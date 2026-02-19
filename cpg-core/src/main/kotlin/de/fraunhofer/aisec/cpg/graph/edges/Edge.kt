@@ -91,16 +91,13 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
         if (this === other) return true
         if (other !is Edge<*>) return false
 
+        // We only consider edges equal if they have the **same** start and end node and equal index
+        // and name. This avoids going into the equals method of individual nodes, which might
+        // trigger equals of edges again.
         return start === other.start &&
             end === other.end &&
             index == other.index &&
             name == other.name
-    }
-
-    fun propertyEquals(obj: Any?): Boolean {
-        if (this === obj) return true
-        if (obj !is Edge<*>) return false
-        return true
     }
 
     override fun hashCode(): Int {
@@ -117,29 +114,6 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
     public override fun clone(): Edge<NodeType> {
         // needs to be implemented by subclasses
         return super.clone() as Edge<NodeType>
-    }
-
-    companion object {
-        @JvmStatic
-        fun <E : Node> propertyEqualsList(edges: List<Edge<E>>?, edges2: List<Edge<E>>?): Boolean {
-            // Check, if the first edge is null
-            if (edges == null) {
-                // They can only be equal now, if the second one is also null
-                return edges2 == null
-            }
-
-            // Otherwise, try to compare the contents of the lists with the propertyEquals (the
-            // second one still might be null)
-            if (edges.size == edges2?.size) {
-                for (i in edges.indices) {
-                    if (!edges[i].propertyEquals(edges2[i])) {
-                        return false
-                    }
-                }
-                return true
-            }
-            return false
-        }
     }
 
     fun <ThisType : Node> delegate(): Delegate<ThisType> {

@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
@@ -61,7 +60,7 @@ open class Block : Expression(), StatementHolder {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Block) return false
-        return super.equals(other) && Edge.propertyEqualsList(statementEdges, other.statementEdges)
+        return super.equals(other) && statementEdges == other.statementEdges
     }
 
     override fun hashCode() = Objects.hash(super.hashCode())

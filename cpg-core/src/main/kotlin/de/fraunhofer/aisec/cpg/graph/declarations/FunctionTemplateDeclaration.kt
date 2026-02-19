@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.*
@@ -58,10 +57,7 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
         if (other == null || javaClass != other.javaClass) return false
         if (!super.equals(other)) return false
         val that = other as FunctionTemplateDeclaration
-        return realization == that.realization &&
-            propertyEqualsList(realizationEdges, that.realizationEdges) &&
-            parameters == that.parameters &&
-            propertyEqualsList(parameterEdges, that.parameterEdges)
+        return realizationEdges == that.realizationEdges && parameterEdges == that.parameterEdges
     }
 
     // Do NOT add parameters to hashcode, as they are added incrementally to the list. If the

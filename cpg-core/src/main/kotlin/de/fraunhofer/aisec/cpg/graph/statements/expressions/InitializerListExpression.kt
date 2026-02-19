@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -117,7 +116,7 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is InitializerListExpression) return false
-        return super.equals(other) && propertyEqualsList(initializerEdges, other.initializerEdges)
+        return super.equals(other) && initializerEdges == other.initializerEdges
     }
 
     override fun hashCode(): Int {

@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -105,8 +104,7 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
         if (other == null || javaClass != other.javaClass) return false
         if (!super.equals(other)) return false
         val that = other as TemplateDeclaration
-        return parameters == that.parameters &&
-            propertyEqualsList(parameterEdges, that.parameterEdges)
+        return parameterEdges == that.parameterEdges
     }
 
     // We can't add anything else here

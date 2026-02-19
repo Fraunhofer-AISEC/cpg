@@ -147,7 +147,7 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     override fun equals(other: Any?): Boolean {
         if (other !is EdgeList<*, *>) return false
 
-        // Otherwise, try to compare the contents of the lists with the propertyEquals method
+        // Compare the contents of the lists
         if (this.size == other.size) {
             for (i in this.indices) {
                 if (this[i] != other[i]) {

@@ -110,12 +110,13 @@ Note: In the future, we might move required properties into the constructor of a
 
 ### `equals` and `hashCode`
 
-Because of the special nature of the `PropertyEdge`, one needs to be careful in comparing them in `equals`, to avoid stack overflows. Therefore, the special function `propertyEqualsList` needs to be used:
+When comparing nodes in `equals`, always compare the edge list properties (e.g., `parameterEdges`) directly using `==`, not the unwrapped lists (e.g., `parameters`):
 ```kotlin
 return super.equals(other) &&
-    parameters == other.parameters &&
-    propertyEqualsList(parameterEdges, other.parameterEdges)
+    parameterEdges == other.parameterEdges
 ```
+
+The edge list comparison uses reference equality (`===`) for the connected nodes, which avoids stack overflow issues that would occur with deep structural equality.
 
 `hashCode` needs to include all properties that are also compared in `equals`. For easier readability, we should use the Kotlin expression body feature:
 ```kotlin

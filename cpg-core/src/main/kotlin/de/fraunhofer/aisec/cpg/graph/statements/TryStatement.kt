@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -82,13 +81,11 @@ class TryStatement : Statement() {
         if (this === other) return true
         if (other !is TryStatement) return false
         return (super.equals(other) &&
-            resources == other.resources &&
-            propertyEqualsList(resourceEdges, other.resourceEdges) &&
+            resourceEdges == other.resourceEdges &&
             tryBlock == other.tryBlock &&
             finallyBlock == other.finallyBlock &&
-            catchClauses == other.catchClauses &&
-            elseBlock == other.elseBlock &&
-            propertyEqualsList(catchClauseEdges, other.catchClauseEdges))
+            catchClauseEdges == other.catchClauseEdges &&
+            elseBlock == other.elseBlock)
     }
 
     override fun hashCode() =

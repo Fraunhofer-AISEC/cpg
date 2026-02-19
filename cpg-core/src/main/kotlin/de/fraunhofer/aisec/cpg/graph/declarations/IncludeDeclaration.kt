@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
@@ -62,11 +61,9 @@ class IncludeDeclaration : Declaration() {
         if (this === other) return true
         if (other !is IncludeDeclaration) return false
         return ((super.equals(other) &&
-            includes == other.includes &&
-            propertyEqualsList(includeEdges, other.includeEdges) &&
-            problems == other.problems) &&
-            propertyEqualsList(problemEdges, other.problemEdges) &&
-            filename == other.filename)
+            includeEdges == other.includeEdges &&
+            problemEdges == other.problemEdges &&
+            filename == other.filename))
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), problems, filename)

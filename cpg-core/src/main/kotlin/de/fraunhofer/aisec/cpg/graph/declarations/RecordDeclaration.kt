@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
@@ -183,14 +182,10 @@ open class RecordDeclaration :
         if (other !is RecordDeclaration) return false
         return super.equals(other) &&
             kind == other.kind &&
-            fields == other.fields &&
-            propertyEqualsList(fieldEdges, other.fieldEdges) &&
-            methods == other.methods &&
-            propertyEqualsList(methodEdges, other.methodEdges) &&
-            constructors == other.constructors &&
-            propertyEqualsList(constructorEdges, other.constructorEdges) &&
-            records == other.records &&
-            propertyEqualsList(recordEdges, other.recordEdges) &&
+            fieldEdges == other.fieldEdges &&
+            methodEdges == other.methodEdges &&
+            constructorEdges == other.constructorEdges &&
+            recordEdges == other.recordEdges &&
             superClasses == other.superClasses &&
             implementedInterfaces == other.implementedInterfaces &&
             superTypeDeclarations == other.superTypeDeclarations

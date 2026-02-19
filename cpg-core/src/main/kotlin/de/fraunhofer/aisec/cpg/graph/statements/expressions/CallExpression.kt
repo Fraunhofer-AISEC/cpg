@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
 import de.fraunhofer.aisec.cpg.graph.edges.*
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
@@ -287,10 +286,8 @@ open class CallExpression :
         if (this === other) return true
         if (other !is CallExpression) return false
         return super.equals(other) &&
-            arguments == other.arguments &&
-            propertyEqualsList(argumentEdges, other.argumentEdges) &&
-            templateArguments == other.templateArguments &&
-            propertyEqualsList(templateArgumentEdges, other.templateArgumentEdges) &&
+            argumentEdges == other.argumentEdges &&
+            templateArgumentEdges == other.templateArgumentEdges &&
             templateInstantiation == other.templateInstantiation &&
             template == other.template
     }
