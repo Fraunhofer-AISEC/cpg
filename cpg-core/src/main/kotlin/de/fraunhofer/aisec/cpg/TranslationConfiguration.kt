@@ -119,7 +119,6 @@ private constructor(
     disableCleanup: Boolean,
     useUnityBuild: Boolean,
     useParallelFrontends: Boolean,
-    useParallelPasses: Boolean,
     inferenceConfiguration: InferenceConfiguration,
     compilationDatabase: CompilationDatabase?,
     matchCommentsToNodes: Boolean,
@@ -165,8 +164,6 @@ private constructor(
      * graph enrichment algorithms remain correct.
      */
     val useParallelFrontends: Boolean
-
-    val useParallelPasses: Boolean
 
     /**
      * This is the data structure for storing the compilation database. It stores a mapping from the
@@ -216,7 +213,6 @@ private constructor(
         this.disableCleanup = disableCleanup
         this.useUnityBuild = useUnityBuild
         this.useParallelFrontends = useParallelFrontends
-        this.useParallelPasses = useParallelPasses
         this.inferenceConfiguration = inferenceConfiguration
         this.compilationDatabase = compilationDatabase
         this.matchCommentsToNodes = matchCommentsToNodes
@@ -269,7 +265,6 @@ private constructor(
         private var disableCleanup = false
         private var useUnityBuild = false
         private var useParallelFrontends = false
-        private var useParallelPasses = false
         private var inferenceConfiguration = InferenceConfiguration.Builder().build()
         private var compilationDatabase: CompilationDatabase? = null
         private var matchCommentsToNodes = false
@@ -724,11 +719,6 @@ private constructor(
             return this
         }
 
-        fun useParallelPasses(b: Boolean): Builder {
-            useParallelPasses = b
-            return this
-        }
-
         fun inferenceConfiguration(configuration: InferenceConfiguration): Builder {
             inferenceConfiguration = configuration
             return this
@@ -757,7 +747,6 @@ private constructor(
                 disableCleanup,
                 useUnityBuild,
                 useParallelFrontends,
-                useParallelPasses,
                 inferenceConfiguration,
                 compilationDatabase,
                 matchCommentsToNodes,

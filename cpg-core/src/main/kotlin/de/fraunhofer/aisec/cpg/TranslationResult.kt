@@ -42,6 +42,8 @@ import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
+import de.fraunhofer.aisec.cpg.passes.markClean
+import de.fraunhofer.aisec.cpg.passes.markDirty
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
@@ -98,6 +100,7 @@ class TranslationResult(
      * A free-for-use collection of unique nodes. Nodes stored here will be exported to Neo4j, too.
      */
     val additionalNodes = mutableSetOf<Node>()
+
     override val benchmarks: MutableSet<MeasurementHolder> = LinkedHashSet()
 
     val isCancelled: Boolean
@@ -198,7 +201,7 @@ class TranslationResult(
      * Users should not access this directly, but rather use the [markDirty] and [markClean] methods
      * or the [Node.markDirty] and [Node.markClean] extension function.
      */
-    @DoNotPersist val dirtyNodes = ConcurrentHashMap<Node, MutableList<KClass<out Pass<*>>>>()
+    @DoNotPersist val dirtyNodes = IdentityHashMap<Node, MutableList<KClass<out Pass<*>>>>()
 
     /**
      * Marks a node as dirty for a specific pass. This is used to indicate that the node needs to be

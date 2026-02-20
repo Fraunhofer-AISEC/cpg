@@ -27,7 +27,9 @@
 
 package de.fraunhofer.aisec.cpg.graph.builder
 
-import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.assumptions.getCallerFileAndLine
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -37,12 +39,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
 import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -62,13 +62,7 @@ fun LanguageFrontend<*, *>.translationResult(
     node.addComponent(component)
     init(node)
 
-    if (ctx.config.useParallelPasses) {
-        for (list in ctx.config.registeredPasses) {
-            executePassesInParallel(list, ctx, node, listOf())
-        }
-    } else {
-        executePassesSequentially(ctx, node, mutableSetOf())
-    }
+    executePassesSequentially(ctx, node, mutableSetOf())
 
     // Start pseudo location inference for the root node of translation, propagating to its
     // descendents.
