@@ -76,6 +76,34 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      */
     private val nameScopeMap: MutableMap<Name, NameScope> = mutableMapOf()
 
+    /**
+     * A cache for [extractScope] results, keyed by a manually computed hash of (name, language,
+     * startScope) to avoid allocations on the hot path. A stored value of `null` means the
+     * extraction is known to fail. On a hash hit, the stored [ScopeExtractionCacheEntry] is used to
+     * verify against collisions before returning the cached result.
+     */
+    private data class ScopeExtractionCacheEntry(
+        val name: Name,
+        val language: Language<*>,
+        val startScope: Scope?,
+        val result: ScopeExtraction?,
+    )
+
+    /**
+     * A cache for [extractScope] results, keyed by a manually computed hash of (name, language,
+     * startScope) to avoid allocations on the hot path. A stored value of `null` means the
+     * extraction is known to fail. On a hash hit, the stored [ScopeExtractionCacheEntry] is used to
+     * verify against collisions before returning the cached result.
+     */
+    private val scopeExtractionCache: HashMap<Int, ScopeExtractionCacheEntry> = hashMapOf()
+
+    /**
+     * Computes a hash for the given parameters to be used as a key in the [scopeExtractionCache].
+     * This is done manually to avoid allocations of key objects on the hot path of [extractScope].
+     */
+    private fun scopeExtractionHash(name: Name, language: Language<*>, startScope: Scope?) =
+        31 * (31 * name.hashCode() + language.hashCode()) + (startScope?.hashCode() ?: 0)
+
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
         get() = this.firstScopeOrNull { it is FunctionScope } != null
@@ -205,6 +233,10 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             val name = scope.astNode?.name
             if (name != null) {
                 nameScopeMap[name] = scope
+                // Invalidate cached extractions for this scope name. We are very defensive about
+                // this and invalidate all cached entries with the same local name (in case this was
+                // done by a partial scope match).
+                scopeExtractionCache.values.removeIf { it.name.localName == name.localName }
             }
         }
 
@@ -531,19 +563,40 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                 return ScopeExtraction(scope, name)
             }
 
-            // We need to check, whether we have an alias for the name's parent in this file
-            val scope = lookupScopeByName(scopeName, language, scope)
+            // Check the cache first. We compute the hash without allocating a key object.
+            // On a hash hit do we check the cached entry against the actual parameters to avoid
+            // collisions.
+            val hash = scopeExtractionHash(scopeName, language, scope)
+            val cached = scopeExtractionCache[hash]
+            if (
+                cached != null &&
+                    cached.name == scopeName &&
+                    cached.language == language &&
+                    cached.startScope == scope
+            ) {
+                return cached.result
+            }
 
-            if (scope == null) {
+            // We need to check, whether we have an alias for the name's parent in this file
+            val resolvedScope = lookupScopeByName(scopeName, language, scope)
+
+            if (resolvedScope == null) {
                 Util.warnWithFileLocation(
                     location,
                     LOGGER,
                     "Could not find the scope $scopeName needed to resolve $n",
                 )
+                scopeExtractionCache[hash] =
+                    ScopeExtractionCacheEntry(scopeName, language, scope, null)
                 return null
             }
-            s = scope
-            n = adjustNameIfNecessary(scope.name, n.parent, n)
+            s = resolvedScope
+            n = adjustNameIfNecessary(resolvedScope.name, n.parent, n)
+
+            // Cache the successful extraction too
+            val result = ScopeExtraction(s, n)
+            scopeExtractionCache[hash] =
+                ScopeExtractionCacheEntry(scopeName, language, scope, result)
         }
 
         return ScopeExtraction(s, n)
@@ -717,7 +770,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /** Returns the current scope for the [ScopeProvider] interface. */
-    override val scope: Scope
+    override val scope
         get() = currentScope
 
     /**
