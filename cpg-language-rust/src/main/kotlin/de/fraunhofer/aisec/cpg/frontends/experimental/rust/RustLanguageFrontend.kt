@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.SupportsNewParse
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -59,12 +59,12 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
     internal val typeHandler = TypeHandler(this)
 
     @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         return parse(file.readText(), file.toPath())
     }
 
     @Throws(TranslationException::class)
-    override fun parse(content: String, path: Path?): TranslationUnitDeclaration {
+    override fun parse(content: String, path: Path?): TranslationUnit {
         this.content = content
         this.uri = path?.toUri() ?: URI("unknown:///")
 
@@ -75,7 +75,7 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         val rootNode = tree.rootNode
 
         val name = path?.toAbsolutePath()?.toString() ?: "unknown"
-        val tud = newTranslationUnitDeclaration(name, rawNode = rootNode)
+        val tud = newTranslationUnit(name, rawNode = rootNode)
         tud.location = locationOf(rootNode)
 
         scopeManager.resetToGlobal(tud)
@@ -85,7 +85,7 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         return tud
     }
 
-    internal fun handleChildren(parent: TSNode, tud: TranslationUnitDeclaration) {
+    internal fun handleChildren(parent: TSNode, tud: TranslationUnit) {
         val pendingAnnotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
 
         for (child in parent.children) {

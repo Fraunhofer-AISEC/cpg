@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.experimental.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.BaseTest
@@ -214,7 +215,7 @@ class RustComprehensiveTest : BaseTest() {
         assertNotNull(tu)
 
         // complex_where should be a template with type parameters
-        val templates = tu.allChildren<FunctionTemplateDeclaration>()
+        val templates = tu.allChildren<FunctionTemplate>()
         val whereFunc = templates.firstOrNull { it.name.localName == "complex_where" }
         assertNotNull(whereFunc, "Should find complex_where template")
     }
@@ -224,7 +225,7 @@ class RustComprehensiveTest : BaseTest() {
         val tu = parseTU("comprehensive.rs")
         assertNotNull(tu)
 
-        val typedefs = tu.allChildren<TypedefDeclaration>()
+        val typedefs = tu.allChildren<Typedef>()
         val coord = typedefs.firstOrNull { it.alias.name.localName == "Coordinate" }
         assertNotNull(coord, "Should find Coordinate type alias")
     }
@@ -234,7 +235,7 @@ class RustComprehensiveTest : BaseTest() {
         val tu = parseTU("comprehensive.rs")
         assertNotNull(tu)
 
-        val includes = tu.allChildren<IncludeDeclaration>()
+        val includes = tu.allChildren<Include>()
         assertTrue(includes.isNotEmpty(), "Should have use declarations")
         assertTrue(
             includes.any { it.name.localName.contains("HashMap") },
@@ -266,7 +267,7 @@ class RustComprehensiveTest : BaseTest() {
         assertNotNull(tu)
 
         val macros =
-            tu.allChildren<FunctionDeclaration>().filter { decl ->
+            tu.allChildren<Function>().filter { decl ->
                 decl.annotations.any { it.name.localName == "macro_rules" }
             }
         assertTrue(macros.isNotEmpty(), "Should find macro_rules! definition")
@@ -278,7 +279,7 @@ class RustComprehensiveTest : BaseTest() {
         val tu = parseTU("comprehensive.rs")
         assertNotNull(tu)
 
-        val enums = tu.allChildren<EnumDeclaration>()
+        val enums = tu.allChildren<Enumeration>()
         val message = enums.firstOrNull { it.name.localName == "Message" }
         assertNotNull(message, "Should find Message enum")
         assertEquals(4, message.entries.size, "Message should have 4 variants")
@@ -473,11 +474,11 @@ class RustComprehensiveTest : BaseTest() {
         val tu = parseTU("comprehensive.rs")
         assertNotNull(tu)
 
-        val namespaces = tu.allChildren<NamespaceDeclaration>()
+        val namespaces = tu.allChildren<Namespace>()
         val innerMod = namespaces.firstOrNull { it.name.localName == "inner_module" }
         assertNotNull(innerMod, "Should find inner_module")
 
-        val innerFuncs = innerMod.allChildren<FunctionDeclaration>()
+        val innerFuncs = innerMod.allChildren<Function>()
         assertTrue(
             innerFuncs.any { it.name.localName == "inner_fn" },
             "Module should contain inner_fn",

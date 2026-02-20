@@ -50,7 +50,7 @@ class RustLifetimesTest : BaseTest() {
 
         // The `longest` function should be a template with a lifetime parameter
         val longestTemplate =
-            tu.declarations.filterIsInstance<FunctionTemplateDeclaration>().firstOrNull {
+            tu.declarations.filterIsInstance<FunctionTemplate>().firstOrNull {
                 it.name.localName == "longest"
             }
         assertNotNull(longestTemplate, "longest should be a template function")
@@ -62,7 +62,7 @@ class RustLifetimesTest : BaseTest() {
 
         // The Excerpt struct should also be a template with lifetime
         val excerptTemplate =
-            tu.declarations.filterIsInstance<RecordTemplateDeclaration>().firstOrNull {
+            tu.declarations.filterIsInstance<RecordTemplate>().firstOrNull {
                 it.name.localName == "Excerpt"
             }
         assertNotNull(excerptTemplate, "Excerpt should be a template struct")

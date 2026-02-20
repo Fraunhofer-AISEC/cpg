@@ -66,10 +66,10 @@ class RustTraitsTest : BaseTest() {
         assertTrue(implMethod.hasBody())
 
         val genericFooTemplate =
-            tu.declarations.filterIsInstance<FunctionTemplateDeclaration>().first {
+            tu.declarations.filterIsInstance<FunctionTemplate>().first {
                 it.name.localName == "generic_foo"
             }
-        val tParam = genericFooTemplate.parameters.getOrNull(0) as? TypeParameterDeclaration
+        val tParam = genericFooTemplate.parameters.getOrNull(0) as? TypeParameter
         assertNotNull(tParam)
         assertEquals("T", tParam.name.localName)
 
@@ -122,7 +122,7 @@ class RustTraitsTest : BaseTest() {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)
-        val templates = tu.allChildren<TemplateDeclaration>()
+        val templates = tu.allChildren<Template>()
         val converterTemplate = templates.find { it.name.localName == "Converter" }
         assertNotNull(converterTemplate, "Should have Converter template")
     }

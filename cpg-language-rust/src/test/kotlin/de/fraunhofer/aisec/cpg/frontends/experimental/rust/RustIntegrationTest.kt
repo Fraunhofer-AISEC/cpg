@@ -51,7 +51,7 @@ class RustIntegrationTest : BaseTest() {
 
         // === Module ===
         val utilsMod =
-            tu.declarations.filterIsInstance<NamespaceDeclaration>().firstOrNull {
+            tu.declarations.filterIsInstance<Namespace>().firstOrNull {
                 it.name.localName == "utils"
             }
         assertNotNull(utilsMod, "Module 'utils' should exist")
@@ -86,7 +86,7 @@ class RustIntegrationTest : BaseTest() {
 
         // === Generic function with lifetime and trait bounds ===
         val processTemplate =
-            tu.declarations.filterIsInstance<FunctionTemplateDeclaration>().firstOrNull {
+            tu.declarations.filterIsInstance<FunctionTemplate>().firstOrNull {
                 it.name.localName == "process"
             }
         assertNotNull(processTemplate, "process should be a template function")
@@ -95,7 +95,7 @@ class RustIntegrationTest : BaseTest() {
 
         // T should have Clone and Drawable bounds
         val tParam =
-            processTemplate.parameters.filterIsInstance<TypeParameterDeclaration>().firstOrNull {
+            processTemplate.parameters.filterIsInstance<TypeParameter>().firstOrNull {
                 it.name.localName == "T"
             }
         assertNotNull(tParam)

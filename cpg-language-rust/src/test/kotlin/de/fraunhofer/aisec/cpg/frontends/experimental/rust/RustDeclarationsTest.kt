@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.experimental.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.BaseTest
@@ -67,7 +68,7 @@ class RustDeclarationsTest : BaseTest() {
         val tu = parseTU("declarations/declarations.rs")
         assertNotNull(tu)
 
-        val imports = tu.allChildren<IncludeDeclaration>()
+        val imports = tu.allChildren<Include>()
         assertTrue(imports.isNotEmpty(), "Should have use/import declarations")
     }
 
@@ -109,7 +110,7 @@ class RustDeclarationsTest : BaseTest() {
         // Color enum with unit variants
         val color = tu.records["Color"]
         assertNotNull(color, "Should find Color enum")
-        assertIs<EnumDeclaration>(color)
+        assertIs<Enumeration>(color)
         assertEquals("enum", color.kind)
         assertEquals(3, color.entries.size)
         assertEquals("Red", color.entries.getOrNull(0)?.name?.localName)
@@ -119,7 +120,7 @@ class RustDeclarationsTest : BaseTest() {
         // Shape enum with tuple variants
         val shape = tu.records["Shape"]
         assertNotNull(shape, "Should find Shape enum")
-        assertIs<EnumDeclaration>(shape)
+        assertIs<Enumeration>(shape)
         assertEquals(2, shape.entries.size)
         assertEquals("Circle", shape.entries.getOrNull(0)?.name?.localName)
         assertEquals("Rectangle", shape.entries.getOrNull(1)?.name?.localName)
@@ -127,7 +128,7 @@ class RustDeclarationsTest : BaseTest() {
         // Message enum with mixed variants
         val message = tu.records["Message"]
         assertNotNull(message, "Should find Message enum")
-        assertIs<EnumDeclaration>(message)
+        assertIs<Enumeration>(message)
         assertEquals(3, message.entries.size)
         assertEquals("Quit", message.entries.getOrNull(0)?.name?.localName)
         assertEquals("Move", message.entries.getOrNull(1)?.name?.localName)
@@ -155,7 +156,7 @@ class RustDeclarationsTest : BaseTest() {
         val tu = parseTU("declarations/declarations.rs")
         assertNotNull(tu)
 
-        val namespaces = tu.allChildren<NamespaceDeclaration>()
+        val namespaces = tu.allChildren<Namespace>()
         val extern = namespaces.firstOrNull { it.name.localName == "extern" }
         assertNotNull(extern, "Should find extern namespace")
 
@@ -172,7 +173,7 @@ class RustDeclarationsTest : BaseTest() {
         val tu = parseTU("declarations/declarations.rs")
         assertNotNull(tu)
 
-        val includes = tu.allChildren<IncludeDeclaration>()
+        val includes = tu.allChildren<Include>()
         assertTrue(
             includes.any { it.name.localName == "alloc" },
             "Should have extern crate alloc: ${includes.map { it.name }}",
@@ -262,12 +263,12 @@ class RustDeclarationsTest : BaseTest() {
         val tu = parseTU("declarations/declarations.rs")
         assertNotNull(tu)
 
-        val templates = tu.allChildren<FunctionTemplateDeclaration>()
+        val templates = tu.allChildren<FunctionTemplate>()
         val process = templates.firstOrNull { it.name.localName == "process" }
         assertNotNull(process, "Should find process template function")
 
         // Should have type parameters
-        val typeParams = process.allChildren<TypeParameterDeclaration>()
+        val typeParams = process.allChildren<TypeParameter>()
         assertTrue(typeParams.size >= 2, "Should have at least T and U type params")
     }
 
@@ -322,7 +323,7 @@ class RustDeclarationsTest : BaseTest() {
     fun testBranchAnnotatedModule() {
         val tu = parseTU("declarations/declarations.rs")
         assertNotNull(tu)
-        val namespaces = tu.allChildren<NamespaceDeclaration>()
+        val namespaces = tu.allChildren<Namespace>()
         assertTrue(
             namespaces.any { it.name.localName == "annotated_mod" },
             "Should have annotated_mod namespace",
@@ -333,7 +334,7 @@ class RustDeclarationsTest : BaseTest() {
     fun testBranchExternCBlock() {
         val tu = parseTU("declarations/declarations.rs")
         assertNotNull(tu)
-        val funcs = tu.allChildren<FunctionDeclaration>()
+        val funcs = tu.allChildren<Function>()
         assertTrue(
             funcs.any { it.name.localName == "c_abs" },
             "Should have extern C function c_abs",
@@ -368,7 +369,7 @@ class RustDeclarationsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val decls = body.allChildren<VariableDeclaration>()
+        val decls = body.allChildren<Variable>()
         assertTrue(decls.size >= 4, "Should have 4+ variable declarations")
     }
 
@@ -380,7 +381,7 @@ class RustDeclarationsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val decls = body.allChildren<VariableDeclaration>()
+        val decls = body.allChildren<Variable>()
         assertTrue(decls.isNotEmpty(), "Should have variable declaration")
     }
 
@@ -403,7 +404,7 @@ class RustDeclarationsTest : BaseTest() {
     fun testModuleNamespace() {
         val tu = parseTU("integration/comprehensive.rs")
         assertNotNull(tu)
-        val namespaces = tu.allChildren<NamespaceDeclaration>()
+        val namespaces = tu.allChildren<Namespace>()
         assertTrue(
             namespaces.any { it.name.localName == "inner_module" },
             "Should have inner module namespace",
@@ -414,7 +415,7 @@ class RustDeclarationsTest : BaseTest() {
     fun testExternBlockFunctions() {
         val tu = parseTU("declarations/declarations.rs")
         assertNotNull(tu)
-        val allFuncs = tu.allChildren<FunctionDeclaration>()
+        val allFuncs = tu.allChildren<Function>()
         assertTrue(allFuncs.any { it.name.localName == "printf" }, "Should have extern fn printf")
     }
 
@@ -442,7 +443,7 @@ class RustDeclarationsTest : BaseTest() {
     fun testUseDecl() {
         val tu = parseTU("integration/comprehensive.rs")
         assertNotNull(tu)
-        val includes = tu.allChildren<IncludeDeclaration>()
+        val includes = tu.allChildren<Include>()
         assertTrue(includes.isNotEmpty(), "Should have use/include declarations")
     }
 
@@ -454,7 +455,7 @@ class RustDeclarationsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val innerFuncs = body.allChildren<FunctionDeclaration>()
+        val innerFuncs = body.allChildren<Function>()
         assertTrue(
             innerFuncs.any { it.name.localName == "inner_add" },
             "Should have nested inner_add function",
@@ -473,7 +474,7 @@ class RustDeclarationsTest : BaseTest() {
     fun testGenericStruct() {
         val tu = parseTU("types/generics.rs")
         assertNotNull(tu)
-        val templates = tu.allChildren<TemplateDeclaration>()
+        val templates = tu.allChildren<Template>()
         assertTrue(
             templates.any { it.name.localName.contains("Container") },
             "Should have Container template",

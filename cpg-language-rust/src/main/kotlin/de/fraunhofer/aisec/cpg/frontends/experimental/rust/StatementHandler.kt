@@ -25,9 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.experimental.rust
 
+import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TupleDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Tuple
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -117,8 +118,8 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `let_declaration` into a [DeclarationStatement] containing a
-     * [VariableDeclaration]. Handles `mut` patterns, type annotations, and tuple destructuring.
+     * Translates a Rust `let_declaration` into a [DeclarationStatement] containing a [Variable].
+     * Handles `mut` patterns, type annotations, and tuple destructuring.
      */
     private fun handleLetDeclaration(node: TSNode): Statement {
         val patternNode = node["pattern"]
@@ -158,7 +159,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        val variable = newVariableDeclaration(actualName, rawNode = node)
+        val variable = newVariable(actualName, rawNode = node)
         if (isMutable) {
             variable.modifiers += "mut"
         }
@@ -193,13 +194,12 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Recursively builds a [TupleDeclaration] from a Rust `tuple_pattern`, which can be nested
-     * (e.g., `let ((a, b), c) = ...`). The initializer is only set for the top-level tuple; nested
-     * tuples will have null initializers since Rust does not allow separate initializers for nested
-     * patterns.
+     * Recursively builds a [Tuple] from a Rust `tuple_pattern`, which can be nested (e.g., `let
+     * ((a, b), c) = ...`). The initializer is only set for the top-level tuple; nested tuples will
+     * have null initializers since Rust does not allow separate initializers for nested patterns.
      */
-    fun buildTuple(pattern: TSNode, initializer: Expression?): TupleDeclaration {
-        val elements = mutableListOf<VariableDeclaration>()
+    fun buildTuple(pattern: TSNode, initializer: Expression?): Tuple {
+        val elements = mutableListOf<Variable>()
         for (child in pattern.children) {
             if (!child.isNamed) continue
             when (child.type) {
@@ -208,13 +208,13 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                     elements += nested
                 }
                 "identifier" -> {
-                    val variable = newVariableDeclaration(child.text(), rawNode = child)
+                    val variable = newVariable(child.text(), rawNode = child)
                     elements += variable
                 }
             }
         }
 
-        val tuple = newTupleDeclaration(elements, initializer, rawNode = pattern)
+        val tuple = newTuple(elements, initializer, rawNode = pattern)
         // Add tuple and its elements to scope
         frontend.scopeManager.addDeclaration(tuple)
         elements.forEach { frontend.scopeManager.addDeclaration(it) }
@@ -223,7 +223,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Translates a Rust tuple-destructuring `let` (e.g., `let (a, b) = tuple`) into a
-     * [DeclarationStatement] containing a [TupleDeclaration].
+     * [DeclarationStatement] containing a [Tuple].
      */
     private fun handleTupleLetDeclaration(node: TSNode, patternNode: TSNode): DeclarationStatement {
         val declStmt = newDeclarationStatement(rawNode = node)
@@ -239,8 +239,8 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         val topLevelTuple = buildTuple(patternNode, initializer)
 
         // Register all tuple declarations (nested + top-level) in this statement
-        fun addTupleDecls(tuple: TupleDeclaration) {
-            tuple.elements.filterIsInstance<TupleDeclaration>().forEach { addTupleDecls(it) }
+        fun addTupleDecls(tuple: Tuple) {
+            tuple.elements.filterIsInstance<Tuple>().forEach { addTupleDecls(it) }
             declStmt.addDeclaration(tuple)
         }
 
@@ -287,7 +287,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             if (condition != null && condition.type == "let_condition") {
                 extractBindings(condition["pattern"])
             } else {
-                emptyList<VariableDeclaration>()
+                emptyList()
             }
 
         val consequence = node["consequence"]
@@ -345,7 +345,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             if (condition != null && condition.type == "let_condition") {
                 extractBindings(condition["pattern"])
             } else {
-                emptyList<VariableDeclaration>()
+                emptyList()
             }
 
         val body = node["body"]
@@ -411,7 +411,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         if (pattern != null && !pattern.isNull) {
             val declStmt = newDeclarationStatement(rawNode = pattern)
             val name = pattern.text()
-            val variable = newVariableDeclaration(name, rawNode = pattern)
+            val variable = newVariable(name, rawNode = pattern)
             frontend.scopeManager.addDeclaration(variable)
             declStmt.addDeclaration(variable)
             forEach.variable = declStmt
@@ -458,7 +458,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         return null
     }
 
-    internal fun handleBlockWithBindings(node: TSNode, bindings: List<VariableDeclaration>): Block {
+    internal fun handleBlockWithBindings(node: TSNode, bindings: List<Variable>): Block {
         val block = newBlock(rawNode = node)
         frontend.scopeManager.enterScope(block)
 
@@ -486,14 +486,14 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         return block
     }
 
-    internal fun extractBindings(pattern: TSNode?): List<VariableDeclaration> {
-        val vars = mutableListOf<VariableDeclaration>()
+    internal fun extractBindings(pattern: TSNode?): List<Variable> {
+        val vars = mutableListOf<Variable>()
         if (pattern == null) return vars
 
         when (pattern.type) {
             "identifier" -> {
                 val name = pattern.text()
-                vars += newVariableDeclaration(name, rawNode = pattern)
+                vars += newVariable(name, rawNode = pattern)
             }
             "tuple_struct_pattern" -> {
                 val typeChild = pattern["type"]
@@ -543,12 +543,12 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                     vars += extractBindings(patternChild)
                 } else if (nameNode != null && !nameNode.isNull) {
                     val name = nameNode.text()
-                    vars += newVariableDeclaration(name, rawNode = nameNode)
+                    vars += newVariable(name, rawNode = nameNode)
                 } else {
                     // Fallback: treat the whole node as a binding
                     val name = pattern.text()
                     if (name.isNotEmpty()) {
-                        vars += newVariableDeclaration(name, rawNode = pattern)
+                        vars += newVariable(name, rawNode = pattern)
                     }
                 }
             }

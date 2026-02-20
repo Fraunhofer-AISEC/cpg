@@ -28,17 +28,18 @@ package de.fraunhofer.aisec.cpg.frontends.experimental.rust
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.treesitter.TSNode
 
 /**
- * A [Handler] that translates Rust declarations (items) into CPG [Declaration] nodes. It currently
- * supports functions, structs, enums, impl blocks, and modules.
+ * A [Handler] that translates Rust declarations (items) into CPG [] nodes. It currently supports
+ * functions, structs, enums, impl blocks, and modules.
  *
  * It also handles generic type parameters for functions and structs by wrapping them in
- * [FunctionTemplateDeclaration] or [RecordTemplateDeclaration] nodes.
+ * [FunctionTemplate] or [RecordTemplate] nodes.
  */
 class DeclarationHandler(frontend: RustLanguageFrontend) :
     RustHandler<Declaration, TSNode>(::ProblemDeclaration, frontend) {
@@ -72,9 +73,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     /**
      * Translates a Rust
      * [`function_item`](https://docs.rs/tree-sitter-rust/latest/tree_sitter_rust/) or
-     * `function_signature_item` into a [FunctionDeclaration] or [MethodDeclaration]. If the
-     * function is inside a record scope (e.g., an `impl` or `trait` block), it becomes a
-     * [MethodDeclaration]. Associated functions without a `self` parameter are marked as static.
+     * `function_signature_item` into a [Function] or [Method]. If the function is inside a record
+     * scope (e.g., an `impl` or `trait` block), it becomes a [Method]. Associated functions without
+     * a `self` parameter are marked as static.
      */
     private fun handleFunctionItem(node: TSNode): Declaration {
         val nameNode = node["name"]
@@ -86,14 +87,14 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         val func =
             if (recordDeclaration != null) {
-                newMethodDeclaration(
+                newMethod(
                     name,
                     isStatic = !hasSelf,
                     recordDeclaration = recordDeclaration,
                     rawNode = node,
                 )
             } else {
-                newFunctionDeclaration(name, rawNode = node)
+                newFunction(name, rawNode = node)
             }
 
         // Check for async modifier (only present in function_item, not function_signature_item)
@@ -114,7 +115,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val typeParameters = node["type_parameters"]
         val template =
             if (typeParameters != null && !typeParameters.isNull) {
-                val t = newFunctionTemplateDeclaration(name, rawNode = node)
+                val t = newFunctionTemplate(name, rawNode = node)
                 t.addDeclaration(func)
                 frontend.scopeManager.addDeclaration(t)
                 frontend.scopeManager.enterScope(t)
@@ -157,7 +158,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Processes a Rust `where_clause` by resolving each predicate's trait bounds and adding them as
-     * super types on the corresponding [TypeParameterDeclaration].
+     * super types on the corresponding [TypeParameter].
      */
     private fun handleWhereClause(node: TSNode) {
         for (child in node.children) {
@@ -171,7 +172,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     val typeParamDecl =
                         frontend.scopeManager
                             .lookupSymbolByName(lookupName, language)
-                            .filterIsInstance<TypeParameterDeclaration>()
+                            .filterIsInstance<TypeParameter>()
                             .firstOrNull()
 
                     val type = typeParamDecl?.type ?: frontend.typeHandler.handle(left)
@@ -182,16 +183,16 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Processes generic type parameters (e.g., `<T: Clone, 'a>`) and creates
-     * [TypeParameterDeclaration] nodes for each, adding them to the given [template].
+     * Processes generic type parameters (e.g., `<T: Clone, 'a>`) and creates [TypeParameter] nodes
+     * for each, adding them to the given [template].
      */
-    private fun handleTypeParameters(node: TSNode, template: TemplateDeclaration) {
+    private fun handleTypeParameters(node: TSNode, template: Template) {
         if (node.isNull) return
         for (child in node.children) {
             // Handle lifetime parameters (e.g., 'a in <'a, T>)
             if (child.type == "lifetime") {
                 val name = child.text()
-                val typeParam = newTypeParameterDeclaration(name, rawNode = child)
+                val typeParam = newTypeParameter(name, rawNode = child)
                 template.addDeclaration(typeParam)
                 frontend.scopeManager.addDeclaration(typeParam)
                 continue
@@ -208,7 +209,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     nameNode = child["name"]
                 }
                 val name = nameNode.text().ifEmpty { child.text() }
-                val typeParam = newTypeParameterDeclaration(name, rawNode = child)
+                val typeParam = newTypeParameter(name, rawNode = child)
 
                 if (child.type == "constrained_type_parameter") {
                     val boundsNode = child["bounds"]
@@ -237,10 +238,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Processes function parameters, creating [ParameterDeclaration] nodes for each parameter. Also
-     * handles `self_parameter` for method receivers and `mut` patterns.
+     * Processes function parameters, creating [Parameter] nodes for each parameter. Also handles
+     * `self_parameter` for method receivers and `mut` patterns.
      */
-    private fun handleParameters(node: TSNode, func: FunctionDeclaration) {
+    private fun handleParameters(node: TSNode, func: Function) {
         for (child in node.children) {
             if (child.type == "parameter") {
                 val pattern = child["pattern"]
@@ -258,8 +259,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     }
                 }
 
-                val param =
-                    newParameterDeclaration(name, frontend.typeOf(typeNode), rawNode = child)
+                val param = newParameter(name, frontend.typeOf(typeNode), rawNode = child)
                 if (isMut) {
                     param.modifiers += "mut"
                 }
@@ -273,10 +273,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Processes a `self_parameter` (e.g., `&self`, `&mut self`, `self`) by creating a receiver
-     * [VariableDeclaration] on the [MethodDeclaration].
+     * [Variable] on the [Method].
      */
-    private fun handleSelfParameter(node: TSNode, func: FunctionDeclaration) {
-        if (func is MethodDeclaration) {
+    private fun handleSelfParameter(node: TSNode, func: Function) {
+        if (func is Method) {
             val recordDeclaration = func.recordDeclaration ?: return
             val selfType = recordDeclaration.toType()
             // Check if it's &self, &mut self, or self
@@ -287,7 +287,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                 if (child.type == "mutable_specifier") isMut = true
             }
             val paramType = if (isRef) selfType.ref() else selfType
-            val selfVar = newVariableDeclaration("self", rawNode = node)
+            val selfVar = newVariable("self", rawNode = node)
             selfVar.type = paramType
             if (isMut) {
                 selfVar.modifiers += "mut"
@@ -297,9 +297,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `struct_item` into a [RecordDeclaration] with kind `"struct"`. Handles both
+     * Translates a Rust `struct_item` into a [Record] with kind `"struct"`. Handles both
      * named-field structs (`struct Point { x: i32, y: i32 }`) and tuple structs (`struct Pair(i32,
-     * i32)`). Generic type parameters produce a wrapping [RecordTemplateDeclaration].
+     * i32)`). Generic type parameters produce a wrapping [RecordTemplate].
      */
     private fun handleStructItem(node: TSNode): Declaration {
         val nameNode = node["name"]
@@ -312,7 +312,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             frontend.scopeManager
                 .filterScopes { it.name == parseName(name) && it is RecordScope }
                 .firstOrNull()
-        val implicitRecord = recordScope?.astNode as? RecordDeclaration
+        val implicitRecord = recordScope?.astNode as? Record
 
         // Update existing implicit record or create new one
         val record =
@@ -321,13 +321,13 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                 implicitRecord.setCodeAndLocation(frontend, node)
                 implicitRecord
             } else {
-                newRecordDeclaration(name, "struct", rawNode = node)
+                newRecord(name, "struct", rawNode = node)
             }
 
         val typeParameters = node["type_parameters"]
         val template =
             if (typeParameters != null && !typeParameters.isNull) {
-                val t = newRecordTemplateDeclaration(name, rawNode = node)
+                val t = newRecordTemplate(name, rawNode = node)
                 t.addDeclaration(record)
                 frontend.scopeManager.addDeclaration(t)
                 frontend.scopeManager.enterScope(t)
@@ -348,12 +348,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     val fieldName = fieldNameNode.text()
                     val fieldTypeNode = child["type"]
 
-                    val field =
-                        newFieldDeclaration(
-                            fieldName,
-                            frontend.typeOf(fieldTypeNode),
-                            rawNode = child,
-                        )
+                    val field = newField(fieldName, frontend.typeOf(fieldTypeNode), rawNode = child)
 
                     // Check for visibility modifier (e.g. pub)
                     for (fieldChild in child.children) {
@@ -382,7 +377,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                                 fieldChild.type != "attribute_item"
                         ) {
                             val field =
-                                newFieldDeclaration(
+                                newField(
                                     fieldIdx.toString(),
                                     frontend.typeOf(fieldChild),
                                     rawNode = fieldChild,
@@ -406,20 +401,19 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `trait_item` into a [RecordDeclaration] with kind `"trait"`. Trait method
-     * signatures, default method implementations, and associated types are added as declarations to
-     * the record.
+     * Translates a Rust `trait_item` into a [Record] with kind `"trait"`. Trait method signatures,
+     * default method implementations, and associated types are added as declarations to the record.
      */
     private fun handleTraitItem(node: TSNode): Declaration {
         val nameNode = node["name"]
         val name = nameNode.text()
 
-        val record = newRecordDeclaration(name, "trait", rawNode = node)
+        val record = newRecord(name, "trait", rawNode = node)
 
         val typeParameters = node["type_parameters"]
         val template =
             if (typeParameters != null && !typeParameters.isNull) {
-                val t = newRecordTemplateDeclaration(name, rawNode = node)
+                val t = newRecordTemplate(name, rawNode = node)
                 t.addDeclaration(record)
                 frontend.scopeManager.addDeclaration(t)
                 frontend.scopeManager.enterScope(t)
@@ -471,14 +465,13 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `enum_item` into an [EnumDeclaration]. Each variant becomes an
-     * [EnumConstantDeclaration] entry.
+     * Translates a Rust `enum_item` into an [Enum]. Each variant becomes an [EnumConstant] entry.
      */
-    private fun handleEnumItem(node: TSNode): EnumDeclaration {
+    private fun handleEnumItem(node: TSNode): Enumeration {
         val nameNode = node["name"]
         val name = nameNode.text()
 
-        val enumDecl = newEnumDeclaration(name, rawNode = node)
+        val enumDecl = newEnumeration(name, rawNode = node)
         enumDecl.kind = "enum"
         frontend.scopeManager.addDeclaration(enumDecl)
         frontend.scopeManager.enterScope(enumDecl)
@@ -490,7 +483,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     val variantNameNode = child["name"]
                     val variantName = variantNameNode.text()
 
-                    val entry = newEnumConstantDeclaration(variantName, rawNode = child)
+                    val entry = newEnumConstant(variantName, rawNode = child)
                     entry.type = enumDecl.toType()
                     frontend.scopeManager.addDeclaration(entry)
                     enumDecl.entries += entry
@@ -503,9 +496,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `impl_item` by resolving or creating the target [RecordDeclaration] and
-     * adding all methods and associated functions to it. Trait implementations add the trait to the
-     * record's [RecordDeclaration.implementedInterfaces].
+     * Translates a Rust `impl_item` by resolving or creating the target [Record] and adding all
+     * methods and associated functions to it. Trait implementations add the trait to the record's
+     * [RecordDeclaration.implementedInterfaces].
      */
     private fun handleImplItem(node: TSNode): Declaration {
         val typeNode = node["type"]
@@ -513,14 +506,14 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         val typeNameString = typeNode.text()
         val typeName = Name(typeNameString, null, language.namespaceDelimiter)
-        val impl = newExtensionDeclaration(typeNameString)
+        val impl = newExtension(typeNameString)
 
         // Try to find an existing record scope with the type name
         val recordScope =
             frontend.scopeManager
                 .filterScopes { it.name == typeName && it is RecordScope }
                 .firstOrNull()
-        var record = recordScope?.astNode as? RecordDeclaration
+        var record = recordScope?.astNode as? Record
 
         if (record != null) {
             impl.extendedDeclaration = record
@@ -529,7 +522,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             // (which is allowed). But in this case we need to define an implicit record declaration
             // for the struct, so that we have a record to attach the impl block to. We will get rid
             // of this record declaration later.
-            record = newRecordDeclaration(typeNameString, "struct", rawNode = typeNode).implicit()
+            record = newRecord(typeNameString, "struct", rawNode = typeNode).implicit()
         }
 
         // Enter the record's scope, so methods are added to the RecordScope
@@ -549,14 +542,14 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `mod_item` into a [NamespaceDeclaration]. All declarations inside the
-     * module body become children of the namespace.
+     * Translates a Rust `mod_item` into a [Namespace]. All declarations inside the module body
+     * become children of the namespace.
      */
-    private fun handleModItem(node: TSNode): NamespaceDeclaration {
+    private fun handleModItem(node: TSNode): Namespace {
         val nameNode = node["name"]
         val name = nameNode.text()
 
-        val mod = newNamespaceDeclaration(name, rawNode = node)
+        val mod = newNamespace(name, rawNode = node)
         frontend.scopeManager.addDeclaration(mod)
         frontend.scopeManager.enterScope(mod)
 
@@ -571,7 +564,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
      * Helper method to process the children of a module, impl block, or trait body, handling inner
      * attributes (annotations) and adding named declarations to the given [holder]. This is used
      * for the bodies of `mod_item` and `impl_item`. For impl blocks, declarations are not added to
-     * the holder (ExtensionDeclaration) since they're already added to the record scope.
+     * the holder (Extension) since they're already added to the record scope.
      */
     private fun handleChildrenWithAnnotations(body: TSNode?, holder: DeclarationHolder) {
         if (body != null) {
@@ -589,7 +582,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     }
                     // Only add to holder if it's not an ExtensionDeclaration
                     // (for impl blocks, methods are already in the record scope)
-                    if (holder !is ExtensionDeclaration) {
+                    if (holder !is Extension) {
                         holder.addDeclaration(decl)
                     }
                 }
@@ -597,10 +590,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
     }
 
-    /**
-     * Translates a Rust `type_item` (type alias, e.g., `type Meters = i32`) into a
-     * [TypedefDeclaration].
-     */
+    /** Translates a Rust `type_item` (type alias, e.g., `type Meters = i32`) into a [Typedef]. */
     private fun handleTypeItem(node: TSNode): Declaration {
         val nameNode = node["name"]
         val name = nameNode.text()
@@ -609,25 +599,25 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val targetType = frontend.typeOf(typeNode)
         val aliasType = objectType(name)
 
-        val decl = newTypedefDeclaration(targetType, aliasType, rawNode = node)
+        val decl = newTypedef(targetType, aliasType, rawNode = node)
         frontend.scopeManager.addTypedef(decl)
         return decl
     }
 
     /**
      * Translates a Rust `associated_type` declaration inside a trait (e.g., `type Item;`) into a
-     * [TypedefDeclaration] with an unknown target type.
+     * [Typedef] with an unknown target type.
      */
     private fun handleAssociatedType(node: TSNode): Declaration {
         val nameNode = node["name"]
         val name = nameNode.text()
 
-        // Associated types in traits have no concrete type yet (just a declaration).
+        // Associated types in traits have no concrete type yet (just a ).
         // Model as a TypedefDeclaration with unknown target type.
         val aliasType = objectType(name)
         val targetType = unknownType()
 
-        val decl = newTypedefDeclaration(targetType, aliasType, rawNode = node)
+        val decl = newTypedef(targetType, aliasType, rawNode = node)
 
         // Parse optional trait bounds on the associated type
         val boundsNode = node["bounds"]
@@ -640,7 +630,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `macro_definition` (`macro_rules!`) into a [FunctionDeclaration] with a
+     * Translates a Rust `macro_definition` (`macro_rules!`) into a [Function] with a
      * `"macro_rules"` annotation. The macro body is opaque.
      */
     private fun handleMacroDefinition(node: TSNode): Declaration {
@@ -649,7 +639,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         // Model macro_rules! definitions as FunctionDeclarations.
         // The macro body is opaque (token trees), so we just capture the declaration.
-        val func = newFunctionDeclaration(name, rawNode = node)
+        val func = newFunction(name, rawNode = node)
         val annotation = newAnnotation("macro_rules", rawNode = node)
         func.annotations += annotation
         frontend.scopeManager.addDeclaration(func)
@@ -657,14 +647,14 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `const_item` (e.g., `const MAX: i32 = 100`) into a [VariableDeclaration]
-     * with a `"const"` modifier.
+     * Translates a Rust `const_item` (e.g., `const MAX: i32 = 100`) into a [Variable] with a
+     * `"const"` modifier.
      */
     private fun handleConstItem(node: TSNode): Declaration {
         val nameNode = node["name"]
         val name = nameNode.text()
 
-        val variable = newVariableDeclaration(name, rawNode = node)
+        val variable = newVariable(name, rawNode = node)
         variable.modifiers += "const"
 
         val typeNode = node["type"]
@@ -682,14 +672,14 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `static_item` (e.g., `static mut COUNT: i32 = 0`) into a
-     * [VariableDeclaration] with `"static"` and optionally `"mut"` modifiers.
+     * Translates a Rust `static_item` (e.g., `static mut COUNT: i32 = 0`) into a [Variable] with
+     * `"static"` and optionally `"mut"` modifiers.
      */
     private fun handleStaticItem(node: TSNode): Declaration {
         val nameNode = node["name"]
         val name = nameNode.text()
 
-        val variable = newVariableDeclaration(name, rawNode = node)
+        val variable = newVariable(name, rawNode = node)
         variable.modifiers += "static"
 
         // Check for mut
@@ -714,25 +704,23 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return variable
     }
 
-    /**
-     * Translates a Rust `use_declaration` (e.g., `use std::io::Read`) into an [IncludeDeclaration].
-     */
+    /** Translates a Rust `use_declaration` (e.g., `use std::io::Read`) into an [Include]. */
     private fun handleUseDeclaration(node: TSNode): Declaration {
         // Extract the use path as a string
         val argument = node.getNamedChild(0)
         val path = argument.text()
 
-        val include = newIncludeDeclaration(path, rawNode = node)
+        val include = newInclude(path, rawNode = node)
         frontend.scopeManager.addDeclaration(include)
         return include
     }
 
-    /** Translates a Rust `union_item` into a [RecordDeclaration] with kind `"union"`. */
+    /** Translates a Rust `union_item` into a [Record] with kind `"union"`. */
     private fun handleUnionItem(node: TSNode): Declaration {
         val nameNode = node["name"]
         val name = nameNode.text()
 
-        val record = newRecordDeclaration(name, "union", rawNode = node)
+        val record = newRecord(name, "union", rawNode = node)
         frontend.scopeManager.addDeclaration(record)
         frontend.scopeManager.enterScope(record)
 
@@ -743,12 +731,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     val fieldNameNode = child["name"]
                     val fieldName = fieldNameNode.text()
                     val fieldTypeNode = child["type"]
-                    val field =
-                        newFieldDeclaration(
-                            fieldName,
-                            frontend.typeOf(fieldTypeNode),
-                            rawNode = child,
-                        )
+                    val field = newField(fieldName, frontend.typeOf(fieldTypeNode), rawNode = child)
                     frontend.scopeManager.addDeclaration(field)
                     record.addDeclaration(field)
                 }
@@ -760,8 +743,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `foreign_mod_item` (e.g., `extern "C" { fn foo(); }`) into a
-     * [NamespaceDeclaration] with an extern ABI annotation.
+     * Translates a Rust `foreign_mod_item` (e.g., `extern "C" { fn foo(); }`) into a [Namespace]
+     * with an extern ABI annotation.
      */
     private fun handleForeignModItem(node: TSNode): Declaration {
         // extern "C" { fn foo(); }
@@ -774,7 +757,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        val ns = newNamespaceDeclaration("extern", rawNode = node)
+        val ns = newNamespace("extern", rawNode = node)
         if (abi.isNotEmpty()) {
             ns.annotations += newAnnotation("extern \"$abi\"", rawNode = node)
         }
@@ -796,14 +779,13 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `extern_crate_declaration` (e.g., `extern crate serde`) into an
-     * [IncludeDeclaration].
+     * Translates a Rust `extern_crate_declaration` (e.g., `extern crate serde`) into an [Include].
      */
     private fun handleExternCrateDeclaration(node: TSNode): Declaration {
         val nameNode = node["name"]
         val name = nameNode.text()
 
-        val include = newIncludeDeclaration(name, rawNode = node)
+        val include = newInclude(name, rawNode = node)
         frontend.scopeManager.addDeclaration(include)
         return include
     }
@@ -820,7 +802,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                 break
             }
         }
-        val decl = newVariableDeclaration("", rawNode = node)
+        val decl = newVariable("", rawNode = node)
         decl.annotations += newAnnotation("#![$attrContent]", rawNode = node)
         frontend.scopeManager.addDeclaration(decl)
         return decl
@@ -834,7 +816,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         // Delegate to expression handler and wrap
         val expr = frontend.expressionHandler.handle(node) as? Expression
         if (expr != null) {
-            val decl = newVariableDeclaration("", rawNode = node)
+            val decl = newVariable("", rawNode = node)
             decl.initializer = expr
             return decl
         }

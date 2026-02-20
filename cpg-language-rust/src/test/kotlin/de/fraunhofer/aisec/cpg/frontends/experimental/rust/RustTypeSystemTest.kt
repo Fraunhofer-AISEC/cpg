@@ -48,7 +48,7 @@ class RustTypeSystemTest : BaseTest() {
 
     companion object {
         private val topLevel = Path.of("src", "test", "resources", "rust", "types")
-        private lateinit var tu: TranslationUnitDeclaration
+        private lateinit var tu: TranslationUnit
 
         @JvmStatic
         @BeforeAll

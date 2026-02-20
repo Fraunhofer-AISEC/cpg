@@ -54,7 +54,7 @@ class RustFrontendTest : BaseTest() {
 
         val letX = body.statements.getOrNull(0) as? DeclarationStatement
         assertNotNull(letX)
-        val x = letX.declarations.getOrNull(0) as? VariableDeclaration
+        val x = letX.declarations.getOrNull(0) as? Variable
         assertNotNull(x)
         assertEquals("x", x.name.localName)
 
@@ -109,7 +109,7 @@ class RustFrontendTest : BaseTest() {
         val letA = body.statements.getOrNull(0) as? DeclarationStatement
         assertNotNull(letA)
         assertFalse(letA.declarations.isEmpty(), "Declarations in letA should not be empty")
-        val a = letA.declarations.getOrNull(0) as? VariableDeclaration
+        val a = letA.declarations.getOrNull(0) as? Variable
         assertNotNull(a)
         assertIs<BinaryOperator>(a.initializer)
 
@@ -117,7 +117,7 @@ class RustFrontendTest : BaseTest() {
         val letB = body.statements.getOrNull(1) as? DeclarationStatement
         assertNotNull(letB)
         assertFalse(letB.declarations.isEmpty(), "Declarations in letB should not be empty")
-        val b = letB.declarations.getOrNull(0) as? VariableDeclaration
+        val b = letB.declarations.getOrNull(0) as? Variable
         assertNotNull(b)
         assertIs<UnaryOperator>(b.initializer)
 
@@ -125,7 +125,7 @@ class RustFrontendTest : BaseTest() {
         val letC = body.statements.getOrNull(2) as? DeclarationStatement
         assertNotNull(letC)
         assertFalse(letC.declarations.isEmpty(), "Declarations in letC should not be empty")
-        val c = letC.declarations.getOrNull(0) as? VariableDeclaration
+        val c = letC.declarations.getOrNull(0) as? Variable
         assertNotNull(c)
         assertIs<InitializerListExpression>(c.initializer)
 
@@ -133,7 +133,7 @@ class RustFrontendTest : BaseTest() {
         val letD = body.statements.getOrNull(3) as? DeclarationStatement
         assertNotNull(letD)
         assertFalse(letD.declarations.isEmpty(), "Declarations in letD should not be empty")
-        val d = letD.declarations.getOrNull(0) as? VariableDeclaration
+        val d = letD.declarations.getOrNull(0) as? Variable
         assertNotNull(d)
         assertIs<InitializerListExpression>(d.initializer)
 
@@ -230,7 +230,7 @@ class RustFrontendTest : BaseTest() {
         assertEquals(2, pointType.methods.size)
 
         val genericId =
-            tu.declarations.filterIsInstance<FunctionTemplateDeclaration>().firstOrNull {
+            tu.declarations.filterIsInstance<FunctionTemplate>().firstOrNull {
                 it.name.localName == "generic_id"
             }
         assertNotNull(genericId, "Should find a FunctionTemplateDeclaration named generic_id")

@@ -731,7 +731,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val lambda = newLambdaExpression(rawNode = node)
 
         // Create an anonymous function for the closure body
-        val func = newFunctionDeclaration("", rawNode = node)
+        val func = newFunction("", rawNode = node)
         frontend.scopeManager.enterScope(func)
 
         // Parse closure parameters
@@ -742,14 +742,13 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                     val pattern = child["pattern"]
                     val pName = pattern.text()
                     val typeNode = child["type"]
-                    val param =
-                        newParameterDeclaration(pName, frontend.typeOf(typeNode), rawNode = child)
+                    val param = newParameter(pName, frontend.typeOf(typeNode), rawNode = child)
                     frontend.scopeManager.addDeclaration(param)
                     func.parameters += param
                 } else if (child.isNamed && child.type == "identifier") {
                     // Simple closure param without type: |x| x + 1
                     val pName = child.text()
-                    val param = newParameterDeclaration(pName, unknownType(), rawNode = child)
+                    val param = newParameter(pName, unknownType(), rawNode = child)
                     frontend.scopeManager.addDeclaration(param)
                     func.parameters += param
                 }

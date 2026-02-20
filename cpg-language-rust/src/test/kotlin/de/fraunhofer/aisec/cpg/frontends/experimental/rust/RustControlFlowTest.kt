@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.experimental.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.BaseTest
@@ -65,13 +65,13 @@ class RustControlFlowTest : BaseTest() {
         // Statement 0: Binding for x
         val declX = thenBlock.statements.getOrNull(0) as? DeclarationStatement
         assertNotNull(declX)
-        val xVar = declX.declarations.getOrNull(0) as? VariableDeclaration
+        val xVar = declX.declarations.getOrNull(0) as? Variable
         assertEquals("x", xVar?.name?.localName)
 
         // Statement 1: let y = x
         val declStmt = thenBlock.statements.getOrNull(1) as? DeclarationStatement
         assertNotNull(declStmt)
-        val y = declStmt.declarations.getOrNull(0) as? VariableDeclaration
+        val y = declStmt.declarations.getOrNull(0) as? Variable
         assertEquals("y", y?.name?.localName)
 
         val init = y?.initializer
@@ -101,13 +101,13 @@ class RustControlFlowTest : BaseTest() {
         // Statement 0: Binding for x
         val declX = loopBody.statements.getOrNull(0) as? DeclarationStatement
         assertNotNull(declX)
-        val xVar = declX.declarations.getOrNull(0) as? VariableDeclaration
+        val xVar = declX.declarations.getOrNull(0) as? Variable
         assertEquals("x", xVar?.name?.localName)
 
         // Statement 1: let y = x
         val declStmtLocal = loopBody.statements.getOrNull(1) as? DeclarationStatement
         assertNotNull(declStmtLocal)
-        val y = declStmtLocal.declarations.getOrNull(0) as? VariableDeclaration
+        val y = declStmtLocal.declarations.getOrNull(0) as? Variable
         assertEquals("y", y?.name?.localName)
 
         val init = y?.initializer
