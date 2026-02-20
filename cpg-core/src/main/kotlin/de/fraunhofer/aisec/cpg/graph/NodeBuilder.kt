@@ -387,7 +387,7 @@ fun <T : AstNode, AstNodeType> T.codeAndLocationFromChildren(
  * This also performs some checks, e.g., if the config disabled setting the code.
  */
 context(contextProvider: ContextProvider)
-private fun <AstNode> Node.setCodeAndLocation(
+fun <AstNode> Node.setCodeAndLocation(
     provider: CodeAndLocationProvider<AstNode>,
     rawNode: AstNode,
 ) {

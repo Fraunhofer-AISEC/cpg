@@ -53,6 +53,10 @@ val enableINIFrontend: Boolean by extra {
     val enableINIFrontend: String? by settings
     enableINIFrontend.toBoolean()
 }
+val enableRustFrontend: Boolean by extra {
+    val enableRustFrontend: String? by settings
+    enableRustFrontend.toBoolean()
+}
 val enableMCPModule: Boolean by extra {
     val enableMCPModule: String? by settings
     enableMCPModule.toBoolean()
@@ -67,6 +71,7 @@ if (enableTypeScriptFrontend) include(":cpg-language-typescript")
 if (enableRubyFrontend) include(":cpg-language-ruby")
 if (enableJVMFrontend) include(":cpg-language-jvm")
 if (enableINIFrontend) include(":cpg-language-ini")
+if (enableRustFrontend) include(":cpg-language-rust")
 if (enableMCPModule) include(":cpg-mcp")
 
 

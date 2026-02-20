@@ -24,3 +24,5 @@ gradle.properties
 LibrariesTest.kt
 findings.json
 
+conductor/
+docs/plans/

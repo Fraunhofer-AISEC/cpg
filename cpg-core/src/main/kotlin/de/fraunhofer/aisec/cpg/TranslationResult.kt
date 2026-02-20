@@ -198,7 +198,7 @@ class TranslationResult(
      * Users should not access this directly, but rather use the [markDirty] and [markClean] methods
      * or the [Node.markDirty] and [Node.markClean] extension function.
      */
-    @DoNotPersist val dirtyNodes = ConcurrentHashMap<Node, MutableList<KClass<out Pass<*>>>>()
+    @DoNotPersist val dirtyNodes = IdentityHashMap<Node, MutableList<KClass<out Pass<*>>>>()
 
     /**
      * Marks a node as dirty for a specific pass. This is used to indicate that the node needs to be
