@@ -41,15 +41,15 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration of a local variable. */
-open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
+open class Variable : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
 
     /**
-     * We need a way to store the templateParameters that a [VariableDeclaration] might have before
-     * the [ConstructExpression] is created.
+     * We need a way to store the templateParameters that a [Variable] might have before the
+     * [ConstructExpression] is created.
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
     var templateParameterEdges = astEdgesOf<AstNode>()
-    var templateParameters by unwrapping(VariableDeclaration::templateParameterEdges)
+    var templateParameters by unwrapping(Variable::templateParameterEdges)
 
     /** Determines if this is a global variable. */
     val isGlobal: Boolean
@@ -78,7 +78,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
             }
         )
     /** The (optional) initializer of the declaration. */
-    override var initializer by unwrapping(VariableDeclaration::initializerEdge)
+    override var initializer by unwrapping(Variable::initializerEdge)
 
     fun <T> getInitializerAs(clazz: Class<T>): T? {
         return clazz.cast(initializer)
@@ -95,7 +95,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
 
     override fun typeChanged(newType: Type, src: HasType) {
         // Only accept type changes from our initializer; or if the source is a tuple
-        if (src != initializer && src !is TupleDeclaration) {
+        if (src != initializer && src !is Tuple) {
             return
         }
 
@@ -104,7 +104,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
         if (this.type is AutoType) {
             // If the source is a tuple, we need to check, if we are really part of the source tuple
             // and if yes, on which position
-            if (src is TupleDeclaration && newType is TupleType) {
+            if (src is Tuple && newType is TupleType) {
                 // We can then derive our appropriate type out of the tuple type based on the
                 // position in the tuple
                 val idx = src.elements.indexOf(this)
@@ -116,7 +116,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
                 type = newType
             }
         } else {
-            if (src !is TupleDeclaration) {
+            if (src !is Tuple) {
                 // If we are not in "auto" mode, we are at least interested in what the
                 // initializer's type is, to see
                 // whether we can fill our assigned types with that
@@ -136,7 +136,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
         if (this === other) {
             return true
         }
-        return if (other !is VariableDeclaration) {
+        return if (other !is Variable) {
             false
         } else super.equals(other) && initializer == other.initializer
     }

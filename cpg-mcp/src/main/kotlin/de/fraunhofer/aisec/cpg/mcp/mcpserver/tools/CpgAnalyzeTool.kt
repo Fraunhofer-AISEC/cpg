@@ -58,7 +58,7 @@ import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.graph.calls
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
@@ -289,7 +289,7 @@ fun Server.addListPasses() {
                                     EOGStarterPass::class ->
                                         EOGStarterHolder::class.qualifiedName.toString()
                                     TranslationUnitPass::class ->
-                                        TranslationUnitDeclaration::class.qualifiedName.toString()
+                                        TranslationUnit::class.qualifiedName.toString()
                                     TranslationResultPass::class ->
                                         TranslationResult::class.qualifiedName.toString()
                                     ComponentPass::class ->
@@ -525,9 +525,8 @@ inline fun <reified T : Node> runPassForNode(
  *   itself if it is a [TranslationResult].
  * - For [ComponentPass], it checks if the node is a [Component] or searches for the nearest
  *   [Component] parent or all children that are [Component]s.
- * - For [TranslationUnitPass], it checks if the node is a [TranslationUnitDeclaration] or searches
- *   for the nearest [TranslationUnitDeclaration] parent or all children that are
- *   [TranslationUnitDeclaration]s.
+ * - For [TranslationUnitPass], it checks if the node is a [TranslationUnit] or searches for the
+ *   nearest [TranslationUnit] parent or all children that are [TranslationUnit]s.
  * - For [EOGStarterPass], it checks if the node is an [EOGStarterHolder] or searches for the
  *   nearest [EOGStarterHolder] parent with no previous EOG or all children that are
  *   [EOGStarterHolder]s with no previous EOG.
@@ -554,7 +553,7 @@ fun runPassForNode(
             runPassForNode<Component>(node, prototype::class, ctx)
         }
         is TranslationUnitPass -> {
-            runPassForNode<TranslationUnitDeclaration>(node, prototype::class, ctx)
+            runPassForNode<TranslationUnit>(node, prototype::class, ctx)
         }
         is EOGStarterPass -> {
             val eogStarters = listOfNotNull((node as? EOGStarterHolder) as? Node).toMutableList()

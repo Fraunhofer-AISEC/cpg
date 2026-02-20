@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -46,7 +46,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val functions = tu.declarations.filterIsInstance<FunctionDeclaration>()
+        val functions = tu.declarations.filterIsInstance<Function>()
         assertNotNull(functions)
 
         assertEquals(2, functions.size)
@@ -81,8 +81,7 @@ class TypeScriptLanguageFrontendTest {
 
         // actually, our frontend returns 3 functions (1 inferred), because our function inference
         // cannot handle non-typed languages very well
-        val functions =
-            tu.declarations.filterIsInstance<FunctionDeclaration>().filter { !it.isInferred }
+        val functions = tu.declarations.filterIsInstance<Function>().filter { !it.isInferred }
         assertNotNull(functions)
 
         assertEquals(2, functions.size)

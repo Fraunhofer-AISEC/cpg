@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.newConstructExpression
 import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
@@ -57,7 +57,7 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
     private fun handleConstructorInitializer(ctx: CPPASTConstructorInitializer): Expression {
         val constructExpression = newConstructExpression(rawNode = ctx)
         constructExpression.type =
-            (frontend.declaratorHandler.lastNode as? VariableDeclaration)?.type ?: unknownType()
+            (frontend.declaratorHandler.lastNode as? Variable)?.type ?: unknownType()
 
         for ((i, argument) in ctx.arguments.withIndex()) {
             val arg = frontend.expressionHandler.handle(argument)

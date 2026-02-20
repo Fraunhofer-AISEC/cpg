@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -263,7 +263,7 @@ class PythonLanguage :
     ): CastResult {
         // Parameters in python do not have a static type. Therefore, we need to match for all types
         // when trying to cast one type to the type of a function parameter at *runtime*
-        if (targetHint is ParameterDeclaration) {
+        if (targetHint is Parameter) {
             // However, if we find type hints, we at least want to issue a warning if the types
             // would not match
             if (hint != null && targetType !is UnknownType && targetType !is AutoType) {
@@ -310,15 +310,15 @@ class PythonLanguage :
     companion object {
         /**
          * This is a "modifier" to differentiate parameters in functions that are "positional" only.
-         * This information will be stored in [ParameterDeclaration.modifiers] so that we can use is
-         * later in call resolving.
+         * This information will be stored in [Parameter.modifiers] so that we can use is later in
+         * call resolving.
          */
         const val MODIFIER_POSITIONAL_ONLY_ARGUMENT = "posonlyarg"
 
         /**
          * This is a "modifier" to differentiate parameters in functions that are "keyword" only.
-         * This information will be stored in [ParameterDeclaration.modifiers] so that we can use is
-         * later in call resolving.
+         * This information will be stored in [Parameter.modifiers] so that we can use is later in
+         * call resolving.
          */
         const val MODIFIER_KEYWORD_ONLY_ARGUMENT = "kwonlyarg"
 

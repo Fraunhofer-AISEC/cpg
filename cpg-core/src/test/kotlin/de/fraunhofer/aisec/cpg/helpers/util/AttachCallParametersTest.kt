@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.helpers.util
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.newCallExpression
-import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.newFunction
 import de.fraunhofer.aisec.cpg.graph.newLiteral
-import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.newParameter
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.Util.attachCallParameters
@@ -373,44 +373,40 @@ class AttachCallParametersTest {
     }
 
     /**
-     * Returns a FunctionDeclaration with the following parameters:
+     * Returns a Function with the following parameters:
      * - 'a': A required positional parameter.
      * - 'b': An optional parameter with a default value of true.
      * - 'kwargs': A variadic parameter that captures additional keyword arguments.
      */
-    private fun getFuncWithDefaultAndVariadicParameters(): FunctionDeclaration {
+    private fun getFuncWithDefaultAndVariadicParameters(): Function {
         with(frontend) {
-            val func = newFunctionDeclaration("kw_args_and_default")
+            val func = newFunction("kw_args_and_default")
             func.parameters =
                 mutableListOf(
-                    newParameterDeclaration("a", primitiveType("string")),
-                    newParameterDeclaration("b", primitiveType("boolean")).apply {
+                    newParameter("a", primitiveType("string")),
+                    newParameter("b", primitiveType("boolean")).apply {
                         default = newLiteral(true, primitiveType("boolean"))
                     },
-                    newParameterDeclaration("**kwargs").apply { isVariadic = true },
+                    newParameter("**kwargs").apply { isVariadic = true },
                 )
             return func
         }
     }
 
     /**
-     * Returns a FunctionDeclaration with the following parameters:
+     * Returns a Function with the following parameters:
      * - 'a': A required positional parameter.
      * - 'args': A variadic parameter that captures additional positional arguments.
      * - 'kwargs': A variadic parameter that captures additional keyword arguments.
      */
-    private fun getFuncWithArgsAndKwargs(): FunctionDeclaration {
+    private fun getFuncWithArgsAndKwargs(): Function {
         with(frontend) {
-            val func = newFunctionDeclaration("variadic_params")
+            val func = newFunction("variadic_params")
             func.parameters =
                 mutableListOf(
-                    newParameterDeclaration("a", primitiveType("string")),
-                    newParameterDeclaration("*args", primitiveType("string")).apply {
-                        isVariadic = true
-                    },
-                    newParameterDeclaration("**kwargs", primitiveType("string")).apply {
-                        isVariadic = true
-                    },
+                    newParameter("a", primitiveType("string")),
+                    newParameter("*args", primitiveType("string")).apply { isVariadic = true },
+                    newParameter("**kwargs", primitiveType("string")).apply { isVariadic = true },
                 )
             return func
         }

@@ -183,7 +183,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (reachableThrowNodes.isNotEmpty()) {
             val catchParameter =
                 catch.parameter
-                    ?: newVariableDeclaration(
+                    ?: newVariable(
                             "e_${catch.name}",
                             UnknownType.getUnknownType(catch.language),
                             implicitInitializerAllowed = true,

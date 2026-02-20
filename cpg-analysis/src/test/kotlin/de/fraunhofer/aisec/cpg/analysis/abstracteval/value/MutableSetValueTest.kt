@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.IntervalLattice
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -53,7 +53,7 @@ class MutableSetValueTest {
                 NewIntervalStateElement(),
             )
         val correctDeclaration =
-            VariableDeclaration().apply {
+            Variable().apply {
                 this.name = name
                 this.initializer =
                     MemberCallExpression().apply {
@@ -77,14 +77,14 @@ class MutableSetValueTest {
                 NewIntervalStateElement(),
             )
         val existingDecl =
-            VariableDeclaration().apply {
+            Variable().apply {
                 this.name = Name("existingDecl")
                 this.type = ListType("list", elementType = ObjectType(), language = TestLanguage())
             }
         lattice.pushToDeclarationState(startState, existingDecl, LatticeInterval.Bounded(2, 3))
 
         val correctDeclaration =
-            VariableDeclaration().apply {
+            Variable().apply {
                 this.name = name
                 this.initializer =
                     MemberCallExpression().apply {
@@ -122,14 +122,14 @@ class MutableSetValueTest {
                 NewIntervalStateElement(),
             )
         val existingDecl =
-            VariableDeclaration().apply {
+            Variable().apply {
                 this.name = Name("existingDecl")
                 this.type = SetType("set", elementType = ObjectType(), language = TestLanguage())
             }
         lattice.pushToDeclarationState(startState, existingDecl, LatticeInterval.Bounded(2, 3))
 
         val correctDeclaration =
-            VariableDeclaration().apply {
+            Variable().apply {
                 this.name = name
                 this.initializer =
                     MemberCallExpression().apply {
@@ -166,7 +166,7 @@ class MutableSetValueTest {
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
-        val noInitializerDeclaration = VariableDeclaration().apply { this.name = name }
+        val noInitializerDeclaration = Variable().apply { this.name = name }
 
         assertEquals(
             LatticeInterval.BOTTOM,
@@ -182,7 +182,7 @@ class MutableSetValueTest {
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
-        val decl = VariableDeclaration().apply { this.name = name }
+        val decl = Variable().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(1, 1))
 
         val add =
@@ -213,7 +213,7 @@ class MutableSetValueTest {
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
-        val decl = VariableDeclaration().apply { this.name = name }
+        val decl = Variable().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(1, 1))
 
         val addAll =
@@ -245,7 +245,7 @@ class MutableSetValueTest {
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
-        val decl = VariableDeclaration().apply { this.name = name }
+        val decl = Variable().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(3, 3))
 
         val clear =
@@ -275,7 +275,7 @@ class MutableSetValueTest {
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
-        val decl = VariableDeclaration().apply { this.name = name }
+        val decl = Variable().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(3, 3))
 
         val removeObject =
@@ -306,7 +306,7 @@ class MutableSetValueTest {
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
-        val decl = VariableDeclaration().apply { this.name = name }
+        val decl = Variable().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(3, 3))
 
         val removeAll =

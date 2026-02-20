@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.newBlock
-import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.newFunction
 import de.fraunhofer.aisec.cpg.graph.newLookupScopeStatement
-import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.newVariable
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -39,8 +39,8 @@ class ScopeTest {
     fun testLookup() {
         with(TestLanguageFrontend()) {
             // some mock variable declarations, global and local
-            val globalA = newVariableDeclaration("a")
-            val localA = newVariableDeclaration("a")
+            val globalA = newVariable("a")
+            val localA = newVariable("a")
 
             // two scopes, global and local
             val globalScope = GlobalScope()
@@ -68,7 +68,7 @@ class ScopeTest {
     @Test
     fun testDeclaringScope() {
         with(TestLanguageFrontend()) {
-            val func = newFunctionDeclaration("foo")
+            val func = newFunction("foo")
             scopeManager.enterScope(func)
 
             scopeManager.leaveScope(func)

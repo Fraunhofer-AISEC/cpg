@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
@@ -600,9 +600,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val body = main.body as? Block
         assertNotNull(body)
 
-        val b =
-            (body.statements.first() as? DeclarationStatement)?.singleDeclaration
-                as? VariableDeclaration
+        val b = (body.statements.first() as? DeclarationStatement)?.singleDeclaration as? Variable
 
         assertNotNull(b)
         assertLocalName("b", b)

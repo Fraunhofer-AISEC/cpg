@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python.expressionHandler
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -47,7 +47,7 @@ import org.junit.jupiter.api.TestInstance
 class FormattedValueHandlerTest {
 
     private lateinit var topLevel: Path
-    private lateinit var result: TranslationUnitDeclaration
+    private lateinit var result: TranslationUnit
 
     @BeforeAll
     fun setup() {

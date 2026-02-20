@@ -37,8 +37,8 @@ import kotlin.collections.MutableMap
 
 /**
  * Represents a possible option source for a configuration option. For example, when loading an INI
- * file with our INI file frontend, each key-value pair is presented as a [FieldDeclaration]. This
- * field declaration would be the source to the configuration option.
+ * file with our INI file frontend, each key-value pair is presented as a [Field]. This field
+ * declaration would be the source to the configuration option.
  */
 public open class ConfigurationOptionSource(
     dataLocation: DataLocation?,

@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.plus
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
@@ -42,7 +42,7 @@ class ExpressionBuilderTest {
         with(TestLanguageFrontend()) {
             val node1 = newLiteral(1)
             val node2 = newReference("node2")
-            val granularity = FieldDataflowGranularity(FieldDeclaration())
+            val granularity = FieldDataflowGranularity(Field())
             val callingContextIn = CallingContextIn(CallExpression())
             node1.prevDFGEdges.addContextSensitive(node2, granularity, callingContextIn)
 
@@ -61,7 +61,7 @@ class ExpressionBuilderTest {
         with(TestLanguageFrontend()) {
             val node1 = newLiteral(1)
             val node2 = newReference("node2")
-            val granularity = FieldDataflowGranularity(FieldDeclaration())
+            val granularity = FieldDataflowGranularity(Field())
             val callingContextIn = CallingContextIn(CallExpression())
             node1.nextDFGEdges.addContextSensitive(node2, granularity, callingContextIn)
 

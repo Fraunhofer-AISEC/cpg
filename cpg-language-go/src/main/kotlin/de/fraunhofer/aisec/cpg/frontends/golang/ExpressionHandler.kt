@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Ast.BasicLit.Kind.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -462,8 +462,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
     fun handleFuncLit(funcLit: GoStandardLibrary.Ast.FuncLit): LambdaExpression {
         val lambda = newLambdaExpression(rawNode = funcLit)
         // Parse the expression as a function declaration with a little trick
-        lambda.function =
-            frontend.declarationHandler.handle(funcLit.toDecl()) as? FunctionDeclaration
+        lambda.function = frontend.declarationHandler.handle(funcLit.toDecl()) as? Function
 
         return lambda
     }

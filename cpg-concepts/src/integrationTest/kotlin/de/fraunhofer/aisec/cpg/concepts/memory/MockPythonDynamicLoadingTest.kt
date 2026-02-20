@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DynamicLoading
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newDynamicLoading
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadSymbol
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -53,7 +53,7 @@ import kotlin.test.assertNotNull
 @DependsOn(SymbolResolver::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class)
 class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
-    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+    override fun handleNode(node: Node, tu: TranslationUnit) {
         when {
             node is CallExpression && node.name.toString() == "loader.Loader" -> {
                 // Create a new DynamicLoading concept
@@ -80,7 +80,7 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
                     node.prevDFG += construct
 
                     val loadSymbol =
-                        newLoadSymbol<ConstructorDeclaration>(
+                        newLoadSymbol<Constructor>(
                             node,
                             dynamicLoading,
                             what = null,

@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.IntervalLattice
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.array
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -51,7 +51,7 @@ class ArrayValueTest {
             )
 
         val correctDeclaration =
-            VariableDeclaration().apply {
+            Variable().apply {
                 this.name = name
                 this.type = IntegerType(language = TestLanguage()).array()
                 this.initializer =
@@ -76,7 +76,7 @@ class ArrayValueTest {
             )
 
         val decl =
-            VariableDeclaration().apply {
+            Variable().apply {
                 this.name = name
                 this.type = IntegerType(language = TestLanguage()).array()
                 this.initializer =
@@ -105,7 +105,7 @@ class ArrayValueTest {
                 NewIntervalStateElement(),
             )
         val noInitializerDeclaration =
-            VariableDeclaration().apply {
+            Variable().apply {
                 this.name = name
                 this.type = IntegerType(language = TestLanguage()).array()
             }

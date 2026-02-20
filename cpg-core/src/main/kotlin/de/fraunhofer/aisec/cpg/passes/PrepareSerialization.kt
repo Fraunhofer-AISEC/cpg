@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
@@ -51,7 +51,7 @@ class PrepareSerialization(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         // nothing to do
     }
 
-    override fun accept(tr: TranslationUnitDeclaration) {
+    override fun accept(tr: TranslationUnit) {
         tr.allChildren<AstNode>().map { node ->
             // Add explicit AST edge
             node.astChildren = SubgraphWalker.getAstChildren(node)

@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -69,9 +69,9 @@ abstract class Statement : AstNode(), DeclarationHolder {
     override fun hashCode() = Objects.hash(super.hashCode(), locals)
 
     override fun addDeclaration(declaration: Declaration) {
-        if (declaration is VariableDeclaration) {
+        if (declaration is Variable) {
             addIfNotContains(localEdges, declaration)
-        } else if (declaration is FunctionDeclaration) {
+        } else if (declaration is Function) {
             addIfNotContains(localEdges, declaration)
         }
     }

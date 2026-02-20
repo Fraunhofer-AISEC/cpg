@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
@@ -102,7 +102,7 @@ class FluentTest {
         assertNotNull(declarationStatement)
         assertTrue(declarationStatement.scope is LocalScope)
 
-        val variable = declarationStatement.singleDeclaration as? VariableDeclaration
+        val variable = declarationStatement.singleDeclaration as? Variable
         assertNotNull(variable)
         assertTrue(variable.scope is LocalScope)
         assertLocalName("a", variable)

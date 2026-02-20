@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.fqn
@@ -40,9 +40,9 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
- * Represents access to a member of a [RecordDeclaration], such as `obj.property`. Another common
- * use-case is access of a member function (method) as part of the [MemberCallExpression.callee]
- * property of a [MemberCallExpression].
+ * Represents access to a member of a [Record], such as `obj.property`. Another common use-case is
+ * access of a member function (method) as part of the [MemberCallExpression.callee] property of a
+ * [MemberCallExpression].
  */
 class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, HasBase {
     @Relationship("BASE")

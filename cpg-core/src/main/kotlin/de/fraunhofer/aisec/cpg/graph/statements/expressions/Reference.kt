@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.HasAliases
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -108,7 +108,7 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
      * @return the declaration cast to the expected class, or null if the class is not assignable
      *   </T>
      */
-    fun <T : VariableDeclaration?> getRefersToAs(clazz: Class<T>): T? {
+    fun <T : Variable?> getRefersToAs(clazz: Class<T>): T? {
         return if (refersTo?.javaClass?.let { clazz.isAssignableFrom(it) } == true)
             clazz.cast(refersTo)
         else null

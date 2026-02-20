@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
@@ -73,8 +73,8 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
      * This function checks for each [AssignExpression], [ComprehensionExpression] and
      * [ForEachStatement] whether there is already a matching variable or not. New variables can be
      * one of:
-     * - [FieldDeclaration] if we are currently in a record
-     * - [VariableDeclaration] otherwise
+     * - [Field] if we are currently in a record
+     * - [Variable] otherwise
      */
     private fun handle(node: Node?) {
         when (node) {
@@ -88,10 +88,9 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     /**
-     * This function will create a new dynamic [VariableDeclaration] if there is a write access to
-     * the [ref].
+     * This function will create a new dynamic [Variable] if there is a write access to the [ref].
      */
-    private fun handleWriteToReference(ref: Reference): VariableDeclaration? {
+    private fun handleWriteToReference(ref: Reference): Variable? {
         if (ref.access != AccessValues.WRITE) {
             return null
         }
@@ -133,14 +132,14 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         if (symbol.isNotEmpty()) return null
 
         // First, check if we need to create a field
-        var decl: VariableDeclaration? =
+        var decl: Variable? =
             when {
                 // Check, whether we are referring to a "self.X", which would create a field
                 scopeManager.isInRecord && scopeManager.isInFunction && ref.refersToReceiver -> {
                     // We need to temporarily jump into the scope of the current record to
                     // add the field. These are instance attributes
                     scopeManager.withScope(scopeManager.firstScopeIsInstanceOrNull<RecordScope>()) {
-                        newFieldDeclaration(ref.name)
+                        newField(ref.name)
                     }
                 }
                 scopeManager.isInRecord && scopeManager.isInFunction && ref is MemberExpression -> {
@@ -151,7 +150,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                 scopeManager.isInRecord && !scopeManager.isInFunction -> {
                     // We end up here for fields declared directly in the class body. These are
                     // class attributes; more or less static fields.
-                    newFieldDeclaration(scopeManager.currentNamespace.fqn(ref.name.localName))
+                    newField(scopeManager.currentNamespace.fqn(ref.name.localName))
                 }
                 else -> {
                     null
@@ -163,9 +162,9 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         if (decl == null) {
             decl =
                 if (targetScope != null) {
-                    scopeManager.withScope(targetScope) { newVariableDeclaration(ref.name) }
+                    scopeManager.withScope(targetScope) { newVariable(ref.name) }
                 } else {
-                    newVariableDeclaration(ref.name)
+                    newVariable(ref.name)
                 }
         }
 
@@ -175,7 +174,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
         log.debug(
             "Creating dynamic {} {} in {}",
-            if (decl is FieldDeclaration) {
+            if (decl is Field) {
                 "field"
             } else {
                 "variable"
@@ -188,7 +187,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         // creation time
         scopeManager.withScope(decl.scope) {
             scopeManager.addDeclaration(decl)
-            if (decl is FieldDeclaration) {
+            if (decl is Field) {
                 (it?.astNode as? DeclarationHolder)?.addDeclaration(decl)
             }
             decl
@@ -204,7 +203,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         }
 
     /**
-     * Generates a new [VariableDeclaration] for [Reference] (and those included in a
+     * Generates a new [Variable] for [Reference] (and those included in a
      * [InitializerListExpression]) in the [ComprehensionExpression.variable].
      */
     private fun handleComprehensionExpression(comprehensionExpression: ComprehensionExpression) {
@@ -212,7 +211,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
             is Reference -> {
                 variable.access = AccessValues.WRITE
                 handleWriteToReference(variable)?.let {
-                    if (it !is FieldDeclaration) {
+                    if (it !is Field) {
                         comprehensionExpression.addDeclaration(it)
                     }
                 }
@@ -222,7 +221,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                     (it as? Reference)?.let { ref ->
                         ref.access = AccessValues.WRITE
                         handleWriteToReference(ref)?.let {
-                            if (it !is FieldDeclaration) {
+                            if (it !is Field) {
                                 comprehensionExpression.addDeclaration(it)
                             }
                         }
@@ -233,8 +232,8 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     /**
-     * Generates a new [VariableDeclaration] if [target] is a [Reference] and there is no existing
-     * declaration yet.
+     * Generates a new [Variable] if [target] is a [Reference] and there is no existing declaration
+     * yet.
      */
     private fun handleAssignmentToTarget(
         assignExpression: AssignExpression,
@@ -254,7 +253,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                     .findValue(target)
                     ?.registerTypeObserver(InitializerTypePropagation(handled))
 
-                if (handled !is FieldDeclaration) {
+                if (handled !is Field) {
                     // Add it to our assign expression, so that we can find it in the AST
                     assignExpression.declarations += handled
                 }
@@ -294,7 +293,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         when (val forVar = node.variable) {
             is Reference -> {
                 val handled = handleWriteToReference(forVar)
-                if (handled != null && handled !is FieldDeclaration) {
+                if (handled != null && handled !is Field) {
                     handled.let { node.addDeclaration(it) }
                 }
             }

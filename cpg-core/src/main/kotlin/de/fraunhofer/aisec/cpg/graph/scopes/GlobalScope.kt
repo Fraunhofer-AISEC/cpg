@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.nodes
 
 /**
@@ -42,11 +42,11 @@ class GlobalScope() : Scope(null) {
 
     /**
      * Because the way we currently handle parallel parsing in [TranslationManager.parseParallel],
-     * we end up with multiple [GlobalScope] objects, one for each [TranslationUnitDeclaration]. In
-     * the end, we need to merge all these different scopes into one final global scope. To be
-     * somewhat consistent with the behaviour of [TranslationManager.parseSequentially], we assign
-     * the *last* translation unit declaration we see to the AST node of the [GlobalScope]. This is
-     * not completely ideal, but the best we can do for now.
+     * we end up with multiple [GlobalScope] objects, one for each [TranslationUnit]. In the end, we
+     * need to merge all these different scopes into one final global scope. To be somewhat
+     * consistent with the behaviour of [TranslationManager.parseSequentially], we assign the *last*
+     * translation unit declaration we see to the AST node of the [GlobalScope]. This is not
+     * completely ideal, but the best we can do for now.
      */
     fun mergeFrom(others: Collection<GlobalScope>) {
         for (other in others) {
