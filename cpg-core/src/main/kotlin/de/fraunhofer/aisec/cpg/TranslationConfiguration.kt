@@ -265,7 +265,6 @@ private constructor(
         private var disableCleanup = false
         private var useUnityBuild = false
         private var useParallelFrontends = false
-        private var useParallelPasses = false
         private var inferenceConfiguration = InferenceConfiguration.Builder().build()
         private var compilationDatabase: CompilationDatabase? = null
         private var matchCommentsToNodes = false
@@ -717,11 +716,6 @@ private constructor(
          */
         fun useParallelFrontends(b: Boolean): Builder {
             useParallelFrontends = b
-            return this
-        }
-
-        fun useParallelPasses(b: Boolean): Builder {
-            useParallelPasses = b
             return this
         }
 
