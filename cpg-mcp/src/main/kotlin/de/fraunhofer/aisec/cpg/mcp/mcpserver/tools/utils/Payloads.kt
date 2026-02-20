@@ -95,8 +95,6 @@ data class ConceptAssignment(
     val endLine: Int? = null,
 )
 
-@Serializable data class ConceptAssignmentResponse(val items: List<ConceptAssignment>)
-
 /**
  * This class represents the payload for a CPG data flow analysis request, containing the source and
  * target concept types.
@@ -106,12 +104,6 @@ data class CpgDataflowPayload(
     @Description("Source concept type (e.g., 'ReadData', 'Data', 'Authentication')")
     val from: String,
     @Description("Target concept type (e.g., 'HttpRequest', 'CallExpression')") val to: String,
-)
-
-@Serializable
-data class CpgLlmAnalyzePayload(
-    @Description("A special description of what to take care of while analyzing the target")
-    val description: String? = null
 )
 
 /**

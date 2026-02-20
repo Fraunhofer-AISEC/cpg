@@ -33,11 +33,11 @@ import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 
 fun configureServer(
     configure: Server.() -> Server = {
+        // TOOLS
         this.addCpgTranslate()
         this.addListPasses()
         this.addRunPass()
         this.addCpgAnalyzeTool()
-        this.addCpgLlmAnalyzeTool()
         this.addCpgApplyConceptsTool()
         this.addCpgDataflowTool()
         this.listFunctions()
@@ -51,6 +51,8 @@ fun configureServer(
         this.listConceptsAndOperations()
         this.getNode()
         this.addDfgBackwardTool()
+        // PROMPTS
+        this.addSuggestConceptsPrompt()
         this
     }
 ): Server {
