@@ -62,8 +62,8 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         walker.registerHandler { handleNode(it) }
         walker.iterate(component)
 
-        // Hacky chackykc hacky
-        typeManager.lookAlsoAtThis.forEach { handleType(it) }
+        // Hacky hacky hacky
+        typeManager.lookAlsoAtThis.values.forEach { it.values.forEach { handleType(it) } }
     }
 
     /**
