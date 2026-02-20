@@ -34,6 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
+import java.io.File
+import java.util.zip.ZipFile
 import kotlin.reflect.KClass
 
 open class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctionOverloading {
@@ -84,5 +86,28 @@ open class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctio
         }
 
         return super.bestViableReferenceCandidate(ref)
+    }
+
+    companion object {
+        /**
+         * Determines if the given file is an APK file by checking if it is a valid ZIP file and
+         * contains either "AndroidManifest.xml" or "classes.dex".
+         */
+        fun File.isApk(): Boolean {
+            if (!this.isFile) {
+                return false
+            }
+            if (this.endsWith(".apk")) {
+                return true
+            }
+            return try {
+                ZipFile(this).use { zip ->
+                    zip.getEntry("AndroidManifest.xml") != null ||
+                        zip.getEntry("classes.dex") != null
+                }
+            } catch (_: Exception) {
+                false
+            }
+        }
     }
 }
