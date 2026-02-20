@@ -30,9 +30,9 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
@@ -212,11 +212,11 @@ fun <T> QueryTree<T>.toQueryTreeNode(): QueryTreeNode {
 
 fun Node.toJson() = Json.encodeToString(NodeInfo(this))
 
-fun FunctionDeclaration.toJson() = Json.encodeToString(FunctionInfo(this))
+fun Function.toJson() = Json.encodeToString(FunctionInfo(this))
 
-fun FieldDeclaration.toJson() = Json.encodeToString(FieldInfo(this))
+fun Field.toJson() = Json.encodeToString(FieldInfo(this))
 
-fun RecordDeclaration.toJson() = Json.encodeToString(RecordInfo(this))
+fun Record.toJson() = Json.encodeToString(RecordInfo(this))
 
 fun CallExpression.toJson() = Json.encodeToString(CallInfo(this))
 

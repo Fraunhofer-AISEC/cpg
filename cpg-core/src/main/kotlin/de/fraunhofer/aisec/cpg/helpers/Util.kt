@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -395,17 +395,16 @@ object Util {
 
     /**
      * Establishes data-flow from the arguments of a [CallExpression] to the parameters of a
-     * [FunctionDeclaration] parameters. It handles positional arguments, named/default arguments,
-     * and variadic parameters. Additionally, if the call is a [MemberCallExpression], it
-     * establishes a data-flow from the [MemberCallExpression.base] towards the
-     * [MethodDeclaration.receiver].
+     * [Function] parameters. It handles positional arguments, named/default arguments, and variadic
+     * parameters. Additionally, if the call is a [MemberCallExpression], it establishes a data-flow
+     * from the [MemberCallExpression.base] towards the [Method.receiver].
      *
-     * @param target The call's target [FunctionDeclaration]
+     * @param target The call's target [Function]
      * @param call The [CallExpression]
      */
-    fun attachCallParameters(target: FunctionDeclaration, call: CallExpression) {
+    fun attachCallParameters(target: Function, call: CallExpression) {
         // Add an incoming DFG edge from a member call's base to the method's receiver
-        if (target is MethodDeclaration && call is MemberCallExpression && !call.isStatic) {
+        if (target is Method && call is MemberCallExpression && !call.isStatic) {
             target.receiver?.let { receiver ->
                 call.base
                     ?.nextDFGEdges
@@ -487,7 +486,7 @@ object Util {
      * @param target
      * @param arguments
      */
-    fun detachCallParameters(target: FunctionDeclaration, arguments: List<Expression>) {
+    fun detachCallParameters(target: Function, arguments: List<Expression>) {
         for (param in target.parameters) {
             // A param could be variadic, so multiple arguments could be set as incoming DFG
             param.prevDFGEdges

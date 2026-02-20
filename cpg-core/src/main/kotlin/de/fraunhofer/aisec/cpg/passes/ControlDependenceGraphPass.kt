@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
@@ -57,8 +57,8 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
     class Configuration(
         /**
          * This specifies the maximum complexity (as calculated per
-         * [de.fraunhofer.aisec.cpg.graph.statements.Statement.cyclomaticComplexity]) a
-         * [FunctionDeclaration] must have in order to be considered.
+         * [de.fraunhofer.aisec.cpg.graph.statements.Statement.cyclomaticComplexity]) a [Function]
+         * must have in order to be considered.
          */
         var maxComplexity: Int? = null,
         /**
@@ -87,7 +87,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
     override fun accept(startNode: Node) {
         // For now, we only execute this for function declarations, we will support all EOG starters
         // in the future.
-        if (startNode !is FunctionDeclaration) {
+        if (startNode !is Function) {
             return
         }
 
@@ -242,7 +242,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
      * This method collects the merging points. It also includes the function declaration itself.
      */
     private fun getBranchingNodeConditions(
-        functionDeclaration: FunctionDeclaration,
+        functionDeclaration: Function,
         allBasicBlocks: Collection<BasicBlock>,
         nodeToBBMap: Map<Node, BasicBlock>,
     ) =

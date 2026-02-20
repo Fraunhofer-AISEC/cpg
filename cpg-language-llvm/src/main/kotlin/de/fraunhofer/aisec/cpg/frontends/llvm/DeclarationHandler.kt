@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.bytedeco.javacpp.Pointer
@@ -74,7 +74,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         // the pointer type
         val type = frontend.typeOf(valueRef)
 
-        val variableDeclaration = newVariableDeclaration(name, type, false, rawNode = valueRef)
+        val variableDeclaration = newVariable(name, type, false, rawNode = valueRef)
 
         // cache binding
         frontend.bindingsCache[valueRef.symbolName] = variableDeclaration
@@ -91,13 +91,12 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Handles the parsing of [functions](https://llvm.org/docs/LangRef.html#functions). They can
-     * either be pure declarations of (external) functions, which do not have a
-     * [FunctionDeclaration.body] or complete definitions of functions including a body of at least
-     * one basic block.
+     * either be pure declarations of (external) functions, which do not have a [Function.body] or
+     * complete definitions of functions including a body of at least one basic block.
      */
-    private fun handleFunction(func: LLVMValueRef): FunctionDeclaration {
+    private fun handleFunction(func: LLVMValueRef): Function {
         val name = LLVMGetValueName(func)
-        val functionDeclaration = newFunctionDeclaration(name.string, rawNode = func)
+        val functionDeclaration = newFunction(name.string, rawNode = func)
 
         // return types are a bit tricky, because the type of the function is a pointer to the
         // function type, which then has the return type in it
@@ -118,7 +117,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             val type = frontend.typeOf(param)
 
             // TODO: support variardic
-            val decl = newParameterDeclaration(paramName, type, false, rawNode = param)
+            val decl = newParameter(paramName, type, false, rawNode = param)
 
             frontend.scopeManager.addDeclaration(decl)
             functionDeclaration.parameters += decl
@@ -179,13 +178,13 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      * there are two different types of structs:
      * - identified structs, which have a name are explicitly declared
      * - literal structs, which do not have a name, but are structurally unique To emulate this
-     *   uniqueness, we create a [RecordDeclaration] for each literal struct and name it according
-     *   to its element types (see [getLiteralStructName]).
+     *   uniqueness, we create a [Record] for each literal struct and name it according to its
+     *   element types (see [getLiteralStructName]).
      */
     fun handleStructureType(
         typeRef: LLVMTypeRef,
         alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf(),
-    ): RecordDeclaration {
+    ): Record {
         // if this is a literal struct, we will give it a pseudo name
         val name =
             if (LLVMIsLiteralStruct(typeRef) == 1) {
@@ -202,7 +201,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             return record
         }
 
-        record = newRecordDeclaration(name, "struct")
+        record = newRecord(name, "struct")
 
         val size = LLVMCountStructElementTypes(typeRef)
 
@@ -215,7 +214,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
             frontend.scopeManager.enterScope(record)
 
-            val field = newFieldDeclaration(fieldName, fieldType, setOf(), null, false)
+            val field = newField(fieldName, fieldType, setOf(), null, false)
             frontend.scopeManager.addDeclaration(field)
             record.fields += field
 

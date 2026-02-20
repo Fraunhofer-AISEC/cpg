@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.newRecord
+import de.fraunhofer.aisec.cpg.graph.newTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.tryCast
@@ -45,7 +45,7 @@ class LanguageTest {
         with(TestLanguageFrontend()) {
             val baseType = objectType("baseType")
 
-            val myTypeRecord = newRecordDeclaration("myType", "class")
+            val myTypeRecord = newRecord("myType", "class")
             myTypeRecord.superClasses = mutableListOf(baseType)
             val myType = myTypeRecord.toType()
 
@@ -92,7 +92,7 @@ class LanguageTest {
 
         val comp1 =
             with(TestLanguageFrontend(language = otherLanguage)) {
-                val tu = newTranslationUnitDeclaration("tu-language-other")
+                val tu = newTranslationUnit("tu-language-other")
                 val comp = Component()
                 comp.addTranslationUnit(tu)
                 comp
@@ -101,7 +101,7 @@ class LanguageTest {
 
         val comp2 =
             with(TestLanguageFrontend(language = testLanguage)) {
-                val tu = newTranslationUnitDeclaration("tu-language-test")
+                val tu = newTranslationUnit("tu-language-test")
                 val comp = Component()
                 comp.addTranslationUnit(tu)
                 comp

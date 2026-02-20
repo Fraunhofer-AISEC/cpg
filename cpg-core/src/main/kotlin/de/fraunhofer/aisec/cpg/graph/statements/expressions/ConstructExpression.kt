@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -45,11 +46,11 @@ import org.neo4j.ogm.annotation.Relationship
 // TODO Merge and/or refactor
 class ConstructExpression : CallExpression() {
     /**
-     * The link to the [ConstructorDeclaration]. This is populated by the
+     * The link to the [Constructor]. This is populated by the
      * [de.fraunhofer.aisec.cpg.passes.SymbolResolver] later.
      */
     @PopulatedByPass(SymbolResolver::class)
-    var constructor: ConstructorDeclaration? = null
+    var constructor: Constructor? = null
         get() =
             if (anonymousClass != null) {
                 anonymousClass?.constructors?.firstOrNull()
@@ -61,11 +62,11 @@ class ConstructExpression : CallExpression() {
 
             // Forward to CallExpression. This will also take care of DFG edges.
             if (value != null) {
-                invokes = mutableListOf(value as FunctionDeclaration)
+                invokes = mutableListOf(value as Function)
             }
         }
 
-    @Relationship("ANONYMOUS_CLASS") var anonymousClassEdge = astOptionalEdgeOf<RecordDeclaration>()
+    @Relationship("ANONYMOUS_CLASS") var anonymousClassEdge = astOptionalEdgeOf<Record>()
 
     var anonymousClass by unwrapping(ConstructExpression::anonymousClassEdge)
 

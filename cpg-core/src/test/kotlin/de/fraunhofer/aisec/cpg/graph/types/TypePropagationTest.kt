@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -152,7 +152,7 @@ class TypePropagationTest {
             // Finally, the assigned types should propagate along the DFG
             assertEquals(setOf(primitiveType("short")), shortVarRefLhs.assignedTypes)
 
-            val refersTo = shortVarRefLhs.refersTo as? VariableDeclaration
+            val refersTo = shortVarRefLhs.refersTo as? Variable
             assertNotNull(refersTo)
             assertIs<IntegerType>(refersTo.type)
             assertLocalName("short", refersTo.type)

@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
@@ -61,14 +61,14 @@ class CXXResolveTest {
         assertLocalName("foo", aFoo)
         assertLocalName("a", aFoo.base)
         // a.foo should connect to A::foo
-        assertLocalName("A", (aFoo.invokes.firstOrNull() as? MethodDeclaration)?.recordDeclaration)
+        assertLocalName("A", (aFoo.invokes.firstOrNull() as? Method)?.recordDeclaration)
 
         val bFoo = realCalls.getOrNull(1)
         assertIs<MemberCallExpression>(bFoo)
         assertLocalName("foo", bFoo)
         assertLocalName("b", bFoo.base)
         // b.foo should connect to B::foo
-        assertLocalName("B", (bFoo.invokes.firstOrNull() as? MethodDeclaration)?.recordDeclaration)
+        assertLocalName("B", (bFoo.invokes.firstOrNull() as? Method)?.recordDeclaration)
 
         val foo = realCalls.getOrNull(2)
         assertNotNull(foo)
@@ -77,7 +77,7 @@ class CXXResolveTest {
         val func = foo.invokes.firstOrNull()
         assertNotNull(func)
         assertLocalName("foo", func)
-        assertFalse(func is MethodDeclaration)
+        assertFalse(func is Method)
         assertTrue(func.isInferred)
 
         val cFoo = main.calls.getOrNull(6)
@@ -85,7 +85,7 @@ class CXXResolveTest {
 
         // c.foo should connect to C::foo
         // and C as well as C:foo should be inferred
-        val method = cFoo.invokes.firstOrNull() as? MethodDeclaration
+        val method = cFoo.invokes.firstOrNull() as? Method
         assertNotNull(method)
         assertLocalName("foo", method)
         assertTrue(method.isInferred)
@@ -118,7 +118,7 @@ class CXXResolveTest {
         var func = foo.invokes.firstOrNull()
         assertNotNull(func)
         assertFalse(func.isInferred)
-        assertFalse(func is MethodDeclaration)
+        assertFalse(func is Method)
 
         val cFoo = main.bodyOrNull<MemberCallExpression>(2)
         assertNotNull(cFoo)
@@ -126,6 +126,6 @@ class CXXResolveTest {
         func = cFoo.invokes.firstOrNull()
         assertNotNull(func)
         assertTrue(func.isInferred)
-        assertTrue(func is MethodDeclaration)
+        assertTrue(func is Method)
     }
 }

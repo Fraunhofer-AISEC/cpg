@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -74,7 +74,7 @@ class ShortcutsTest {
         val declarationStatement = mainBody.statements[0]
         assertIs<DeclarationStatement>(declarationStatement)
         val variable = declarationStatement.declarations[0]
-        assertIs<VariableDeclaration>(variable)
+        assertIs<Variable>(variable)
         val newExpr = variable.initializer
         assertIs<NewExpression>(newExpr)
         val constructExpr = newExpr.initializer
@@ -130,7 +130,7 @@ class ShortcutsTest {
 
     @Test
     fun testCalleesOf() {
-        val expected = mutableListOf<FunctionDeclaration>()
+        val expected = mutableListOf<Function>()
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
 
@@ -155,7 +155,7 @@ class ShortcutsTest {
         val stmt0 = mainBody.statements[0]
         assertIs<DeclarationStatement>(stmt0)
         val variable = stmt0.declarations[0]
-        assertIs<VariableDeclaration>(variable)
+        assertIs<Variable>(variable)
         val newExpr = variable.initializer
         assertIs<NewExpression>(newExpr)
         val constructExpr = newExpr.initializer
@@ -175,7 +175,7 @@ class ShortcutsTest {
         val print = classDecl.methods["print"]
         assertNotNull(print)
 
-        val expected = mutableListOf<FunctionDeclaration>()
+        val expected = mutableListOf<Function>()
         val main = classDecl.functions["main"]
         assertNotNull(main)
 

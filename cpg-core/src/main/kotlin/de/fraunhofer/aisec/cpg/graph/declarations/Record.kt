@@ -42,7 +42,7 @@ import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
 /** Represents a C++ union/struct/class or Java class */
-open class RecordDeclaration :
+open class Record :
     Declaration(),
     DeclarationHolder,
     StatementHolder,
@@ -53,53 +53,53 @@ open class RecordDeclaration :
     var kind: String? = null
 
     /**
-     * The [FieldDeclaration]s that are directly contained in this record declaration's AST
-     * structure. This does not include any fields that might be declared in a base class or
-     * interface or fields that are declared outside the AST structure.
+     * The [Field]s that are directly contained in this record declaration's AST structure. This
+     * does not include any fields that might be declared in a base class or interface or fields
+     * that are declared outside the AST structure.
      */
     @Relationship(value = "FIELDS", direction = Relationship.Direction.OUTGOING)
-    var fieldEdges = astEdgesOf<FieldDeclaration>()
+    var fieldEdges = astEdgesOf<Field>()
     /** Virtual property to directly access the nodes in [fieldEdges]. */
-    var fields by unwrapping(RecordDeclaration::fieldEdges)
+    var fields by unwrapping(Record::fieldEdges)
 
     /**
-     * The [MethodDeclaration]s that are directly contained in this record declaration's AST
-     * structure. This does not include any methods that might be declared in a base class or
-     * interface or methods that are declared outside the AST structure.
+     * The [Method]s that are directly contained in this record declaration's AST structure. This
+     * does not include any methods that might be declared in a base class or interface or methods
+     * that are declared outside the AST structure.
      */
     @Relationship(value = "METHODS", direction = Relationship.Direction.OUTGOING)
-    var methodEdges = astEdgesOf<MethodDeclaration>()
+    var methodEdges = astEdgesOf<Method>()
     /** Virtual property to directly access the nodes in [methods]. */
-    var methods by unwrapping(RecordDeclaration::methodEdges)
+    var methods by unwrapping(Record::methodEdges)
 
     /**
-     * The [ConstructorDeclaration]s that are directly contained in this record declaration's AST
-     * structure. This does not include any constructors that might be declared in a base class or
-     * interface or constructors that are declared outside the AST structure.
+     * The [Constructor]s that are directly contained in this record declaration's AST structure.
+     * This does not include any constructors that might be declared in a base class or interface or
+     * constructors that are declared outside the AST structure.
      */
     @Relationship(value = "CONSTRUCTORS", direction = Relationship.Direction.OUTGOING)
-    var constructorEdges = astEdgesOf<ConstructorDeclaration>()
+    var constructorEdges = astEdgesOf<Constructor>()
     /** Virtual property to directly access the nodes in [constructors]. */
-    var constructors by unwrapping(RecordDeclaration::constructorEdges)
+    var constructors by unwrapping(Record::constructorEdges)
 
     /**
-     * The [RecordDeclaration]s that are directly contained in this record declaration's AST
-     * structure. This does not include any records that might be declared in a base class or
-     * interface or records that are declared outside the AST structure.
+     * The [Record]s that are directly contained in this record declaration's AST structure. This
+     * does not include any records that might be declared in a base class or interface or records
+     * that are declared outside the AST structure.
      */
     @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
-    var recordEdges = astEdgesOf<RecordDeclaration>()
+    var recordEdges = astEdgesOf<Record>()
     /** Virtual property to directly access the nodes in [recordEdges]. */
-    var records by unwrapping(RecordDeclaration::recordEdges)
+    var records by unwrapping(Record::recordEdges)
 
     @Relationship(value = "TEMPLATES", direction = Relationship.Direction.OUTGOING)
-    var templateEdges = astEdgesOf<TemplateDeclaration>()
-    var templates by unwrapping(RecordDeclaration::templateEdges)
+    var templateEdges = astEdgesOf<Template>()
+    var templates by unwrapping(Record::templateEdges)
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
     override var statementEdges = astEdgesOf<Statement>()
-    override var statements by unwrapping(RecordDeclaration::statementEdges)
+    override var statements by unwrapping(Record::statementEdges)
 
     @Transient var superClasses: MutableList<Type> = ArrayList()
 
@@ -110,7 +110,7 @@ open class RecordDeclaration :
      */
     @Transient var implementedInterfaces = mutableListOf<Type>()
 
-    @Relationship var superTypeDeclarations: Set<RecordDeclaration> = HashSet()
+    @Relationship var superTypeDeclarations: Set<Record> = HashSet()
 
     var importStatements: List<String> = ArrayList()
 
@@ -180,7 +180,7 @@ open class RecordDeclaration :
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is RecordDeclaration) return false
+        if (other !is Record) return false
         return super.equals(other) &&
             kind == other.kind &&
             fields == other.fields &&
@@ -200,11 +200,11 @@ open class RecordDeclaration :
 
     override fun addDeclaration(declaration: Declaration) {
         when (declaration) {
-            is ConstructorDeclaration -> addIfNotContains(constructorEdges, declaration)
-            is MethodDeclaration -> addIfNotContains(methodEdges, declaration)
-            is FieldDeclaration -> addIfNotContains(fieldEdges, declaration)
-            is RecordDeclaration -> addIfNotContains(recordEdges, declaration)
-            is TemplateDeclaration -> addIfNotContains(templateEdges, declaration)
+            is Constructor -> addIfNotContains(constructorEdges, declaration)
+            is Method -> addIfNotContains(methodEdges, declaration)
+            is Field -> addIfNotContains(fieldEdges, declaration)
+            is Record -> addIfNotContains(recordEdges, declaration)
+            is Template -> addIfNotContains(templateEdges, declaration)
         }
     }
 

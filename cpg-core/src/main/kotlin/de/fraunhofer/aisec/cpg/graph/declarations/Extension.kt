@@ -32,31 +32,27 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
 
 /**
- * Represents an extension to an existing declaration (e.g. [RecordDeclaration], such as Rust `impl`
- * blocks or C# partial classes. The declarations contained within this node are part of the AST
- * structure of the extension but are added to the symbol table of the [extendedDeclaration] they
- * are extending.
+ * Represents an extension to an existing declaration (e.g. [Record], such as Rust `impl` blocks or
+ * C# partial classes. The declarations contained within this node are part of the AST structure of
+ * the extension but are added to the symbol table of the [extendedDeclaration] they are extending.
  *
  * The [name] of this extension identifies the construct it is extending.
  */
-class ExtensionDeclaration : Declaration(), DeclarationHolder {
-    /**
-     * Edges to [Declaration] nodes (e.g. a [MethodDeclaration]) contained in this extension
-     * declaration.
-     */
+class Extension : Declaration(), DeclarationHolder {
+    /** Edges to [Declaration] nodes (e.g. a [Method]) contained in this extension declaration. */
     val declarationEdges = astEdgesOf<Declaration>()
-    override val declarations by unwrapping(ExtensionDeclaration::declarationEdges)
+    override val declarations by unwrapping(Extension::declarationEdges)
 
     /**
      * The [Declaration] we are "extending" with this extension declaration. All children of this
      * extension MUST be placed in the [Declaration.declaringScope] of this declaration. Currently,
-     * we only accept a [RecordDeclaration].
+     * we only accept a [Record].
      */
-    var extendedDeclaration: RecordDeclaration? = null
+    var extendedDeclaration: Record? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ExtensionDeclaration) return false
+        if (other !is Extension) return false
         return super.equals(other) &&
             declarations == other.declarations &&
             extendedDeclaration == other.extendedDeclaration

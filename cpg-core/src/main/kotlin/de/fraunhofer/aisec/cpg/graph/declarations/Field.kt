@@ -25,20 +25,47 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-class EnumDeclaration : RecordDeclaration() {
-    @Relationship(value = "ENTRIES", direction = Relationship.Direction.OUTGOING)
-    var entryEdges = astEdgesOf<EnumConstantDeclaration>()
-    var entries by unwrapping(EnumDeclaration::entryEdges)
+/**
+ * Declaration of a field within a [Record]. It contains the modifiers associated with the field as
+ * well as an initializer [Expression] which provides an initial value for the field.
+ */
+class Field : Variable() {
+    /** Specifies whether this field declaration is also a definition, i.e. has an initializer. */
+    var isDefinition = false
+
+    /** If this is only a declaration, this provides a link to the definition of the field. */
+    @Relationship(value = "DEFINES")
+    var definition: Field = this
+        get() {
+            return if (isDefinition) {
+                this
+            } else {
+                field
+            }
+        }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
-            .append("entries", entries)
+            .append("initializer", initializer)
+            .append("modifiers", modifiers)
             .toString()
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other !is Field) {
+            return false
+        }
+        return (super.equals(other) && modifiers == other.modifiers)
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), initializer, modifiers)
 }

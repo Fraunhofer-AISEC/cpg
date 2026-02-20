@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.multiLanguage
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
@@ -49,21 +49,20 @@ import org.neo4j.ogm.annotation.Transient
  */
 @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 open class Component : AstNode() {
-    @Relationship("TRANSLATION_UNITS")
-    val translationUnitEdges = astEdgesOf<TranslationUnitDeclaration>()
+    @Relationship("TRANSLATION_UNITS") val translationUnitEdges = astEdgesOf<TranslationUnit>()
     /** All translation units belonging to this application. */
     val translationUnits by unwrapping(Component::translationUnitEdges)
 
     /**
-     * The import dependencies of [TranslationUnitDeclaration] nodes of this component. The
-     * preferred way to access this is via [Strategy.TRANSLATION_UNITS_LEAST_IMPORTS].
+     * The import dependencies of [TranslationUnit] nodes of this component. The preferred way to
+     * access this is via [Strategy.TRANSLATION_UNITS_LEAST_IMPORTS].
      */
     @Transient
     @PopulatedByPass(ImportResolver::class)
-    var translationUnitDependencies: ImportDependencies<TranslationUnitDeclaration>? = null
+    var translationUnitDependencies: ImportDependencies<TranslationUnit>? = null
 
     @Synchronized
-    fun addTranslationUnit(tu: TranslationUnitDeclaration) {
+    fun addTranslationUnit(tu: TranslationUnit) {
         translationUnits.add(tu)
     }
 

@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclarationState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -70,7 +70,7 @@ class ArrayValue : Value<LatticeInterval> {
     ): LatticeInterval {
         var size: LatticeInterval = LatticeInterval.BOTTOM
         var target: Node? = null
-        if (node is VariableDeclaration && node.initializer != null && node.type is PointerType) {
+        if (node is Variable && node.initializer != null && node.type is PointerType) {
             size = getSize(node.initializer!!)
             target = node
         } else if (node is AssignExpression && node.rhs.size == 1 && node.lhs.size == 1) {

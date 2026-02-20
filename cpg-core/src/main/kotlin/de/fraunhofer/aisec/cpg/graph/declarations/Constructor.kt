@@ -25,22 +25,24 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.HasInitializer
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import org.neo4j.ogm.annotation.Relationship
+import de.fraunhofer.aisec.cpg.graph.fqn
 
 /**
- * Represents a constant within an [EnumDeclaration]. Depending on the language, this might have an
- * explicit initializer value.
+ * The declaration of a constructor within a [Record]. Is it essentially a special case of a
+ * [Method].
  */
-class EnumConstantDeclaration : ValueDeclaration(), HasInitializer {
-    @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
-    override var initializer by unwrapping(EnumConstantDeclaration::initializerEdge)
+class Constructor : Method() {
+    // constructors always have implicitly the return type of their class
+    override var recordDeclaration: Record?
+        get() = super.recordDeclaration
+        set(recordDeclaration) {
+            super.recordDeclaration = recordDeclaration
+            if (recordDeclaration != null) {
+                // constructors always have implicitly the return type of their class
+                returnTypes = listOf(recordDeclaration.toType())
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return initializer?.getStartingPrevEOG() ?: setOf()
-    }
+                // also make sure, our name is updated to the FQN of the record
+                name = recordDeclaration.name.fqn(this.name.localName)
+            }
+        }
 }

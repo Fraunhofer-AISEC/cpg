@@ -36,7 +36,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 /** Abstract class representing the template concept */
 @NodeEntity
-abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
+abstract class Template : Declaration(), DeclarationHolder {
     enum class TemplateInitialization {
         /**
          * Template Parameter is deduced automatically due to matching type provided in the function
@@ -53,15 +53,15 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
     /** Parameters the Template requires for instantiation */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
     var parameterEdges = astEdgesOf<Declaration>()
-    val parameters by unwrapping(TemplateDeclaration::parameterEdges)
+    val parameters by unwrapping(Template::parameterEdges)
 
     val parametersWithDefaults: List<Declaration>
         get() {
             val parametersWithDefaults: MutableList<Declaration> = ArrayList()
             for (declaration in parameters) {
                 if (
-                    (declaration is TypeParameterDeclaration && declaration.default != null) ||
-                        (declaration is ParameterDeclaration && declaration.default != null)
+                    (declaration is TypeParameter && declaration.default != null) ||
+                        (declaration is Parameter && declaration.default != null)
                 ) {
                     parametersWithDefaults.add(declaration)
                 }
@@ -73,9 +73,9 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
         get() {
             val defaults: MutableList<AstNode?> = ArrayList()
             for (declaration in parameters) {
-                if (declaration is TypeParameterDeclaration) {
+                if (declaration is TypeParameter) {
                     defaults.add(declaration.default)
-                } else if (declaration is ParameterDeclaration) {
+                } else if (declaration is Parameter) {
                     defaults.add(declaration.default)
                 }
             }
@@ -90,11 +90,11 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
             return list
         }
 
-    fun removeParameter(parameterizedType: TypeParameterDeclaration?) {
+    fun removeParameter(parameterizedType: TypeParameter?) {
         parameterEdges.removeIf { it.end == parameterizedType }
     }
 
-    fun removeParameter(nonTypeTemplateParamDeclaration: ParameterDeclaration?) {
+    fun removeParameter(nonTypeTemplateParamDeclaration: Parameter?) {
         parameterEdges.removeIf { it.end == nonTypeTemplateParamDeclaration }
     }
 
@@ -104,7 +104,7 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
         if (!super.equals(other)) return false
-        val that = other as TemplateDeclaration
+        val that = other as Template
         return parameters == that.parameters &&
             propertyEqualsList(parameterEdges, that.parameterEdges)
     }

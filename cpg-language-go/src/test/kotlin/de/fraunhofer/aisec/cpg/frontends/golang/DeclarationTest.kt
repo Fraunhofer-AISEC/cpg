@@ -232,7 +232,7 @@ class DeclarationTest {
         assertNull(e.initializer)
 
         // The tuple (e,f) does have an initializer
-        val ef = main.allChildren<TupleDeclaration> { it.name.toString() == "(e,f)" }.firstOrNull()
+        val ef = main.allChildren<Tuple> { it.name.toString() == "(e,f)" }.firstOrNull()
         assertNotNull(ef)
         assertIs<CallExpression>(ef.initializer)
         assertEquals(ef, e.astParent)

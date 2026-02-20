@@ -42,7 +42,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
-class TupleDeclarationTest {
+class TupleTest {
     @Test
     fun testTopLevelTuple() {
         with(
@@ -61,8 +61,8 @@ class TupleDeclarationTest {
                         // I fear this is too complex for the fluent DSL; so we just use the node
                         // builder here
                         val tuple =
-                            newTupleDeclaration(
-                                listOf(newVariableDeclaration("a"), newVariableDeclaration("b")),
+                            newTuple(
+                                listOf(newVariable("a"), newVariable("b")),
                                 newCallExpression(newReference("func")),
                             )
                         scopeManager.addDeclaration(tuple)
@@ -81,7 +81,7 @@ class TupleDeclarationTest {
 
             val tuple = result.variables["(a,b)"]
             assertNotNull(tuple)
-            assertIs<TupleDeclaration>(tuple)
+            assertIs<Tuple>(tuple)
             assertIs<TupleType>(tuple.type)
 
             val call = tuple.initializer as? CallExpression
@@ -147,11 +147,8 @@ class TupleDeclarationTest {
                                     // I fear this is too complex for the fluent DSL; so we just use
                                     // the node builder here
                                     val tuple =
-                                        newTupleDeclaration(
-                                            listOf(
-                                                newVariableDeclaration("a"),
-                                                newVariableDeclaration("b"),
-                                            ),
+                                        newTuple(
+                                            listOf(newVariable("a"), newVariable("b")),
                                             newCallExpression(newReference("func")),
                                         )
                                     scopeManager.addDeclaration(tuple)
@@ -171,7 +168,7 @@ class TupleDeclarationTest {
 
             val tuple = main.variables["(a,b)"]
             assertNotNull(tuple)
-            assertIs<TupleDeclaration>(tuple)
+            assertIs<Tuple>(tuple)
             assertIs<TupleType>(tuple.type)
 
             val call = tuple.initializer

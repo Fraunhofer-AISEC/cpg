@@ -35,9 +35,9 @@ import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.Overlays
@@ -95,10 +95,10 @@ abstract class Node() :
      * The scope this node "lives" in / in which it is defined. This property is set in
      * [Node.applyMetadata] by a [ScopeProvider] at the time when the node is created.
      *
-     * For example, if a [RecordDeclaration] is defined in a [TranslationUnitDeclaration] (without
-     * any namespaces), the scope of the [RecordDeclaration] is most likely a [GlobalScope]. Since
-     * the declaration itself creates a [RecordScope], the scope of a [MethodDeclaration] within the
-     * class would be a [RecordScope] pointing to the [RecordDeclaration].
+     * For example, if a [Record] is defined in a [TranslationUnit] (without any namespaces), the
+     * scope of the [Record] is most likely a [GlobalScope]. Since the declaration itself creates a
+     * [RecordScope], the scope of a [Method] within the class would be a [RecordScope] pointing to
+     * the [Record].
      */
     @Relationship(value = "SCOPE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference

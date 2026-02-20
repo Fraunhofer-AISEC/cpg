@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
@@ -161,8 +161,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 node.captureDefault == ICPPASTLambdaExpression.CaptureDefault.BY_REFERENCE
 
         val anonymousFunction =
-            node.declarator?.let { frontend.declaratorHandler.handle(it) as? FunctionDeclaration }
-                ?: newFunctionDeclaration("lambda${lambda.hashCode()}")
+            node.declarator?.let { frontend.declaratorHandler.handle(it) as? Function }
+                ?: newFunction("lambda${lambda.hashCode()}")
         anonymousFunction.type = computeType(anonymousFunction)
 
         frontend.scopeManager.enterScope(anonymousFunction)
@@ -1003,7 +1003,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     /**
      * In C++, the "this" expression is also modeled as a literal. In our case however, we want to
      * return a [Reference], which is then later connected to the current method's
-     * [MethodDeclaration.receiver].
+     * [Method.receiver].
      */
     private fun handleThisLiteral(ctx: IASTLiteralExpression): Reference {
         // We should be in a record here. However since we are a fuzzy parser, maybe things went

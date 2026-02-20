@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclarationState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
@@ -70,7 +70,7 @@ class MutableListSize() : MutableCollectionSize() {
         var target: Node? = null
         var variableSize: LatticeInterval = LatticeInterval.BOTTOM
 
-        if (node is VariableDeclaration && node.initializer != null) {
+        if (node is Variable && node.initializer != null) {
             target = node
             variableSize =
                 when (val init = node.initializer) {

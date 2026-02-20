@@ -25,47 +25,38 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 
-/**
- * Declaration of a field within a [RecordDeclaration]. It contains the modifiers associated with
- * the field as well as an initializer [Expression] which provides an initial value for the field.
- */
-class FieldDeclaration : VariableDeclaration() {
-    /** Specifies whether this field declaration is also a definition, i.e. has an initializer. */
-    var isDefinition = false
+/** Represents a type alias definition as found in C/C++: `typedef unsigned long ulong;` */
+class Typedef : Declaration() /*, DeclaresType*/, HasSecondaryTypeEdge {
+    /** The already existing type that is to be aliased */
+    var type: Type = unknownType()
 
-    /** If this is only a declaration, this provides a link to the definition of the field. */
-    @Relationship(value = "DEFINES")
-    var definition: FieldDeclaration = this
-        get() {
-            return if (isDefinition) {
-                this
-            } else {
-                field
-            }
-        }
+    /** The newly created alias to be defined */
+    var alias: Type = unknownType()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Typedef) return false
+        return super.equals(other) && type == other.type && alias == other.alias
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), type, alias)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("initializer", initializer)
-            .append("modifiers", modifiers)
+            .append("type", type)
+            .append("alias", alias)
             .toString()
     }
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is FieldDeclaration) {
-            return false
-        }
-        return (super.equals(other) && modifiers == other.modifiers)
-    }
+    override val secondaryTypes: List<Type>
+        get() = listOf(alias)
 
-    override fun hashCode() = Objects.hash(super.hashCode(), initializer, modifiers)
+    /*override val declaredType: Type
+    get() = alias*/
 }

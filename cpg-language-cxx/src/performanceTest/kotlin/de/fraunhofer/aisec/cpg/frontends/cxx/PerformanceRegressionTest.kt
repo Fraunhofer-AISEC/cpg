@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.AstNode
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.primitiveType
@@ -79,8 +79,8 @@ class PerformanceRegressionTest {
     @Test
     fun testTraversal() {
         with(TestLanguageFrontend()) {
-            val tu = TranslationUnitDeclaration()
-            val decl = VariableDeclaration()
+            val tu = TranslationUnit()
+            val decl = Variable()
             val list = InitializerListExpression()
 
             for (i in 0 until 50000) {

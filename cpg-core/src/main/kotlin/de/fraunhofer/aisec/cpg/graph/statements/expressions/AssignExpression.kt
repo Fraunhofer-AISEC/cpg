@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -124,7 +124,7 @@ class AssignExpression :
             return operatorCode in language.simpleAssignmentOperators
         }
 
-    @Relationship("DECLARATIONS") var declarationEdges = astEdgesOf<VariableDeclaration>()
+    @Relationship("DECLARATIONS") var declarationEdges = astEdgesOf<Variable>()
     /**
      * Some languages, such as Go explicitly allow the definition / declaration of variables in the
      * assignment (known as a "short assignment"). Some languages, such as Python even implicitly

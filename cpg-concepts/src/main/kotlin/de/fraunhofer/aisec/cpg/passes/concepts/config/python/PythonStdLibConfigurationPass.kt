@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.config.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.evaluate
 import de.fraunhofer.aisec.cpg.graph.followDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.followPrevDFG
@@ -61,7 +61,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
     "This pass is responsible for creating [ConfigurationOperation] nodes based on the configparser module of the Python standard library."
 )
 class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) {
-    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+    override fun handleNode(node: Node, tu: TranslationUnit) {
         when (node) {
             is ConstructExpression -> handleConstructExpression(node)
             is MemberCallExpression -> handleMemberCallExpression(node)

@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -59,10 +60,10 @@ import de.fraunhofer.aisec.cpg.passes.getPossibleContainingTypes
 import kotlin.collections.forEach
 
 /**
- * Tries to infer a [NamespaceDeclaration] from a [Name]. This will return `null`, if inference was
- * not possible, or if it was turned off in the [InferenceConfiguration].
+ * Tries to infer a [Namespace] from a [Name]. This will return `null`, if inference was not
+ * possible, or if it was turned off in the [InferenceConfiguration].
  */
-fun Pass<*>.tryNamespaceInference(name: Name, source: Node): NamespaceDeclaration? {
+fun Pass<*>.tryNamespaceInference(name: Name, source: Node): Namespace? {
     // Determine the scope where we want to start our inference
     val extractedScope =
         scopeManager.extractScope(name, language = source.language, location = source.location)
@@ -81,16 +82,16 @@ fun Pass<*>.tryNamespaceInference(name: Name, source: Node): NamespaceDeclaratio
         holder = tryScopeInference(parentName, source)
     }
 
-    return (holder ?: scopeManager.translationUnitForInference<NamespaceDeclaration>(source))
+    return (holder ?: scopeManager.translationUnitForInference<Namespace>(source))
         .startInference(ctx)
         ?.inferNamespaceDeclaration(name, null, source)
 }
 
 /**
- * Tries to infer a [RecordDeclaration] from an unresolved [Type]. This will return `null`, if
- * inference was not possible, or if it was turned off in the [InferenceConfiguration].
+ * Tries to infer a [Record] from an unresolved [Type]. This will return `null`, if inference was
+ * not possible, or if it was turned off in the [InferenceConfiguration].
  */
-internal fun Pass<*>.tryRecordInference(type: Type, source: Node): RecordDeclaration? {
+internal fun Pass<*>.tryRecordInference(type: Type, source: Node): Record? {
     val kind =
         if (type.language is HasStructs) {
             "struct"
@@ -131,7 +132,7 @@ internal fun Pass<*>.tryRecordInference(type: Type, source: Node): RecordDeclara
     }
 
     val record =
-        (holder ?: scopeManager.translationUnitForInference<RecordDeclaration>(source))
+        (holder ?: scopeManager.translationUnitForInference<Record>(source))
             .startInference(ctx)
             ?.inferRecordDeclaration(type, kind, source)
 
@@ -148,23 +149,21 @@ internal fun Pass<*>.tryRecordInference(type: Type, source: Node): RecordDeclara
 }
 
 /**
- * Tries to infer a [VariableDeclaration] (or [FieldDeclaration]) out of a [Reference]. This will
- * return `null`, if inference was not possible, or if it was turned off in the
- * [InferenceConfiguration].
+ * Tries to infer a [Variable] (or [Field]) out of a [Reference]. This will return `null`, if
+ * inference was not possible, or if it was turned off in the [InferenceConfiguration].
  *
  * We mainly try to infer global variables and fields here, since these are possibly parts of the
  * code we do not "see". We do not try to infer local variables, because we are under the assumption
  * that even with incomplete code, we at least have the complete current function code. We can
  * therefore differentiate between four scenarios:
- * - Inference of a [FieldDeclaration] if we have a language that allows implicit receivers, are
- *   inside a function and the ref is not qualified. This is then forwarded to [tryFieldInference].
- * - Inference of a top-level [VariableDeclaration] on a namespace level (this is not yet
- *   implemented)
- * - Inference of a global [VariableDeclaration] in the [GlobalScope].
+ * - Inference of a [Field] if we have a language that allows implicit receivers, are inside a
+ *   function and the ref is not qualified. This is then forwarded to [tryFieldInference].
+ * - Inference of a top-level [Variable] on a namespace level (this is not yet implemented)
+ * - Inference of a global [Variable] in the [GlobalScope].
  * - No inference, in any other cases since this would mean that we would infer a local variable.
  *   This is something we do not want to do see (see above).
  */
-internal fun Pass<*>.tryVariableInference(ref: Reference): VariableDeclaration? {
+internal fun Pass<*>.tryVariableInference(ref: Reference): Variable? {
     val currentRecordType = scopeManager.currentRecord?.toType()
     return if (
         ref.language is HasImplicitReceiver &&
@@ -196,7 +195,7 @@ internal fun Pass<*>.tryVariableInference(ref: Reference): VariableDeclaration? 
         // We can try to infer a possible global variable (at top-level), if the language
         // supports this
         scopeManager
-            .translationUnitForInference<VariableDeclaration>(ref)
+            .translationUnitForInference<Variable>(ref)
             .startInference(this.ctx)
             ?.inferVariableDeclaration(ref)
     } else {
@@ -206,23 +205,20 @@ internal fun Pass<*>.tryVariableInference(ref: Reference): VariableDeclaration? 
 }
 
 /**
- * Tries to infer a [FieldDeclaration] from an unresolved [MemberExpression] or [Reference] (if the
- * language has [HasImplicitReceiver]). This will return `null`, if inference was not possible, or
- * if it was turned off in the [InferenceConfiguration].
+ * Tries to infer a [Field] from an unresolved [MemberExpression] or [Reference] (if the language
+ * has [HasImplicitReceiver]). This will return `null`, if inference was not possible, or if it was
+ * turned off in the [InferenceConfiguration].
  *
- * It will also try to infer a [RecordDeclaration], if [targetType] does not have a declaration.
- * However, this is a very special corner-case that will most likely not be triggered, since the
- * majority of types will have their declaration inferred in the [TypeResolver] already before we
- * reach this step here. This should actually only happen in one case: If we try to infer a field of
- * a type that is registered in [Language.builtInTypes] (e.g. `std::string` for C++). In this case,
- * the record for this type is NOT inferred in the type resolver, because we intentionally wait
- * until the symbol resolver, in case we really "see" the record, e.g., if we parse the std headers.
- * If we did not "see" its declaration, we can infer it now.
+ * It will also try to infer a [Record], if [targetType] does not have a declaration. However, this
+ * is a very special corner-case that will most likely not be triggered, since the majority of types
+ * will have their declaration inferred in the [TypeResolver] already before we reach this step
+ * here. This should actually only happen in one case: If we try to infer a field of a type that is
+ * registered in [Language.builtInTypes] (e.g. `std::string` for C++). In this case, the record for
+ * this type is NOT inferred in the type resolver, because we intentionally wait until the symbol
+ * resolver, in case we really "see" the record, e.g., if we parse the std headers. If we did not
+ * "see" its declaration, we can infer it now.
  */
-internal fun Pass<*>.tryFieldInference(
-    ref: Reference,
-    targetType: ObjectType,
-): VariableDeclaration? {
+internal fun Pass<*>.tryFieldInference(ref: Reference, targetType: ObjectType): Variable? {
     // We only want to infer fields here, this can either happen if we have a reference with an
     // implicit receiver or if we have a scoped reference and the scope points to a record
     val extractedScope = scopeManager.extractScope(ref)
@@ -249,15 +245,14 @@ internal fun Pass<*>.tryFieldInference(
 }
 
 /**
- * Tries to infer a [FunctionDeclaration] or a [MethodDeclaration] from a [CallExpression]. This
- * will return an empty list, if inference was not possible, or if it was turned off in the
- * [InferenceConfiguration].
+ * Tries to infer a [Function] or a [Method] from a [CallExpression]. This will return an empty
+ * list, if inference was not possible, or if it was turned off in the [InferenceConfiguration].
  *
  * Depending on several factors, e.g., whether the callee has an FQN, was a [MemberExpression] or
  * whether the language supports [HasImplicitReceiver] we either infer
- * - a global [FunctionDeclaration]
- * - a [FunctionDeclaration] in a namespace
- * - a [MethodDeclaration] in a record using [tryMethodInference]
+ * - a global [Function]
+ * - a [Function] in a namespace
+ * - a [Method] in a record using [tryMethodInference]
  *
  * Since potentially multiple suitable bases exist for the inference of methods (derived by
  * [getPossibleContainingTypes]), we infer a method for all of them and return a list.
@@ -265,7 +260,7 @@ internal fun Pass<*>.tryFieldInference(
 internal fun Pass<*>.tryFunctionInference(
     call: CallExpression,
     result: CallResolutionResult,
-): List<FunctionDeclaration> {
+): List<Function> {
     // We need to see, whether we have any suitable base (e.g. a class) or not; There are two
     // main cases
     // a) we have a member expression -> easy
@@ -299,8 +294,8 @@ internal fun Pass<*>.tryFunctionInference(
         }
         val func =
             when (val start = scope.astNode) {
-                is TranslationUnitDeclaration -> start.inferFunction(call, ctx = this.ctx)
-                is NamespaceDeclaration -> start.inferFunction(call, ctx = this.ctx)
+                is TranslationUnit -> start.inferFunction(call, ctx = this.ctx)
+                is Namespace -> start.inferFunction(call, ctx = this.ctx)
                 else -> null
             }
         listOfNotNull(func)
@@ -309,7 +304,7 @@ internal fun Pass<*>.tryFunctionInference(
     }
 }
 
-/** This function tries to infer a missing [FunctionDeclaration] from a function pointer usage. */
+/** This function tries to infer a missing [Function] from a function pointer usage. */
 internal fun Pass<*>.tryFunctionInferenceFromFunctionPointer(
     ref: Reference,
     type: FunctionPointerType,
@@ -329,15 +324,13 @@ internal fun Pass<*>.tryFunctionInferenceFromFunctionPointer(
 }
 
 /**
- * Creates an inferred [FunctionDeclaration] for each suitable [Type] (which points to a
- * [RecordDeclaration]).
+ * Creates an inferred [Function] for each suitable [Type] (which points to a [Record]).
  *
  * There is a big challenge in this inference: We can not be 100 % sure, whether we really need to
- * infer a [MethodDeclaration] inside the [RecordDeclaration] or if this is a call to a global
- * function (if [call] is a simple [CallExpression] and not a [MemberCallExpression]). The reason
- * behind that is that most languages allow to omit `this` when calling methods in the current
- * class. So a call to `foo()` inside record `Bar` could either be a call to a global function `foo`
- * or a call to `Bar::foo`.
+ * infer a [Method] inside the [Record] or if this is a call to a global function (if [call] is a
+ * simple [CallExpression] and not a [MemberCallExpression]). The reason behind that is that most
+ * languages allow to omit `this` when calling methods in the current class. So a call to `foo()`
+ * inside record `Bar` could either be a call to a global function `foo` or a call to `Bar::foo`.
  *
  * We need to decide whether we want to infer a global function or not; the heuristic is based on a
  * multitude of factors such as:
@@ -349,7 +342,7 @@ internal fun Pass<*>.tryMethodInference(
     call: CallExpression,
     possibleContainingTypes: Set<Type>,
     bestGuess: Type?,
-): List<FunctionDeclaration> {
+): List<Function> {
     // We need to decide whether we want to infer a global function or not. We do this with a
     // simple heuristic. This will of course not be 100 % error-free, but this is the burden of
     // inference.
@@ -381,8 +374,7 @@ internal fun Pass<*>.tryMethodInference(
         }
 
     if (inferGlobalFunction) {
-        val currentTU =
-            scopeManager.currentScope.globalScope?.astNode as? TranslationUnitDeclaration
+        val currentTU = scopeManager.currentScope.globalScope?.astNode as? TranslationUnit
         return listOfNotNull(currentTU?.inferFunction(call, ctx = ctx))
     }
 
@@ -409,9 +401,8 @@ internal fun Pass<*>.tryMethodInference(
  *
  * A common use-case for this is the creation of nested namespaces, e.g., when inferring classes
  * such as `java.lang.System`. At first, we check whether the scope `java` exists, if not, this
- * function makes sure that a [NamespaceDeclaration] `java` will be created. Afterward, the same
- * check will be repeated for `java.lang`, until we are finally ready to infer the
- * [RecordDeclaration] `java.lang.System`.
+ * function makes sure that a [Namespace] `java` will be created. Afterward, the same check will be
+ * repeated for `java.lang`, until we are finally ready to infer the [Record] `java.lang.System`.
  */
 internal fun Pass<*>.tryScopeInference(scopeName: Name, source: Node): Declaration? {
     // At this point, we need to check whether we have any type reference to our scope

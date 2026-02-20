@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogGet
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogLevel
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogWrite
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Logging
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Import
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -80,7 +80,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private val defaultLoggerName = ""
 
     /** The global `import logging` node. */
-    private var loggingLogger: ImportDeclaration? = null
+    private var loggingLogger: Import? = null
 
     override fun cleanup() {
         // nothing to do
@@ -104,13 +104,13 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This pass is interested in [ImportDeclaration]s and
+     * This pass is interested in [Import]s and
      * [de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression]s as these are the
      * relevant parts of the Python code for logging.
      */
     private fun handleNode(node: Node) {
         when (node) {
-            is ImportDeclaration -> handleImport(node)
+            is Import -> handleImport(node)
             is CallExpression -> handleCall(node)
         }
     }
@@ -125,7 +125,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      *
      * will be translated to [Logging]s.
      */
-    private fun handleImport(importDeclaration: ImportDeclaration) {
+    private fun handleImport(importDeclaration: Import) {
         if (importDeclaration.import.toString() == "logging") {
             // Add the GetLog operation to the existing Logging concept or generate a new one if
             // there

@@ -28,7 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Template.TemplateInitialization
 import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
@@ -44,7 +45,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 /**
  * An expression, which calls another function. It has a list of arguments (list of [Expression]s)
- * and is connected via the INVOKES edge to its [FunctionDeclaration].
+ * and is connected via the INVOKES edge to its [Function].
  */
 open class CallExpression :
     Expression(),
@@ -53,17 +54,13 @@ open class CallExpression :
     ArgumentHolder,
     HasSecondaryTypeEdge {
     /**
-     * Connection to its [FunctionDeclaration]. This will be populated by the [SymbolResolver]. This
-     * will have an effect on the [type]
+     * Connection to its [Function]. This will be populated by the [SymbolResolver]. This will have
+     * an effect on the [type]
      */
     @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
-    var invokeEdges: Invokes<FunctionDeclaration> =
-        Invokes<FunctionDeclaration>(
-            this,
-            mirrorProperty = FunctionDeclaration::calledByEdges,
-            outgoing = true,
-        )
+    var invokeEdges: Invokes<Function> =
+        Invokes<Function>(this, mirrorProperty = Function::calledByEdges, outgoing = true)
         protected set
 
     /**
@@ -177,7 +174,7 @@ open class CallExpression :
      * directly. The invokes edge will still point to the realization of the template.
      */
     @Relationship(value = "TEMPLATE_INSTANTIATION", direction = Relationship.Direction.OUTGOING)
-    var templateInstantiation: TemplateDeclaration? = null
+    var templateInstantiation: Template? = null
         set(value) {
             field = value
             template = value != null
@@ -278,7 +275,7 @@ open class CallExpression :
     /**
      * Some languages allow to even overload "()", meaning that basically a normal call to [callee]
      * is overloaded. In this case we want the [operatorBase] to point to [callee], so we can take
-     * its type to lookup the necessary [OperatorDeclaration].
+     * its type to lookup the necessary [Operator].
      */
     override val operatorBase: Expression
         get() = callee

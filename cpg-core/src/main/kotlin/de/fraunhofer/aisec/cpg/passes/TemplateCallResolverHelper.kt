@@ -50,7 +50,7 @@ import de.fraunhofer.aisec.cpg.graph.types.apply
  */
 fun SymbolResolver.addRecursiveDefaultTemplateArgs(
     constructExpression: ConstructExpression,
-    template: RecordTemplateDeclaration,
+    template: RecordTemplate,
 ) {
     var templateParameters: Int
     do {
@@ -87,15 +87,15 @@ fun SymbolResolver.addRecursiveDefaultTemplateArgs(
  */
 fun handleExplicitTemplateParameters(
     constructExpression: ConstructExpression,
-    template: RecordTemplateDeclaration,
+    template: RecordTemplate,
     templateParametersExplicitInitialization: MutableMap<Node, AstNode>,
 ) {
     for (i in constructExpression.templateArguments.indices) {
         val explicit = constructExpression.templateArguments[i]
-        if (template.parameters[i] is TypeParameterDeclaration) {
+        if (template.parameters[i] is TypeParameter) {
             templateParametersExplicitInitialization[
-                (template.parameters[i] as TypeParameterDeclaration).type] = explicit
-        } else if (template.parameters[i] is ParameterDeclaration) {
+                (template.parameters[i] as TypeParameter).type] = explicit
+        } else if (template.parameters[i] is Parameter) {
             templateParametersExplicitInitialization[template.parameters[i]] = explicit
         }
     }
@@ -112,7 +112,7 @@ fun handleExplicitTemplateParameters(
  *   default (no recursive)
  */
 fun SymbolResolver.applyMissingParams(
-    template: RecordTemplateDeclaration,
+    template: RecordTemplate,
     constructExpression: ConstructExpression,
     templateParametersExplicitInitialization: Map<Node, AstNode>,
     templateParameterRealDefaultInitialization: Map<Node, AstNode?>,
@@ -145,7 +145,7 @@ fun SymbolResolver.applyMissingParams(
                 templateParametersExplicitInitialization[missingParam]?.let {
                     constructExpression.addTemplateParameter(
                         it,
-                        TemplateDeclaration.TemplateInitialization.DEFAULT,
+                        Template.TemplateInitialization.DEFAULT,
                     )
                 }
 
@@ -164,7 +164,7 @@ fun SymbolResolver.applyMissingParams(
                 templateParameterRealDefaultInitialization[missingParam]?.let {
                     constructExpression.addTemplateParameter(
                         it,
-                        TemplateDeclaration.TemplateInitialization.DEFAULT,
+                        Template.TemplateInitialization.DEFAULT,
                     )
                 }
                 (templateParametersExplicitInitialization[missingParam] as? TypeExpression)
@@ -187,14 +187,14 @@ fun SymbolResolver.applyMissingParams(
  *   default (no recursive)
  */
 fun handleDefaultTemplateParameters(
-    template: RecordTemplateDeclaration,
+    template: RecordTemplate,
     templateParameterRealDefaultInitialization: MutableMap<Node, AstNode?>,
 ) {
     val declaredTemplateTypes = mutableListOf<Type?>()
-    val declaredNonTypeTemplate = mutableListOf<ParameterDeclaration>()
+    val declaredNonTypeTemplate = mutableListOf<Parameter>()
     val parametersWithDefaults = template.parametersWithDefaults
     for (declaration in template.parameters) {
-        if (declaration is TypeParameterDeclaration) {
+        if (declaration is TypeParameter) {
             declaredTemplateTypes.add(declaration.type)
             if (
                 declaration.default?.type !in declaredTemplateTypes &&
@@ -202,7 +202,7 @@ fun handleDefaultTemplateParameters(
             ) {
                 templateParameterRealDefaultInitialization[declaration.type] = declaration.default
             }
-        } else if (declaration is ParameterDeclaration) {
+        } else if (declaration is Parameter) {
             declaredNonTypeTemplate.add(declaration)
             if (
                 declaration in parametersWithDefaults &&
@@ -225,14 +225,14 @@ fun handleDefaultTemplateParameters(
  */
 internal fun realizeType(
     language: Language<*>?,
-    parameterizedTypeResolution: Map<ParameterizedType, TypeParameterDeclaration>,
+    parameterizedTypeResolution: Map<ParameterizedType, TypeParameter>,
     incomingType: Type,
     initializationSignature: Map<Declaration?, Node?>,
 ): Type {
     var type: Type = UnknownType.getUnknownType(language)
 
     // The root type of our incoming type should be a ParameterizedType. We need to find its
-    // matching TypeParameterDeclaration, to find out how the parameter is initialized.
+    // matching TypeParameter, to find out how the parameter is initialized.
     val typeParamDeclaration = parameterizedTypeResolution[incomingType.root]
     if (typeParamDeclaration != null) {
         val node = initializationSignature[typeParamDeclaration]

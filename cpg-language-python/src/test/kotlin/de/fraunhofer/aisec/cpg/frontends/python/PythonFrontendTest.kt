@@ -31,10 +31,10 @@ import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -196,10 +196,10 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(p)
 
         val foo = p.declarations.firstOrNull()
-        assertIs<FunctionDeclaration>(foo)
+        assertIs<Function>(foo)
 
         val bar = p.declarations[1]
-        assertIs<FunctionDeclaration>(bar)
+        assertIs<Function>(bar)
         assertEquals(2, bar.parameters.size)
 
         val fooBody = foo.body
@@ -476,7 +476,7 @@ class PythonFrontendTest : BaseTest() {
         val barBaz = methBarBody.statements[1]
         assertIs<AssignExpression>(barBaz)
         val barBazInner = recordFoo.fields("baz").firstOrNull()
-        assertIs<FieldDeclaration>(barBazInner)
+        assertIs<Field>(barBazInner)
         assertNotNull(barBazInner.firstAssignment)
     }
 
@@ -531,7 +531,7 @@ class PythonFrontendTest : BaseTest() {
         val barBodyFirstStmt = barBody.statements[0]
         assertIs<AssignExpression>(barBodyFirstStmt)
         val someVarDeclaration = recordFoo.variables.firstOrNull()
-        assertIs<FieldDeclaration>(someVarDeclaration)
+        assertIs<Field>(someVarDeclaration)
         assertLocalName("somevar", someVarDeclaration)
         assertRefersTo(someVarDeclaration.firstAssignment, i)
 
@@ -775,21 +775,16 @@ class PythonFrontendTest : BaseTest() {
         assertNull(classFieldNoInitializer.initializer)
 
         val localClassFieldNoInitializer =
-            methBar.variables[
-                    { it.name.localName == "classFieldNoInitializer" && it !is FieldDeclaration }]
+            methBar.variables[{ it.name.localName == "classFieldNoInitializer" && it !is Field }]
         assertNotNull(localClassFieldNoInitializer)
 
         val localClassFieldWithInit =
-            methBar.variables[
-                    { it.name.localName == "classFieldWithInit" && it !is FieldDeclaration }]
+            methBar.variables[{ it.name.localName == "classFieldWithInit" && it !is Field }]
         assertNotNull(localClassFieldNoInitializer)
 
         val localClassFieldDeclaredInFunction =
             methBar.variables[
-                    {
-                        it.name.localName == "classFieldDeclaredInFunction" &&
-                            it !is FieldDeclaration
-                    }]
+                    { it.name.localName == "classFieldDeclaredInFunction" && it !is Field }]
         assertNotNull(localClassFieldNoInitializer)
 
         // classFieldNoInitializer = classFieldWithInit
@@ -806,7 +801,7 @@ class PythonFrontendTest : BaseTest() {
         val barStmt0 = barBody.statements[0]
         assertIs<AssignExpression>(barStmt0)
         val decl0 = clsFoo.fields("classFieldDeclaredInFunction").firstOrNull()
-        assertIs<FieldDeclaration>(decl0)
+        assertIs<Field>(decl0)
         assertNotNull(decl0.firstAssignment)
 
         // self.classFieldNoInitializer = 789
@@ -1112,7 +1107,7 @@ class PythonFrontendTest : BaseTest() {
 
         assertEquals(9, commentedNodes.size)
 
-        val functions = commentedNodes.filterIsInstance<FunctionDeclaration>()
+        val functions = commentedNodes.filterIsInstance<Function>()
         assertEquals(1, functions.size)
         assertEquals("# a function", functions.firstOrNull()?.comment)
 
@@ -1120,7 +1115,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(1, literals.size)
         assertEquals("# comment start", literals.firstOrNull()?.comment)
 
-        val params = commentedNodes.filterIsInstance<ParameterDeclaration>()
+        val params = commentedNodes.filterIsInstance<Parameter>()
         assertEquals(2, params.size)
         assertEquals("# a parameter", params.first { it.name.localName == "i" }.comment)
         assertEquals("# another parameter", params.first { it.name.localName == "j" }.comment)
@@ -1576,7 +1571,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Reference>(lhs)
 
         val lhsVariable = lhs.refersTo
-        assertIs<VariableDeclaration>(lhsVariable)
+        assertIs<Variable>(lhsVariable)
         assertLocalName("x", lhsVariable)
 
         val rhs = assignExpression.rhs.firstOrNull()
@@ -1870,7 +1865,7 @@ class PythonFrontendTest : BaseTest() {
         // method has a local variables "b".
         val variableB = method.variables["b"]
         assertNotNull(variableB)
-        assertIsNot<FieldDeclaration>(variableB)
+        assertIsNot<Field>(variableB)
         assertEquals(1, someClass.fields.size)
 
         val someClass2 = tu.records["SomeClass2"]
@@ -1878,7 +1873,7 @@ class PythonFrontendTest : BaseTest() {
         val staticMethod = tu.functions["static_method"]
         assertNotNull(staticMethod)
         // static_method has two local variables which are "b" and "x"
-        assertEquals(2, staticMethod.variables.filter { it !is FieldDeclaration }.size)
+        assertEquals(2, staticMethod.variables.filter { it !is Field }.size)
         assertEquals(setOf("b", "x"), staticMethod.variables.map { it.name.localName }.toSet())
         assertTrue(someClass2.fields.isEmpty())
 
@@ -1888,7 +1883,7 @@ class PythonFrontendTest : BaseTest() {
         val foo = tu.functions["foo"]
         assertNotNull(foo)
         val refersTo = foo.refs("fooA").map { it.refersTo }
-        refersTo.forEach { refersTo -> assertIs<ParameterDeclaration>(refersTo) }
+        refersTo.forEach { refersTo -> assertIs<Parameter>(refersTo) }
     }
 
     @Test
