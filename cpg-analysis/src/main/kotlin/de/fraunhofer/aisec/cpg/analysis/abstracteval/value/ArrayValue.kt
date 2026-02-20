@@ -36,11 +36,11 @@ import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArray
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.query.value
 
@@ -73,7 +73,7 @@ class ArrayValue : Value<LatticeInterval> {
         if (node is Variable && node.initializer != null && node.type is PointerType) {
             size = getSize(node.initializer!!)
             target = node
-        } else if (node is AssignExpression && node.rhs.size == 1 && node.lhs.size == 1) {
+        } else if (node is Assign && node.rhs.size == 1 && node.lhs.size == 1) {
             size = getSize(node.rhs.single())
             target = node.lhs.single()
         }
@@ -100,13 +100,13 @@ class ArrayValue : Value<LatticeInterval> {
                     LatticeInterval.Bounded(1, 1)
                 }
             }
-            is InitializerListExpression -> {
+            is InitializerList -> {
                 // The number of elements in the initializer list
                 val length = node.initializers.size.toLong()
                 LatticeInterval.Bounded(length, length)
                 // node.initializers.fold(0L) { acc, init -> acc + getSize(init) }
             }
-            is NewArrayExpression -> {
+            is NewArray -> {
                 if (node.initializer != null) {
                     getSize(node.initializer!!)
                 } else {
@@ -117,7 +117,7 @@ class ArrayValue : Value<LatticeInterval> {
                     LatticeInterval.Bounded(length, length)
                 }
             }
-            is CallExpression -> {
+            is Call -> {
                 if (node.name.localName == "malloc") {
                     val length = (node.arguments.singleOrNull()?.value?.value as? Number)?.toLong()
                     length?.let { LatticeInterval.Bounded(length, length) }

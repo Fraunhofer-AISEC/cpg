@@ -38,8 +38,8 @@ import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Comprehension
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Conditional
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
@@ -354,10 +354,10 @@ private fun EvaluationOrder.isConditionalBranch(): Boolean {
     } else
         (startNode is IfStatement ||
             startNode is DoStatement ||
-            startNode is ComprehensionExpression ||
-            (startNode.astParent is ComprehensionExpression &&
-                startNode == (startNode.astParent as ComprehensionExpression).iterable) ||
-            startNode is ConditionalExpression) && branch == false ||
+            startNode is Comprehension ||
+            (startNode.astParent is Comprehension &&
+                startNode == (startNode.astParent as Comprehension).iterable) ||
+            startNode is Conditional) && branch == false ||
             /*
              * Code like `foo() && bar()` requires us to look-ahead for a [ShortCircuitOperator].
              * The execution of the rhs of the [ShortCircuitOperator] always depends on the lhs:

@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Problem
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.*
 import java.util.function.BiConsumer
@@ -44,7 +44,7 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCatchHandler
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class StatementHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Statement, IASTStatement>(Supplier(::ProblemExpression), lang) {
+    CXXHandler<Statement, IASTStatement>(Supplier(::Problem), lang) {
 
     override fun handleNode(node: IASTStatement): Statement {
         return when (node) {
@@ -74,7 +74,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         }
     }
 
-    private fun handleProblemStatement(problemStatement: IASTProblemStatement): ProblemExpression {
+    private fun handleProblemStatement(problemStatement: IASTProblemStatement): Problem {
         Util.errorWithFileLocation(
             frontend,
             problemStatement,
@@ -82,7 +82,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             problemStatement.problem.message,
         )
 
-        return newProblemExpression(problemStatement.problem.message)
+        return newProblem(problemStatement.problem.message)
     }
 
     private fun handleEmptyStatement(nullStatement: IASTNullStatement): EmptyStatement {
@@ -286,7 +286,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     private fun handleExpressionStatement(ctx: IASTExpressionStatement): Expression {
         val expression =
             frontend.expressionHandler.handle(ctx.expression)?.codeAndLocationFromOtherRawNode(ctx)
-                ?: ProblemExpression("could not parse expression in statement")
+                ?: Problem("could not parse expression in statement")
 
         return expression
     }

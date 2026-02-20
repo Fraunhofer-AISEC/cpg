@@ -40,7 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.problems
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Problem
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import kotlin.test.Test
@@ -63,7 +63,7 @@ internal class ExtensionsTest : BaseTest() {
             translationResult {
                 translationUnit("foo.bar") {
                     function("foo") { body { declare { problemDecl(problemDeclText) } } }
-                        .additionalProblems += ProblemExpression(problemExprText)
+                        .additionalProblems += Problem(problemExprText)
                 }
             }
         }

@@ -60,7 +60,7 @@ import org.slf4j.LoggerFactory
 
 class StatementHandler(lang: JavaLanguageFrontend?) :
     Handler<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement, JavaLanguageFrontend>(
-        Supplier { ProblemExpression() },
+        Supplier { Problem() },
         lang!!,
     ) {
     fun handleExpressionStatement(
@@ -79,7 +79,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         stmt: Statement
     ): de.fraunhofer.aisec.cpg.graph.statements.Statement {
         val throwStmt = stmt as ThrowStmt
-        val throwOperation = newThrowExpression(rawNode = stmt)
+        val throwOperation = newThrow(rawNode = stmt)
         throwOperation.exception =
             frontend.expressionHandler.handle(throwStmt.expression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -437,7 +437,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             }
             for (subStmt in sentry.statements) {
                 compoundStatement.statements +=
-                    handle(subStmt) ?: ProblemExpression("Could not parse statement")
+                    handle(subStmt) ?: Problem("Could not parse statement")
             }
         }
         switchStatement.statement = compoundStatement
@@ -445,7 +445,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return switchStatement
     }
 
-    private fun handleExplicitConstructorInvocation(stmt: Statement): ConstructExpression {
+    private fun handleExplicitConstructorInvocation(stmt: Statement): Construct {
         val explicitConstructorInvocationStmt = stmt.asExplicitConstructorInvocationStmt()
         var containingClass = ""
         val currentRecord = frontend.scopeManager.currentRecord
@@ -458,7 +458,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         }
 
         val name = containingClass
-        val node = this.newConstructExpression(name, rawNode = null)
+        val node = this.newConstruct(name, rawNode = null)
         node.type = unknownType()
 
         // Create a reference either to "this"

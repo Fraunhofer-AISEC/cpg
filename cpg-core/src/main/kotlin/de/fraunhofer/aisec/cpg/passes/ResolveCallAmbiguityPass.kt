@@ -29,7 +29,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.frontends.HasCallExpressionAmbiguity
+import de.fraunhofer.aisec.cpg.frontends.HasCallAmbiguity
 import de.fraunhofer.aisec.cpg.frontends.HasFunctionStyleCasts
 import de.fraunhofer.aisec.cpg.frontends.HasFunctionStyleConstruction
 import de.fraunhofer.aisec.cpg.frontends.Language
@@ -42,7 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
-import de.fraunhofer.aisec.cpg.helpers.toConstructExpression
+import de.fraunhofer.aisec.cpg.helpers.toConstruct
 import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
@@ -50,39 +50,38 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
- * If a [Language] has the trait [HasCallExpressionAmbiguity], we cannot distinguish between
- * [CallExpression], [CastExpression] or [ConstructExpression] during the initial translation. This
- * stems from the fact that we might not know all the types yet. We therefore need to handle them as
- * regular call expression in a [LanguageFrontend] or [Handler] and then later replace them with a
- * [CastExpression] or [ConstructExpression], if the [CallExpression.callee] refers to name of a
- * [Type] / [Record] rather than a function.
+ * If a [Language] has the trait [HasCallAmbiguity], we cannot distinguish between [Call], [Cast] or
+ * [Construct] during the initial translation. This stems from the fact that we might not know all
+ * the types yet. We therefore need to handle them as regular call expression in a
+ * [LanguageFrontend] or [Handler] and then later replace them with a [Cast] or [Construct], if the
+ * [Call.callee] refers to name of a [Type] / [Record] rather than a function.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @DependsOn(TypeResolver::class)
-@RequiresLanguageTrait(HasCallExpressionAmbiguity::class)
+@RequiresLanguageTrait(HasCallAmbiguity::class)
 @Description(
-    "Tries to identify and resolve ambiguous CallExpressions that could also be CastExpressions or ConstructExpressions. The initial translation cannot distinguish between these expression types in some languages (having the trait HasCallExpressionAmbiguity) in the CPG and try to fix these issues by this pass."
+    "Tries to identify and resolve ambiguous Calls that could also be Casts or Constructs. The initial translation cannot distinguish between these expression types in some languages (having the trait HasCallAmbiguity) in the CPG and try to fix these issues by this pass."
 )
-class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+class ResolveCallAmbiguityPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
     override fun accept(tu: TranslationUnit) {
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node ->
             when (node) {
-                is CallExpression -> handleCall(node)
+                is Call -> handleCall(node)
             }
         }
 
         walker.iterate(tu)
     }
 
-    private fun handleCall(call: CallExpression) {
+    private fun handleCall(call: Call) {
         val parent = call.astParent
 
         // Make sure, we are not accidentally handling construct expressions (since they also derive
         // from call expressions)
-        if (call is ConstructExpression) {
+        if (call is Construct) {
             return
         }
 
@@ -99,7 +98,7 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
         // as pointers. We are interested in the references in the "core". We can skip all
         // references that are member expressions
         val ref = callee.unwrapReference()
-        if (ref == null || ref is MemberExpression) {
+        if (ref == null || ref is Member) {
             return
         }
 
@@ -134,10 +133,10 @@ context(provider: ContextProvider)
 fun SubgraphWalker.ScopedWalker<Node>.replaceCallWithCast(
     type: Type,
     parent: AstNode,
-    call: CallExpression,
+    call: Call,
     pointer: Boolean,
 ) {
-    val cast = provider.newCastExpression()
+    val cast = provider.newCast()
     cast.code = call.code
     cast.language = call.language
     cast.location = call.location
@@ -157,11 +156,11 @@ context(_: ContextProvider)
 fun SubgraphWalker.ScopedWalker<Node>.replaceCallWithConstruct(
     type: ObjectType,
     parent: AstNode,
-    call: CallExpression,
+    call: Call,
 ) {
     val callee = call.callee
     if (callee is Reference) {
-        val construct = call.toConstructExpression(callee)
+        val construct = call.toConstruct(callee)
         construct.type = type
         replace(parent, call, construct)
     }

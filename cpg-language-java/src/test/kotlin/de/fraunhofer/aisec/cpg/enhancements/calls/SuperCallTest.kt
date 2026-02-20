@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.enhancements.calls
 
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -92,7 +92,7 @@ internal class SuperCallTest : BaseTest() {
         var refs = getField.refs
         val fieldRef = findByUniquePredicate(refs) { "field" == it.code }
         val getSuperField = findByUniqueName(methods, "getSuperField")
-        refs = getSuperField.allChildren<MemberExpression>()
+        refs = getSuperField.allChildren<Member>()
         val superFieldRef = findByUniquePredicate(refs) { "super.field" == it.code }
         assertEquals(field, fieldRef.refersTo)
         assertTrue(superFieldRef.base is Reference)

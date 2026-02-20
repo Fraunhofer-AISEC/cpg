@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -68,7 +68,7 @@ internal class StaticImportsTest : BaseTest() {
         assertNotNull(staticField)
         assertTrue(staticField.modifiers.contains("static"))
 
-        val memberExpressionExpressions = main.allChildren<MemberExpression>()
+        val memberExpressionExpressions = main.allChildren<Member>()
         // we have two member expressions, one to the field and one to the method
         assertEquals(2, memberExpressionExpressions.size)
 

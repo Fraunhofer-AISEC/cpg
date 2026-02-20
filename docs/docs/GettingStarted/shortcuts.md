@@ -88,7 +88,7 @@ which search for other patterns in the graph. Note that these are often less
 stable than the information from above!
 
 * The size of an array is evaluated using
-  `SubscriptExpression.arraySize`. Unfortunately, this only works if the
+  `Subscript.arraySize`. Unfortunately, this only works if the
   size is given in the initialization. Updates are not considered.
 * Control dependencies are currently available via the extensions
   `Node.controlledBy()` and `IfStatement.controls()`.

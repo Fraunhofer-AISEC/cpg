@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Problem
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
@@ -167,7 +167,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 firstCatch.body?.statements = firstStatement.statements
             }
         }
-        node.catchClauses.forEach(::fixThrowExpressionsForCatch)
+        node.catchClauses.forEach(::fixThrowsForCatch)
     }
 
     /**
@@ -175,10 +175,10 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Those expressions have been artificially added e.g. by a catchswitch and need to be filled
      * now.
      */
-    private fun fixThrowExpressionsForCatch(catch: CatchClause) {
+    private fun fixThrowsForCatch(catch: CatchClause) {
         val reachableThrowNodes =
-            getAllChildrenRecursively(catch).filterIsInstance<ThrowExpression>().filter { n ->
-                n.exception is ProblemExpression
+            getAllChildrenRecursively(catch).filterIsInstance<Throw>().filter { n ->
+                n.exception is Problem
             }
         if (reachableThrowNodes.isNotEmpty()) {
             val catchParameter =

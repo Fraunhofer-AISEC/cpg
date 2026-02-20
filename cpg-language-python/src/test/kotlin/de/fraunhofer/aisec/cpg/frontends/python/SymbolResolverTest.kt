@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertFullName
 import de.fraunhofer.aisec.cpg.test.assertNotRefersTo
@@ -57,19 +57,19 @@ class SymbolResolverTest {
         assertNotNull(fieldA)
 
         val aRefs = result.refs("a")
-        aRefs.filterIsInstance<MemberExpression>().forEach { assertRefersTo(it, fieldA) }
-        aRefs.filter { it !is MemberExpression }.forEach { assertRefersTo(it, globalA) }
+        aRefs.filterIsInstance<Member>().forEach { assertRefersTo(it, fieldA) }
+        aRefs.filter { it !is Member }.forEach { assertRefersTo(it, globalA) }
 
         // We should only have one reference to "os" -> the member expression "self.os"
         val osRefs = result.refs("os")
         assertEquals(1, osRefs.size)
-        assertIs<MemberExpression>(osRefs.singleOrNull())
+        assertIs<Member>(osRefs.singleOrNull())
 
         // "os.name" is not a member expression but a reference to the field "name" of the "os"
         // module, therefore it is a reference
         val osNameRefs = result.refs("os.name")
         assertEquals(1, osNameRefs.size)
-        assertIsNot<MemberExpression>(osNameRefs.singleOrNull())
+        assertIsNot<Member>(osNameRefs.singleOrNull())
 
         // Same tests but for fields declared at the record level.
         // A variable "declared" inside a class is considered a field in Python.
@@ -78,13 +78,13 @@ class SymbolResolverTest {
         val baz = result.records["MyClass"]?.methods["baz"]
         assertIs<Method>(baz)
         val bazPrint = baz.calls("print").singleOrNull()
-        assertIs<CallExpression>(bazPrint)
+        assertIs<Call>(bazPrint)
         val bazPrintArgument = bazPrint.arguments.firstOrNull()
         assertRefersTo(bazPrintArgument, fieldCopyA)
 
         // make sure, that this does not work without the receiver
         val bazDoesNotWork = baz.calls("doesNotWork").singleOrNull()
-        assertIs<CallExpression>(bazDoesNotWork)
+        assertIs<Call>(bazDoesNotWork)
         val bazDoesNotWorkArgument = bazDoesNotWork.arguments.firstOrNull()
         assertNotNull(bazDoesNotWorkArgument)
         assertNotRefersTo(bazDoesNotWorkArgument, fieldCopyA)
@@ -123,6 +123,6 @@ class SymbolResolverTest {
 
         val doSomething = result.calls("do_something").singleOrNull()
         assertNotNull(doSomething, "Expected to find a single call to 'do_something'")
-        assertIs<MemberCallExpression>(doSomething, "'do_something' should be a member call")
+        assertIs<MemberCall>(doSomething, "'do_something' should be a member call")
     }
 }

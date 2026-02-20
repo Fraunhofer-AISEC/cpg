@@ -43,7 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
@@ -67,12 +67,12 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
     override fun handleNode(node: Node, tu: TranslationUnit) {
         when (node) {
-            is CallExpression -> handleCallExpression(node, tu)
+            is Call -> handleCall(node, tu)
         }
     }
 
-    /** Handles a [CallExpression] node and checks if it is a dynamic loading operation. */
-    private fun handleCallExpression(call: CallExpression, tu: TranslationUnit) {
+    /** Handles a [Call] node and checks if it is a dynamic loading operation. */
+    private fun handleCall(call: Call, tu: TranslationUnit) {
         val concept = tu.getConceptOrCreate<DynamicLoading>()
 
         val ops =
@@ -93,14 +93,14 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
      * it to the [DynamicLoading] concept. The tricky part is to find the [Function] that is loaded.
      */
     private fun handleLoadFunction(
-        call: CallExpression,
+        call: Call,
         concept: DynamicLoading,
     ): List<LoadSymbol<out ValueDeclaration>> {
         // The first argument is the handle to the library. We can follow the DFG back to find the
         // call to dlopen.
         val path =
             call.arguments.getOrNull(0)?.followPrevDFG {
-                it is CallExpression && it.operationNodes.any { it is LoadLibrary }
+                it is Call && it.operationNodes.any { it is LoadLibrary }
             }
 
         val loadLibrary =
@@ -156,7 +156,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
      * represents the [LoadLibrary.what].
      */
     private fun handleLibraryLoad(
-        call: CallExpression,
+        call: Call,
         concept: DynamicLoading,
         os: OperatingSystemArchitecture,
     ): List<LoadLibrary> {

@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Problem
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -40,17 +40,17 @@ class ArgumentHolderTest {
                 listOf(
                     newBinaryOperator("?"),
                     newUnaryOperator("?", false, false),
-                    newCallExpression(),
-                    newCastExpression(),
+                    newCall(),
+                    newCast(),
                     newIfStatement(),
                     newReturnStatement(),
-                    newConditionalExpression(newLiteral(true)),
+                    newConditional(newLiteral(true)),
                     newDoStatement(),
-                    newInitializerListExpression(),
-                    newKeyValueExpression(key = ProblemExpression(), value = ProblemExpression()),
-                    newSubscriptExpression(),
+                    newInitializerList(),
+                    newKeyValue(key = Problem(), value = Problem()),
+                    newSubscript(),
                     newWhileStatement(),
-                    newAssignExpression(),
+                    newAssign(),
                     newVariable("test"),
                 )
 

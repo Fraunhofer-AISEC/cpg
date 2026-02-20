@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 class StatementHandler(frontend: GoLanguageFrontend) :
-    GoHandler<Statement, GoStandardLibrary.Ast.Stmt>(::ProblemExpression, frontend) {
+    GoHandler<Statement, GoStandardLibrary.Ast.Stmt>(::Problem, frontend) {
 
     override fun handleNode(node: GoStandardLibrary.Ast.Stmt): Statement {
         return when (node) {
@@ -60,7 +60,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         }
     }
 
-    private fun handleAssignStmt(assignStmt: GoStandardLibrary.Ast.AssignStmt): AssignExpression {
+    private fun handleAssignStmt(assignStmt: GoStandardLibrary.Ast.AssignStmt): Assign {
         val lhs = assignStmt.lhs.map { frontend.expressionHandler.handle(it) }
         val rhs = assignStmt.rhs.map { frontend.expressionHandler.handle(it) }
 
@@ -74,7 +74,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                 "="
             }
 
-        return newAssignExpression(operatorCode, lhs, rhs, rawNode = assignStmt)
+        return newAssign(operatorCode, lhs, rhs, rawNode = assignStmt)
     }
 
     private fun handleBranchStmt(branchStmt: GoStandardLibrary.Ast.BranchStmt): Statement {
@@ -96,7 +96,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             }
         }
 
-        return newProblemExpression("unknown token \"${branchStmt.tokString}\" in branch statement")
+        return newProblem("unknown token \"${branchStmt.tokString}\" in branch statement")
     }
 
     private fun handleBlockStmt(blockStmt: GoStandardLibrary.Ast.BlockStmt): Statement {
@@ -146,7 +146,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
         if (currentBlock == null) {
             log.error("could not find block to add case clauses")
-            return newProblemExpression("could not find block to add case clauses")
+            return newProblem("could not find block to add case clauses")
         }
 
         // Add the case statement
@@ -252,9 +252,9 @@ class StatementHandler(frontend: GoLanguageFrontend) :
      * supplied call expression in a separate Go routine. We cannot model this 1:1, so we basically
      * we create a call expression to a built-in call.
      */
-    private fun handleGoStmt(goStmt: GoStandardLibrary.Ast.GoStmt): CallExpression {
+    private fun handleGoStmt(goStmt: GoStandardLibrary.Ast.GoStmt): Call {
         val ref = newReference("go")
-        val call = newCallExpression(ref, "go", rawNode = goStmt)
+        val call = newCall(ref, "go", rawNode = goStmt)
         call += frontend.expressionHandler.handle(goStmt.call)
 
         return call
@@ -386,8 +386,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         switchStmt.init?.let { switch.initializerStatement = handle(it) }
         switchStmt.tag?.let { switch.selector = frontend.expressionHandler.handle(it) }
 
-        val block =
-            handle(switchStmt.body) as? Block ?: return newProblemExpression("missing switch body")
+        val block = handle(switchStmt.body) as? Block ?: return newProblem("missing switch body")
 
         switch.statement = block
 
@@ -407,7 +406,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
         val assign = frontend.statementHandler.handle(typeSwitchStmt.assign)
         val (lhs, rhs) =
-            if (assign is AssignExpression) {
+            if (assign is Assign) {
                 val rhs = assign.rhs.singleOrNull()
                 switch.selector = rhs
                 Pair(assign.lhs.singleOrNull(), (rhs as? UnaryOperator)?.input)

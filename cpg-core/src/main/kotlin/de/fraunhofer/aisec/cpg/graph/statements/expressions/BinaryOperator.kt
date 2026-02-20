@@ -41,7 +41,7 @@ import org.neo4j.ogm.annotation.Relationship
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
  * right hand expression (rhs) and an operatorCode.
  *
- * Note: For assignments, i.e., using an `=` or `+=`, etc. the [AssignExpression] MUST be used.
+ * Note: For assignments, i.e., using an `=` or `+=`, etc. the [Assign] MUST be used.
  */
 open class BinaryOperator :
     Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
@@ -50,7 +50,7 @@ open class BinaryOperator :
     @Relationship("LHS")
     var lhsEdge =
         astEdgeOf<Expression>(
-            of = ProblemExpression("could not parse lhs"),
+            of = Problem("could not parse lhs"),
             onChanged = ::exchangeTypeObserverWithAccessPropagation,
         )
     var lhs by unwrapping(BinaryOperator::lhsEdge)
@@ -59,7 +59,7 @@ open class BinaryOperator :
     @Relationship("RHS")
     var rhsEdge =
         astEdgeOf<Expression>(
-            of = ProblemExpression("could not parse rhs"),
+            of = Problem("could not parse rhs"),
             onChanged = ::exchangeTypeObserverWithAccessPropagation,
         )
     var rhs by unwrapping(BinaryOperator::rhsEdge)
@@ -73,7 +73,7 @@ open class BinaryOperator :
                     (operatorCode in language.simpleAssignmentOperators)
             ) {
                 throw TranslationException(
-                    "Creating a BinaryOperator with an assignment operator code is not allowed. The class AssignExpression must be used instead."
+                    "Creating a BinaryOperator with an assignment operator code is not allowed. The class Assign must be used instead."
                 )
             }
         }
@@ -130,7 +130,7 @@ open class BinaryOperator :
     override fun hashCode() = Objects.hash(super.hashCode(), lhs, rhs, operatorCode)
 
     override fun addArgument(expression: Expression) {
-        if (lhs is ProblemExpression) {
+        if (lhs is Problem) {
             lhs = expression
         } else {
             rhs = expression

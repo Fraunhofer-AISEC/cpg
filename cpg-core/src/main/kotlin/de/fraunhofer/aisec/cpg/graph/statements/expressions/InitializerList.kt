@@ -39,11 +39,11 @@ import org.neo4j.ogm.annotation.Relationship
 /**
  * This node represents the initialization of an "aggregate" object, such as an array or a struct or
  * object. The actual use can greatly differ by the individual language frontends. In order to be as
- * accurate as possible when propagating types, the [InitializerListExpression.type] property MUST
- * be set before adding any values to [InitializerListExpression.initializers].
+ * accurate as possible when propagating types, the [InitializerList.type] property MUST be set
+ * before adding any values to [InitializerList.initializers].
  */
 // TODO Merge and/or refactor
-class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
+class InitializerList : Expression(), ArgumentHolder, HasType.TypeObserver {
 
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)
@@ -58,7 +58,7 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
         }
 
     /** Virtual property to access [initializerEdges] without property edges. */
-    var initializers by unwrapping(InitializerListExpression::initializerEdges)
+    var initializers by unwrapping(InitializerList::initializerEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -116,7 +116,7 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is InitializerListExpression) return false
+        if (other !is InitializerList) return false
         return super.equals(other) && propertyEqualsList(initializerEdges, other.initializerEdges)
     }
 

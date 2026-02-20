@@ -47,7 +47,7 @@ import org.neo4j.ogm.annotation.Relationship
  * An expression, which calls another function. It has a list of arguments (list of [Expression]s)
  * and is connected via the INVOKES edge to its [Function].
  */
-open class CallExpression :
+open class Call :
     Expression(),
     HasOverloadedOperation,
     HasType.TypeObserver,
@@ -67,7 +67,7 @@ open class CallExpression :
      * A virtual property to quickly access the list of declarations that this call invokes without
      * property edges.
      */
-    @PopulatedByPass(SymbolResolver::class) var invokes by unwrapping(CallExpression::invokeEdges)
+    @PopulatedByPass(SymbolResolver::class) var invokes by unwrapping(Call::invokeEdges)
 
     /** The list of arguments of this call expression, backed by a list of [Edge] objects. */
     @Relationship(value = "ARGUMENTS", direction = Relationship.Direction.OUTGOING)
@@ -77,7 +77,7 @@ open class CallExpression :
      * The list of arguments as a simple list. This is a delegated property delegated to
      * [argumentEdges].
      */
-    var arguments by unwrapping(CallExpression::argumentEdges)
+    var arguments by unwrapping(Call::argumentEdges)
 
     /** The list of argument types (aka the signature). */
     val signature: List<Type>
@@ -91,9 +91,9 @@ open class CallExpression :
      * is intentionally left empty. It is not filled by the [SymbolResolver].
      */
     @Relationship(value = "CALLEE", direction = Relationship.Direction.OUTGOING)
-    private var calleeEdge = astEdgeOf<Expression>(ProblemExpression("could not parse callee"))
+    private var calleeEdge = astEdgeOf<Expression>(Problem("could not parse callee"))
 
-    var callee by unwrapping(CallExpression::calleeEdge)
+    var callee by unwrapping(Call::calleeEdge)
 
     /**
      * The [Name] of this call expression, based on its [callee].
@@ -155,7 +155,7 @@ open class CallExpression :
     /** Specifies, whether this call has any template arguments. */
     var template = false
 
-    /** If the CallExpression instantiates a template, the call can provide template arguments. */
+    /** If the Call instantiates a template, the call can provide template arguments. */
     @Relationship(value = "TEMPLATE_ARGUMENTS", direction = Relationship.Direction.OUTGOING)
     var templateArgumentEdges: TemplateArguments<AstNode>? = null
         set(value) {
@@ -169,9 +169,9 @@ open class CallExpression :
         }
 
     /**
-     * If the CallExpression instantiates a Template the CallExpression is connected to the template
-     * which is instantiated. This is required by the expansion pass to access the Template
-     * directly. The invokes edge will still point to the realization of the template.
+     * If the Call instantiates a Template the Call is connected to the template which is
+     * instantiated. This is required by the expansion pass to access the Template directly. The
+     * invokes edge will still point to the realization of the template.
      */
     @Relationship(value = "TEMPLATE_INSTANTIATION", direction = Relationship.Direction.OUTGOING)
     var templateInstantiation: Template? = null
@@ -282,7 +282,7 @@ open class CallExpression :
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is CallExpression) return false
+        if (other !is Call) return false
         return super.equals(other) &&
             arguments == other.arguments &&
             propertyEqualsList(argumentEdges, other.argumentEdges) &&
@@ -300,7 +300,7 @@ open class CallExpression :
         get() = signature
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        return if (this.callee is ProblemExpression)
+        return if (this.callee is Problem)
             this.arguments.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
         else this.callee.getStartingPrevEOG()
     }

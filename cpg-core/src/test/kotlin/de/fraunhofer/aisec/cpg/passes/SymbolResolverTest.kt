@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construct
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ReferenceTag
 import de.fraunhofer.aisec.cpg.test.GraphExamples
@@ -63,14 +63,14 @@ class SymbolResolverTest {
             assertEquals(type, ref?.type)
 
             val callmethod1 = method2.calls["method1"]
-            assertIs<MemberCallExpression>(callmethod1)
+            assertIs<MemberCall>(callmethod1)
             assertRefersTo(callmethod1.base, method2.receiver)
             assertInvokes(callmethod1, method1)
 
             val callmethod2 = method2.calls["method2"]
             assertInvokes(callmethod2, method2)
 
-            val construct = method1.calls { it is ConstructExpression }.firstOrNull()
+            val construct = method1.calls { it is Construct }.firstOrNull()
             assertNotNull(construct)
             assertInvokes(construct, constructor)
         }
@@ -78,7 +78,7 @@ class SymbolResolverTest {
 
     @Test
     fun testUniqueTags() {
-        val result = GraphExamples.getConditionalExpression()
+        val result = GraphExamples.getConditional()
 
         val map = mutableMapOf<ReferenceTag, MutableList<Reference>>()
 

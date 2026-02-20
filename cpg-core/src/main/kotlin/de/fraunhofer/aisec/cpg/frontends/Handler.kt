@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory
  * usually supplied by a language parser into our generic CPG nodes.
  *
  * It implements at least one [MetadataProvider], so that node builder extension functions (e.g.,
- * [newCallExpression] can be used directly to create appropriate nodes.
+ * [newCall] can be used directly to create appropriate nodes.
  *
  * @param <S> the result node or a collection of nodes
  * @param <T> the raw ast node specific to the parser

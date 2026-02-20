@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.config.ReadConfigurationGroup
 import de.fraunhofer.aisec.cpg.graph.concepts.config.ReadConfigurationOption
 import de.fraunhofer.aisec.cpg.graph.concepts.config.RegisterConfigurationGroup
 import de.fraunhofer.aisec.cpg.graph.concepts.config.RegisterConfigurationOption
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Subscript
 import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.ini.IniFileConfigurationSourcePass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
@@ -158,7 +158,7 @@ class ConfigurationPassTest {
             registerOptionOps.associate { Pair(it.name.toString(), it.option) },
         )
 
-        val subs = result.allChildren<SubscriptExpression>()
+        val subs = result.allChildren<Subscript>()
         assertEquals(6, subs.size)
 
         val port = result.refs["port"]

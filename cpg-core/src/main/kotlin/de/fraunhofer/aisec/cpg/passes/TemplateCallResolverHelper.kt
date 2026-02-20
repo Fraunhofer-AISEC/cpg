@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.objectType
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construct
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -42,14 +42,13 @@ import de.fraunhofer.aisec.cpg.graph.types.apply
 
 /**
  * Adds the resolved default template arguments recursively to the templateParameter list of the
- * ConstructExpression until a fixpoint is reached e.g. template&lt;class Type1, class Type2 =
- * Type1&gt;
+ * Construct until a fixpoint is reached e.g. template&lt;class Type1, class Type2 = Type1&gt;
  *
  * @param constructExpression
  * @param template
  */
 fun SymbolResolver.addRecursiveDefaultTemplateArgs(
-    constructExpression: ConstructExpression,
+    constructExpression: Construct,
     template: RecordTemplate,
 ) {
     var templateParameters: Int
@@ -86,7 +85,7 @@ fun SymbolResolver.addRecursiveDefaultTemplateArgs(
  *   instantiation
  */
 fun handleExplicitTemplateParameters(
-    constructExpression: ConstructExpression,
+    constructExpression: Construct,
     template: RecordTemplate,
     templateParametersExplicitInitialization: MutableMap<Node, AstNode>,
 ) {
@@ -102,9 +101,9 @@ fun handleExplicitTemplateParameters(
 }
 
 /**
- * Apply missingParameters (either explicit or defaults) to the ConstructExpression and its type
+ * Apply missingParameters (either explicit or defaults) to the Construct and its type
  *
- * @param template Template which is instantiated by the ConstructExpression
+ * @param template Template which is instantiated by the Construct
  * @param constructExpression
  * @param templateParametersExplicitInitialization mapping of the template parameter to the explicit
  *   instantiation
@@ -113,7 +112,7 @@ fun handleExplicitTemplateParameters(
  */
 fun SymbolResolver.applyMissingParams(
     template: RecordTemplate,
-    constructExpression: ConstructExpression,
+    constructExpression: Construct,
     templateParametersExplicitInitialization: Map<Node, AstNode>,
     templateParameterRealDefaultInitialization: Map<Node, AstNode?>,
 ) {

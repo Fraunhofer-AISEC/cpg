@@ -42,7 +42,7 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
     @Relationship("INPUT")
     var inputEdge =
         astEdgeOf<Expression>(
-            of = ProblemExpression("could not parse input"),
+            of = Problem("could not parse input"),
             onChanged = { old, new ->
                 exchangeTypeObserverWithAccessPropagation(old, new)
                 changeExpressionAccess()

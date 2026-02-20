@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util
 
@@ -70,7 +70,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
 
         stmt.keywords.forEach {
             cls.additionalProblems +=
-                newProblemExpression(problem = "could not parse keyword $it in class", rawNode = it)
+                newProblem(problem = "could not parse keyword $it in class", rawNode = it)
         }
 
         for (s in stmt.body) {
@@ -267,7 +267,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         // first argument is the receiver
         val recvPythonNode = positionalArguments.firstOrNull()
         if (recvPythonNode == null) {
-            result.additionalProblems += newProblemExpression("Expected a receiver", rawNode = args)
+            result.additionalProblems += newProblem("Expected a receiver", rawNode = args)
         } else {
             val tpe = recordDeclaration.toType()
             val recvNode =
@@ -285,7 +285,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                     args.defaults.getOrNull(0)?.let { frontend.expressionHandler.handle(it) }
                 defaultValue?.let {
                     result.additionalProblems +=
-                        newProblemExpression("Receiver with default value", rawNode = args)
+                        newProblem("Receiver with default value", rawNode = args)
                 }
             }
             // Add the receiver to the scope so that references to it can be resolved
@@ -296,7 +296,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                 is Method -> result.receiver = recvNode
                 else ->
                     result.additionalProblems +=
-                        newProblemExpression(
+                        newProblem(
                             problem =
                                 "Expected a constructor or method declaration. Got something else.",
                             rawNode = result,
@@ -386,7 +386,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                     is Python.AST.Attribute -> {
                         val parsedDecorator = frontend.expressionHandler.handle(decorator)
                         val name =
-                            if (parsedDecorator is MemberExpression) {
+                            if (parsedDecorator is Member) {
                                 parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
                             } else {
                                 parsedDecorator.name
@@ -396,7 +396,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                     is Python.AST.Call -> {
                         val parsedDecorator = frontend.expressionHandler.handle(decorator.func)
                         val name =
-                            if (parsedDecorator is MemberExpression) {
+                            if (parsedDecorator is Member) {
                                 parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
                             } else {
                                 parsedDecorator.name

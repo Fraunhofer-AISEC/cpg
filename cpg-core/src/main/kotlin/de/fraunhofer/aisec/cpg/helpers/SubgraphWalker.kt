@@ -395,9 +395,9 @@ object SubgraphWalker {
  *   replacement BEFORE any DFG edges are set. We are re-wiring EOG edges, but nothing else. If one
  *   tries to replace a node with existing [Node.nextDFG] or [Node.prevDFG], we fail.
  * - We also migrate [HasType.typeObservers] from the [old] to the [new] node.
- * - Lastly, if the [new] node is a [CallExpression.callee] of a [CallExpression] parent, and the
- *   [old] and [new] expressions are of different types (e.g., exchanging a simple [Reference] for a
- *   [MemberExpression]), we also replace the [CallExpression] with a [MemberCallExpression].
+ * - Lastly, if the [new] node is a [Call.callee] of a [Call] parent, and the [old] and [new]
+ *   expressions are of different types (e.g., exchanging a simple [Reference] for a [Member]), we
+ *   also replace the [Call] with a [MemberCall].
  */
 context(provider: ContextProvider)
 fun SubgraphWalker.ScopedWalker<Node>.replace(
@@ -414,16 +414,16 @@ fun SubgraphWalker.ScopedWalker<Node>.replace(
 
     val success =
         when (parent) {
-            is CallExpression -> {
+            is Call -> {
                 if (parent.callee == old) {
                     // Now we are running into a problem. If the previous callee and the new callee
                     // are of different types (ref/vs. member expression). We also need to replace
                     // the whole call expression instead.
-                    if (parent is MemberCallExpression && new is Reference) {
-                        val newCall = parent.toCallExpression(new)
+                    if (parent is MemberCall && new is Reference) {
+                        val newCall = parent.toCall(new)
                         return replace(parent.astParent, parent, newCall)
-                    } else if (new is MemberExpression) {
-                        val newCall = parent.toMemberCallExpression(new)
+                    } else if (new is Member) {
+                        val newCall = parent.toMemberCall(new)
                         return replace(parent.astParent, parent, newCall)
                     } else {
                         parent.callee = new
@@ -494,11 +494,11 @@ fun SubgraphWalker.ScopedWalker<Node>.replace(
 }
 
 /**
- * Copies the properties of this [CallExpression] to the given [call] and sets the `call.callee` to
- * [callee]. Note that the ast children are not duplicated. This means that their `astParent` will
- * now point to [call].
+ * Copies the properties of this [Call] to the given [call] and sets the `call.callee` to [callee].
+ * Note that the ast children are not duplicated. This means that their `astParent` will now point
+ * to [call].
  */
-private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) {
+private fun Call.duplicateTo(call: Call, callee: Reference) {
     call.language = this.language
     call.scope = this.scope
     call.argumentEdges.clear()
@@ -520,33 +520,33 @@ private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) 
 }
 
 /**
- * Creates a new [CallExpression] with the same properties (e.g. ast childre, etc.) except from DFG
- * and EOG edges as [this]. It sets the [CallExpression.callee] to [callee].
+ * Creates a new [Call] with the same properties (e.g. ast childre, etc.) except from DFG and EOG
+ * edges as [this]. It sets the [Call.callee] to [callee].
  */
-fun MemberCallExpression.toCallExpression(callee: Reference): CallExpression {
-    val call = CallExpression()
+fun MemberCall.toCall(callee: Reference): Call {
+    val call = Call()
     duplicateTo(call, callee)
 
     return call
 }
 
 /**
- * Creates a new [MemberCallExpression] with the same properties (e.g. ast children, etc.) except
- * from DFG and EOG edges as [this]. It sets the [MemberCallExpression.callee] to [callee].
+ * Creates a new [MemberCall] with the same properties (e.g. ast children, etc.) except from DFG and
+ * EOG edges as [this]. It sets the [MemberCall.callee] to [callee].
  */
-fun CallExpression.toMemberCallExpression(callee: MemberExpression): MemberCallExpression {
-    val call = MemberCallExpression()
+fun Call.toMemberCall(callee: Member): MemberCall {
+    val call = MemberCall()
     duplicateTo(call, callee)
 
     return call
 }
 
 /**
- * Creates a new [ConstructExpression] with the same properties (e.g. ast children, etc.) except
- * from DFG and EOG edges as [this]. It sets the [ConstructExpression.callee] to [callee].
+ * Creates a new [Construct] with the same properties (e.g. ast children, etc.) except from DFG and
+ * EOG edges as [this]. It sets the [Construct.callee] to [callee].
  */
-fun CallExpression.toConstructExpression(callee: Reference): ConstructExpression {
-    val construct = ConstructExpression()
+fun Call.toConstruct(callee: Reference): Construct {
+    val construct = Construct()
     duplicateTo(construct, callee)
 
     return construct

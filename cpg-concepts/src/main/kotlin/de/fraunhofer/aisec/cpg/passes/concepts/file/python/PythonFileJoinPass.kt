@@ -31,9 +31,9 @@ import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.graph.concepts.file.FileLikeObject
 import de.fraunhofer.aisec.cpg.graph.concepts.file.FileTempFileStatus
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFile
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
@@ -63,10 +63,7 @@ import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 @Description("Handles python's os.path.join calls to create better understanding of File nodes.")
 class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
-    override fun handleCallExpression(
-        state: NodeToOverlayStateElement,
-        node: CallExpression,
-    ): Collection<OverlayNode> {
+    override fun handleCall(state: NodeToOverlayStateElement, node: Call): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
         if (node.language.name.localName != "PythonLanguage") {
@@ -84,9 +81,9 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         }
     }
 
-    override fun handleMemberCallExpression(
+    override fun handleMemberCall(
         state: NodeToOverlayStateElement,
-        node: MemberCallExpression,
+        node: MemberCall,
     ): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
@@ -110,7 +107,7 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * To do so, it concatenates the file names of the [FileLikeObject]s and [Literal]s in the
      * arguments with the separator `"/"` and generates new [File] nodes with the computed names.
      */
-    private fun handlePathJoin(callExpression: CallExpression): Collection<OverlayNode> {
+    private fun handlePathJoin(callExpression: Call): Collection<OverlayNode> {
         val allCombinedPaths =
             callExpression.arguments.fold(
                 listOf(listOf<String>() to FileTempFileStatus.NOT_A_TEMP_FILE)

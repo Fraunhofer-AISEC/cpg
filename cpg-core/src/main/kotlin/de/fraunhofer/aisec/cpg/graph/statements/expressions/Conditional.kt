@@ -40,11 +40,10 @@ import org.neo4j.ogm.annotation.Relationship
  * Represents an expression containing a ternary operator: `var x = condition ? valueIfTrue :
  * valueIfFalse`;
  */
-class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasType.TypeObserver {
+class Conditional : Expression(), ArgumentHolder, BranchingNode, HasType.TypeObserver {
     @Relationship("CONDITION")
-    var conditionEdge =
-        astEdgeOf<Expression>(ProblemExpression("could not parse condition expression"))
-    var condition by unwrapping(ConditionalExpression::conditionEdge)
+    var conditionEdge = astEdgeOf<Expression>(Problem("could not parse condition expression"))
+    var condition by unwrapping(Conditional::conditionEdge)
 
     @Relationship("THEN_EXPRESSION")
     var thenExpressionEdge =
@@ -54,7 +53,7 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
                 new?.end?.registerTypeObserver(this)
             }
         )
-    var thenExpression by unwrapping(ConditionalExpression::thenExpressionEdge)
+    var thenExpression by unwrapping(Conditional::thenExpressionEdge)
 
     @Relationship("ELSE_EXPRESSION")
     var elseExpressionEdge =
@@ -64,7 +63,7 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
                 new?.end?.registerTypeObserver(this)
             }
         )
-    var elseExpression by unwrapping(ConditionalExpression::elseExpressionEdge)
+    var elseExpression by unwrapping(Conditional::elseExpressionEdge)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -79,7 +78,7 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
         get() = condition
 
     override fun addArgument(expression: Expression) {
-        if (condition is ProblemExpression) {
+        if (condition is Problem) {
             condition = expression
         } else if (thenExpression == null) {
             thenExpression = expression
@@ -130,7 +129,7 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ConditionalExpression) return false
+        if (other !is Conditional) return false
         return super.equals(other) &&
             condition == other.condition &&
             thenExpression == other.thenExpression &&

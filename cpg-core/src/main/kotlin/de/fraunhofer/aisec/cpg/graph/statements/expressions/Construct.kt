@@ -40,11 +40,11 @@ import org.neo4j.ogm.annotation.Relationship
 /**
  * Represents a call to a constructor, usually as an initializer.
  * * In C++ this can be part of a variable declaration plus initialization, such as `int a(5);` or
- *   as part of a [NewExpression].
- * * In Java, it is the initializer of a [NewExpression].
+ *   as part of a [New].
+ * * In Java, it is the initializer of a [New].
  */
 // TODO Merge and/or refactor
-class ConstructExpression : CallExpression() {
+class Construct : Call() {
     /**
      * The link to the [Constructor]. This is populated by the
      * [de.fraunhofer.aisec.cpg.passes.SymbolResolver] later.
@@ -60,7 +60,7 @@ class ConstructExpression : CallExpression() {
         set(value) {
             field = value
 
-            // Forward to CallExpression. This will also take care of DFG edges.
+            // Forward to Call. This will also take care of DFG edges.
             if (value != null) {
                 invokes = mutableListOf(value as Function)
             }
@@ -68,7 +68,7 @@ class ConstructExpression : CallExpression() {
 
     @Relationship("ANONYMOUS_CLASS") var anonymousClassEdge = astOptionalEdgeOf<Record>()
 
-    var anonymousClass by unwrapping(ConstructExpression::anonymousClassEdge)
+    var anonymousClass by unwrapping(Construct::anonymousClassEdge)
 
     /** The [Declaration] of the type this expression instantiates. */
     @PopulatedByPass(SymbolResolver::class)
@@ -97,7 +97,7 @@ class ConstructExpression : CallExpression() {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ConstructExpression) return false
+        if (other !is Construct) return false
         return super.equals(other) &&
             constructor == other.constructor &&
             arguments == other.arguments

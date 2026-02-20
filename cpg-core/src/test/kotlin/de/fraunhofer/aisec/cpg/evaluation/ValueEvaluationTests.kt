@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.newConditionalExpression
-import de.fraunhofer.aisec.cpg.graph.newNewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.newConditional
+import de.fraunhofer.aisec.cpg.graph.newNewArray
 
 class ValueEvaluationTests {
     companion object {
@@ -52,7 +52,7 @@ class ValueEvaluationTests {
                                 body {
                                     declare {
                                         variable("array", t("int").array()) {
-                                            val newExpr = newNewArrayExpression()
+                                            val newExpr = newNewArray()
                                             newExpr.addDimension(literal(3, t("int")))
                                             this.initializer = newExpr
                                         }
@@ -290,7 +290,7 @@ class ValueEvaluationTests {
                                 declare {
                                     variable("a", t("int")) {
                                         this.initializer =
-                                            newConditionalExpression(
+                                            newConditional(
                                                 ref("b") lt literal(2, t("int")),
                                                 literal(3, t("int")),
                                                 literal(5, t("int")).inc(),
@@ -308,7 +308,7 @@ class ValueEvaluationTests {
                             body {
                                 declare {
                                     variable("array", t("int").array()) {
-                                        val creationExpr = newNewArrayExpression()
+                                        val creationExpr = newNewArray()
                                         creationExpr.addDimension(literal(6, t("int")))
                                         this.initializer = creationExpr
                                     }

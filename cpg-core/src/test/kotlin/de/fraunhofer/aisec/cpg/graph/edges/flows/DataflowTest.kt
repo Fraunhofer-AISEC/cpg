@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.graph.edges.flows
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.ThrowExpression
+import de.fraunhofer.aisec.cpg.graph.statements.Throw
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.test.GraphExamples.Companion.prepareThrowDFGTest
 import kotlin.collections.firstOrNull
 import kotlin.test.Test
@@ -118,13 +118,13 @@ class DataflowTest {
         assertIs<Block>(body)
 
         val throwStmt = body.statements.getOrNull(1)
-        assertIs<ThrowExpression>(throwStmt)
+        assertIs<Throw>(throwStmt)
         assertNotNull(throwStmt.exception)
         val throwCall = throwStmt.exception
-        assertIs<CallExpression>(throwCall)
+        assertIs<Call>(throwCall)
 
         val someError = result.calls["SomeError"]
-        assertIs<CallExpression>(someError)
+        assertIs<Call>(someError)
         assertContains(throwStmt.prevDFG, someError)
     }
 }

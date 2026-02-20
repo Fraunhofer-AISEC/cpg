@@ -51,7 +51,7 @@ class SizeEvaluator : ValueEvaluator() {
         node?.let { this.path += it }
 
         return when (node) {
-            is NewArrayExpression ->
+            is NewArray ->
                 if (node.initializer != null) {
                     evaluateInternal(node.initializer, depth + 1)
                 } else {
@@ -61,7 +61,7 @@ class SizeEvaluator : ValueEvaluator() {
             is Reference -> evaluateInternal(node.refersTo, depth + 1)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> if (node.value is String) (node.value as String).length else node.value
-            is SubscriptExpression -> evaluate(node.arrayExpression)
+            is Subscript -> evaluate(node.arrayExpression)
             else -> cannotEvaluate(node, this)
         }
     }

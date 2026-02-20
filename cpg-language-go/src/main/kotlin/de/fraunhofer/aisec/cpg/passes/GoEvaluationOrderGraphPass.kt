@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.followEOGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 
 /** This pass contains fine-grained improvements to the EOG for the [GoLanguage]. */
@@ -48,7 +48,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
 
     override fun handleUnspecificUnaryOperator(node: UnaryOperator) {
         val input = node.input
-        if (node.operatorCode == "defer" && input is CallExpression) {
+        if (node.operatorCode == "defer" && input is Call) {
             handleDeferUnaryOperator(node, input)
         } else {
             super.handleUnspecificUnaryOperator(node)
@@ -56,7 +56,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
     }
 
     /** Handles the EOG for a [`defer`](https://go.dev/ref/spec#Defer_statements) statement. */
-    private fun handleDeferUnaryOperator(node: UnaryOperator, input: CallExpression) {
+    private fun handleDeferUnaryOperator(node: UnaryOperator, input: Call) {
         val function = scopeManager.currentFunction
         if (function != null) {
             // We need to disrupt the regular EOG handling here and store this deferred call. We

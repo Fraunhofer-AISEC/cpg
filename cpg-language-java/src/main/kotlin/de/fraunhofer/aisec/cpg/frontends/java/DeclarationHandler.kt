@@ -47,7 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArray
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -413,8 +413,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     it.matchesSignature(arguments.map { it.type }).isDirectMatch
                 }
 
-            val constructExpr =
-                newConstructExpression(matchingConstructor?.name ?: currentEnum?.name)
+            val constructExpr = newConstruct(matchingConstructor?.name ?: currentEnum?.name)
             arguments.forEach { constructExpr.addArgument(it) }
             matchingConstructor?.let { constructExpr.constructor = matchingConstructor }
             result.initializer = constructExpr
@@ -452,7 +451,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             val initializer =
                 frontend.expressionHandler.handle(oInitializer.get())
                     as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-            if (initializer is NewArrayExpression) {
+            if (initializer is NewArray) {
                 declaration.isArray = true
             }
             declaration.initializer = initializer

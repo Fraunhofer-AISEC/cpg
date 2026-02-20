@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -118,10 +118,8 @@ open class JavaLanguage :
         } else super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
     }
 
-    override fun SymbolResolver.handleSuperExpression(
-        memberExpression: MemberExpression,
-        curClass: Record,
-    ) = handleSuperExpressionHelper(memberExpression, curClass)
+    override fun SymbolResolver.handleSuperExpression(memberExpression: Member, curClass: Record) =
+        handleSuperExpressionHelper(memberExpression, curClass)
 
     /**
      * This function handles some specifics of the Java language when choosing a reference target
@@ -132,7 +130,7 @@ open class JavaLanguage :
         // Therefore, it can be that we both import a field and a method with the same name. We
         // therefore do some additional filtering of the candidates here, before handling it.
         if (ref.candidates.size > 1) {
-            if (ref.resolutionHelper is CallExpression) {
+            if (ref.resolutionHelper is Call) {
                 ref.candidates = ref.candidates.filter { it is Function }.toSet()
             } else {
                 ref.candidates = ref.candidates.filter { it is Variable }.toSet()

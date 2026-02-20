@@ -48,26 +48,26 @@ internal class ConstructorsTest : BaseTest() {
         val variables = result.variables
         val a1 = findByUniqueName(variables, "a1")
         assertNotNull(a1)
-        assertTrue(a1.initializer is NewExpression)
-        assertTrue((a1.initializer as? NewExpression)?.initializer is ConstructExpression)
+        assertTrue(a1.initializer is New)
+        assertTrue((a1.initializer as? New)?.initializer is Construct)
 
-        val a1Initializer = (a1.initializer as NewExpression).initializer as ConstructExpression
+        val a1Initializer = (a1.initializer as New).initializer as Construct
         assertEquals(noArg, a1Initializer.constructor)
 
         val a2 = findByUniqueName(variables, "a2")
         assertNotNull(a2)
-        assertTrue(a2.initializer is NewExpression)
-        assertTrue((a2.initializer as? NewExpression)?.initializer is ConstructExpression)
+        assertTrue(a2.initializer is New)
+        assertTrue((a2.initializer as? New)?.initializer is Construct)
 
-        val a2Initializer = (a2.initializer as NewExpression).initializer as ConstructExpression
+        val a2Initializer = (a2.initializer as New).initializer as Construct
         assertEquals(singleArg, a2Initializer.constructor)
 
         val a3 = findByUniqueName(variables, "a3")
         assertNotNull(a3)
-        assertTrue(a3.initializer is NewExpression)
-        assertTrue((a3.initializer as NewExpression).initializer is ConstructExpression)
+        assertTrue(a3.initializer is New)
+        assertTrue((a3.initializer as New).initializer is Construct)
 
-        val a3Initializer = (a3.initializer as NewExpression).initializer as ConstructExpression
+        val a3Initializer = (a3.initializer as New).initializer as Construct
         assertEquals(twoArgs, a3Initializer.constructor)
 
         val a4 = findByUniqueName(variables, "a4")

@@ -41,20 +41,20 @@ import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents access to a member of a [Record], such as `obj.property`. Another common use-case is
- * access of a member function (method) as part of the [MemberCallExpression.callee] property of a
- * [MemberCallExpression].
+ * access of a member function (method) as part of the [MemberCall.callee] property of a
+ * [MemberCall].
  */
-class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, HasBase {
+class Member : Reference(), HasOverloadedOperation, ArgumentHolder, HasBase {
     @Relationship("BASE")
     var baseEdge =
         astEdgeOf<Expression>(
-            ProblemExpression("could not parse base expression"),
+            Problem("could not parse base expression"),
             onChanged = { old, new ->
                 exchangeTypeObserverWithAccessPropagation(old, new)
                 updateName()
             },
         )
-    override var base by unwrapping(MemberExpression::baseEdge)
+    override var base by unwrapping(Member::baseEdge)
 
     override var operatorCode: String? = null
 
@@ -90,7 +90,7 @@ class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, Ha
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is MemberExpression) return false
+        if (other !is Member) return false
         return super.equals(other) && base == other.base
     }
 

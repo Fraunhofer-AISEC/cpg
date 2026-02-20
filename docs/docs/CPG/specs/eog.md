@@ -130,12 +130,12 @@ flowchart LR
 
 In case the variable is a global variable (e.g., a top-level variable in a `RecordDeclaration`), it does not have a `prevEOG` and the initializer does not have a `nextEOG`.
 
-## CallExpression
+## Call
 Represents any type of call in a program.
 
 Interesting fields:
 
-* `callee: Expression`: The expression declaring the target of a call. This can be a base in a `MemberCallExpression` or a function pointer in a `CallExpression`or a reference.
+* `callee: Expression`: The expression declaring the target of a call. This can be a base in a `MemberCall` or a function pointer in a `Call`or a reference.
 * `arguments: List<Expression>`: Mapped to the parameters of the call target but evaluated before the call happens.
 
 Scheme:
@@ -143,7 +143,7 @@ Scheme:
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child["callee"]
-  parent(["CallExpression"]) --EOG--> next:::outer
+  parent(["Call"]) --EOG--> next:::outer
   child --EOG--> arg1["Argument(i-1)"]
   arg1--EOG--> arg2["Argument(i)"]
   arg2["Argument(i)"] --EOG--> parent
@@ -152,7 +152,7 @@ flowchart LR
   parent -."arguments(n)".-> arg2
 ```
 
-## MemberExpression
+## Member
 Access to the field in a `RecordDeclaration`.
 
 Interesting fields:
@@ -164,12 +164,12 @@ Scheme:
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child
-  parent(["MemberExpression"]) --EOG--> next:::outer
+  parent(["Member"]) --EOG--> next:::outer
   parent -.-> child["base"]
   child --EOG--> parent
 ```
 
-## SubscriptExpression
+## Subscript
 Array access in the form of `arrayExpression[subscriptExpression]`.
 
 Interesting fields:
@@ -183,13 +183,13 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child
   child --EOG--> child2["subscriptExpression"]
-  parent(["SubscriptExpression"]) --EOG--> next:::outer
+  parent(["Subscript"]) --EOG--> next:::outer
   parent -.-> child["arrayExpression"]
   parent -.-> child2
   child2 --EOG--> parent
 ```
 
-## NewArrayExpression
+## NewArray
 Interesting fields:
 
 * `dimensions: List<Expression>`: Multiple expressions that define the array's dimensions.
@@ -202,14 +202,14 @@ flowchart LR
   prev:::outer --EOG--> child1["dimension(i-1)"]
   child1 --EOG--> child2["dimension(i)"]
   child2 --EOG--> initializer
-  parent(["NewArrayExpression"]) --EOG--> next:::outer
+  parent(["NewArray"]) --EOG--> next:::outer
   parent -.-> child1
   parent -.-> child2
   parent -.-> initializer
   initializer --EOG--> parent
 ```
 
-## KeyValueExpression
+## KeyValue
 Represents a key / value pair that could be used in associative arrays, among others.
 
 Interesting fields:
@@ -223,7 +223,7 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child
   child --EOG--> child2["value"]
-  parent(["KeyValueExpression"]) --EOG--> next:::outer
+  parent(["KeyValue"]) --EOG--> next:::outer
   parent -.-> child["key"]
   parent -.-> child2
   child2 --EOG--> parent
@@ -296,7 +296,7 @@ flowchart LR
   rhs --EOG--> node
 ```
 
-## AssignExpression
+## Assign
 
 Interesting fields:
 
@@ -359,7 +359,7 @@ flowchart LR
   parent -."statements(n)".-> child
 ```
 
-## ThrowExpression
+## Throw
 The EOG continues at an exception catching structure or a function that does a re-throw.
 
 Interesting fields:
@@ -374,7 +374,7 @@ flowchart LR
   prev:::outer --EOG--> child1["exception"]
   child1 --EOG--> child2["parentException"]
   child2 --EOG-->parent
-  parent(["ThrowExpression"]) --EOG--> catchingContext:::outer
+  parent(["Throw"]) --EOG--> catchingContext:::outer
   parent -.-> child1
   parent -.-> child2
 ```
@@ -455,7 +455,7 @@ flowchart LR
   parent(["BreakStatement"]) --EOG--> nextAfterBreakableContext:::outer
 ```
 
-## DeleteExpression
+## Delete
 Deletion of a specific object freeing memory or calling the destructor.
 
 Interesting fields:
@@ -468,7 +468,7 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child["operand"]
   child --EOG--> parent
-  parent(["DeleteExpression"]) --EOG--> next:::outer
+  parent(["Delete"]) --EOG--> next:::outer
   parent -.-> child
 ```
 
@@ -495,7 +495,7 @@ flowchart LR
   child --EOG--> labeledStatement:::outer
 ```
 
-## NewExpression
+## New
 Creates a new object, which is either an array or an instantiation of a `RecordDeclaration`. The initializer has to be evaluated to create the object.
 
 Interesting fields:
@@ -508,11 +508,11 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child["initializer"]
   child --EOG--> parent
-  parent(["NewExpression"]) --EOG--> next:::outer
+  parent(["New"]) --EOG--> next:::outer
   parent -.-> child
 ```
 
-## CastExpression
+## Cast
 Interesting fields:
 
 * `expression: Expression`: An expression of a specific compile time type, cast to a specified other compile time type.
@@ -523,7 +523,7 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child["expression"]
   child --EOG--> parent
-  parent(["CastExpression"]) --EOG--> next:::outer
+  parent(["Cast"]) --EOG--> next:::outer
   parent -.-> child
 ```
 
@@ -546,7 +546,7 @@ flowchart LR
   parent -."expressions(n)".-> child2
 ```
 
-## InitializerListExpression
+## InitializerList
 This expression initializes multiple variables or an object of multiple elements, e.g. arrays, lists.
 
 Scheme:
@@ -556,13 +556,13 @@ flowchart LR
   prev:::outer --EOG--> child1["initializer(i-1)"]
   child1 --EOG--> child2["initializer(i)"]
   child2 --EOG--> parent
-  parent(["InitializerListExpression"]) --EOG--> next:::outer
+  parent(["InitializerList"]) --EOG--> next:::outer
   parent -."initializers(n)".-> child1
   parent -."initializers(n)".-> child2
 ```
 
-## ConstructExpression
-A ConstructExpression creates an object.
+## Construct
+A Construct creates an object.
 
 Interesting fields:
 
@@ -575,7 +575,7 @@ flowchart LR
   prev:::outer --EOG--> child1["argument(i-1)"]
   child1 --EOG--> child2["argument(i)"]
   child2 --EOG--> parent
-  parent(["ConstructExpression"]) --EOG--> next:::outer
+  parent(["Construct"]) --EOG--> next:::outer
   parent -."arguments(n)".-> child1
   parent -."arguments(n)".-> child2
 ```
@@ -600,7 +600,7 @@ flowchart LR
   parent -.-> child2
 ```
 
-## ConditionalExpression
+## Conditional
 A conditional evaluation of two expression, realizing the branching pattern of an `IfStatement` on the expression level.
 
 Interesting fields:
@@ -614,7 +614,7 @@ Scheme:
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["condition"]
-  child1 --EOG--> parent(["ConditionalExpression"])
+  child1 --EOG--> parent(["Conditional"])
   parent --EOG:true--> child2["thenExpression"]
   parent --EOG:false--> child3["elseExpression"]
   child2 --EOG--> next:::outer
@@ -629,7 +629,7 @@ This node iterates through a collection of elements via `comprehensionExpression
 
 Interesting fields:
 
-* `comprehensionExpressions: List<ComprehensionExpression>`: The part which iterates through all elements of the collection and filter them.
+* `comprehensionExpressions: List<Comprehension>`: The part which iterates through all elements of the collection and filter them.
 * `statement: Statement`: The operation applied to each element iterated over.
 
 Scheme:
@@ -648,7 +648,7 @@ flowchart LR
   parent -.-> child1
 ```
 
-## ComprehensionExpression
+## Comprehension
 This node iterates through a collection of elements of `iterable`, keeps the element in `variable` and evaluates an optional `predicate`.
 
 Interesting fields:
@@ -664,7 +664,7 @@ flowchart LR
   prev:::outer --EOG--> child1["iterable"]
   child1 --EOG:true--> child2["variable"]
   child2 --EOG--> child3["predicate"]
-  child3 --EOG--> parent(["ComprehensionExpression"])
+  child3 --EOG--> parent(["Comprehension"])
   parent --EOG:true--> enter:::outer
   parent --EOG:false--> child1
   child1 --EOG:false--> exit:::outer
@@ -842,7 +842,7 @@ flowchart LR
   parent -.-> child
 
 ```
-## LambdaExpression
+## Lambda
 The expression itself is connected to the outer EOG. A separate EOG is built for the expressed code, as the code itself is not executed at this point.
 
 Interesting fields:
@@ -853,7 +853,7 @@ Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> parent["LambdaExpression"]
+  prev:::outer --EOG--> parent["Lambda"]
   parent --EOG--> next:::outer
   parent -.-> child
   child(["function"]) --EOG-->internalNext:::outer
@@ -925,7 +925,7 @@ flowchart LR
   parent --EOG--> next:::outer
 ```
 
-## TypeIdExpression
+## TypeId
 The statement itself is connected to the outer EOG.
 
 Interesting fields: /
@@ -934,7 +934,7 @@ Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> parent["TypeIdExpression"]
+  prev:::outer --EOG--> parent["TypeId"]
   parent --EOG--> next:::outer
 ```
 

@@ -296,14 +296,14 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     PowersetLattice(identitySetOf(currentNode)),
                 )
             }
-        } else if (currentNode is MemberExpression) {
+        } else if (currentNode is Member) {
             handlePartialAccessExpression(
                 currentNode,
                 currentNode.base,
                 currentNode.refersTo,
                 doubleState,
             )
-        } else if (currentNode is SubscriptExpression) {
+        } else if (currentNode is Subscript) {
             handlePartialAccessExpression(
                 currentNode,
                 currentNode.base,
@@ -316,9 +316,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             // The rhs can be anything. The rhs flows to the respective lhs. To identify the
             // correct mapping, we use the "assignments" property which already searches for us.
             currentNode.assignments.forEach { assignment ->
-                // Sometimes, we have a InitializerListExpression on the lhs which is not good at
+                // Sometimes, we have a InitializerList on the lhs which is not good at
                 // all...
-                if (assignment.target is InitializerListExpression) {
+                if (assignment.target is InitializerList) {
                     assignment.target.initializers.forEachIndexed { idx, initializer ->
                         (initializer as? Reference)?.let { ref ->
                             ref.refersTo?.let {
@@ -398,8 +398,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // the other steps
                 state.push(currentNode, it)
             }
-        } else if (currentNode is ComprehensionExpression) {
-            handleComprehensionExpression(currentNode, doubleState)
+        } else if (currentNode is Comprehension) {
+            handleComprehension(currentNode, doubleState)
         } else if (currentNode is ForEachStatement && currentNode.variable != null) {
             // The Variable in the ForEachStatement doesn't have an initializer, so
             // the "normal" case won't work. We handle this case separately here...
@@ -465,8 +465,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 currentNode,
                 PowersetLattice(identitySetOf(currentNode)),
             )
-        } else if (currentNode is CallExpression) {
-            // If the CallExpression invokes a function for which we have a function summary, we use
+        } else if (currentNode is Call) {
+            // If the Call invokes a function for which we have a function summary, we use
             // the summary to identify the last write to a parameter (or receiver) and match it to
             // the respective argument or the base.
             // Since this Reference r is manipulated inside the invoked function, the next
@@ -484,7 +484,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                         val arg =
                             when (param) {
                                 (invoked as? Method)?.receiver ->
-                                    (currentNode as? MemberCallExpression)?.base as? Reference
+                                    (currentNode as? MemberCall)?.base as? Reference
                                 is Parameter ->
                                     currentNode.arguments[param.argumentIndex] as? Reference
                                 else -> null
@@ -582,24 +582,21 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     }
 
     /**
-     * Handles the propagation of data flows to the variables used in a [ComprehensionExpression].
-     * We have a write access to one or multiple [Declaration]s or [Reference]s here. Multiple
-     * values are supported through [InitializerListExpression].
+     * Handles the propagation of data flows to the variables used in a [Comprehension]. We have a
+     * write access to one or multiple [Declaration]s or [Reference]s here. Multiple values are
+     * supported through [InitializerList].
      */
-    protected fun handleComprehensionExpression(
-        currentNode: ComprehensionExpression,
-        state: DFGPassState<Set<Node>>,
-    ) {
+    protected fun handleComprehension(currentNode: Comprehension, state: DFGPassState<Set<Node>>) {
         val writtenTo =
             when (val variable = currentNode.variable) {
                 is DeclarationStatement -> {
                     variable.declarations
                 }
                 is Reference -> listOf(variable)
-                is InitializerListExpression -> variable.initializers
+                is InitializerList -> variable.initializers
                 else -> {
                     log.error(
-                        "The type ${variable.javaClass} is not yet supported as ComprehensionExpression::variable"
+                        "The type ${variable.javaClass} is not yet supported as Comprehension::variable"
                     )
                     listOf()
                 }
@@ -610,10 +607,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 when (writtenToIt) {
                     is Declaration -> writtenToIt
                     is Reference -> writtenToIt.refersTo
-                    is SubscriptExpression -> (writtenToIt.arrayExpression as? Reference)?.refersTo
+                    is Subscript -> (writtenToIt.arrayExpression as? Reference)?.refersTo
                     else -> {
                         log.error(
-                            "The variable of type ${writtenToIt.javaClass} is not yet supported in the ComprehensionExpression"
+                            "The variable of type ${writtenToIt.javaClass} is not yet supported in the Comprehension"
                         )
                         null
                     }
@@ -642,15 +639,15 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * operators +=, -=, *=, ...
      */
     protected fun isCompoundAssignment(currentNode: Node): Boolean {
-        contract { returns(true) implies (currentNode is AssignExpression) }
-        return currentNode is AssignExpression &&
+        contract { returns(true) implies (currentNode is Assign) }
+        return currentNode is Assign &&
             currentNode.operatorCode in currentNode.language.compoundAssignmentOperators &&
             (currentNode.lhs.singleOrNull() as? Reference)?.refersTo != null
     }
 
     protected fun isSimpleAssignment(currentNode: Node): Boolean {
-        contract { returns(true) implies (currentNode is AssignExpression) }
-        return currentNode is AssignExpression && currentNode.isSimpleAssignment
+        contract { returns(true) implies (currentNode is Assign) }
+        return currentNode is Assign && currentNode.isSimpleAssignment
     }
 
     /** Checks if the node is an increment or decrement operator (e.g. i++, i--, ++i, --i) */
@@ -773,11 +770,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
  * b.field = 2;
  * ```
  *
- * In this case, the [objectIdentifier] of the [MemberExpression] `a` is a combination of the
- * hash-code of the [Variable] `a` as well as the [Field] of `field`. The same applies for `b`. If
- * we would only rely on the [Variable], we would not be sensitive to fields, if we would only rely
- * on the [Field], we would not be sensitive to different object instances. Therefore, we consider
- * both.
+ * In this case, the [objectIdentifier] of the [Member] `a` is a combination of the hash-code of the
+ * [Variable] `a` as well as the [Field] of `field`. The same applies for `b`. If we would only rely
+ * on the [Variable], we would not be sensitive to fields, if we would only rely on the [Field], we
+ * would not be sensitive to different object instances. Therefore, we consider both.
  *
  * Please note however, that this current, very basic implementation does not consider perform any
  * kind of pointer or alias analysis. This means that even though the "contents" of two variables
@@ -786,8 +782,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
  */
 fun Node.objectIdentifier(): Int? {
     return when (this) {
-        is SubscriptExpression -> this.objectIdentifier()
-        is MemberExpression -> this.objectIdentifier()
+        is Subscript -> this.objectIdentifier()
+        is Member -> this.objectIdentifier()
         is Reference -> this.objectIdentifier()
         is Declaration -> this.hashCode()
         is Literal<*> -> this.value.hashCode()
@@ -795,8 +791,8 @@ fun Node.objectIdentifier(): Int? {
     }
 }
 
-/** Implements [Node.objectIdentifier] for a [SubscriptExpression]. */
-fun SubscriptExpression.objectIdentifier(): Int? {
+/** Implements [Node.objectIdentifier] for a [Subscript]. */
+fun Subscript.objectIdentifier(): Int? {
     val ref = this.subscriptExpression.objectIdentifier()
     val baseIdentifier = base.objectIdentifier()
     return if (baseIdentifier != null && ref != null) {
@@ -806,8 +802,8 @@ fun SubscriptExpression.objectIdentifier(): Int? {
     }
 }
 
-/** Implements [Node.objectIdentifier] for a [MemberExpression]. */
-fun MemberExpression.objectIdentifier(): Int? {
+/** Implements [Node.objectIdentifier] for a [Member]. */
+fun Member.objectIdentifier(): Int? {
     val ref = this.refersTo
     return if (ref == null) {
         null

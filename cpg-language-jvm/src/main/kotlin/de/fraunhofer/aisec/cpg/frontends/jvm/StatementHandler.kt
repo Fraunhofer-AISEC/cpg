@@ -28,16 +28,16 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Problem
 import kotlin.jvm.optionals.getOrNull
 import sootup.core.jimple.common.stmt.*
 import sootup.core.model.Body
 import sootup.core.util.printer.NormalStmtPrinter
 
 class StatementHandler(frontend: JVMLanguageFrontend) :
-    Handler<Statement?, Any, JVMLanguageFrontend>(::ProblemExpression, frontend) {
+    Handler<Statement?, Any, JVMLanguageFrontend>(::Problem, frontend) {
 
     override fun handle(ctx: Any): Statement? {
         try {
@@ -50,11 +50,11 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
                 is JInvokeStmt -> handleInvokeStmt(ctx)
                 is JReturnStmt -> handleReturnStmt(ctx)
                 is JReturnVoidStmt -> handleReturnVoidStmt(ctx)
-                is JThrowStmt -> handleThrowExpression(ctx)
+                is JThrowStmt -> handleThrow(ctx)
                 is JNopStmt -> newEmptyStatement(ctx)
                 else -> {
                     log.warn("Unhandled statement type: ${ctx.javaClass.simpleName}")
-                    newProblemExpression(
+                    newProblem(
                         "Unhandled statement type: ${ctx.javaClass.simpleName}",
                         rawNode = ctx,
                     )
@@ -62,15 +62,12 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
             }
         } catch (e: Exception) {
             log.error("Error while handling a statement", e)
-            return newProblemExpression(
-                "Error handling statement ${ctx}: ${e.message}",
-                rawNode = ctx,
-            )
+            return newProblem("Error handling statement ${ctx}: ${e.message}", rawNode = ctx)
         }
     }
 
-    private fun handleThrowExpression(throwStmt: JThrowStmt): ThrowExpression {
-        val expr = newThrowExpression(rawNode = throwStmt)
+    private fun handleThrow(throwStmt: JThrowStmt): Throw {
+        val expr = newThrow(rawNode = throwStmt)
         expr.exception = frontend.expressionHandler.handle(throwStmt.op)
 
         return expr
@@ -129,8 +126,8 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         return outerBlock
     }
 
-    private fun handleAbstractDefinitionStmt(defStmt: AbstractDefinitionStmt): AssignExpression {
-        val assign = newAssignExpression("=", rawNode = defStmt)
+    private fun handleAbstractDefinitionStmt(defStmt: AbstractDefinitionStmt): Assign {
+        val assign = newAssign("=", rawNode = defStmt)
         assign.lhs =
             listOfNotNull(frontend.expressionHandler.handle(defStmt.leftOp)).toMutableList()
         assign.rhs =

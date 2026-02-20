@@ -38,8 +38,8 @@ import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -168,7 +168,7 @@ fun DeclarationStateElement.pushType(
  * After the iteration, we set the following based on the final state:
  * - [Reference.candidates] - the candidates for the reference
  * - [Reference.refersTo] - the final declaration for the reference
- * - [CallExpression.invokes] - the final declaration for the call expression
+ * - [Call.invokes] - the final declaration for the call expression
  * - [HasType.type] - the type of the node
  * - [HasType.assignedTypes] - the assigned types of the node
  */
@@ -227,7 +227,7 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
             // Now it's getting interesting! We need to make the final decision based on whether
             // this a simple reference to a variable or if we are the callee of a call
             // expression
-            val call = node.astParent as? CallExpression
+            val call = node.astParent as? Call
             if (call != null) {
                 decideInvokesBasedOnCandidates(node, call)
             } else {
@@ -327,7 +327,7 @@ private fun SymbolResolver.handleReference(
     infoWithFileLocation(node, log, "Resolving reference. {} scopes are active", state.symbols.size)
     var state = state
     var candidates =
-        if (node is MemberExpression) {
+        if (node is Member) {
             // We need to extract the scope from the base type(s) and then do a qualified
             // lookup
             val baseTypes = state.types[node.base] ?: identitySetOf()

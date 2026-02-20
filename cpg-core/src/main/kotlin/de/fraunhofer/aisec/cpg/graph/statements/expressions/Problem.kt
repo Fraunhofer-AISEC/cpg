@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,25 +25,30 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import java.util.Objects
-import org.neo4j.ogm.annotation.Relationship
+import org.apache.commons.lang3.builder.ToStringBuilder
 
-class DeleteExpression : Expression() {
-    @Relationship("OPERANDS") var operandEdges = astEdgesOf<Expression>()
-    var operands by unwrapping(DeleteExpression::operandEdges)
+/**
+ * A node where the statement could not be translated by the graph. We use Problems whenever the CPG
+ * library requires an [Expression].
+ */
+class Problem(
+    override var problem: String = "",
+    override var problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION,
+) : Expression(), ProblemNode {
+    override fun toString(): String {
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("problem", problem)
+            .toString()
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is DeleteExpression) return false
-        return super.equals(other) && operands == other.operands
+        if (other !is Problem) return false
+        return super.equals(other) && problem == other.problem
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), operands)
-
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.operands.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
-    }
+    override fun hashCode() = Objects.hash(super.hashCode(), problem)
 }

@@ -34,9 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DefaultStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Problem
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.switches
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -284,12 +284,12 @@ class MatchTest {
         val switchStatement = func.switches.singleOrNull()
         assertNotNull(switchStatement)
 
-        assertIs<CallExpression>(switchStatement.selector)
+        assertIs<Call>(switchStatement.selector)
 
         val statementBlock = switchStatement.statement
         assertIs<Block>(statementBlock)
         val case = statementBlock[0]
         assertIs<CaseStatement>(case)
-        assertIs<ProblemExpression>(case.caseExpression)
+        assertIs<Problem>(case.caseExpression)
     }
 }

@@ -39,7 +39,7 @@ import org.neo4j.ogm.annotation.Relationship
  * This expression denotes the usage of an anonymous / lambda function. It connects the inner
  * anonymous function to the user of a lambda function with an expression.
  */
-class LambdaExpression : Expression(), HasType.TypeObserver {
+class Lambda : Expression(), HasType.TypeObserver {
 
     /**
      * If [areVariablesMutable] is false, only the (outer) variables in this list can be modified
@@ -53,7 +53,7 @@ class LambdaExpression : Expression(), HasType.TypeObserver {
     @Relationship("FUNCTION")
     var functionEdge =
         astOptionalEdgeOf<Function>(onChanged = ::exchangeTypeObserverWithAccessPropagation)
-    var function by unwrapping(LambdaExpression::functionEdge)
+    var function by unwrapping(Lambda::functionEdge)
 
     override fun typeChanged(newType: Type, src: HasType) {
         // Make sure our src is the function

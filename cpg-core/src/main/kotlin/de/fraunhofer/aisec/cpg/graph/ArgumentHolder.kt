@@ -27,13 +27,12 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 
 /**
  * This interfaces denotes that [Node] can accept arguments. The most famous example would be a
- * [CallExpression] to populate [CallExpression.arguments] or the [ReturnStatement.returnValue] of a
- * return statement.
+ * [Call] to populate [Call.arguments] or the [ReturnStatement.returnValue] of a return statement.
  *
  * We do have some use-cases where we are a little "relaxed" about what is an argument. For example,
  * we also consider the [BinaryOperator.lhs] and [BinaryOperator.rhs] of a binary operator as

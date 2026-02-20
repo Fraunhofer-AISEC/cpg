@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.evaluation
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Subscript
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -85,10 +85,7 @@ class SizeEvaluatorTest {
         val forLoop = main.forLoops.firstOrNull()
         assertNotNull(forLoop)
 
-        val subscriptExpr =
-            ((forLoop.statement as Block).statements[0] as AssignExpression).lhs<
-                SubscriptExpression
-            >()
+        val subscriptExpr = ((forLoop.statement as Block).statements[0] as Assign).lhs<Subscript>()
 
         value = evaluator.evaluate(subscriptExpr) as Int
         assertEquals(3, value)

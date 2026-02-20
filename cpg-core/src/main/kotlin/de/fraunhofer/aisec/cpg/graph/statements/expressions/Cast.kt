@@ -34,23 +34,23 @@ import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.LoggerFactory
 
-class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
+class Cast : Expression(), ArgumentHolder, HasType.TypeObserver {
     /**
      * The [Expression] that is cast to [castType].
      *
      * Note: While the [type] will always stay the same (i.e. the [castType]), we still want to
      * register ourselves as a type observer to the expression. The reason for that is that we want
      * to propagate the [assignedTypes] of our [expression] to us and then possibly to other nodes.
-     * This way we can still access the original type of expression (e.g., created by a
-     * [NewExpression]), even when it is cast.
+     * This way we can still access the original type of expression (e.g., created by a [New]), even
+     * when it is cast.
      */
     @Relationship(type = "EXPRESSION")
     var expressionEdge =
         astEdgeOf<Expression>(
-            of = ProblemExpression("could not parse inner expression"),
+            of = Problem("could not parse inner expression"),
             onChanged = ::exchangeTypeObserverWithAccessPropagation,
         )
-    var expression by unwrapping(CastExpression::expressionEdge)
+    var expression by unwrapping(Cast::expressionEdge)
 
     var castType: Type = unknownType()
         set(value) {
@@ -108,7 +108,7 @@ class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
         if (this === other) {
             return true
         }
-        if (other !is CastExpression) {
+        if (other !is Cast) {
             return false
         }
         return expression == other.expression && castType == other.castType
@@ -127,6 +127,6 @@ class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
     }
 
     companion object {
-        private val log = LoggerFactory.getLogger(CastExpression::class.java)
+        private val log = LoggerFactory.getLogger(Cast::class.java)
     }
 }

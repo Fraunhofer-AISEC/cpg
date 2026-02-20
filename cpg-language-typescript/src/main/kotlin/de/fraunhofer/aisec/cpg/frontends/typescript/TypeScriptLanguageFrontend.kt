@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -228,9 +228,9 @@ class TypeScriptLanguageFrontend(
 
     private fun handleDecorator(node: TypeScriptNode): Annotation {
         // a decorator can contain a call expression with additional arguments
-        val callExpr = node.firstChild("CallExpression")
+        val callExpr = node.firstChild("Call")
         return if (callExpr != null) {
-            val call = this.expressionHandler.handle(callExpr) as CallExpression
+            val call = this.expressionHandler.handle(callExpr) as Call
 
             val annotation = newAnnotation(call.name.localName, rawNode = node)
 

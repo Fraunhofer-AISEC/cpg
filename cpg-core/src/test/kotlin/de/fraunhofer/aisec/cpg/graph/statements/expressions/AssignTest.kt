@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import kotlin.test.*
 
-class AssignExpressionTest {
+class AssignTest {
     @Test
     fun propagateSimple() {
         with(TestLanguageFrontend()) {
@@ -42,7 +42,7 @@ class AssignExpressionTest {
             val refB = newReference("b")
 
             // Simple assignment from "b" to "a". Both types are unknown at this point
-            val stmt = newAssignExpression(lhs = listOf(refA), rhs = listOf(refB))
+            val stmt = newAssign(lhs = listOf(refA), rhs = listOf(refB))
 
             // Type listeners should be configured
             assertContains(refB.typeObservers, stmt)
@@ -74,11 +74,10 @@ class AssignExpressionTest {
                             val refErr = newReference("err")
                             val refFunc = newReference("func")
                             refFunc.refersTo = func
-                            val call = newCallExpression(refFunc)
+                            val call = newCall(refFunc)
 
                             // Assignment from "func()" to "a" and "err".
-                            val stmt =
-                                newAssignExpression(lhs = listOf(refA, refErr), rhs = listOf(call))
+                            val stmt = newAssign(lhs = listOf(refA, refErr), rhs = listOf(call))
 
                             body = newBlock()
                             body as Block += stmt

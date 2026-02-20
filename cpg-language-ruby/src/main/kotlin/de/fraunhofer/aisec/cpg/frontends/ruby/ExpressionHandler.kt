@@ -34,7 +34,7 @@ import org.jruby.ast.types.INameNode
 import org.jruby.ast.visitor.OperatorCallNode
 
 class ExpressionHandler(lang: RubyLanguageFrontend) :
-    RubyHandler<Expression, Node>({ ProblemExpression() }, lang) {
+    RubyHandler<Expression, Node>({ Problem() }, lang) {
 
     override fun handleNode(node: Node): Expression {
         return when (node) {
@@ -69,7 +69,7 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
         return newReference(node.name.idString())
     }
 
-    private fun handleIterNode(node: IterNode): LambdaExpression {
+    private fun handleIterNode(node: IterNode): Lambda {
         // a complete hack, to handle iter nodes, which is sort of a lambda expression
         // so we create an anonymous function declaration out of the bodyNode and varNode
         val func = newFunction("", rawNode = node)
@@ -90,14 +90,14 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
 
         frontend.scopeManager.leaveScope(func)
 
-        val lambda = newLambdaExpression()
+        val lambda = newLambda()
         lambda.function = func
 
         return lambda
     }
 
-    private fun handleDAsgnNode(node: DAsgnNode): AssignExpression {
-        val assign = newAssignExpression("=")
+    private fun handleDAsgnNode(node: DAsgnNode): Assign {
+        val assign = newAssign("=")
 
         // we need to build a reference out of the assignment node itself for our LHS
         assign.lhs = mutableListOf(handleINameNode(node))
@@ -106,8 +106,8 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
         return assign
     }
 
-    private fun handleLocalAsgnNode(node: LocalAsgnNode): AssignExpression {
-        val assign = newAssignExpression("=")
+    private fun handleLocalAsgnNode(node: LocalAsgnNode): Assign {
+        val assign = newAssign("=")
 
         // we need to build a reference out of the assignment node itself for our LHS
         assign.lhs = mutableListOf(handleINameNode(node))
@@ -118,11 +118,10 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
 
     private fun handleCallNode(node: CallNode): Expression {
         val base =
-            handle(node.receiverNode) as? Expression
-                ?: return ProblemExpression("could not parse base")
-        val callee = newMemberExpression(node.name.asJavaString(), base)
+            handle(node.receiverNode) as? Expression ?: return Problem("could not parse base")
+        val callee = newMember(node.name.asJavaString(), base)
 
-        val mce = newMemberCallExpression(callee, false)
+        val mce = newMemberCall(callee, false)
 
         for (arg in node.argsNode?.childNodes() ?: emptyList()) {
             mce.addArgument(handle(arg))
@@ -137,7 +136,7 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
     private fun handleFCallNode(node: FCallNode): Expression {
         val callee = handleINameNode(node)
 
-        val call = newCallExpression(callee)
+        val call = newCall(callee)
 
         for (arg in node.argsNode?.childNodes() ?: emptyList()) {
             call.addArgument(handle(arg))

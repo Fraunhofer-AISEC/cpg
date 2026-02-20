@@ -55,29 +55,29 @@ import org.slf4j.LoggerFactory
 /**
  * Creates new connections between the place where a variable is declared and where it is used.
  *
- * A field access is modeled with a [MemberExpression]. After AST building, its base and member
- * references are set to [Reference] stubs. This pass resolves those references and makes the member
- * point to the appropriate [Field] and the base to the "this" [Field] of the containing class. It
- * is also capable of resolving references to fields that are inherited from a superclass and thus
- * not declared in the actual base class. When base or member declarations are not found in the
- * graph, a new "inferred" [Field] is being created that is then used to collect all usages to the
- * same unknown declaration. [Reference] stubs are removed from the graph after being resolved.
+ * A field access is modeled with a [Member]. After AST building, its base and member references are
+ * set to [Reference] stubs. This pass resolves those references and makes the member point to the
+ * appropriate [Field] and the base to the "this" [Field] of the containing class. It is also
+ * capable of resolving references to fields that are inherited from a superclass and thus not
+ * declared in the actual base class. When base or member declarations are not found in the graph, a
+ * new "inferred" [Field] is being created that is then used to collect all usages to the same
+ * unknown declaration. [Reference] stubs are removed from the graph after being resolved.
  *
  * Accessing a local variable is modeled directly with a [Reference]. This step of the pass doesn't
  * remove the [Reference] nodes like in the field usage case but rather makes their "refersTo" point
  * to the appropriate [ValueDeclaration].
  *
- * Resolves [CallExpression] and [NewExpression] targets.
+ * Resolves [Call] and [New] targets.
  *
- * A [CallExpression] specifies the method that wants to be called via [CallExpression.name]. The
- * call target is a method of the same class the caller belongs to, so the name is resolved to the
- * appropriate [Method]. This pass also takes into consideration that a method might not be present
- * in the current class, but rather has its implementation in a superclass, and sets the pointer
+ * A [Call] specifies the method that wants to be called via [Call.name]. The call target is a
+ * method of the same class the caller belongs to, so the name is resolved to the appropriate
+ * [Method]. This pass also takes into consideration that a method might not be present in the
+ * current class, but rather has its implementation in a superclass, and sets the pointer
  * accordingly.
  *
- * Constructor calls with [ConstructExpression] are resolved in such a way that their
- * [ConstructExpression.instantiates] points to the correct [Record]. Additionally, the
- * [ConstructExpression.constructor] is set to the according [Constructor].
+ * Constructor calls with [Construct] are resolved in such a way that their [Construct.instantiates]
+ * points to the correct [Record]. Additionally, the [Construct.constructor] is set to the according
+ * [Constructor].
  *
  * This pass should NOT use any DFG edges because they are computed / adjusted in a later stage.
  */
@@ -207,15 +207,14 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
      *   depending on the name.
      * - The results of the lookup are stored in [Reference.candidates]. The purpose of this is
      *   two-fold. First, it is a good way to debug potential symbol resolution errors. Second, it
-     *   is used by other functions, for example [handleCallExpression], which then picks the best
-     *   viable option out of the candidates (if the reference is part of the
-     *   [CallExpression.callee]).
+     *   is used by other functions, for example [handleCall], which then picks the best viable
+     *   option out of the candidates (if the reference is part of the [Call.callee]).
      * - In the next step, we need to decide whether we are resolving a standalone reference (which
-     *   most likely points to a [Variable]) or if we are part of a [CallExpression.callee]. In the
-     *   first case, we can directly assign [Reference.refersTo] based on the candidates (at the
-     *   moment we only assign it if we have exactly one candidate). In the second case, we are
-     *   finished and let [handleCallExpression] take care of the rest once the EOG reaches the
-     *   appropriate [CallExpression] (which should actually be just be the next EOG node).
+     *   most likely points to a [Variable]) or if we are part of a [Call.callee]. In the first
+     *   case, we can directly assign [Reference.refersTo] based on the candidates (at the moment we
+     *   only assign it if we have exactly one candidate). In the second case, we are finished and
+     *   let [handleCall] take care of the rest once the EOG reaches the appropriate [Call] (which
+     *   should actually be just be the next EOG node).
      */
     protected open fun handleReference(ref: Reference) {
         val language = ref.language
@@ -231,7 +230,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         // Ignore references to "super" if the language has super expressions, because they will be
-        // handled separately in handleMemberExpression
+        // handled separately in handleMember
         if (language is HasSuperClasses && ref.name.localName == language.superClassKeyword) {
             return
         }
@@ -285,7 +284,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         // For now, we still separate the resolving of simple variable references from call
         // resolving. Therefore, we need to stop here if we are the callee of a call and continue in
-        // handleCallExpression.
+        // handleCall.
         //
         // However, there is a special case that we want to catch, that is if we are "calling" a
         // reference to a variable (or parameter). This can be done in several languages, e.g., in
@@ -293,7 +292,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // resolve the reference of this call expression back to its original declaration, and then
         // we later continue in the DynamicInvokeResolver, which sets the invokes edge.
         if (
-            ref.resolutionHelper is CallExpression &&
+            ref.resolutionHelper is Call &&
                 (wouldResolveTo !is Variable && wouldResolveTo !is Parameter)
         ) {
             return
@@ -326,15 +325,14 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * This function handles resolving of a [MemberExpression] in the [ScopeManager.currentRecord].
-     * This works similar to [handleReference]. First, we set the [MemberExpression.candidates]
-     * based on [resolveMemberByName], which internally calls [ScopeManager.lookupSymbolByName]
-     * based on the current class and its parent classes. Then, if we resolve a
-     * [MemberCallExpression], we abort (and later pick up resolving in [handleCallExpression]). In
-     * case of a field access, we set the [MemberExpression.refersTo] based on
-     * [Language.bestViableReferenceCandidate].
+     * This function handles resolving of a [Member] in the [ScopeManager.currentRecord]. This works
+     * similar to [handleReference]. First, we set the [Member.candidates] based on
+     * [resolveMemberByName], which internally calls [ScopeManager.lookupSymbolByName] based on the
+     * current class and its parent classes. Then, if we resolve a [MemberCall], we abort (and later
+     * pick up resolving in [handleCall]). In case of a field access, we set the [Member.refersTo]
+     * based on [Language.bestViableReferenceCandidate].
      */
-    protected open fun handleMemberExpression(current: MemberExpression) {
+    protected open fun handleMember(current: Member) {
         // Some locals for easier smart casting
         val base = current.base
         val language = current.language
@@ -363,11 +361,11 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         // For legacy reasons, resolving of simple variable references (including fields) is
         // separated from call resolving. Therefore, we need to stop here if we are the callee of a
-        // member call and continue in handleCallExpression. But we can already make
-        // handleCallExpression a bit cleaner, if we set the candidates here, similar to what we do
+        // member call and continue in handleCall. But we can already make
+        // handleCall a bit cleaner, if we set the candidates here, similar to what we do
         // in handleReference.
         val helper = current.resolutionHelper
-        if (helper is MemberCallExpression) {
+        if (helper is MemberCall) {
             return
         }
 
@@ -389,14 +387,13 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     /**
      * This function resolves a possible overloaded -> (arrow) operator, for languages which support
      * operator overloading. The implicit call to the overloaded operator function is inserted as
-     * base for the MemberExpression. This can be the case for a [MemberExpression] or
-     * [MemberCallExpression]
+     * base for the Member. This can be the case for a [Member] or [MemberCall]
      */
     private fun resolveOverloadedArrowOperator(ex: Expression): Type? {
         var type: Type? = null
         if (
             ex.language is HasOperatorOverloading &&
-                ex is MemberExpression &&
+                ex is Member &&
                 ex.operatorCode == "->" &&
                 ex.base.type !is PointerType
         ) {
@@ -422,10 +419,10 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
      */
     protected open fun handle(node: Node?) {
         when (node) {
-            is MemberExpression -> handleMemberExpression(node)
+            is Member -> handleMember(node)
             is Reference -> handleReference(node)
-            is ConstructExpression -> handleConstructExpression(node)
-            is CallExpression -> handleCallExpression(node)
+            is Construct -> handleConstruct(node)
+            is Call -> handleCall(node)
             is HasOverloadedOperation -> handleOverloadedOperator(node)
         }
 
@@ -434,30 +431,29 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * This function handles the resolution of a [CallExpression] based on a list of candidates. The
-     * candidates are taken from [CallExpression.callee] which are set either in [handleReference]
-     * or [handleMemberExpression], depending on the type.
+     * This function handles the resolution of a [Call] based on a list of candidates. The
+     * candidates are taken from [Call.callee] which are set either in [handleReference] or
+     * [handleMember], depending on the type.
      *
      * In any case, the candidates are then resolved with the arguments of the call expression using
-     * [resolveWithArguments]. The result of this resolution is stored in [CallExpression.invokes]
-     * and depending on [CallResolutionResult.SuccessKind] are warning is emitted if resolution was
-     * erroneous or ambiguous. Furthermore, the [CallExpression.callee]'s [Reference.refersTo] is
-     * also set.
+     * [resolveWithArguments]. The result of this resolution is stored in [Call.invokes] and
+     * depending on [CallResolutionResult.SuccessKind] are warning is emitted if resolution was
+     * erroneous or ambiguous. Furthermore, the [Call.callee]'s [Reference.refersTo] is also set.
      *
      * If the resolution was unsuccessful, we try to infer the function based on the information
-     * provided in the [CallResolutionResult] and the [CallExpression]. This is done in
+     * provided in the [CallResolutionResult] and the [Call]. This is done in
      * [tryFunctionInference].
      *
-     * @param call The [CallExpression] to resolve.
+     * @param call The [Call] to resolve.
      */
-    protected open fun handleCallExpression(call: CallExpression) {
+    protected open fun handleCall(call: Call) {
         // Some local variables for easier smart casting
         val callee = call.callee
         val language = call.language
 
         // If the base type is unknown, we cannot resolve the call
         if (
-            callee is MemberExpression &&
+            callee is Member &&
                 callee.base.type is UnknownType &&
                 callee.base.assignedTypes.isEmpty()
         ) {
@@ -530,7 +526,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         return candidates
     }
 
-    protected open fun handleConstructExpression(constructExpression: ConstructExpression) {
+    protected open fun handleConstruct(constructExpression: Construct) {
         if (constructExpression.instantiates != null && constructExpression.constructor != null)
             return
         val recordDeclaration = constructExpression.type.root.recordDeclaration
@@ -582,7 +578,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * [HasOperatorOverloading.overloadedOperatorNames].
      *
      * Internally, it takes the result of [resolveOperator] and if successful, replaces the node
-     * with the resolved [OperatorCallExpression].
+     * with the resolved [OperatorCall].
      */
     protected open fun handleOverloadedOperator(op: HasOverloadedOperation) {
         val result = resolveOperator(op)
@@ -649,9 +645,9 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     .flatten()
 
             // C++ does not allow overloading at different hierarchy levels. If we find a
-            // Function with the same name as the function in the CallExpression we have
+            // Function with the same name as the function in the Call we have
             // to stop the search in the parent even if the Function does not match with
-            // the signature of the CallExpression
+            // the signature of the Call
             // TODO: move this to refineMethodResolution of CXXLanguage
             if (possibleTypes.firstOrNull()?.language.isCPP) { // TODO: Needs a special trait?
                 workingPossibleTypes.removeIf { recordDeclaration ->
@@ -692,13 +688,13 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     /**
      * @param constructExpression we want to find an invocation target for
-     * @param recordDeclaration associated with the Object the ConstructExpression constructs
-     * @return a ConstructDeclaration that is an invocation of the given ConstructExpression. If
-     *   there is no valid ConstructDeclaration we will create an implicit ConstructDeclaration that
-     *   matches the ConstructExpression.
+     * @param recordDeclaration associated with the Object the Construct constructs
+     * @return a ConstructDeclaration that is an invocation of the given Construct. If there is no
+     *   valid ConstructDeclaration we will create an implicit ConstructDeclaration that matches the
+     *   Construct.
      */
     private fun getConstructorDeclaration(
-        constructExpression: ConstructExpression,
+        constructExpression: Construct,
         recordDeclaration: Record,
     ): Constructor? {
         val signature = constructExpression.signature
@@ -723,15 +719,15 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val componentsToTemplates = mutableMapOf<Component, MutableList<Template>>()
 
         /**
-         * Adds implicit duplicates of the TemplateParams to the implicit ConstructExpression
+         * Adds implicit duplicates of the TemplateParams to the implicit Construct
          *
-         * @param templateParams of the [Variable]/[NewExpression]
+         * @param templateParams of the [Variable]/[New]
          * @param constructExpression duplicate TemplateParameters (implicit) to preserve AST, as
-         *   [ConstructExpression] uses AST as well as the [Variable]/[NewExpression]
+         *   [Construct] uses AST as well as the [Variable]/[New]
          */
         fun addImplicitTemplateParametersToCall(
             templateParams: List<Node>,
-            constructExpression: ConstructExpression,
+            constructExpression: Construct,
         ) {
             for (node in templateParams) {
                 if (node is TypeExpression) {
@@ -745,18 +741,18 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 }
 
 /**
- * This function decides which functions to add to [CallExpression.invokes] based on the candidates
- * and the arguments. It uses [resolveWithArguments] to resolve the best viable function based on
- * the candidates and the arguments.
+ * This function decides which functions to add to [Call.invokes] based on the candidates and the
+ * arguments. It uses [resolveWithArguments] to resolve the best viable function based on the
+ * candidates and the arguments.
  *
  * If the resolution is [SUCCESSFUL], it sets the invokes edge to the best viable functions. If it
  * is [AMBIGUOUS] or [PROBLEMATIC], it sets the invokes edge to all possible viable functions. If it
  * is unresolved, it tries to infer the function using [tryFunctionInference].
  *
  * @param callee The [Reference] of the callee.
- * @param call The [CallExpression] to resolve.
+ * @param call The [Call] to resolve.
  */
-internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: CallExpression) {
+internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: Call) {
     // Try to resolve the best viable function based on the candidates and the arguments
     val result = resolveWithArguments(callee.candidates, call.arguments, call)
     when (result.success) {
@@ -785,14 +781,14 @@ internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: Cal
 }
 
 /**
- * Returns a set of types in which the [CallExpression.callee] (which is a [Reference]) could reside
- * in. More concretely, it returns a [Pair], where the first element is the set of types and the
- * second is our best guess.
+ * Returns a set of types in which the [Call.callee] (which is a [Reference]) could reside in. More
+ * concretely, it returns a [Pair], where the first element is the set of types and the second is
+ * our best guess.
  */
 internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>, Type?> {
     val possibleTypes = mutableSetOf<Type>()
     var bestGuess: Type? = null
-    if (ref is MemberExpression) {
+    if (ref is Member) {
         bestGuess = ref.base.type
         possibleTypes.add(ref.base.type)
         possibleTypes.addAll(ref.base.assignedTypes)
@@ -809,14 +805,14 @@ internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>,
 }
 
 /**
- * This function tries to resolve a set of [candidates] (e.g. coming from a [CallExpression.callee])
- * into the best matching [Function] (or multiple functions, if applicable) based on the supplied
+ * This function tries to resolve a set of [candidates] (e.g. coming from a [Call.callee]) into the
+ * best matching [Function] (or multiple functions, if applicable) based on the supplied
  * [arguments]. The result is returned in the form of a [CallResolutionResult] which holds detail
  * information about intermediate results as well as the kind of success the resolution had.
  *
  * The [source] expression specifies the node in the graph that triggered this resolution. This is
- * most likely a [CallExpression], but could be other node as well. It is also the source of the
- * scope and language used in the resolution.
+ * most likely a [Call], but could be other node as well. It is also the source of the scope and
+ * language used in the resolution.
  */
 internal fun Pass<*>.resolveWithArguments(
     candidates: Set<Declaration>,
@@ -841,7 +837,7 @@ internal fun Pass<*>.resolveWithArguments(
     // will always fail
     val extractedScope =
         if (
-            source is MemberCallExpression &&
+            source is MemberCall &&
                 (source.base?.type is DynamicType ||
                     source.base?.type is UnknownType ||
                     source.base?.type is AutoType)

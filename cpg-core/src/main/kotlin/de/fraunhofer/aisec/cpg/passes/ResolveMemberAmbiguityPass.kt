@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.frontends.HasCallExpressionAmbiguity
-import de.fraunhofer.aisec.cpg.frontends.HasMemberExpressionAmbiguity
+import de.fraunhofer.aisec.cpg.frontends.HasCallAmbiguity
+import de.fraunhofer.aisec.cpg.frontends.HasMemberAmbiguity
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.Name
@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
@@ -54,18 +54,18 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * and, if so, replaces the member expression with a reference using the fully qualified name.
  *
  * This pass is dependent on the [ImportResolver] pass and requires the language trait
- * [HasCallExpressionAmbiguity]. It is executed before the [EvaluationOrderGraphPass].
+ * [HasCallAmbiguity]. It is executed before the [EvaluationOrderGraphPass].
  *
  * @constructor Initializes the pass with the provided translation context.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
-@ExecuteBefore(ResolveCallExpressionAmbiguityPass::class)
+@ExecuteBefore(ResolveCallAmbiguityPass::class)
 @DependsOn(ImportResolver::class)
-@RequiresLanguageTrait(HasMemberExpressionAmbiguity::class)
+@RequiresLanguageTrait(HasMemberAmbiguity::class)
 @Description(
     "A translation unit pass that resolves ambiguities in member expressions within a translation unit. This pass checks whether the base or member name in a member expression refers to an import and, if so, replaces the member expression with a reference using the fully qualified name."
 )
-class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+class ResolveMemberAmbiguityPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
     lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
@@ -73,11 +73,11 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node ->
             when (node) {
-                is MemberExpression -> resolveAmbiguity(node)
+                is Member -> resolveAmbiguity(node)
                 is Reference -> {
                     // Only call resolveReference for sole references. For member expressions bases,
                     // this is done by resolveAmbiguity to simulate EOG order.
-                    if (node.astParent !is MemberExpression) {
+                    if (node.astParent !is Member) {
                         resolveReference(node)
                     }
                 }
@@ -142,12 +142,12 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
      * @param me The member expression to disambiguate and potentially replace.
      * @return True if the member expression was replaced with a reference, false otherwise.
      */
-    private fun resolveAmbiguity(me: MemberExpression): Boolean {
+    private fun resolveAmbiguity(me: Member): Boolean {
         // Try to resolve the base first. This is necessary, since we walk the nodes in AST order,
         // and therefore we would reach the member expression first. However, we cannot switch to
         // EOG order since we want to have the return false of the handleReference function.
-        if (me.base is MemberExpression) {
-            resolveAmbiguity(me.base as MemberExpression)
+        if (me.base is Member) {
+            resolveAmbiguity(me.base as Member)
         } else if (me.base is Reference) {
             // If resolveReferences yields only an "uninteresting" result, we can abort here
             if (!resolveReference(me.base as Reference)) {
@@ -209,8 +209,8 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
 
 /**
  * This utility function tries to reconstruct the name as if the expression was part of an imported
- * symbol. This is needed because the [MemberExpression.name] includes the [MemberExpression.base]'s
- * type instead of the name, and thus it might be "UNKNOWN".
+ * symbol. This is needed because the [Member.name] includes the [Member.base]'s type instead of the
+ * name, and thus it might be "UNKNOWN".
  */
 val Expression.reconstructedImportName: Name
     get() {

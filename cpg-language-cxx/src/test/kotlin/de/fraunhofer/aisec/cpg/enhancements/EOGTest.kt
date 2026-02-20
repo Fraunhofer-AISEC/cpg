@@ -420,7 +420,7 @@ internal class EOGTest : BaseTest() {
     @Throws(Exception::class)
     fun testCPPCallGraph() {
         val nodes = translateToNodes("src/test/resources/cg.cpp")
-        val calls = nodes.filterIsInstance<CallExpression>()
+        val calls = nodes.filterIsInstance<Call>()
         val functions = nodes.filterIsInstance<Function>()
         val first = findByUniqueName(calls, "first")
         assertNotNull(first)
@@ -940,7 +940,7 @@ internal class EOGTest : BaseTest() {
     }
 
     @Test
-    fun testLambdaExpression() {
+    fun testLambda() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
@@ -956,7 +956,7 @@ internal class EOGTest : BaseTest() {
 
         val lambdaVar = function.variables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
-        val lambda = lambdaVar.initializer as? LambdaExpression
+        val lambda = lambdaVar.initializer as? Lambda
         assertNotNull(lambda)
 
         // The "outer" EOG is assembled correctly.

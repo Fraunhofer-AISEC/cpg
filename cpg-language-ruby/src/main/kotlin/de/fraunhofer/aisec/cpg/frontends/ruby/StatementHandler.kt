@@ -30,11 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Problem
 import org.jruby.ast.*
 
 class StatementHandler(lang: RubyLanguageFrontend) :
-    RubyHandler<Statement, Node>({ ProblemExpression() }, lang) {
+    RubyHandler<Statement, Node>({ Problem() }, lang) {
 
     override fun handleNode(node: Node): Statement {
         return when (node) {

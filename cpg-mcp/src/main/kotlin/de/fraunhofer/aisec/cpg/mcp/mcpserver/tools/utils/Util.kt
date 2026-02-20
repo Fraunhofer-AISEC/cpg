@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.query.QueryTree
@@ -218,7 +218,7 @@ fun Field.toJson() = Json.encodeToString(FieldInfo(this))
 
 fun Record.toJson() = Json.encodeToString(RecordInfo(this))
 
-fun CallExpression.toJson() = Json.encodeToString(CallInfo(this))
+fun Call.toJson() = Json.encodeToString(CallInfo(this))
 
 fun OverlayNode.toJson() = Json.encodeToString(OverlayInfo(this))
 

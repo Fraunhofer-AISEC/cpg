@@ -36,19 +36,19 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the creation of a new object through the `new` keyword. */
-class NewExpression : Expression(), HasInitializer {
+class New : Expression(), HasInitializer {
     @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
 
     /** The initializer expression. */
-    override var initializer by unwrapping(NewExpression::initializerEdge)
+    override var initializer by unwrapping(New::initializerEdge)
 
     /**
-     * We need a way to store the templateParameters that a NewExpression might have before the
-     * ConstructExpression is created
+     * We need a way to store the templateParameters that a New might have before the Construct is
+     * created
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
     var templateParameterEdges = astEdgesOf<AstNode>()
-    var templateParameters by unwrapping(NewExpression::templateParameterEdges)
+    var templateParameters by unwrapping(New::templateParameterEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -59,7 +59,7 @@ class NewExpression : Expression(), HasInitializer {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is NewExpression) return false
+        if (other !is New) return false
         return super.equals(other) && initializer == other.initializer
     }
 
