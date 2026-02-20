@@ -36,8 +36,6 @@ import org.neo4j.ogm.annotation.Relationship
  * .
  */
 open class MethodDeclaration : FunctionDeclaration() {
-    var isStatic = false
-
     /**
      * The [RecordDeclaration] this method is part of. This can be empty if we do not know about it.
      */
