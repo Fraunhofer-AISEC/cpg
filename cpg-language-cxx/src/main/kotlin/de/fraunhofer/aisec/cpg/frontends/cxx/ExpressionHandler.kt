@@ -629,7 +629,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleCharLiteral(ctx: IASTLiteralExpression): Expression {
         var raw = String(ctx.value)
         if (!raw.startsWith("'") || !raw.endsWith("'")) {
-            return newProblemExpression("character literal does not start or end with '", rawNode = ctx)
+            return newProblemExpression(
+                "character literal does not start or end with '",
+                rawNode = ctx,
+            )
         }
 
         raw = raw.trim('\'')
@@ -696,7 +699,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                             inEscape = false
                             maxChars = 0
                         } catch (ex: NumberFormatException) {
-                            return newProblemExpression("invalid number: ${ex.message}", rawNode = ctx)
+                            return newProblemExpression(
+                                "invalid number: ${ex.message}",
+                                rawNode = ctx,
+                            )
                         }
                     }
                 }
@@ -847,7 +853,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return newAssign(lhs = listOfNotNull(lhs), rhs = listOfNotNull(rhs), rawNode = ctx)
     }
 
-    private fun handleTypeIdInitializerExpression(ctx: CASTTypeIdInitializerExpression): Construction {
+    private fun handleTypeIdInitializerExpression(
+        ctx: CASTTypeIdInitializerExpression
+    ): Construction {
         val type = frontend.typeOf(ctx.typeId)
 
         val construct = newConstruction(type.name, rawNode = ctx)
