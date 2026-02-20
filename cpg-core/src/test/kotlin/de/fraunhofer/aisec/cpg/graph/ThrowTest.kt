@@ -29,13 +29,13 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.statements.ThrowExpression
+import de.fraunhofer.aisec.cpg.graph.statements.Throw
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import kotlin.test.*
 
-class ThrowExpressionTest {
+class ThrowTest {
     @Test
     fun testThrow() {
         val result =
@@ -69,29 +69,29 @@ class ThrowExpressionTest {
         assertIs<Block>(body)
 
         val emptyThrow = body.statements.getOrNull(0)
-        assertIs<ThrowExpression>(emptyThrow)
+        assertIs<Throw>(emptyThrow)
         println(emptyThrow.toString()) // This is only here to simulate a higher test coverage
         assertNull(emptyThrow.exception)
         assertTrue(emptyThrow.prevDFG.isEmpty())
 
         val throwWithExc = body.statements.getOrNull(1)
-        assertIs<ThrowExpression>(throwWithExc)
+        assertIs<Throw>(throwWithExc)
         println(throwWithExc.toString()) // This is only here to simulate a higher test coverage
         val throwCall = throwWithExc.exception
-        assertIs<CallExpression>(throwCall)
+        assertIs<Call>(throwCall)
         assertLocalName("SomeError", throwCall)
         assertEquals(setOf<Node>(throwCall), throwWithExc.prevDFG.toSet())
 
         val throwWithExcAndParent = body.statements.getOrNull(2)
-        assertIs<ThrowExpression>(throwWithExcAndParent)
+        assertIs<Throw>(throwWithExcAndParent)
         println(
             throwWithExcAndParent.toString()
         ) // This is only here to simulate a higher test coverage
         val throwCallException = throwWithExcAndParent.exception
-        assertIs<CallExpression>(throwCallException)
+        assertIs<Call>(throwCallException)
         assertLocalName("SomeError", throwCallException)
         val throwCallParent = throwWithExcAndParent.parentException
-        assertIs<CallExpression>(throwCallParent)
+        assertIs<Call>(throwCallParent)
         assertLocalName("SomeError2", throwCallParent)
         assertEquals(
             setOf<Node>(throwCallException, throwCallParent),

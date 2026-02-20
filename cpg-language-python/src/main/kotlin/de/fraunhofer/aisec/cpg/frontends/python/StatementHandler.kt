@@ -205,10 +205,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`Raise`](https://docs.python.org/3/library/ast.html#ast.Raise) into a
-     * [ThrowExpression].
+     * [Throw].
      */
-    private fun handleRaise(node: Python.AST.Raise): ThrowExpression {
-        val ret = newThrowExpression(rawNode = node)
+    private fun handleRaise(node: Python.AST.Raise): Throw {
+        val ret = newThrow(rawNode = node)
         node.exc?.let { ret.exception = frontend.expressionHandler.handle(it) }
         node.cause?.let { ret.parentException = frontend.expressionHandler.handle(it) }
         return ret
@@ -258,7 +258,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         fun generateManagerAssignment(
             withItem: Python.AST.withitem,
             currentBlock: Block,
-        ): Pair<AssignExpression, Name> {
+        ): Pair<Assign, Name> {
             // Create a temporary unique reference for the context manager
             val managerName =
                 Name.temporary(prefix = CONTEXT_MANAGER, separatorChar = '_', currentBlock)
@@ -268,21 +268,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // Represents the line `manager = ContextManager()`
             val contextExpr = frontend.expressionHandler.handle(withItem.context_expr)
             val managerAssignment =
-                newAssignExpression(
-                        operatorCode = "=",
-                        lhs = listOf(manager),
-                        rhs = listOf(contextExpr),
-                    )
+                newAssign(operatorCode = "=", lhs = listOf(manager), rhs = listOf(contextExpr))
                     .implicit()
             return Pair(managerAssignment, managerName)
         }
 
         /** Prepares the `manager.__exit__(None, None, None)` call for the else-block. */
-        fun generateExitCallWithNone(managerName: Name): MemberCallExpression {
+        fun generateExitCallWithNone(managerName: Name): MemberCall {
             val exitCallWithNone =
-                newMemberCallExpression(
+                newMemberCall(
                         callee =
-                            newMemberExpression(
+                            newMemberAccess(
                                     name = "__exit__",
                                     base = newReference(name = managerName).implicit(),
                                 )
@@ -302,9 +298,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
          */
         fun generateExitCallWithSysExcInfo(managerName: Name): IfStatement {
             val exitCallWithSysExec =
-                newMemberCallExpression(
+                newMemberCall(
                         callee =
-                            newMemberExpression(
+                            newMemberAccess(
                                     name = "__exit__",
                                     base = newReference(name = managerName).implicit(),
                                 )
@@ -314,12 +310,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     .implicit()
             val starOp = newUnaryOperator("*", postfix = false, prefix = false)
             starOp.input =
-                newMemberExpression(name = "exec_info", base = newReference("sys").implicit())
+                newMemberAccess(name = "exec_info", base = newReference("sys").implicit())
                     .implicit()
             exitCallWithSysExec.addArgument(starOp)
 
             val ifStmt = newIfStatement().implicit()
-            ifStmt.thenStatement = newThrowExpression().implicit()
+            ifStmt.thenStatement = newThrow().implicit()
             val neg = newUnaryOperator("not", postfix = false, prefix = false).implicit()
             neg.input = exitCallWithSysExec
             ifStmt.condition = neg
@@ -335,15 +331,15 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
          */
         fun generateEnterCallAndAssignment(
             managerName: Name,
-            managerAssignment: AssignExpression,
-        ): Pair<AssignExpression, Name> {
+            managerAssignment: Assign,
+        ): Pair<Assign, Name> {
             val tmpValName =
                 Name.temporary(prefix = WITH_TMP_VAL, separatorChar = '_', managerAssignment)
             val enterVar = newReference(name = tmpValName).implicit()
             val enterCall =
-                newMemberCallExpression(
+                newMemberCall(
                         callee =
-                            newMemberExpression(
+                            newMemberAccess(
                                     name = "__enter__",
                                     base = newReference(name = managerName).implicit(),
                                 )
@@ -353,11 +349,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     .implicit()
 
             return Pair(
-                newAssignExpression(
-                        operatorCode = "=",
-                        lhs = listOf(enterVar),
-                        rhs = listOf(enterCall),
-                    )
+                newAssign(operatorCode = "=", lhs = listOf(enterVar), rhs = listOf(enterCall))
                     .implicit(),
                 tmpValName,
             )
@@ -400,7 +392,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                         // Represents the line "cm = tmpVal # Doesn't exist if no
                                         // variable is used"
                                         this.statements.add(
-                                            newAssignExpression(
+                                            newAssign(
                                                     operatorCode = "=",
                                                     lhs = listOf(optionalVar),
                                                     rhs =
@@ -499,10 +491,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`Delete`](https://docs.python.org/3/library/ast.html#ast.Delete) into a
-     * [DeleteExpression].
+     * [Delete].
      */
-    private fun handleDelete(node: Python.AST.Delete): DeleteExpression {
-        val delete = newDeleteExpression(rawNode = node)
+    private fun handleDelete(node: Python.AST.Delete): Delete {
+        val delete = newDelete(rawNode = node)
         node.targets.forEach { target ->
             delete.operands.add(frontend.expressionHandler.handle(target))
 
@@ -726,7 +718,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.iterable = frontend.expressionHandler.handle(node.iter)
 
         when (val loopVar = frontend.expressionHandler.handle(node.target)) {
-            is InitializerListExpression -> { // unpacking
+            is InitializerList -> { // unpacking
                 val (tempVarRef, unpackingAssignment) = getUnpackingNodes(loopVar)
 
                 ret.variable = tempVarRef
@@ -762,23 +754,17 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     /**
      * This function creates two things:
      * - A [Reference] to a variable with a random [Name]
-     * - An [AssignExpression] assigning the reference above to the [loopVar] input
+     * - An [Assign] assigning the reference above to the [loopVar] input
      *
      * This is used in [handleFor] when loops have multiple loop variables to iterate over with
      * automatic unpacking. We translate this implicit unpacking to multiple CPG nodes, as the CPG
      * does not support automatic unpacking.
      */
-    private fun getUnpackingNodes(
-        loopVar: InitializerListExpression
-    ): Pair<Reference, AssignExpression> {
+    private fun getUnpackingNodes(loopVar: InitializerList): Pair<Reference, Assign> {
         val tempVarName = Name.temporary(prefix = LOOP_VAR_PREFIX, separatorChar = '_', loopVar)
         val tempRef = newReference(name = tempVarName).implicit().codeAndLocationFrom(loopVar)
         val assign =
-            newAssignExpression(
-                    operatorCode = "=",
-                    lhs = (loopVar).initializers,
-                    rhs = listOf(tempRef),
-                )
+            newAssign(operatorCode = "=", lhs = (loopVar).initializers, rhs = listOf(tempRef))
                 .implicit()
                 .codeAndLocationFrom(loopVar)
         return Pair(tempRef, assign)
@@ -790,13 +776,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`AnnAssign`](https://docs.python.org/3/library/ast.html#ast.AnnAssign)
-     * into an [AssignExpression].
+     * into an [Assign].
      */
-    private fun handleAnnAssign(node: Python.AST.AnnAssign): AssignExpression {
+    private fun handleAnnAssign(node: Python.AST.AnnAssign): Assign {
         val lhs = frontend.expressionHandler.handle(node.target)
         lhs.assignedTypes += frontend.typeOf(node.annotation)
         val rhs = node.value?.let { listOf(frontend.expressionHandler.handle(it)) } ?: emptyList()
-        return newAssignExpression(lhs = listOf(lhs), rhs = rhs, rawNode = node)
+        return newAssign(lhs = listOf(lhs), rhs = rhs, rawNode = node)
     }
 
     private fun handleIf(node: Python.AST.If): Statement {
@@ -825,9 +811,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`Assign`](https://docs.python.org/3/library/ast.html#ast.Assign) into an
-     * [AssignExpression].
+     * [Assign].
      */
-    private fun handleAssign(node: Python.AST.Assign): AssignExpression {
+    private fun handleAssign(node: Python.AST.Assign): Assign {
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
         node.type_comment?.let { typeComment ->
             val tpe = frontend.typeOf(typeComment)
@@ -835,7 +821,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
         val rhs = frontend.expressionHandler.handle(node.value)
         if (rhs is List<*>)
-            newAssignExpression(
+            newAssign(
                 lhs = lhs,
                 rhs =
                     rhs.map {
@@ -847,19 +833,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     },
                 rawNode = node,
             )
-        return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
+        return newAssign(lhs = lhs, rhs = listOf(rhs), rawNode = node)
     }
 
     private fun handleAugAssign(node: Python.AST.AugAssign): Statement {
         val lhs = frontend.expressionHandler.handle(node.target)
         val rhs = frontend.expressionHandler.handle(node.value)
         val op = frontend.operatorToString(node.op) + "="
-        return newAssignExpression(
-            operatorCode = op,
-            lhs = listOf(lhs),
-            rhs = listOf(rhs),
-            rawNode = node,
-        )
+        return newAssign(operatorCode = op, lhs = listOf(lhs), rhs = listOf(rhs), rawNode = node)
     }
 
     /**

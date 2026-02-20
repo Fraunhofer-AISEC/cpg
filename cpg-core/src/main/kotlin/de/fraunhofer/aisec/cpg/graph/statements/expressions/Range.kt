@@ -32,7 +32,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents the specification of a range (e.g., of an array). Usually used in combination with an
- * [SubscriptExpression] as the [SubscriptExpression.subscriptExpression].
+ * [Subscription] as the [Subscription.subscriptExpression].
  *
  * Examples can be found in Go:
  * ```go
@@ -54,14 +54,14 @@ import org.neo4j.ogm.annotation.Relationship
  *
  * Individual meaning of the range indices might differ per language.
  */
-class RangeExpression : Expression() {
+class Range : Expression() {
     @Relationship("FLOOR") var floorEdge = astOptionalEdgeOf<Expression>()
     /** The lower bound ("floor") of the range. This index is usually *inclusive*. */
-    var floor by unwrapping(RangeExpression::floorEdge)
+    var floor by unwrapping(Range::floorEdge)
 
     @Relationship("CEILING") var ceilingEdge = astOptionalEdgeOf<Expression>()
     /** The upper bound ("ceiling") of the range. This index is usually *exclusive*. */
-    var ceiling by unwrapping(RangeExpression::ceilingEdge)
+    var ceiling by unwrapping(Range::ceilingEdge)
 
     @Relationship("THIRD") var thirdEdge = astOptionalEdgeOf<Expression>()
     /**
@@ -69,14 +69,14 @@ class RangeExpression : Expression() {
      * example, Python allows specifying a step, while Go allows to control the underlying array's
      * capacity (not length).
      */
-    var third by unwrapping(RangeExpression::thirdEdge)
+    var third by unwrapping(Range::thirdEdge)
 
     /** The operator code that separates the range elements. Common cases are `:` or `...` */
     var operatorCode = ":"
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is RangeExpression) return false
+        if (other !is Range) return false
         return super.equals(other) &&
             floor == other.floor &&
             ceiling == other.ceiling &&

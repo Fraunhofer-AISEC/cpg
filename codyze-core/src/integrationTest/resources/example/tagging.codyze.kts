@@ -27,13 +27,13 @@ package example
 
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.GetSecret
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.passes.concepts.*
 
 project {
     tagging {
         tag {
-            each<CallExpression>("get_secret_from_server").withMultiple {
+            each<Call>("get_secret_from_server").withMultiple {
                 val secret =
                     Secret()
                         .also { secret -> secret.location = node.location }

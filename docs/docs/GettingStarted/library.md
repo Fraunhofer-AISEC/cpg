@@ -40,7 +40,7 @@ The following lines give you a small example:
 ```kotlin
 val inferenceConfig = InferenceConfiguration
     .builder()
-    .guessCastExpressions(true)
+    .guessCasts(true)
     .inferRecords(true)
     .inferDfgForUnresolvedCalls(true)
     .build()

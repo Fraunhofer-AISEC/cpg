@@ -125,7 +125,7 @@ fun Node.insertNodeBeforeInEOGPath(
     newNode: Node,
     builder: ((EvaluationOrder) -> Unit) = {},
 ): Boolean {
-    // Construct a new edge from the given node to the current node
+    // Construction a new edge from the given node to the current node
     val edge = EvaluationOrder(newNode, this).also(builder)
 
     // Make a copy of the incoming edges of the current node and set the start of the new edge as
@@ -168,7 +168,7 @@ fun Node.insertNodeAfterwardInEOGPath(
     newNode: Node,
     builder: ((EvaluationOrder) -> Unit) = {},
 ): Boolean {
-    // Construct a new edge from the current node to the given node
+    // Construction a new edge from the current node to the given node
     val edge = EvaluationOrder(this, newNode).also(builder)
 
     // Make a copy of the outgoing edges of the current node and set the end of the new edge as

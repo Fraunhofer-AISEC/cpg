@@ -119,21 +119,21 @@ open class ValueEvaluator(
         node.let { this.path += it }
 
         when (node) {
-            is NewArrayExpression -> return handleHasInitializer(node, depth)
+            is ArrayConstruction -> return handleHasInitializer(node, depth)
             is Variable -> return handleHasInitializer(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
             is UnaryOperator -> return handleUnaryOp(node, depth)
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
-            is CastExpression -> return this.evaluateInternal(node.expression, depth + 1)
-            is SubscriptExpression -> return handleSubscriptExpression(node, depth)
+            is Cast -> return this.evaluateInternal(node.expression, depth + 1)
+            is Subscription -> return handleSubscription(node, depth)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
-            is ConditionalExpression -> return handleConditionalExpression(node, depth)
-            is AssignExpression -> return handleAssignExpression(node, depth)
+            is Conditional -> return handleConditional(node, depth)
+            is Assign -> return handleAssign(node, depth)
             is Reference -> return handleReference(node, depth)
-            is CallExpression -> return handleCallExpression(node, depth)
+            is Call -> return handleCall(node, depth)
             else -> return handlePrevDFG(node, depth)
         }
 
@@ -142,8 +142,8 @@ open class ValueEvaluator(
         return cannotEvaluate(node, this)
     }
 
-    /** Handles a [CallExpression]. Default behaviour is to call [handlePrevDFG] */
-    protected open fun handleCallExpression(node: CallExpression, depth: Int): Any? {
+    /** Handles a [Call]. Default behaviour is to call [handlePrevDFG] */
+    protected open fun handleCall(node: Call, depth: Int): Any? {
         return handlePrevDFG(node, depth)
     }
 
@@ -166,7 +166,7 @@ open class ValueEvaluator(
     }
 
     /** Under certain circumstances, an assignment can also be used as an expression. */
-    protected open fun handleAssignExpression(node: AssignExpression, depth: Int): Any? {
+    protected open fun handleAssign(node: Assign, depth: Int): Any? {
         // Handle compound assignments. Only possible with single values
         val lhs = node.lhs.singleOrNull()
         val rhs = node.rhs.singleOrNull()
@@ -203,7 +203,7 @@ open class ValueEvaluator(
      * Computes the effect of basic "binary" operators.
      *
      * Note: this is both used by a [BinaryOperator] with basic arithmetic operations as well as
-     * [AssignExpression], if [AssignExpression.isCompoundAssignment] is true.
+     * [Assign], if [Assign.isCompoundAssignment] is true.
      */
     protected open fun computeBinaryOpEffect(
         lhsValue: Any?,
@@ -402,17 +402,16 @@ open class ValueEvaluator(
 
     /**
      * For arrays, we check whether we can actually access the contents of the array. This is
-     * basically the case if the base of the subscript expression is a list of [KeyValueExpression]
-     * s.
+     * basically the case if the base of the subscript expression is a list of [KeyValue] s.
      */
-    protected fun handleSubscriptExpression(expr: SubscriptExpression, depth: Int): Any? {
+    protected fun handleSubscription(expr: Subscription, depth: Int): Any? {
         val array = (expr.arrayExpression as? Reference)?.refersTo as? Variable
-        val ile = array?.initializer as? InitializerListExpression
+        val ile = array?.initializer as? InitializerList
 
         ile?.let {
             return evaluateInternal(
                 it.initializers
-                    .filterIsInstance<KeyValueExpression>()
+                    .filterIsInstance<KeyValue>()
                     .firstOrNull { kve ->
                         (kve.key as? Literal<*>)?.value ==
                             (expr.subscriptExpression as? Literal<*>)?.value
@@ -428,7 +427,7 @@ open class ValueEvaluator(
         return handlePrevDFG(expr, depth + 1)
     }
 
-    protected open fun handleConditionalExpression(expr: ConditionalExpression, depth: Int): Any? {
+    protected open fun handleConditional(expr: Conditional, depth: Int): Any? {
         var condition = expr.condition
 
         // Assume that condition is a binary operator
@@ -502,14 +501,14 @@ open class ValueEvaluator(
             // Remove the self reference
             list =
                 list.filter {
-                    !((it is AssignExpression && it.lhs.singleOrNull() == ref) ||
+                    !((it is Assign && it.lhs.singleOrNull() == ref) ||
                         (it is UnaryOperator && it.input == ref))
                 }
         } else if (ref.access == AccessValues.READWRITE && !isCase2) {
             // Consider only the self reference
             list =
                 list.filter {
-                    ((it is AssignExpression && it.lhs.singleOrNull() == ref) ||
+                    ((it is Assign && it.lhs.singleOrNull() == ref) ||
                         (it is UnaryOperator && it.input == ref))
                 }
         }

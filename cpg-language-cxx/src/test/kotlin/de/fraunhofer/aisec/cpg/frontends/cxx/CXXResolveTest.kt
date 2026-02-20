@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.*
@@ -53,18 +53,18 @@ class CXXResolveTest {
         val main = tu.functions["main"]
         assertNotNull(main)
 
-        val realCalls = main.calls.filter { it !is ConstructExpression }
+        val realCalls = main.calls.filter { it !is Construction }
 
         // 0, 1 and 2 are construct expressions -> our "real" calls start at index 3
         val aFoo = realCalls.getOrNull(0)
-        assertIs<MemberCallExpression>(aFoo)
+        assertIs<MemberCall>(aFoo)
         assertLocalName("foo", aFoo)
         assertLocalName("a", aFoo.base)
         // a.foo should connect to A::foo
         assertLocalName("A", (aFoo.invokes.firstOrNull() as? Method)?.recordDeclaration)
 
         val bFoo = realCalls.getOrNull(1)
-        assertIs<MemberCallExpression>(bFoo)
+        assertIs<MemberCall>(bFoo)
         assertLocalName("foo", bFoo)
         assertLocalName("b", bFoo.base)
         // b.foo should connect to B::foo
@@ -112,7 +112,7 @@ class CXXResolveTest {
         val main = tu.functions["main"]
         assertNotNull(main)
 
-        val foo = main.bodyOrNull<CallExpression>(0)
+        val foo = main.bodyOrNull<Call>(0)
         assertNotNull(foo)
 
         var func = foo.invokes.firstOrNull()
@@ -120,7 +120,7 @@ class CXXResolveTest {
         assertFalse(func.isInferred)
         assertFalse(func is Method)
 
-        val cFoo = main.bodyOrNull<MemberCallExpression>(2)
+        val cFoo = main.bodyOrNull<MemberCall>(2)
         assertNotNull(cFoo)
 
         func = cFoo.invokes.firstOrNull()

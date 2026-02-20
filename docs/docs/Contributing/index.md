@@ -99,9 +99,9 @@ Note: We actually want list property to be immutable so that they can only be mo
 
 ### Required Properties
 
-Properties which can be considered as a required part of an expression, should be non-nullable and be initialized to a `ProblemNode`. In this case we can represent parsing problems in the graph and still avoid too many null checks. For example in the `MemberExpression`:
+Properties which can be considered as a required part of an expression, should be non-nullable and be initialized to a `ProblemNode`. In this case we can represent parsing problems in the graph and still avoid too many null checks. For example in the `MemberAccess`:
 ```kotlin
-var base: Expression = newProblemExpression("could not parse base expression")
+var base: Expression = newProblem("could not parse base expression")
 ```
 
 There might be cases, where either one or the other property might be required, e.g., if a property can either be an `Expression` or a `Declaration`. In this case we need to resort of having both properties nullable.

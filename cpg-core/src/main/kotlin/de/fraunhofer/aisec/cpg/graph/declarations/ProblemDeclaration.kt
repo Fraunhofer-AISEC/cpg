@@ -30,8 +30,8 @@ import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
- * A node where the statement could not be translated by the graph. We use ProblemExpressions
- * whenever the CPG library requires an [Declaration].
+ * A node where the statement could not be translated by the graph. We use Problems whenever the CPG
+ * library requires an [Declaration].
  */
 class ProblemDeclaration(
     override var problem: String = "",

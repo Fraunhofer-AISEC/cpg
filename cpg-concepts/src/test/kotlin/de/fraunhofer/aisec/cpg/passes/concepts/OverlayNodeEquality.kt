@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
@@ -44,9 +44,9 @@ class OverlayNodeEquality {
         assertNotEquals(file1, file3)
         assertNotEquals(file2, file3)
 
-        val call1 = CallExpression()
+        val call1 = Call()
         call1.location = PhysicalLocation(URI("./some/path"), Region(1, 1, 1, 1))
-        val call2 = CallExpression()
+        val call2 = Call()
         call2.location = PhysicalLocation(URI("./some/path"), Region(1, 2, 1, 3))
 
         file1.underlyingNode = call1

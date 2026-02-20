@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.evaluation
 import de.fraunhofer.aisec.cpg.frontends.TestHandler
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import kotlin.test.*
 
 class MultiValueEvaluatorTest {
@@ -63,7 +63,7 @@ class MultiValueEvaluatorTest {
         val path = evaluator.path
         assertEquals(5, path.size)
 
-        val printA = main.bodyOrNull<CallExpression>(1)
+        val printA = main.bodyOrNull<Call>(1)
         assertNotNull(printA)
 
         value = evaluator.evaluate(printA.arguments.firstOrNull()) as ConcreteNumberSet
@@ -180,7 +180,7 @@ class MultiValueEvaluatorTest {
         assertNotNull(forLoop)
 
         val evaluator = MultiValueEvaluator()
-        val iVarList = ((forLoop.statement as Block).statements[0] as AssignExpression).rhs
+        val iVarList = ((forLoop.statement as Block).statements[0] as Assign).rhs
         assertEquals(1, iVarList.size)
         val iVar = iVarList.first()
         val value = evaluator.evaluate(iVar) as ConcreteNumberSet
@@ -192,7 +192,7 @@ class MultiValueEvaluatorTest {
         val evaluator = MultiValueEvaluator()
 
         with(TestHandler(TestLanguageFrontend())) {
-            // Construct a fake DFG flow
+            // Construction a fake DFG flow
             val three = newLiteral(3, primitiveType("int"))
             val four = newLiteral(4, primitiveType("int"))
 

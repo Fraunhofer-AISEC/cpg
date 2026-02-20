@@ -27,43 +27,43 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.edges.get
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayConstruction
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 
 fun Node.evaluate(evaluator: ValueEvaluator = this.language.evaluator): Any? {
     return evaluator.evaluate(this)
 }
 
-val NewArrayExpression.capacity: Int
+val ArrayConstruction.capacity: Int
     get() {
         return dimensions.first().evaluate() as Int
     }
 
 /**
- * A little helper function to find a [CallExpression]s argument [Node] by argument [name] or
- * argument [position]. The function prioritizes resolution by [name] over the [position].
+ * A little helper function to find a [Call]s argument [Node] by argument [name] or argument
+ * [position]. The function prioritizes resolution by [name] over the [position].
  *
- * @param this The [CallExpression] to analyze.
- * @param name Optionally: the [CallExpression.arguments] name.
- * @param position Optionally: the [CallExpression.arguments] position.
+ * @param this The [Call] to analyze.
+ * @param name Optionally: the [Call.arguments] name.
+ * @param position Optionally: the [Call.arguments] position.
  * @return The argument [Node] or `null` if not found.
  */
-fun CallExpression.argumentByNameOrPosition(name: String? = null, position: Int? = null): Node? {
+fun Call.argumentByNameOrPosition(name: String? = null, position: Int? = null): Node? {
     return name?.let { this.argumentEdges[it]?.end }
         ?: position?.let { this.arguments.getOrNull(it) }
 }
 
 /**
- * A little helper function to find a [CallExpression]s argument first by [name] and if this fails
- * by [position]. The argument ist evaluated and the result is returned if it has the expected type
+ * A little helper function to find a [Call]s argument first by [name] and if this fails by
+ * [position]. The argument ist evaluated and the result is returned if it has the expected type
  * [T].
  *
- * @param this The [CallExpression] to analyze.
- * @param name Optionally: the [CallExpression.arguments] name.
- * @param position Optionally: the [CallExpression.arguments] position.
+ * @param this The [Call] to analyze.
+ * @param name Optionally: the [Call.arguments] name.
+ * @param position Optionally: the [Call.arguments] position.
  * @return The evaluated result (of type [T]) or `null` on failure.
  */
-inline fun <reified T> CallExpression.argumentValueByNameOrPosition(
+inline fun <reified T> Call.argumentValueByNameOrPosition(
     name: String? = null,
     position: Int? = null,
 ): T? {

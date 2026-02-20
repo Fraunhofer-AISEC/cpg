@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayConstruction
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import kotlin.test.Test
@@ -55,7 +55,7 @@ class ArrayValueTest {
                 this.name = name
                 this.type = IntegerType(language = TestLanguage()).array()
                 this.initializer =
-                    NewArrayExpression().apply {
+                    ArrayConstruction().apply {
                         this.dimensions += Literal<Int>().apply { this.value = 5 }
                     }
             }
@@ -80,7 +80,7 @@ class ArrayValueTest {
                 this.name = name
                 this.type = IntegerType(language = TestLanguage()).array()
                 this.initializer =
-                    NewArrayExpression().apply {
+                    ArrayConstruction().apply {
                         this.dimensions += Literal<Int>().apply { this.value = 5 }
                     }
             }

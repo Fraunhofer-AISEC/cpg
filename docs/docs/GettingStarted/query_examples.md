@@ -22,13 +22,13 @@ result.all<HasBase>(mustSatisfy={it.base() != null})
 ## Memcpy too large source (Buffer Overflow)
 Part of CWE 120: Buffer Copy without Checking Size of Input ('Classic Buffer Overflow') --> do we also need to find self-written copy functions for buffers?
 ```
-result.all<CallExpression>({ it.name == "memcpy" }, { sizeof(it.arguments[0]) >= min(it.arguments[2]) } )
+result.all<Call>({ it.name == "memcpy" }, { sizeof(it.arguments[0]) >= min(it.arguments[2]) } )
 ```
 
 ## Memcpy too small source
 
 ```
-result.all<CallExpression>({ it.name == "memcpy" }, { sizeof(it.arguments[1]) <= max(it.arguments[2]) } )
+result.all<Call>({ it.name == "memcpy" }, { sizeof(it.arguments[1]) <= max(it.arguments[2]) } )
 ```
 
 ## Division by 0 (CWE 369)
@@ -49,13 +49,13 @@ For other expressions, we need to compute the effect of the operator.
 
 Intuition: No node which is reachable from a node `free(x)` must use `x`. Use EOG for reachability, but I'm not sure how to say "don't use x". This is the most basic form.
 ```
-result.all<CallExpression>({ it.name == "free" }) { outer -> !executionPath(outer) { (it as? DeclaredReferenceExpression)?.refersTo == (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo }.value }
+result.all<Call>({ it.name == "free" }) { outer -> !executionPath(outer) { (it as? DeclaredReferenceExpression)?.refersTo == (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo }.value }
 ```
 
 ## Double Free
 
 ```
-result.all<CallExpression>({ it.name == "free" }) { outer -> !executionPath(outer) { ((it as? CallExpression)?.name == "free" && ((it as? CallExpression)?.arguments?.getOrNull(0) as? DeclaredReferenceExpression)?.refersTo == (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo }.value }
+result.all<Call>({ it.name == "free" }) { outer -> !executionPath(outer) { ((it as? Call)?.name == "free" && ((it as? Call)?.arguments?.getOrNull(0) as? DeclaredReferenceExpression)?.refersTo == (outer.arguments[0] as? DeclaredReferenceExpression)?.refersTo }.value }
 ```
 
 ## Format string attack
@@ -63,7 +63,7 @@ result.all<CallExpression>({ it.name == "free" }) { outer -> !executionPath(oute
 arg0 of functions such as `printf` must not be user input. Since I'm not aware that we have a general model for "this is user input" (yet), we could say that all options for the argument must be a Literal (not sure if the proposed notation makes sense though).
 ```
 vuln_fcs = ["fprint", "printf", "sprintf", "snprintf", "vfprintf", "vprintf", "vsprintf", "vsnprintf"];
-forall (n: CallExpression): n.invokes.name in vuln_fcs => forall u in |backwards_DFG(n.arguments[0])|: u is Literal
+forall (n: Call): n.invokes.name in vuln_fcs => forall u in |backwards_DFG(n.arguments[0])|: u is Literal
 ```
 
 Since many classical vulns. (injection) are related to user input, we probably need a way to specify sources of user input (or "sources" in general). To reduce FP, we probably also want to check some conditions over the path between the source and the sink (e.g. some checks are in place to check for critical characters/substrings, do escaping, etc.). Problem: There are tons of options.
@@ -103,25 +103,25 @@ Idea: when crypto API is known, we could follow the input argument for passwords
 
 ```
 relevant_args = {"function": "arg0"}
-forall (n: CallExpression): n.invokes.name in relevant_args.keys => forall u in |backwards_DFG(relevant_args(n.invokes.name))|: u !is Literal
+forall (n: Call): n.invokes.name in relevant_args.keys => forall u in |backwards_DFG(relevant_args(n.invokes.name))|: u !is Literal
 ```
 
 ## Scribbles
 
 ### Test arguments of call expression
 ```
-result.all<CallExpression>({ it.name == "<function name>" }) { it.arguments[<no.>].value!! == const(<value>) }
+result.all<Call>({ it.name == "<function name>" }) { it.arguments[<no.>].value!! == const(<value>) }
 ```
 
 ### Track return value of call expression
 
 ```
-forall (n1: CallExpression, n2: CallExpression): n1.invokes.name == "<function name 1>" && n2.invokes.name == "<function name 2>" => data_flow(n1.returnValue, n2.arguments[<no.>])
+forall (n1: Call, n2: Call): n1.invokes.name == "<function name 1>" && n2.invokes.name == "<function name 2>" => data_flow(n1.returnValue, n2.arguments[<no.>])
 ```
 
 ### Ensure path property
 ```
-forall (n: CallExpression, v: Value) : n.invokes.name == "<function name>" && data_flow(v, n.arguments[<no.>]) => inferred_property(v, <property>)
+forall (n: Call, v: Value) : n.invokes.name == "<function name>" && data_flow(v, n.arguments[<no.>]) => inferred_property(v, <property>)
 ```
 
 Example:
@@ -135,7 +135,7 @@ val cipher = initialize_cipher(algo); // at this point one can infer that algo m
 
 ## https://cwe.mitre.org/data/definitions/1228.html
 
-Should be easy by simply maintaining a list of the dangerous, inconsistent, obsolete, etc. functions and checking all `CallExpression`s.
+Should be easy by simply maintaining a list of the dangerous, inconsistent, obsolete, etc. functions and checking all `Call`s.
 
 # Which analyses do we need?
 

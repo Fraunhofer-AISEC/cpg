@@ -130,7 +130,7 @@ class JVMLanguageFrontendTest {
 
         // Call to add should be resolved
         val call = r3ref.prevDFG.firstOrNull()
-        assertIs<MemberCallExpression>(call)
+        assertIs<MemberCall>(call)
         assertLocalName("add", call)
         assertInvokes(call, add)
         assertEquals(listOf("Integer", "Integer"), call.arguments.map { it.type.name.localName })
@@ -138,7 +138,7 @@ class JVMLanguageFrontendTest {
         // All references (which are not part of a call) and not to the stdlib should be resolved
         val refs = tu.refs
         refs
-            .filter { it.astParent !is CallExpression }
+            .filter { it.astParent !is Call }
             .filter { !it.name.startsWith("java.") }
             .forEach {
                 val refersTo = it.refersTo
@@ -313,7 +313,7 @@ class JVMLanguageFrontendTest {
             appInit.calls[
                     {
                         it.name.localName == "getMyProperty" &&
-                            it is MemberCallExpression &&
+                            it is MemberCall &&
                             it.base in extended.usages
                     }]
         assertNotNull(getMyProperty)
@@ -323,7 +323,7 @@ class JVMLanguageFrontendTest {
             appInit.calls[
                     {
                         it.name.localName == "setMyProperty" &&
-                            it is MemberCallExpression &&
+                            it is MemberCall &&
                             it.base in extended.usages
                     }]
         assertNotNull(setMyProperty)
@@ -347,7 +347,7 @@ class JVMLanguageFrontendTest {
         assertEquals(0, tu.problems.size)
         tu.methods.forEach { println(it.code) }
 
-        val refs = tu.refs.filterIsInstance<MemberExpression>()
+        val refs = tu.refs.filterIsInstance<MemberAccess>()
         refs.forEach {
             val refersTo = it.refersTo
             assertNotNull(refersTo, "${it.name} could not be resolved")
@@ -419,7 +419,7 @@ class JVMLanguageFrontendTest {
         assertNotNull(r3write)
 
         var expr = r3write.prevDFG.singleOrNull()
-        assertIs<NewArrayExpression>(expr)
+        assertIs<ArrayConstruction>(expr)
         assertLiteralValue(2, expr.dimensions.singleOrNull())
 
         var r1 = create.variables["r1"]
@@ -434,7 +434,7 @@ class JVMLanguageFrontendTest {
         assertNotNull(r2write)
 
         val prevDFG = r2write.prevDFG.singleOrNull()
-        assertIs<SubscriptExpression>(prevDFG)
+        assertIs<Subscription>(prevDFG)
         assertRefersTo(prevDFG.arrayExpression, r3)
 
         val createMulti = tu.methods["createMulti"]
@@ -452,7 +452,7 @@ class JVMLanguageFrontendTest {
         assertNotNull(r1write)
 
         expr = r1write.prevDFG.singleOrNull()
-        assertIs<NewArrayExpression>(expr)
+        assertIs<ArrayConstruction>(expr)
         listOf(2, 10).forEachIndexed { index, i -> assertLiteralValue(i, expr.dimensions[index]) }
     }
 
@@ -593,7 +593,7 @@ class JVMLanguageFrontendTest {
     }
 
     @Test
-    fun testCastExpression() {
+    fun testCast() {
         val topLevel = Path.of("src", "test", "resources", "class", "operators")
         val result =
             analyze(listOf(topLevel.resolve("Operators.class").toFile()), topLevel, true) {

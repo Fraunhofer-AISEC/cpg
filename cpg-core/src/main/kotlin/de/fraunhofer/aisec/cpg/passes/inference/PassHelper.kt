@@ -43,9 +43,9 @@ import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
@@ -205,8 +205,8 @@ internal fun Pass<*>.tryVariableInference(ref: Reference): Variable? {
 }
 
 /**
- * Tries to infer a [Field] from an unresolved [MemberExpression] or [Reference] (if the language
- * has [HasImplicitReceiver]). This will return `null`, if inference was not possible, or if it was
+ * Tries to infer a [Field] from an unresolved [MemberAccess] or [Reference] (if the language has
+ * [HasImplicitReceiver]). This will return `null`, if inference was not possible, or if it was
  * turned off in the [InferenceConfiguration].
  *
  * It will also try to infer a [Record], if [targetType] does not have a declaration. However, this
@@ -245,10 +245,10 @@ internal fun Pass<*>.tryFieldInference(ref: Reference, targetType: ObjectType): 
 }
 
 /**
- * Tries to infer a [Function] or a [Method] from a [CallExpression]. This will return an empty
- * list, if inference was not possible, or if it was turned off in the [InferenceConfiguration].
+ * Tries to infer a [Function] or a [Method] from a [Call]. This will return an empty list, if
+ * inference was not possible, or if it was turned off in the [InferenceConfiguration].
  *
- * Depending on several factors, e.g., whether the callee has an FQN, was a [MemberExpression] or
+ * Depending on several factors, e.g., whether the callee has an FQN, was a [MemberAccess] or
  * whether the language supports [HasImplicitReceiver] we either infer
  * - a global [Function]
  * - a [Function] in a namespace
@@ -258,7 +258,7 @@ internal fun Pass<*>.tryFieldInference(ref: Reference, targetType: ObjectType): 
  * [getPossibleContainingTypes]), we infer a method for all of them and return a list.
  */
 internal fun Pass<*>.tryFunctionInference(
-    call: CallExpression,
+    call: Call,
     result: CallResolutionResult,
 ): List<Function> {
     // We need to see, whether we have any suitable base (e.g. a class) or not; There are two
@@ -272,7 +272,7 @@ internal fun Pass<*>.tryFunctionInference(
     val callee = call.callee
     val (suitableBases, bestGuess) =
         if (
-            callee is MemberExpression ||
+            callee is MemberAccess ||
                 callee is Reference &&
                     !call.callee.name.isQualified() &&
                     call.language is HasImplicitReceiver
@@ -328,9 +328,9 @@ internal fun Pass<*>.tryFunctionInferenceFromFunctionPointer(
  *
  * There is a big challenge in this inference: We can not be 100 % sure, whether we really need to
  * infer a [Method] inside the [Record] or if this is a call to a global function (if [call] is a
- * simple [CallExpression] and not a [MemberCallExpression]). The reason behind that is that most
- * languages allow to omit `this` when calling methods in the current class. So a call to `foo()`
- * inside record `Bar` could either be a call to a global function `foo` or a call to `Bar::foo`.
+ * simple [Call] and not a [MemberCall]). The reason behind that is that most languages allow to
+ * omit `this` when calling methods in the current class. So a call to `foo()` inside record `Bar`
+ * could either be a call to a global function `foo` or a call to `Bar::foo`.
  *
  * We need to decide whether we want to infer a global function or not; the heuristic is based on a
  * multitude of factors such as:
@@ -339,7 +339,7 @@ internal fun Pass<*>.tryFunctionInferenceFromFunctionPointer(
  *   without an explicit receiver.
  */
 internal fun Pass<*>.tryMethodInference(
-    call: CallExpression,
+    call: Call,
     possibleContainingTypes: Set<Type>,
     bestGuess: Type?,
 ): List<Function> {
@@ -349,7 +349,7 @@ internal fun Pass<*>.tryMethodInference(
     // 1a) If the language does not even support functions at a global level, it's easy
     // 1b) If this is a member call expression, it's also easy
     val inferGlobalFunction =
-        if (call.language !is HasGlobalFunctions || call is MemberCallExpression) {
+        if (call.language !is HasGlobalFunctions || call is MemberCall) {
             false
         } else if (bestGuess is ObjectType && methodExists(bestGuess, call.name.localName)) {
             // 2) We do a quick check, whether we would have a method with our name in the "best
@@ -368,7 +368,7 @@ internal fun Pass<*>.tryMethodInference(
             // unlikely
             val others =
                 ctx.currentComponent.calls {
-                    it != call && it.name == call.name && call !is MemberCallExpression
+                    it != call && it.name == call.name && call !is MemberCall
                 }
             others.isNotEmpty()
         }

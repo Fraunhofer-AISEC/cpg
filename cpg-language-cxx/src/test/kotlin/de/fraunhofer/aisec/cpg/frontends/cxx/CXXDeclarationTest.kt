@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.OperatorCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.OperatorCall
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
@@ -302,13 +302,13 @@ class CXXDeclarationTest {
         // we should now have an implicit call to our operator in-between "p" and "size"
         val opCall = sizeRef.base
         assertNotNull(opCall)
-        assertIs<OperatorCallExpression>(opCall)
+        assertIs<OperatorCall>(opCall)
         assertEquals(p, opCall.base)
         assertInvokes(opCall, op)
     }
 
     @Test
-    fun testCallExpressionOperator() {
+    fun testCallOperator() {
         val file = File("src/test/resources/cxx/operators/call_expression.cpp")
         val result =
             analyze(listOf(file), file.parentFile.toPath(), true) {
@@ -346,7 +346,7 @@ class CXXDeclarationTest {
         // we should now have an implicit call to our operator in-between "p" and "foo"
         val opCall = funcFooRef.base
         assertNotNull(opCall)
-        assertIs<OperatorCallExpression>(opCall)
+        assertIs<OperatorCall>(opCall)
         assertEquals(p, opCall.base)
         assertInvokes(opCall, op)
     }

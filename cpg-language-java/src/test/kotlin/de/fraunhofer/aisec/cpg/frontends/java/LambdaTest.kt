@@ -56,15 +56,15 @@ class JavaLambdaTest {
         assertNotNull(result)
 
         val foreachArg = result.calls["forEach"]?.arguments?.first()
-        assertTrue(foreachArg is LambdaExpression)
+        assertTrue(foreachArg is Lambda)
         assertNotNull(foreachArg.function)
 
         val replaceAllArg = result.calls["replaceAll"]?.arguments?.first()
-        assertTrue(replaceAllArg is LambdaExpression)
+        assertTrue(replaceAllArg is Lambda)
         assertNotNull(replaceAllArg.function)
 
         val mapArg = result.calls["map"]?.arguments?.first()
-        assertTrue(mapArg is LambdaExpression)
+        assertTrue(mapArg is Lambda)
         assertNotNull(mapArg.function)
 
         val mapBody = mapArg.function?.body as? BinaryOperator
@@ -76,7 +76,7 @@ class JavaLambdaTest {
         val testfunctionArg =
             result.calls { it.name.localName == "testFunction" }[0].arguments.first()
         assertTrue(testfunctionArg is Reference)
-        assertTrue((testfunctionArg.refersTo as? Variable)?.initializer is LambdaExpression)
+        assertTrue((testfunctionArg.refersTo as? Variable)?.initializer is Lambda)
 
         val testfunctionBody = mapArg.function?.body as? BinaryOperator
         assertNotNull(testfunctionBody)
@@ -84,8 +84,7 @@ class JavaLambdaTest {
 
         val lambdaVar = result.variables["lambdaVar"]
         assertNotNull(lambdaVar)
-        val constructExpr =
-            (lambdaVar.initializer as? NewExpression)?.initializer as? ConstructExpression
+        val constructExpr = (lambdaVar.initializer as? New)?.initializer as? Construction
         assertNotNull(constructExpr)
         val anonymousRecord = constructExpr.instantiates as? Record
         assertNotNull(anonymousRecord)

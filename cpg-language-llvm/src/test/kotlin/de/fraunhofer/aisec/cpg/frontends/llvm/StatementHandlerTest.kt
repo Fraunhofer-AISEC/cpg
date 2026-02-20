@@ -34,12 +34,12 @@ import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Cast
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Conditional
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
@@ -85,7 +85,7 @@ class StatementHandlerTest {
         assertNotNull(xDeclaration)
 
         val call = xDeclaration.initializer
-        assertIs<CallExpression>(call)
+        assertIs<Call>(call)
         assertLocalName("rand", call)
         assertContains(call.invokes, rand)
         assertEquals(0, call.arguments.size)
@@ -249,7 +249,7 @@ class StatementHandlerTest {
         assertNotNull(xDeclaration)
 
         val call = xDeclaration.initializer
-        assertIs<CallExpression>(call)
+        assertIs<Call>(call)
         assertLocalName("rand", call)
         assertContains(call.invokes, rand)
         assertEquals(0, call.arguments.size)
@@ -353,7 +353,7 @@ class StatementHandlerTest {
         assertNotNull(xDeclaration)
 
         val call = xDeclaration.initializer
-        assertIs<CallExpression>(call)
+        assertIs<Call>(call)
         assertLocalName("rand", call)
         assertContains(call.invokes, rand)
         assertEquals(0, call.arguments.size)
@@ -508,7 +508,7 @@ class StatementHandlerTest {
         assertNotNull(yDeclaration)
 
         val call = xDeclaration.initializer
-        assertIs<CallExpression>(call)
+        assertIs<Call>(call)
         assertLocalName("rand", call)
         assertContains(call.invokes, rand)
         assertEquals(0, call.arguments.size)
@@ -687,7 +687,7 @@ class StatementHandlerTest {
         assertIs<UnaryOperator>(cmpOrdNeg)
         assertEquals("!", cmpOrdNeg.operatorCode)
         val cmpOrd = cmpOrdNeg.input
-        assertIs<CallExpression>(cmpOrd)
+        assertIs<Call>(cmpOrd)
         assertLocalName("isunordered", cmpOrd)
         assertRefersTo(cmpOrd.arguments[0], xDeclaration)
         assertRefersTo(cmpOrd.arguments[1], yDeclaration)
@@ -701,7 +701,7 @@ class StatementHandlerTest {
         assertEquals("i1", cmpUnoDeclaration.type.typeName)
 
         val cmpUno = cmpUnoDeclaration.initializer
-        assertIs<CallExpression>(cmpUno)
+        assertIs<Call>(cmpUno)
         assertLocalName("isunordered", cmpUno)
         assertRefersTo(cmpUno.arguments[0], xDeclaration)
         assertRefersTo(cmpUno.arguments[1], yDeclaration)
@@ -732,7 +732,7 @@ class StatementHandlerTest {
         assertEquals("i32", xDeclaration.type.typeName)
 
         val freezeInstruction = xDeclaration.initializer
-        assertIs<ConditionalExpression>(freezeInstruction)
+        assertIs<Conditional>(freezeInstruction)
         val condition = freezeInstruction.condition
         assertIs<BinaryOperator>(condition)
         assertEquals("&&", condition.operatorCode)
@@ -754,7 +754,7 @@ class StatementHandlerTest {
         assertRefersTo(freezeInstruction.thenExpression, wDeclaration)
 
         val elseExpression = freezeInstruction.elseExpression
-        assertIs<CallExpression>(elseExpression)
+        assertIs<Call>(elseExpression)
         assertFullName("llvm.freeze", elseExpression)
         assertEquals(1, elseExpression.arguments.size)
         assertRefersTo(elseExpression.arguments.firstOrNull(), wDeclaration)
@@ -801,7 +801,7 @@ class StatementHandlerTest {
         // This one is not wrapped in a block and does not have the declaration statement!
         // Check that the replacement equals *ptr = ~(*ptr | 1)
         val replacementNand = fooBody[5]
-        assertIs<AssignExpression>(replacementNand)
+        assertIs<Assign>(replacementNand)
         assertEquals(1, replacementNand.lhs.size)
         assertEquals(1, replacementNand.rhs.size)
         assertEquals("=", replacementNand.operatorCode)
@@ -858,7 +858,7 @@ class StatementHandlerTest {
 
         // Check that the replacement equals *ptr = (*ptr <cmp> 1) ? *ptr : 1
         val replacement = atomicrmwStatement.statements[1]
-        assertIs<AssignExpression>(replacement)
+        assertIs<Assign>(replacement)
         assertEquals(1, replacement.lhs.size)
         assertEquals(1, replacement.rhs.size)
         assertEquals("=", replacement.operatorCode)
@@ -869,13 +869,13 @@ class StatementHandlerTest {
 
         // Check that the rhs is equal to (*ptr <cmp> 1) ? *ptr : 1
         val conditionalExpression = replacement.rhs.first()
-        assertIs<ConditionalExpression>(conditionalExpression)
+        assertIs<Conditional>(conditionalExpression)
         val condition = conditionalExpression.condition
         assertIs<BinaryOperator>(condition)
         assertEquals(cmp, condition.operatorCode)
         var cmpLhs = condition.lhs
         if (requiresUintCast) {
-            assertIs<CastExpression>(cmpLhs)
+            assertIs<Cast>(cmpLhs)
             assertEquals("ui32", cmpLhs.castType.typeName)
             cmpLhs = cmpLhs.expression
         }
@@ -884,7 +884,7 @@ class StatementHandlerTest {
         assertLocalName("ptr", cmpLhs.input)
         var cmpRhs = condition.rhs
         if (requiresUintCast) {
-            assertIs<CastExpression>(cmpRhs)
+            assertIs<Cast>(cmpRhs)
             assertEquals("ui32", cmpRhs.castType.typeName)
             cmpRhs = cmpRhs.expression
         }
@@ -914,7 +914,7 @@ class StatementHandlerTest {
         // Check that the replacement equals *ptr = *ptr <operator> 1
         val replacement = atomicrmwStatement.statements[1]
 
-        assertIs<AssignExpression>(replacement)
+        assertIs<Assign>(replacement)
         assertEquals(1, replacement.lhs.size)
         assertEquals(1, replacement.rhs.size)
         assertEquals("=", replacement.operatorCode)

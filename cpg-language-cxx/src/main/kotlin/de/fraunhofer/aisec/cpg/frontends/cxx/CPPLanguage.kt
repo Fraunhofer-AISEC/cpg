@@ -37,9 +37,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.matchesSignature
@@ -99,16 +99,16 @@ open class CPPLanguage :
             BinaryOperator::class of "<=" to "operator<=",
             BinaryOperator::class of "=>" to "operator=>",
 
-            // Member access operators. See
+            // MemberAccess access operators. See
             // https://en.cppreference.com/w/cpp/language/operator_member_access
-            MemberExpression::class of "[]" to "operator[]",
+            MemberAccess::class of "[]" to "operator[]",
             UnaryOperator::class of "*" to "operator*",
             UnaryOperator::class of "&" to "operator&",
-            MemberExpression::class of "->" to "operator->",
-            MemberExpression::class of "->*" to "operator->*",
+            MemberAccess::class of "->" to "operator->",
+            MemberAccess::class of "->*" to "operator->*",
 
             // Other operators. See https://en.cppreference.com/w/cpp/language/operator_other
-            MemberCallExpression::class of "()" to "operator()",
+            MemberCall::class of "()" to "operator()",
             BinaryOperator::class of "," to "operator,",
         )
 
@@ -239,7 +239,7 @@ open class CPPLanguage :
      */
     override fun handleTemplateFunctionCalls(
         curClass: Record?,
-        templateCall: CallExpression,
+        templateCall: Call,
         applyInference: Boolean,
         ctx: TranslationContext,
         currentTU: TranslationUnit?,

@@ -880,7 +880,7 @@ fun <T : Declaration> ContextProvider.declare(declaration: T): T {
 
 /**
  * [SignatureResult] will be the result of the function [Function.matchesSignature] which calculates
- * whether the provided [CallExpression] will match the signature of the current [Function].
+ * whether the provided [Call] will match the signature of the current [Function].
  */
 sealed class SignatureResult(open val casts: List<CastResult>? = null) {
     val ranking: Int
@@ -975,14 +975,14 @@ fun Function.matchesSignature(
  * [bestViable]) of the call resolution.
  */
 data class CallResolutionResult(
-    /** The original expression that triggered the resolution. Most likely a [CallExpression]. */
+    /** The original expression that triggered the resolution. Most likely a [Call]. */
     val source: Expression,
 
     /** The arguments that were supplied to the expression. */
     val arguments: List<Expression>,
 
     /**
-     * A set of candidate symbols we discovered based on the [CallExpression.callee] (using
+     * A set of candidate symbols we discovered based on the [Call.callee] (using
      * [ScopeManager.lookupSymbolByName]), more specifically a list of [Function] nodes.
      */
     var candidateFunctions: Set<Function>,
@@ -1025,7 +1025,7 @@ data class CallResolutionResult(
          * Ideally, we have only one function in [bestViable], but it could be that we still have
          * multiple functions in this list. The most common scenario for this is if we have a member
          * call to an interface, and we know at least partially which implemented classes could be
-         * in the [MemberExpression.base]. In this case, all best viable functions of each of the
+         * in the [MemberAccess.base]. In this case, all best viable functions of each of the
          * implemented classes are contained in [bestViable].
          */
         SUCCESSFUL,

@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.DynamicType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.buildSignature
@@ -75,15 +75,15 @@ open class Function :
     val overrides = mutableListOf<Function>()
 
     /**
-     * The mirror property for [CallExpression.invokeEdges]. This holds all incoming [Invokes] edges
-     * from [CallExpression] nodes to this function.
+     * The mirror property for [Call.invokeEdges]. This holds all incoming [Invokes] edges from
+     * [Call] nodes to this function.
      */
     @Relationship(value = "INVOKES", direction = Relationship.Direction.INCOMING)
     val calledByEdges: Invokes<Function> =
-        Invokes<Function>(this, CallExpression::invokeEdges, outgoing = false)
+        Invokes<Function>(this, Call::invokeEdges, outgoing = false)
 
     /** Virtual property for accessing [calledByEdges] without property edges. */
-    val calledBy: MutableList<CallExpression> by unwrappingIncoming(Function::calledByEdges)
+    val calledBy: MutableList<Call> by unwrappingIncoming(Function::calledByEdges)
 
     /** The list of return types. The default is an empty list. */
     var returnTypes = listOf<Type>()

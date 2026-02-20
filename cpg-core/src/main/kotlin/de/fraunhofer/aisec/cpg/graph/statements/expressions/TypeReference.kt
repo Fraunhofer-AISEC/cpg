@@ -34,13 +34,13 @@ import java.util.Objects
  *
  * TODO: Is such a class really necessary??
  */
-class TypeIdExpression : Expression() {
+class TypeReference : Expression() {
     var referencedType: Type? = null
     var operatorCode: String? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is TypeIdExpression) return false
+        if (other !is TypeReference) return false
         return super.equals(other) &&
             operatorCode == other.operatorCode &&
             referencedType == other.referencedType

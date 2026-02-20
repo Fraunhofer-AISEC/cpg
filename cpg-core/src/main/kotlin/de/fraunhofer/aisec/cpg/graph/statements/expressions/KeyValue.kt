@@ -36,22 +36,21 @@ import org.neo4j.ogm.annotation.Relationship
  * Represents a key / value pair, often found in languages that allow associative arrays or objects,
  * such as Python, Golang or JavaScript.
  *
- * Most often used in combination with an [InitializerListExpression] to represent the creation of
- * an array.
+ * Most often used in combination with an [InitializerList] to represent the creation of an array.
  */
-class KeyValueExpression : Expression(), ArgumentHolder {
+class KeyValue : Expression(), ArgumentHolder {
 
     @Relationship("KEY") var keyEdge = astEdgeOf<Expression>(ProblemExpression("missing key"))
     /**
      * The key of this pair. It is usually a literal, but some languages even allow references to
      * variables as a key.
      */
-    var key by unwrapping(KeyValueExpression::keyEdge)
+    var key by unwrapping(KeyValue::keyEdge)
 
     @Relationship("VALUE") var valueEdge = astEdgeOf<Expression>(ProblemExpression("missing value"))
 
     /** The value of this pair. It can be any expression */
-    var value by unwrapping(KeyValueExpression::valueEdge)
+    var value by unwrapping(KeyValue::valueEdge)
 
     override fun addArgument(expression: Expression) {
         if (key is ProblemExpression) {
@@ -79,7 +78,7 @@ class KeyValueExpression : Expression(), ArgumentHolder {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is KeyValueExpression) return false
+        if (other !is KeyValue) return false
         return super.equals(other) && key == other.key && value == other.value
     }
 

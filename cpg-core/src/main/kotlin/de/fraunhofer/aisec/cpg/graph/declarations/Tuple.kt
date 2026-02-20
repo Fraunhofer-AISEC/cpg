@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.newTuple
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 
@@ -47,7 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.types.TupleType
  * corresponds to:
  * - two [Variable] nodes `a` and `b`, with an empty [Variable.initializer]
  * - a [Tuple], with the auto-generated name `(a,b)` and [Tuple.elements] `a` and `b`
- * - an [Tuple.initializer] that holds a [CallExpression] to `call`.
+ * - an [Tuple.initializer] that holds a [Call] to `call`.
  *
  * Implementation Note #1: The [Variable.initializer] of the element variables MUST be empty; only
  * the [Tuple.initializer] must be set. Otherwise we are potentially parsing the initializer twice.

@@ -179,7 +179,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             LLVMResume -> {
                 // Resumes propagation of an existing (in-flight) exception whose unwinding was
                 // interrupted with a landingpad instruction.
-                newThrowExpression(rawNode = instr).apply {
+                newThrow(rawNode = instr).apply {
                     exception =
                         newProblemExpression("We don't know the exception while parsing this node.")
                 }
@@ -270,12 +270,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val compoundStatement = newBlock(rawNode = instr)
 
         val dummyCall =
-            newCallExpression(
-                llvmInternalRef("llvm.catchswitch"),
-                "llvm.catchswitch",
-                false,
-                rawNode = instr,
-            )
+            newCall(llvmInternalRef("llvm.catchswitch"), "llvm.catchswitch", false, rawNode = instr)
         dummyCall.addArgument(parent, "parent")
 
         val tokenGeneration = declarationOrNot(dummyCall, instr) as DeclarationStatement
@@ -302,7 +297,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val catchOps = LLVMGetNumArgOperands(catchpad)
 
             val matchesCatchpad =
-                newCallExpression(
+                newCall(
                     llvmInternalRef("llvm.matchesCatchpad"),
                     "llvm.matchesCatchpad",
                     false,
@@ -340,7 +335,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // that we will throw something here, but we don't know what. We have to fix
             // that later once we know in which catch-block this statement is executed.
             val throwOperation =
-                newThrowExpression(rawNode = instr).apply {
+                newThrow(rawNode = instr).apply {
                     exception =
                         newProblemExpression("We don't know the exception while parsing this node.")
                 }
@@ -362,12 +357,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val catchswitch = frontend.getOperandValueAtIndex(instr, 0)
 
         val dummyCall =
-            newCallExpression(
-                llvmInternalRef("llvm.cleanuppad"),
-                "llvm.cleanuppad",
-                false,
-                rawNode = instr,
-            )
+            newCall(llvmInternalRef("llvm.cleanuppad"), "llvm.cleanuppad", false, rawNode = instr)
         dummyCall.addArgument(catchswitch, "parentCatchswitch")
 
         for (i in 1 until numOps) {
@@ -389,12 +379,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val catchswitch = frontend.expressionHandler.handle(parentCatchSwitch) as Expression
 
         val dummyCall =
-            newCallExpression(
-                llvmInternalRef("llvm.catchpad"),
-                "llvm.catchpad",
-                false,
-                rawNode = instr,
-            )
+            newCall(llvmInternalRef("llvm.catchpad"), "llvm.catchpad", false, rawNode = instr)
         dummyCall.addArgument(catchswitch, "parentCatchswitch")
 
         for (i in 0 until numOps) {
@@ -412,7 +397,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     @FunctionReplacement(["llvm.va_arg"], "va_arg")
     private fun handleVaArg(instr: LLVMValueRef): Statement {
         val callExpr =
-            newCallExpression(llvmInternalRef("llvm.va_arg"), "llvm.va_arg", false, rawNode = instr)
+            newCall(llvmInternalRef("llvm.va_arg"), "llvm.va_arg", false, rawNode = instr)
         val operandName = frontend.getOperandValueAtIndex(instr, 0)
         callExpr.addArgument(operandName)
         val expectedType = frontend.typeOf(instr)
@@ -482,10 +467,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     /**
      * Handles the ['alloca'](https://llvm.org/docs/LangRef.html#alloca-instruction) instruction,
      * which allocates a defined block of memory. The closest what we have in the graph is the
-     * [NewArrayExpression], which creates a fixed sized array, i.e., a block of memory.
+     * [ArrayConstruction], which creates a fixed sized array, i.e., a block of memory.
      */
     private fun handleAlloca(instr: LLVMValueRef): Statement {
-        val array = newNewArrayExpression(rawNode = instr)
+        val array = newArrayConstruction(rawNode = instr)
 
         array.type = frontend.typeOf(instr)
 
@@ -507,7 +492,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val dereference = newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
         dereference.input = frontend.getOperandValueAtIndex(instr, 1)
 
-        return newAssignExpression(
+        return newAssign(
             "=",
             listOf(dereference),
             listOf(frontend.getOperandValueAtIndex(instr, 0)),
@@ -637,7 +622,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 ProblemNode.ProblemType.TRANSLATION,
                 rawNode = instr,
             )
-        if (operand !is ConstructExpression) {
+        if (operand !is Construction) {
             copy = declarationOrNot(operand, instr)
             if (copy is DeclarationStatement) {
                 base =
@@ -653,14 +638,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         for (idx: Int in 0 until numOps) {
             val index = indices.get(idx.toLong())
 
-            if (base is ConstructExpression) {
+            if (base is Construction) {
                 if (idx == numOps - 1) {
                     base.setArgument(index, valueToSet)
                     return declarationOrNot(operand, instr)
                 }
                 base = base.arguments[index]
             } else if (baseType is PointerType) {
-                val arrayExpr = newSubscriptExpression()
+                val arrayExpr = newSubscription()
                 arrayExpr.arrayExpression = base
                 arrayExpr.name = Name(index.toString())
                 arrayExpr.subscriptExpression = operand
@@ -697,7 +682,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 baseType = field?.type ?: unknownType()
 
                 // construct our member expression
-                expr = newMemberExpression(field?.name?.localName, base, baseType, ".")
+                expr = newMemberAccess(field?.name?.localName, base, baseType, ".")
                 log.info("{}", expr)
 
                 // the current expression is the new base
@@ -706,7 +691,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         val compoundStatement = newBlock(rawNode = instr)
-        val assignment = newAssignExpression("=", listOf(base), listOf(valueToSet), rawNode = instr)
+        val assignment = newAssign("=", listOf(base), listOf(valueToSet), rawNode = instr)
         compoundStatement.statements += copy
         compoundStatement.statements += assignment
 
@@ -742,11 +727,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         // The implementation of this function would depend on the data type (e.g. for integers, it
         // could be rand())
         val callExpression =
-            newCallExpression(llvmInternalRef("llvm.freeze"), "llvm.freeze", false, rawNode = instr)
+            newCall(llvmInternalRef("llvm.freeze"), "llvm.freeze", false, rawNode = instr)
         callExpression.addArgument(operand)
 
         // res = (arg != undef && arg != poison) ? arg : llvm.freeze(arg)
-        val conditional = newConditionalExpression(condition, operand, callExpression, operand.type)
+        val conditional = newConditional(condition, operand, callExpression, operand.type)
         return declarationOrNot(conditional, instr)
     }
 
@@ -762,7 +747,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleFence(instr: LLVMValueRef): Statement {
         val instrString = frontend.codeOf(instr)
         val callExpression =
-            newCallExpression(llvmInternalRef("llvm.fence"), "llvm.fence", false, rawNode = instr)
+            newCall(llvmInternalRef("llvm.fence"), "llvm.fence", false, rawNode = instr)
         val ordering = newLiteral(LLVMGetOrdering(instr), primitiveType("i32"), rawNode = instr)
         callExpression.addArgument(ordering, "ordering")
         if (instrString?.contains("syncscope") == true) {
@@ -808,7 +793,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val targetType = frontend.typeOf(instr)
 
             // construct it
-            val construct = newConstructExpression("")
+            val construct = newConstruction("")
             construct.instantiates = (targetType as? ObjectType)?.recordDeclaration
 
             val ptrDerefConstruct =
@@ -833,8 +818,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val ptrDerefAssign = newUnaryOperator("*", false, true, rawNode = instr)
         ptrDerefAssign.input = frontend.getOperandValueAtIndex(instr, 0)
 
-        val assignment =
-            newAssignExpression("=", listOf(ptrDerefAssign), listOf(value), rawNode = instr)
+        val assignment = newAssign("=", listOf(ptrDerefAssign), listOf(value), rawNode = instr)
 
         val ifStatement = newIfStatement(rawNode = instr)
         ifStatement.condition = cmpExpr
@@ -855,7 +839,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val ptr = frontend.getOperandValueAtIndex(instr, 0)
         val value = frontend.getOperandValueAtIndex(instr, 1)
         val ty = value.type
-        val exchOp = newAssignExpression("=", rawNode = instr)
+        val exchOp = newAssign("=", rawNode = instr)
         exchOp.name = Name("atomicrmw")
 
         val ptrDeref = newUnaryOperator("*", postfix = false, prefix = true, rawNode = instr)
@@ -923,8 +907,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
                 val ptrDerefConditional = newUnaryOperator("*", false, true, rawNode = instr)
                 ptrDerefConditional.input = frontend.getOperandValueAtIndex(instr, 0)
-                val conditional =
-                    newConditionalExpression(condition, ptrDerefConditional, value, ty)
+                val conditional = newConditional(condition, ptrDerefConditional, value, ty)
                 exchOp.rhs = mutableListOf(conditional)
             }
             LLVMAtomicRMWBinOpUMax,
@@ -936,20 +919,19 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                         ">"
                     }
                 val condition = newBinaryOperator(operatorCode, rawNode = instr)
-                val castExprLhs = newCastExpression(rawNode = instr)
+                val castExprLhs = newCast(rawNode = instr)
                 castExprLhs.castType = objectType("u${ty.name}")
                 castExprLhs.expression = ptrDeref
                 condition.lhs = castExprLhs
 
-                val castExprRhs = newCastExpression(rawNode = instr)
+                val castExprRhs = newCast(rawNode = instr)
                 castExprRhs.castType = objectType("u${ty.name}")
                 castExprRhs.expression = value
                 condition.rhs = castExprRhs
 
                 val ptrDerefConditional = newUnaryOperator("*", false, true, rawNode = instr)
                 ptrDerefConditional.input = frontend.getOperandValueAtIndex(instr, 0)
-                val conditional =
-                    newConditionalExpression(condition, ptrDerefConditional, value, ty)
+                val conditional = newConditional(condition, ptrDerefConditional, value, ty)
                 exchOp.rhs = mutableListOf(conditional)
             }
             else -> {
@@ -1088,7 +1070,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * [`call`](https://llvm.org/docs/LangRef.html#call-instruction) and the
      * [`invoke`](https://llvm.org/docs/LangRef.html#invoke-instruction) instruction.
      *
-     * Returns either a [DeclarationStatement] or a [CallExpression].
+     * Returns either a [DeclarationStatement] or a [Call].
      */
     private fun handleFunctionCall(instr: LLVMValueRef): Statement {
         val calledFunc = LLVMGetCalledValue(instr)
@@ -1121,7 +1103,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val callee = newReference(calledFuncName, frontend.typeOf(calledFunc), rawNode = calledFunc)
 
-        val callExpr = newCallExpression(callee, calledFuncName, false, rawNode = instr)
+        val callExpr = newCall(callee, calledFuncName, false, rawNode = instr)
 
         while (idx < max) {
             val operandName = frontend.getOperandValueAtIndex(instr, idx)
@@ -1215,7 +1197,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         compoundStatement.statements += newArrayDecl
 
         val decl = newArrayDecl.declarations[0] as? Variable
-        val arrayExpr = newSubscriptExpression(rawNode = instr)
+        val arrayExpr = newSubscription(rawNode = instr)
         arrayExpr.arrayExpression =
             newReference(
                 decl?.name?.toString() ?: Node.EMPTY_NAME,
@@ -1225,7 +1207,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         arrayExpr.subscriptExpression = frontend.getOperandValueAtIndex(instr, 2)
 
         val assignExpr =
-            newAssignExpression(
+            newAssign(
                 "=",
                 listOf(arrayExpr),
                 listOf(frontend.getOperandValueAtIndex(instr, 1)),
@@ -1241,7 +1223,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * instruction which is modeled as access to an array at a given index.
      */
     private fun handleExtractelement(instr: LLVMValueRef): Statement {
-        val arrayExpr = newSubscriptExpression(rawNode = instr)
+        val arrayExpr = newSubscription(rawNode = instr)
         arrayExpr.arrayExpression = frontend.getOperandValueAtIndex(instr, 0)
         arrayExpr.subscriptExpression = frontend.getOperandValueAtIndex(instr, 1)
 
@@ -1257,7 +1239,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * barely used and also the features of LLVM are very limited in that scenario.
      */
     private fun handleShufflevector(instr: LLVMValueRef): Statement {
-        val list = newInitializerListExpression(frontend.typeOf(instr), rawNode = instr)
+        val list = newInitializerList(frontend.typeOf(instr), rawNode = instr)
         val elementType = frontend.typeOf(instr).dereference()
 
         val initializers = mutableListOf<Expression>()
@@ -1291,24 +1273,24 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         for (idx in 0 until indices) {
             val idxInt = LLVMGetMaskValue(instr, idx)
             if (idxInt < array1Length) {
-                if (array1 is InitializerListExpression) {
+                if (array1 is InitializerList) {
                     initializers += array1.initializers[idxInt]
                 } else if (array1 is Literal<*> && array1.value == null) {
                     initializers += newLiteral(null, elementType, rawNode = instr)
                 } else {
-                    val arrayExpr = newSubscriptExpression(rawNode = instr)
+                    val arrayExpr = newSubscription(rawNode = instr)
                     arrayExpr.arrayExpression = frontend.getOperandValueAtIndex(instr, 0)
                     arrayExpr.subscriptExpression =
                         newLiteral(idxInt, primitiveType("i32"), rawNode = instr)
                     initializers += arrayExpr
                 }
             } else if (idxInt < array1Length + array2Length) {
-                if (array2 is InitializerListExpression) {
+                if (array2 is InitializerList) {
                     initializers += array2.initializers[idxInt - array1Length]
                 } else if (array2 is Literal<*> && array2.value == null) {
                     initializers += newLiteral(null, elementType, rawNode = instr)
                 } else {
-                    val arrayExpr = newSubscriptExpression(rawNode = instr)
+                    val arrayExpr = newSubscription(rawNode = instr)
                     arrayExpr.arrayExpression = frontend.getOperandValueAtIndex(instr, 1)
                     arrayExpr.subscriptExpression =
                         newLiteral(idxInt - array1Length, primitiveType("i32"), rawNode = instr)
@@ -1403,7 +1385,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         for ((l, r) in labelMap) {
             // Now, we iterate over all the basic blocks and add an assign statement.
             val assignment =
-                newAssignExpression(
+                newAssign(
                     "=",
                     listOf(newReference(varName, type, rawNode = instr)),
                     listOf(r),
@@ -1487,8 +1469,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Handles a binary operation and returns either a [BinaryOperator], [UnaryOperator],
-     * [CallExpression] or a [DeclarationStatement].
+     * Handles a binary operation and returns either a [BinaryOperator], [UnaryOperator], [Call] or
+     * a [DeclarationStatement].
      *
      * It expects the llvm-instruction in [instr] and the operator in [op]. The argument [unsigned]
      * indicates if the operands have to be treated as unsigned integer values. In this case, a cast
@@ -1513,24 +1495,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // Unordered comparison operand => Replace with a call to isunordered(x, y)
             // Resulting statement: i1 lhs = isordered(op1, op2)
             binaryOperator =
-                newCallExpression(
-                    llvmInternalRef("isunordered"),
-                    "isunordered",
-                    false,
-                    rawNode = instr,
-                )
+                newCall(llvmInternalRef("isunordered"), "isunordered", false, rawNode = instr)
             binaryOperator.addArgument(op1)
             binaryOperator.addArgument(op2)
         } else if (op == "ord") {
             // Ordered comparison operand => Replace with !isunordered(x, y)
             // Resulting statement: i1 lhs = !isordered(op1, op2)
             val unorderedCall =
-                newCallExpression(
-                    llvmInternalRef("isunordered"),
-                    "isunordered",
-                    false,
-                    rawNode = instr,
-                )
+                newCall(llvmInternalRef("isunordered"), "isunordered", false, rawNode = instr)
             unorderedCall.addArgument(op1)
             unorderedCall.addArgument(op2)
             binaryOperator = newUnaryOperator("!", false, true, rawNode = instr)
@@ -1541,13 +1513,13 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
             if (unsigned) {
                 val op1Type = "u${op1.type.name}"
-                val castExprLhs = newCastExpression(rawNode = instr)
+                val castExprLhs = newCast(rawNode = instr)
                 castExprLhs.castType = objectType(op1Type)
                 castExprLhs.expression = op1
                 binaryOperator.lhs = castExprLhs
 
                 val op2Type = "u${op2.type.name}"
-                val castExprRhs = newCastExpression(rawNode = instr)
+                val castExprRhs = newCast(rawNode = instr)
                 castExprRhs.castType = objectType(op2Type)
                 castExprRhs.expression = op2
                 binaryOperator.rhs = castExprRhs
@@ -1563,12 +1535,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 binOpUnordered = newBinaryOperator("||", rawNode = instr)
                 binOpUnordered.rhs = binaryOperator
                 val unorderedCall =
-                    newCallExpression(
-                        llvmInternalRef("isunordered"),
-                        "isunordered",
-                        false,
-                        rawNode = instr,
-                    )
+                    newCall(llvmInternalRef("isunordered"), "isunordered", false, rawNode = instr)
                 unorderedCall.addArgument(op1)
                 unorderedCall.addArgument(op2)
                 binOpUnordered.lhs = unorderedCall

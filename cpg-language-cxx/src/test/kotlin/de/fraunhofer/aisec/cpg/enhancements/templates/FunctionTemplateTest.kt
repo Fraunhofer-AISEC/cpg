@@ -64,7 +64,7 @@ internal class FunctionTemplateTest : BaseTest() {
     }
 
     private fun testFunctionTemplateArguments(
-        callFloat3: CallExpression,
+        callFloat3: Call,
         floatType: ObjectType,
         int3: Literal<*>,
     ) {
@@ -144,9 +144,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, callInt2.invokes[0])
 
         val callFloat3 =
-            findByUniquePredicate(result.calls) { c: CallExpression ->
-                c.location!!.region.startLine == 13
-            }
+            findByUniquePredicate(result.calls) { c: Call -> c.location!!.region.startLine == 13 }
         assertEquals(1, callFloat3.invokes.size)
         assertEquals(fixedMultiply, callFloat3.invokes[0])
 
@@ -176,9 +174,7 @@ internal class FunctionTemplateTest : BaseTest() {
                     f.returnTypes.firstOrNull()?.name?.localName == "double"
             }
         val call =
-            findByUniquePredicate(result.calls) { c: CallExpression ->
-                c.name.localName == "fixed_multiply"
-            }
+            findByUniquePredicate(result.calls) { c: Call -> c.name.localName == "fixed_multiply" }
 
         // Check invocation
         assertEquals(1, call.invokes.size)
@@ -190,7 +186,7 @@ internal class FunctionTemplateTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testInvocationWithoutCallTarget() {
-        // Check if a CallExpression is converted to a TemplateCallExpression if a compatible target
+        // Check if a Call is converted to a TemplateCall if a compatible target
         // exists
         val result =
             analyze(
@@ -221,9 +217,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, templateDeclaration.realization[0])
 
         val call =
-            findByUniquePredicate(result.calls) { c: CallExpression ->
-                c.name.localName == "fixed_multiply"
-            }
+            findByUniquePredicate(result.calls) { c: Call -> c.name.localName == "fixed_multiply" }
         // Check invocation target
         assertEquals(1, call.invokes.size)
         assertEquals(fixedMultiply, call.invokes[0])
@@ -242,7 +236,7 @@ internal class FunctionTemplateTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testInvocationWithAutoDeduction() {
-        // Check if a TemplateCallExpression without template parameters performs autodeduction
+        // Check if a TemplateCall without template parameters performs autodeduction
         val result =
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation3.cpp").toFile()),
@@ -306,9 +300,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, templateDeclaration.realization.size)
         assertEquals(fixedMultiply, templateDeclaration.realization[0])
         val call =
-            findByUniquePredicate(result.calls) { c: CallExpression ->
-                c.name.localName == "fixed_multiply"
-            }
+            findByUniquePredicate(result.calls) { c: Call -> c.name.localName == "fixed_multiply" }
 
         // Check invocation target
         assertEquals(1, call.invokes.size)
@@ -361,9 +353,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, templateDeclaration.realization.size)
         assertEquals(fixedMultiply, templateDeclaration.realization[0])
         val call =
-            findByUniquePredicate(result.calls) { c: CallExpression ->
-                c.name.localName == "fixed_multiply"
-            }
+            findByUniquePredicate(result.calls) { c: Call -> c.name.localName == "fixed_multiply" }
 
         // Check invocation target
         assertEquals(1, call.invokes.size)
@@ -406,9 +396,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, templateDeclaration.realization.size)
         assertEquals(fixedMultiply, templateDeclaration.realization[0])
         val call =
-            findByUniquePredicate(result.calls) { c: CallExpression ->
-                c.name.localName == "fixed_multiply"
-            }
+            findByUniquePredicate(result.calls) { c: Call -> c.name.localName == "fixed_multiply" }
 
         // Check invocation target
         assertEquals(1, call.invokes.size)
@@ -432,8 +420,8 @@ internal class FunctionTemplateTest : BaseTest() {
 
         // Check cast
         assertEquals(1, call.arguments.size)
-        assertTrue(call.arguments[0] is CastExpression)
-        val arg = call.arguments[0] as CastExpression
+        assertTrue(call.arguments[0] is Cast)
+        val arg = call.arguments[0] as Cast
         assertEquals(intType, arg.castType)
         assertEquals(20.3, (arg.expression as Literal<*>).value)
     }
@@ -461,21 +449,13 @@ internal class FunctionTemplateTest : BaseTest() {
                     !func.isInferred)
             }
         val f1 =
-            findByUniquePredicate(result.calls) { c: CallExpression ->
-                c.location!!.region.startLine == 9
-            }
+            findByUniquePredicate(result.calls) { c: Call -> c.location!!.region.startLine == 9 }
         val f2 =
-            findByUniquePredicate(result.calls) { c: CallExpression ->
-                c.location!!.region.startLine == 10
-            }
+            findByUniquePredicate(result.calls) { c: Call -> c.location!!.region.startLine == 10 }
         val f3 =
-            findByUniquePredicate(result.calls) { c: CallExpression ->
-                c.location!!.region.startLine == 11
-            }
+            findByUniquePredicate(result.calls) { c: Call -> c.location!!.region.startLine == 11 }
         val f4 =
-            findByUniquePredicate(result.calls) { c: CallExpression ->
-                c.location!!.region.startLine == 12
-            }
+            findByUniquePredicate(result.calls) { c: Call -> c.location!!.region.startLine == 12 }
         assertEquals(1, f1.invokes.size)
         assertEquals(f, f1.invokes[0])
         assertEquals(1, f2.invokes.size)
@@ -519,7 +499,7 @@ internal class FunctionTemplateTest : BaseTest() {
 
         // Test callexpression to invoke the realization
         val callExpression =
-            findByUniquePredicate(result.calls) { c: CallExpression ->
+            findByUniquePredicate(result.calls) { c: Call ->
                 c.code != null && c.code == "myObj.fixed_multiply<int>(3);"
             }
         assertEquals(1, callExpression.invokes.size)
@@ -573,9 +553,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertTrue(templateDeclaration.parameters[1] is Parameter)
         assertEquals(1, fixedDivision.parameters.size)
         val callInt2 =
-            findByUniquePredicate(result.calls) { c: CallExpression ->
-                c.location!!.region.startLine == 12
-            }
+            findByUniquePredicate(result.calls) { c: Call -> c.location!!.region.startLine == 12 }
         assertEquals(1, callInt2.invokes.size)
         assertEquals(fixedDivision, callInt2.invokes[0])
         assertTrue(
@@ -598,9 +576,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertTrue(templateDeclaration.parameters[1] is Parameter)
         assertEquals(1, fixedDivision.parameters.size)
         val callDouble3 =
-            findByUniquePredicate(result.calls) { c: CallExpression ->
-                c.location!!.region.startLine == 13
-            }
+            findByUniquePredicate(result.calls) { c: Call -> c.location!!.region.startLine == 13 }
         assertEquals(1, callDouble3.invokes.size)
         assertEquals(fixedDivision, callDouble3.invokes[0])
         assertTrue(

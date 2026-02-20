@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runPassForNode
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.passes.ResolveMemberExpressionAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.ResolveMemberAmbiguityPass
 import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
@@ -60,7 +60,7 @@ class RunPassForNodeUnitTest {
         assertNotNull(functionDecl)
 
         // Use a concrete TU-related pass on the child
-        val result = runPassForNode(functionDecl, ResolveMemberExpressionAmbiguityPass::class, ctx)
+        val result = runPassForNode(functionDecl, ResolveMemberAmbiguityPass::class, ctx)
         // No error expected
         assertTrue(result.success)
     }
@@ -79,8 +79,7 @@ class RunPassForNodeUnitTest {
         assertNotNull(ctx)
 
         // Use a concrete TU-related pass on the parent
-        val result =
-            runPassForNode(globalAnalysisResult, ResolveMemberExpressionAmbiguityPass::class, ctx)
+        val result = runPassForNode(globalAnalysisResult, ResolveMemberAmbiguityPass::class, ctx)
         // No error expected
         assertTrue(result.success)
     }
@@ -99,8 +98,7 @@ class RunPassForNodeUnitTest {
         assertNotNull(ctx)
 
         // Use a concrete TU-related pass on the parent
-        val result =
-            runPassForNode(globalAnalysisResult, ResolveMemberExpressionAmbiguityPass::class, ctx)
+        val result = runPassForNode(globalAnalysisResult, ResolveMemberAmbiguityPass::class, ctx)
         // No error expected
         assertTrue(result.success)
     }

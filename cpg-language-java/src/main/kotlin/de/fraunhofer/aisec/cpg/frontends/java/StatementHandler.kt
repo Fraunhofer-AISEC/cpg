@@ -79,7 +79,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         stmt: Statement
     ): de.fraunhofer.aisec.cpg.graph.statements.Statement {
         val throwStmt = stmt as ThrowStmt
-        val throwOperation = newThrowExpression(rawNode = stmt)
+        val throwOperation = newThrow(rawNode = stmt)
         throwOperation.exception =
             frontend.expressionHandler.handle(throwStmt.expression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -445,7 +445,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return switchStatement
     }
 
-    private fun handleExplicitConstructorInvocation(stmt: Statement): ConstructExpression {
+    private fun handleExplicitConstructorInvocation(stmt: Statement): Construction {
         val explicitConstructorInvocationStmt = stmt.asExplicitConstructorInvocationStmt()
         var containingClass = ""
         val currentRecord = frontend.scopeManager.currentRecord
@@ -458,7 +458,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         }
 
         val name = containingClass
-        val node = this.newConstructExpression(name, rawNode = null)
+        val node = this.newConstruction(name, rawNode = null)
         node.type = unknownType()
 
         // Create a reference either to "this"

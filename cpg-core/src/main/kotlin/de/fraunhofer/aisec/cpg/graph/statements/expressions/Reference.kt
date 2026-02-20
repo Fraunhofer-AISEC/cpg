@@ -41,8 +41,8 @@ import org.neo4j.ogm.annotation.Relationship
 
 /**
  * An expression, which refers to something which is declared, e.g. a variable. For example, the
- * expression `a = b`, which itself is an [AssignExpression], contains two [Reference]s, one for the
- * variable `a` and one for variable `b`, which have been previously been declared.
+ * expression `a = b`, which itself is an [Assign], contains two [Reference]s, one for the variable
+ * `a` and one for variable `b`, which have been previously been declared.
  */
 open class Reference : Expression(), HasType.TypeObserver, HasAliases {
     /**
@@ -78,12 +78,12 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
      * - First, identify possible candidates with a matching name / symbol
      * - Second, restrict this set to list to the actual best viable solution
      *
-     * In case of call resolution, this is additionally split into two nodes: a [CallExpression],
-     * which holds the arguments and a [Reference] (or [MemberExpression]), which is used as the
-     * [CallExpression.callee] and holds the name of the desired function.
+     * In case of call resolution, this is additionally split into two nodes: a [Call], which holds
+     * the arguments and a [Reference] (or [MemberAccess]), which is used as the [Call.callee] and
+     * holds the name of the desired function.
      *
      * Until we have proper support for AST parents, we need to rely on the [resolutionHelper] to
-     * find out if this reference is used as a [CallExpression.callee].
+     * find out if this reference is used as a [Call.callee].
      */
     var candidates: Set<Declaration> = setOf()
 
@@ -137,7 +137,7 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
         }
 
         // We also allow updates from our previous DFG nodes; but only for FULL data-flows. This is
-        // important especially for MemberExpression nodes (which are also Reference nodes).
+        // important especially for MemberAccess nodes (which are also Reference nodes).
         // Otherwise, an update in the base's type could propagate to a member (since we have a
         // PARTIAL DFG from the base to the member) and this is BAD.
         if (prevFullDFG.contains(src as Node)) {

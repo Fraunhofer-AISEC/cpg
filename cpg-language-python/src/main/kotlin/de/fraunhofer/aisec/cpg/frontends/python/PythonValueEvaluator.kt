@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -56,7 +56,7 @@ class PythonValueEvaluator : ValueEvaluator() {
 
     override val cannotEvaluate: (Node?, ValueEvaluator) -> Any?
         get() = { node, evaluator ->
-            if (node is InitializerListExpression) {
+            if (node is InitializerList) {
                 // We can evaluate initializer lists if all elements are constant
                 val values = node.initializers.map { evaluator.evaluate(it) }
                 if (values.all { it is Number }) {
@@ -88,14 +88,14 @@ class PythonValueEvaluator : ValueEvaluator() {
         }
     }
 
-    override fun handleCallExpression(node: CallExpression, depth: Int): Any? {
+    override fun handleCall(node: Call, depth: Int): Any? {
         return when (node.reconstructedImportName.toString()) {
             "os.path.join" -> {
                 node.arguments.joinToString(separator = "/") { arg ->
                     super.evaluate(arg).toString()
                 }
             }
-            else -> super.handleCallExpression(node, depth)
+            else -> super.handleCall(node, depth)
         }
     }
 

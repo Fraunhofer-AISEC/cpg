@@ -71,15 +71,15 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     /**
      * Translates a Python
      * [`comprehension`](https://docs.python.org/3/library/ast.html#ast.comprehension) into a
-     * [ComprehensionExpression].
+     * [Comprehension].
      *
      * Connects multiple predicates by `and`.
      */
     private fun handleComprehension(
         node: Python.AST.comprehension,
         parent: Python.AST.BaseExpr,
-    ): ComprehensionExpression {
-        return newComprehensionExpression(rawNode = parent).apply {
+    ): Comprehension {
+        return newComprehension(rawNode = parent).apply {
             variable = handle(node.target)
             iterable = handle(node.iter)
             val predicates = node.ifs.map { handle(it) }
@@ -142,11 +142,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleDictComprehension(node: Python.AST.DictComp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).applyWithScope {
             this.statement =
-                newKeyValueExpression(
-                    key = handle(node.key),
-                    value = handle(node.value),
-                    rawNode = node,
-                )
+                newKeyValue(key = handle(node.key), value = handle(node.value), rawNode = node)
             this.comprehensionExpressions += node.generators.map { handleComprehension(it, node) }
             this.type = primitiveType("dict")
         }
@@ -154,13 +150,13 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`NamedExpr`](https://docs.python.org/3/library/ast.html#ast.NamedExpr)
-     * into an [AssignExpression].
+     * into an [Assign].
      *
      * As opposed to the Assign node, both target and value must be single nodes.
      */
-    private fun handleNamedExpr(node: Python.AST.NamedExpr): AssignExpression {
+    private fun handleNamedExpr(node: Python.AST.NamedExpr): Assign {
         val assignExpression =
-            newAssignExpression(
+            newAssign(
                 operatorCode = ":=",
                 lhs = listOf(handle(node.target)),
                 rhs = listOf(handle(node.value)),
@@ -190,7 +186,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      *     - The format specification (`".2f"`).
      *
      * CPG Representation:
-     * - `CallExpression` node:
+     * - `Call` node:
      *         - `callee`: `Reference` to `format`.
      *         - `arguments`:
      *             1. A node representing `value`.
@@ -221,7 +217,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 formattedValConversionString -> {
                     // String representation: wrap in `str()` call.
                     val strCall =
-                        newCallExpression(
+                        newCall(
                                 callee = newReference(name = "str", rawNode = node),
                                 fqn = "str",
                                 rawNode = node,
@@ -233,7 +229,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 formattedValConversionRepr -> {
                     // Repr-String representation: wrap in `repr()` call.
                     val reprCall =
-                        newCallExpression(
+                        newCall(
                                 callee = newReference(name = "repr", rawNode = node),
                                 fqn = "repr",
                                 rawNode = node,
@@ -245,11 +241,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                 formattedValConversionASCII -> {
                     // ASCII-String representation: wrap in `ascii()` call.
                     val asciiCall =
-                        newCallExpression(
-                                newReference("ascii", rawNode = node),
-                                "ascii",
-                                rawNode = node,
-                            )
+                        newCall(newReference("ascii", rawNode = node), "ascii", rawNode = node)
                             .implicit()
                     asciiCall.addArgument(handle(node.value))
                     asciiCall
@@ -262,7 +254,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     )
             }
         if (formatSpec != null) {
-            return newCallExpression(
+            return newCall(
                     callee = newReference(name = "format", rawNode = node),
                     fqn = "format",
                     rawNode = node,
@@ -324,7 +316,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleSlice(node: Python.AST.Slice): Expression {
-        val slice = newRangeExpression(rawNode = node)
+        val slice = newRange(rawNode = node)
         slice.floor = node.lower?.let { handle(it) }
         slice.ceiling = node.upper?.let { handle(it) }
         slice.third = node.step?.let { handle(it) }
@@ -332,7 +324,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleSubscript(node: Python.AST.Subscript): Expression {
-        val subscriptExpression = newSubscriptExpression(rawNode = node)
+        val subscriptExpression = newSubscription(rawNode = node)
         subscriptExpression.arrayExpression = handle(node.value)
         subscriptExpression.subscriptExpression = handle(node.slice)
         return subscriptExpression
@@ -375,7 +367,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         for (e in node.elts) {
             lst += handle(e)
         }
-        val ile = newInitializerListExpression(rawNode = node)
+        val ile = newInitializerList(rawNode = node)
         ile.type = frontend.objectType("list")
         ile.initializers = lst
         return ile
@@ -386,7 +378,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         for (e in node.elts) {
             lst += handle(e)
         }
-        val ile = newInitializerListExpression(rawNode = node)
+        val ile = newInitializerList(rawNode = node)
         ile.type = frontend.objectType("set")
         ile.initializers = lst
         return ile
@@ -397,14 +389,14 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         for (e in node.elts) {
             lst += handle(e)
         }
-        val ile = newInitializerListExpression(rawNode = node)
+        val ile = newInitializerList(rawNode = node)
         ile.type = frontend.objectType("tuple")
         ile.initializers = lst
         return ile
     }
 
     private fun handleIfExp(node: Python.AST.IfExp): Expression {
-        return newConditionalExpression(
+        return newConditional(
             condition = handle(node.test),
             thenExpression = handle(node.body),
             elseExpression = handle(node.orelse),
@@ -417,14 +409,14 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         for (i in node.values.indices) { // TODO: keys longer than values possible?
             // Here we can not use node as raw node as it spans all keys and values
             lst +=
-                newKeyValueExpression(
+                newKeyValue(
                         key =
                             node.keys[i]?.let { handle(it) } ?: newProblemExpression("missing key"),
                         value = handle(node.values[i]),
                     )
                     .codeAndLocationFromChildren(node, frontend.lineSeparator)
         }
-        val ile = newInitializerListExpression(rawNode = node)
+        val ile = newInitializerList(rawNode = node)
         ile.type = frontend.objectType("dict")
         ile.initializers = lst
         return ile
@@ -472,7 +464,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleAttribute(node: Python.AST.Attribute): Expression {
         val base = handle(node.value)
 
-        return newMemberExpression(name = node.attr, base = base, rawNode = node)
+        return newMemberAccess(name = node.attr, base = base, rawNode = node)
     }
 
     private fun handleConstant(node: Python.AST.Constant): Expression {
@@ -512,10 +504,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Handles an `ast.Call` Python node. This can be one of
-     * - [MemberCallExpression]
-     * - [ConstructExpression]
-     * - [CastExpression]
-     * - [CallExpression]
+     * - [MemberCall]
+     * - [Construction]
+     * - [Cast]
+     * - [Call]
      *
      * TODO: cast, memberexpression, magic
      */
@@ -523,10 +515,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         val callee = frontend.expressionHandler.handle(node.func)
 
         val ret =
-            if (callee is MemberExpression) {
-                newMemberCallExpression(callee, rawNode = node)
+            if (callee is MemberAccess) {
+                newMemberCall(callee, rawNode = node)
             } else {
-                newCallExpression(callee, rawNode = node)
+                newCall(callee, rawNode = node)
             }
 
         for (arg in node.args) {
@@ -546,7 +538,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleLambda(node: Python.AST.Lambda): Expression {
-        val lambda = newLambdaExpression(rawNode = node)
+        val lambda = newLambda(rawNode = node)
         val function = newFunction(name = "", rawNode = node)
         frontend.scopeManager.enterScope(function)
         for (arg in node.args.args) {

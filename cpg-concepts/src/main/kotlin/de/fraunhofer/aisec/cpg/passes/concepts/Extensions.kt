@@ -29,7 +29,7 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass.Companion.filterDuplicates
 import kotlin.reflect.KClass
@@ -45,11 +45,10 @@ import kotlin.reflect.safeCast
  * nodes are "tagged" with [OverlayNode]s. Currently, the only allowed statements are:
  * - [each]: Applies the specified overlay nodes to "each" of the nodes selected.
  *
- * In the following example, each [CallExpression] with the name "foo" is tagged with an overlay
- * class `Bar`:
+ * In the following example, each [Call] with the name "foo" is tagged with an overlay class `Bar`:
  * ```Kotlin
  * tag {
- *   each<CallExpression>("foo").with {
+ *   each<Call>("foo").with {
  *     Bar()
  *   }
  * }

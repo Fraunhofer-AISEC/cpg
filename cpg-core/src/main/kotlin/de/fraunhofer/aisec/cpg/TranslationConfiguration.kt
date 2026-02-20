@@ -594,8 +594,8 @@ private constructor(
          * - [DynamicInvokeResolver]
          * - [TypeResolver]
          * - [ControlFlowSensitiveDFGPass]
-         * - [ResolveCallExpressionAmbiguityPass]
-         * - [ResolveMemberExpressionAmbiguityPass]
+         * - [ResolveCallAmbiguityPass]
+         * - [ResolveMemberAmbiguityPass]
          *
          * to be executed in the order specified by their annotations.
          */
@@ -608,8 +608,8 @@ private constructor(
             registerPass<EvaluationOrderGraphPass>() // creates EOG
             registerPass<TypeResolver>()
             registerPass<ControlFlowSensitiveDFGPass>()
-            registerPass<ResolveCallExpressionAmbiguityPass>()
-            registerPass<ResolveMemberExpressionAmbiguityPass>()
+            registerPass<ResolveCallAmbiguityPass>()
+            registerPass<ResolveMemberAmbiguityPass>()
             registerPass<BasicBlockCollectorPass>()
             registerPass<SccPass>()
             useDefaultPasses = true
