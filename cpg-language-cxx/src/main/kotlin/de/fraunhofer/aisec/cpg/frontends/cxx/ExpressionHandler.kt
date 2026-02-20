@@ -67,24 +67,24 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is IASTLiteralExpression -> handleLiteralExpression(node)
             is IASTBinaryExpression -> handleBinaryExpression(node)
             is IASTUnaryExpression -> handleUnaryExpression(node)
-            is IASTConditional -> handleConditional(node)
+            is IASTConditionalExpression -> handleConditional(node)
             is IASTIdExpression -> handleIdExpression(node)
             is IASTFieldReference -> handleFieldReference(node)
-            is IASTFunctionCall -> handleFunctionCall(node)
-            is IASTCast -> handleCast(node)
+            is IASTFunctionCallExpression -> handleFunctionCall(node)
+            is IASTCastExpression -> handleCast(node)
             is IASTExpressionList -> handleExpressionList(node)
             is IASTInitializerList ->
                 frontend.initializerHandler.handle(node)
                     ?: ProblemExpression("could not parse initializer list")
-            is IASTArraySubscript -> handleArraySubscript(node)
-            is IASTTypeId -> handleTypeReference(node)
+            is IASTArraySubscriptExpression -> handleArraySubscript(node)
+            is IASTTypeIdExpression -> handleTypeReference(node)
             is IGNUASTCompoundStatementExpression -> handleCompoundStatementExpression(node)
-            is CPPASTNew -> handleNew(node)
+            is CPPASTNewExpression -> handleNew(node)
             is CPPASTDesignatedInitializer -> handleCXXDesignatedInitializer(node)
             is CASTDesignatedInitializer -> handleCDesignatedInitializer(node)
             is CASTTypeIdInitializerExpression -> handleTypeIdInitializerExpression(node)
-            is CPPASTDelete -> handleDelete(node)
-            is CPPASTLambda -> handleLambda(node)
+            is CPPASTDeleteExpression -> handleDelete(node)
+            is CPPASTLambdaExpression -> handleLambda(node)
             is CPPASTSimpleTypeConstructorExpression -> handleSimpleTypeConstructorExpression(node)
             else -> {
                 handleNotSupported(node, node.javaClass.name)
@@ -125,7 +125,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         }
     }
 
-    private fun handleLambda(node: CPPASTLambda): Expression {
+    private fun handleLambda(node: CPPASTLambdaExpression): Expression {
         val lambda = newLambda(rawNode = node)
 
         // Variables passed by reference are mutable. If we have initializers, we have to model the
@@ -179,7 +179,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return frontend.statementHandler.handle(ctx.compoundStatement) as Expression
     }
 
-    private fun handleTypeReference(ctx: IASTTypeId): TypeReference {
+    private fun handleTypeReference(ctx: IASTTypeIdExpression): TypeReference {
         // Eclipse CDT seems to support the following operators
         // * 0 sizeof
         // * 1 typeid
@@ -191,19 +191,20 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         var operatorCode = ""
         var type: Type = unknownType()
         when (ctx.operator) {
-            IASTTypeId.op_sizeof -> {
+            IASTTypeIdExpression.op_sizeof -> {
                 operatorCode = "sizeof"
                 type = objectType("std::size_t")
             }
-            IASTTypeId.op_typeid -> {
+            IASTTypeIdExpression.op_typeid -> {
                 operatorCode = "typeid"
                 type = objectType("std::type_info").ref()
             }
-            IASTTypeId.op_alignof -> {
+            IASTTypeIdExpression.op_alignof -> {
                 operatorCode = "alignof"
                 type = objectType("std::size_t")
             }
-            IASTTypeId.op_typeof -> // typeof is not an official c++ keyword - not sure why eclipse
+            IASTTypeIdExpression
+                .op_typeof -> // typeof is not an official c++ keyword - not sure why eclipse
                 // supports it
                 operatorCode = "typeof"
             else -> log.debug("Unknown typeid operator code: {}", ctx.operator)
@@ -213,14 +214,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return newTypeReference(operatorCode, type, referencedType, rawNode = ctx)
     }
 
-    private fun handleArraySubscript(ctx: IASTArraySubscript): Expression {
+    private fun handleArraySubscript(ctx: IASTArraySubscriptExpression): Expression {
         val arraySubsExpression = newSubscription(rawNode = ctx)
         handle(ctx.arrayExpression)?.let { arraySubsExpression.arrayExpression = it }
         handle(ctx.argument)?.let { arraySubsExpression.subscriptExpression = it }
         return arraySubsExpression
     }
 
-    private fun handleNew(ctx: CPPASTNew): Expression {
+    private fun handleNew(ctx: CPPASTNewExpression): Expression {
         val t = frontend.typeOf(ctx.typeId)
         val init = ctx.initializer
 
@@ -307,7 +308,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return templateArguments
     }
 
-    private fun handleConditional(ctx: IASTConditional): Conditional {
+    private fun handleConditional(ctx: IASTConditionalExpression): Conditional {
         val condition =
             handle(ctx.logicalConditionExpression)
                 ?: ProblemExpression("could not parse condition expression")
@@ -319,7 +320,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         )
     }
 
-    private fun handleDelete(ctx: CPPASTDelete): Delete {
+    private fun handleDelete(ctx: CPPASTDeleteExpression): Delete {
         val deleteExpression = newDelete(rawNode = ctx)
         for (name in ctx.implicitDestructorNames) {
             log.debug("Implicit constructor name {}", name)
@@ -328,7 +329,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return deleteExpression
     }
 
-    private fun handleCast(ctx: IASTCast): Expression {
+    private fun handleCast(ctx: IASTCastExpression): Expression {
         val castExpression = newCast(rawNode = ctx)
         castExpression.expression =
             handle(ctx.operand) ?: ProblemExpression("could not parse inner expression")
@@ -390,7 +391,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // If this expression is NOT part of a call expression and contains a "name" or
                 // something similar, we want to keep the information that this is an expression
                 // wrapped in parentheses. The best way to do this is to create a unary expression
-                if (ctx.operand is IASTIdExpression && ctx.parent !is IASTFunctionCall) {
+                if (ctx.operand is IASTIdExpression && ctx.parent !is IASTFunctionCallExpression) {
                     val op = newUnaryOperator("()", postfix = true, prefix = true, rawNode = ctx)
                     if (input != null) {
                         op.input = input
@@ -426,7 +427,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return unaryOperator
     }
 
-    private fun handleFunctionCall(ctx: IASTFunctionCall): Expression {
+    private fun handleFunctionCall(ctx: IASTFunctionCallExpression): Expression {
         val reference = handle(ctx.functionNameExpression)
         val callExpression: Call
         when {
