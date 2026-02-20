@@ -31,10 +31,8 @@ import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KProperty
 
 /**
- * This is a MAJOR workaround since the persistence system does not allow to use our (generic)
- * [Edge] class for our AST edges. See https://github.com/neo4j/neo4j-ogm/issues/1132.
- *
- * Therefore, we need to wrap the edge in a list with a single element.
+ * This is a MAJOR workaround since the old persistence system did not allow to use our (generic)
+ * [Edge] class for our AST edges. We could most likely remove this class now.
  */
 open class EdgeSingletonList<
     NodeType : Node,
