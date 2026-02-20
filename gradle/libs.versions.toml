@@ -11,7 +11,7 @@ slf4j = "2.0.16"
 clikt = "5.1.0"
 kaml = "0.104.0"
 sarif4k = "0.6.0"
-ktor = "3.4.0"
+ktor = "3.2.3"
 node = "22.14.0"
 deno-plugin = "0.1.5"
 
@@ -68,6 +68,7 @@ ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negoti
 ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
 
 mcp = {module = "io.modelcontextprotocol:kotlin-sdk", version = "0.8.3"}
+mcp-client = {module = "io.modelcontextprotocol:kotlin-sdk-client", version = "0.8.3"}
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.14.1"}

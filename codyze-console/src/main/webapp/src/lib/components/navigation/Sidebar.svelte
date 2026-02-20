@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
+  import { onMount } from 'svelte';
   import type { AnalysisProjectJSON } from '$lib/types';
 
   interface Props {
@@ -8,6 +9,21 @@
 
   let { project = null }: Props = $props();
 
+  // Feature flags from backend
+  let mcpEnabled = $state(true); // Default to true, will be updated on mount
+
+  onMount(async () => {
+    try {
+      const response = await fetch('/api/features');
+      if (response.ok) {
+        const features = await response.json();
+        mcpEnabled = features.mcpEnabled ?? true;
+      }
+    } catch (e) {
+      console.error('Failed to fetch feature flags:', e);
+    }
+  });
+
   // Function to get the last segment of a path
   const getLastPathSegment = (path: string): string => {
     if (!path) return '';
@@ -15,12 +31,13 @@
     return segments[segments.length - 1] || segments[segments.length - 2] || path;
   };
 
-  // Navigation items
-  const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: 'home' },
-    { name: 'Requirements', path: '/requirements', icon: 'clipboard-check' },
-    { name: 'Components', path: '/components', icon: 'code' }
-  ];
+  // Navigation items with optional disabled state
+  const navItems = $derived([
+    { name: 'Dashboard', path: '/dashboard', icon: 'home', disabled: false },
+    { name: 'Requirements', path: '/requirements', icon: 'clipboard-check', disabled: false },
+    { name: 'Components', path: '/components', icon: 'code', disabled: false },
+    { name: 'Agent', path: '/ai-agent', icon: 'robot', disabled: !mcpEnabled }
+  ]);
 
   let currentPath = $derived($page.url.pathname);
 </script>
@@ -48,43 +65,65 @@
     <ul class="space-y-2">
       {#each navItems as item}
         <li>
-          <a
-            href={item.path}
-            class="flex items-center rounded-md px-3 py-2 text-sm font-medium {currentPath.startsWith(
-              item.path
-            )
-              ? 'bg-blue-50 text-blue-700'
-              : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="mr-3 h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+          {#if item.disabled}
+            <span
+              class="flex cursor-not-allowed items-center rounded-md px-3 py-2 text-sm font-medium text-gray-400"
+              title="MCP module not enabled"
             >
-              {#if item.icon === 'home'}
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                />
-              {:else if item.icon === 'clipboard-check'}
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                />
-              {:else if item.icon === 'code'}
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                />
+              {#if item.icon === 'robot'}
+                <svg class="mr-3 h-5 w-5" fill="currentColor" viewBox="0 0 960 960">
+                  <path d="M160-360q-50 0-85-35t-35-85q0-50 35-85t85-35v-80q0-33 23.5-56.5T240-760h120q0-50 35-85t85-35q50 0 85 35t35 85h120q33 0 56.5 23.5T800-680v80q50 0 85 35t35 85q0 50-35 85t-85 35v160q0 33-23.5 56.5T720-120H240q-33 0-56.5-23.5T160-200v-160Zm200-80q25 0 42.5-17.5T420-500q0-25-17.5-42.5T360-560q-25 0-42.5 17.5T300-500q0 25 17.5 42.5T360-440Zm240 0q25 0 42.5-17.5T660-500q0-25-17.5-42.5T600-560q-25 0-42.5 17.5T540-500q0 25 17.5 42.5T600-440ZM320-280h320v-80H320v80Zm-80 80h480v-480H240v480Zm240-240Z" />
+                </svg>
               {/if}
-            </svg>
-            {item.name}
-          </a>
+              {item.name}
+            </span>
+          {:else}
+            <a
+              href={item.path}
+              class="flex items-center rounded-md px-3 py-2 text-sm font-medium transition-all {currentPath.startsWith(
+                item.path
+              )
+                ? item.icon === 'robot'
+                  ? 'bg-gradient-to-r from-blue-50 to-purple-50'
+                  : 'bg-blue-100 text-blue-600'
+                : 'text-gray-700 hover:text-gray-900'}"
+            >
+              {#if item.icon === 'robot'}
+                <svg class="mr-3 h-5 w-5 drop-shadow-sm" style="color: #975ff1" fill="currentColor" viewBox="0 -960 960 960">
+                  <path d="M160-360q-50 0-85-35t-35-85q0-50 35-85t85-35v-80q0-33 23.5-56.5T240-760h120q0-50 35-85t85-35q50 0 85 35t35 85h120q33 0 56.5 23.5T800-680v80q50 0 85 35t35 85q0 50-35 85t-85 35v160q0 33-23.5 56.5T720-120H240q-33 0-56.5-23.5T160-200v-160Zm200-80q25 0 42.5-17.5T420-500q0-25-17.5-42.5T360-560q-25 0-42.5 17.5T300-500q0 25 17.5 42.5T360-440Zm240 0q25 0 42.5-17.5T660-500q0-25-17.5-42.5T600-560q-25 0-42.5 17.5T540-500q0 25 17.5 42.5T600-440ZM320-280h320v-80H320v80Zm-80 80h480v-480H240v480Zm240-240Z" />
+                </svg>
+              {:else}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="mr-3 h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  {#if item.icon === 'home'}
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                    />
+                  {:else if item.icon === 'clipboard-check'}
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                    />
+                  {:else if item.icon === 'code'}
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                    />
+                  {/if}
+                </svg>
+              {/if}
+              <span class={item.icon === 'robot' ? 'bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent' : ''}>{item.name}</span>
+            </a>
+          {/if}
         </li>
       {/each}
     </ul>

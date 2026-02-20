@@ -25,6 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.mcp
 
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.main
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.int
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
@@ -36,31 +40,30 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.io.asSink
 import kotlinx.io.asSource
 import kotlinx.io.buffered
-import picocli.CommandLine
 
-@CommandLine.Command(name = "cpg-mcp")
-class Application : Runnable {
-    @CommandLine.Option(
-        names = ["--sse"],
-        description =
-            [
-                "Provide the port to run SSE (Server Sent Events). If not specified, the MCP server will run using stdio."
-            ],
-    )
-    var ssePort: Int? = null
+class Application : CliktCommand(name = "cpg-mcp") {
+    private val ssePort by
+        option(
+                "--sse",
+                help =
+                    "Provide the port to run SSE (Server Sent Events). If not specified, the MCP server will run using stdio.",
+            )
+            .int()
 
     override fun run() {
         val port = ssePort
-        if (port == null) {
-            runMcpServerUsingStdio()
+        if (port != null) {
+            println("Starting MCP server in SSE mode on port $port...")
+            runSseMcpServerUsingKtorPlugin(port, configureServer(), wait = true)
         } else {
-            runSseMcpServerUsingKtorPlugin(port, configureServer())
+            println("Starting MCP server in stdio mode...")
+            runMcpServerUsingStdio()
         }
     }
 }
 
 fun main(args: Array<String>) {
-    CommandLine(Application()).execute(*args)
+    Application().main(args)
 }
 
 fun runMcpServerUsingStdio() {
@@ -70,7 +73,7 @@ fun runMcpServerUsingStdio() {
     runBlocking {
         val job = Job()
         server.onClose { job.complete() }
-        server.connect(transport)
+        server.createSession(transport)
         job.join()
     }
 }
@@ -81,7 +84,9 @@ fun runMcpServerUsingStdio() {
  * The url can be accessed in the MCP inspector at [http://localhost:$port]
  *
  * @param port The port number on which the SSE MCP server will listen for client connections.
+ * @param wait If true the thread is blocked until the server stops. This flag is needed when the
+ *   server runs in the background alongside another server (e.g. in codyze-console).
  */
-fun runSseMcpServerUsingKtorPlugin(port: Int, server: Server) = runBlocking {
-    embeddedServer(CIO, host = "0.0.0.0", port = port) { mcp { server } }.start(wait = true)
+fun runSseMcpServerUsingKtorPlugin(port: Int, server: Server, wait: Boolean = false) {
+    embeddedServer(CIO, host = "0.0.0.0", port = port) { mcp { server } }.start(wait = wait)
 }

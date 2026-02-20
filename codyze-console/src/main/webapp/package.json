@@ -41,7 +41,8 @@
     "vite": "^6.4.1"
   },
   "dependencies": {
-    "chart.js": "^4.5.1"
+    "chart.js": "^4.5.1",
+    "marked": "^16.3.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

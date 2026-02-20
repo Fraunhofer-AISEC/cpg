@@ -69,6 +69,28 @@ export interface EdgeJSON {
   end: string;
 }
 
+// AI Agent / Chat interfaces
+export interface LLMMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+export interface ToolResult {
+  toolName?: string;
+  content: any;
+  isError?: boolean;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  contentType?: 'text' | 'tool-result';
+  toolResult?: ToolResult;
+  reasoning?: string;
+  timestamp: Date;
+}
+
 export interface ConceptInfo {
   conceptName: string;
   constructorInfo: ConstructorInfo[];
