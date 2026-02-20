@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,29 +23,24 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.edges
+package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.newMethod
-import de.fraunhofer.aisec.cpg.graph.newRecord
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import de.fraunhofer.aisec.cpg.graph.HasInitializer
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import org.neo4j.ogm.annotation.Relationship
 
-class EdgesTest {
-    @Test
-    fun testUnwrap() {
-        with(TestLanguageFrontend()) {
-            val record = newRecord("myRecord", kind = "class")
-            val method = newMethod("myFunc")
-            record.methods += method
+/**
+ * Represents a constant within an [Enumeration]. Depending on the language, this might have an
+ * explicit initializer value.
+ */
+class EnumConstant : ValueDeclaration(), HasInitializer {
+    @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
+    override var initializer by unwrapping(EnumConstant::initializerEdge)
 
-            assertEquals(1, record.methods.size)
-            assertEquals(method, record.methods.firstOrNull())
-
-            assertEquals(
-                "Record[name=myRecord,location=<null>,name=myRecord,kind=class,superTypeDeclarations=[],fields=[],methods=[Method[name=myFunc,location=<null>,parameters=[]]],constructors=[],records=[]]",
-                record.toString(),
-            )
-        }
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return initializer?.getStartingPrevEOG() ?: setOf()
     }
 }

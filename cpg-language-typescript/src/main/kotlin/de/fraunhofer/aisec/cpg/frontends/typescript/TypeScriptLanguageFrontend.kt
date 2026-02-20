@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -104,7 +104,7 @@ class TypeScriptLanguageFrontend(
         }
     }
 
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         // Necessary to not read file contents several times
         currentFileContent = file.readText()
         if (!parserFile.exists()) {
@@ -115,7 +115,7 @@ class TypeScriptLanguageFrontend(
 
         val node = mapper.readValue(p.inputStream, TypeScriptNode::class.java)
 
-        val translationUnit = this.declarationHandler.handle(node) as TranslationUnitDeclaration
+        val translationUnit = this.declarationHandler.handle(node) as TranslationUnit
 
         handleComments(file, translationUnit)
 
@@ -133,7 +133,7 @@ class TypeScriptLanguageFrontend(
      * @param file The source of comments
      * @param translationUnit the ast root node which children get the comments associated to
      */
-    fun handleComments(file: File, translationUnit: TranslationUnitDeclaration) {
+    fun handleComments(file: File, translationUnit: TranslationUnit) {
         // Extracting comments with regex, not ideal, as you need a context sensitive parser. but
         // the parser does not support comments so we
         // use a regex as best effort approach. We may recognize something as a comment, which is

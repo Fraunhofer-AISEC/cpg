@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 
@@ -115,7 +115,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handleArrowFunction(node: TypeScriptNode): Expression {
         // parse as a function
-        val func = frontend.declarationHandler.handle(node) as? FunctionDeclaration
+        val func = frontend.declarationHandler.handle(node) as? Function
 
         // the function will (probably) not have a defined return type, so we try to deduce this
         // from a return statement

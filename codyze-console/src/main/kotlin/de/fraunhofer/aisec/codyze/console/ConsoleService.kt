@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
@@ -301,10 +301,7 @@ class ConsoleService {
      * Extracts the nodes from the given translation unit. If [overlayNodes] is true, it extracts
      * the overlay nodes, otherwise it extracts the AST nodes.
      */
-    private fun extractNodes(
-        tu: TranslationUnitDeclaration,
-        overlayNodes: Boolean,
-    ): List<NodeJSON> {
+    private fun extractNodes(tu: TranslationUnit, overlayNodes: Boolean): List<NodeJSON> {
         return if (overlayNodes) {
             tu.nodes.flatMap { it.overlays }.map { it.toJSON() }
         } else {

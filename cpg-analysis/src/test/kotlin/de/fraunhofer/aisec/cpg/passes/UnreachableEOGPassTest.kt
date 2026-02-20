@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.testcases.Passes
@@ -37,7 +37,7 @@ import org.junit.jupiter.api.assertThrows
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class UnreachableEOGPassTest {
-    private lateinit var tu: TranslationUnitDeclaration
+    private lateinit var tu: TranslationUnit
 
     @BeforeAll
     fun beforeAll() {

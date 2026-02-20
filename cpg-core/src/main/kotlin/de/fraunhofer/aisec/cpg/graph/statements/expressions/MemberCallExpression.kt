@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import java.util.*
 
 /**
@@ -61,8 +61,8 @@ class MemberCallExpression : CallExpression(), HasBase, HasOperatorCode {
 
     /**
      * Needs to be set to true, if this call is a static call, i.e., a call to a static member of a
-     * [RecordDeclaration]. In this case the [callee] is most likely a [MemberExpression] in which
-     * [MemberExpression.base] refers directly to the [RecordDeclaration] instead of an object.
+     * [Record]. In this case the [callee] is most likely a [MemberExpression] in which
+     * [MemberExpression.base] refers directly to the [Record] instead of an object.
      */
     var isStatic: Boolean = false
 

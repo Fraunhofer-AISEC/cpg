@@ -168,7 +168,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             val stmt = newDeclarationStatement()
             stmt.isImplicit = true
 
-            val decl = newVariableDeclaration(typeSwitchLhs.name)
+            val decl = newVariable(typeSwitchLhs.name)
             if (case is CaseStatement) {
                 decl.type = (case.caseExpression as? TypeExpression)?.type ?: unknownType()
             } else {
@@ -327,7 +327,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             rangeStmt.key?.let {
                 val ref = frontend.expressionHandler.handle(it)
                 if (ref is Reference) {
-                    val key = newVariableDeclaration(ref.name, rawNode = it)
+                    val key = newVariable(ref.name, rawNode = it)
                     frontend.scopeManager.addDeclaration(key)
                     stmt.declarationEdges += key
                 }
@@ -337,7 +337,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             rangeStmt.value?.let {
                 val ref = frontend.expressionHandler.handle(it)
                 if (ref is Reference) {
-                    val key = newVariableDeclaration(ref.name, rawNode = it)
+                    val key = newVariable(ref.name, rawNode = it)
                     frontend.scopeManager.addDeclaration(key)
                     stmt.declarationEdges += key
                 }

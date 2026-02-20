@@ -34,8 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.policy.Equals
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.ExitBoundary
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.Principal
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.ProtectedAsset
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.returns
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -70,9 +70,7 @@ class PolicyTest {
                         tag =
                             tag {
                                 // Tag the class "Team" with the concept "Boundary"
-                                each<RecordDeclaration>(
-                                        predicate = { node -> node.name.localName == "Team" }
-                                    )
+                                each<Record>(predicate = { node -> node.name.localName == "Team" })
                                     .with {
                                         val boundary = Boundary()
                                         node.returns.forEach { ret ->
@@ -81,12 +79,12 @@ class PolicyTest {
                                         boundary
                                     }
                                 // Tag the field "__members" with the concept "ProtectedAsset"
-                                each<FieldDeclaration>(
+                                each<Field>(
                                         predicate = { node -> node.name.localName == "__members" }
                                     )
                                     .with { ProtectedAsset(scope = node.scope) }
                                 // Tag the field "manager" with the concept "Principal"
-                                each<FieldDeclaration>(
+                                each<Field>(
                                         predicate = { node -> node.name.localName == "manager" }
                                     )
                                     .with { Principal() }

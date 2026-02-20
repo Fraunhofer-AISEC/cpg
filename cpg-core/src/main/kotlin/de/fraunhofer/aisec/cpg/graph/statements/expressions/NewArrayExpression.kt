@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
@@ -37,7 +37,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Expressions of the form `new Type[]` that represents the creation of an array, mostly used in
- * combination with a [VariableDeclaration].
+ * combination with a [Variable].
  */
 // TODO Merge and/or refactor with new Expression
 class NewArrayExpression : Expression(), HasInitializer {

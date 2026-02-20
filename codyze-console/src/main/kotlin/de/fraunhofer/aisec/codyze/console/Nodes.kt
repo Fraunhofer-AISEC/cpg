@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.*
 import de.fraunhofer.aisec.cpg.query.*
 import de.fraunhofer.aisec.cpg.serialization.*
@@ -100,14 +100,14 @@ data class ComponentJSON(
     val topLevel: String?,
 )
 
-/** JSON data class for a [TranslationUnitDeclaration]. */
+/** JSON data class for a [TranslationUnit]. */
 @Serializable
 data class TranslationUnitJSON(
     val name: String,
     @Serializable(with = UuidSerializer::class) val id: Uuid,
     val path: String,
     val code: String,
-    @Transient val cpgTU: TranslationUnitDeclaration? = null,
+    @Transient val cpgTU: TranslationUnit? = null,
 )
 
 /** JSON data class holding all relevant information required to instantiate a [Concept]. */
@@ -297,9 +297,9 @@ fun AnalysisProject.toJSON(): AnalysisProjectJSON {
     )
 }
 
-/** Converts a [TranslationUnitDeclaration] into its JSON representation. */
+/** Converts a [TranslationUnit] into its JSON representation. */
 context(_: ContextProvider)
-fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
+fun TranslationUnit.toJSON(): TranslationUnitJSON {
     val localName =
         component?.topLevel()?.let {
             this.location?.artifactLocation?.uri?.toPath()?.toFile()?.relativeToOrNull(it)

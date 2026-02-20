@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -47,7 +47,7 @@ abstract class FrontendConfiguration<L : LanguageFrontend<*, *>> {
      * @return true if the function's body should not be parsed, false otherwise (parse the body)
      */
     context(provider: FrontendProvider<L>)
-    abstract fun doNotParseBody(node: FunctionDeclaration): Boolean
+    abstract fun doNotParseBody(node: Function): Boolean
 }
 
 /**
@@ -84,11 +84,11 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
         this.ctx.config.frontendConfigurations[this::class]
     }
 
-    var currentTU: TranslationUnitDeclaration? = null
+    var currentTU: TranslationUnit? = null
 
     @Throws(TranslationException::class)
-    fun parseAll(): List<TranslationUnitDeclaration> {
-        val units = ArrayList<TranslationUnitDeclaration>()
+    fun parseAll(): List<TranslationUnit> {
+        val units = ArrayList<TranslationUnit>()
         for (componentFiles in config.softwareComponents.values) {
             for (sourceFile in componentFiles) {
                 units.add(parse(sourceFile))
@@ -97,7 +97,7 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
         return units
     }
 
-    @Throws(TranslationException::class) abstract fun parse(file: File): TranslationUnitDeclaration
+    @Throws(TranslationException::class) abstract fun parse(file: File): TranslationUnit
 
     /**
      * This function returns a [TranslationResult], but rather than parsing source code, the

@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.enhancements.calls
 
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
 import de.fraunhofer.aisec.cpg.graph.literals
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.variables
@@ -42,7 +42,7 @@ internal class ConstructorsTest : BaseTest() {
     @Throws(Exception::class)
     fun testCPP() {
         val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
-        val constructors = result.allChildren<ConstructorDeclaration>()
+        val constructors = result.allChildren<Constructor>()
         val noArg =
             findByUniquePredicate(constructors) {
                 it.parameters.isEmpty() && it.name.localName == "A"
@@ -144,7 +144,7 @@ internal class ConstructorsTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val constructors = result.allChildren<ConstructorDeclaration>()
+        val constructors = result.allChildren<Constructor>()
         val variables = result.variables
         val twoDefaultArg =
             findByUniquePredicate(constructors) {
@@ -201,10 +201,10 @@ internal class ConstructorsTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val constructors = result.allChildren<ConstructorDeclaration>()
+        val constructors = result.allChildren<Constructor>()
         val variables = result.variables
         val singleDefaultArg =
-            findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
+            findByUniquePredicate(constructors) { c: Constructor ->
                 c.parameters.size == 2 && c.name.localName == "E"
             }
         val literal10 = findByUniquePredicate(result.literals) { it.value == 10 }
@@ -248,12 +248,10 @@ internal class ConstructorsTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val constructors = result.allChildren<ConstructorDeclaration>()
+        val constructors = result.allChildren<Constructor>()
         val variables = result.variables
         val implicitConstructor =
-            findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
-                c.name.localName == "I"
-            }
+            findByUniquePredicate(constructors) { c: Constructor -> c.name.localName == "I" }
         val literal10 = findByUniquePredicate(result.literals) { it.value == 10 }
         val i1 = findByUniqueName(variables, "i1")
         assertTrue(i1.initializer is ConstructExpression)
@@ -265,9 +263,7 @@ internal class ConstructorsTest : BaseTest() {
         assertLiteralValue(1.0, i1Constructor.arguments[0])
 
         val implicitConstructorWithDefault =
-            findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
-                c.name.localName == "H"
-            }
+            findByUniquePredicate(constructors) { c: Constructor -> c.name.localName == "H" }
         val h1 = findByUniqueName(variables, "h1")
         assertTrue(h1.initializer is ConstructExpression)
 
