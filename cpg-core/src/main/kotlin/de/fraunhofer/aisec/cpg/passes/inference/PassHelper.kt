@@ -188,7 +188,7 @@ internal fun Pass<*>.tryVariableInference(ref: Reference): VariableDeclaration? 
             }
             is RecordScope -> {
                 val field = scope.astNode?.startInference(ctx)?.inferFieldDeclaration(ref)
-                // TODO: set field static
+                field?.isStatic = true
                 field
             }
             else -> {
