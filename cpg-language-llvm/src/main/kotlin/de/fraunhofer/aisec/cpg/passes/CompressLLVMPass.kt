@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Problem
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
@@ -178,7 +178,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun fixThrowsForCatch(catch: CatchClause) {
         val reachableThrowNodes =
             getAllChildrenRecursively(catch).filterIsInstance<Throw>().filter { n ->
-                n.exception is Problem
+                n.exception is ProblemExpression
             }
         if (reachableThrowNodes.isNotEmpty()) {
             val catchParameter =

@@ -34,11 +34,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Problem
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import kotlin.collections.plusAssign
 
 class StatementHandler(lang: TypeScriptLanguageFrontend) :
-    Handler<Statement, TypeScriptNode, TypeScriptLanguageFrontend>(::Problem, lang) {
+    Handler<Statement, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
@@ -53,7 +53,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
             "FunctionDeclaration" -> return handleFunction(node)
         }
 
-        return Problem("No handler was implemented for nodes of type " + node.type)
+        return ProblemExpression("No handler was implemented for nodes of type " + node.type)
     }
 
     private fun handleFunction(node: TypeScriptNode): Statement {
@@ -94,7 +94,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         // this is possible because in our CPG, expression inherit from statements
         // and can be directly added to a compound statement
         return node.children?.first()?.let { this.frontend.expressionHandler.handle(it) }
-            ?: Problem("problem parsing expression")
+            ?: ProblemExpression("problem parsing expression")
     }
 
     private fun handleVariableStatement(node: TypeScriptNode): DeclarationStatement {

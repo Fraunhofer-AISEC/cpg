@@ -47,7 +47,7 @@ import kotlin.jvm.optionals.getOrNull
 import org.slf4j.LoggerFactory
 
 class ExpressionHandler(lang: JavaLanguageFrontend) :
-    Handler<Statement, Expression, JavaLanguageFrontend>(Supplier { Problem() }, lang) {
+    Handler<Statement, Expression, JavaLanguageFrontend>(Supplier { ProblemExpression() }, lang) {
 
     private fun handleLambdaExpr(expr: Expression): Statement {
         val lambdaExpr = expr.asLambdaExpr()
@@ -80,7 +80,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val expression =
             handle(castExpr.expression)
                 as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-                ?: newProblem("could not parse expression")
+                ?: newProblemExpression("could not parse expression")
         castExpression.expression = expression
         castExpression.setCastOperator(2)
         val t = frontend.getTypeAsGoodAsPossible(castExpr.type)
@@ -191,7 +191,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val condition =
             handle(conditionalExpr.condition)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-                ?: newProblem("Could not parse condition")
+                ?: newProblemExpression("Could not parse condition")
         val thenExpr =
             handle(conditionalExpr.thenExpr)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
@@ -208,13 +208,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val lhs =
             handle(assignExpr.target)
                 as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-                ?: newProblem("could not parse lhs")
+                ?: newProblemExpression("could not parse lhs")
 
         // second, handle the value. this is the second argument of the operator call
         val rhs =
             handle(assignExpr.value)
                 as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-                ?: newProblem("could not parse lhs")
+                ?: newProblemExpression("could not parse lhs")
         return newAssign(
             assignExpr.operator.asString(),
             listOf(lhs),
@@ -393,7 +393,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val lhs =
             handle(binaryExpr.expression)
                 as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-                ?: newProblem("could not parse lhs")
+                ?: newProblemExpression("could not parse lhs")
         val typeAsGoodAsPossible = frontend.getTypeAsGoodAsPossible(binaryExpr.type)
 
         // second, handle the value. this is the second argument of the operator call
@@ -416,7 +416,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val expression =
             handle(unaryExpr.expression)
                 as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-                ?: newProblem("could not parse input")
+                ?: newProblemExpression("could not parse input")
         val unaryOperator =
             newUnaryOperator(
                 unaryExpr.operator.asString(),
@@ -435,13 +435,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val lhs =
             handle(binaryExpr.left)
                 as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-                ?: newProblem("could not parse lhs")
+                ?: newProblemExpression("could not parse lhs")
 
         // second, handle the value. this is the second argument of the operator call
         val rhs =
             handle(binaryExpr.right)
                 as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-                ?: newProblem("could not parse rhs")
+                ?: newProblemExpression("could not parse rhs")
         val binaryOperator = newBinaryOperator(binaryExpr.operator.asString(), rawNode = binaryExpr)
         binaryOperator.lhs = lhs
         binaryOperator.rhs = rhs
@@ -485,7 +485,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             val scope = o.get()
             base =
                 handle(scope) as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-                    ?: newProblem("Could not parse base")
+                    ?: newProblemExpression("Could not parse base")
 
             // If the base directly refers to a record, then this is a static call
             if (base is Reference && base.refersTo is Record) {
@@ -531,7 +531,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 handle(arguments[i])
                     as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
             argument?.argumentIndex = i
-            callExpression.addArgument(argument ?: newProblem("Could not parse the argument"))
+            callExpression.addArgument(
+                argument ?: newProblemExpression("Could not parse the argument")
+            )
         }
         return callExpression
     }

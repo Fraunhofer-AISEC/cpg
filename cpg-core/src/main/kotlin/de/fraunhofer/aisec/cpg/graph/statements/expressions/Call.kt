@@ -91,7 +91,7 @@ open class Call :
      * is intentionally left empty. It is not filled by the [SymbolResolver].
      */
     @Relationship(value = "CALLEE", direction = Relationship.Direction.OUTGOING)
-    private var calleeEdge = astEdgeOf<Expression>(Problem("could not parse callee"))
+    private var calleeEdge = astEdgeOf<Expression>(ProblemExpression("could not parse callee"))
 
     var callee by unwrapping(Call::calleeEdge)
 
@@ -300,7 +300,7 @@ open class Call :
         get() = signature
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        return if (this.callee is Problem)
+        return if (this.callee is ProblemExpression)
             this.arguments.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
         else this.callee.getStartingPrevEOG()
     }

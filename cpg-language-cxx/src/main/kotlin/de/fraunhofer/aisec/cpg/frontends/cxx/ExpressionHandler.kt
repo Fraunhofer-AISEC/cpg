@@ -60,7 +60,7 @@ import org.eclipse.cdt.internal.core.model.ASTStringUtil
  * handler.
  */
 class ExpressionHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Expression, IASTNode>(Supplier(::Problem), lang) {
+    CXXHandler<Expression, IASTNode>(Supplier(::ProblemExpression), lang) {
 
     override fun handleNode(node: IASTNode): Expression {
         return when (node) {
@@ -75,7 +75,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is IASTExpressionList -> handleExpressionList(node)
             is IASTInitializerList ->
                 frontend.initializerHandler.handle(node)
-                    ?: Problem("could not parse initializer list")
+                    ?: ProblemExpression("could not parse initializer list")
             is IASTArraySubscript -> handleArraySubscript(node)
             is IASTTypeId -> handleTypeId(node)
             is IGNUASTCompoundStatementExpression -> handleCompoundStatementExpression(node)
@@ -111,7 +111,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             val single =
                 (node.initializer as? ICPPASTConstructorInitializer)?.arguments?.singleOrNull()
             cast.expression =
-                single?.let { handle(it) } ?: newProblem("could not parse initializer")
+                single?.let { handle(it) } ?: newProblemExpression("could not parse initializer")
             cast
         } else {
             // Otherwise, we try to parse it as an initializer, which must either be an initializer
@@ -121,7 +121,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 val construct = newConstruct(rawNode = node)
                 construct.arguments = initializer.initializers
                 construct
-            } else initializer ?: newProblem("could not parse initializer")
+            } else initializer ?: newProblemExpression("could not parse initializer")
         }
     }
 
@@ -310,7 +310,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleConditional(ctx: IASTConditional): Conditional {
         val condition =
             handle(ctx.logicalConditionExpression)
-                ?: Problem("could not parse condition expression")
+                ?: ProblemExpression("could not parse condition expression")
         return newConditional(
             condition,
             if (ctx.positiveResultExpression != null) handle(ctx.positiveResultExpression)
@@ -331,7 +331,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleCast(ctx: IASTCast): Expression {
         val castExpression = newCast(rawNode = ctx)
         castExpression.expression =
-            handle(ctx.operand) ?: Problem("could not parse inner expression")
+            handle(ctx.operand) ?: ProblemExpression("could not parse inner expression")
         castExpression.setCastOperator(ctx.operator)
         castExpression.castType = frontend.typeOf(ctx.typeId)
 
@@ -348,7 +348,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
      * [Member].
      */
     private fun handleFieldReference(ctx: IASTFieldReference): Expression {
-        val base = handle(ctx.fieldOwner) ?: return newProblem("base of field is null")
+        val base = handle(ctx.fieldOwner) ?: return newProblemExpression("base of field is null")
 
         // We need some special handling for templates (of course). Since we only want the basic
         // name without any arguments as a name
@@ -560,13 +560,13 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
 
         val binaryOperator = newBinaryOperator(operatorCode, rawNode = ctx)
-        val lhs = handle(ctx.operand1) ?: newProblem("could not parse lhs")
+        val lhs = handle(ctx.operand1) ?: newProblemExpression("could not parse lhs")
         val rhs =
             if (ctx.operand2 != null) {
                 handle(ctx.operand2)
             } else {
                 handle(ctx.initOperand2)
-            } ?: newProblem("could not parse rhs")
+            } ?: newProblemExpression("could not parse rhs")
 
         binaryOperator.lhs = lhs
         binaryOperator.rhs = rhs
@@ -575,13 +575,13 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleAssignment(ctx: IASTBinaryExpression): Expression {
-        val lhs = handle(ctx.operand1) ?: newProblem("missing LHS")
+        val lhs = handle(ctx.operand1) ?: newProblemExpression("missing LHS")
         val rhs =
             if (ctx.operand2 != null) {
                 handle(ctx.operand2)
             } else {
                 handle(ctx.initOperand2)
-            } ?: newProblem("missing RHS")
+            } ?: newProblemExpression("missing RHS")
 
         val operatorCode = String(ASTStringUtil.getBinaryOperatorString(ctx))
         val assign = newAssign(operatorCode, listOf(lhs), listOf(rhs), rawNode = ctx)
@@ -629,7 +629,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     private fun handleCharLiteral(ctx: IASTLiteralExpression): Expression {
         var raw = String(ctx.value)
         if (!raw.startsWith("'") || !raw.endsWith("'")) {
-            return newProblem("character literal does not start or end with '", rawNode = ctx)
+            return newProblemExpression("character literal does not start or end with '", rawNode = ctx)
         }
 
         raw = raw.trim('\'')
@@ -668,7 +668,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         i++
                         continue
                     } catch (ex: NumberFormatException) {
-                        return newProblem("invalid number: ${ex.message}", rawNode = ctx)
+                        return newProblemExpression("invalid number: ${ex.message}", rawNode = ctx)
                     }
                 }
 
@@ -696,7 +696,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                             inEscape = false
                             maxChars = 0
                         } catch (ex: NumberFormatException) {
-                            return newProblem("invalid number: ${ex.message}", rawNode = ctx)
+                            return newProblemExpression("invalid number: ${ex.message}", rawNode = ctx)
                         }
                     }
                 }
@@ -739,7 +739,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val des = ctx.designators.firstOrNull()
         if (des == null) {
             Util.errorWithFileLocation(frontend, ctx, log, "no designator found")
-            return newProblem("no designator found")
+            return newProblemExpression("no designator found")
         }
 
         // We need to start with our target (which we need to find in a hacky way) as
@@ -791,7 +791,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val des = ctx.designators.firstOrNull()
         if (des == null) {
             Util.errorWithFileLocation(frontend, ctx, log, "no designator found")
-            return newProblem("no designator found")
+            return newProblemExpression("no designator found")
         }
 
         // We need to start with our target (which we need to find in a hacky way) as
@@ -856,7 +856,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         (ctx.initializer as? IASTInitializerList)?.let {
             construct.arguments =
                 it.clauses
-                    .map { handle(it) ?: newProblem("could not parse argument") }
+                    .map { handle(it) ?: newProblemExpression("could not parse argument") }
                     .toMutableList()
         }
 
@@ -957,7 +957,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             return newLiteral(numberValue, type, rawNode = ctx)
         } catch (ex: NumberFormatException) {
             // It could be that we cannot parse the literal, in this case we return an error
-            return Problem("could not parse literal: ${ex.message}")
+            return ProblemExpression("could not parse literal: ${ex.message}")
         }
     }
 
@@ -977,7 +977,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             }
         } catch (ex: NumberFormatException) {
             // It could be that we cannot parse the literal, in this case we return an error
-            Problem("could not parse literal: ${ex.message}")
+            ProblemExpression("could not parse literal: ${ex.message}")
         }
     }
 

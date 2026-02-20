@@ -70,7 +70,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
 
         stmt.keywords.forEach {
             cls.additionalProblems +=
-                newProblem(problem = "could not parse keyword $it in class", rawNode = it)
+                newProblemExpression(problem = "could not parse keyword $it in class", rawNode = it)
         }
 
         for (s in stmt.body) {
@@ -267,7 +267,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         // first argument is the receiver
         val recvPythonNode = positionalArguments.firstOrNull()
         if (recvPythonNode == null) {
-            result.additionalProblems += newProblem("Expected a receiver", rawNode = args)
+            result.additionalProblems += newProblemExpression("Expected a receiver", rawNode = args)
         } else {
             val tpe = recordDeclaration.toType()
             val recvNode =
@@ -285,7 +285,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                     args.defaults.getOrNull(0)?.let { frontend.expressionHandler.handle(it) }
                 defaultValue?.let {
                     result.additionalProblems +=
-                        newProblem("Receiver with default value", rawNode = args)
+                        newProblemExpression("Receiver with default value", rawNode = args)
                 }
             }
             // Add the receiver to the scope so that references to it can be resolved
@@ -296,7 +296,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                 is Method -> result.receiver = recvNode
                 else ->
                     result.additionalProblems +=
-                        newProblem(
+                        newProblemExpression(
                             problem =
                                 "Expected a constructor or method declaration. Got something else.",
                             rawNode = result,

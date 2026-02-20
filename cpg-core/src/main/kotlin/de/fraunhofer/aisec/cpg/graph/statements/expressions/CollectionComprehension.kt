@@ -58,7 +58,9 @@ class CollectionComprehension : Expression(), ArgumentHolder {
 
     @Relationship("STATEMENT")
     var statementEdge =
-        astEdgeOf<Statement>(Problem("No statement provided but is required in ${this::class}"))
+        astEdgeOf<Statement>(
+            ProblemExpression("No statement provided but is required in ${this::class}")
+        )
     /**
      * This field contains the statement which is applied to each element of the input for which the
      * predicate returned `true`.
@@ -83,7 +85,7 @@ class CollectionComprehension : Expression(), ArgumentHolder {
     override fun hashCode() = Objects.hash(super.hashCode(), statement, comprehensionExpressions)
 
     override fun addArgument(expression: Expression) {
-        if (this.statement is Problem) {
+        if (this.statement is ProblemExpression) {
             this.statement = expression
         } else if (expression is Comprehension) {
             this.comprehensionExpressions += expression

@@ -50,7 +50,7 @@ open class BinaryOperator :
     @Relationship("LHS")
     var lhsEdge =
         astEdgeOf<Expression>(
-            of = Problem("could not parse lhs"),
+            of = ProblemExpression("could not parse lhs"),
             onChanged = ::exchangeTypeObserverWithAccessPropagation,
         )
     var lhs by unwrapping(BinaryOperator::lhsEdge)
@@ -59,7 +59,7 @@ open class BinaryOperator :
     @Relationship("RHS")
     var rhsEdge =
         astEdgeOf<Expression>(
-            of = Problem("could not parse rhs"),
+            of = ProblemExpression("could not parse rhs"),
             onChanged = ::exchangeTypeObserverWithAccessPropagation,
         )
     var rhs by unwrapping(BinaryOperator::rhsEdge)
@@ -130,7 +130,7 @@ open class BinaryOperator :
     override fun hashCode() = Objects.hash(super.hashCode(), lhs, rhs, operatorCode)
 
     override fun addArgument(expression: Expression) {
-        if (lhs is Problem) {
+        if (lhs is ProblemExpression) {
             lhs = expression
         } else {
             rhs = expression

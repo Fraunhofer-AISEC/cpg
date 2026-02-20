@@ -30,14 +30,14 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Problem
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import kotlin.jvm.optionals.getOrNull
 import sootup.core.jimple.common.stmt.*
 import sootup.core.model.Body
 import sootup.core.util.printer.NormalStmtPrinter
 
 class StatementHandler(frontend: JVMLanguageFrontend) :
-    Handler<Statement?, Any, JVMLanguageFrontend>(::Problem, frontend) {
+    Handler<Statement?, Any, JVMLanguageFrontend>(::ProblemExpression, frontend) {
 
     override fun handle(ctx: Any): Statement? {
         try {
@@ -54,7 +54,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
                 is JNopStmt -> newEmptyStatement(ctx)
                 else -> {
                     log.warn("Unhandled statement type: ${ctx.javaClass.simpleName}")
-                    newProblem(
+                    newProblemExpression(
                         "Unhandled statement type: ${ctx.javaClass.simpleName}",
                         rawNode = ctx,
                     )
@@ -62,7 +62,10 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
             }
         } catch (e: Exception) {
             log.error("Error while handling a statement", e)
-            return newProblem("Error handling statement ${ctx}: ${e.message}", rawNode = ctx)
+            return newProblemExpression(
+                "Error handling statement ${ctx}: ${e.message}",
+                rawNode = ctx,
+            )
         }
     }
 

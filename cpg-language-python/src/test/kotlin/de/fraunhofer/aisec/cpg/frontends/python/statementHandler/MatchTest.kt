@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Problem
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.switches
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -290,6 +290,6 @@ class MatchTest {
         assertIs<Block>(statementBlock)
         val case = statementBlock[0]
         assertIs<CaseStatement>(case)
-        assertIs<Problem>(case.caseExpression)
+        assertIs<ProblemExpression>(case.caseExpression)
     }
 }

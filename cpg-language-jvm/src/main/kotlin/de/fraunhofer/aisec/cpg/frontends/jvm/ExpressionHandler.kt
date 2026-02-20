@@ -39,7 +39,7 @@ import sootup.core.signatures.MethodSignature
 import sootup.core.signatures.SootClassMemberSignature
 
 class ExpressionHandler(frontend: JVMLanguageFrontend) :
-    Handler<Expression, Value, JVMLanguageFrontend>(::Problem, frontend) {
+    Handler<Expression, Value, JVMLanguageFrontend>(::ProblemExpression, frontend) {
 
     override fun handle(ctx: Value): Expression {
         try {
@@ -103,7 +103,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
                 is ClassConstant -> handleClassConstant(ctx)
                 else -> {
                     log.warn("Unhandled expression type: ${ctx.javaClass.simpleName}")
-                    newProblem(
+                    newProblemExpression(
                         "Unhandled expression type: ${ctx.javaClass.simpleName}",
                         rawNode = ctx,
                     )
@@ -111,7 +111,10 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
             }
         } catch (e: Exception) {
             log.error("Error while handling an expression", e)
-            return newProblem("Error handling expression ${ctx}: ${e.message}", rawNode = ctx)
+            return newProblemExpression(
+                "Error handling expression ${ctx}: ${e.message}",
+                rawNode = ctx,
+            )
         }
     }
 

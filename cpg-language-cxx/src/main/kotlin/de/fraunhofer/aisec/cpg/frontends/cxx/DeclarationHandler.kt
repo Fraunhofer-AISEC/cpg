@@ -165,7 +165,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private fun handleFunctionDefinition(ctx: IASTFunctionDefinition): Declaration {
         // TODO: A problem with cpp functions is that we cannot know if they may throw an exception
-        //  as throw(...) is not compiler enforced (Problem for TryStatement)
+        //  as throw(...) is not compiler enforced (ProblemExpression for TryStatement)
         val declaration = frontend.declaratorHandler.handle(ctx.declarator)
 
         if (declaration !is Function) {

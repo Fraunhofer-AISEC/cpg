@@ -248,7 +248,8 @@ class JVMLanguageFrontendTest {
         // Most importantly, the analysis should complete without OOM errors
         // The new error handling should catch and handle any parsing issues gracefully
         assertTrue(
-            tu.problems.isEmpty() || tu.problems.all { it is ProblemDeclaration || it is Problem }
+            tu.problems.isEmpty() ||
+                tu.problems.all { it is ProblemDeclaration || it is ProblemExpression }
         )
     }
 

@@ -41,7 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Cast
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Conditional
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Problem
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
@@ -947,7 +947,7 @@ class StatementHandlerTest {
         val mainBody = main.body
         assertIs<Block>(mainBody)
         val callBrInstruction = mainBody.statements[3]
-        assertIs<Problem>(callBrInstruction)
+        assertIs<ProblemExpression>(callBrInstruction)
     }
 
     @Test

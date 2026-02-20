@@ -568,17 +568,18 @@ fun MetadataProvider.newThrow(rawNode: Any? = null): Throw {
 }
 
 /**
- * Creates a new [Problem]. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [ProblemExpression]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newProblem(
+fun MetadataProvider.newProblemExpression(
     problem: String = "",
     type: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
     rawNode: Any? = null,
-): Problem {
-    val node = Problem(problem, type)
+): ProblemExpression {
+    val node = ProblemExpression(problem, type)
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)

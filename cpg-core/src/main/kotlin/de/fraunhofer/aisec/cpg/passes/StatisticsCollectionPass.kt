@@ -60,7 +60,7 @@ class StatisticsCollectionPass(ctx: TranslationContext) : TranslationResultPass(
 
         val nodeMeasurement = MeasurementHolder(this.javaClass, "Measuring Nodes", false, result)
         nodeMeasurement.addMeasurement("Total graph nodes", nodes.toString())
-        nodeMeasurement.addMeasurement("Problem nodes", problemNodes.toString())
+        nodeMeasurement.addMeasurement("ProblemExpression nodes", problemNodes.toString())
     }
 
     override fun cleanup() {

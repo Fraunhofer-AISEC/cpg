@@ -34,7 +34,7 @@ import org.jruby.ast.types.INameNode
 import org.jruby.ast.visitor.OperatorCallNode
 
 class ExpressionHandler(lang: RubyLanguageFrontend) :
-    RubyHandler<Expression, Node>({ Problem() }, lang) {
+    RubyHandler<Expression, Node>({ ProblemExpression() }, lang) {
 
     override fun handleNode(node: Node): Expression {
         return when (node) {
@@ -118,7 +118,8 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
 
     private fun handleCallNode(node: CallNode): Expression {
         val base =
-            handle(node.receiverNode) as? Expression ?: return Problem("could not parse base")
+            handle(node.receiverNode) as? Expression
+                ?: return ProblemExpression("could not parse base")
         val callee = newMember(node.name.asJavaString(), base)
 
         val mce = newMemberCall(callee, false)

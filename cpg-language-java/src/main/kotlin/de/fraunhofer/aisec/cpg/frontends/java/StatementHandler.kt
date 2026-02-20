@@ -60,7 +60,7 @@ import org.slf4j.LoggerFactory
 
 class StatementHandler(lang: JavaLanguageFrontend?) :
     Handler<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement, JavaLanguageFrontend>(
-        Supplier { Problem() },
+        Supplier { ProblemExpression() },
         lang!!,
     ) {
     fun handleExpressionStatement(
@@ -437,7 +437,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             }
             for (subStmt in sentry.statements) {
                 compoundStatement.statements +=
-                    handle(subStmt) ?: Problem("Could not parse statement")
+                    handle(subStmt) ?: ProblemExpression("Could not parse statement")
             }
         }
         switchStatement.statement = compoundStatement

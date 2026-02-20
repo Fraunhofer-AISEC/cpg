@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 
 class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
-    Handler<Expression, TypeScriptNode, TypeScriptLanguageFrontend>(::Problem, lang) {
+    Handler<Expression, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
@@ -58,12 +58,14 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             "JsxClosingElement" -> return handleJsxClosingElement(node)
         }
 
-        return Problem("No handler was implemented for nodes of type " + node.type)
+        return ProblemExpression("No handler was implemented for nodes of type " + node.type)
     }
 
     private fun handleJsxAttribute(node: TypeScriptNode): KeyValue {
-        val key = node.children?.first()?.let { this.handle(it) } ?: newProblem("missing key")
-        val value = node.children?.last()?.let { this.handle(it) } ?: newProblem("missing value")
+        val key =
+            node.children?.first()?.let { this.handle(it) } ?: newProblemExpression("missing key")
+        val value =
+            node.children?.last()?.let { this.handle(it) } ?: newProblemExpression("missing value")
 
         return newKeyValue(key, value, rawNode = node)
     }
@@ -81,7 +83,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleJsxExpression(node: TypeScriptNode): Expression {
         // for now, we just treat this as a wrapper and directly return the first node
         return node.children?.first()?.let { this.handle(it) }
-            ?: Problem("problem parsing expression")
+            ?: ProblemExpression("problem parsing expression")
     }
 
     private fun handleJsxOpeningElement(node: TypeScriptNode): ExpressionList {
@@ -140,8 +142,10 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handlePropertyAssignment(node: TypeScriptNode): KeyValue {
-        val key = node.children?.first()?.let { this.handle(it) } ?: newProblem("missing key")
-        val value = node.children?.last()?.let { this.handle(it) } ?: newProblem("missing value")
+        val key =
+            node.children?.first()?.let { this.handle(it) } ?: newProblemExpression("missing key")
+        val value =
+            node.children?.last()?.let { this.handle(it) } ?: newProblemExpression("missing value")
 
         return newKeyValue(key, value, rawNode = node)
     }
@@ -178,7 +182,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handlePropertyAccessExpression(node: TypeScriptNode): Expression {
         val base =
-            node.children?.first()?.let { this.handle(it) } ?: Problem("problem parsing base")
+            node.children?.first()?.let { this.handle(it) }
+                ?: ProblemExpression("problem parsing base")
 
         val name = node.children?.last()?.let { this.frontend.codeOf(it) } ?: ""
 
@@ -195,7 +200,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
             if (propertyAccess != null) {
                 val memberExpressionExpression =
                     this.handle(propertyAccess) as? Member
-                        ?: return Problem("node is not a member expression")
+                        ?: return ProblemExpression("node is not a member expression")
 
                 newMemberCall(memberExpressionExpression, rawNode = node)
             } else {

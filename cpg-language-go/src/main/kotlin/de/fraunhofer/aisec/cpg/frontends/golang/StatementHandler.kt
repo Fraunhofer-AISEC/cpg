@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 class StatementHandler(frontend: GoLanguageFrontend) :
-    GoHandler<Statement, GoStandardLibrary.Ast.Stmt>(::Problem, frontend) {
+    GoHandler<Statement, GoStandardLibrary.Ast.Stmt>(::ProblemExpression, frontend) {
 
     override fun handleNode(node: GoStandardLibrary.Ast.Stmt): Statement {
         return when (node) {
@@ -96,7 +96,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             }
         }
 
-        return newProblem("unknown token \"${branchStmt.tokString}\" in branch statement")
+        return newProblemExpression("unknown token \"${branchStmt.tokString}\" in branch statement")
     }
 
     private fun handleBlockStmt(blockStmt: GoStandardLibrary.Ast.BlockStmt): Statement {
@@ -146,7 +146,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
         if (currentBlock == null) {
             log.error("could not find block to add case clauses")
-            return newProblem("could not find block to add case clauses")
+            return newProblemExpression("could not find block to add case clauses")
         }
 
         // Add the case statement
@@ -386,7 +386,8 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         switchStmt.init?.let { switch.initializerStatement = handle(it) }
         switchStmt.tag?.let { switch.selector = frontend.expressionHandler.handle(it) }
 
-        val block = handle(switchStmt.body) as? Block ?: return newProblem("missing switch body")
+        val block =
+            handle(switchStmt.body) as? Block ?: return newProblemExpression("missing switch body")
 
         switch.statement = block
 

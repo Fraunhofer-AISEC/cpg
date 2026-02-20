@@ -49,14 +49,15 @@ class Subscript : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
     @Relationship("ARRAY_EXPRESSION")
     var arrayExpressionEdge =
         astEdgeOf<Expression>(
-            of = Problem("could not parse array expression"),
+            of = ProblemExpression("could not parse array expression"),
             onChanged = ::exchangeTypeObserverWithoutAccessPropagation,
         )
     /** The array on which the access is happening. This is most likely a [Reference]. */
     var arrayExpression by unwrapping(Subscript::arrayExpressionEdge)
 
     @Relationship("SUBSCRIPT_EXPRESSION")
-    var subscriptExpressionEdge = astEdgeOf<Expression>(Problem("could not parse index expression"))
+    var subscriptExpressionEdge =
+        astEdgeOf<Expression>(ProblemExpression("could not parse index expression"))
     /**
      * The expression which represents the "subscription" or index on which the array is accessed.
      * This can for example be a reference to another variable ([Reference]), a [Literal] or a
@@ -103,9 +104,9 @@ class Subscript : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
     }
 
     override fun addArgument(expression: Expression) {
-        if (arrayExpression is Problem) {
+        if (arrayExpression is ProblemExpression) {
             arrayExpression = expression
-        } else if (subscriptExpression is Problem) {
+        } else if (subscriptExpression is ProblemExpression) {
             subscriptExpression = expression
         }
     }

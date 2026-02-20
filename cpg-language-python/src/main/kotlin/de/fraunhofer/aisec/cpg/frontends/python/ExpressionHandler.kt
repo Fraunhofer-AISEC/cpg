@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Expression, Python.AST.BaseExpr>(::Problem, frontend) {
+    PythonHandler<Expression, Python.AST.BaseExpr>(::ProblemExpression, frontend) {
 
     override fun handleNode(node: Python.AST.BaseExpr): Expression {
         return when (node) {
@@ -61,7 +61,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Await,
             is Python.AST.Yield,
             is Python.AST.YieldFrom ->
-                newProblem(
+                newProblemExpression(
                     "The expression of class ${node.javaClass} is not supported yet",
                     rawNode = node,
                 )
@@ -91,7 +91,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             }
             if (node.is_async != 0L)
                 additionalProblems +=
-                    newProblem(
+                    newProblemExpression(
                         "Node marked as is_async but we don't support this yet",
                         rawNode = node,
                     )
@@ -247,7 +247,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
                     asciiCall
                 }
                 else ->
-                    newProblem(
+                    newProblemExpression(
                         problem =
                             "Cannot handle formatted value with conversion code ${node.conversion} yet",
                         rawNode = node,
@@ -335,10 +335,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * [`BoolOp`](https://docs.python.org/3/library/ast.html#ast.BoolOp).
      *
      * Generates a (potentially nested) [BinaryOperator] from a `BoolOp`. Less than two operands in
-     * [Python.AST.BoolOp.values] don't make sense and will generate a [Problem]. If only two
-     * operands exist, a simple [BinaryOperator] will be generated. More than two operands will lead
-     * to a nested [BinaryOperator]. E.g., if [Python.AST.BoolOp.values] contains the operators `[a,
-     * b, c]`, the result will be `a OP (b OP c)`.
+     * [Python.AST.BoolOp.values] don't make sense and will generate a [ProblemExpression]. If only
+     * two operands exist, a simple [BinaryOperator] will be generated. More than two operands will
+     * lead to a nested [BinaryOperator]. E.g., if [Python.AST.BoolOp.values] contains the operators
+     * `[a, b, c]`, the result will be `a OP (b OP c)`.
      */
     private fun handleBoolOp(node: Python.AST.BoolOp): Expression {
         val op =
@@ -348,7 +348,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             }
 
         return if (node.values.size <= 1) {
-            newProblem(
+            newProblemExpression(
                 "Expected exactly two expressions but got ${node.values.size}",
                 rawNode = node,
             )
@@ -410,7 +410,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             // Here we can not use node as raw node as it spans all keys and values
             lst +=
                 newKeyValue(
-                        key = node.keys[i]?.let { handle(it) } ?: newProblem("missing key"),
+                        key =
+                            node.keys[i]?.let { handle(it) } ?: newProblemExpression("missing key"),
                         value = handle(node.values[i]),
                     )
                     .codeAndLocationFromChildren(node, frontend.lineSeparator)
@@ -423,7 +424,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleCompare(node: Python.AST.Compare): Expression {
         if (node.comparators.size != 1 || node.ops.size != 1) {
-            return newProblem("Multi compare is not (yet) supported.", rawNode = node)
+            return newProblemExpression("Multi compare is not (yet) supported.", rawNode = node)
         }
         val op =
             when (node.ops.first()) {

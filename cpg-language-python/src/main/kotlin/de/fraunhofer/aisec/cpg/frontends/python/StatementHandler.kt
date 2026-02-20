@@ -44,7 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Statement, Python.AST.BaseStmt>(::Problem, frontend) {
+    PythonHandler<Statement, Python.AST.BaseStmt>(::ProblemExpression, frontend) {
 
     override fun handleNode(node: Python.AST.BaseStmt): Statement {
         return when (node) {
@@ -72,7 +72,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Raise -> handleRaise(node)
             is Python.AST.Match -> handleMatch(node)
             is Python.AST.TryStar ->
-                newProblem(
+                newProblemExpression(
                     problem = "The statement of class ${node.javaClass} is not supported yet",
                     rawNode = node,
                 )
@@ -104,7 +104,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                             is Python.AST.BaseExpr -> frontend.expressionHandler.handle(ctx = value)
                             null -> newLiteral(value = null, rawNode = node)
                             else ->
-                                newProblem(
+                                newProblemExpression(
                                     problem =
                                         "Can't handle ${value::class} in value of Python.AST.MatchSingleton yet"
                                 )
@@ -122,8 +122,15 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.MatchClass,
             is Python.AST.MatchStar,
             is Python.AST.MatchAs ->
-                newProblem(problem = "Cannot handle of type ${node::class} yet", rawNode = node)
-            else -> newProblem(problem = "Cannot handle of type ${node::class} yet", rawNode = node)
+                newProblemExpression(
+                    problem = "Cannot handle of type ${node::class} yet",
+                    rawNode = node,
+                )
+            else ->
+                newProblemExpression(
+                    problem = "Cannot handle of type ${node::class} yet",
+                    rawNode = node,
+                )
         }
     }
 
@@ -492,7 +499,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
             if (target !is Python.AST.Subscript) {
                 delete.additionalProblems +=
-                    newProblem(
+                    newProblemExpression(
                         problem =
                             "handleDelete: 'Name' and 'Attribute' deletions are not fully supported, as they remove variables from the scope.",
                         rawNode = target,
@@ -728,7 +735,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             }
             else -> {
                 ret.variable =
-                    newProblem(
+                    newProblemExpression(
                         problem =
                             "handleFor: cannot handle loop variable of type ${loopVar::class.simpleName}.",
                         rawNode = node.target,
@@ -818,7 +825,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 rhs =
                     rhs.map {
                         (it as? Expression)
-                            ?: newProblem("There was an issue with an argument.", rawNode = node)
+                            ?: newProblemExpression(
+                                "There was an issue with an argument.",
+                                rawNode = node,
+                            )
                     },
                 rawNode = node,
             )

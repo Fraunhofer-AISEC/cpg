@@ -794,7 +794,7 @@ class ValueEvaluatorTest {
             assertEquals(2, cond.evaluate())
 
             // handle invalid
-            cond = newConditional(newProblem(), newLiteral(2), aRef)
+            cond = newConditional(newProblemExpression(), newLiteral(2), aRef)
             assertEquals("{}", cond.evaluate())
         }
     }

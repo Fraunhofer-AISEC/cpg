@@ -43,7 +43,7 @@ import org.bytedeco.llvm.LLVM.LLVMValueRef
 import org.bytedeco.llvm.global.LLVM.*
 
 class StatementHandler(lang: LLVMIRLanguageFrontend) :
-    Handler<Statement, Pointer, LLVMIRLanguageFrontend>(::Problem, lang) {
+    Handler<Statement, Pointer, LLVMIRLanguageFrontend>(::ProblemExpression, lang) {
     init {
         map.put(LLVMValueRef::class.java) { handleInstruction(it as LLVMValueRef) }
         map.put(LLVMBasicBlockRef::class.java) { handleBasicBlock(it as LLVMBasicBlockRef) }
@@ -98,7 +98,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMCallBr -> {
                 // Maps to a call but also to a goto statement? Barely used => not relevant
-                newProblem(
+                newProblemExpression(
                     "Cannot handle callbr instruction yet",
                     ProblemNode.ProblemType.TRANSLATION,
                     rawNode = instr,
@@ -180,7 +180,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 // Resumes propagation of an existing (in-flight) exception whose unwinding was
                 // interrupted with a landingpad instruction.
                 newThrow(rawNode = instr).apply {
-                    exception = newProblem("We don't know the exception while parsing this node.")
+                    exception =
+                        newProblemExpression("We don't know the exception while parsing this node.")
                 }
             }
             LLVMLandingPad -> {
@@ -213,7 +214,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
             else -> {
                 log.error("Not handling instruction opcode {} yet", opcode)
-                newProblem(
+                newProblemExpression(
                     "Not handling instruction opcode $opcode yet",
                     ProblemNode.ProblemType.TRANSLATION,
                     rawNode = instr,
@@ -335,7 +336,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // that later once we know in which catch-block this statement is executed.
             val throwOperation =
                 newThrow(rawNode = instr).apply {
-                    exception = newProblem("We don't know the exception while parsing this node.")
+                    exception =
+                        newProblemExpression("We don't know the exception while parsing this node.")
                 }
             currentIfStatement?.elseStatement = throwOperation
         }
@@ -453,7 +455,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                     handleBinaryOperator(instr, "^", false)
                 }
                 else ->
-                    newProblem(
+                    newProblemExpression(
                         "No opcode found for binary operator",
                         ProblemNode.ProblemType.TRANSLATION,
                         rawNode = instr,
@@ -615,7 +617,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         // Make a copy of the operand
         var copy: Statement =
-            newProblem(
+            newProblemExpression(
                 "Default statement for insertvalue",
                 ProblemNode.ProblemType.TRANSLATION,
                 rawNode = instr,
@@ -933,7 +935,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 exchOp.rhs = mutableListOf(conditional)
             }
             else -> {
-                newProblem(
+                newProblemExpression(
                     "LLVMAtomicRMWBinOp $operation not supported",
                     ProblemNode.ProblemType.TRANSLATION,
                     rawNode = instr,

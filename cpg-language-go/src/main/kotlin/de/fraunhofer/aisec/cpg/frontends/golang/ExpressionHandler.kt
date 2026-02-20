@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.math.BigInteger
 
 class ExpressionHandler(frontend: GoLanguageFrontend) :
-    GoHandler<Expression, GoStandardLibrary.Ast.Expr>(::Problem, frontend) {
+    GoHandler<Expression, GoStandardLibrary.Ast.Expr>(::ProblemExpression, frontend) {
 
     override fun handleNode(node: GoStandardLibrary.Ast.Expr): Expression {
         return when (node) {
@@ -269,7 +269,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
     private fun handleNewExpr(callExpr: GoStandardLibrary.Ast.CallExpr): Expression {
         if (callExpr.args.isEmpty()) {
-            return newProblem("could not create New with empty arguments")
+            return newProblemExpression("could not create New with empty arguments")
         }
 
         val n = newNew(rawNode = callExpr)
@@ -293,7 +293,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         val args = callExpr.args
 
         if (args.isEmpty()) {
-            return newProblem("too few arguments for make expression")
+            return newProblemExpression("too few arguments for make expression")
         }
 
         val expression =

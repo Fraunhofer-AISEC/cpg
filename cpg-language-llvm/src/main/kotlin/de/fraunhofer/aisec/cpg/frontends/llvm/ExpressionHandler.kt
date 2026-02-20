@@ -44,7 +44,7 @@ import org.bytedeco.llvm.global.LLVM.*
  * [Expression]. Operands are basically arguments to an instruction.
  */
 class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
-    Handler<Expression, LLVMValueRef, LLVMIRLanguageFrontend>(::Problem, lang) {
+    Handler<Expression, LLVMValueRef, LLVMIRLanguageFrontend>(::ProblemExpression, lang) {
     init {
         map.put(LLVMValueRef::class.java) { handleValue(it) }
     }
@@ -82,7 +82,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMMetadataAsValueValueKind,
             LLVMInlineAsmValueKind -> {
-                return newProblem(
+                return newProblemExpression(
                     "Metadata or ASM value kind not supported yet",
                     ProblemNode.ProblemType.TRANSLATION,
                     rawNode = value,
@@ -106,7 +106,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                     )
                 } else {
                     log.error("Unknown expression {}", kind)
-                    newProblem(
+                    newProblemExpression(
                         "Unknown expression $kind",
                         ProblemNode.ProblemType.TRANSLATION,
                         rawNode = value,
@@ -223,7 +223,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             LLVMICmp -> frontend.statementHandler.handleIntegerComparison(value)
             else -> {
                 log.error("Not handling constant expression of opcode {} yet", kind)
-                newProblem(
+                newProblemExpression(
                     "Not handling constant expression of opcode $kind yet",
                     ProblemNode.ProblemType.TRANSLATION,
                     rawNode = value,
@@ -395,7 +395,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         var base = operand
 
         var expr: Expression =
-            newProblem(
+            newProblemExpression(
                 "Default node for getelementptr",
                 ProblemNode.ProblemType.TRANSLATION,
                 rawNode = instr,

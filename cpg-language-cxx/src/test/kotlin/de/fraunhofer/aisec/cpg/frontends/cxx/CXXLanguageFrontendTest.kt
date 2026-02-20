@@ -856,11 +856,11 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val duration_ms = tu.variables["duration_ms"]
         assertNotNull(duration_ms)
-        assertIs<Problem>(duration_ms.initializer)
+        assertIs<ProblemExpression>(duration_ms.initializer)
 
         val duration_s = tu.variables["duration_s"]
         assertNotNull(duration_s)
-        assertIs<Problem>(duration_s.initializer)
+        assertIs<ProblemExpression>(duration_s.initializer)
     }
 
     @Test

@@ -42,7 +42,7 @@ class Comprehension : Expression(), ArgumentHolder {
     @Relationship("VARIABLE")
     var variableEdge =
         astEdgeOf<Statement>(
-            of = Problem("Missing variableEdge in ${this::class}"),
+            of = ProblemExpression("Missing variableEdge in ${this::class}"),
             onChanged = { _, new -> (new?.end as? Expression)?.access = AccessValues.WRITE },
         )
 
@@ -53,7 +53,8 @@ class Comprehension : Expression(), ArgumentHolder {
     var variable by unwrapping(Comprehension::variableEdge)
 
     @Relationship("ITERABLE")
-    var iterableEdge = astEdgeOf<Expression>(Problem("Missing iterable in ${this::class}"))
+    var iterableEdge =
+        astEdgeOf<Expression>(ProblemExpression("Missing iterable in ${this::class}"))
 
     /** This field contains the iteration subject of the loop. */
     var iterable by unwrapping(Comprehension::iterableEdge)
@@ -86,9 +87,9 @@ class Comprehension : Expression(), ArgumentHolder {
     override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, predicate)
 
     override fun addArgument(expression: Expression) {
-        if (this.variable is Problem) {
+        if (this.variable is ProblemExpression) {
             this.variable = expression
-        } else if (this.iterable is Problem) {
+        } else if (this.iterable is ProblemExpression) {
             this.iterable = expression
         } else {
             this.predicate = expression

@@ -33,7 +33,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * A node where the statement could not be translated by the graph. We use Problems whenever the CPG
  * library requires an [Expression].
  */
-class Problem(
+class ProblemExpression(
     override var problem: String = "",
     override var problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION,
 ) : Expression(), ProblemNode {
@@ -46,7 +46,7 @@ class Problem(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is Problem) return false
+        if (other !is ProblemExpression) return false
         return super.equals(other) && problem == other.problem
     }
 

@@ -47,7 +47,7 @@ class Cast : Expression(), ArgumentHolder, HasType.TypeObserver {
     @Relationship(type = "EXPRESSION")
     var expressionEdge =
         astEdgeOf<Expression>(
-            of = Problem("could not parse inner expression"),
+            of = ProblemExpression("could not parse inner expression"),
             onChanged = ::exchangeTypeObserverWithAccessPropagation,
         )
     var expression by unwrapping(Cast::expressionEdge)

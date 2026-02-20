@@ -48,7 +48,7 @@ class Member : Reference(), HasOverloadedOperation, ArgumentHolder, HasBase {
     @Relationship("BASE")
     var baseEdge =
         astEdgeOf<Expression>(
-            Problem("could not parse base expression"),
+            ProblemExpression("could not parse base expression"),
             onChanged = { old, new ->
                 exchangeTypeObserverWithAccessPropagation(old, new)
                 updateName()
