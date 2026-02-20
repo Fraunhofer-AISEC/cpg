@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
