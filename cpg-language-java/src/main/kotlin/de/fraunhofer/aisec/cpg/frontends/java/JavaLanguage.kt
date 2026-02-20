@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -118,8 +118,10 @@ open class JavaLanguage :
         } else super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
     }
 
-    override fun SymbolResolver.handleSuperExpression(memberExpression: Member, curClass: Record) =
-        handleSuperExpressionHelper(memberExpression, curClass)
+    override fun SymbolResolver.handleSuperExpression(
+        memberExpression: MemberAccess,
+        curClass: Record,
+    ) = handleSuperExpressionHelper(memberExpression, curClass)
 
     /**
      * This function handles some specifics of the Java language when choosing a reference target

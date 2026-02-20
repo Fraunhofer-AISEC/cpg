@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertFullName
@@ -57,19 +57,19 @@ class SymbolResolverTest {
         assertNotNull(fieldA)
 
         val aRefs = result.refs("a")
-        aRefs.filterIsInstance<Member>().forEach { assertRefersTo(it, fieldA) }
-        aRefs.filter { it !is Member }.forEach { assertRefersTo(it, globalA) }
+        aRefs.filterIsInstance<MemberAccess>().forEach { assertRefersTo(it, fieldA) }
+        aRefs.filter { it !is MemberAccess }.forEach { assertRefersTo(it, globalA) }
 
         // We should only have one reference to "os" -> the member expression "self.os"
         val osRefs = result.refs("os")
         assertEquals(1, osRefs.size)
-        assertIs<Member>(osRefs.singleOrNull())
+        assertIs<MemberAccess>(osRefs.singleOrNull())
 
         // "os.name" is not a member expression but a reference to the field "name" of the "os"
         // module, therefore it is a reference
         val osNameRefs = result.refs("os.name")
         assertEquals(1, osNameRefs.size)
-        assertIsNot<Member>(osNameRefs.singleOrNull())
+        assertIsNot<MemberAccess>(osNameRefs.singleOrNull())
 
         // Same tests but for fields declared at the record level.
         // A variable "declared" inside a class is considered a field in Python.

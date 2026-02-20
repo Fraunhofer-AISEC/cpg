@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construct
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import org.slf4j.Logger
@@ -298,11 +298,11 @@ open class DFAOrderEvaluator(
     fun getBaseOfNode(node: Call) =
         when {
             node is MemberCall -> node.base
-            node is Construct -> node.astParent?.getSuitableDFGTarget()
+            node is Construction -> node.astParent?.getSuitableDFGTarget()
             node.thisPosition != null -> node.getBaseOfCallUsingArgument(node.thisPosition!!)
             else -> {
                 val dfgTarget = node.getSuitableDFGTarget()
-                if (dfgTarget != null && dfgTarget is Construct) {
+                if (dfgTarget != null && dfgTarget is Construction) {
                     dfgTarget.getSuitableDFGTarget()
                 } else {
                     dfgTarget
@@ -313,7 +313,7 @@ open class DFAOrderEvaluator(
     /**
      * Returns a [Pair] holding the "base" and the "operator" of the function/method call happening
      * in [node]. The operator is retrieved from the map [nodeToRelevantMethod] and is probably the
-     * name of the function called. If the call is neither a [MemberCall] nor a [Construct], it
+     * name of the function called. If the call is neither a [MemberCall] nor a [Construction], it
      * probably calls a function which does not have a "base" (as it is the case for C). In that
      * case, we try to look up the base in the map [thisPositionOfNode].
      *
@@ -396,7 +396,7 @@ open class DFAOrderEvaluator(
     private fun Node.getSuitableDFGTarget(): Node? {
         return this.nextDFG
             .filter {
-                it is Reference || it is ReturnStatement || it is Construct || it is Variable
+                it is Reference || it is ReturnStatement || it is Construction || it is Variable
             }
             .minByOrNull { it.name }
     }

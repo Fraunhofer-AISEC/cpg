@@ -272,9 +272,9 @@ fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
 
 /**
  * Asserts that `usingNode` uses/references the provided `usedBase` and `usedMember`. If
- * [ENFORCE_MEMBER_EXPRESSION] is true, `usingNode` must be a [Member] where [Member.base] uses
- * `usedBase` and [ ][Member.refersTo] uses `usedMember`. Using is checked as preformed per
- * [assertUsageOf]
+ * [ENFORCE_MEMBER_EXPRESSION] is true, `usingNode` must be a [MemberAccess] where
+ * [MemberAccess.base] uses `usedBase` and [ ][MemberAccess.refersTo] uses `usedMember`. Using is
+ * checked as preformed per [assertUsageOf]
  *
  * @param usingNode
  * - Node that uses some member
@@ -287,13 +287,13 @@ fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
  */
 fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: Declaration?) {
     assertNotNull(usingNode)
-    if (usingNode !is Member && !ENFORCE_MEMBER_EXPRESSION) {
+    if (usingNode !is MemberAccess && !ENFORCE_MEMBER_EXPRESSION) {
         // Assumption here is that the target of the member portion of the expression and not the
         // base is resolved
         assertUsageOf(usingNode, usedMember)
     } else {
-        assertTrue(usingNode is Member)
-        val memberExpressionExpression = usingNode as Member?
+        assertTrue(usingNode is MemberAccess)
+        val memberExpressionExpression = usingNode as MemberAccess?
         assertNotNull(memberExpressionExpression)
 
         val base = memberExpressionExpression.base

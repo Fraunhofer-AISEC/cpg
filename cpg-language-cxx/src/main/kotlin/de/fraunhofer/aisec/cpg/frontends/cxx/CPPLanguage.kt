@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -99,13 +99,13 @@ open class CPPLanguage :
             BinaryOperator::class of "<=" to "operator<=",
             BinaryOperator::class of "=>" to "operator=>",
 
-            // Member access operators. See
+            // MemberAccess access operators. See
             // https://en.cppreference.com/w/cpp/language/operator_member_access
-            Member::class of "[]" to "operator[]",
+            MemberAccess::class of "[]" to "operator[]",
             UnaryOperator::class of "*" to "operator*",
             UnaryOperator::class of "&" to "operator&",
-            Member::class of "->" to "operator->",
-            Member::class of "->*" to "operator->*",
+            MemberAccess::class of "->" to "operator->",
+            MemberAccess::class of "->*" to "operator->*",
 
             // Other operators. See https://en.cppreference.com/w/cpp/language/operator_other
             MemberCall::class of "()" to "operator()",

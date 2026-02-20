@@ -539,8 +539,8 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     /**
      * This class implements a [HasType.TypeObserver] and uses the observed type to set the
      * [ValueDeclaration.type] of a [ValueDeclaration], based on the types we see. It can be
-     * registered on objects that are used to "start" an inference, for example a [Member], which
-     * infers a [Field]. Once the type of the member expression becomes known, we can use this
+     * registered on objects that are used to "start" an inference, for example a [MemberAccess],
+     * which infers a [Field]. Once the type of the member expression becomes known, we can use this
      * information to set the type of the field.
      *
      * For now, this implementation uses the first type that we "see" and once the type of our
@@ -625,7 +625,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                     return numericTypes.lastOrNull()
                 }
             }
-            is Construct -> {
+            is Construction -> {
                 return holder.type
             }
             is BinaryOperator -> {

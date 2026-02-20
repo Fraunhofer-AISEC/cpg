@@ -278,7 +278,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             val exitCallWithNone =
                 newMemberCall(
                         callee =
-                            newMember(
+                            newMemberAccess(
                                     name = "__exit__",
                                     base = newReference(name = managerName).implicit(),
                                 )
@@ -300,7 +300,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             val exitCallWithSysExec =
                 newMemberCall(
                         callee =
-                            newMember(
+                            newMemberAccess(
                                     name = "__exit__",
                                     base = newReference(name = managerName).implicit(),
                                 )
@@ -310,7 +310,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     .implicit()
             val starOp = newUnaryOperator("*", postfix = false, prefix = false)
             starOp.input =
-                newMember(name = "exec_info", base = newReference("sys").implicit()).implicit()
+                newMemberAccess(name = "exec_info", base = newReference("sys").implicit())
+                    .implicit()
             exitCallWithSysExec.addArgument(starOp)
 
             val ifStmt = newIfStatement().implicit()
@@ -338,7 +339,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             val enterCall =
                 newMemberCall(
                         callee =
-                            newMember(
+                            newMemberAccess(
                                     name = "__enter__",
                                     base = newReference(name = managerName).implicit(),
                                 )
@@ -497,7 +498,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         node.targets.forEach { target ->
             delete.operands.add(frontend.expressionHandler.handle(target))
 
-            if (target !is Python.AST.Subscript) {
+            if (target !is Python.AST.Subscription) {
                 delete.additionalProblems +=
                     newProblemExpression(
                         problem =

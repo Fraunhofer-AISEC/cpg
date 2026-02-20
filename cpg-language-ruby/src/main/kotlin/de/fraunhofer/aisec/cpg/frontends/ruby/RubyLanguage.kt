@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import kotlin.reflect.KClass
@@ -76,7 +76,7 @@ class RubyLanguage :
         )
 
     override fun SymbolResolver.handleSuperExpression(
-        memberExpression: Member,
+        memberExpression: MemberAccess,
         curClass: Record,
     ): Boolean {
         TODO("Not yet implemented")

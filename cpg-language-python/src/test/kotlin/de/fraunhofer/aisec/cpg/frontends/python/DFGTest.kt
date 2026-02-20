@@ -36,9 +36,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Subscript
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Subscription
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.nio.file.Path
@@ -284,8 +284,8 @@ class DFGTest {
             "We expect that there is a reference called \"d\" in line 9 of the file.",
         )
         val dBLine9 =
-            result.allChildren<Subscript> { it.location?.region?.startLine == 9 }.singleOrNull()
-        assertIs<Subscript>(
+            result.allChildren<Subscription> { it.location?.region?.startLine == 9 }.singleOrNull()
+        assertIs<Subscription>(
             dBLine9,
             "We expect that there is a subscript expression representing \"d['b']\" in line 9 of the file.",
         )
@@ -369,8 +369,8 @@ class DFGTest {
         )
 
         val subscriptLine10 =
-            result.allChildren<Subscript> { it.location?.region?.startLine == 10 }.singleOrNull()
-        assertIs<Subscript>(
+            result.allChildren<Subscription> { it.location?.region?.startLine == 10 }.singleOrNull()
+        assertIs<Subscription>(
             subscriptLine10,
             "We expect that there is a subscript expression simulating \"d['b']\" in line 10 of the file.",
         )
@@ -443,8 +443,8 @@ class DFGTest {
         )
 
         val subscriptLine11 =
-            result.allChildren<Subscript> { it.location?.region?.startLine == 11 }.singleOrNull()
-        assertIs<Subscript>(
+            result.allChildren<Subscription> { it.location?.region?.startLine == 11 }.singleOrNull()
+        assertIs<Subscription>(
             subscriptLine11,
             "We expect that there is a subscript expression simulating \"d['a']\" in line 11 of the file.",
         )
@@ -518,8 +518,8 @@ class DFGTest {
             "We expect that there is a reference called \"d\" in line 9 of the file.",
         )
         val d1Line9 =
-            result.allChildren<Subscript> { it.location?.region?.startLine == 9 }.singleOrNull()
-        assertIs<Subscript>(
+            result.allChildren<Subscription> { it.location?.region?.startLine == 9 }.singleOrNull()
+        assertIs<Subscription>(
             d1Line9,
             "We expect that there is a subscript expression representing \"d[1]\" in line 9 of the file.",
         )
@@ -603,8 +603,8 @@ class DFGTest {
         )
 
         val subscriptLine10 =
-            result.allChildren<Subscript> { it.location?.region?.startLine == 10 }.singleOrNull()
-        assertIs<Subscript>(
+            result.allChildren<Subscription> { it.location?.region?.startLine == 10 }.singleOrNull()
+        assertIs<Subscription>(
             subscriptLine10,
             "We expect that there is a subscript expression simulating \"d[1]\" in line 10 of the file.",
         )
@@ -677,8 +677,8 @@ class DFGTest {
         )
 
         val subscriptLine11 =
-            result.allChildren<Subscript> { it.location?.region?.startLine == 11 }.singleOrNull()
-        assertIs<Subscript>(
+            result.allChildren<Subscription> { it.location?.region?.startLine == 11 }.singleOrNull()
+        assertIs<Subscription>(
             subscriptLine11,
             "We expect that there is a subscript expression simulating \"d[0]\" in line 11 of the file.",
         )
@@ -757,8 +757,8 @@ class DFGTest {
             "We expect that there is a reference called \"d\" in line 9 of the file.",
         )
         val dBLine9 =
-            result.allChildren<Member> { it.location?.region?.startLine == 9 }.singleOrNull()
-        assertIs<Member>(
+            result.allChildren<MemberAccess> { it.location?.region?.startLine == 9 }.singleOrNull()
+        assertIs<MemberAccess>(
             dBLine9,
             "We expect that there is a subscript expression representing \"d.b\" in line 9 of the file.",
         )
@@ -842,8 +842,8 @@ class DFGTest {
         )
 
         val subscriptLine10 =
-            result.allChildren<Member> { it.location?.region?.startLine == 10 }.singleOrNull()
-        assertIs<Member>(
+            result.allChildren<MemberAccess> { it.location?.region?.startLine == 10 }.singleOrNull()
+        assertIs<MemberAccess>(
             subscriptLine10,
             "We expect that there is a subscript expression simulating \"d.b\" in line 10 of the file.",
         )
@@ -916,8 +916,8 @@ class DFGTest {
         )
 
         val subscriptLine11 =
-            result.allChildren<Member> { it.location?.region?.startLine == 11 }.singleOrNull()
-        assertIs<Member>(
+            result.allChildren<MemberAccess> { it.location?.region?.startLine == 11 }.singleOrNull()
+        assertIs<MemberAccess>(
             subscriptLine11,
             "We expect that there is a subscript expression simulating \"d.a\" in line 11 of the file.",
         )

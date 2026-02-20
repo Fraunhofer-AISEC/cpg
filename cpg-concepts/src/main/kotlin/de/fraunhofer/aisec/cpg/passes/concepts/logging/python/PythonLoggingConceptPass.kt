@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Import
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
@@ -188,7 +188,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun findLogger(callExpression: Call): Log? {
         val callee = callExpression.callee
-        if (callee is Member) {
+        if (callee is MemberAccess) {
             // might be a call like `logger.error`
             val base = callee.base
             val fulfilledPaths: List<NodePath> =

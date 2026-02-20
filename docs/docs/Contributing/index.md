@@ -99,7 +99,7 @@ Note: We actually want list property to be immutable so that they can only be mo
 
 ### Required Properties
 
-Properties which can be considered as a required part of an expression, should be non-nullable and be initialized to a `ProblemNode`. In this case we can represent parsing problems in the graph and still avoid too many null checks. For example in the `Member`:
+Properties which can be considered as a required part of an expression, should be non-nullable and be initialized to a `ProblemNode`. In this case we can represent parsing problems in the graph and still avoid too many null checks. For example in the `MemberAccess`:
 ```kotlin
 var base: Expression = newProblem("could not parse base expression")
 ```

@@ -44,7 +44,7 @@ import org.neo4j.ogm.annotation.Relationship
  * * In Java, it is the initializer of a [New].
  */
 // TODO Merge and/or refactor
-class Construct : Call() {
+class Construction : Call() {
     /**
      * The link to the [Constructor]. This is populated by the
      * [de.fraunhofer.aisec.cpg.passes.SymbolResolver] later.
@@ -68,7 +68,7 @@ class Construct : Call() {
 
     @Relationship("ANONYMOUS_CLASS") var anonymousClassEdge = astOptionalEdgeOf<Record>()
 
-    var anonymousClass by unwrapping(Construct::anonymousClassEdge)
+    var anonymousClass by unwrapping(Construction::anonymousClassEdge)
 
     /** The [Declaration] of the type this expression instantiates. */
     @PopulatedByPass(SymbolResolver::class)
@@ -97,7 +97,7 @@ class Construct : Call() {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is Construct) return false
+        if (other !is Construction) return false
         return super.equals(other) &&
             constructor == other.constructor &&
             arguments == other.arguments

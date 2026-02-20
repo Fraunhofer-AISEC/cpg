@@ -135,7 +135,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             val i = funcDecl.variables["i"]
             assertNotNull(i)
 
-            val sizeof = i.initializer as? TypeId
+            val sizeof = i.initializer as? TypeReference
             assertNotNull(sizeof)
             assertLocalName("sizeof", sizeof)
             assertEquals(assertResolvedType("std::size_t"), sizeof.type)
@@ -143,7 +143,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             val typeInfo = funcDecl.variables["typeInfo"]
             assertNotNull(typeInfo)
 
-            val typeid = typeInfo.initializer as? TypeId
+            val typeid = typeInfo.initializer as? TypeReference
             assertNotNull(typeid)
             assertLocalName("typeid", typeid)
 
@@ -152,7 +152,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             val j = funcDecl.variables["j"]
             assertNotNull(j)
 
-            val alignOf = j.initializer as? TypeId
+            val alignOf = j.initializer as? TypeReference
             assertNotNull(sizeof)
             assertNotNull(alignOf)
             assertLocalName("alignof", alignOf)
@@ -234,7 +234,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertEquals(3, initializers.size)
 
             // second statement is an expression directly
-            val ase = statement.statements[1] as Subscript
+            val ase = statement.statements[1] as Subscription
             assertNotNull(ase)
             assertEquals(x, (ase.arrayExpression as Reference).refersTo)
             assertEquals(0, (ase.subscriptExpression as Literal<*>).value)
@@ -927,7 +927,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertEquals(assertResolvedType("Integer"), i.type)
 
             // initializer should be a construct expression
-            var constructExpr = i.initializer as? Construct
+            var constructExpr = i.initializer as? Construction
             assertNotNull(constructExpr)
             // type of the construct expression should also be Integer
             assertEquals(assertResolvedType("Integer"), constructExpr.type)
@@ -949,7 +949,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertEquals(assertResolvedType("Integer").pointer(), newExpression.type)
 
             // initializer should be a construct expression
-            constructExpr = newExpression.initializer as? Construct
+            constructExpr = newExpression.initializer as? Construction
             assertNotNull(constructExpr)
             // type of the construct expression should be Integer
             assertEquals(assertResolvedType("Integer"), constructExpr.type)
@@ -1009,7 +1009,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val assign = init.initializers.firstOrNull()
         assertIs<Assign>(assign)
 
-        val lhs = assign.lhs<Subscript>(0)
+        val lhs = assign.lhs<Subscription>(0)
         assertNotNull(lhs)
     }
 
@@ -1081,11 +1081,11 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(initializer.initializers[1] is Assign)
 
         die = initializer.initializers[0] as Assign
-        assertLiteralValue(3, (die.lhs[0] as Subscript).subscriptExpression)
+        assertLiteralValue(3, (die.lhs[0] as Subscription).subscriptExpression)
         assertLiteralValue(1, die.rhs[0])
 
         die = initializer.initializers[1] as Assign
-        assertLiteralValue(5, (die.lhs[0] as Subscript).subscriptExpression)
+        assertLiteralValue(5, (die.lhs[0] as Subscription).subscriptExpression)
         assertLiteralValue(2, die.rhs[0])
 
         val o = declaration.variables["o"]
@@ -1327,7 +1327,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val classTReturn = classTFoo.returns.firstOrNull()
         assertNotNull(classTReturn)
 
-        val classTReturnMember = classTReturn.returnValue as? Member
+        val classTReturnMember = classTReturn.returnValue as? MemberAccess
         assertNotNull(classTReturnMember)
 
         val classTThisExpression = classTReturnMember.base as? Reference
@@ -1342,7 +1342,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val classSReturn = classSFoo.bodyOrNull<ReturnStatement>()
         assertNotNull(classSReturn)
 
-        val classSReturnMember = classSReturn.returnValue as? Member
+        val classSReturnMember = classSReturn.returnValue as? MemberAccess
         assertNotNull(classSReturnMember)
 
         val classSThisExpression = classSReturnMember.base as? Reference

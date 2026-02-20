@@ -41,7 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construct
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -353,7 +353,7 @@ fun Node.generatesNewData(): NodeCollectionWithAssumption {
                 tmp.fulfilled.map { it.nodes.last() }.toSet()
             }
             /* A new object is constructed and our data flow into this object -> track the new object. */
-            this is Construct ||
+            this is Construction ||
                 /* A collection comprehension (e.g. list, set, dict comprehension) generates a new object similar to calling the constructor. */
                 this is CollectionComprehension -> {
                 setOf(this)

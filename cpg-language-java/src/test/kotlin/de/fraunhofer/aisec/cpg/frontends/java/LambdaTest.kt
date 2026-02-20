@@ -84,7 +84,7 @@ class JavaLambdaTest {
 
         val lambdaVar = result.variables["lambdaVar"]
         assertNotNull(lambdaVar)
-        val constructExpr = (lambdaVar.initializer as? New)?.initializer as? Construct
+        val constructExpr = (lambdaVar.initializer as? New)?.initializer as? Construction
         assertNotNull(constructExpr)
         val anonymousRecord = constructExpr.instantiates as? Record
         assertNotNull(anonymousRecord)

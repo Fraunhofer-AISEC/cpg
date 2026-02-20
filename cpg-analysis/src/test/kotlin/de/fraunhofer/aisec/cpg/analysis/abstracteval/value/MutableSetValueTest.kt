@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.ListType
@@ -90,7 +90,7 @@ class MutableSetValueTest {
                     MemberCall().apply {
                         this.name = Name("toSet")
                         this.callee =
-                            Member().apply {
+                            MemberAccess().apply {
                                 this.name = Name("toSet")
                                 this.base =
                                     Reference().apply {
@@ -135,7 +135,7 @@ class MutableSetValueTest {
                     MemberCall().apply {
                         this.name = Name("toSet")
                         this.callee =
-                            Member().apply {
+                            MemberAccess().apply {
                                 this.name = Name("toSet")
                                 this.base =
                                     Reference().apply {
@@ -189,7 +189,7 @@ class MutableSetValueTest {
             MemberCall().apply {
                 this.name = Name("add")
                 callee =
-                    Member().apply {
+                    MemberAccess().apply {
                         this.name = Name("add")
                         base =
                             Reference().apply {
@@ -220,7 +220,7 @@ class MutableSetValueTest {
             MemberCall().apply {
                 this.name = Name("addAll")
                 callee =
-                    Member().apply {
+                    MemberAccess().apply {
                         this.name = Name("addAll")
                         base =
                             Reference().apply {
@@ -252,7 +252,7 @@ class MutableSetValueTest {
             MemberCall().apply {
                 this.name = Name("clear")
                 callee =
-                    Member().apply {
+                    MemberAccess().apply {
                         this.name = Name("clear")
                         base =
                             Reference().apply {
@@ -282,7 +282,7 @@ class MutableSetValueTest {
             MemberCall().apply {
                 this.name = Name("remove")
                 callee =
-                    Member().apply {
+                    MemberAccess().apply {
                         this.name = Name("remove")
                         base =
                             Reference().apply {
@@ -313,7 +313,7 @@ class MutableSetValueTest {
             MemberCall().apply {
                 this.name = Name("removeAll")
                 callee =
-                    Member().apply {
+                    MemberAccess().apply {
                         this.name = Name("removeAll")
                         base =
                             Reference().apply {

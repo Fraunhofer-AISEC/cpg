@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construct
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
@@ -53,7 +53,7 @@ class CXXResolveTest {
         val main = tu.functions["main"]
         assertNotNull(main)
 
-        val realCalls = main.calls.filter { it !is Construct }
+        val realCalls = main.calls.filter { it !is Construction }
 
         // 0, 1 and 2 are construct expressions -> our "real" calls start at index 3
         val aFoo = realCalls.getOrNull(0)

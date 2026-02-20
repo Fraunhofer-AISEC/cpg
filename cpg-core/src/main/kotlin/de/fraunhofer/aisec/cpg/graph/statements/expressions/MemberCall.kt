@@ -31,9 +31,9 @@ import java.util.*
 
 /**
  * Represents a [Call] to something which is a member of an object (the [base]). For example
- * `obj.toString()`. The type of the [callee] property should be a [Member] (unless a translation
- * error occurred). One notable exception are function pointer calls to class methods in C++, in
- * which the callee is a [BinaryOperator] with a `.*` operator.
+ * `obj.toString()`. The type of the [callee] property should be a [MemberAccess] (unless a
+ * translation error occurred). One notable exception are function pointer calls to class methods in
+ * C++, in which the callee is a [BinaryOperator] with a `.*` operator.
  *
  * While this node implements [HasBase], this is basically just a shortcut to access the base of the
  * underlying [callee] property, if appropriate.
@@ -42,7 +42,7 @@ class MemberCall : Call(), HasBase, HasOperatorCode {
     /**
      * The base object. This is basically a shortcut to accessing the base of the [callee], if it
      * has one (i.e., if it implements [HasBase]). This is the case for example, if it is a
-     * [Member].
+     * [MemberAccess].
      */
     override val base: Expression?
         get() {
@@ -52,7 +52,7 @@ class MemberCall : Call(), HasBase, HasOperatorCode {
     /**
      * The operator code to access the base object. This is basically a shortcut to accessing the
      * base of the [callee], if it has one (i.e., if it implements [HasBase]). This is the case for
-     * example, if it is a [Member].
+     * example, if it is a [MemberAccess].
      */
     override val operatorCode: String?
         get() {
@@ -61,8 +61,8 @@ class MemberCall : Call(), HasBase, HasOperatorCode {
 
     /**
      * Needs to be set to true, if this call is a static call, i.e., a call to a static member of a
-     * [Record]. In this case the [callee] is most likely a [Member] in which [Member.base] refers
-     * directly to the [Record] instead of an object.
+     * [Record]. In this case the [callee] is most likely a [MemberAccess] in which
+     * [MemberAccess.base] refers directly to the [Record] instead of an object.
      */
     var isStatic: Boolean = false
 

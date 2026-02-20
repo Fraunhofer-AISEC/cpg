@@ -46,7 +46,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Tuple -> handleTuple(node)
             is Python.AST.List -> handleList(node)
             is Python.AST.BoolOp -> handleBoolOp(node)
-            is Python.AST.Subscript -> handleSubscript(node)
+            is Python.AST.Subscription -> handleSubscription(node)
             is Python.AST.Slice -> handleSlice(node)
             is Python.AST.Lambda -> handleLambda(node)
             is Python.AST.Set -> handleSet(node)
@@ -323,8 +323,8 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return slice
     }
 
-    private fun handleSubscript(node: Python.AST.Subscript): Expression {
-        val subscriptExpression = newSubscript(rawNode = node)
+    private fun handleSubscription(node: Python.AST.Subscription): Expression {
+        val subscriptExpression = newSubscription(rawNode = node)
         subscriptExpression.arrayExpression = handle(node.value)
         subscriptExpression.subscriptExpression = handle(node.slice)
         return subscriptExpression
@@ -464,7 +464,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     private fun handleAttribute(node: Python.AST.Attribute): Expression {
         val base = handle(node.value)
 
-        return newMember(name = node.attr, base = base, rawNode = node)
+        return newMemberAccess(name = node.attr, base = base, rawNode = node)
     }
 
     private fun handleConstant(node: Python.AST.Constant): Expression {
@@ -505,7 +505,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     /**
      * Handles an `ast.Call` Python node. This can be one of
      * - [MemberCall]
-     * - [Construct]
+     * - [Construction]
      * - [Cast]
      * - [Call]
      *
@@ -515,7 +515,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         val callee = frontend.expressionHandler.handle(node.func)
 
         val ret =
-            if (callee is Member) {
+            if (callee is MemberAccess) {
                 newMemberCall(callee, rawNode = node)
             } else {
                 newCall(callee, rawNode = node)

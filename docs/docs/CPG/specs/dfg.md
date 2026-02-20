@@ -152,7 +152,7 @@ Scheme:
     lhs -- DFG --> node;
   ```
 
-## NewArray
+## ArrayConstruction
 
 Interesting fields:
 
@@ -163,7 +163,7 @@ The `initializer` flows to the array creation expression.
 Scheme:
   ```mermaid
   flowchart LR
-    node([NewArray]) -.- initializer(initializer)
+    node([ArrayConstruction]) -.- initializer(initializer)
     initializer -- DFG --> node
   ```
 
@@ -182,7 +182,7 @@ Scheme:
     initializer -- DFG --> node
 ```
 
-## Subscript
+## Subscription
 
 Interesting fields:
 
@@ -195,7 +195,7 @@ not differentiate between the field which is accessed.
 Scheme:
   ```mermaid
   flowchart LR
-    arrayExpression -- DFG --> node([Subscript]);
+    arrayExpression -- DFG --> node([Subscription]);
     arrayExpression -.- node;
   ```
 
@@ -396,7 +396,7 @@ performs the following actions:
     lhs -- DFG --> refersTo
   ```
 
-## Member
+## MemberAccess
 
 Interesting fields:
 
@@ -404,7 +404,7 @@ Interesting fields:
 * `refersTo: Declaration?`: The field it refers to. If the class is not
   implemented in the code under analysis, it is `null`.
 
-The Member represents an access to an object's field and extends a
+The MemberAccess represents an access to an object's field and extends a
 Reference with a `base`
 
 If an implementation of the respective class is available, we handle it like a

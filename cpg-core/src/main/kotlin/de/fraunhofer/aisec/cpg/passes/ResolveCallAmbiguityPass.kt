@@ -51,10 +51,10 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * If a [Language] has the trait [HasCallAmbiguity], we cannot distinguish between [Call], [Cast] or
- * [Construct] during the initial translation. This stems from the fact that we might not know all
- * the types yet. We therefore need to handle them as regular call expression in a
- * [LanguageFrontend] or [Handler] and then later replace them with a [Cast] or [Construct], if the
- * [Call.callee] refers to name of a [Type] / [Record] rather than a function.
+ * [Construction] during the initial translation. This stems from the fact that we might not know
+ * all the types yet. We therefore need to handle them as regular call expression in a
+ * [LanguageFrontend] or [Handler] and then later replace them with a [Cast] or [Construction], if
+ * the [Call.callee] refers to name of a [Type] / [Record] rather than a function.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @DependsOn(TypeResolver::class)
@@ -81,7 +81,7 @@ class ResolveCallAmbiguityPass(ctx: TranslationContext) : TranslationUnitPass(ct
 
         // Make sure, we are not accidentally handling construct expressions (since they also derive
         // from call expressions)
-        if (call is Construct) {
+        if (call is Construction) {
             return
         }
 
@@ -98,7 +98,7 @@ class ResolveCallAmbiguityPass(ctx: TranslationContext) : TranslationUnitPass(ct
         // as pointers. We are interested in the references in the "core". We can skip all
         // references that are member expressions
         val ref = callee.unwrapReference()
-        if (ref == null || ref is Member) {
+        if (ref == null || ref is MemberAccess) {
             return
         }
 

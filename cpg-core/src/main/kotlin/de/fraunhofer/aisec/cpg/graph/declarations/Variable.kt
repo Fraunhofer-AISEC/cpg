@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construct
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
@@ -45,7 +45,7 @@ open class Variable : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
 
     /**
      * We need a way to store the templateParameters that a [Variable] might have before the
-     * [Construct] is created.
+     * [Construction] is created.
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
     var templateParameterEdges = astEdgesOf<AstNode>()

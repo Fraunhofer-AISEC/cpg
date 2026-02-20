@@ -368,11 +368,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is Function -> handleFunction(node)
             is Tuple -> handleTuple(node)
             is Variable -> handleVariable(node)
-            is Construct -> handleConstruct(node)
+            is Construction -> handleConstruction(node)
             is Call -> handleCall(node)
-            is Member -> handleMember(node)
-            is Subscript -> handleSubscript(node)
-            is NewArray -> handleNewArray(node)
+            is MemberAccess -> handleMemberAccess(node)
+            is Subscription -> handleSubscription(node)
+            is ArrayConstruction -> handleArrayConstruction(node)
             is Range -> handleRange(node)
             is DeclarationStatement -> handleDeclarationStatement(node)
             is ReturnStatement -> handleReturnStatement(node)
@@ -414,7 +414,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is EmptyStatement -> handleDefault(node)
             is Literal<*> -> handleDefault(node)
             is DefaultStatement -> handleDefault(node)
-            is TypeId -> handleDefault(node)
+            is TypeReference -> handleDefault(node)
             is Reference -> handleDefault(node)
             is Import -> handleDefault(node)
             // These nodes are not added to the EOG
@@ -467,9 +467,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * See
-     * [Specification for TypeId](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#typeidexpression)
+     * [Specification for TypeReference](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#typeidexpression)
      */
-    private fun handleTypeId(node: TypeId) {
+    private fun handleTypeReference(node: TypeReference) {
         attachToEOG(node)
     }
 
@@ -510,18 +510,18 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * See
-     * [Specification for Member](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#memberexpression)
+     * [Specification for MemberAccess](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#memberexpression)
      */
-    protected fun handleMember(node: Member) {
+    protected fun handleMemberAccess(node: MemberAccess) {
         handleEOG(node.base)
         attachToEOG(node)
     }
 
     /**
      * See
-     * [Specification for Subscript](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#subscriptexpression)
+     * [Specification for Subscription](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#subscriptexpression)
      */
-    protected fun handleSubscript(node: Subscript) {
+    protected fun handleSubscription(node: Subscription) {
         // Connect according to evaluation order, first the array reference, then the contained
         // index.
         handleEOG(node.arrayExpression)
@@ -531,9 +531,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * See
-     * [Specification for NewArray](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#newarrayexpression)
+     * [Specification for ArrayConstruction](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#newarrayexpression)
      */
-    protected fun handleNewArray(node: NewArray) {
+    protected fun handleArrayConstruction(node: ArrayConstruction) {
         for (dimension in node.dimensions) {
             handleEOG(dimension)
         }
@@ -942,9 +942,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * See
-     * [Specification for Construct](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#constructexpression)
+     * [Specification for Construction](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#constructexpression)
      */
-    protected fun handleConstruct(node: Construct) {
+    protected fun handleConstruction(node: Construction) {
         // first the arguments
         for (arg in node.arguments) {
             handleEOG(arg)

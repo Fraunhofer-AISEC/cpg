@@ -814,11 +814,11 @@ interface Python {
 
         /**
          * ```
-         * ast.Subscript = class Subscript(expr)
-         *  |  Subscript(expr value, expr slice, expr_context ctx)
+         * ast.Subscription = class Subscription(expr)
+         *  |  Subscription(expr value, expr slice, expr_context ctx)
          * ```
          */
-        class Subscript(pyObject: PyObject) : BaseExpr(pyObject) {
+        class Subscription(pyObject: PyObject) : BaseExpr(pyObject) {
             val value: BaseExpr by lazy { "value" of pyObject }
             val slice: BaseExpr by lazy { "slice" of pyObject }
             val ctx: BaseExprContext by lazy { "ctx" of pyObject }

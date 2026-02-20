@@ -1185,8 +1185,8 @@ val AstNode?.blocks: List<Block>
 val AstNode?.refs: List<Reference>
     get() = this.allChildren()
 
-/** Returns all [Member] children in this graph, starting with this [Node]. */
-val AstNode?.memberExpressions: List<Member>
+/** Returns all [MemberAccess] children in this graph, starting with this [Node]. */
+val AstNode?.memberExpressions: List<MemberAccess>
     get() = this.allChildren()
 
 /** Returns all [Statement] child edges in this graph, starting with this [Node]. */
@@ -1419,9 +1419,10 @@ fun Node.controlledBy(): List<Node> {
  * Returns the expression specifying the dimension (i.e., size) of the array during its
  * initialization.
  */
-val Subscript.arraySize: Expression
+val Subscription.arraySize: Expression
     get() =
-        (((this.arrayExpression as Reference).refersTo as Variable).initializer as NewArray)
+        (((this.arrayExpression as Reference).refersTo as Variable).initializer
+                as ArrayConstruction)
             .dimensions[0]
 
 /**
@@ -1519,7 +1520,7 @@ val Expression.importedFrom: List<Import>
             is Call -> {
                 return this.callee.importedFrom
             }
-            is Member -> {
+            is MemberAccess -> {
                 return this.base.importedFrom
             }
             is Reference -> {

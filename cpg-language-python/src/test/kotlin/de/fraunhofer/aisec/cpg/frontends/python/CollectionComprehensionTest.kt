@@ -49,9 +49,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Comprehension
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.KeyValue
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Subscript
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Subscription
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
@@ -1247,29 +1247,29 @@ class CollectionComprehensionTest {
             "The first element of the tuple \"(a, b[0])\" is expected to be represented by a Reference with localName \"a\" in the CPG.",
         )
         val accessB0 = tuple.initializers[1]
-        assertIs<Subscript>(
+        assertIs<Subscription>(
             accessB0,
-            "The second element of the tuple \"(a, b[0])\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\".",
+            "The second element of the tuple \"(a, b[0])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\".",
         )
         val refB = accessB0.arrayExpression
         assertIs<Reference>(
             refB,
-            "The second element of the tuple \"(a, b[0])\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
+            "The second element of the tuple \"(a, b[0])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
         )
         assertLocalName(
             "b",
             refB,
-            "The second element of the tuple \"(a, b[0])\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
+            "The second element of the tuple \"(a, b[0])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
         )
         val index = accessB0.subscriptExpression
         assertIs<Literal<Int>>(
             index,
-            "The second element of the tuple \"(a, b[0])\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
+            "The second element of the tuple \"(a, b[0])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
         )
         assertLiteralValue(
             0L,
             index,
-            "The second element of the tuple \"(a, b[0])\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
+            "The second element of the tuple \"(a, b[0])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
         )
 
         // Now the actually interesting part: We check for variables belonging to the references.
@@ -1412,29 +1412,29 @@ class CollectionComprehensionTest {
             "The first element of the tuple \"(a, b[a])\" is expected to be represented by a Reference with localName \"a\" in the CPG.",
         )
         val accessBA = tuple.initializers[1]
-        assertIs<Subscript>(
+        assertIs<Subscription>(
             accessBA,
-            "The second element of the tuple \"(a, b[a])\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to the same variable as the tuple's first element.",
+            "The second element of the tuple \"(a, b[a])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to the same variable as the tuple's first element.",
         )
         val refB = accessBA.arrayExpression
         assertIs<Reference>(
             refB,
-            "The second element of the tuple \"(a, b[a])\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to the same variable as the tuple's first element.",
+            "The second element of the tuple \"(a, b[a])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to the same variable as the tuple's first element.",
         )
         assertLocalName(
             "b",
             refB,
-            "The second element of the tuple \"(a, b[a])\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is Reference \"a\" which refers to the same variable as the tuple's first element.",
+            "The second element of the tuple \"(a, b[a])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is Reference \"a\" which refers to the same variable as the tuple's first element.",
         )
         val index = accessBA.subscriptExpression
         assertIs<Reference>(
             index,
-            "The second element of the tuple \"(a, b[a])\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is Reference \"a\" which refers to the same variable as the tuple's first element.",
+            "The second element of the tuple \"(a, b[a])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is Reference \"a\" which refers to the same variable as the tuple's first element.",
         )
         assertLocalName(
             "a",
             index,
-            "The second element of the tuple \"(a, b[a])\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
+            "The second element of the tuple \"(a, b[a])\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
         )
 
         // Now the actually interesting part: We check for variables belonging to the references.
@@ -1597,29 +1597,29 @@ class CollectionComprehensionTest {
             "The tuple \"(b[a], a)\" represented by an InitializerList in the CPG is expected to have exactly two elements.",
         )
         val accessBA = tuple.initializers[0]
-        assertIs<Subscript>(
+        assertIs<Subscription>(
             accessBA,
-            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
+            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
         )
         val refB = accessBA.arrayExpression
         assertIs<Reference>(
             refB,
-            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
+            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
         )
         assertLocalName(
             "b",
             refB,
-            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
+            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
         )
         val indexA = accessBA.subscriptExpression
         assertIs<Reference>(
             indexA,
-            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
+            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
         )
         assertLocalName(
             "a",
             indexA,
-            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
+            "The first element of the tuple \"(b[a], a)\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\"  and the subscriptExpression representing the index is a Reference \"a\" which refers to no variable available at this point.",
         )
         val refA = tuple.initializers[1]
         assertIs<Reference>(
@@ -1803,29 +1803,29 @@ class CollectionComprehensionTest {
             "The tuple \"(b[c], a)\" represented by an InitializerList in the CPG is expected to have exactly two elements.",
         )
         val accessBA = tuple.initializers[0]
-        assertIs<Subscript>(
+        assertIs<Subscription>(
             accessBA,
-            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
+            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
         )
         val refB = accessBA.arrayExpression
         assertIs<Reference>(
             refB,
-            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
+            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
         )
         assertLocalName(
             "b",
             refB,
-            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
+            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
         )
         val index = accessBA.subscriptExpression
         assertIs<Reference>(
             index,
-            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
+            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
         )
         assertLocalName(
             "c",
             index,
-            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
+            "The first element of the tuple \"(b[c], a)\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Reference \"c\" which refers to the local variable.",
         )
         val refA = tuple.initializers[1]
         assertIs<Reference>(
@@ -1928,29 +1928,29 @@ class CollectionComprehensionTest {
         )
 
         val accessB0 = comprehensionExpression.variable
-        assertIs<Subscript>(
+        assertIs<Subscription>(
             accessB0,
-            "The control variable of the Comprehension is \"b[0]\" which is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\".",
+            "The control variable of the Comprehension is \"b[0]\" which is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\".",
         )
         val refB = accessB0.arrayExpression
         assertIs<Reference>(
             refB,
-            "The control variable \"b[0]\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
+            "The control variable \"b[0]\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
         )
         assertLocalName(
             "b",
             refB,
-            "The control variable \"b[0]\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
+            "The control variable \"b[0]\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
         )
         val index = accessB0.subscriptExpression
         assertIs<Literal<Int>>(
             index,
-            "The control variable \"b[0]\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
+            "The control variable \"b[0]\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
         )
         assertLiteralValue(
             0L,
             index,
-            "The control variable \"b[0]\" is expected to be represented by a Subscript with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
+            "The control variable \"b[0]\" is expected to be represented by a Subscription with in the CPG. We expect that the base is a Reference with localName \"b\" and the subscriptExpression representing the index is a Literal<Int> with value \"0\" (with kotlin type Long ).",
         )
 
         // Now the actually interesting part: We check for variables belonging to the references.
@@ -2029,24 +2029,24 @@ class CollectionComprehensionTest {
         )
 
         val bMemberA = comprehensionExpression.variable
-        assertIs<Member>(
+        assertIs<MemberAccess>(
             bMemberA,
-            "The control variable \"b.a\" is expected to be represented by a Member in the CPG. We expect that the base is a Reference with localName \"b\" and the localName of the Member is \"a\".",
+            "The control variable \"b.a\" is expected to be represented by a MemberAccess in the CPG. We expect that the base is a Reference with localName \"b\" and the localName of the MemberAccess is \"a\".",
         )
         val refB = bMemberA.base
         assertIs<Reference>(
             refB,
-            "The control variable \"b.a\" is expected to be represented by a Member in the CPG. We expect that the base is a Reference with localName \"b\" and the localName of the Member is \"a\".",
+            "The control variable \"b.a\" is expected to be represented by a MemberAccess in the CPG. We expect that the base is a Reference with localName \"b\" and the localName of the MemberAccess is \"a\".",
         )
         assertLocalName(
             "b",
             refB,
-            "The control variable \"b.a\" is expected to be represented by a Member in the CPG. We expect that the base is a Reference with localName \"b\" and the localName of the Member is \"a\".",
+            "The control variable \"b.a\" is expected to be represented by a MemberAccess in the CPG. We expect that the base is a Reference with localName \"b\" and the localName of the MemberAccess is \"a\".",
         )
         assertLocalName(
             "a",
             bMemberA,
-            "The control variable \"b.a\" is expected to be represented by a Member in the CPG. We expect that the base is a Reference with localName \"b\" and the localName of the Member is \"a\".",
+            "The control variable \"b.a\" is expected to be represented by a MemberAccess in the CPG. We expect that the base is a Reference with localName \"b\" and the localName of the MemberAccess is \"a\".",
         )
 
         // Now the actually interesting part: We check for variables belonging to the references.

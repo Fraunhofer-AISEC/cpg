@@ -38,7 +38,7 @@ import org.neo4j.ogm.annotation.Relationship
  * ([arrayExpression]) and `index` ([subscriptExpression]) are of type [Expression]. CPP can
  * overload operators thus changing semantics of array access.
  */
-class Subscript : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
+class Subscription : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
     override var access = AccessValues.READ
         set(value) {
             field = value
@@ -53,7 +53,7 @@ class Subscript : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
             onChanged = ::exchangeTypeObserverWithoutAccessPropagation,
         )
     /** The array on which the access is happening. This is most likely a [Reference]. */
-    var arrayExpression by unwrapping(Subscript::arrayExpressionEdge)
+    var arrayExpression by unwrapping(Subscription::arrayExpressionEdge)
 
     @Relationship("SUBSCRIPT_EXPRESSION")
     var subscriptExpressionEdge =
@@ -63,7 +63,7 @@ class Subscript : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
      * This can for example be a reference to another variable ([Reference]), a [Literal] or a
      * [Range].
      */
-    var subscriptExpression by unwrapping(Subscript::subscriptExpressionEdge)
+    var subscriptExpression by unwrapping(Subscription::subscriptExpressionEdge)
 
     override val base: Expression
         get() = arrayExpression
@@ -129,7 +129,7 @@ class Subscript : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is Subscript) return false
+        if (other !is Subscription) return false
         return super.equals(other) &&
             arrayExpression == other.arrayExpression &&
             subscriptExpression == other.subscriptExpression

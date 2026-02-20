@@ -65,10 +65,10 @@ class Assign :
         astEdgesOf<Expression>(
             onAdd = {
                 var end = it.end
-                var base = (end as? Member)?.base as? Member
+                var base = (end as? MemberAccess)?.base as? MemberAccess
                 while (base != null) {
                     base.access = AccessValues.READWRITE
-                    base = base.base as? Member
+                    base = base.base as? MemberAccess
                 }
 
                 end.access =

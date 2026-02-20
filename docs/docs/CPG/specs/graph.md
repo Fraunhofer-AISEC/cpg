@@ -723,18 +723,18 @@ ForEachStatement--"VARIABLE¹"-->ForEachStatementVARIABLE[<a href='#estatement'>
 <span class="child">[BinaryOperator](#ebinaryoperator)</span>
 <span class="child">[Conditional](#econditionalexpression)</span>
 <span class="child">[Delete](#edeleteexpression)</span>
-<span class="child">[Subscript](#esubscriptexpression)</span>
+<span class="child">[Subscription](#esubscriptexpression)</span>
 <span class="child">[Problem](#eproblemexpression)</span>
 <span class="child">[Range](#erangeexpression)</span>
 <span class="child">[Lambda](#elambdaexpression)</span>
-<span class="child">[NewArray](#enewarrayexpression)</span>
+<span class="child">[ArrayConstruction](#enewarrayexpression)</span>
 <span class="child">[KeyValue](#ekeyvalueexpression)</span>
 <span class="child">[Assign](#eassignexpression)</span>
 <span class="child">[Comprehension](#ecomprehensionexpression)</span>
 <span class="child">[TypeExpression](#etypeexpression)</span>
 <span class="child">[InitializerList](#einitializerlistexpression)</span>
 <span class="child">[Literal](#eliteral)</span>
-<span class="child">[TypeId](#etypeidexpression)</span>
+<span class="child">[TypeReference](#etypeidexpression)</span>
 <span class="child">[ExpressionList](#eexpressionlist)</span>
 
 ### Relationships
@@ -820,7 +820,7 @@ Expression--"ASSIGNED_TYPES*"-->ExpressionASSIGNED_TYPES[<a href='#etype'>Type</
 
 ### Children
 <span class="child">[OperatorCall](#eoperatorcallexpression)</span>
-<span class="child">[Construct](#econstructexpression)</span>
+<span class="child">[Construction](#econstructexpression)</span>
 <span class="child">[MemberCall](#emembercallexpression)</span>
 
 ### Relationships
@@ -1011,12 +1011,12 @@ operatorCode : String
 
 </div>
 
-## Construct<a id="econstructexpression"></a>
+## Construction<a id="econstructexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
 <span class="superclassLabel">[Expression](#eexpression)</span>
 <span class="superclassLabel">[Call](#ecallexpression)</span>
-<span class="classLabel">[Construct](#econstructexpression)</span>
+<span class="classLabel">[Construction](#econstructexpression)</span>
 
 ### Relationships
 <span class="relationship">[INSTANTIATES](#ConstructINSTANTIATES)</span>
@@ -1063,19 +1063,19 @@ operatorCode : String
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Construct--"INSTANTIATES¹"-->ConstructINSTANTIATES[<a href='#edeclaration'>Declaration</a>]:::outer
+Construction--"INSTANTIATES¹"-->ConstructINSTANTIATES[<a href='#edeclaration'>Declaration</a>]:::outer
 ```
 #### ANONYMOUS_CLASS<a id="ConstructANONYMOUS_CLASS"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Construct--"ANONYMOUS_CLASS¹"-->ConstructANONYMOUS_CLASS[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
+Construction--"ANONYMOUS_CLASS¹"-->ConstructANONYMOUS_CLASS[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
 ```
 #### CONSTRUCTOR<a id="ConstructCONSTRUCTOR"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Construct--"CONSTRUCTOR¹"-->ConstructCONSTRUCTOR[<a href='#econstructordeclaration'>ConstructorDeclaration</a>]:::outer
+Construction--"CONSTRUCTOR¹"-->ConstructCONSTRUCTOR[<a href='#econstructordeclaration'>ConstructorDeclaration</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -1792,7 +1792,7 @@ Cast--"EXPRESSION¹"-->CastEXPRESSION[<a href='#eexpression'>Expression</a>]:::o
 <span class="classLabel">[Reference](#ereference)</span>
 
 ### Children
-<span class="child">[Member](#ememberexpression)</span>
+<span class="child">[MemberAccess](#ememberexpression)</span>
 
 ### Relationships
 <span class="relationship">[REFERS_TO](#ReferenceREFERS_TO)</span>
@@ -1891,12 +1891,12 @@ isStaticAccess : boolean
 
 </div>
 
-## Member<a id="ememberexpression"></a>
+## MemberAccess<a id="ememberexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
 <span class="superclassLabel">[Expression](#eexpression)</span>
 <span class="superclassLabel">[Reference](#ereference)</span>
-<span class="classLabel">[Member](#ememberexpression)</span>
+<span class="classLabel">[MemberAccess](#ememberexpression)</span>
 
 ### Relationships
 <span class="relationship">[BASE](#MemberBASE)</span>
@@ -1939,7 +1939,7 @@ isStaticAccess : boolean
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Member--"BASE¹"-->MemberBASE[<a href='#eexpression'>Expression</a>]:::outer
+MemberAccess--"BASE¹"-->MemberBASE[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
 operatorCode : String
@@ -2322,11 +2322,11 @@ Delete--"OPERANDS¹"-->DeleteOPERANDS[<a href='#eexpression'>Expression</a>]:::o
 
 </div>
 
-## Subscript<a id="esubscriptexpression"></a>
+## Subscription<a id="esubscriptexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
 <span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[Subscript](#esubscriptexpression)</span>
+<span class="classLabel">[Subscription](#esubscriptexpression)</span>
 
 ### Relationships
 <span class="relationship">[ARRAY_EXPRESSION](#SubscriptARRAY_EXPRESSION)</span>
@@ -2362,13 +2362,13 @@ Delete--"OPERANDS¹"-->DeleteOPERANDS[<a href='#eexpression'>Expression</a>]:::o
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Subscript--"ARRAY_EXPRESSION¹"-->SubscriptARRAY_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
+Subscription--"ARRAY_EXPRESSION¹"-->SubscriptARRAY_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 #### SUBSCRIPT_EXPRESSION<a id="SubscriptSUBSCRIPT_EXPRESSION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Subscript--"SUBSCRIPT_EXPRESSION¹"-->SubscriptSUBSCRIPT_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
+Subscription--"SUBSCRIPT_EXPRESSION¹"-->SubscriptSUBSCRIPT_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -2663,11 +2663,11 @@ areVariablesMutable : boolean
 
 </div>
 
-## NewArray<a id="enewarrayexpression"></a>
+## ArrayConstruction<a id="enewarrayexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
 <span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[NewArray](#enewarrayexpression)</span>
+<span class="classLabel">[ArrayConstruction](#enewarrayexpression)</span>
 
 ### Relationships
 <span class="relationship">[INITIALIZER](#NewArrayINITIALIZER)</span>
@@ -2703,13 +2703,13 @@ areVariablesMutable : boolean
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-NewArray--"INITIALIZER¹"-->NewArrayINITIALIZER[<a href='#eexpression'>Expression</a>]:::outer
+ArrayConstruction--"INITIALIZER¹"-->NewArrayINITIALIZER[<a href='#eexpression'>Expression</a>]:::outer
 ```
 #### DIMENSIONS<a id="NewArrayDIMENSIONS"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-NewArray--"DIMENSIONS¹"-->NewArrayDIMENSIONS[<a href='#eexpression'>Expression</a>]:::outer
+ArrayConstruction--"DIMENSIONS¹"-->NewArrayDIMENSIONS[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -3243,11 +3243,11 @@ value : Object
 
 </div>
 
-## TypeId<a id="etypeidexpression"></a>
+## TypeReference<a id="etypeidexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
 <span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[TypeId](#etypeidexpression)</span>
+<span class="classLabel">[TypeReference](#etypeidexpression)</span>
 
 ### Relationships
 <span class="relationship">[REFERENCED_TYPE](#TypeIdREFERENCED_TYPE)</span>
@@ -3282,7 +3282,7 @@ value : Object
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TypeId--"REFERENCED_TYPE¹"-->TypeIdREFERENCED_TYPE[<a href='#etype'>Type</a>]:::outer
+TypeReference--"REFERENCED_TYPE¹"-->TypeIdREFERENCED_TYPE[<a href='#etype'>Type</a>]:::outer
 ```
 ### Properties
 operatorCode : String

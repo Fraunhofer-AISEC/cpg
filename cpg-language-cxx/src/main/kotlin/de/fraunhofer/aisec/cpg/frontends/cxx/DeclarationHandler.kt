@@ -481,7 +481,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // We want to make sure that we parse the initializer *after* we have set the
                 // type. This has several advantages:
                 // * This way we can deduce, whether our initializer needs to have the
-                //   declared type (in case of a Construct);
+                //   declared type (in case of a Construction);
                 // * or if the declaration needs to have the same type as the initializer (when
                 //   an auto-type is used). The latter case is done internally by the
                 //   Variable class and its type observer.

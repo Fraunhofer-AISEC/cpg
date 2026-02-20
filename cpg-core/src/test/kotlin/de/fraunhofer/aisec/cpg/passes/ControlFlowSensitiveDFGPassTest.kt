@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.*
 import de.fraunhofer.aisec.cpg.test.GraphExamples
@@ -49,7 +49,9 @@ class ControlFlowSensitiveDFGPassTest {
         assertNotNull(result)
     }
 
-    /** This test asserts the dataflow that occurs with a simple field access using a [Member]. */
+    /**
+     * This test asserts the dataflow that occurs with a simple field access using a [MemberAccess].
+     */
     @Test
     fun testSimpleFieldDataflow() {
         val test = GraphExamples.getSimpleFieldDataflow()
@@ -86,13 +88,13 @@ class ControlFlowSensitiveDFGPassTest {
             val baseOfMemberRead11 = assertNotNull(next.firstOrNull()?.end)
             assertEquals(11, baseOfMemberRead11.location?.region?.startLine)
             assertIs<Reference>(baseOfMemberRead11)
-            assertIs<Member>(baseOfMemberRead11.astParent)
+            assertIs<MemberAccess>(baseOfMemberRead11.astParent)
             assertEquals(AccessValues.READ, baseOfMemberRead11.access)
 
             val baseOfMemberWrite13 = assertNotNull(next.getOrNull(1)?.end)
             assertEquals(13, baseOfMemberWrite13.location?.region?.startLine)
             assertIs<Reference>(baseOfMemberWrite13)
-            assertIs<Member>(baseOfMemberWrite13.astParent)
+            assertIs<MemberAccess>(baseOfMemberWrite13.astParent)
             assertEquals(
                 AccessValues.READ,
                 baseOfMemberWrite13.access,
@@ -109,7 +111,7 @@ class ControlFlowSensitiveDFGPassTest {
                 assertSame(field1, granularity.partialTarget)
 
                 // The target of this partial flow should be our member expression in line 11
-                val me = assertIs<Member>(partialFlow.end)
+                val me = assertIs<MemberAccess>(partialFlow.end)
                 assertEquals(11, me.location?.region?.startLine)
                 // Which in turn should only have an incoming FULL DFG edge from the field
                 // declaration as its "initializer"
@@ -130,7 +132,7 @@ class ControlFlowSensitiveDFGPassTest {
                 // The partial target of this edge is our field declaration.
                 // And the originating node should be our member expression that does the member
                 // write in line 13
-                val memberWrite13 = assertSinglePartialEdgeTo<Member>(this, field1)
+                val memberWrite13 = assertSinglePartialEdgeTo<MemberAccess>(this, field1)
                 assertEquals(13, memberWrite13.location?.region?.startLine)
 
                 // The sole incoming DFG edge to the memberWrite member expression should be a
@@ -152,7 +154,10 @@ class ControlFlowSensitiveDFGPassTest {
                 // Once again, we have a partial flow to the member expression, which reads the
                 // field in line 15
                 val memberRead15 =
-                    assertSinglePartialEdgeFrom<Member>(baseOfMemberRead15, partialTarget = field1)
+                    assertSinglePartialEdgeFrom<MemberAccess>(
+                        baseOfMemberRead15,
+                        partialTarget = field1,
+                    )
                 assertEquals(15, memberRead15.location?.region?.startLine)
 
                 // This finally flows to "i"
@@ -176,7 +181,7 @@ class ControlFlowSensitiveDFGPassTest {
             val single = assertNotNull(next.singleOrNull()?.end)
             assertEquals(14, single.location?.region?.startLine)
             assertIs<Reference>(single)
-            val me = assertIs<Member>(single.astParent)
+            val me = assertIs<MemberAccess>(single.astParent)
             assertEquals(AccessValues.WRITE, me.access)
 
             // The rest should be the same as s1, so we can probably skip the rest of the asserts

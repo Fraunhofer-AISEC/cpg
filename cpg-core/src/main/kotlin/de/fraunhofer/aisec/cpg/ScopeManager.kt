@@ -1025,8 +1025,8 @@ data class CallResolutionResult(
          * Ideally, we have only one function in [bestViable], but it could be that we still have
          * multiple functions in this list. The most common scenario for this is if we have a member
          * call to an interface, and we know at least partially which implemented classes could be
-         * in the [Member.base]. In this case, all best viable functions of each of the implemented
-         * classes are contained in [bestViable].
+         * in the [MemberAccess.base]. In this case, all best viable functions of each of the
+         * implemented classes are contained in [bestViable].
          */
         SUCCESSFUL,
 

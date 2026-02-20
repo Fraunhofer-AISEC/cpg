@@ -69,7 +69,7 @@ class MultiValueEvaluator : ValueEvaluator() {
 
         when (node) {
             is Field -> return handleHasInitializer(node, depth)
-            is NewArray -> return handleHasInitializer(node, depth)
+            is ArrayConstruction -> return handleHasInitializer(node, depth)
             is Variable -> return handleHasInitializer(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
@@ -78,7 +78,7 @@ class MultiValueEvaluator : ValueEvaluator() {
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
             is Cast -> return this.evaluateInternal(node.expression, depth + 1)
-            is Subscript -> return handleSubscript(node, depth)
+            is Subscription -> return handleSubscription(node, depth)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
             is Conditional -> return handleConditional(node, depth)

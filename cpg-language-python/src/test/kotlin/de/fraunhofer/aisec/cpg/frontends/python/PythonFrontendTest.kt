@@ -357,7 +357,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(c1)
         assertLocalName("c1", c1)
         val ctor = c1.firstAssignment
-        assertIs<Construct>(ctor)
+        assertIs<Construction>(ctor)
         assertEquals(ctor.constructor, cls.constructors.firstOrNull())
         assertFullName("simple_class.SomeClass", c1.type)
         ctor.arguments.forEach { assertEquals(ctor, it.astParent) }
@@ -470,7 +470,7 @@ class PythonFrontendTest : BaseTest() {
         val methBarBody = methBar.body
         assertIs<Block>(methBarBody)
         val barZ = methBarBody.statements[0]
-        assertIs<Member>(barZ)
+        assertIs<MemberAccess>(barZ)
         assertRefersTo(barZ, fieldZ)
 
         val barBaz = methBarBody.statements[1]
@@ -541,7 +541,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<MemberCall>(fooMemCall)
 
         val mem = fooMemCall.callee
-        assertIs<Member>(mem)
+        assertIs<MemberAccess>(mem)
         assertLocalName("bar", mem)
         assertEquals(".", fooMemCall.operatorCode)
         assertFullName("class_self.Foo.bar", fooMemCall)
@@ -631,7 +631,7 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("foo", fooDecl)
         assertFullName("class_ctor.Foo", fooDecl.type)
         val initializer = fooDecl.firstAssignment
-        assertIs<Construct>(initializer)
+        assertIs<Construction>(initializer)
         assertEquals(fooCtor, initializer.constructor)
 
         assertRefersTo(line2.base, fooDecl)
@@ -724,7 +724,7 @@ class PythonFrontendTest : BaseTest() {
         val assign = methBody.statements[0]
         assertIs<Assign>(assign)
 
-        val assignLhs = assign.lhs<Member>()
+        val assignLhs = assign.lhs<MemberAccess>()
         val assignRhs = assign.rhs<BinaryOperator>()
         assertEquals("=", assign.operatorCode)
         assertNotNull(assignLhs)
@@ -733,13 +733,13 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("+", assignRhs.operatorCode)
 
         val assignRhsLhs = assignRhs.lhs // the second "self.total" in "self.total = self.total + 1"
-        assertIs<Member>(assignRhsLhs)
+        assertIs<MemberAccess>(assignRhsLhs)
         assertRefersTo(assignRhsLhs.base, selfReceiver)
 
         val r = methBody.statements[1]
         assertIs<ReturnStatement>(r)
         val retVal = r.returnValue
-        assertIs<Member>(retVal)
+        assertIs<MemberAccess>(retVal)
         assertRefersTo(retVal.base, selfReceiver)
 
         // TODO last line "count(c1())"
@@ -807,12 +807,12 @@ class PythonFrontendTest : BaseTest() {
         // self.classFieldNoInitializer = 789
         val barStmt1 = barBody.statements[1]
         assertIs<Assign>(barStmt1)
-        assertRefersTo((barStmt1.lhs<Member>()), classFieldNoInitializer)
+        assertRefersTo((barStmt1.lhs<MemberAccess>()), classFieldNoInitializer)
 
         // self.classFieldWithInit = 12
         val barStmt2 = barBody.statements[2]
         assertIs<Assign>(barStmt2)
-        assertRefersTo((barStmt2.lhs<Member>()), classFieldWithInit)
+        assertRefersTo((barStmt2.lhs<MemberAccess>()), classFieldWithInit)
 
         // classFieldNoInitializer = "shadowed"
         val barStmt3 = barBody.statements[3]
@@ -888,14 +888,14 @@ class PythonFrontendTest : BaseTest() {
 
         assertLocalName("zzz", firstAssignment)
         val base = firstAssignment.base
-        assertIs<Member>(base)
+        assertIs<MemberAccess>(base)
         assertLocalName("baz", base)
         val baseBase = base.base
         assertIs<Reference>(baseBase)
         assertLocalName("bar", baseBase)
 
         val memberExpression = firstAssignment.callee
-        assertIs<Member>(memberExpression)
+        assertIs<MemberAccess>(memberExpression)
         assertLocalName("zzz", memberExpression)
     }
 
@@ -1401,7 +1401,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Assign>(fifthStmt)
         val fStmtRhs = fifthStmt.rhs.singleOrNull()
 
-        assertIs<Subscript>(fStmtRhs)
+        assertIs<Subscription>(fStmtRhs)
         assertEquals("a", fStmtRhs.arrayExpression.name.localName)
         val subscriptExpression = fStmtRhs.subscriptExpression
         assertIs<Range>(subscriptExpression)
@@ -1676,7 +1676,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(tu)
 
         val refs = tu.refs
-        refs.forEach { assertIsNot<Member>(it, "{${it.name}} is a member expression") }
+        refs.forEach { assertIsNot<MemberAccess>(it, "{${it.name}} is a member expression") }
         assertEquals(
             setOf("a", "b", "pkg.module.foo", "pkg.another_module.foo"),
             refs.map { it.name.toString() }.toSet(),
@@ -1717,7 +1717,7 @@ class PythonFrontendTest : BaseTest() {
         val refs = result.refs
 
         // All reference except the .field access should be reference and not a member expression
-        refs.filter { it.name.localName != "field" }.forEach { assertIsNot<Member>(it) }
+        refs.filter { it.name.localName != "field" }.forEach { assertIsNot<MemberAccess>(it) }
 
         assertEquals(
             listOf("pkg.function", "another_pkg.function", "another_pkg.function", "pkg.function"),

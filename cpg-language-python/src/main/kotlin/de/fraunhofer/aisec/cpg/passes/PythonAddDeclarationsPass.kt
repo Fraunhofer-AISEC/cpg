@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Comprehension
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerList
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -96,7 +96,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
         // If this is a member expression, and we do not know the base's type, we cannot create a
         // declaration
-        if (ref is Member && ref.base.type is UnknownType) {
+        if (ref is MemberAccess && ref.base.type is UnknownType) {
             return null
         }
 
@@ -141,7 +141,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                         newField(ref.name)
                     }
                 }
-                scopeManager.isInRecord && scopeManager.isInFunction && ref is Member -> {
+                scopeManager.isInRecord && scopeManager.isInFunction && ref is MemberAccess -> {
                     // If this is any other member expression, we are usually not interested in
                     // creating fields, except if this is a receiver
                     return null
@@ -197,7 +197,8 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
     private val Reference.refersToReceiver: Boolean
         get() {
-            return this is Member && this.base.name == scopeManager.currentMethod?.receiver?.name
+            return this is MemberAccess &&
+                this.base.name == scopeManager.currentMethod?.receiver?.name
         }
 
     /**

@@ -39,9 +39,9 @@ import de.fraunhofer.aisec.cpg.graph.followDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.followPrevDFG
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.implicit
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construct
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Subscript
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Subscription
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -63,16 +63,16 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) {
     override fun handleNode(node: Node, tu: TranslationUnit) {
         when (node) {
-            is Construct -> handleConstruct(node)
+            is Construction -> handleConstruction(node)
             is MemberCall -> handleMemberCall(node)
-            is Subscript -> handleSubscript(node)
+            is Subscription -> handleSubscription(node)
         }
     }
 
     /**
      * Translates a `configparser.ConfigParser()` constructor call into a [Configuration] concept.
      */
-    private fun handleConstruct(expr: Construct): Configuration? {
+    private fun handleConstruction(expr: Construction): Configuration? {
         if (expr.name.toString() == "configparser.ConfigParser") {
             val conf = newConfiguration(underlyingNode = expr, connect = true)
             expr.prevDFG += conf
@@ -122,7 +122,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
      * or groups (except in the deprecated legacy API), we need to implicitly create them here as
      * well.
      */
-    private fun handleSubscript(sub: Subscript): MutableList<ConfigurationOperation>? {
+    private fun handleSubscription(sub: Subscription): MutableList<ConfigurationOperation>? {
         // We need to check, whether we access a group or an option
         val path =
             sub.arrayExpression.followPrevDFG { it is Configuration || it is ConfigurationGroup }
@@ -142,7 +142,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
     /** Translates a group access (`config["group"]`) into a [ReadConfigurationGroup] operation. */
     private fun handleGroupAccess(
         conf: Configuration,
-        sub: Subscript,
+        sub: Subscription,
     ): MutableList<ConfigurationOperation> {
         val ops = mutableListOf<ConfigurationOperation>()
 
@@ -181,7 +181,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
      */
     private fun handleOptionAccess(
         group: ConfigurationGroup,
-        sub: Subscript,
+        sub: Subscription,
     ): MutableList<ConfigurationOperation> {
         val ops = mutableListOf<ConfigurationOperation>()
 

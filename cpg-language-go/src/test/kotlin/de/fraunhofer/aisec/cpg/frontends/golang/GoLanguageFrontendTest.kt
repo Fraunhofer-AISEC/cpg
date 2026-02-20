@@ -121,7 +121,7 @@ class GoLanguageFrontendTest : BaseTest() {
             val new = assertIs<New>(decl.firstAssignment)
             with(result) { assertEquals(assertResolvedType("p.MyStruct").pointer(), new.type) }
 
-            val construct = new.initializer as? Construct
+            val construct = new.initializer as? Construction
             assertNotNull(construct)
             assertEquals(myStruct, construct.instantiates)
 
@@ -134,7 +134,7 @@ class GoLanguageFrontendTest : BaseTest() {
             assertNotNull(make)
             assertEquals(primitiveType("int").array(), make.type)
 
-            assertTrue(make is NewArray)
+            assertTrue(make is ArrayConstruction)
 
             val dimension = make.dimensions.firstOrNull() as? Literal<*>
             assertNotNull(dimension)
@@ -147,7 +147,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
             make = assertIs(decl.firstAssignment)
             assertNotNull(make)
-            assertTrue(make is Construct)
+            assertTrue(make is Construction)
 
             // TODO: Maps can have dedicated types and parsing them as a generic here is only a
             //  temporary solution. This should be fixed in the future.
@@ -165,7 +165,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
             make = assertIs(decl.firstAssignment)
             assertNotNull(make)
-            assertTrue(make is Construct)
+            assertTrue(make is Construction)
             assertEquals(
                 objectType("chan", listOf(primitiveType("int"))).also {
                     it.scope = finalCtx.scopeManager.globalScope
@@ -568,7 +568,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val assign = body.statements.first() as? Assign
         assertNotNull(assign)
 
-        val lhs = assign.lhs.firstOrNull() as? Member
+        val lhs = assign.lhs.firstOrNull() as? MemberAccess
         assertNotNull(lhs)
         assertEquals(myFunc.receiver, (lhs.base as? Reference)?.refersTo)
         assertLocalName("Field", lhs)
@@ -1067,7 +1067,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(assign)
 
         val mce = assign.target
-        assertIs<Member>(mce)
+        assertIs<MemberAccess>(mce)
         assertRefersTo(mce, field)
     }
 

@@ -119,7 +119,7 @@ open class ValueEvaluator(
         node.let { this.path += it }
 
         when (node) {
-            is NewArray -> return handleHasInitializer(node, depth)
+            is ArrayConstruction -> return handleHasInitializer(node, depth)
             is Variable -> return handleHasInitializer(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
@@ -127,7 +127,7 @@ open class ValueEvaluator(
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
             is Cast -> return this.evaluateInternal(node.expression, depth + 1)
-            is Subscript -> return handleSubscript(node, depth)
+            is Subscription -> return handleSubscription(node, depth)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
             is Conditional -> return handleConditional(node, depth)
@@ -404,7 +404,7 @@ open class ValueEvaluator(
      * For arrays, we check whether we can actually access the contents of the array. This is
      * basically the case if the base of the subscript expression is a list of [KeyValue] s.
      */
-    protected fun handleSubscript(expr: Subscript, depth: Int): Any? {
+    protected fun handleSubscription(expr: Subscription, depth: Int): Any? {
         val array = (expr.arrayExpression as? Reference)?.refersTo as? Variable
         val ile = array?.initializer as? InitializerList
 

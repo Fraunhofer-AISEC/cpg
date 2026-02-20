@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -327,7 +327,7 @@ private fun SymbolResolver.handleReference(
     infoWithFileLocation(node, log, "Resolving reference. {} scopes are active", state.symbols.size)
     var state = state
     var candidates =
-        if (node is Member) {
+        if (node is MemberAccess) {
             // We need to extract the scope from the base type(s) and then do a qualified
             // lookup
             val baseTypes = state.types[node.base] ?: identitySetOf()

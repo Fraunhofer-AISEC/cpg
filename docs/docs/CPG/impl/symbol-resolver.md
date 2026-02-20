@@ -29,7 +29,7 @@ The symbol resolver itself has gone through many re-writes over the years and th
 
 ## Resolving References
 
-The main functionality lies in `ScopeManager::handleReference`. For all `Reference` nodes (that are not `Member` nodes) we use the symbol lookup API to find declaration candidates for the name the reference is referring to. This candidate list is then stored in `Reference::candidates`. If the reference is the `Call::callee` property of a call, we abort here and jump to [Resolve Calls](#resolve-calls).
+The main functionality lies in `ScopeManager::handleReference`. For all `Reference` nodes (that are not `MemberAccess` nodes) we use the symbol lookup API to find declaration candidates for the name the reference is referring to. This candidate list is then stored in `Reference::candidates`. If the reference is the `Call::callee` property of a call, we abort here and jump to [Resolve Calls](#resolve-calls).
 
 Otherwise, we currently take the first entry of the candidate list and set the `Reference::refersTo` property to it.
 

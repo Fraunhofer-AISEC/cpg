@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -60,7 +60,7 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 val dynamicLoading = newDynamicLoading(node, connect = true)
                 node.prevDFG += dynamicLoading
             }
-            node is Member && node.name.localName == "impl" -> {
+            node is MemberAccess && node.name.localName == "impl" -> {
                 var paths =
                     node.followDFGEdgesUntilHit(direction = Backward(GraphToFollow.DFG)) {
                         it is DynamicLoading
@@ -75,7 +75,7 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
                     }
 
                     // Create an implicit construct expression
-                    val construct = newConstruct(record.name).implicit()
+                    val construct = newConstruction(record.name).implicit()
                     construct.type = record.toType()
                     node.prevDFG += construct
 

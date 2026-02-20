@@ -117,10 +117,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is Cast -> handleCast(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
             is Assign -> handleAssign(node)
-            is NewArray -> handleNewArray(node)
-            is Subscript -> handleSubscript(node)
+            is ArrayConstruction -> handleArrayConstruction(node)
+            is Subscription -> handleSubscription(node)
             is Conditional -> handleConditional(node)
-            is Member -> handleMember(node)
+            is MemberAccess -> handleMemberAccess(node)
             is Reference -> handleReference(node)
             is ExpressionList -> handleExpressionList(node)
             is New -> handleNew(node)
@@ -204,8 +204,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    /** For a [Member], the base flows from/to the expression, depending on the [Member.access]. */
-    protected fun handleMember(node: Member) {
+    /**
+     * For a [MemberAccess], the base flows from/to the expression, depending on the
+     * [MemberAccess.access].
+     */
+    protected fun handleMemberAccess(node: MemberAccess) {
         when (node.access) {
             AccessValues.WRITE -> {
                 node.nextDFGEdges.add(node.base) {
@@ -457,10 +460,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge to an [Subscript]. The whole array `x` flows to the result `x[i]` or vice
-     * versa depending on the access value.
+     * Adds the DFG edge to an [Subscription]. The whole array `x` flows to the result `x[i]` or
+     * vice versa depending on the access value.
      */
-    protected fun handleSubscript(node: Subscript) {
+    protected fun handleSubscription(node: Subscription) {
         if (node.access == AccessValues.WRITE) {
                 node.nextDFGEdges
             } else {
@@ -477,8 +480,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             }
     }
 
-    /** Adds the DFG edge to an [NewArray]. The initializer flows to the expression. */
-    protected fun handleNewArray(node: NewArray) {
+    /** Adds the DFG edge to an [ArrayConstruction]. The initializer flows to the expression. */
+    protected fun handleArrayConstruction(node: ArrayConstruction) {
         node.initializer?.let { node.prevDFGEdges += it }
     }
 

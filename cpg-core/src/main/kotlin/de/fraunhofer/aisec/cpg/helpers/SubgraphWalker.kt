@@ -396,8 +396,8 @@ object SubgraphWalker {
  *   tries to replace a node with existing [Node.nextDFG] or [Node.prevDFG], we fail.
  * - We also migrate [HasType.typeObservers] from the [old] to the [new] node.
  * - Lastly, if the [new] node is a [Call.callee] of a [Call] parent, and the [old] and [new]
- *   expressions are of different types (e.g., exchanging a simple [Reference] for a [Member]), we
- *   also replace the [Call] with a [MemberCall].
+ *   expressions are of different types (e.g., exchanging a simple [Reference] for a
+ *   [MemberAccess]), we also replace the [Call] with a [MemberCall].
  */
 context(provider: ContextProvider)
 fun SubgraphWalker.ScopedWalker<Node>.replace(
@@ -422,7 +422,7 @@ fun SubgraphWalker.ScopedWalker<Node>.replace(
                     if (parent is MemberCall && new is Reference) {
                         val newCall = parent.toCall(new)
                         return replace(parent.astParent, parent, newCall)
-                    } else if (new is Member) {
+                    } else if (new is MemberAccess) {
                         val newCall = parent.toMemberCall(new)
                         return replace(parent.astParent, parent, newCall)
                     } else {
@@ -534,7 +534,7 @@ fun MemberCall.toCall(callee: Reference): Call {
  * Creates a new [MemberCall] with the same properties (e.g. ast children, etc.) except from DFG and
  * EOG edges as [this]. It sets the [MemberCall.callee] to [callee].
  */
-fun Call.toMemberCall(callee: Member): MemberCall {
+fun Call.toMemberCall(callee: MemberAccess): MemberCall {
     val call = MemberCall()
     duplicateTo(call, callee)
 
@@ -542,11 +542,11 @@ fun Call.toMemberCall(callee: Member): MemberCall {
 }
 
 /**
- * Creates a new [Construct] with the same properties (e.g. ast children, etc.) except from DFG and
- * EOG edges as [this]. It sets the [Construct.callee] to [callee].
+ * Creates a new [Construction] with the same properties (e.g. ast children, etc.) except from DFG
+ * and EOG edges as [this]. It sets the [Construction.callee] to [callee].
  */
-fun Call.toConstruct(callee: Reference): Construct {
-    val construct = Construct()
+fun Call.toConstruct(callee: Reference): Construction {
+    val construct = Construction()
     duplicateTo(construct, callee)
 
     return construct

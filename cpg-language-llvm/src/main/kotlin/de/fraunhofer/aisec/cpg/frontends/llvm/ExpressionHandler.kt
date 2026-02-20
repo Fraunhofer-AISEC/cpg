@@ -236,13 +236,13 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Handles a constant struct value, which belongs to the
      * [complex constants](https://llvm.org/docs/LangRef.html#complex-constants). Its type needs to
      * be a structure type (either identified or literal) and we currently map this to a
-     * [Construct], with the individual struct members being added as arguments.
+     * [Construction], with the individual struct members being added as arguments.
      */
     private fun handleConstantStructValue(value: LLVMValueRef): Expression {
         // retrieve the type
         val type = frontend.typeOf(value)
 
-        val expr: Construct = newConstruct(frontend.codeOf(value))
+        val expr: Construction = newConstruction(frontend.codeOf(value))
         // map the construct expression to the record declaration of the type
         expr.instantiates = (type as? ObjectType)?.recordDeclaration
 
@@ -300,7 +300,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Recursively creates a structure of [type] and initializes all its fields with a `null`-
      * [Literal] as this is closest to `undef`.
      *
-     * Returns a [Construct].
+     * Returns a [Construction].
      */
     private fun initializeAsUndef(type: Type, value: LLVMValueRef): Expression {
         return if (
@@ -308,7 +308,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         ) {
             newLiteral(null, type, rawNode = value)
         } else {
-            val expr: Construct = newConstruct(frontend.codeOf(value), rawNode = value)
+            val expr: Construction = newConstruction(frontend.codeOf(value), rawNode = value)
             // map the construct expression to the record declaration of the type
             expr.instantiates = (type as? ObjectType)?.recordDeclaration
             if (expr.instantiates == null) return expr
@@ -327,7 +327,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     /**
      * Recursively creates a structure of [type] and initializes all its fields with 0-[Literal].
      *
-     * Returns a [Construct].
+     * Returns a [Construction].
      */
     private fun initializeAsZero(type: Type, value: LLVMValueRef): Expression {
         return if (
@@ -335,7 +335,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         ) {
             newLiteral(0, type, rawNode = value)
         } else {
-            val expr: Construct = newConstruct(frontend.codeOf(value), rawNode = value)
+            val expr: Construction = newConstruction(frontend.codeOf(value), rawNode = value)
             // map the construct expression to the record declaration of the type
             expr.instantiates = (type as? ObjectType)?.recordDeclaration
             if (expr.instantiates == null) return expr
@@ -363,8 +363,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * [`extractvalue`](https://llvm.org/docs/LangRef.html#extractvalue-instruction) instruction
      * which works in a similar way.
      *
-     * We try to convert it either into an [Subscript] or an [Member], depending on whether the
-     * accessed variable is a struct or an array. Furthermore, since `getelementptr` allows an
+     * We try to convert it either into an [Subscription] or an [MemberAccess], depending on whether
+     * the accessed variable is a struct or an array. Furthermore, since `getelementptr` allows an
      * (infinite) chain of sub-element access within a single instruction, we need to unwrap those
      * into individual expressions.
      */
@@ -422,7 +422,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             // check, if the current base type is a pointer -> then we need to handle this as an
             // array access
             if (baseType is PointerType) {
-                val arrayExpr = newSubscript()
+                val arrayExpr = newSubscription()
                 arrayExpr.arrayExpression = base
                 arrayExpr.name = Name(index.toString())
                 arrayExpr.subscriptExpression = operand
@@ -476,7 +476,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 baseType = field?.type ?: unknownType()
 
                 // construct our member expression
-                expr = newMember(fieldName, base, field?.type ?: unknownType(), ".")
+                expr = newMemberAccess(fieldName, base, field?.type ?: unknownType(), ".")
                 log.info("{}", expr)
 
                 // the current expression is the new base

@@ -216,7 +216,7 @@ fun getTemplateInitializationSignature(
     orderedInitializationSignature: MutableMap<Declaration, Int>,
     explicitInstantiated: MutableList<ParameterizedType>,
 ): Map<Declaration?, AstNode?>? {
-    // Construct Signature
+    // Construction Signature
     val signature =
         constructTemplateInitializationSignatureFromTemplateParameters(
             functionTemplateDeclaration,

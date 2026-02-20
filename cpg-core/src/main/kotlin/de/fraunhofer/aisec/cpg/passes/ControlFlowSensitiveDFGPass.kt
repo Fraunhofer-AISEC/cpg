@@ -296,14 +296,14 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     PowersetLattice(identitySetOf(currentNode)),
                 )
             }
-        } else if (currentNode is Member) {
+        } else if (currentNode is MemberAccess) {
             handlePartialAccessExpression(
                 currentNode,
                 currentNode.base,
                 currentNode.refersTo,
                 doubleState,
             )
-        } else if (currentNode is Subscript) {
+        } else if (currentNode is Subscription) {
             handlePartialAccessExpression(
                 currentNode,
                 currentNode.base,
@@ -607,7 +607,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 when (writtenToIt) {
                     is Declaration -> writtenToIt
                     is Reference -> writtenToIt.refersTo
-                    is Subscript -> (writtenToIt.arrayExpression as? Reference)?.refersTo
+                    is Subscription -> (writtenToIt.arrayExpression as? Reference)?.refersTo
                     else -> {
                         log.error(
                             "The variable of type ${writtenToIt.javaClass} is not yet supported in the Comprehension"
@@ -770,10 +770,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
  * b.field = 2;
  * ```
  *
- * In this case, the [objectIdentifier] of the [Member] `a` is a combination of the hash-code of the
- * [Variable] `a` as well as the [Field] of `field`. The same applies for `b`. If we would only rely
- * on the [Variable], we would not be sensitive to fields, if we would only rely on the [Field], we
- * would not be sensitive to different object instances. Therefore, we consider both.
+ * In this case, the [objectIdentifier] of the [MemberAccess] `a` is a combination of the hash-code
+ * of the [Variable] `a` as well as the [Field] of `field`. The same applies for `b`. If we would
+ * only rely on the [Variable], we would not be sensitive to fields, if we would only rely on the
+ * [Field], we would not be sensitive to different object instances. Therefore, we consider both.
  *
  * Please note however, that this current, very basic implementation does not consider perform any
  * kind of pointer or alias analysis. This means that even though the "contents" of two variables
@@ -782,8 +782,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
  */
 fun Node.objectIdentifier(): Int? {
     return when (this) {
-        is Subscript -> this.objectIdentifier()
-        is Member -> this.objectIdentifier()
+        is Subscription -> this.objectIdentifier()
+        is MemberAccess -> this.objectIdentifier()
         is Reference -> this.objectIdentifier()
         is Declaration -> this.hashCode()
         is Literal<*> -> this.value.hashCode()
@@ -791,8 +791,8 @@ fun Node.objectIdentifier(): Int? {
     }
 }
 
-/** Implements [Node.objectIdentifier] for a [Subscript]. */
-fun Subscript.objectIdentifier(): Int? {
+/** Implements [Node.objectIdentifier] for a [Subscription]. */
+fun Subscription.objectIdentifier(): Int? {
     val ref = this.subscriptExpression.objectIdentifier()
     val baseIdentifier = base.objectIdentifier()
     return if (baseIdentifier != null && ref != null) {
@@ -802,8 +802,8 @@ fun Subscript.objectIdentifier(): Int? {
     }
 }
 
-/** Implements [Node.objectIdentifier] for a [Member]. */
-fun Member.objectIdentifier(): Int? {
+/** Implements [Node.objectIdentifier] for a [MemberAccess]. */
+fun MemberAccess.objectIdentifier(): Int? {
     val ref = this.refersTo
     return if (ref == null) {
         null

@@ -152,7 +152,7 @@ flowchart LR
   parent -."arguments(n)".-> arg2
 ```
 
-## Member
+## MemberAccess
 Access to the field in a `RecordDeclaration`.
 
 Interesting fields:
@@ -164,12 +164,12 @@ Scheme:
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child
-  parent(["Member"]) --EOG--> next:::outer
+  parent(["MemberAccess"]) --EOG--> next:::outer
   parent -.-> child["base"]
   child --EOG--> parent
 ```
 
-## Subscript
+## Subscription
 Array access in the form of `arrayExpression[subscriptExpression]`.
 
 Interesting fields:
@@ -183,13 +183,13 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child
   child --EOG--> child2["subscriptExpression"]
-  parent(["Subscript"]) --EOG--> next:::outer
+  parent(["Subscription"]) --EOG--> next:::outer
   parent -.-> child["arrayExpression"]
   parent -.-> child2
   child2 --EOG--> parent
 ```
 
-## NewArray
+## ArrayConstruction
 Interesting fields:
 
 * `dimensions: List<Expression>`: Multiple expressions that define the array's dimensions.
@@ -202,7 +202,7 @@ flowchart LR
   prev:::outer --EOG--> child1["dimension(i-1)"]
   child1 --EOG--> child2["dimension(i)"]
   child2 --EOG--> initializer
-  parent(["NewArray"]) --EOG--> next:::outer
+  parent(["ArrayConstruction"]) --EOG--> next:::outer
   parent -.-> child1
   parent -.-> child2
   parent -.-> initializer
@@ -561,8 +561,8 @@ flowchart LR
   parent -."initializers(n)".-> child2
 ```
 
-## Construct
-A Construct creates an object.
+## Construction
+A Construction creates an object.
 
 Interesting fields:
 
@@ -575,7 +575,7 @@ flowchart LR
   prev:::outer --EOG--> child1["argument(i-1)"]
   child1 --EOG--> child2["argument(i)"]
   child2 --EOG--> parent
-  parent(["Construct"]) --EOG--> next:::outer
+  parent(["Construction"]) --EOG--> next:::outer
   parent -."arguments(n)".-> child1
   parent -."arguments(n)".-> child2
 ```
@@ -925,7 +925,7 @@ flowchart LR
   parent --EOG--> next:::outer
 ```
 
-## TypeId
+## TypeReference
 The statement itself is connected to the outer EOG.
 
 Interesting fields: /
@@ -934,7 +934,7 @@ Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> parent["TypeId"]
+  prev:::outer --EOG--> parent["TypeReference"]
   parent --EOG--> next:::outer
 ```
 

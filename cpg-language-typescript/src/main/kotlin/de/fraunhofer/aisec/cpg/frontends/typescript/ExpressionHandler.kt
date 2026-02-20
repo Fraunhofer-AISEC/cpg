@@ -187,7 +187,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         val name = node.children?.last()?.let { this.frontend.codeOf(it) } ?: ""
 
-        return newMember(name, base, unknownType(), ".", rawNode = node)
+        return newMemberAccess(name, base, unknownType(), ".", rawNode = node)
     }
 
     private fun handleCall(node: TypeScriptNode): Expression {
@@ -199,7 +199,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         call =
             if (propertyAccess != null) {
                 val memberExpressionExpression =
-                    this.handle(propertyAccess) as? Member
+                    this.handle(propertyAccess) as? MemberAccess
                         ?: return ProblemExpression("node is not a member expression")
 
                 newMemberCall(memberExpressionExpression, rawNode = node)

@@ -36,11 +36,11 @@ import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayConstruction
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArray
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.query.value
 
@@ -106,7 +106,7 @@ class ArrayValue : Value<LatticeInterval> {
                 LatticeInterval.Bounded(length, length)
                 // node.initializers.fold(0L) { acc, init -> acc + getSize(init) }
             }
-            is NewArray -> {
+            is ArrayConstruction -> {
                 if (node.initializer != null) {
                     getSize(node.initializer!!)
                 } else {

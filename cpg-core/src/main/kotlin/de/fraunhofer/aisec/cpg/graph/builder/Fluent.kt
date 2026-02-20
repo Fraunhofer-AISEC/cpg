@@ -342,8 +342,8 @@ fun LanguageFrontend<*, *>.returnStmt(init: ReturnStatement.() -> Unit): ReturnS
 }
 
 context(holder: Holder<out Statement>)
-fun LanguageFrontend<*, *>.subscriptExpr(init: (Subscript.() -> Unit)? = null): Subscript {
-    val node = newSubscript().apply { this.location = getCallerFileAndLine() }
+fun LanguageFrontend<*, *>.subscriptExpr(init: (Subscription.() -> Unit)? = null): Subscription {
+    val node = newSubscription().apply { this.location = getCallerFileAndLine() }
 
     if (init != null) {
         init(node)
@@ -480,8 +480,8 @@ fun LanguageFrontend<*, *>.problemDecl(
  *
  * The type of expression is determined whether [name] is either a [Name] with a [Name.parent] or if
  * it can be parsed as a FQN in the given language. It also automatically creates either a
- * [Reference] or [Member] and sets it as the [Call.callee]. The [init] block can be used to create
- * further sub-nodes as well as configuring the created node itself.
+ * [Reference] or [MemberAccess] and sets it as the [Call.callee]. The [init] block can be used to
+ * create further sub-nodes as well as configuring the created node itself.
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.call(
@@ -494,7 +494,7 @@ fun LanguageFrontend<*, *>.call(
     val node =
         if (parsedName.parent != null) {
             newMemberCall(
-                    newMember(
+                    newMemberAccess(
                             parsedName.localName,
                             memberOrRef(parsedName.parent).apply {
                                 this.location = getCallerFileAndLine()
@@ -529,8 +529,8 @@ fun LanguageFrontend<*, *>.call(
  *
  * The type of expression is determined whether [localName] is either a [Name] with a [Name.parent]
  * or if it can be parsed as a FQN in the given language. It also automatically creates either a
- * [Reference] or [Member] and sets it as the [Call.callee]. The [init] block can be used to create
- * further sub-nodes as well as configuring the created node itself.
+ * [Reference] or [MemberAccess] and sets it as the [Call.callee]. The [init] block can be used to
+ * create further sub-nodes as well as configuring the created node itself.
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.memberCall(
@@ -542,7 +542,7 @@ fun LanguageFrontend<*, *>.memberCall(
     // Try to parse the name
     val node =
         newMemberCall(
-                newMember(localName, base).apply { this.location = getCallerFileAndLine() },
+                newMemberAccess(localName, base).apply { this.location = getCallerFileAndLine() },
                 isStatic,
             )
             .apply { this.location = getCallerFileAndLine() }
@@ -560,8 +560,8 @@ fun LanguageFrontend<*, *>.memberCall(
 }
 
 /**
- * Creates a new [Construct] in the Fluent Node DSL for the translation record/type with the given
- * [name] and adds it to the nearest enclosing [Holder]. Depending on whether it is a
+ * Creates a new [Construction] in the Fluent Node DSL for the translation record/type with the
+ * given [name] and adds it to the nearest enclosing [Holder]. Depending on whether it is a
  * [StatementHolder] it is added to the list of [StatementHolder.statements] or in case of an
  * [ArgumentHolder], the function [ArgumentHolder.addArgument] is invoked. The [init] block can be
  * used to create further sub-nodes as well as configuring the created node itself.
@@ -569,9 +569,9 @@ fun LanguageFrontend<*, *>.memberCall(
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.construct(
     name: CharSequence,
-    init: (Construct.() -> Unit)? = null,
-): Construct {
-    val node = newConstruct(parseName(name)).apply { this.location = getCallerFileAndLine() }
+    init: (Construction.() -> Unit)? = null,
+): Construction {
+    val node = newConstruction(parseName(name)).apply { this.location = getCallerFileAndLine() }
     node.type = t(name)
 
     if (init != null) {
@@ -619,7 +619,7 @@ fun LanguageFrontend<*, *>.new(init: (New.() -> Unit)? = null): New {
 fun LanguageFrontend<*, *>.memberOrRef(name: Name, type: Type = unknownType()): Expression {
     val node =
         if (name.parent != null) {
-            newMember(
+            newMemberAccess(
                     name.localName,
                     memberOrRef(name.parent).apply { this.location = getCallerFileAndLine() },
                 )
@@ -1126,16 +1126,16 @@ fun Expression.line(i: Int): Expression {
 }
 
 /**
- * Creates a new [Member] in the Fluent Node DSL and invokes [ArgumentHolder.addArgument] of the
- * nearest enclosing [Holder], but only if it is an [ArgumentHolder]. If the [name] doesn't already
- * contain a fqn, we add an implicit "this" as base.
+ * Creates a new [MemberAccess] in the Fluent Node DSL and invokes [ArgumentHolder.addArgument] of
+ * the nearest enclosing [Holder], but only if it is an [ArgumentHolder]. If the [name] doesn't
+ * already contain a fqn, we add an implicit "this" as base.
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.member(
     name: CharSequence,
     base: Expression? = null,
     operatorCode: String = ".",
-): Member {
+): MemberAccess {
     val parsedName = parseName(name)
     val type =
         if (parsedName.parent != null) {
@@ -1151,7 +1151,7 @@ fun LanguageFrontend<*, *>.member(
     val memberBase = base ?: this.memberOrRef(parsedName.parent ?: this.parseName("this"), type)
 
     val node =
-        newMember(name, memberBase, operatorCode = operatorCode).apply {
+        newMemberAccess(name, memberBase, operatorCode = operatorCode).apply {
             this.location = getCallerFileAndLine()
         }
 

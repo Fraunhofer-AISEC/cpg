@@ -159,7 +159,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         val base = handle(instanceFieldRef.base)
 
         val ref =
-            newMember(
+            newMemberAccess(
                 instanceFieldRef.fieldSignature.name,
                 base,
                 frontend.typeOf(instanceFieldRef.fieldSignature.type),
@@ -172,8 +172,8 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
     private fun handleStaticFieldRef(staticFieldRef: JStaticFieldRef) =
         staticFieldRef.fieldSignature.toStaticRef()
 
-    private fun handleArrayRef(arrayRef: JArrayRef): Subscript {
-        val sub = newSubscript(rawNode = arrayRef)
+    private fun handleArrayRef(arrayRef: JArrayRef): Subscription {
+        val sub = newSubscription(rawNode = arrayRef)
         sub.arrayExpression = handle(arrayRef.base)
         sub.subscriptExpression = handle(arrayRef.index)
 
@@ -187,7 +187,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         // Not really necessary, but since we already have the type information, we can use it
         base.type = frontend.typeOf(invokeExpr.methodSignature.declClassType)
 
-        val callee = newMember(invokeExpr.methodSignature.name, base)
+        val callee = newMemberAccess(invokeExpr.methodSignature.name, base)
 
         val call = newMemberCall(callee, rawNode = invokeExpr)
         call.arguments = invokeExpr.args.mapNotNull { handle(it) }.toMutableList()
@@ -216,7 +216,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         // This is probably a constructor call
         return if (invokeExpr.methodSignature.name == "<init>") {
             val type = frontend.typeOf(invokeExpr.methodSignature.declClassType)
-            val construct = newConstruct(rawNode = invokeExpr)
+            val construct = newConstruction(rawNode = invokeExpr)
             construct.callee = newReference(Name("<init>", type.name))
             construct.type = type
 
@@ -260,16 +260,16 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
     private fun handleNewExpr(newExpr: JNewExpr) =
         newNew(frontend.typeOf(newExpr.type), rawNode = newExpr)
 
-    private fun handleNewArrayExpr(newArrayExpr: JNewArrayExpr): NewArray {
-        val new = newNewArray(rawNode = newArrayExpr)
+    private fun handleNewArrayExpr(newArrayExpr: JNewArrayExpr): ArrayConstruction {
+        val new = newArrayConstruction(rawNode = newArrayExpr)
         new.type = frontend.typeOf(newArrayExpr.type)
         new.dimensions = listOfNotNull(handle(newArrayExpr.size)).toMutableList()
 
         return new
     }
 
-    private fun handleNewMultiArrayExpr(newMultiArrayExpr: JNewMultiArrayExpr): NewArray {
-        val new = newNewArray(rawNode = newMultiArrayExpr)
+    private fun handleNewMultiArrayExpr(newMultiArrayExpr: JNewMultiArrayExpr): ArrayConstruction {
+        val new = newArrayConstruction(rawNode = newMultiArrayExpr)
         new.type = frontend.typeOf(newMultiArrayExpr.type)
         new.dimensions = newMultiArrayExpr.sizes.mapNotNull { handle(it) }.toMutableList()
 

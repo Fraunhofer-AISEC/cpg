@@ -40,14 +40,14 @@ import org.neo4j.ogm.annotation.Relationship
  * combination with a [Variable].
  */
 // TODO Merge and/or refactor with new Expression
-class NewArray : Expression(), HasInitializer {
+class ArrayConstruction : Expression(), HasInitializer {
     @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
 
     /**
      * The initializer of the expression, if present. Many languages, such as Java, either specify
      * [dimensions] or an initializer.
      */
-    override var initializer by unwrapping(NewArray::initializerEdge)
+    override var initializer by unwrapping(ArrayConstruction::initializerEdge)
 
     /**
      * Specifies the dimensions of the array that is to be created. Many languages, such as Java,
@@ -58,7 +58,7 @@ class NewArray : Expression(), HasInitializer {
     var dimensionEdges = astEdgesOf<Expression>()
 
     /** Virtual property to access [dimensionEdges] without property edges. */
-    var dimensions by unwrapping(NewArray::dimensionEdges)
+    var dimensions by unwrapping(ArrayConstruction::dimensionEdges)
 
     /** Adds an [Expression] to the existing [dimensions]. */
     fun addDimension(expression: Expression) {
@@ -67,7 +67,7 @@ class NewArray : Expression(), HasInitializer {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is NewArray) return false
+        if (other !is ArrayConstruction) return false
         return (super.equals(other) &&
             initializer == other.initializer &&
             dimensions == other.dimensions &&

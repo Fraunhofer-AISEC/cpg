@@ -441,7 +441,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         }
 
         // it has an array creation initializer
-        val ace = a.initializer as? NewArray
+        val ace = a.initializer as? ArrayConstruction
         assertNotNull(ace)
 
         // which has a initializer list (1 entry)
@@ -457,7 +457,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val b = (statements[1] as? DeclarationStatement)?.singleDeclaration as? Variable
 
         // initializer is array subscription
-        val ase = b?.initializer as? Subscript
+        val ase = b?.initializer as? Subscription
         assertNotNull(ase)
         assertEquals(a, (ase.arrayExpression as? Reference)?.refersTo)
         assertEquals(0, (ase.subscriptExpression as? Literal<*>)?.value)
@@ -487,7 +487,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val l = (statements[1] as? DeclarationStatement)?.singleDeclaration as? Variable
         assertLocalName("l", l)
 
-        val length = l?.initializer as? Member
+        val length = l?.initializer as? MemberAccess
         assertNotNull(length)
         assertLocalName("length", length)
         assertLocalName("int", length.type)
@@ -641,7 +641,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             val op = constructor.bodyOrNull<Assign>(0)
             assertNotNull(op)
 
-            val lhs = op.lhs<Member>()
+            val lhs = op.lhs<MemberAccess>()
             val receiver = (lhs?.base as? Reference)?.refersTo as? Variable?
             assertNotNull(receiver)
             assertLocalName("this", receiver)
@@ -776,7 +776,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val assign = doSomething.bodyOrNull<Assign>()
         assertNotNull(assign)
 
-        val ref = ((assign.rhs<Member>())?.base as Reference).refersTo
+        val ref = ((assign.rhs<MemberAccess>())?.base as Reference).refersTo
         assertNotNull(ref)
         assertSame(ref, thisOuterClass)
     }
@@ -884,15 +884,17 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val entryOne = enum.entries.singleOrNull { it.name.localName == "VALUE_ONE" }
         assertEquals(
             1,
-            ((entryOne?.initializer as? Construct)?.arguments?.singleOrNull() as? Literal<*>)?.value,
+            ((entryOne?.initializer as? Construction)?.arguments?.singleOrNull() as? Literal<*>)
+                ?.value,
         )
-        assertEquals(constructor, (entryOne?.initializer as? Construct)?.constructor)
+        assertEquals(constructor, (entryOne?.initializer as? Construction)?.constructor)
         val entryTwo = enum.entries.singleOrNull { it.name.localName == "VALUE_TWO" }
         assertEquals(
             2,
-            ((entryTwo?.initializer as? Construct)?.arguments?.singleOrNull() as? Literal<*>)?.value,
+            ((entryTwo?.initializer as? Construction)?.arguments?.singleOrNull() as? Literal<*>)
+                ?.value,
         )
-        assertEquals(constructor, (entryTwo?.initializer as? Construct)?.constructor)
+        assertEquals(constructor, (entryTwo?.initializer as? Construction)?.constructor)
 
         val mainMethod = enum.methods["main"]
         assertNotNull(mainMethod)

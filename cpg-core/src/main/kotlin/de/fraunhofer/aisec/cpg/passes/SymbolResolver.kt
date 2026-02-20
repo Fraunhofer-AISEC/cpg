@@ -55,13 +55,13 @@ import org.slf4j.LoggerFactory
 /**
  * Creates new connections between the place where a variable is declared and where it is used.
  *
- * A field access is modeled with a [Member]. After AST building, its base and member references are
- * set to [Reference] stubs. This pass resolves those references and makes the member point to the
- * appropriate [Field] and the base to the "this" [Field] of the containing class. It is also
- * capable of resolving references to fields that are inherited from a superclass and thus not
- * declared in the actual base class. When base or member declarations are not found in the graph, a
- * new "inferred" [Field] is being created that is then used to collect all usages to the same
- * unknown declaration. [Reference] stubs are removed from the graph after being resolved.
+ * A field access is modeled with a [MemberAccess]. After AST building, its base and member
+ * references are set to [Reference] stubs. This pass resolves those references and makes the member
+ * point to the appropriate [Field] and the base to the "this" [Field] of the containing class. It
+ * is also capable of resolving references to fields that are inherited from a superclass and thus
+ * not declared in the actual base class. When base or member declarations are not found in the
+ * graph, a new "inferred" [Field] is being created that is then used to collect all usages to the
+ * same unknown declaration. [Reference] stubs are removed from the graph after being resolved.
  *
  * Accessing a local variable is modeled directly with a [Reference]. This step of the pass doesn't
  * remove the [Reference] nodes like in the field usage case but rather makes their "refersTo" point
@@ -75,9 +75,9 @@ import org.slf4j.LoggerFactory
  * current class, but rather has its implementation in a superclass, and sets the pointer
  * accordingly.
  *
- * Constructor calls with [Construct] are resolved in such a way that their [Construct.instantiates]
- * points to the correct [Record]. Additionally, the [Construct.constructor] is set to the according
- * [Constructor].
+ * Constructor calls with [Construction] are resolved in such a way that their
+ * [Construction.instantiates] points to the correct [Record]. Additionally, the
+ * [Construction.constructor] is set to the according [Constructor].
  *
  * This pass should NOT use any DFG edges because they are computed / adjusted in a later stage.
  */
@@ -230,7 +230,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         // Ignore references to "super" if the language has super expressions, because they will be
-        // handled separately in handleMember
+        // handled separately in handleMemberAccess
         if (language is HasSuperClasses && ref.name.localName == language.superClassKeyword) {
             return
         }
@@ -325,14 +325,14 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * This function handles resolving of a [Member] in the [ScopeManager.currentRecord]. This works
-     * similar to [handleReference]. First, we set the [Member.candidates] based on
+     * This function handles resolving of a [MemberAccess] in the [ScopeManager.currentRecord]. This
+     * works similar to [handleReference]. First, we set the [MemberAccess.candidates] based on
      * [resolveMemberByName], which internally calls [ScopeManager.lookupSymbolByName] based on the
      * current class and its parent classes. Then, if we resolve a [MemberCall], we abort (and later
-     * pick up resolving in [handleCall]). In case of a field access, we set the [Member.refersTo]
-     * based on [Language.bestViableReferenceCandidate].
+     * pick up resolving in [handleCall]). In case of a field access, we set the
+     * [MemberAccess.refersTo] based on [Language.bestViableReferenceCandidate].
      */
-    protected open fun handleMember(current: Member) {
+    protected open fun handleMemberAccess(current: MemberAccess) {
         // Some locals for easier smart casting
         val base = current.base
         val language = current.language
@@ -387,13 +387,13 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     /**
      * This function resolves a possible overloaded -> (arrow) operator, for languages which support
      * operator overloading. The implicit call to the overloaded operator function is inserted as
-     * base for the Member. This can be the case for a [Member] or [MemberCall]
+     * base for the MemberAccess. This can be the case for a [MemberAccess] or [MemberCall]
      */
     private fun resolveOverloadedArrowOperator(ex: Expression): Type? {
         var type: Type? = null
         if (
             ex.language is HasOperatorOverloading &&
-                ex is Member &&
+                ex is MemberAccess &&
                 ex.operatorCode == "->" &&
                 ex.base.type !is PointerType
         ) {
@@ -419,9 +419,9 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
      */
     protected open fun handle(node: Node?) {
         when (node) {
-            is Member -> handleMember(node)
+            is MemberAccess -> handleMemberAccess(node)
             is Reference -> handleReference(node)
-            is Construct -> handleConstruct(node)
+            is Construction -> handleConstruction(node)
             is Call -> handleCall(node)
             is HasOverloadedOperation -> handleOverloadedOperator(node)
         }
@@ -433,7 +433,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     /**
      * This function handles the resolution of a [Call] based on a list of candidates. The
      * candidates are taken from [Call.callee] which are set either in [handleReference] or
-     * [handleMember], depending on the type.
+     * [handleMemberAccess], depending on the type.
      *
      * In any case, the candidates are then resolved with the arguments of the call expression using
      * [resolveWithArguments]. The result of this resolution is stored in [Call.invokes] and
@@ -453,7 +453,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         // If the base type is unknown, we cannot resolve the call
         if (
-            callee is Member &&
+            callee is MemberAccess &&
                 callee.base.type is UnknownType &&
                 callee.base.assignedTypes.isEmpty()
         ) {
@@ -526,7 +526,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         return candidates
     }
 
-    protected open fun handleConstruct(constructExpression: Construct) {
+    protected open fun handleConstruction(constructExpression: Construction) {
         if (constructExpression.instantiates != null && constructExpression.constructor != null)
             return
         val recordDeclaration = constructExpression.type.root.recordDeclaration
@@ -688,13 +688,13 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     /**
      * @param constructExpression we want to find an invocation target for
-     * @param recordDeclaration associated with the Object the Construct constructs
-     * @return a ConstructDeclaration that is an invocation of the given Construct. If there is no
-     *   valid ConstructDeclaration we will create an implicit ConstructDeclaration that matches the
-     *   Construct.
+     * @param recordDeclaration associated with the Object the Construction constructs
+     * @return a ConstructDeclaration that is an invocation of the given Construction. If there is
+     *   no valid ConstructDeclaration we will create an implicit ConstructDeclaration that matches
+     *   the Construction.
      */
     private fun getConstructorDeclaration(
-        constructExpression: Construct,
+        constructExpression: Construction,
         recordDeclaration: Record,
     ): Constructor? {
         val signature = constructExpression.signature
@@ -719,15 +719,15 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val componentsToTemplates = mutableMapOf<Component, MutableList<Template>>()
 
         /**
-         * Adds implicit duplicates of the TemplateParams to the implicit Construct
+         * Adds implicit duplicates of the TemplateParams to the implicit Construction
          *
          * @param templateParams of the [Variable]/[New]
          * @param constructExpression duplicate TemplateParameters (implicit) to preserve AST, as
-         *   [Construct] uses AST as well as the [Variable]/[New]
+         *   [Construction] uses AST as well as the [Variable]/[New]
          */
         fun addImplicitTemplateParametersToCall(
             templateParams: List<Node>,
-            constructExpression: Construct,
+            constructExpression: Construction,
         ) {
             for (node in templateParams) {
                 if (node is TypeExpression) {
@@ -788,7 +788,7 @@ internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: Cal
 internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>, Type?> {
     val possibleTypes = mutableSetOf<Type>()
     var bestGuess: Type? = null
-    if (ref is Member) {
+    if (ref is MemberAccess) {
         bestGuess = ref.base.type
         possibleTypes.add(ref.base.type)
         possibleTypes.addAll(ref.base.assignedTypes)

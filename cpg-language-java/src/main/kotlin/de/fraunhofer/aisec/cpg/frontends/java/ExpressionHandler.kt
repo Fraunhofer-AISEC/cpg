@@ -97,14 +97,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 
     /**
-     * Creates a new [NewArray], which is usually used as an initializer of a [Variable].
+     * Creates a new [ArrayConstruction], which is usually used as an initializer of a [Variable].
      *
      * @param expr the expression
-     * @return the [NewArray]
+     * @return the [ArrayConstruction]
      */
     private fun handleArrayCreationExpr(expr: Expression): Statement {
         val arrayCreationExpr = expr as ArrayCreationExpr
-        val creationExpression = newNewArray(rawNode = expr)
+        val creationExpression = newArrayConstruction(rawNode = expr)
 
         // in Java, an array creation expression either specifies an initializer or dimensions
 
@@ -150,9 +150,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         return initList
     }
 
-    private fun handleArrayAccessExpr(expr: Expression): Subscript {
+    private fun handleArrayAccessExpr(expr: Expression): Subscription {
         val arrayAccessExpr = expr as ArrayAccessExpr
-        val arraySubsExpression = newSubscript(rawNode = expr)
+        val arraySubsExpression = newSubscription(rawNode = expr)
         (handle(arrayAccessExpr.name)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?)
             ?.let { arraySubsExpression.arrayExpression = it }
@@ -239,9 +239,9 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     /**
      * Translates a Java
      * [field access expression](https://docs.oracle.com/javase/specs/jls/se23/html/jls-15.html#jls-15.11)
-     * into a [Member].
+     * into a [MemberAccess].
      */
-    private fun handleFieldAccessExpression(fieldAccessExpr: FieldAccessExpr): Member {
+    private fun handleFieldAccessExpression(fieldAccessExpr: FieldAccessExpr): MemberAccess {
         var baseType = unknownType()
         var fieldType = unknownType()
 
@@ -262,7 +262,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         base.type = baseType
 
-        return newMember(
+        return newMemberAccess(
             fieldAccessExpr.name.identifier,
             base,
             fieldType,
@@ -362,7 +362,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
      * into an [Expression].
      *
      * Since a name can be a multitude of different things the result can either be a [Reference] or
-     * a [Member].
+     * a [MemberAccess].
      */
     private fun handleNameExpression(
         nameExpr: NameExpr
@@ -520,7 +520,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 base = createImplicitThis()
             }
         }
-        val member = newMember(name, base, unknownType(), ".", rawNode = methodCallExpr.name)
+        val member = newMemberAccess(name, base, unknownType(), ".", rawNode = methodCallExpr.name)
         callExpression = newMemberCall(member, isStatic, rawNode = expr)
         callExpression.type = typeString?.let { this.objectType(it) } ?: unknownType()
         val arguments = methodCallExpr.arguments
@@ -565,11 +565,11 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val constructorName = t.name.localName
 
         // To be consistent with other languages, we need to create a New (for the "new X"
-        // part) as well as a Construct (for the constructor call)
+        // part) as well as a Construction (for the constructor call)
         val newExpression = newNew(t, rawNode = expr)
         val arguments = objectCreationExpr.arguments
 
-        val ctor = newConstruct(rawNode = expr)
+        val ctor = newConstruction(rawNode = expr)
         ctor.type = t
 
         // handle the arguments

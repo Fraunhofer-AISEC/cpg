@@ -340,7 +340,7 @@ class DeclarationTest {
         assertNotNull(callPrintf)
         assertInvokes(callPrintf, printf)
 
-        val expr = result.allChildren<Member>().firstOrNull()
+        val expr = result.allChildren<MemberAccess>().firstOrNull()
         assertNotNull(expr)
 
         val fmt = result.variables["fmt"]
@@ -378,7 +378,7 @@ class DeclarationTest {
 
         val mce = assign.target
         assertNotNull(mce)
-        assertIs<Member>(mce)
+        assertIs<MemberAccess>(mce)
         assertRefersTo(mce, field)
     }
 }

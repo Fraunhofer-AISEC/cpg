@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construct
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ReferenceTag
@@ -70,7 +70,7 @@ class SymbolResolverTest {
             val callmethod2 = method2.calls["method2"]
             assertInvokes(callmethod2, method2)
 
-            val construct = method1.calls { it is Construct }.firstOrNull()
+            val construct = method1.calls { it is Construction }.firstOrNull()
             assertNotNull(construct)
             assertInvokes(construct, constructor)
         }

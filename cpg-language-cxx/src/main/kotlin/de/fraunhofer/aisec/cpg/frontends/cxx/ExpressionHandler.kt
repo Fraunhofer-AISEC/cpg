@@ -77,7 +77,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 frontend.initializerHandler.handle(node)
                     ?: ProblemExpression("could not parse initializer list")
             is IASTArraySubscript -> handleArraySubscript(node)
-            is IASTTypeId -> handleTypeId(node)
+            is IASTTypeId -> handleTypeReference(node)
             is IGNUASTCompoundStatementExpression -> handleCompoundStatementExpression(node)
             is CPPASTNew -> handleNew(node)
             is CPPASTDesignatedInitializer -> handleCXXDesignatedInitializer(node)
@@ -95,7 +95,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     /**
      * This handles a [CPPASTSimpleTypeConstructorExpression], which handles all cases of
      * [Explicit type conversion](https://en.cppreference.com/w/cpp/language/explicit_cast).
-     * Depending on the case, we either handle this as a [Cast] or a [Construct].
+     * Depending on the case, we either handle this as a [Cast] or a [Construction].
      */
     private fun handleSimpleTypeConstructorExpression(
         node: CPPASTSimpleTypeConstructorExpression
@@ -118,7 +118,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // list expression or a constructor initializer
             val initializer = frontend.initializerHandler.handle(node.initializer)
             if (initializer is InitializerList) {
-                val construct = newConstruct(rawNode = node)
+                val construct = newConstruction(rawNode = node)
                 construct.arguments = initializer.initializers
                 construct
             } else initializer ?: newProblemExpression("could not parse initializer")
@@ -179,7 +179,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return frontend.statementHandler.handle(ctx.compoundStatement) as Expression
     }
 
-    private fun handleTypeId(ctx: IASTTypeId): TypeId {
+    private fun handleTypeReference(ctx: IASTTypeId): TypeReference {
         // Eclipse CDT seems to support the following operators
         // * 0 sizeof
         // * 1 typeid
@@ -210,11 +210,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         }
 
         val referencedType = frontend.typeOf(ctx.typeId)
-        return newTypeId(operatorCode, type, referencedType, rawNode = ctx)
+        return newTypeReference(operatorCode, type, referencedType, rawNode = ctx)
     }
 
     private fun handleArraySubscript(ctx: IASTArraySubscript): Expression {
-        val arraySubsExpression = newSubscript(rawNode = ctx)
+        val arraySubsExpression = newSubscription(rawNode = ctx)
         handle(ctx.arrayExpression)?.let { arraySubsExpression.arrayExpression = it }
         handle(ctx.argument)?.let { arraySubsExpression.subscriptExpression = it }
         return arraySubsExpression
@@ -228,7 +228,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return if (ctx.isArrayAllocation) {
             t.array()
             val arrayMods = (ctx.typeId.abstractDeclarator as IASTArrayDeclarator).arrayModifiers
-            val arrayCreate = newNewArray(rawNode = ctx)
+            val arrayCreate = newArrayConstruction(rawNode = ctx)
             arrayCreate.type = t
             for (arrayMod in arrayMods) {
                 val constant = handle(arrayMod.constantExpression)
@@ -257,7 +257,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // Therefore, CDT does not have an explicit construct expression, so we need create
                 // an implicit one
                 initializer =
-                    newConstruct(t.name.localName).implicit(code = "${t.name.localName}()")
+                    newConstruction(t.name.localName).implicit(code = "${t.name.localName}()")
                 initializer.type = t
             }
 
@@ -266,7 +266,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             if (newExpression.templateParameters.isNotEmpty()) {
                 addImplicitTemplateParametersToCall(
                     newExpression.templateParameters,
-                    initializer as Construct,
+                    initializer as Construction,
                 )
             }
 
@@ -345,7 +345,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     /**
      * Translates a C/C++
      * [member access](https://en.cppreference.com/w/cpp/language/operator_member_access) into a
-     * [Member].
+     * [MemberAccess].
      */
     private fun handleFieldReference(ctx: IASTFieldReference): Expression {
         val base = handle(ctx.fieldOwner) ?: return newProblemExpression("base of field is null")
@@ -359,7 +359,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 ctx.fieldName.toString()
             }
 
-        return newMember(
+        return newMemberAccess(
             name,
             base,
             unknownType(),
@@ -430,7 +430,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val reference = handle(ctx.functionNameExpression)
         val callExpression: Call
         when {
-            reference is Member -> {
+            reference is MemberAccess -> {
                 callExpression = newMemberCall(reference, rawNode = ctx)
                 if (
                     (ctx.functionNameExpression as? IASTFieldReference)?.fieldName
@@ -754,7 +754,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val lhs =
             when (des) {
                 is CPPASTArrayDesignator -> {
-                    val sub = newSubscript()
+                    val sub = newSubscription()
                     sub.arrayExpression = ref
                     handle(des.subscriptExpression)?.let { sub.subscriptExpression = it }
                     sub
@@ -765,7 +765,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     for (field in
                         ctx.designators.toList().filterIsInstance<CPPASTFieldDesignator>()) {
                         // the old ref is our new base
-                        ref = newMember(field.name.toString(), ref, rawNode = field)
+                        ref = newMemberAccess(field.name.toString(), ref, rawNode = field)
                     }
                     ref
                 }
@@ -806,13 +806,13 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val lhs =
             when (des) {
                 is CASTArrayDesignator -> {
-                    val sub = newSubscript(rawNode = des)
+                    val sub = newSubscription(rawNode = des)
                     sub.arrayExpression = ref
                     handle(des.subscriptExpression)?.let { sub.subscriptExpression = it }
                     sub
                 }
                 is CASTArrayRangeDesignator -> {
-                    val sub = newSubscript(rawNode = des)
+                    val sub = newSubscription(rawNode = des)
                     sub.arrayExpression = ref
 
                     val range = newRange(rawNode = des)
@@ -828,7 +828,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     for (field in
                         ctx.designators.toList().filterIsInstance<CASTFieldDesignator>()) {
                         // the old ref is our new base
-                        ref = newMember(field.name.toString(), ref, rawNode = field)
+                        ref = newMemberAccess(field.name.toString(), ref, rawNode = field)
                     }
                     ref
                 }
@@ -847,10 +847,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return newAssign(lhs = listOfNotNull(lhs), rhs = listOfNotNull(rhs), rawNode = ctx)
     }
 
-    private fun handleTypeIdInitializerExpression(ctx: CASTTypeIdInitializerExpression): Construct {
+    private fun handleTypeIdInitializerExpression(ctx: CASTTypeIdInitializerExpression): Construction {
         val type = frontend.typeOf(ctx.typeId)
 
-        val construct = newConstruct(type.name, rawNode = ctx)
+        val construct = newConstruction(type.name, rawNode = ctx)
 
         // The only supported initializer is an initializer list
         (ctx.initializer as? IASTInitializerList)?.let {

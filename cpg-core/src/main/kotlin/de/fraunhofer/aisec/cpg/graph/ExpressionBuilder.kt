@@ -153,17 +153,17 @@ fun MetadataProvider.newNew(type: Type = unknownType(), rawNode: Any? = null): N
 }
 
 /**
- * Creates a new [Construct]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [Construction]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newConstruct(
+fun MetadataProvider.newConstruction(
     name: CharSequence? = EMPTY_NAME,
     rawNode: Any? = null,
-): Construct {
-    val node = Construct()
+): Construction {
+    val node = Construction()
     node.applyMetadata(this, name, rawNode, true)
 
     log(node)
@@ -333,19 +333,20 @@ fun MetadataProvider.newMemberCall(
 }
 
 /**
- * Creates a new [Member]. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [MemberAccess]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newMember(
+fun MetadataProvider.newMemberAccess(
     name: CharSequence?,
     base: Expression,
     memberType: Type = unknownType(),
     operatorCode: String? = ".",
     rawNode: Any? = null,
-): Member {
-    val node = Member()
+): MemberAccess {
+    val node = MemberAccess()
     node.applyMetadata(this, name, rawNode, true)
 
     node.base = base
@@ -371,18 +372,19 @@ fun MetadataProvider.newCast(rawNode: Any? = null): Cast {
 }
 
 /**
- * Creates a new [TypeId]. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [TypeReference]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newTypeId(
+fun MetadataProvider.newTypeReference(
     operatorCode: String,
     type: Type = unknownType(),
     referencedType: Type = unknownType(),
     rawNode: Any? = null,
-): TypeId {
-    val node = TypeId()
+): TypeReference {
+    val node = TypeReference()
     node.applyMetadata(this, operatorCode, rawNode, true)
 
     node.operatorCode = operatorCode
@@ -394,14 +396,14 @@ fun MetadataProvider.newTypeId(
 }
 
 /**
- * Creates a new [Subscript]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [Subscription]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newSubscript(rawNode: Any? = null): Subscript {
-    val node = Subscript()
+fun MetadataProvider.newSubscription(rawNode: Any? = null): Subscription {
+    val node = Subscription()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
@@ -430,14 +432,14 @@ fun MetadataProvider.newRange(
 }
 
 /**
- * Creates a new [NewArray]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [ArrayConstruction]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newNewArray(rawNode: Any? = null): NewArray {
-    val node = NewArray()
+fun MetadataProvider.newArrayConstruction(rawNode: Any? = null): ArrayConstruction {
+    val node = ArrayConstruction()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)

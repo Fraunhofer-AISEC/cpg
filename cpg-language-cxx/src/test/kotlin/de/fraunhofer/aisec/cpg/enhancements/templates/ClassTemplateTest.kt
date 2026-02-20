@@ -96,7 +96,7 @@ internal class ClassTemplateTest : BaseTest() {
 
     private fun testClassTemplateInvocation(
         pairConstructorDeclaration: Constructor?,
-        constructExpression: Construct,
+        constructExpression: Construction,
         pair: Record?,
         pairType: ObjectType,
         template: RecordTemplate?,
@@ -157,7 +157,7 @@ internal class ClassTemplateTest : BaseTest() {
 
         val pairConstructorDecl = findByUniqueName(result.allChildren<Constructor>(), "Pair")
         val constructExpression =
-            findByUniquePredicate(result.allChildren()) { c: Construct -> c.code == "Pair()" }
+            findByUniquePredicate(result.allChildren()) { c: Construction -> c.code == "Pair()" }
         val point1 = findByUniqueName(result.variables, "point1")
 
         // Test Template Structure
@@ -205,7 +205,7 @@ internal class ClassTemplateTest : BaseTest() {
 
         val pairConstructorDecl = findByUniqueName(result.allChildren<Constructor>(), "Pair")
         val constructExpr =
-            findByUniquePredicate(result.allChildren<Construct>()) { it.code == "Pair()" }
+            findByUniquePredicate(result.allChildren<Construction>()) { it.code == "Pair()" }
         val literal3 = findByUniquePredicate(result.literals) { it.value == 3 && !it.isImplicit }
         val literal3Implicit =
             findByUniquePredicate(result.literals) { it.value == 3 && it.isImplicit }
@@ -250,7 +250,7 @@ internal class ClassTemplateTest : BaseTest() {
         template: RecordTemplate?,
         pair: Record?,
         pairConstructorDeclaration: Constructor?,
-        constructExpression: Construct,
+        constructExpression: Construction,
         point1: Variable,
     ) {
         assertEquals(pair, constructExpression.instantiates)
@@ -297,7 +297,7 @@ internal class ClassTemplateTest : BaseTest() {
         val second = findByUniqueName(result.fields, "second")
         val point1 = findByUniqueName(result.variables, "point1")
         val constructExpr =
-            findByUniquePredicate(result.allChildren<Construct>()) { it.code == "Pair()" }
+            findByUniquePredicate(result.allChildren<Construction>()) { it.code == "Pair()" }
         assertEquals(1, template.realizations.size)
         assertEquals(pair, template.realizations[0])
         assertEquals(2, template.parameters.size)
@@ -348,7 +348,7 @@ internal class ClassTemplateTest : BaseTest() {
             )
         val pair = findByUniqueName(result.records, "Pair")
         val constructExpr =
-            findByUniquePredicate(result.allChildren<Construct>()) { it.code == "Pair()" }
+            findByUniquePredicate(result.allChildren<Construction>()) { it.code == "Pair()" }
         val literal2 = findByUniquePredicate(result.literals) { it.value == 2 && !it.isImplicit }
         assertNotNull(literal2)
         val literal2Implicit =
@@ -401,7 +401,7 @@ internal class ClassTemplateTest : BaseTest() {
         val paramA = findByUniqueName(result.parameters, "A")
         val paramB = findByUniqueName(result.parameters, "B")
         val constructExpression =
-            findByUniquePredicate(result.allChildren()) { c: Construct -> c.code == "Pair()" }
+            findByUniquePredicate(result.allChildren()) { c: Construction -> c.code == "Pair()" }
         val literal1 = findByUniquePredicate(result.literals) { it.value == 1 }
         assertEquals(4, template.parameters.size)
         assertEquals(paramA, template.parameters[2])
@@ -484,7 +484,7 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(typeT, tArray.elementType)
 
         val constructExpr =
-            findByUniquePredicate(result.allChildren<Construct>()) { it.code == "Array()" }
+            findByUniquePredicate(result.allChildren<Construction>()) { it.code == "Array()" }
         assertEquals(template, constructExpr.templateInstantiation)
         assertEquals(array, constructExpr.instantiates)
         assertLocalName("int", constructExpr.templateArguments[0])
@@ -511,7 +511,7 @@ internal class ClassTemplateTest : BaseTest() {
             )
         val array = findByUniqueName(result.records, "Array")
         val constructExpression =
-            findByUniquePredicate(result.allChildren()) { c: Construct -> c.code == "Array()" }
+            findByUniquePredicate(result.allChildren()) { c: Construction -> c.code == "Array()" }
         val literal5 =
             findByUniquePredicate(result.literals) {
                 it.value == 5 && it.location!!.region.endColumn == 41 && !it.isImplicit

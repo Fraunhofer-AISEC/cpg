@@ -46,7 +46,7 @@ class OperatorCall : Call(), HasOperatorCode, HasBase {
     /**
      * The base object. This is basically a shortcut to accessing the base of the [callee], if it
      * has one (i.e., if it implements [HasBase]). This is the case for example, if it is a
-     * [Member].
+     * [MemberAccess].
      */
     override val base: Expression?
         get() {
@@ -61,7 +61,7 @@ class OperatorCall : Call(), HasOperatorCode, HasBase {
 fun operatorCallFromDeclaration(decl: Operator, op: HasOverloadedOperation): OperatorCall {
     return with(decl) {
         val ref =
-            newMember(decl.name, op.operatorBase, operatorCode = ".")
+            newMemberAccess(decl.name, op.operatorBase, operatorCode = ".")
                 .implicit(decl.name.localName, location = op.location)
         ref.refersTo = decl
         val call =

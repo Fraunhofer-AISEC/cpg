@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
@@ -60,14 +60,14 @@ class JavaExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node ->
             when (node) {
-                is Member -> handleMember(node)
+                is MemberAccess -> handleMemberAccess(node)
             }
         }
 
         walker.iterate(tu)
     }
 
-    fun handleMember(me: Member) {
+    fun handleMemberAccess(me: MemberAccess) {
         val parent = me.astParent
 
         // For now, we are only interested in fields and not in calls, since this will open another

@@ -445,7 +445,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return switchStatement
     }
 
-    private fun handleExplicitConstructorInvocation(stmt: Statement): Construct {
+    private fun handleExplicitConstructorInvocation(stmt: Statement): Construction {
         val explicitConstructorInvocationStmt = stmt.asExplicitConstructorInvocationStmt()
         var containingClass = ""
         val currentRecord = frontend.scopeManager.currentRecord
@@ -458,7 +458,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         }
 
         val name = containingClass
-        val node = this.newConstruct(name, rawNode = null)
+        val node = this.newConstruction(name, rawNode = null)
         node.type = unknownType()
 
         // Create a reference either to "this"

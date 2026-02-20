@@ -44,7 +44,7 @@ import org.neo4j.ogm.annotation.Relationship
  * access of a member function (method) as part of the [MemberCall.callee] property of a
  * [MemberCall].
  */
-class Member : Reference(), HasOverloadedOperation, ArgumentHolder, HasBase {
+class MemberAccess : Reference(), HasOverloadedOperation, ArgumentHolder, HasBase {
     @Relationship("BASE")
     var baseEdge =
         astEdgeOf<Expression>(
@@ -54,7 +54,7 @@ class Member : Reference(), HasOverloadedOperation, ArgumentHolder, HasBase {
                 updateName()
             },
         )
-    override var base by unwrapping(Member::baseEdge)
+    override var base by unwrapping(MemberAccess::baseEdge)
 
     override var operatorCode: String? = null
 
@@ -90,7 +90,7 @@ class Member : Reference(), HasOverloadedOperation, ArgumentHolder, HasBase {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is Member) return false
+        if (other !is MemberAccess) return false
         return super.equals(other) && base == other.base
     }
 

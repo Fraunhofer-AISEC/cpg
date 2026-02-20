@@ -32,7 +32,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents the specification of a range (e.g., of an array). Usually used in combination with an
- * [Subscript] as the [Subscript.subscriptExpression].
+ * [Subscription] as the [Subscription.subscriptExpression].
  *
  * Examples can be found in Go:
  * ```go

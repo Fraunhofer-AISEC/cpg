@@ -120,7 +120,7 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
         val base =
             handle(node.receiverNode) as? Expression
                 ?: return ProblemExpression("could not parse base")
-        val callee = newMember(node.name.asJavaString(), base)
+        val callee = newMemberAccess(node.name.asJavaString(), base)
 
         val mce = newMemberCall(callee, false)
 

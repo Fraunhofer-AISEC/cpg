@@ -188,7 +188,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     .filter { it.granularity is FullDataflowGranularity }
                     .map { it.start }
                     .toMutableList()
-            if (curr is Member && prevDFGToPush.isEmpty()) {
+            if (curr is MemberAccess && prevDFGToPush.isEmpty()) {
                 // TODO: This is only a workaround!
                 //   If there is nothing found for Members, we may have set the field
                 //   somewhere else but do not yet propagate this to this location (e.g. because it

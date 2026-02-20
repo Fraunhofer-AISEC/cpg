@@ -192,7 +192,7 @@ class MultiValueEvaluatorTest {
         val evaluator = MultiValueEvaluator()
 
         with(TestHandler(TestLanguageFrontend())) {
-            // Construct a fake DFG flow
+            // Construction a fake DFG flow
             val three = newLiteral(3, primitiveType("int"))
             val four = newLiteral(4, primitiveType("int"))
 

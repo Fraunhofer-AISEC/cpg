@@ -347,7 +347,7 @@ class JVMLanguageFrontendTest {
         assertEquals(0, tu.problems.size)
         tu.methods.forEach { println(it.code) }
 
-        val refs = tu.refs.filterIsInstance<Member>()
+        val refs = tu.refs.filterIsInstance<MemberAccess>()
         refs.forEach {
             val refersTo = it.refersTo
             assertNotNull(refersTo, "${it.name} could not be resolved")
@@ -419,7 +419,7 @@ class JVMLanguageFrontendTest {
         assertNotNull(r3write)
 
         var expr = r3write.prevDFG.singleOrNull()
-        assertIs<NewArray>(expr)
+        assertIs<ArrayConstruction>(expr)
         assertLiteralValue(2, expr.dimensions.singleOrNull())
 
         var r1 = create.variables["r1"]
@@ -434,7 +434,7 @@ class JVMLanguageFrontendTest {
         assertNotNull(r2write)
 
         val prevDFG = r2write.prevDFG.singleOrNull()
-        assertIs<Subscript>(prevDFG)
+        assertIs<Subscription>(prevDFG)
         assertRefersTo(prevDFG.arrayExpression, r3)
 
         val createMulti = tu.methods["createMulti"]
@@ -452,7 +452,7 @@ class JVMLanguageFrontendTest {
         assertNotNull(r1write)
 
         expr = r1write.prevDFG.singleOrNull()
-        assertIs<NewArray>(expr)
+        assertIs<ArrayConstruction>(expr)
         listOf(2, 10).forEachIndexed { index, i -> assertLiteralValue(i, expr.dimensions[index]) }
     }
 

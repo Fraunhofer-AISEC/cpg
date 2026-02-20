@@ -43,8 +43,8 @@ class New : Expression(), HasInitializer {
     override var initializer by unwrapping(New::initializerEdge)
 
     /**
-     * We need a way to store the templateParameters that a New might have before the Construct is
-     * created
+     * We need a way to store the templateParameters that a New might have before the Construction
+     * is created
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
     var templateParameterEdges = astEdgesOf<AstNode>()

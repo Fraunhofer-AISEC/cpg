@@ -162,7 +162,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
                     val initializer =
-                        newConstruct(typeString)
+                        newConstruction(typeString)
                             .codeAndLocationFrom(node)
                             .implicit(code = "$typeString()")
                     initializer.language = node.language
@@ -173,7 +173,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         initializer,
                     )
                 } else if (
-                    currInitializer !is Construct &&
+                    currInitializer !is Construction &&
                         currInitializer is Call &&
                         currInitializer.name.localName == node.type.root.name.localName
                 ) {
@@ -182,7 +182,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     // Note: Cannot simplify call chain due to nullable `Node::code`
                     val signature = arguments.map(Node::code).joinToString(", ")
                     val initializer =
-                        newConstruct(typeString).implicit(code = "$typeString($signature)")
+                        newConstruction(typeString).implicit(code = "$typeString($signature)")
                     initializer.language = node.language
                     initializer.type = node.type
                     initializer.arguments = mutableListOf(*arguments.toTypedArray())

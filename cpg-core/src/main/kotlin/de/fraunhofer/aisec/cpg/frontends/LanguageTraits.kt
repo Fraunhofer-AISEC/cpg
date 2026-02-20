@@ -118,7 +118,10 @@ interface HasSuperClasses : LanguageTrait {
      */
     val superClassKeyword: String
 
-    fun SymbolResolver.handleSuperExpression(memberExpression: Member, curClass: Record): Boolean
+    fun SymbolResolver.handleSuperExpression(
+        memberExpression: MemberAccess,
+        curClass: Record,
+    ): Boolean
 }
 
 /**
@@ -247,7 +250,7 @@ interface HasFunctionStyleCasts : HasCallAmbiguity
  * meaning that constructor calls look like regular call expressions (usually meaning that the
  * language has no dedicated `new` keyword).
  *
- * Since we can therefore not distinguish between a [Call] and a [Construct] in the frontend, we
+ * Since we can therefore not distinguish between a [Call] and a [Construction] in the frontend, we
  * need to employ an additional pass ([ResolveCallAmbiguityPass]) after the initial language
  * frontends are done.
  */

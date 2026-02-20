@@ -467,10 +467,10 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     /**
      * Handles the ['alloca'](https://llvm.org/docs/LangRef.html#alloca-instruction) instruction,
      * which allocates a defined block of memory. The closest what we have in the graph is the
-     * [NewArray], which creates a fixed sized array, i.e., a block of memory.
+     * [ArrayConstruction], which creates a fixed sized array, i.e., a block of memory.
      */
     private fun handleAlloca(instr: LLVMValueRef): Statement {
-        val array = newNewArray(rawNode = instr)
+        val array = newArrayConstruction(rawNode = instr)
 
         array.type = frontend.typeOf(instr)
 
@@ -622,7 +622,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 ProblemNode.ProblemType.TRANSLATION,
                 rawNode = instr,
             )
-        if (operand !is Construct) {
+        if (operand !is Construction) {
             copy = declarationOrNot(operand, instr)
             if (copy is DeclarationStatement) {
                 base =
@@ -638,14 +638,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         for (idx: Int in 0 until numOps) {
             val index = indices.get(idx.toLong())
 
-            if (base is Construct) {
+            if (base is Construction) {
                 if (idx == numOps - 1) {
                     base.setArgument(index, valueToSet)
                     return declarationOrNot(operand, instr)
                 }
                 base = base.arguments[index]
             } else if (baseType is PointerType) {
-                val arrayExpr = newSubscript()
+                val arrayExpr = newSubscription()
                 arrayExpr.arrayExpression = base
                 arrayExpr.name = Name(index.toString())
                 arrayExpr.subscriptExpression = operand
@@ -682,7 +682,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 baseType = field?.type ?: unknownType()
 
                 // construct our member expression
-                expr = newMember(field?.name?.localName, base, baseType, ".")
+                expr = newMemberAccess(field?.name?.localName, base, baseType, ".")
                 log.info("{}", expr)
 
                 // the current expression is the new base
@@ -793,7 +793,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val targetType = frontend.typeOf(instr)
 
             // construct it
-            val construct = newConstruct("")
+            val construct = newConstruction("")
             construct.instantiates = (targetType as? ObjectType)?.recordDeclaration
 
             val ptrDerefConstruct =
@@ -1197,7 +1197,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         compoundStatement.statements += newArrayDecl
 
         val decl = newArrayDecl.declarations[0] as? Variable
-        val arrayExpr = newSubscript(rawNode = instr)
+        val arrayExpr = newSubscription(rawNode = instr)
         arrayExpr.arrayExpression =
             newReference(
                 decl?.name?.toString() ?: Node.EMPTY_NAME,
@@ -1223,7 +1223,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * instruction which is modeled as access to an array at a given index.
      */
     private fun handleExtractelement(instr: LLVMValueRef): Statement {
-        val arrayExpr = newSubscript(rawNode = instr)
+        val arrayExpr = newSubscription(rawNode = instr)
         arrayExpr.arrayExpression = frontend.getOperandValueAtIndex(instr, 0)
         arrayExpr.subscriptExpression = frontend.getOperandValueAtIndex(instr, 1)
 
@@ -1278,7 +1278,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 } else if (array1 is Literal<*> && array1.value == null) {
                     initializers += newLiteral(null, elementType, rawNode = instr)
                 } else {
-                    val arrayExpr = newSubscript(rawNode = instr)
+                    val arrayExpr = newSubscription(rawNode = instr)
                     arrayExpr.arrayExpression = frontend.getOperandValueAtIndex(instr, 0)
                     arrayExpr.subscriptExpression =
                         newLiteral(idxInt, primitiveType("i32"), rawNode = instr)
@@ -1290,7 +1290,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 } else if (array2 is Literal<*> && array2.value == null) {
                     initializers += newLiteral(null, elementType, rawNode = instr)
                 } else {
-                    val arrayExpr = newSubscript(rawNode = instr)
+                    val arrayExpr = newSubscription(rawNode = instr)
                     arrayExpr.arrayExpression = frontend.getOperandValueAtIndex(instr, 1)
                     arrayExpr.subscriptExpression =
                         newLiteral(idxInt - array1Length, primitiveType("i32"), rawNode = instr)

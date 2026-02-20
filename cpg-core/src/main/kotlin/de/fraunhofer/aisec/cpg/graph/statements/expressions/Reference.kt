@@ -79,8 +79,8 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
      * - Second, restrict this set to list to the actual best viable solution
      *
      * In case of call resolution, this is additionally split into two nodes: a [Call], which holds
-     * the arguments and a [Reference] (or [Member]), which is used as the [Call.callee] and holds
-     * the name of the desired function.
+     * the arguments and a [Reference] (or [MemberAccess]), which is used as the [Call.callee] and
+     * holds the name of the desired function.
      *
      * Until we have proper support for AST parents, we need to rely on the [resolutionHelper] to
      * find out if this reference is used as a [Call.callee].
@@ -137,7 +137,7 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
         }
 
         // We also allow updates from our previous DFG nodes; but only for FULL data-flows. This is
-        // important especially for Member nodes (which are also Reference nodes).
+        // important especially for MemberAccess nodes (which are also Reference nodes).
         // Otherwise, an update in the base's type could propagate to a member (since we have a
         // PARTIAL DFG from the base to the member) and this is BAD.
         if (prevFullDFG.contains(src as Node)) {

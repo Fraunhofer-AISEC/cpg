@@ -78,7 +78,7 @@ class ShortcutsTest {
         val newExpr = variable.initializer
         assertIs<New>(newExpr)
         val constructExpr = newExpr.initializer
-        assertIs<Construct>(constructExpr)
+        assertIs<Construction>(constructExpr)
         expected.add(constructExpr)
         val memberCall1 = mainBody.statements[1]
         assertIs<MemberCall>(memberCall1)
@@ -159,7 +159,7 @@ class ShortcutsTest {
         val newExpr = variable.initializer
         assertIs<New>(newExpr)
         val constructExpr = newExpr.initializer
-        assertIs<Construct>(constructExpr)
+        assertIs<Construction>(constructExpr)
         val constructor = constructExpr.constructor
         assertNotNull(constructor)
         expected.add(constructor)
@@ -220,7 +220,7 @@ class ShortcutsTest {
         assertIs<BinaryOperator>(condition)
         expected.add(condition)
         val conditionLhs = condition.lhs
-        assertIs<Member>(conditionLhs)
+        assertIs<MemberAccess>(conditionLhs)
         expected.add(conditionLhs)
         expected.add(conditionLhs.base)
         expected.add(condition.rhs)
@@ -231,7 +231,7 @@ class ShortcutsTest {
         assertIs<Assign>(nestedThenStmt0)
         expected.add(nestedThenStmt0)
         val nestedThenStmt0Lhs = nestedThenStmt0.lhs.singleOrNull()
-        assertIs<Member>(nestedThenStmt0Lhs)
+        assertIs<MemberAccess>(nestedThenStmt0Lhs)
         expected.add(nestedThenStmt0Lhs)
         expected.add(nestedThenStmt0Lhs.base)
 
@@ -245,7 +245,7 @@ class ShortcutsTest {
         assertIs<Assign>(nestedElseStmt0)
         expected.add(nestedElseStmt0)
         val nestedElseStmt0Lhs = nestedElseStmt0.lhs.singleOrNull()
-        assertIs<Member>(nestedElseStmt0Lhs)
+        assertIs<MemberAccess>(nestedElseStmt0Lhs)
         expected.add(nestedElseStmt0Lhs)
         expected.add(nestedElseStmt0Lhs.base)
         val nestedElseStmt0Rhs = nestedElseStmt0.rhs.singleOrNull()
@@ -259,7 +259,7 @@ class ShortcutsTest {
         assertIs<Assign>(outerElseStmt0)
         expected.add(outerElseStmt0)
         val outerElseStmt0Lhs = outerElseStmt0.lhs.singleOrNull()
-        assertIs<Member>(outerElseStmt0Lhs)
+        assertIs<MemberAccess>(outerElseStmt0Lhs)
         expected.add(outerElseStmt0Lhs)
         expected.add(outerElseStmt0Lhs.base)
         val outerElseStmt0Rhs = outerElseStmt0.rhs.singleOrNull()

@@ -164,8 +164,8 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         return newReference(name, rawNode = ident)
     }
 
-    private fun handleIndexExpr(indexExpr: GoStandardLibrary.Ast.IndexExpr): Subscript {
-        val ase = newSubscript(rawNode = indexExpr)
+    private fun handleIndexExpr(indexExpr: GoStandardLibrary.Ast.IndexExpr): Subscription {
+        val ase = newSubscription(rawNode = indexExpr)
         ase.arrayExpression = frontend.expressionHandler.handle(indexExpr.x)
         ase.subscriptExpression = frontend.expressionHandler.handle(indexExpr.index)
 
@@ -223,7 +223,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
         // Differentiate between calls and member calls based on the callee
         val call =
-            if (callee is Member) {
+            if (callee is MemberAccess) {
                 newMemberCall(callee, rawNode = callExpr)
             } else {
                 newCall(callee, name, rawNode = callExpr)
@@ -280,8 +280,8 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         // new is a pointer, so need to reference the type with a pointer
         n.type = type.reference(PointerType.PointerOrigin.POINTER)
 
-        // a new expression also needs an initializer, which is usually a Construct
-        val construct = newConstruct(rawNode = callExpr)
+        // a new expression also needs an initializer, which is usually a Construction
+        val construct = newConstruction(rawNode = callExpr)
         construct.type = type
 
         n.initializer = construct
@@ -299,7 +299,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         val expression =
             // Actually make() can make more than just arrays, i.e. channels and maps
             if (args[0] is GoStandardLibrary.Ast.ArrayType) {
-                val array = newNewArray(rawNode = callExpr)
+                val array = newArrayConstruction(rawNode = callExpr)
 
                 // second argument is a dimension (if this is an array), usually a literal
                 if (args.size > 1) {
@@ -309,7 +309,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             } else {
                 // Create at least a generic construct expression for the given map or channel type
                 // and provide the remaining arguments
-                val construct = newConstruct(rawNode = callExpr)
+                val construct = newConstruction(rawNode = callExpr)
 
                 // Pass the remaining arguments
                 for (expr in args.subList(1.coerceAtMost(args.size - 1), args.size - 1)) {
@@ -334,7 +334,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
         val ref =
             if (isMember) {
-                newMember(selectorExpr.sel.name, base, rawNode = selectorExpr)
+                newMemberAccess(selectorExpr.sel.name, base, rawNode = selectorExpr)
             } else {
                 // we need to set the name to a FQN-style, including the package scope. the call
                 // resolver will then resolve this
@@ -362,11 +362,11 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
     /**
      * This function handles an ast.SliceExpr, which is an extended version of ast.IndexExpr. We are
-     * modeling this as a combination of a [Subscript] that contains a [Range] as its
+     * modeling this as a combination of a [Subscription] that contains a [Range] as its
      * subscriptExpression to share some code between this and an index expression.
      */
-    private fun handleSliceExpr(sliceExpr: GoStandardLibrary.Ast.SliceExpr): Subscript {
-        val ase = newSubscript(rawNode = sliceExpr)
+    private fun handleSliceExpr(sliceExpr: GoStandardLibrary.Ast.SliceExpr): Subscription {
+        val ase = newSubscription(rawNode = sliceExpr)
         ase.arrayExpression = frontend.expressionHandler.handle(sliceExpr.x)
 
         // Build the slice expression
@@ -430,7 +430,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
     /**
      * handleCompositeLit handles a composite literal, which we need to translate into a combination
-     * of a Construct and a list of KeyValues. The problem is that we need to add the list as a
+     * of a Construction and a list of KeyValues. The problem is that we need to add the list as a
      * first argument of the construct expression.
      */
     private fun handleCompositeLit(compositeLit: GoStandardLibrary.Ast.CompositeLit): Expression {

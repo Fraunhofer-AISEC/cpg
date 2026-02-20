@@ -44,7 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Member
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.translationUnit
@@ -205,7 +205,7 @@ internal fun Pass<*>.tryVariableInference(ref: Reference): Variable? {
 }
 
 /**
- * Tries to infer a [Field] from an unresolved [Member] or [Reference] (if the language has
+ * Tries to infer a [Field] from an unresolved [MemberAccess] or [Reference] (if the language has
  * [HasImplicitReceiver]). This will return `null`, if inference was not possible, or if it was
  * turned off in the [InferenceConfiguration].
  *
@@ -248,8 +248,8 @@ internal fun Pass<*>.tryFieldInference(ref: Reference, targetType: ObjectType): 
  * Tries to infer a [Function] or a [Method] from a [Call]. This will return an empty list, if
  * inference was not possible, or if it was turned off in the [InferenceConfiguration].
  *
- * Depending on several factors, e.g., whether the callee has an FQN, was a [Member] or whether the
- * language supports [HasImplicitReceiver] we either infer
+ * Depending on several factors, e.g., whether the callee has an FQN, was a [MemberAccess] or
+ * whether the language supports [HasImplicitReceiver] we either infer
  * - a global [Function]
  * - a [Function] in a namespace
  * - a [Method] in a record using [tryMethodInference]
@@ -272,7 +272,7 @@ internal fun Pass<*>.tryFunctionInference(
     val callee = call.callee
     val (suitableBases, bestGuess) =
         if (
-            callee is Member ||
+            callee is MemberAccess ||
                 callee is Reference &&
                     !call.callee.name.isQualified() &&
                     call.language is HasImplicitReceiver

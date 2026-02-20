@@ -27,14 +27,14 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.edges.get
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayConstruction
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArray
 
 fun Node.evaluate(evaluator: ValueEvaluator = this.language.evaluator): Any? {
     return evaluator.evaluate(this)
 }
 
-val NewArray.capacity: Int
+val ArrayConstruction.capacity: Int
     get() {
         return dimensions.first().evaluate() as Int
     }

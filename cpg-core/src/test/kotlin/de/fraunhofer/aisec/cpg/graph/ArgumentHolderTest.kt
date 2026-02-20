@@ -48,7 +48,7 @@ class ArgumentHolderTest {
                     newDoStatement(),
                     newInitializerList(),
                     newKeyValue(key = ProblemExpression(), value = ProblemExpression()),
-                    newSubscript(),
+                    newSubscription(),
                     newWhileStatement(),
                     newAssign(),
                     newVariable("test"),

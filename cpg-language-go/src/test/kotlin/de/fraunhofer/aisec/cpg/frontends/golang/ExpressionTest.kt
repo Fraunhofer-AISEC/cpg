@@ -85,7 +85,7 @@ class ExpressionTest {
         assertLocalName("int[]", b.type)
 
         // [:1]
-        var slice = assertIs<Range>(assertIs<Subscript>(b.firstAssignment).subscriptExpression)
+        var slice = assertIs<Range>(assertIs<Subscription>(b.firstAssignment).subscriptExpression)
         assertNull(slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
@@ -95,7 +95,7 @@ class ExpressionTest {
         assertLocalName("int[]", c.type)
 
         // [1:]
-        slice = assertIs(assertIs<Subscript>(c.firstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<Subscription>(c.firstAssignment).subscriptExpression)
         assertLiteralValue(1, slice.floor)
         assertNull(slice.ceiling)
         assertNull(slice.third)
@@ -105,7 +105,7 @@ class ExpressionTest {
         assertLocalName("int[]", d.type)
 
         // [0:1]
-        slice = assertIs(assertIs<Subscript>(d.firstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<Subscription>(d.firstAssignment).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
@@ -115,7 +115,7 @@ class ExpressionTest {
         assertLocalName("int[]", e.type)
 
         // [0:1:1]
-        slice = assertIs(assertIs<Subscript>(e.firstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<Subscription>(e.firstAssignment).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertLiteralValue(1, slice.third)

@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Delete
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Subscript
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Subscription
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -200,13 +200,13 @@ class StatementHandlerTest : BaseTest() {
         // Test for `del my_list[2]`
         val deleteStmt2 = deleteExpressions[1]
         assertEquals(1, deleteStmt2.operands.size)
-        assertIs<Subscript>(deleteStmt2.operands.firstOrNull())
+        assertIs<Subscription>(deleteStmt2.operands.firstOrNull())
         assertTrue(deleteStmt2.additionalProblems.isEmpty())
 
         // Test for `del my_dict['b']`
         val deleteStmt3 = deleteExpressions[2]
         assertEquals(1, deleteStmt3.operands.size)
-        assertIs<Subscript>(deleteStmt3.operands.firstOrNull())
+        assertIs<Subscription>(deleteStmt3.operands.firstOrNull())
         assertTrue(deleteStmt3.additionalProblems.isEmpty())
 
         // Test for `del obj.d`
