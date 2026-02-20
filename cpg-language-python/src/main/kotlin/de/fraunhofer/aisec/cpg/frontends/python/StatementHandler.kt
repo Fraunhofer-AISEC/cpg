@@ -498,7 +498,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         node.targets.forEach { target ->
             delete.operands.add(frontend.expressionHandler.handle(target))
 
-            if (target !is Python.AST.Subscription) {
+            if (target !is Python.AST.Subscript) {
                 delete.additionalProblems +=
                     newProblemExpression(
                         problem =

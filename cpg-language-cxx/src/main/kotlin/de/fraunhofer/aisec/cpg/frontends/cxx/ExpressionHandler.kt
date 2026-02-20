@@ -43,13 +43,9 @@ import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTBinaryExpression.*
 import org.eclipse.cdt.core.dom.ast.IASTLiteralExpression.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTConstructorInitializer
-import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTLambda
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTLambdaExpression
 import org.eclipse.cdt.core.dom.ast.gnu.IGNUASTCompoundStatementExpression
-import org.eclipse.cdt.internal.core.dom.parser.c.CASTArrayDesignator
-import org.eclipse.cdt.internal.core.dom.parser.c.CASTArrayRangeDesignator
-import org.eclipse.cdt.internal.core.dom.parser.c.CASTDesignatedInitializer
-import org.eclipse.cdt.internal.core.dom.parser.c.CASTFieldDesignator
-import org.eclipse.cdt.internal.core.dom.parser.c.CASTTypeIdInitializerExpression
+import org.eclipse.cdt.internal.core.dom.parser.c.*
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import org.eclipse.cdt.internal.core.model.ASTStringUtil
 
@@ -157,7 +153,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         // either make the function "mutable" or pass everything by reference.
         lambda.areVariablesMutable =
             (node.declarator as? CPPASTFunctionDeclarator)?.isMutable == true ||
-                node.captureDefault == ICPPASTLambda.CaptureDefault.BY_REFERENCE
+                node.captureDefault == ICPPASTLambdaExpression.CaptureDefault.BY_REFERENCE
 
         val anonymousFunction =
             node.declarator?.let { frontend.declaratorHandler.handle(it) as? Function }

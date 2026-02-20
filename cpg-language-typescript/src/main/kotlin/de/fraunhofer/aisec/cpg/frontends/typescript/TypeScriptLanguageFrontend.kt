@@ -228,7 +228,7 @@ class TypeScriptLanguageFrontend(
 
     private fun handleDecorator(node: TypeScriptNode): Annotation {
         // a decorator can contain a call expression with additional arguments
-        val callExpr = node.firstChild("Call")
+        val callExpr = node.firstChild("CallExpression")
         return if (callExpr != null) {
             val call = this.expressionHandler.handle(callExpr) as Call
 

@@ -534,7 +534,7 @@ fun fromPython(pyObject: Any?): Python.BaseObject {
             "ast.JoinedStr" -> Python.AST.JoinedStr(pyObject)
             "ast.Constant" -> Python.AST.Constant(pyObject)
             "ast.Attribute" -> Python.AST.Attribute(pyObject)
-            "ast.Subscription" -> Python.AST.Subscription(pyObject)
+            "ast.Subscript" -> Python.AST.Subscript(pyObject)
             "ast.Starred" -> Python.AST.Starred(pyObject)
             "ast.Name" -> Python.AST.Name(pyObject)
             "ast.List" -> Python.AST.List(pyObject)

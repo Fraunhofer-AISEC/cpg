@@ -39,7 +39,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handleNode(node: TypeScriptNode): Expression {
         when (node.type) {
-            "Call" -> return handleCall(node)
+            "CallExpression" -> return handleCall(node)
             "PropertyAccessExpression" -> return handlePropertyAccessExpression(node)
             "Identifier" -> return handleIdentifier(node)
             "FirstTemplateToken" -> return handleStringLiteral(node)

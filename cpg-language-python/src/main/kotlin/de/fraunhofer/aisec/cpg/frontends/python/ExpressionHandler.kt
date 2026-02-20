@@ -46,7 +46,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.Tuple -> handleTuple(node)
             is Python.AST.List -> handleList(node)
             is Python.AST.BoolOp -> handleBoolOp(node)
-            is Python.AST.Subscription -> handleSubscription(node)
+            is Python.AST.Subscript -> handleSubscript(node)
             is Python.AST.Slice -> handleSlice(node)
             is Python.AST.Lambda -> handleLambda(node)
             is Python.AST.Set -> handleSet(node)
@@ -323,7 +323,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
         return slice
     }
 
-    private fun handleSubscription(node: Python.AST.Subscription): Expression {
+    private fun handleSubscript(node: Python.AST.Subscript): Expression {
         val subscriptExpression = newSubscription(rawNode = node)
         subscriptExpression.arrayExpression = handle(node.value)
         subscriptExpression.subscriptExpression = handle(node.slice)
