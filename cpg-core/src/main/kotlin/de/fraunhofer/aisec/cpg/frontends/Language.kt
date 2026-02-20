@@ -156,7 +156,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString.toString()]
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
-    fun handlesFile(file: File): Boolean {
+    open fun handlesFile(file: File): Boolean {
         return file.extension in fileExtensions
     }
 

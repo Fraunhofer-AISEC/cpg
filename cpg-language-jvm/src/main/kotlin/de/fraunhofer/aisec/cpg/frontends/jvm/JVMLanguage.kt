@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 
-class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctionOverloading {
+open class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctionOverloading {
     override val fileExtensions: List<String> = listOf("class", "java", "jimple", "jar", "apk")
 
     override val namespaceDelimiter: String = "."
