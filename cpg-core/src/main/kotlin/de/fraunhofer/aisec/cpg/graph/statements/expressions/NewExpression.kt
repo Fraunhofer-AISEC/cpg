@@ -31,9 +31,9 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the creation of a new object through the `new` keyword. */
 class NewExpression : Expression(), HasInitializer {

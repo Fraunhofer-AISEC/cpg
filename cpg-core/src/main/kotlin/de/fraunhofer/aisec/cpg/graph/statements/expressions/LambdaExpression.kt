@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import org.neo4j.ogm.annotation.Relationship
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 
 /**
  * This expression denotes the usage of an anonymous / lambda function. It connects the inner

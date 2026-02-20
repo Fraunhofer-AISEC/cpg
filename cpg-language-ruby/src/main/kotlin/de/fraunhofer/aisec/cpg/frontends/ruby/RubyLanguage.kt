@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
 
 /** The Ruby Language */
@@ -41,13 +42,14 @@ class RubyLanguage :
     HasShortCircuitOperators {
     override val fileExtensions = listOf("rb")
     override val namespaceDelimiter = "::"
-    @Transient override val frontend: KClass<out RubyLanguageFrontend> = RubyLanguageFrontend::class
+    @DoNotPersist
+    override val frontend: KClass<out RubyLanguageFrontend> = RubyLanguageFrontend::class
     override val superClassKeyword = "super"
 
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
 
-    @Transient
+    @DoNotPersist
     /** See [The RubySpec](https://github.com/ruby/spec) */
     override val builtInTypes =
         mapOf(

@@ -29,20 +29,20 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
-import org.neo4j.ogm.annotation.Transient
 
 /** The LLVM IR language. */
 class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     override val fileExtensions = listOf("ll")
     override val namespaceDelimiter = "::"
-    @Transient
+    @DoNotPersist
     override val frontend: KClass<out LLVMIRLanguageFrontend> = LLVMIRLanguageFrontend::class
     override val compoundAssignmentOperators = setOf<String>()
 
     // TODO: In theory, the integers can have any bit-width from 1 to 1^32 bits. It's not known if
     //  they are interpreted as signed or unsigned.
-    @Transient
+    @DoNotPersist
     override val builtInTypes =
         mapOf(
             "i1" to IntegerType("i1", 1, this, NumericType.Modifier.NOT_APPLICABLE),

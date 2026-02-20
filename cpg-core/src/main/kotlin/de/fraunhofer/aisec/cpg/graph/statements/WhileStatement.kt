@@ -33,9 +33,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents a conditional loop statement of the form: `while(...){...}`. The loop body is executed

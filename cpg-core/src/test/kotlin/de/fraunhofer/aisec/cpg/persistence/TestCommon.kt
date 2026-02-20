@@ -100,7 +100,6 @@ class TestCommon {
                 "OVERLAY",
                 "PDG",
                 "SCOPE",
-                "USED_LANGUAGES",
             ),
             relationships.keys.sorted(),
         )

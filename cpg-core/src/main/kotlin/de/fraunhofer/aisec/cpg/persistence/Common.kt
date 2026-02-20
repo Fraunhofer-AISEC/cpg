@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
-import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
+import de.fraunhofer.aisec.cpg.persistence.converters.NameConverter
 import kotlin.collections.plusAssign
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -41,6 +41,7 @@ import kotlin.reflect.KVariance
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.createInstance
 import kotlin.reflect.full.createType
+import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.memberProperties
@@ -49,11 +50,66 @@ import kotlin.reflect.full.withNullability
 import kotlin.reflect.jvm.javaField
 import kotlin.reflect.jvm.javaType
 import kotlin.uuid.Uuid
-import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.Relationship.Direction.INCOMING
-import org.neo4j.ogm.annotation.typeconversion.Convert
-import org.neo4j.ogm.typeconversion.AttributeConverter
-import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
+
+/** This annotation is used to denote that this property or class should not be persisted */
+@Target(AnnotationTarget.PROPERTY, AnnotationTarget.CLASS) annotation class DoNotPersist
+
+/**
+ * Interface for converters that convert between object property types and graph database types.
+ *
+ * @param T The object property type
+ * @param G The graph database type
+ */
+interface AttributeConverter<T, G> {
+    /** Converts a property value to a graph database value. */
+    fun toGraphProperty(value: T): G
+
+    /** Converts a graph database value back to a property value. */
+    fun toEntityAttribute(value: G?): T
+}
+
+/**
+ * Interface for converters that convert an object property to multiple graph database properties.
+ *
+ * @param T The object property type
+ */
+interface CompositeAttributeConverter<T> {
+    /** Converts a property value to a map of graph database properties. */
+    fun toGraphProperties(value: T): Map<String, *>
+
+    /** Converts a map of graph database properties back to a property value. */
+    fun toEntityAttribute(value: Map<String, *>?): T
+}
+
+/**
+ * Annotation to mark a property as a relationship in the persistence schema and is used to specify
+ * custom relationship names and directions for properties that represent relationships between
+ * nodes.
+ *
+ * @param value The name of the relationship. If not specified, the relationship name will be
+ *   derived from the property name (converted to UPPER_SNAKE_CASE).
+ * @param direction The direction of the relationship. Defaults to OUTGOING.
+ */
+@Target(AnnotationTarget.FIELD, AnnotationTarget.PROPERTY)
+@Retention(AnnotationRetention.RUNTIME)
+annotation class Relationship(
+    val value: String = "",
+    val direction: Direction = Direction.OUTGOING,
+) {
+    enum class Direction {
+        OUTGOING,
+        INCOMING,
+    }
+}
+
+/**
+ * Annotation to specify a converter for a property.
+ *
+ * @param value The converter class to use for this property.
+ */
+@Target(AnnotationTarget.FIELD, AnnotationTarget.PROPERTY)
+@Retention(AnnotationRetention.RUNTIME)
+annotation class Convert(val value: KClass<out Any>)
 
 /**
  * A cache used to store and retrieve sets of labels associated with specific Kotlin class types.
@@ -93,11 +149,7 @@ val schemaRelationshipCache:
 fun Persistable.properties(): Map<String, Any?> {
     val properties = mutableMapOf<String, Any?>()
     for (entry in this::class.schemaProperties) {
-        val value = entry.value.call(this)
-
-        if (value == null) {
-            continue
-        }
+        val value = entry.value.call(this) ?: continue
 
         value.convert(entry, properties)
     }
@@ -107,8 +159,7 @@ fun Persistable.properties(): Map<String, Any?> {
 
 /**
  * Runs any conversions that are necessary by [CompositeAttributeConverter] and
- * [AttributeConverter]. Since both of these classes are Neo4J OGM classes, we need to find new base
- * types at some point.
+ * [AttributeConverter].
  */
 fun Any.convert(
     entry: Map.Entry<String, KProperty1<out Persistable, *>>,
@@ -116,28 +167,35 @@ fun Any.convert(
 ) {
     val originalKey = entry.key
 
-    val annotation = entry.value.javaField?.getAnnotation(Convert::class.java)
+    // Check for @Convert annotation
+    val annotation = entry.value.findAnnotation<Convert>()
+
     @Suppress("UNCHECKED_CAST")
-    if (annotation != null) {
-        val converter = annotation.value.createInstance()
-        if (converter is CompositeAttributeConverter<*>) {
-            properties += (converter as CompositeAttributeConverter<Any>).toGraphProperties(this)
-        } else if (converter is AttributeConverter<*, *>) {
-            properties.put(
-                originalKey,
-                (converter as AttributeConverter<Any, Any>).toGraphProperty(this),
-            )
+    when {
+        annotation != null -> {
+            val converterClass = annotation.value
+            val converter = converterClass.createInstance()
+            // Check for converter interfaces
+            if (converter is CompositeAttributeConverter<*>) {
+                properties +=
+                    (converter as CompositeAttributeConverter<Any>).toGraphProperties(this)
+            } else if (converter is AttributeConverter<*, *>) {
+                properties[originalKey] =
+                    (converter as AttributeConverter<Any, Any>).toGraphProperty(this)
+            }
         }
-    } else if (this is Name && originalKey == "name") {
-        // needs to be extra because of the way annotations work, this will be re-designed once OGM
-        // is completely gone
-        properties += NameConverter().toGraphProperties(this)
-    } else if (this is Enum<*>) {
-        properties.put(originalKey, this.name)
-    } else if (this is Uuid) {
-        properties.put(originalKey, this.toString())
-    } else {
-        properties.put(originalKey, this)
+        this is Name && originalKey == "name" -> {
+            properties += NameConverter().toGraphProperties(this)
+        }
+        this is Enum<*> -> {
+            properties[originalKey] = this.name
+        }
+        this is Uuid -> {
+            properties[originalKey] = this.toString()
+        }
+        else -> {
+            properties[originalKey] = this
+        }
     }
 }
 
@@ -284,13 +342,12 @@ private fun isSimpleProperty(property: KProperty1<out Persistable, *>): Boolean 
  *
  * This evaluates to true, when
  * - The property is not a delegate (Note: this might change in the future, once we re-design node
- *   properties if Neo4J OGM is completely removed)
+ *   properties)
  * - The property is an [EdgeList]
  * - The property is referring to a [Collection] of [Node] objects
  * - The property is referring to a [Node]
  * - The property does not have the annotation [DoNotPersist]
- * - The property does not have the annotation [org.neo4j.ogm.annotation.Relationship] with an
- *   incoming direction (Note: We will replace this with our own annotation at some point)
+ * - The property does not have the annotation [Relationship] with an incoming direction
  *
  * @param property the property to be evaluated, belonging to a class implementing the Persistable
  *   interface
@@ -302,7 +359,8 @@ private fun isRelationship(property: KProperty1<out Persistable, *>): Boolean {
     return when {
         property.hasAnnotation<DoNotPersist>() -> false
         property.javaField?.type?.simpleName?.contains("Delegate") == true -> false
-        property.javaField?.getAnnotation(Relationship::class.java)?.direction == INCOMING -> false
+        property.findAnnotation<Relationship>()?.direction == Relationship.Direction.INCOMING ->
+            false
         property.visibility == KVisibility.PRIVATE -> false
         returnType.isSubtypeOf(edgeCollectionType) -> true
         returnType.isSubtypeOf(collectionOfPersistableType) -> true
@@ -312,7 +370,7 @@ private fun isRelationship(property: KProperty1<out Persistable, *>): Boolean {
 }
 
 /**
- * Retrieves the relational name associated with a property in the context of the raph schema.
+ * Retrieves the relational name associated with a property in the context of the graph schema.
  *
  * The `relationshipName` is determined based on the following rules:
  * - If the property is annotated with the `@Relationship` annotation, the value of the annotation
@@ -324,8 +382,13 @@ private fun isRelationship(property: KProperty1<out Persistable, *>): Boolean {
  */
 val <K, V> KProperty1<K, V>.relationshipName: String
     get() {
-        // If we have a (legacy) Neo4J annotation for our relationship, we take this one
-        // Note: We will replace this with something else in the future
+        // First check for @Relationship annotation on the property itself
+        val propertyAnnotation = this.findAnnotation<Relationship>()
+        if (propertyAnnotation != null && propertyAnnotation.value.isNotEmpty()) {
+            return propertyAnnotation.value
+        }
+
+        // Then check the Java field for the annotation
         val value = this.javaField?.getAnnotation(Relationship::class.java)?.value
         if (value != null && value != "") {
             return value
@@ -361,7 +424,7 @@ fun String.toUpperSnakeCase(): String {
  * - `endId`: The ID of the end node of the relationship.
  * - `type`: The name of the relationship type.
  */
-internal typealias Relationship = Map<String, Any?>
+internal typealias RelationshipMap = Map<String, Any?>
 
 /**
  * Returns all [Node] objects that are connected with this node with some kind of relationship
@@ -388,8 +451,8 @@ val Persistable.connectedNodes: IdentitySet<Node>
         return nodes
     }
 
-fun List<Node>.collectRelationships(): List<de.fraunhofer.aisec.cpg.persistence.Relationship> {
-    val relationships = mutableListOf<de.fraunhofer.aisec.cpg.persistence.Relationship>()
+fun List<Node>.collectRelationships(): List<RelationshipMap> {
+    val relationships = mutableListOf<RelationshipMap>()
 
     for (node in this) {
         for (entry in node::class.schemaRelationships) {

@@ -45,9 +45,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.NodeEntity
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * A symbol is a simple, local name. It is valid within the scope that declares it and all of its
@@ -62,7 +62,6 @@ typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
  * restriction and can act as namespaces to avoid name collisions.
  */
 @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
-@NodeEntity
 sealed class Scope(
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
     @JsonBackReference
@@ -80,20 +79,20 @@ sealed class Scope(
     var parent: Scope? = null
 
     /** The list of child scopes. */
-    @Transient
+    @DoNotPersist
     @Relationship(value = "PARENT", direction = Relationship.Direction.INCOMING)
     var children = mutableListOf<Scope>()
 
-    @Transient var labelStatements = mutableMapOf<String, LabelStatement>()
+    @DoNotPersist var labelStatements = mutableMapOf<String, LabelStatement>()
 
     /** A map of symbols and their respective [Declaration] nodes that declare them. */
-    @Transient var symbols: SymbolMap = mutableMapOf()
+    @DoNotPersist var symbols: SymbolMap = mutableMapOf()
 
     /**
      * A list of [Import] nodes that have an [ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE] import
      * style ("wildcard" import).
      */
-    @Transient var wildcardImports: MutableSet<Import> = mutableSetOf()
+    @DoNotPersist var wildcardImports: MutableSet<Import> = mutableSetOf()
 
     /**
      * This set of edges is used to store [Import] edges that denotes foreign [NamespaceScope]
@@ -117,13 +116,14 @@ sealed class Scope(
      * also store this information in the scope to avoid unnecessary AST traversals when resolving
      * symbols using [lookupSymbol].
      */
-    @Transient var predefinedLookupScopes: MutableMap<Symbol, LookupScopeStatement> = mutableMapOf()
+    @DoNotPersist
+    var predefinedLookupScopes: MutableMap<Symbol, LookupScopeStatement> = mutableMapOf()
 
     /**
      * A map of typedefs keyed by their alias name. This is still needed as a bridge until we
      * completely redesign the alias / typedef system.
      */
-    @Transient val typedefs = mutableMapOf<Name, Typedef>()
+    @DoNotPersist val typedefs = mutableMapOf<Name, Typedef>()
 
     /**
      * Adds a [typedef] declaration to the scope. This is used to store typedefs in the scope, so

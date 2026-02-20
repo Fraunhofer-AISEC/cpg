@@ -37,9 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.Transient
 
 /** Represents a C++ union/struct/class or Java class */
 open class Record :
@@ -101,14 +100,14 @@ open class Record :
     override var statementEdges = astEdgesOf<Statement>()
     override var statements by unwrapping(Record::statementEdges)
 
-    @Transient var superClasses: MutableList<Type> = ArrayList()
+    @DoNotPersist var superClasses: MutableList<Type> = ArrayList()
 
     /**
      * Interfaces implemented by this class. This concept is not present in C++
      *
      * @return the list of implemented interfaces
      */
-    @Transient var implementedInterfaces = mutableListOf<Type>()
+    @DoNotPersist var implementedInterfaces = mutableListOf<Type>()
 
     @Relationship var superTypeDeclarations: Set<Record> = HashSet()
 

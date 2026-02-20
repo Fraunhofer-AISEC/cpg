@@ -32,10 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import kotlin.reflect.KProperty
-import org.neo4j.ogm.annotation.RelationshipEntity
 
 /** This edge class denotes the invocation of a [Function] by a [CallExpression]. */
-@RelationshipEntity
 class Invoke(
     start: Node,
     end: Function,
@@ -60,7 +58,7 @@ class Invoke(
     }
 }
 
-/** A container for [Usage] edges. [NodeType] is necessary because of the Neo4J OGM. */
+/** A container for [Usage] edges. [NodeType] is necessary for type safety. */
 class Invokes<NodeType : Function>(
     thisRef: Node,
     override var mirrorProperty: KProperty<MutableCollection<Invoke>>,

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.ini
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.StringType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
 
 /**
@@ -42,7 +43,7 @@ class IniFileLanguage : Language<IniFileFrontend>() {
     override val fileExtensions = listOf("ini", "conf")
     override val namespaceDelimiter: String = "." // no such thing
 
-    @Transient override val frontend: KClass<out IniFileFrontend> = IniFileFrontend::class
+    @DoNotPersist override val frontend: KClass<out IniFileFrontend> = IniFileFrontend::class
     override val builtInTypes: Map<String, Type> =
         mapOf("string" to StringType("string", language = this)) // everything is a string
 

@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
 import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
 import de.fraunhofer.aisec.cpg.passes.updateImportedSymbols
-import org.neo4j.ogm.annotation.Relationship
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 
 /**
  * This scope is opened up by a [Namespace] and represents the scope of the whole namespace. This

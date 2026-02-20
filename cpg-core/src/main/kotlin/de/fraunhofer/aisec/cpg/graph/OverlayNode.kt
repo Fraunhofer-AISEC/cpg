@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.frontends.NoLanguage
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.OverlayEdge
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.OverlaySingleEdge
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents an extra node added to the CPG. These nodes can live next to the regular nodes,

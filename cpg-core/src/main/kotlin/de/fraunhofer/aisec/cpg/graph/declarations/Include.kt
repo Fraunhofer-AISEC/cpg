@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 
 /** This declaration represents either an include or an import, depending on the language. */
 class Include : Declaration() {

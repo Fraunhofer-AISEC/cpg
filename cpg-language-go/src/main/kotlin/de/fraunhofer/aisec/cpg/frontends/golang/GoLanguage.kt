@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.math.max
-import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
 class GoLanguage :
@@ -46,7 +46,7 @@ class GoLanguage :
     HasFunctionStyleCasts {
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
-    @Transient override val frontend = GoLanguageFrontend::class
+    @DoNotPersist override val frontend = GoLanguageFrontend::class
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
     override val startCharacter = '['
@@ -66,7 +66,7 @@ class GoLanguage :
     override val simpleAssignmentOperators = setOf("=", ":=")
 
     /** See [Documentation](https://pkg.go.dev/builtin). */
-    @Transient
+    @DoNotPersist
     override val builtInTypes =
         mapOf(
             // https://pkg.go.dev/builtin#any

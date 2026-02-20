@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Declares the scope of a namespace and appends its own name to the current namespace-prefix to

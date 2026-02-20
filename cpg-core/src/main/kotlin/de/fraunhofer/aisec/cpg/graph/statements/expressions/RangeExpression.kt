@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents the specification of a range (e.g., of an array). Usually used in combination with an
