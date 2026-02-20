@@ -45,6 +45,7 @@ class TestCommon {
                 "id",
                 "isImplicit",
                 "isInferred",
+                "isStatic",
                 "location",
                 "name",
             ),

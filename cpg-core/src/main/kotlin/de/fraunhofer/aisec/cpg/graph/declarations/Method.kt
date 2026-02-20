@@ -31,11 +31,14 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import org.neo4j.ogm.annotation.Relationship
 
-/** A method declaration is a [Function] that is part of to a specific [Record] . */
+/**
+ * A method declaration is a [Function] that is part of to a specific [Record]
+ * .
+ */
 open class Method : Function() {
-    var isStatic = false
-
-    /** The [Record] this method is part of. This can be empty if we do not know about it. */
+    /**
+     * The [Record] this method is part of. This can be empty if we do not know about it.
+     */
     open var recordDeclaration: Record? = null
 
     @Relationship("RECEIVER") var receiverEdge = astOptionalEdgeOf<Variable>()
