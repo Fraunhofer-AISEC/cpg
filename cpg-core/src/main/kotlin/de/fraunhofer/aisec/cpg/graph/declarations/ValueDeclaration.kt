@@ -99,6 +99,12 @@ abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
     /** All usages of the variable/field. */
     @PopulatedByPass(SymbolResolver::class) var usages by unwrapping(ValueDeclaration::usageEdges)
 
+    /**
+     * Defines, whether this declaration is static or not. Commonly used to declare static
+     * [FieldDeclaration]s or [MethodDeclaration]s in classes (see [RecordDeclaration]).
+     */
+    var isStatic = false
+
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE).appendSuper(super.toString()).toString()
     }
