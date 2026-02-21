@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.HasFunctionOverloading
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -71,7 +71,7 @@ open class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctio
         // therefore do some additional filtering of the candidates here, before handling it.
         if (ref.candidates.size > 1) {
             if (ref.resolutionHelper is CallExpression) {
-                val functionDecls = ref.candidates.filterIsInstance<FunctionDeclaration>()
+                val functionDecls = ref.candidates.filterIsInstance<Function>()
                 // We can also check if the signature matches to account for overloading.
                 val targetType = ref.type as? FunctionType
                 val filteredFunctions =
@@ -81,7 +81,7 @@ open class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctio
                 if (filteredFunctions.isNotEmpty()) ref.candidates = filteredFunctions
                 else ref.candidates = functionDecls.toSet()
             } else {
-                ref.candidates = ref.candidates.filter { it is VariableDeclaration }.toSet()
+                ref.candidates = ref.candidates.filter { it is Variable }.toSet()
             }
         }
 

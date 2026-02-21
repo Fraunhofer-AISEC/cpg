@@ -153,7 +153,7 @@ class JVMLanguageFrontend(
 
             val pkg =
                 sootClass.type.packageName?.name?.split(language.namespaceDelimiter)?.fold(null) {
-                    previous: NamespaceDeclaration?,
+                    previous: Namespace?,
                     path ->
                     val fqn = previous?.name.fqn(path)
                     val innerPkg =
