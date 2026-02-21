@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
@@ -239,7 +238,7 @@ internal class ScopeManagerTest : BaseTest() {
         val language = TestLanguage()
         val frontend = TestLanguageFrontend(ctx, language)
         with(frontend) {
-            val tu = newTranslationUnitDeclaration("file.java", null)
+            val tu = newTranslationUnit("file.java", null)
             s.resetToGlobal(tu)
 
             val name = parseName("java.lang.String")
@@ -266,13 +265,13 @@ internal class ScopeManagerTest : BaseTest() {
         val language = TestLanguage()
         val frontend = TestLanguageFrontend(ctx, language)
         with(frontend) {
-            val tu = newTranslationUnitDeclaration("file.java", null)
+            val tu = newTranslationUnit("file.java", null)
             s.resetToGlobal(tu)
 
             // Register "java" and "java.lang" namespaces
-            val javaNs = newNamespaceDeclaration("java")
+            val javaNs = newNamespace("java")
             s.enterScope(javaNs)
-            val langNs = newNamespaceDeclaration("java.lang")
+            val langNs = newNamespace("java.lang")
             s.enterScope(langNs)
             s.leaveScope(langNs)
             s.addDeclaration(langNs)
@@ -292,7 +291,7 @@ internal class ScopeManagerTest : BaseTest() {
             val s2 = ctx2.scopeManager
             val frontend2 = TestLanguageFrontend(ctx2, language)
             with(frontend2) {
-                val tu2 = newTranslationUnitDeclaration("other.java", null)
+                val tu2 = newTranslationUnit("other.java", null)
                 s2.resetToGlobal(tu2)
                 val result2 = s2.extractScope(name, language, scope = s2.globalScope)
                 assertNull(result2)
@@ -312,7 +311,7 @@ internal class ScopeManagerTest : BaseTest() {
         val language = TestLanguage()
         val frontend = TestLanguageFrontend(ctx, language)
         with(frontend) {
-            val tu = newTranslationUnitDeclaration("file.java", null)
+            val tu = newTranslationUnit("file.java", null)
             s.resetToGlobal(tu)
 
             val name = parseName("java.lang.String")
@@ -322,9 +321,9 @@ internal class ScopeManagerTest : BaseTest() {
             assertNull(before)
 
             // Register the "java" and "java.lang" namespaces — this must invalidate the cache
-            val javaNs = newNamespaceDeclaration("java")
+            val javaNs = newNamespace("java")
             s.enterScope(javaNs)
-            val langNs = newNamespaceDeclaration("java.lang")
+            val langNs = newNamespace("java.lang")
             s.enterScope(langNs)
             s.leaveScope(langNs)
             s.addDeclaration(langNs)
