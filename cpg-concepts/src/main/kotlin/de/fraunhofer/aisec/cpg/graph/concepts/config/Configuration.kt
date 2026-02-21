@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.graph.concepts.config
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 
@@ -88,12 +88,12 @@ open class ConfigurationOption(
     var group: ConfigurationGroup,
     /**
      * The node that represents the "key" of this option. For example, in an INI file, this would be
-     * the [FieldDeclaration] node that represents the key.
+     * the [Field] node that represents the key.
      */
     var key: Node,
     /**
      * The node that represents the "value" of this option. For example, in an INI file, this would
-     * be the [FieldDeclaration.initializer] node that represents the value.
+     * be the [Field.initializer] node that represents the value.
      *
      * Since initializers could potentially be empty, we make this nullable.
      */
@@ -262,8 +262,8 @@ open class ProvideConfigurationOption(
 
 /**
  * Represents a possible source for a configuration. For example, when loading an INI file with our
- * INI file frontend, the whole file would be represented as a [TranslationUnitDeclaration]. This
- * translation unit declaration would be the source of the configuration.
+ * INI file frontend, the whole file would be represented as a [TranslationUnit]. This translation
+ * unit declaration would be the source of the configuration.
  */
 open class ConfigurationSource(underlyingNode: Node? = null) :
     Concept(underlyingNode = underlyingNode) {
@@ -283,8 +283,8 @@ open class ConfigurationSource(underlyingNode: Node? = null) :
 
 /**
  * Represents a possible group source for a configuration group. For example, when loading an INI
- * file with our INI file frontend, each section is presented as a [RecordDeclaration]. This record
- * declaration would be the source of the configuration group.
+ * file with our INI file frontend, each section is presented as a [Record]. This record declaration
+ * would be the source of the configuration group.
  */
 open class ConfigurationGroupSource(underlyingNode: Node? = null) :
     Concept(underlyingNode = underlyingNode) {
@@ -293,8 +293,8 @@ open class ConfigurationGroupSource(underlyingNode: Node? = null) :
 
 /**
  * Represents a possible option source for a configuration option. For example, when loading an INI
- * file with our INI file frontend, each key-value pair is presented as a [FieldDeclaration]. This
- * field declaration would be the source to the configuration option.
+ * file with our INI file frontend, each key-value pair is presented as a [Field]. This field
+ * declaration would be the source to the configuration option.
  */
 open class ConfigurationOptionSource(
     underlyingNode: Node? = null,

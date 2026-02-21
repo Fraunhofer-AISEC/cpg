@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -113,9 +113,8 @@ class DFGTest {
 
     /**
      * Ensures that if there is an assignment like a = a + b the replacement of the current value of
-     * the VariableDeclaration is delayed until the entire assignment has been traversed. This is
-     * necessary, since if the replacement was not delayed the rhs a would have an incoming dfg edge
-     * from a + b
+     * the Variable is delayed until the entire assignment has been traversed. This is necessary,
+     * since if the replacement was not delayed the rhs a would have an incoming dfg edge from a + b
      *
      * @throws Exception
      */
@@ -396,7 +395,7 @@ class DFGTest {
         ) // Outgoing DFG Edges only to the Reference in the assignment to b
         assertEquals(b.initializer!!, a2.nextDFG.first())
 
-        val refersTo = a2.getRefersToAs(VariableDeclaration::class.java)
+        val refersTo = a2.getRefersToAs(Variable::class.java)
         assertNotNull(refersTo)
         assertEquals(2, refersTo.nextDFG.size) // The print and assignment to b
         // Outgoing DFG Edge to the Reference in the assignment of b
@@ -475,8 +474,8 @@ class DFGTest {
     }
 
     /**
-     * Tests that the outgoing DFG edges from a VariableDeclaration go to references with a path
-     * without a new assignment to the variable.
+     * Tests that the outgoing DFG edges from a Variable go to references with a path without a new
+     * assignment to the variable.
      *
      * @throws Exception
      */

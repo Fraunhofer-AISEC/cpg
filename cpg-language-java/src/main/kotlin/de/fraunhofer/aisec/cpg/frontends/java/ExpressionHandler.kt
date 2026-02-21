@@ -34,8 +34,8 @@ import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -52,12 +52,11 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     private fun handleLambdaExpr(expr: Expression): Statement {
         val lambdaExpr = expr.asLambdaExpr()
         val lambda = newLambdaExpression(rawNode = lambdaExpr)
-        val anonymousFunction = newFunctionDeclaration("", rawNode = lambdaExpr)
+        val anonymousFunction = newFunction("", rawNode = lambdaExpr)
         frontend.scopeManager.enterScope(anonymousFunction)
         for (parameter in lambdaExpr.parameters) {
             val resolvedType = frontend.getTypeAsGoodAsPossible(parameter.type)
-            val param =
-                newParameterDeclaration(parameter.nameAsString, resolvedType, parameter.isVarArgs)
+            val param = newParameter(parameter.nameAsString, resolvedType, parameter.isVarArgs)
             frontend.processAnnotations(param, parameter)
             frontend.scopeManager.addDeclaration(param)
             anonymousFunction.parameters += param
@@ -98,8 +97,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 
     /**
-     * Creates a new [NewArrayExpression], which is usually used as an initializer of a
-     * [VariableDeclaration].
+     * Creates a new [NewArrayExpression], which is usually used as an initializer of a [Variable].
      *
      * @param expr the expression
      * @return the [NewArrayExpression]
@@ -226,7 +224,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 
     // Not sure how to handle this exactly yet
-    private fun handleVariableDeclarationExpr(expr: Expression): DeclarationStatement {
+    private fun handleVariableExpr(expr: Expression): DeclarationStatement {
         val variableDeclarationExpr = expr.asVariableDeclarationExpr()
         val declarationStatement = newDeclarationStatement(rawNode = expr)
         for (variable in variableDeclarationExpr.variables) {
@@ -490,7 +488,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                     ?: newProblemExpression("Could not parse base")
 
             // If the base directly refers to a record, then this is a static call
-            if (base is Reference && base.refersTo is RecordDeclaration) {
+            if (base is Reference && base.refersTo is Record) {
                 isStatic = true
             }
         } else {
@@ -586,14 +584,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         newExpression.initializer = ctor
 
         if (objectCreationExpr.anonymousClassBody.isPresent) {
-            // We have an anonymous class and will create a RecordDeclaration for it and add all the
+            // We have an anonymous class and will create a Record for it and add all the
             // implemented methods.
             val locationHash = frontend.locationOf(objectCreationExpr)?.hashCode()
 
             // We use the hash of the location to distinguish multiple instances of the anonymous
             // class' superclass
             val anonymousClassName = "$constructorName$locationHash"
-            val anonymousRecord = newRecordDeclaration(anonymousClassName, "class")
+            val anonymousRecord = newRecord(anonymousClassName, "class")
             anonymousRecord.isImplicit = true
 
             frontend.scopeManager.enterScope(anonymousRecord)
@@ -609,12 +607,11 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
             if (anonymousRecord.constructors.isEmpty()) {
                 val constructorDeclaration =
-                    newConstructorDeclaration(anonymousRecord.name.localName, anonymousRecord)
+                    newConstructor(anonymousRecord.name.localName, anonymousRecord)
                         .implicit(anonymousRecord.name.localName)
 
                 ctor.arguments.forEachIndexed { i, arg ->
-                    constructorDeclaration.parameters +=
-                        newParameterDeclaration("arg${i}", arg.type)
+                    constructorDeclaration.parameters += newParameter("arg${i}", arg.type)
                 }
                 frontend.scopeManager.addDeclaration(constructorDeclaration)
                 anonymousRecord.constructors += constructorDeclaration
@@ -646,9 +643,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         map[InstanceOfExpr::class.java] = HandlerInterface { handleInstanceOfExpression(it) }
         map[UnaryExpr::class.java] = HandlerInterface { handleUnaryExpression(it) }
         map[BinaryExpr::class.java] = HandlerInterface { handleBinaryExpression(it) }
-        map[VariableDeclarationExpr::class.java] = HandlerInterface {
-            handleVariableDeclarationExpr(it)
-        }
+        map[VariableDeclarationExpr::class.java] = HandlerInterface { handleVariableExpr(it) }
         map[MethodCallExpr::class.java] = HandlerInterface { handleMethodCallExpression(it) }
         map[ObjectCreationExpr::class.java] = HandlerInterface { handleObjectCreationExpr(it) }
         map[com.github.javaparser.ast.expr.ConditionalExpr::class.java] = HandlerInterface {

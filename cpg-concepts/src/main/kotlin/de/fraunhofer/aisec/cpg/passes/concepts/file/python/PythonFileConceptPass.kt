@@ -76,7 +76,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
          *
          * This is currently done per [Component].
          */
-        // TODO: Is TranslationUnitDeclaration better?
+        // TODO: Is TranslationUnit better?
         internal val fileCache = mutableMapOf<Component?, MutableMap<String, File>>()
     }
 

@@ -30,7 +30,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
@@ -46,7 +46,7 @@ import kotlin.collections.plusAssign
 
 /**
  * The purpose of this [Pass] is to establish a relationship between [Type] nodes (more specifically
- * [ObjectType]s) and their [RecordDeclaration].
+ * [ObjectType]s) and their [Record].
  */
 @DependsOn(ImportResolver::class)
 @Description(
@@ -175,7 +175,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             type.name = declaredType.name
             type.refreshNames()
             type.declaredFrom = declares
-            type.recordDeclaration = declares as? RecordDeclaration
+            type.recordDeclaration = declares as? Record
             type.typeOrigin = Type.Origin.RESOLVED
             typeManager.resolvedTypes += type
 

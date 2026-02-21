@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.multiLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
@@ -42,6 +42,8 @@ import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
+import de.fraunhofer.aisec.cpg.passes.markClean
+import de.fraunhofer.aisec.cpg.passes.markDirty
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
@@ -98,6 +100,7 @@ class TranslationResult(
      * A free-for-use collection of unique nodes. Nodes stored here will be exported to Neo4j, too.
      */
     val additionalNodes = mutableSetOf<Node>()
+
     override val benchmarks: MutableSet<MeasurementHolder> = LinkedHashSet()
 
     val isCancelled: Boolean
@@ -113,12 +116,12 @@ class TranslationResult(
      */
     @Deprecated(message = "translation units of individual components should be accessed instead")
     @DoNotPersist
-    val translationUnits: List<TranslationUnitDeclaration>
+    val translationUnits: List<TranslationUnit>
         get() {
             if (components.size == 1) {
                 return Collections.unmodifiableList(components[0].translationUnits)
             }
-            val result: MutableList<TranslationUnitDeclaration> = ArrayList()
+            val result: MutableList<TranslationUnit> = ArrayList()
             for (sc in components) {
                 result.addAll(sc.translationUnits)
             }
@@ -139,7 +142,7 @@ class TranslationResult(
         selected and the translation unit should be added there."""
     )
     @Synchronized
-    fun addTranslationUnit(tu: TranslationUnitDeclaration) {
+    fun addTranslationUnit(tu: TranslationUnit) {
         val application = components[DEFAULT_APPLICATION_NAME]
         if (application == null) {
             // No application component exists, but it should be since it is automatically created
@@ -168,9 +171,7 @@ class TranslationResult(
         get() {
             val result: MutableList<String> = ArrayList()
             components.forEach { sc: Component ->
-                result.addAll(
-                    sc.translationUnits.map(TranslationUnitDeclaration::name).map(Name::toString)
-                )
+                result.addAll(sc.translationUnits.map(TranslationUnit::name).map(Name::toString))
             }
             return result
         }

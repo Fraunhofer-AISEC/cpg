@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
@@ -78,8 +79,8 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * a, b := 1, 2
  * ```
  *
- * In the frontend we only do the assignment, therefore we need to create a new
- * [VariableDeclaration] for `b` and inject a [DeclarationStatement].
+ * In the frontend we only do the assignment, therefore we need to create a new [Variable] for `b`
+ * and inject a [DeclarationStatement].
  *
  * ## Adjust Names of Keys in Key Value Expressions to FQN
  *
@@ -90,8 +91,8 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  *
  * ## Add Methods of Embedded Structs to the Record's Scope
  *
- * This pass also adds methods of [RecordDeclaration.embeddedStructs] into the scope of the
- * [RecordDeclaration] itself, so that it can be resolved using the regular [SymbolResolver].
+ * This pass also adds methods of [Record.embeddedStructs] into the scope of the [Record] itself, so
+ * that it can be resolved using the regular [SymbolResolver].
  */
 @ExecuteBefore(SymbolResolver::class)
 @ExecuteBefore(EvaluationOrderGraphPass::class)
@@ -118,7 +119,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         walker = SubgraphWalker.ScopedWalker(scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node ->
             when (node) {
-                is RecordDeclaration -> handleRecordDeclaration(node)
+                is Record -> handleRecord(node)
                 is AssignExpression -> handleAssign(node)
                 is ForEachStatement -> handleForEachStatement(node)
                 is InitializerListExpression -> handleInitializerListExpression(node)
@@ -131,8 +132,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This function adds methods of [RecordDeclaration.embeddedStructs] into the scope of the
-     * struct itself, so we can resolve method calls of embedded structs.
+     * This function adds methods of [Record.embeddedStructs] into the scope of the struct itself,
+     * so we can resolve method calls of embedded structs.
      *
      * For example, if a struct embeds another struct (see https://go.dev/ref/spec#Struct_types), we
      * can call any methods of the embedded struct on the one that embeds it:
@@ -147,7 +148,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * }
      * ```
      */
-    private fun handleRecordDeclaration(record: RecordDeclaration) {
+    private fun handleRecord(record: Record) {
         // We are only interest in structs, not interfaces
         if (record.kind != "struct") {
             return
@@ -166,14 +167,14 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         scopeManager.leaveScope(record)
     }
 
-    private fun addBuiltIn(): TranslationUnitDeclaration {
-        val builtin = newTranslationUnitDeclaration("builtin.go")
+    private fun addBuiltIn(): TranslationUnit {
+        val builtin = newTranslationUnit("builtin.go")
         builtin.language = GoLanguage()
         scopeManager.resetToGlobal(builtin)
 
         return with(builtin) {
-            val len = newFunctionDeclaration("len", localNameOnly = true)
-            len.parameters = mutableListOf(newParameterDeclaration("v", autoType()))
+            val len = newFunction("len", localNameOnly = true)
+            len.parameters = mutableListOf(newParameter("v", autoType()))
             len.returnTypes = listOf(primitiveType("int"))
             addBuiltInFunction(len)
 
@@ -182,11 +183,11 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
              * func append(slice []Type, elems ...Type) []Type
              * ```
              */
-            val append = newFunctionDeclaration("append", localNameOnly = true)
+            val append = newFunction("append", localNameOnly = true)
             append.parameters =
                 mutableListOf(
-                    newParameterDeclaration("slice", autoType().array()),
-                    newParameterDeclaration("elems", autoType(), variadic = true),
+                    newParameter("slice", autoType().array()),
+                    newParameter("elems", autoType(), variadic = true),
                 )
             append.returnTypes = listOf(autoType().array())
             addBuiltInFunction(append)
@@ -196,8 +197,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
              * func panic(v any)
              * ```
              */
-            val panic = newFunctionDeclaration("panic", localNameOnly = true)
-            panic.parameters = mutableListOf(newParameterDeclaration("v", primitiveType("any")))
+            val panic = newFunction("panic", localNameOnly = true)
+            panic.parameters = mutableListOf(newParameter("v", primitiveType("any")))
             addBuiltInFunction(panic)
 
             /**
@@ -205,14 +206,14 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
              * func recover() any
              * ```
              */
-            val recover = newFunctionDeclaration("panic", localNameOnly = true)
+            val recover = newFunction("panic", localNameOnly = true)
             panic.returnTypes = listOf(primitiveType("any"))
             addBuiltInFunction(recover)
 
-            val error = newRecordDeclaration("error", "interface")
+            val error = newRecord("error", "interface")
             scopeManager.enterScope(error)
 
-            val errorFunc = newMethodDeclaration("Error", recordDeclaration = error)
+            val errorFunc = newMethod("Error", recordDeclaration = error)
             errorFunc.returnTypes = listOf(primitiveType("string"))
             addBuiltInFunction(errorFunc)
 
@@ -221,7 +222,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    private fun TranslationUnitDeclaration.addBuiltInFunction(func: FunctionDeclaration) {
+    private fun TranslationUnit.addBuiltInFunction(func: Function) {
         func.type =
             FunctionType(
                 funcTypeName(func.signatureTypes, func.returnTypes),
@@ -325,13 +326,11 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     val variable = forEach.variable
                     if (variable is DeclarationStatement) {
                         // The key is the first variable. It is always an int
-                        val keyVariable =
-                            variable.declarations.firstOrNull() as? VariableDeclaration
+                        val keyVariable = variable.declarations.firstOrNull() as? Variable
                         keyVariable?.type = forEach.primitiveType("int")
 
                         // The value is the second one. Its type depends on the array type
-                        val valueVariable =
-                            variable.declarations.getOrNull(1) as? VariableDeclaration
+                        val valueVariable = variable.declarations.getOrNull(1) as? Variable
                         ((forEach.iterable as? HasType)?.type as? PointerType)?.let {
                             valueVariable?.type = it.elementType
                         }
@@ -359,10 +358,10 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         for ((idx, expr) in assign.lhs.withIndex()) {
             if (expr is Reference) {
                 // And try to resolve it as a variable
-                val ref = scopeManager.lookupSymbolByNodeNameOfType<VariableDeclaration>(expr)
+                val ref = scopeManager.lookupSymbolByNodeNameOfType<Variable>(expr)
                 if (ref.isEmpty()) {
                     // We need to implicitly declare it, if it's not declared before.
-                    val decl = newVariableDeclaration(expr.name, expr.autoType())
+                    val decl = newVariable(expr.name, expr.autoType())
                     decl.language = expr.language
                     decl.location = expr.location
                     decl.isImplicit = true

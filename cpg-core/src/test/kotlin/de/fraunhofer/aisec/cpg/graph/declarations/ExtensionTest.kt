@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import kotlin.test.*
 
-class ExtensionDeclarationTest {
+class ExtensionTest {
     @Test
     fun testDeclarationPlacement() {
 
@@ -54,10 +54,10 @@ class ExtensionDeclarationTest {
 
             // find the TU and extension
             val tu = tr.components.first().translationUnits.first()
-            val extensions = tu.declarations.filterIsInstance<ExtensionDeclaration>()
+            val extensions = tu.declarations.filterIsInstance<Extension>()
             assertEquals(1, extensions.size, "One extension should be present")
 
-            val records = tu.declarations.filterIsInstance<RecordDeclaration>()
+            val records = tu.declarations.filterIsInstance<Record>()
             assertEquals(1, records.size, "One record should be present")
 
             scopeManager.enterScope(records.first())
@@ -85,7 +85,7 @@ class ExtensionDeclarationTest {
             }
 
             val tu = tr.components.first().translationUnits.first()
-            val extensions = tu.declarations.filterIsInstance<ExtensionDeclaration>()
+            val extensions = tu.declarations.filterIsInstance<Extension>()
             assertEquals(1, extensions.size)
             assertNull(extensions.first().extendedDeclaration)
         }
@@ -108,7 +108,7 @@ class ExtensionDeclarationTest {
             }
 
             val tu = tr.components.first().translationUnits.first()
-            val extensions = tu.declarations.filterIsInstance<ExtensionDeclaration>()
+            val extensions = tu.declarations.filterIsInstance<Extension>()
             assertEquals(1, extensions.size)
             // Should have EMPTY_NAME when null is provided
             assertTrue(extensions.first().name.localName.isEmpty())

@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.enhancements.calls
 
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.*
@@ -41,7 +41,7 @@ internal class ConstructorsTest : BaseTest() {
     @Throws(Exception::class)
     fun testJava() {
         val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
-        val constructors = result.allChildren<ConstructorDeclaration>()
+        val constructors = result.allChildren<Constructor>()
         val noArg = findByUniquePredicate(constructors) { it.parameters.isEmpty() }
         val singleArg = findByUniquePredicate(constructors) { it.parameters.size == 1 }
         val twoArgs = findByUniquePredicate(constructors) { it.parameters.size == 2 }

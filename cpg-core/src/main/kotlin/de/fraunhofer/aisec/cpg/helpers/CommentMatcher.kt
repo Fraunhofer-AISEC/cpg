@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 
@@ -81,7 +81,7 @@ class CommentMatcher {
     fun matchCommentToNode(
         comment: String,
         location: Region,
-        tu: TranslationUnitDeclaration,
+        tu: TranslationUnit,
         artifactLocation: PhysicalLocation.ArtifactLocation? = null,
     ) {
         var enclosingNode: Node = tu

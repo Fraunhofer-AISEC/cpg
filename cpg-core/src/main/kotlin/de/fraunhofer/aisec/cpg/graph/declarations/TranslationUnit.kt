@@ -36,25 +36,24 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** The top most declaration, representing a translation unit, for example a file. */
-class TranslationUnitDeclaration :
-    Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
+class TranslationUnit : Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
     /** A list of declarations within this unit. */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
     val declarationEdges = astEdgesOf<Declaration>()
-    override val declarations by unwrapping(TranslationUnitDeclaration::declarationEdges)
+    override val declarations by unwrapping(TranslationUnit::declarationEdges)
 
     /** A list of includes within this unit. */
     val includes
-        get() = declarations.filterIsInstance<IncludeDeclaration>()
+        get() = declarations.filterIsInstance<Include>()
 
     /** A list of namespaces within this unit. */
     val namespaces
-        get() = declarations.filterIsInstance<NamespaceDeclaration>()
+        get() = declarations.filterIsInstance<Namespace>()
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
     override var statementEdges = astEdgesOf<Statement>()
-    override var statements by unwrapping(TranslationUnitDeclaration::statementEdges)
+    override var statements by unwrapping(TranslationUnit::statementEdges)
 
     override fun addDeclaration(declaration: Declaration) {
         addIfNotContains(declarationEdges, declaration)
@@ -82,7 +81,7 @@ class TranslationUnitDeclaration :
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is TranslationUnitDeclaration) return false
+        if (other !is TranslationUnit) return false
         return super.equals(other) && declarations == other.declarations
     }
 

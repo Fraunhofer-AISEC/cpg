@@ -31,21 +31,24 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
-/** Node representing a declaration of a template class or struct */
-class RecordTemplateDeclaration : TemplateDeclaration() {
+/** Node representing a declaration of a FunctionTemplate */
+class FunctionTemplate : Template() {
     /**
-     * Edges pointing to all RecordDeclarations that are realized by the ClassTempalte. Before the
-     * expansion pass there is only a single RecordDeclaration which is instantiated after the
-     * expansion pass for each instantiation of the ClassTemplate there will be a realization
+     * Edges pointing to all FunctionDeclarations that are realized by the FunctionTemplate. Before
+     * the expansion pass there is only a single Function which is instantiated After the expansion
+     * pass for each instantiation of the FunctionTemplate there will be a realization
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
-    val realizationEdges = astEdgesOf<RecordDeclaration>()
-    override val realizations by unwrapping(RecordTemplateDeclaration::realizationEdges)
+    val realizationEdges = astEdgesOf<Function>()
+    val realization by unwrapping(FunctionTemplate::realizationEdges)
+
+    override val realizations: List<Declaration>
+        get() = ArrayList<Declaration>(realization)
 
     override fun addDeclaration(declaration: Declaration) {
-        if (declaration is TypeParameterDeclaration || declaration is ParameterDeclaration) {
-            addIfNotContains(super.parameterEdges, declaration)
-        } else if (declaration is RecordDeclaration) {
+        if (declaration is TypeParameter || declaration is Parameter) {
+            addIfNotContains(this.parameterEdges, declaration)
+        } else if (declaration is Function) {
             addIfNotContains(realizationEdges, declaration)
         }
     }
@@ -54,8 +57,8 @@ class RecordTemplateDeclaration : TemplateDeclaration() {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
         if (!super.equals(other)) return false
-        val that = other as RecordTemplateDeclaration
-        return realizations == that.realizations &&
+        val that = other as FunctionTemplate
+        return realization == that.realization &&
             propertyEqualsList(realizationEdges, that.realizationEdges) &&
             parameters == that.parameters &&
             propertyEqualsList(parameterEdges, that.parameterEdges)

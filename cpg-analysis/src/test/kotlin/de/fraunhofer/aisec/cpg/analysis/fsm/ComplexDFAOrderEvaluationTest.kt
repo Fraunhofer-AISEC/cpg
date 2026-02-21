@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory
 class ComplexDFAOrderEvaluationTest {
 
     private var dfa = DFA()
-    private lateinit var tu: TranslationUnitDeclaration
+    private lateinit var tu: TranslationUnit
 
     @BeforeTest
     fun getDFABeforeTest() {

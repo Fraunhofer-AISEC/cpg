@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.Util
 import org.slf4j.Logger
@@ -120,7 +120,7 @@ open class ValueEvaluator(
 
         when (node) {
             is NewArrayExpression -> return handleHasInitializer(node, depth)
-            is VariableDeclaration -> return handleHasInitializer(node, depth)
+            is Variable -> return handleHasInitializer(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
             is UnaryOperator -> return handleUnaryOp(node, depth)
@@ -406,7 +406,7 @@ open class ValueEvaluator(
      * s.
      */
     protected fun handleSubscriptExpression(expr: SubscriptExpression, depth: Int): Any? {
-        val array = (expr.arrayExpression as? Reference)?.refersTo as? VariableDeclaration
+        val array = (expr.arrayExpression as? Reference)?.refersTo as? Variable
         val ile = array?.initializer as? InitializerListExpression
 
         ile?.let {
