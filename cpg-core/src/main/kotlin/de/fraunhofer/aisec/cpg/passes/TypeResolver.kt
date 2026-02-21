@@ -61,6 +61,9 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         walker = SubgraphWalker.ScopedWalker(scopeManager, strategy = Strategy::AST_FORWARD)
         walker.registerHandler { handleNode(it) }
         walker.iterate(component)
+
+        // Hacky hacky hacky
+        typeManager.lookAlsoAtThis.values.forEach { it.values.forEach { handleType(it) } }
     }
 
     /**

@@ -29,6 +29,7 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Template
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -65,6 +66,8 @@ class TypeManager {
      * the [TypeResolver].
      */
     val resolvedTypes = identitySetOf<Type>()
+
+    val lookAlsoAtThis = IdentityHashMap<Component, IdentityHashMap<String, Type>>()
 
     /**
      * @param recordDeclaration that is instantiated by a template containing parameterizedtypes

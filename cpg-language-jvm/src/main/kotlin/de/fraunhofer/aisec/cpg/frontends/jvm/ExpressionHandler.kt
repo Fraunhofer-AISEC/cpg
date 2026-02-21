@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import java.util.IdentityHashMap
 import sootup.core.jimple.basic.Local
 import sootup.core.jimple.basic.Value
 import sootup.core.jimple.common.constant.*
@@ -372,7 +373,15 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun SootClassMemberSignature<*>.toStaticRef(): Reference {
         // First, construct the name using <parent-type>.<fun>
-        val ref = newReference("${this.declClassType.fullyQualifiedName}.${this.name}")
+        val parentTypeName = "${this.declClassType.fullyQualifiedName}"
+        val ref = newReference("$parentTypeName.${this.name}")
+        val currentComponent =
+            this@ExpressionHandler.frontend.currentTU?.firstParentOrNull<Component>()
+
+        frontend.typeManager.lookAlsoAtThis
+            .computeIfAbsent(currentComponent) { IdentityHashMap() }
+            .computeIfAbsent(parentTypeName) { objectType(parentTypeName) }
+        ref.type = frontend.typeOf(this.type)
 
         // Make it static
         ref.isStaticAccess = true

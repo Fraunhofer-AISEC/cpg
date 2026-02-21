@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage.Companion.isApk
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
@@ -96,8 +97,8 @@ class JVMLanguageFrontend(
      */
     override fun parse(file: File): TranslationUnit {
         val view =
-            when (file.extension) {
-                "class" -> {
+            when {
+                file.extension == "class" -> {
                     JavaView(
                         JavaClassPathAnalysisInputLocation(
                             ctx.currentComponent?.topLevel()?.path!!,
@@ -106,7 +107,7 @@ class JVMLanguageFrontend(
                         )
                     )
                 }
-                "jar" -> {
+                file.extension == "jar" -> {
                     JavaView(
                         JavaClassPathAnalysisInputLocation(
                             file.path,
@@ -115,14 +116,14 @@ class JVMLanguageFrontend(
                         )
                     )
                 }
-                "java" -> {
+                file.extension == "java" -> {
                     JavaView(
                         JavaSourcePathAnalysisInputLocation(
                             ctx.currentComponent?.topLevel()?.path!!
                         )
                     )
                 }
-                "apk" -> {
+                file.isApk() || file.extension == "apk" -> {
                     val apkAnalysis =
                         ApkAnalysisInputLocation(
                             file.toPath(),
@@ -132,7 +133,7 @@ class JVMLanguageFrontend(
 
                     JavaView(listOf(apkAnalysis), LRUCacheProvider(2))
                 }
-                "jimple" -> {
+                file.extension == "jimple" -> {
                     JimpleView(
                         JimpleAnalysisInputLocation(ctx.currentComponent?.topLevel()?.toPath()!!)
                     )
@@ -149,23 +150,31 @@ class JVMLanguageFrontend(
 
         for (sootClass in view.classes) {
             // Create an appropriate namespace, if it does not already exist
-            val pkg =
-                packages.computeIfAbsent(sootClass.type.packageName.name) {
-                    val pkg = newNamespace(it)
-                    scopeManager.addDeclaration(pkg)
-                    tu.addDeclaration(pkg)
-                    pkg
-                }
 
-            // Enter namespace scope
-            scopeManager.enterScope(pkg)
+            val pkg =
+                sootClass.type.packageName?.name?.split(language.namespaceDelimiter)?.fold(null) {
+                    previous: Namespace?,
+                    path ->
+                    val fqn = previous?.name.fqn(path)
+                    val innerPkg =
+                        packages.computeIfAbsent(fqn.toString()) {
+                            val pkg = newNamespace(it)
+                            scopeManager.addDeclaration(pkg)
+                            val holder = previous ?: tu
+                            holder.addDeclaration(pkg)
+                            pkg
+                        }
+                    // Enter namespace scope
+                    scopeManager.enterScope(innerPkg)
+                    innerPkg
+                }
 
             val decl = declarationHandler.handle(sootClass)
             scopeManager.addDeclaration(decl)
-            pkg.addDeclaration(decl)
+            pkg?.addDeclaration(decl)
 
             // Leave namespace scope
-            scopeManager.leaveScope(pkg)
+            pkg?.let { scopeManager.leaveScope(it) }
 
             // We need to clear the processed because they need to be per-file and we only have one
             // frontend for all files

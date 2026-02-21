@@ -25,11 +25,20 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.jvm
 
+import de.fraunhofer.aisec.cpg.frontends.HasClasses
+import de.fraunhofer.aisec.cpg.frontends.HasFunctionOverloading
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
+import java.io.File
+import java.util.zip.ZipFile
 import kotlin.reflect.KClass
 
-class JVMLanguage : Language<JVMLanguageFrontend>() {
+open class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctionOverloading {
     override val fileExtensions: List<String> = listOf("class", "java", "jimple", "jar", "apk")
 
     override val namespaceDelimiter: String = "."
@@ -51,4 +60,54 @@ class JVMLanguage : Language<JVMLanguageFrontend>() {
         )
 
     override val compoundAssignmentOperators: Set<String> = setOf()
+
+    /**
+     * This function handles some specifics of the Java language when choosing a reference target
+     * before invoking [Language.bestViableReferenceCandidate].
+     */
+    override fun bestViableReferenceCandidate(ref: Reference): Declaration? {
+        // Java allows to have "ambiguous" symbol when importing static fields and methods.
+        // Therefore, it can be that we both import a field and a method with the same name. We
+        // therefore do some additional filtering of the candidates here, before handling it.
+        if (ref.candidates.size > 1) {
+            if (ref.resolutionHelper is CallExpression) {
+                val functionDecls = ref.candidates.filterIsInstance<Function>()
+                // We can also check if the signature matches to account for overloading.
+                val targetType = ref.type as? FunctionType
+                val filteredFunctions =
+                    functionDecls
+                        .filter { it.parameters.map { it.type } == targetType?.parameters }
+                        .toSet()
+                if (filteredFunctions.isNotEmpty()) ref.candidates = filteredFunctions
+                else ref.candidates = functionDecls.toSet()
+            } else {
+                ref.candidates = ref.candidates.filter { it is Variable }.toSet()
+            }
+        }
+
+        return super.bestViableReferenceCandidate(ref)
+    }
+
+    companion object {
+        /**
+         * Determines if the given file is an APK file by checking if it is a valid ZIP file and
+         * contains either "AndroidManifest.xml" or "classes.dex".
+         */
+        fun File.isApk(): Boolean {
+            if (!this.isFile) {
+                return false
+            }
+            if (this.endsWith(".apk")) {
+                return true
+            }
+            return try {
+                ZipFile(this).use { zip ->
+                    zip.getEntry("AndroidManifest.xml") != null ||
+                        zip.getEntry("classes.dex") != null
+                }
+            } catch (_: Exception) {
+                false
+            }
+        }
+    }
 }
