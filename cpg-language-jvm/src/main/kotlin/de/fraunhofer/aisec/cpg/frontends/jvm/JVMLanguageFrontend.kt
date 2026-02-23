@@ -106,6 +106,16 @@ class JVMLanguageFrontend(
                         )
                     )
                 }
+                file.isApk() -> {
+                    val apkAnalysis =
+                        ApkAnalysisInputLocation(
+                            file.toPath(),
+                            "",
+                            DexBodyInterceptors.Default.bodyInterceptors(),
+                        )
+
+                    JavaView(listOf(apkAnalysis), LRUCacheProvider(2))
+                }
                 file.isJar() -> {
                     JavaView(
                         JavaClassPathAnalysisInputLocation(
@@ -121,16 +131,6 @@ class JVMLanguageFrontend(
                             ctx.currentComponent?.topLevel()?.path!!
                         )
                     )
-                }
-                file.isApk() -> {
-                    val apkAnalysis =
-                        ApkAnalysisInputLocation(
-                            file.toPath(),
-                            "",
-                            DexBodyInterceptors.Default.bodyInterceptors(),
-                        )
-
-                    JavaView(listOf(apkAnalysis), LRUCacheProvider(2))
                 }
                 file.extension == "jimple" -> {
                     JimpleView(

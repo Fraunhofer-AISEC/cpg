@@ -191,8 +191,73 @@ class JVMLanguageFrontendTest {
         tu.methods.forEach { println(it.code) }
     }
 
+    @Ignore(
+        "This test is too slow (around 4 minutes) and is not meant to be ran in the regular test suite (yet)."
+    )
     @Test
-    fun testHelloWorldApk() {
+    fun testRealHelloWorldApk() {
+        // This will be our classpath
+        val topLevel = Path.of("src", "test", "resources", "apk", "HelloWorld")
+        val apkFile = topLevel.resolve("real-app-debug.apk").toFile()
+
+        // Assert file exists
+        assertTrue(apkFile.exists(), "APK file not found at ${apkFile.absolutePath}")
+
+        val tu =
+            analyzeAndGetFirstTU(
+                // In case of an APK, the APK is directly used as input
+                listOf(apkFile),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<JVMLanguage>()
+                it.configureFrontend<JVMLanguageFrontend>(
+                    JVMFrontendConfiguration(
+                        packagesToIgnore =
+                            listOf(
+                                "android.",
+                                "androidx.",
+                                "com.android.",
+                                "kotlin.",
+                                "kotlinx.",
+                                "java.",
+                                "javax.",
+                            )
+                    )
+                )
+            }
+        assertNotNull(tu)
+
+        // The error handling improvements should prevent OOM errors
+        // We should get some user code parsed (non-ignored packages)
+        val userMethods =
+            tu.methods.filter { method ->
+                !method.name.toString().startsWith("android.") &&
+                    !method.name.toString().startsWith("androidx.") &&
+                    !method.name.toString().startsWith("kotlin.") &&
+                    !method.name.toString().startsWith("java.")
+            }
+
+        // If the APK contains user code, we should find some methods
+        if (userMethods.isNotEmpty()) {
+            println("Found ${userMethods.size} user methods in APK")
+            // Verify the methods have proper structure
+            userMethods.take(5).forEach { method ->
+                assertNotNull(method.name, "Method should have a name")
+                println("Method: ${method.name}")
+            }
+        }
+
+        // Most importantly, the analysis should complete without OOM errors
+        // The new error handling should catch and handle any parsing issues gracefully
+        assertTrue(
+            tu.problems.isEmpty() ||
+                tu.problems.all { it is ProblemDeclaration || it is ProblemExpression }
+        )
+    }
+
+    @Test
+    fun testHelloWorldFakeApk() {
         // This will be our classpath
         val topLevel = Path.of("src", "test", "resources", "apk", "HelloWorld")
         val apkFile = topLevel.resolve("app-debug.apk").toFile()
@@ -223,6 +288,7 @@ class JVMLanguageFrontendTest {
                     )
                 )
             }
+        assertNotNull(tu)
         assertNotNull(tu)
 
         // The error handling improvements should prevent OOM errors
