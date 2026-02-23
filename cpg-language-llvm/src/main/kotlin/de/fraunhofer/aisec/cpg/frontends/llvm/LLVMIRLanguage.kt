@@ -33,7 +33,7 @@ import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The LLVM IR language. */
-class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
+open class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     override val fileExtensions = listOf("ll")
     override val namespaceDelimiter = "::"
     @Transient
