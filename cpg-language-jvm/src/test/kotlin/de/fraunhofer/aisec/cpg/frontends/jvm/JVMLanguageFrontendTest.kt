@@ -289,7 +289,6 @@ class JVMLanguageFrontendTest {
                 )
             }
         assertNotNull(tu)
-        assertNotNull(tu)
 
         // The error handling improvements should prevent OOM errors
         // We should get some user code parsed (non-ignored packages)
