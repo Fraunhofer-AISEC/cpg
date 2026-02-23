@@ -528,7 +528,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
     }
 
     override fun unwrapNextStepFromEdge(edge: Edge<Node>): Node {
-        return edge.start
+        return if (edge is Invoke) edge.end else edge.start
     }
 
     override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
