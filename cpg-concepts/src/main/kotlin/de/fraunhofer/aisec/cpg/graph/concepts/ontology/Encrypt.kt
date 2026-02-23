@@ -23,16 +23,26 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.logging
+package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import java.util.Objects
+import kotlin.Any
+import kotlin.Boolean
+import kotlin.Int
+import kotlin.String
 
-/**
- * A log get operation e.g. `logging.getLogger("...")`.
- *
- * @param underlyingNode The underlying CPG node.
- * @param concept The corresponding [Log] concept note, i.e. the log that is returned.
- */
-open class LogGet(underlyingNode: Node? = null, override val concept: Log) :
-    Operation(underlyingNode = underlyingNode, concept = concept), IsLogging
+public open class Encrypt(
+    public val algorithm: String?,
+    public val secret: Secret?,
+    linkedConcept: Cipher,
+    underlyingNode: Node? = null,
+) : CipherOperation(linkedConcept, underlyingNode) {
+    override fun equals(other: Any?): Boolean =
+        other is Encrypt &&
+            super.equals(other) &&
+            other.algorithm == this.algorithm &&
+            other.secret == this.secret
+
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), algorithm, secret)
+}
