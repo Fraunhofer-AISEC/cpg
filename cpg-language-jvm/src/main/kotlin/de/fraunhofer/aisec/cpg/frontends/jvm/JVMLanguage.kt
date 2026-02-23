@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 
-class JVMLanguage : Language<JVMLanguageFrontend>() {
+open class JVMLanguage : Language<JVMLanguageFrontend>() {
     override val fileExtensions: List<String> = listOf("class", "java", "jimple", "jar", "apk")
 
     override val namespaceDelimiter: String = "."
