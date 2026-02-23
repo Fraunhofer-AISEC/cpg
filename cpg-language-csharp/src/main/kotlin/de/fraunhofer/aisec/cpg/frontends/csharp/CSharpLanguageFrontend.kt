@@ -88,9 +88,9 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
         scopeManager.resetToGlobal(tu)
         scopeManager.enterScope(tu)
 
-        for (child in root.children) {
-            handleNode(child, tu)
-        }
+        //        for (child in root.children) {
+        //            handleNode(child, tu)
+        //        }
 
         scopeManager.leaveScope(tu)
         return tu
@@ -102,9 +102,9 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
                 val ns = newNamespaceDeclaration(node.name, rawNode = node)
                 scopeManager.enterScope(ns)
 
-                for (child in node.children) {
-                    handleNode(child, ns)
-                }
+                //                for (child in node.children) {
+                //                    handleNode(child, ns)
+                //                }
 
                 scopeManager.leaveScope(ns)
                 scopeManager.addDeclaration(ns)
@@ -138,7 +138,7 @@ interface CSharpNativeParser : Library {
 
     fun getNumChildren(handle: Pointer): Int
 
-    fun getChild(handle: Pointer, index: Int): Pointer
+    fun getChild(handle: CSharpSyntaxNode, index: Int): CSharpSyntaxNode
 
     fun getIdentifier(handle: Pointer): Pointer
 
@@ -151,13 +151,6 @@ interface CSharpNativeParser : Library {
 open class CSharpSyntaxNode(val handle: Pointer) {
     val code: String by lazy {
         CSharpLanguageFrontend.nativeString(CSharpLanguageFrontend.nativeLib.getCode(handle))
-    }
-    val children: List<CSharpSyntaxNode> by lazy {
-        val n = CSharpLanguageFrontend.nativeLib.getNumChildren(handle)
-        (0 until n).map {
-            val childHandle = CSharpLanguageFrontend.nativeLib.getChild(handle, it)
-            CSharpLanguageFrontend.wrapHandle(childHandle)
-        }
     }
 }
 
