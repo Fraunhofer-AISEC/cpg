@@ -152,9 +152,7 @@ class LoggingConceptTest : BaseTest() {
         assertNotNull(literalINFO)
 
         assertTrue(
-            dataFlow(startNode = literalINFO) {
-                    it is Logging && it.underlyingNode is Import
-                }
+            dataFlow(startNode = literalINFO) { it is Logging && it.underlyingNode is Import }
                 .value,
             "Expected to find a dataflow from the literal \"INFO\" to the logging node based on the import declaration.",
         )

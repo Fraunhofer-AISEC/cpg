@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
@@ -178,11 +179,16 @@ internal fun Pass<*>.tryVariableInference(ref: Reference): Variable? {
         // namespaces
         val extractedScope = scopeManager.extractScope(ref, ref.language)
         when (val scope = extractedScope?.scope) {
-            is NameScope -> {
+            is NamespaceScope -> {
                 log.warn(
                     "We should infer a namespace variable ${ref.name} at this point, but this is not yet implemented."
                 )
                 null
+            }
+            is RecordScope -> {
+                val field = scope.astNode?.startInference(ctx)?.inferFieldDeclaration(ref)
+                field?.isStatic = true
+                field
             }
             else -> {
                 log.warn(
