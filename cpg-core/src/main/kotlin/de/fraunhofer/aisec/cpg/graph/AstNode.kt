@@ -76,7 +76,7 @@ abstract class AstNode : Node() {
     val idAst: String by lazy {
         /*
          * proposed structure:
-         *     {parent}/{simple class name}/{name | signature | value}
+         *     {parent}/{simple class name}/{name | signature | value | index}
          */
         var item: String =
             when (this) {
@@ -89,8 +89,10 @@ abstract class AstNode : Node() {
                 else -> name.toString()
             }
 
-        val parentId = if (astParent != null) astParent?.idAst + "/" else ""
+        // use parent's id as base
+        val parentId = astParent?.let { "${it.idAst}/" }.orEmpty()
 
+        // assemble full id
         parentId +
             this::class.simpleName +
             if (item.isEmpty()) "" else "/" + URLEncoder.encode(item, StandardCharsets.UTF_8)
