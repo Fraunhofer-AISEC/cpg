@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import kotlin.reflect.KClass
 
 /** The Ruby Language */
-class RubyLanguage :
+open class RubyLanguage :
     Language<RubyLanguageFrontend>(),
     HasDefaultArguments,
     HasClasses,
