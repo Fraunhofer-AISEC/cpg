@@ -149,7 +149,7 @@ class JVMLanguageFrontend(
 
         for (sootClass in view.classes) {
             // Create an appropriate namespace, if it does not already exist
-            val pkg =
+            var pkg =
                 sootClass.type.packageName?.name?.split(language.namespaceDelimiter)?.fold(null) {
                     previous: Namespace?,
                     path ->
@@ -172,8 +172,9 @@ class JVMLanguageFrontend(
             pkg?.addDeclaration(decl)
 
             // Leave namespace scope
-            if (pkg is Namespace) {
-                tu.allChildren<Namespace>().reversed().forEach { scopeManager.leaveScope(it) }
+            while (pkg is Namespace) {
+                scopeManager.leaveScope(pkg)
+                pkg = pkg.astParent as? Namespace
             }
 
             // We need to clear the processed because they need to be per-file and we only have one
