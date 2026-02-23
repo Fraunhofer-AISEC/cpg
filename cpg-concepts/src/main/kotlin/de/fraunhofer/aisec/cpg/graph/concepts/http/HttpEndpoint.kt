@@ -32,12 +32,12 @@ import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
 import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authorization
 import de.fraunhofer.aisec.cpg.graph.concepts.auth.RequestContext
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.RemoteEntryPoint
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import java.util.Objects
 
 /** Represents a single [HttpEndpoint] on the server */
 open class HttpEndpoint(
-    underlyingNode: FunctionDeclaration? = null,
+    underlyingNode: Function? = null,
     val httpMethod: HttpMethod,
     val path: String,
     val arguments: List<Node>,

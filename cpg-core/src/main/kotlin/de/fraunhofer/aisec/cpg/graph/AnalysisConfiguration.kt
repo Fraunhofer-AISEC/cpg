@@ -29,7 +29,7 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
@@ -364,10 +364,9 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                     } else if (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty()) {
                         // Return from the functions/methods which have been invoked.
                         val returnedTo =
-                            (currentNode as? FunctionDeclaration
-                                    ?: currentNode.firstParentOrNull<FunctionDeclaration>()
-                                    ?: (currentNode as? OverlayNode)?.underlyingNode
-                                        as? FunctionDeclaration)
+                            (currentNode as? Function
+                                    ?: currentNode.firstParentOrNull<Function>()
+                                    ?: (currentNode as? OverlayNode)?.underlyingNode as? Function)
                                 ?.calledByEdges as Collection<Edge<Node>>? ?: setOf()
 
                         filterAndJump(
@@ -482,7 +481,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                                 .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
                         }
 
-                        is FunctionDeclaration -> {
+                        is Function -> {
                             val calledBy = currentNode.calledByEdges as Collection<Edge<Node>>
 
                             filterAndJump(
@@ -551,7 +550,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
             }
 
             GraphToFollow.EOG -> {
-                edge is Invoke && currentNode is FunctionDeclaration
+                edge is Invoke && currentNode is Function
             }
         }
     }

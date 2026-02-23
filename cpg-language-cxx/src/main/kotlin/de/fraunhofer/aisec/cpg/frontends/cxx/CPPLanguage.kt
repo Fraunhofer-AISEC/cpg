@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -181,9 +182,7 @@ open class CPPLanguage :
         // call, this will match the type T because this means that the parameter is given by
         // reference rather than by value.
         if (
-            targetType is ReferenceType &&
-                targetType.elementType == type &&
-                targetHint is ParameterDeclaration
+            targetType is ReferenceType && targetType.elementType == type && targetHint is Parameter
         ) {
             return DirectMatch
         }
@@ -205,7 +204,7 @@ open class CPPLanguage :
     context(_: ContextProvider)
     override fun bestViableResolution(
         result: CallResolutionResult
-    ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
+    ): Pair<Set<Function>, CallResolutionResult.SuccessKind> {
         // There is a sort of weird workaround in C++ to select a prefix vs. postfix operator for
         // increment and decrement operators. See
         // https://en.cppreference.com/w/cpp/language/operator_incdec. If it is a postfix, we need
@@ -239,18 +238,17 @@ open class CPPLanguage :
      * @return true if resolution was successful, false if not
      */
     override fun handleTemplateFunctionCalls(
-        curClass: RecordDeclaration?,
+        curClass: Record?,
         templateCall: CallExpression,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration?,
+        currentTU: TranslationUnit?,
         needsExactMatch: Boolean,
-    ): Pair<Boolean, List<FunctionDeclaration>> {
+    ): Pair<Boolean, List<Function>> {
         val instantiationCandidates =
-            ctx.scopeManager.lookupSymbolByNodeNameOfType<FunctionTemplateDeclaration>(templateCall)
+            ctx.scopeManager.lookupSymbolByNodeNameOfType<FunctionTemplate>(templateCall)
         for (functionTemplateDeclaration in instantiationCandidates) {
-            val initializationType =
-                mutableMapOf<AstNode?, TemplateDeclaration.TemplateInitialization?>()
+            val initializationType = mutableMapOf<AstNode?, Template.TemplateInitialization?>()
             val orderedInitializationSignature = mutableMapOf<Declaration, Int>()
             val explicitInstantiation = mutableListOf<ParameterizedType>()
             if (
@@ -309,7 +307,7 @@ open class CPPLanguage :
             val edges = templateCall.templateArgumentEdges
             // Set instantiation propertyEdges
             for (edge in edges ?: listOf()) {
-                edge.instantiation = TemplateDeclaration.TemplateInitialization.EXPLICIT
+                edge.instantiation = Template.TemplateInitialization.EXPLICIT
             }
 
             if (functionTemplateDeclaration == null) {

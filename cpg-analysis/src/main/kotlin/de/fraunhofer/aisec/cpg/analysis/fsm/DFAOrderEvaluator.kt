@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
@@ -40,8 +40,7 @@ import org.slf4j.LoggerFactory
  * This class uses a [DFA] to evaluate if the order of statements in the CPG is correct. It needs
  * the following inputs:
  * - [dfa]: Describes the desired correct order of nodes
- * - [consideredBases]: A set of the IDs of nodes (typically the [VariableDeclaration]) which are
- *   considered.
+ * - [consideredBases]: A set of the IDs of nodes (typically the [Variable]) which are considered.
  * - [nodeToRelevantMethod]: A mapping between CPG nodes and their operators used by the respective
  *   edges in the [dfa]. Currently, we only consider [CallExpression]s. If a node is not contained
  *   in this list, it is not considered by the evaluation as we assume that the method is not
@@ -348,7 +347,7 @@ open class DFAOrderEvaluator(
             // the different paths of execution which both can use the same base.
             val prefixedBase = "$eogPath|${base.name}.$base"
 
-            if (base is ParameterDeclaration) {
+            if (base is Parameter) {
                 // The base was the parameter of the function? We have an inter-procedural flow!
                 interproceduralFlows[prefixedBase] = true
             }
@@ -403,7 +402,7 @@ open class DFAOrderEvaluator(
                 it is Reference ||
                     it is ReturnStatement ||
                     it is ConstructExpression ||
-                    it is VariableDeclaration
+                    it is Variable
             }
             .minByOrNull { it.name }
     }

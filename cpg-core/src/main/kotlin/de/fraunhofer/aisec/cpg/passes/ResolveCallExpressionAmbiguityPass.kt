@@ -35,8 +35,8 @@ import de.fraunhofer.aisec.cpg.frontends.HasFunctionStyleConstruction
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -55,7 +55,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * stems from the fact that we might not know all the types yet. We therefore need to handle them as
  * regular call expression in a [LanguageFrontend] or [Handler] and then later replace them with a
  * [CastExpression] or [ConstructExpression], if the [CallExpression.callee] refers to name of a
- * [Type] / [RecordDeclaration] rather than a function.
+ * [Type] / [Record] rather than a function.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @DependsOn(TypeResolver::class)
@@ -66,7 +66,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
-    override fun accept(tu: TranslationUnitDeclaration) {
+    override fun accept(tu: TranslationUnit) {
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node ->
             when (node) {

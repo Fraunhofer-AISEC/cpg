@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
 import de.fraunhofer.aisec.cpg.graph.FrontendProvider
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 
 abstract class GoFrontendConfiguration() : FrontendConfiguration<GoLanguageFrontend>()
 
@@ -41,14 +41,14 @@ class NoDependenciesGoFrontendConfiguration : GoFrontendConfiguration() {
      * @param node The function declaration to check
      */
     context(provider: FrontendProvider<GoLanguageFrontend>)
-    override fun doNotParseBody(node: FunctionDeclaration): Boolean {
+    override fun doNotParseBody(node: Function): Boolean {
         return provider.frontend.isDependency
     }
 }
 
 class EmptyGoFrontendConfiguration() : GoFrontendConfiguration() {
     context(provider: FrontendProvider<GoLanguageFrontend>)
-    override fun doNotParseBody(node: FunctionDeclaration): Boolean {
+    override fun doNotParseBody(node: Function): Boolean {
         return false // Always parse the body of functions
     }
 }

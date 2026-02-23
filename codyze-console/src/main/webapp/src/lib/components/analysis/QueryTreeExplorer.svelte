@@ -194,8 +194,11 @@
   // Function to load more node values for display
   function loadMoreNodes() {
     if (!queryTree?.nodeValues) return;
-    
-    const newCount = Math.min(displayedNodeCount + NODE_VALUES_BATCH_SIZE, queryTree.nodeValues.length);
+
+    const newCount = Math.min(
+      displayedNodeCount + NODE_VALUES_BATCH_SIZE,
+      queryTree.nodeValues.length
+    );
     displayedNodeCount = newCount;
     
     if (newCount >= queryTree.nodeValues.length) {

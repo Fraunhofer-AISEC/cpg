@@ -26,12 +26,12 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Operator
 
 /**
  * This special call expression is used when an operator (such as a [BinaryOperator]) is overloaded.
  * In this case, we replace the original [BinaryOperator] with an [OperatorCallExpression], which
- * points to its respective [OperatorDeclaration].
+ * points to its respective [Operator].
  */
 class OperatorCallExpression : CallExpression(), HasOperatorCode, HasBase {
 
@@ -55,11 +55,11 @@ class OperatorCallExpression : CallExpression(), HasOperatorCode, HasBase {
 }
 
 /**
- * Creates a new [OperatorCallExpression] to a [OperatorDeclaration] and also sets the appropriate
- * fields such as [CallExpression.invokes] and [Reference.refersTo].
+ * Creates a new [OperatorCallExpression] to a [Operator] and also sets the appropriate fields such
+ * as [CallExpression.invokes] and [Reference.refersTo].
  */
 fun operatorCallFromDeclaration(
-    decl: OperatorDeclaration,
+    decl: Operator,
     op: HasOverloadedOperation,
 ): OperatorCallExpression {
     return with(decl) {

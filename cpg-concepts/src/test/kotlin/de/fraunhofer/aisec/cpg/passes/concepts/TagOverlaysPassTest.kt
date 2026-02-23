@@ -34,8 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.util.Objects
@@ -76,12 +76,8 @@ class TagOverlaysPassTest {
                                         TagOverlaysPass.Configuration(
                                             tag =
                                                 tag {
-                                                    each<RecordDeclaration>("Encryption").with {
-                                                        Cipher()
-                                                    }
-                                                    each<VariableDeclaration>("key").with {
-                                                        Secret()
-                                                    }
+                                                    each<Record>("Encryption").with { Cipher() }
+                                                    each<Variable>("key").with { Secret() }
                                                     each<CallExpression>("encrypt").withMultiple {
                                                         propagate { node.arguments[0] }
                                                             .with { SecretKey() }

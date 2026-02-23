@@ -51,7 +51,7 @@ class ArgumentHolderTest {
                     newSubscriptExpression(),
                     newWhileStatement(),
                     newAssignExpression(),
-                    newVariableDeclaration("test"),
+                    newVariable("test"),
                 )
 
             for (node in list) {

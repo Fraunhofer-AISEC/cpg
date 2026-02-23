@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -230,7 +230,7 @@ class IntegerValue : Value<LatticeInterval> {
             }
             return interval
         } // (Re-)Declarations of the Variable
-        else if (node is VariableDeclaration) {
+        else if (node is Variable) {
             val initializerValue =
                 node.initializer?.let {
                     this.applyEffect(lattice, state, it, null, computeWithoutPush = true)

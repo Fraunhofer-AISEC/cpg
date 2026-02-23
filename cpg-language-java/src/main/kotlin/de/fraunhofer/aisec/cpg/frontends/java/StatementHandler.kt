@@ -35,7 +35,7 @@ import com.github.javaparser.utils.Pair
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
 import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
@@ -502,7 +502,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         for (r in resources) {
             if (r is DeclarationStatement) {
                 for (d in r.declarations) {
-                    if (d is VariableDeclaration) {
+                    if (d is Variable) {
                         frontend.scopeManager.addDeclaration(d)
                     }
                 }
@@ -531,7 +531,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             possibleTypes.add(concreteType)
         }
         val parameter =
-            this.newVariableDeclaration(
+            this.newVariable(
                 catchCls.parameter.name.toString(),
                 concreteType,
                 rawNode = catchCls.parameter,

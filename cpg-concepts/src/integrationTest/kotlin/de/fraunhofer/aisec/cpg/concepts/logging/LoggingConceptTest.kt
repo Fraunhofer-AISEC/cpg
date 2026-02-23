@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.logging.IsLogging
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.Log
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogLevel
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWrite
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Import
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.concepts.logging.python.PythonLoggingConceptPass
 import de.fraunhofer.aisec.cpg.query.dataFlow
@@ -153,10 +153,7 @@ class LoggingConceptTest : BaseTest() {
         assertNotNull(literalINFO)
 
         assertTrue(
-            dataFlow(startNode = literalINFO) {
-                    it is Log && it.underlyingNode is ImportDeclaration
-                }
-                .value,
+            dataFlow(startNode = literalINFO) { it is Log && it.underlyingNode is Import }.value,
             "Expected to find a dataflow from the literal \"INFO\" to the logging node based on the import declaration.",
         )
 
@@ -197,7 +194,7 @@ class LoggingConceptTest : BaseTest() {
             "Expected to find 3 logging nodes. One from the `import logging as log` declaration and one `foo` and one `bar` logger from the `log.getLogger()` calls. The other `getLogger()` calls are duplicates and must not create new loggers.",
         )
 
-        val defaultLogger = allLoggers.singleOrNull { it.underlyingNode is ImportDeclaration }
+        val defaultLogger = allLoggers.singleOrNull { it.underlyingNode is Import }
         assertNotNull(defaultLogger)
 
         val fooLogger =

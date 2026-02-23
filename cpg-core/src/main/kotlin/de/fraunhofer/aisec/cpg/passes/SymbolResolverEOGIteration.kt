@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
@@ -173,7 +173,7 @@ fun DeclarationStateElement.pushType(
  * - [HasType.assignedTypes] - the assigned types of the node
  */
 fun SymbolResolver.acceptWithIterateEOG(t: Node) {
-    if (t !is FunctionDeclaration) {
+    if (t !is Function) {
         return
     }
 

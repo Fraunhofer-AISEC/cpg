@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
@@ -48,8 +48,7 @@ class SymbolResolverTest {
             }
 
         val globalA =
-            result.namespaces["fields"]
-                .variables[{ it.name.localName == "a" && it !is FieldDeclaration }]
+            result.namespaces["fields"].variables[{ it.name.localName == "a" && it !is Field }]
         assertNotNull(globalA)
 
         // Make sure, we only have one (!) field a
@@ -75,9 +74,9 @@ class SymbolResolverTest {
         // Same tests but for fields declared at the record level.
         // A variable "declared" inside a class is considered a field in Python.
         val fieldCopyA = result.records["MyClass"]?.fields["copyA"]
-        assertIs<FieldDeclaration>(fieldCopyA)
+        assertIs<Field>(fieldCopyA)
         val baz = result.records["MyClass"]?.methods["baz"]
-        assertIs<MethodDeclaration>(baz)
+        assertIs<Method>(baz)
         val bazPrint = baz.calls("print").singleOrNull()
         assertIs<CallExpression>(bazPrint)
         val bazPrintArgument = bazPrint.arguments.firstOrNull()

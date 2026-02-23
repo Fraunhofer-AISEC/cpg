@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -117,7 +117,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
         catchClause.body = body as? Block
 
-        if (decl is VariableDeclaration) {
+        if (decl is Variable) {
             frontend.scopeManager.addDeclaration(decl)
             catchClause.parameter = decl
         }

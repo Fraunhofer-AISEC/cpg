@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -315,7 +315,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             if (expr.instantiates == null) return expr
 
             // loop through the operands
-            for (field in (expr.instantiates as RecordDeclaration).fields) {
+            for (field in (expr.instantiates as Record).fields) {
                 // and handle them as expressions themselves
                 val arg = initializeAsUndef(field.type, value)
                 expr.addArgument(arg)
@@ -343,7 +343,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             if (expr.instantiates == null) return expr
 
             // loop through the operands
-            for (field in (expr.instantiates as RecordDeclaration).fields) {
+            for (field in (expr.instantiates as Record).fields) {
                 // and handle them as expressions themselves
                 val arg = initializeAsZero(field.type, value)
                 expr.addArgument(arg)
@@ -462,7 +462,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 )
 
                 // look for the field
-                val field: FieldDeclaration?
+                val field: Field?
                 val fieldName: String =
                     if (index is Int) {
                         field = record.fields["field_$index"]

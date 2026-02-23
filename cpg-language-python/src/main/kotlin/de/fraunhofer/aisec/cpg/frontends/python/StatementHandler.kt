@@ -466,7 +466,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (node.type != null) {
                     // the parameter can have a name, or we use the anonymous identifier _
                     catchClause.parameter =
-                        newVariableDeclaration(
+                        newVariable(
                             name = node.name ?: "",
                             type = frontend.typeOf(node.type),
                             rawNode = node,
@@ -554,7 +554,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 // If we have an alias, we import the package with the alias and do NOT import the
                 // parent packages
                 val decl =
-                    newImportDeclaration(
+                    newImport(
                         parseName(imp.name),
                         style = ImportStyle.IMPORT_NAMESPACE,
                         parseName(alias),
@@ -569,11 +569,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 var importName: Name? = parseName(imp.name)
                 while (importName != null) {
                     val decl =
-                        newImportDeclaration(
-                            importName,
-                            style = ImportStyle.IMPORT_NAMESPACE,
-                            rawNode = imp,
-                        )
+                        newImport(importName, style = ImportStyle.IMPORT_NAMESPACE, rawNode = imp)
                     conditionallyAddAdditionalSourcesToAnalysis(decl.import)
                     frontend.scopeManager.addDeclaration(decl)
                     declStmt.declarations += decl
@@ -625,7 +621,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     // In the wildcard case, our "import" is the module name, and we set "wildcard"
                     // to true
                     conditionallyAddAdditionalSourcesToAnalysis(module)
-                    newImportDeclaration(
+                    newImport(
                         module,
                         style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
                         rawNode = imp,
@@ -637,14 +633,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     val alias = imp.asname
                     conditionallyAddAdditionalSourcesToAnalysis(name)
                     if (alias != null) {
-                        newImportDeclaration(
+                        newImport(
                             name,
                             style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                             parseName(alias),
                             rawNode = imp,
                         )
                     } else {
-                        newImportDeclaration(
+                        newImport(
                             name,
                             style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                             rawNode = imp,
@@ -690,8 +686,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /** Small utility function to check, whether we are inside an __init__ module. */
     private fun isInitModule(): Boolean =
-        (frontend.scopeManager.firstScopeIsInstanceOrNull<NameScope>()?.astNode
-                as? NamespaceDeclaration)
+        (frontend.scopeManager.firstScopeIsInstanceOrNull<NameScope>()?.astNode as? Namespace)
             ?.path
             ?.endsWith(PythonLanguage.IDENTIFIER_INIT) == true
 

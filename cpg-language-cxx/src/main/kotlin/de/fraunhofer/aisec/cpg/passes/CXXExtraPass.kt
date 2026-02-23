@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
@@ -156,7 +156,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     private fun fixInitializers(node: Node) {
-        if (node is VariableDeclaration) {
+        if (node is Variable) {
             // check if we have the corresponding class for this type
             val record = node.type.root.recordDeclaration
             val typeString = node.type.root.name
@@ -197,14 +197,14 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This function connects a [FunctionDeclaration] that is a definition (i.e., has a body) to
-     * possible declarations of the same function (has [FunctionDeclaration.isDefinition] set to
-     * false) pointing to it by setting the field [FunctionDeclaration.definition].
+     * This function connects a [Function] that is a definition (i.e., has a body) to possible
+     * declarations of the same function (has [Function.isDefinition] set to false) pointing to it
+     * by setting the field [Function.definition].
      *
      * This works across the whole [Component].
      */
     private fun connectDefinitions(declaration: Node) {
-        if (declaration !is FunctionDeclaration) {
+        if (declaration !is Function) {
             return
         }
 
@@ -222,7 +222,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // Note: scope is not null.
         // Update the definition
         val candidates =
-            scope.symbols[declaration.symbol]?.filterIsInstance<FunctionDeclaration>()?.filter {
+            scope.symbols[declaration.symbol]?.filterIsInstance<Function>()?.filter {
                 // We should only connect methods to methods, functions to functions and
                 // constructors to constructors.
                 it::class == declaration::class &&

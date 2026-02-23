@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.builder.function
 import de.fraunhofer.aisec.cpg.graph.builder.problemDecl
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.problems
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
@@ -88,13 +88,13 @@ internal class ExtensionsTest : BaseTest() {
         with(TestLanguageFrontend()) {
             val collectionComprehension =
                 newCollectionComprehension().applyWithScope {
-                    val varA = newVariableDeclaration("a")
+                    val varA = newVariable("a")
                     val declarationStatement = newDeclarationStatement()
                     declarationStatement.addDeclaration(varA)
                     this.statement = declarationStatement
                 }
             val varA = collectionComprehension.variables["a"]
-            assertIs<VariableDeclaration>(varA)
+            assertIs<Variable>(varA)
             assertIs<GlobalScope>(varA.scope)
         }
     }

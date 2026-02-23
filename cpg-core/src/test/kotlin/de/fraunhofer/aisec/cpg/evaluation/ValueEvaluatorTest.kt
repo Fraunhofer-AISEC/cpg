@@ -770,7 +770,7 @@ class ValueEvaluatorTest {
     @Test
     fun testHandleConditionalExpression() {
         with(TestLanguageFrontend()) {
-            val a = newVariableDeclaration("a")
+            val a = newVariable("a")
             a.initializer = newLiteral(1)
 
             val aRef = newReference("a")

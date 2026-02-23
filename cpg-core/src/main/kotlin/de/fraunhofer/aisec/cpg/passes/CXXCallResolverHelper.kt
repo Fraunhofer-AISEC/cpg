@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.tryCast
@@ -43,7 +44,7 @@ import java.util.regex.Pattern
  * @return true if there is no method in the recordDeclaration where the name of the method matches
  *   with the provided name. false otherwise
  */
-fun shouldContinueSearchInParent(recordDeclaration: RecordDeclaration?, name: String?): Boolean {
+fun shouldContinueSearchInParent(recordDeclaration: Record?, name: String?): Boolean {
     val namePattern =
         Pattern.compile(
             "(" + Pattern.quote(recordDeclaration?.name.toString()) + "\\.)?" + Pattern.quote(name)
@@ -58,27 +59,27 @@ fun shouldContinueSearchInParent(recordDeclaration: RecordDeclaration?, name: St
  * TemplateInstantiation Edge from CallExpression to Template 2. Set Invokes Edge to all
  * realizations of the Template 3. Set return type of the CallExpression and checks if it uses a
  * ParameterizedType and therefore has to be instantiated 4. Set Template Parameters Edge from the
- * CallExpression to all Instantiation Values 5. Set DFG Edges from instantiation to
- * ParameterDeclaration in TemplateDeclaration
+ * CallExpression to all Instantiation Values 5. Set DFG Edges from instantiation to Parameter in
+ * Template
  *
  * @param templateCall call to instantiate and invoke a function template
  * @param functionTemplateDeclaration functionTemplate we have identified that should be
  *   instantiated
- * @param function FunctionDeclaration representing the realization of the template
+ * @param function Function representing the realization of the template
  * @param initializationSignature mapping containing the all elements of the signature of the
- *   TemplateDeclaration as key and the Type/Expression the Parameter is initialized with.
+ *   Template as key and the Type/Expression the Parameter is initialized with.
  * @param initializationType mapping of the instantiation value to the instantiation type (depends
- *   on resolution [TemplateDeclaration.TemplateInitialization]
+ *   on resolution [Template.TemplateInitialization]
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  */
 fun applyTemplateInstantiation(
     templateCall: CallExpression,
-    functionTemplateDeclaration: FunctionTemplateDeclaration?,
-    function: FunctionDeclaration,
+    functionTemplateDeclaration: FunctionTemplate?,
+    function: Function,
     initializationSignature: Map<Declaration?, AstNode?>,
-    initializationType: Map<AstNode?, TemplateDeclaration.TemplateInitialization?>,
+    initializationType: Map<AstNode?, Template.TemplateInitialization?>,
     orderedInitializationSignature: Map<Declaration, Int>,
-): List<FunctionDeclaration> {
+): List<Function> {
     val templateInstantiationParameters =
         mutableListOf<AstNode>(*orderedInitializationSignature.keys.toTypedArray())
     for ((key, value) in orderedInitializationSignature) {
@@ -117,10 +118,10 @@ fun applyTemplateInstantiation(
         }
     }
 
-    // Add DFG edges from the instantiation Expression to the ParameterDeclaration in the
+    // Add DFG edges from the instantiation Expression to the Parameter in the
     // Template.
     for ((declaration) in initializationSignature) {
-        if (declaration is ParameterDeclaration) {
+        if (declaration is Parameter) {
             initializationSignature[declaration]?.let { declaration.prevDFGEdges += it }
         }
     }
@@ -136,10 +137,10 @@ fun applyTemplateInstantiation(
  * @param arguments arguments of the call
  * @param functionSignature Types of the signature of the possible invocation candidate
  * @return List containing either null on the i-th position (if the type of i-th argument of the
- *   call equals the type of the i-th argument of the FunctionDeclaration) or a CastExpression on
- *   the i-th position (if the argument of the call can be cast to match the type of the argument at
- *   the i-th position of the FunctionDeclaration). If the list is empty the signature of the
- *   FunctionDeclaration cannot be reached through implicit casts
+ *   call equals the type of the i-th argument of the Function) or a CastExpression on the i-th
+ *   position (if the argument of the call can be cast to match the type of the argument at the i-th
+ *   position of the Function). If the list is empty the signature of the Function cannot be reached
+ *   through implicit casts
  */
 fun signatureWithImplicitCastTransformation(
     call: CallExpression,
@@ -174,15 +175,14 @@ fun signatureWithImplicitCastTransformation(
  *
  * @param initialization mapping of the declaration of the template parameters to the explicit
  *   values the template is instantiated with
- * @return mapping of the parameterized types to the corresponding TypeParameterDeclaration in the
- *   template
+ * @return mapping of the parameterized types to the corresponding TypeParameter in the template
  */
 fun getParameterizedSignaturesFromInitialization(
     initialization: Map<Declaration?, Node?>
-): Map<ParameterizedType, TypeParameterDeclaration> {
-    val parameterizedSignature: MutableMap<ParameterizedType, TypeParameterDeclaration> = HashMap()
+): Map<ParameterizedType, TypeParameter> {
+    val parameterizedSignature: MutableMap<ParameterizedType, TypeParameter> = HashMap()
     for (templateParam in initialization.keys) {
-        if (templateParam is TypeParameterDeclaration) {
+        if (templateParam is TypeParameter) {
             parameterizedSignature[templateParam.type as ParameterizedType] = templateParam
         }
     }
@@ -190,8 +190,8 @@ fun getParameterizedSignaturesFromInitialization(
 }
 
 /**
- * Creates a Mapping between the Parameters of the TemplateDeclaration and the Values provided * for
- * the instantiation of the template.
+ * Creates a Mapping between the Parameters of the Template and the Values provided * for the
+ * instantiation of the template.
  *
  * The difference to [constructTemplateInitializationSignatureFromTemplateParameters] is that this
  * one also takes into account defaults and auto deductions
@@ -202,18 +202,18 @@ fun getParameterizedSignaturesFromInitialization(
  *   instantiated
  * @param templateCall callExpression that instantiates the template
  * @param instantiationType mapping of the instantiation value to the instantiation type (depends on
- *   resolution [TemplateDeclaration.TemplateInitialization]
+ *   resolution [Template.TemplateInitialization]
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  * @param explicitInstantiated list of all ParameterizedTypes which are explicitly instantiated
- * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
- *   and the Type/Expression the Parameter is initialized with. This function returns null if the
- *   {ParameterDeclaration, TypeParameterDeclaration} do not match the provided value for
- *   initialization -&gt; initialization not possible
+ * @return mapping containing the all elements of the signature of the Template as key and the
+ *   Type/Expression the Parameter is initialized with. This function returns null if the
+ *   {Parameter, TypeParameter} do not match the provided value for initialization -&gt;
+ *   initialization not possible
  */
 fun getTemplateInitializationSignature(
-    functionTemplateDeclaration: FunctionTemplateDeclaration,
+    functionTemplateDeclaration: FunctionTemplate,
     templateCall: CallExpression,
-    instantiationType: MutableMap<AstNode?, TemplateDeclaration.TemplateInitialization?>,
+    instantiationType: MutableMap<AstNode?, Template.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
     explicitInstantiated: MutableList<ParameterizedType>,
 ): Map<Declaration?, AstNode?>? {
@@ -243,38 +243,37 @@ fun getTemplateInitializationSignature(
                 (signature[parameterizedTypeResolution[currentArgumentType.root]] == null ||
                     (instantiationType[
                         signature[parameterizedTypeResolution[currentArgumentType.root]]] ==
-                        TemplateDeclaration.TemplateInitialization.DEFAULT))
+                        Template.TemplateInitialization.DEFAULT))
         ) {
             signature[parameterizedTypeResolution[currentArgumentType.root]] = typeExpression
-            instantiationType[typeExpression] =
-                TemplateDeclaration.TemplateInitialization.AUTO_DEDUCTION
+            instantiationType[typeExpression] = Template.TemplateInitialization.AUTO_DEDUCTION
         }
     }
     return signature
 }
 
 /**
- * Creates a Mapping between the Parameters of the TemplateDeclaration and the Values provided for
- * the instantiation of the template (Only the ones that are in defined in the instantiation => no
+ * Creates a Mapping between the Parameters of the Template and the Values provided for the
+ * instantiation of the template (Only the ones that are in defined in the instantiation => no
  * defaults or implicit). Additionally, it fills the maps and lists mentioned below:
  *
  * @param functionTemplateDeclaration functionTemplate we have identified that should be
  *   instantiated
  * @param templateCall callExpression that instantiates the template
  * @param instantiationType mapping of the instantiation value to the instantiation type (depends
- * * on resolution [TemplateDeclaration.TemplateInitialization]
+ * * on resolution [Template.TemplateInitialization]
  *
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  * @param explicitInstantiated list of all ParameterizedTypes which are explicitly instantiated
- * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
- *   and the Type/Expression the Parameter is initialized with. This function returns null if the
- *   {ParameterDeclaration, TypeParameterDeclaration} do not match the provided value for
- *   initialization -&gt; initialization not possible
+ * @return mapping containing the all elements of the signature of the Template as key and the
+ *   Type/Expression the Parameter is initialized with. This function returns null if the
+ *   {Parameter, TypeParameter} do not match the provided value for initialization -&gt;
+ *   initialization not possible
  */
 fun constructTemplateInitializationSignatureFromTemplateParameters(
-    functionTemplateDeclaration: FunctionTemplateDeclaration,
+    functionTemplateDeclaration: FunctionTemplate,
     templateCall: CallExpression,
-    instantiationType: MutableMap<AstNode?, TemplateDeclaration.TemplateInitialization?>,
+    instantiationType: MutableMap<AstNode?, Template.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
     explicitInstantiated: MutableList<ParameterizedType>,
 ): MutableMap<Declaration?, AstNode?>? {
@@ -285,9 +284,8 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
             val templateParameter = functionTemplateDeclaration.parameters[i]
             if (isInstantiated(callParameter, templateParameter)) {
                 instantiationSignature[templateParameter] = callParameter
-                instantiationType[callParameter] =
-                    TemplateDeclaration.TemplateInitialization.EXPLICIT
-                if (templateParameter is TypeParameterDeclaration) {
+                instantiationType[callParameter] = Template.TemplateInitialization.EXPLICIT
+                if (templateParameter is TypeParameter) {
                     explicitInstantiated.add(templateParameter.type as ParameterizedType)
                 }
                 orderedInitializationSignature[templateParameter] = i
@@ -313,19 +311,19 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
  *
  * @param callParameterArg
  * @param templateParameter
- * @return If the TemplateParameter is an TypeParameterDeclaration, the callParameter must be an
- *   ObjectType => returns true If the TemplateParameter is a ParameterDeclaration, the
- *   callParameterArg must be an Expression and its type must match the type of the
- *   ParameterDeclaration (same type or subtype) => returns true Otherwise return false
+ * @return If the TemplateParameter is an TypeParameter, the callParameter must be an ObjectType =>
+ *   returns true If the TemplateParameter is a Parameter, the callParameterArg must be an
+ *   Expression and its type must match the type of the Parameter (same type or subtype) => returns
+ *   true Otherwise return false
  */
 fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boolean {
     var callParameter = callParameterArg
     if (callParameter is TypeExpression) {
         callParameter = callParameter.type
     }
-    return if (callParameter is Type && templateParameter is TypeParameterDeclaration) {
+    return if (callParameter is Type && templateParameter is TypeParameter) {
         callParameter is ObjectType
-    } else if (callParameter is Expression && templateParameter is ParameterDeclaration) {
+    } else if (callParameter is Expression && templateParameter is Parameter) {
         callParameter.type == templateParameter.type ||
             callParameter.type.tryCast(templateParameter.type) != CastNotPossible
     } else {
@@ -342,14 +340,14 @@ fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boo
  * @param instantiationSignature mapping of the Declaration representing a template parameter to the
  *   value that initializes that template parameter
  * @param instantiationType mapping of the instantiation value to the instantiation type (depends on
- *   resolution [TemplateDeclaration.TemplateInitialization]
+ *   resolution [Template.TemplateInitialization]
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  */
 fun handleImplicitTemplateParameter(
-    functionTemplateDeclaration: FunctionTemplateDeclaration,
+    functionTemplateDeclaration: FunctionTemplate,
     index: Int,
     instantiationSignature: MutableMap<Declaration?, AstNode?>,
-    instantiationType: MutableMap<AstNode?, TemplateDeclaration.TemplateInitialization?>,
+    instantiationType: MutableMap<AstNode?, Template.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
 ) {
     if ((functionTemplateDeclaration.parameters[index] as HasDefault<*>).default != null) {
@@ -362,30 +360,30 @@ fun handleImplicitTemplateParameter(
             defaultNode.isImplicit = true
         }*/
         instantiationSignature[functionTemplateDeclaration.parameters[index]] = defaultNode
-        instantiationType[defaultNode] = TemplateDeclaration.TemplateInitialization.DEFAULT
+        instantiationType[defaultNode] = Template.TemplateInitialization.DEFAULT
         orderedInitializationSignature[functionTemplateDeclaration.parameters[index]] = index
     } else {
         // If there is no default, we don't have information on the parameter -> check
         // auto-deduction
         instantiationSignature[functionTemplateDeclaration.parameters[index]] = null
-        instantiationType[null] = TemplateDeclaration.TemplateInitialization.UNKNOWN
+        instantiationType[null] = Template.TemplateInitialization.UNKNOWN
         orderedInitializationSignature[functionTemplateDeclaration.parameters[index]] = index
     }
 }
 
 /**
- * @param function FunctionDeclaration realization of the template
+ * @param function Function realization of the template
  * @param parameterizedTypeResolution mapping of ParameterizedTypes to the TypeParameterDeclarations
  *   that define them, used to backwards resolve
  * @param initializationSignature mapping between the ParamDeclaration of the template and the
  *   corresponding instantiations
- * @return List of Types representing the Signature of the FunctionDeclaration, but
- *   ParameterizedTypes (which depend on the specific instantiation of the template) are resolved to
- *   the values the Template is instantiated with.
+ * @return List of Types representing the Signature of the Function, but ParameterizedTypes (which
+ *   depend on the specific instantiation of the template) are resolved to the values the Template
+ *   is instantiated with.
  */
 fun getCallSignature(
-    function: FunctionDeclaration,
-    parameterizedTypeResolution: Map<ParameterizedType, TypeParameterDeclaration>,
+    function: Function,
+    parameterizedTypeResolution: Map<ParameterizedType, TypeParameter>,
     initializationSignature: Map<Declaration?, Node?>,
 ): List<Type> {
     val templateCallSignature = mutableListOf<Type>()
@@ -407,16 +405,16 @@ fun getCallSignature(
 }
 
 /**
- * @param functionDeclaration FunctionDeclaration realization of the template
- * @param functionDeclarationSignature Signature of the realization FunctionDeclaration, but
- *   replacing the ParameterizedTypes with the ones provided in the instantiation
+ * @param functionDeclaration Function realization of the template
+ * @param functionDeclarationSignature Signature of the realization Function, but replacing the
+ *   ParameterizedTypes with the ones provided in the instantiation
  * @param templateCallExpression CallExpression that instantiates the template
  * @param explicitInstantiation list of the explicitly instantiated type parameters
  * @return true if the instantiation of the template is compatible with the template declaration,
  *   false otherwise
  */
 fun checkArgumentValidity(
-    functionDeclaration: FunctionDeclaration,
+    functionDeclaration: Function,
     functionDeclarationSignature: List<Type>,
     templateCallExpression: CallExpression,
     explicitInstantiation: List<ParameterizedType>,

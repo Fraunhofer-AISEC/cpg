@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.evaluation
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
@@ -68,9 +68,9 @@ class MultiValueEvaluator : ValueEvaluator() {
         this.path += node
 
         when (node) {
-            is FieldDeclaration -> return handleHasInitializer(node, depth)
+            is Field -> return handleHasInitializer(node, depth)
             is NewArrayExpression -> return handleHasInitializer(node, depth)
-            is VariableDeclaration -> return handleHasInitializer(node, depth)
+            is Variable -> return handleHasInitializer(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
             is UnaryOperator -> return handleUnaryOp(node, depth)
@@ -237,7 +237,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         val result = mutableSetOf<Any?>()
         if (prevDFG.isEmpty()) {
             // No previous expression?? Let's try with a variable declaration and its initialization
-            val decl = prevDFG.filterIsInstance<VariableDeclaration>()
+            val decl = prevDFG.filterIsInstance<Variable>()
             for (declaration in decl) {
                 val res = evaluateInternal(declaration, depth + 1)
                 result.addAnything(res)

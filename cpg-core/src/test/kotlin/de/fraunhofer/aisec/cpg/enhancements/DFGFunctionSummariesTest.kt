@@ -245,7 +245,7 @@ class DFGFunctionSummariesTest {
         assertNotNull(argA)
         /*
         The flows should be as follows:
-        VariableDeclaration["a"] -> Reference["a" (argument of call)] -CallingContextIn-> ParameterDeclaration -CallingContextOut-> Reference["a" (return)]
+        Variable["a"] -> Reference["a" (argument of call)] -CallingContextIn-> Parameter -CallingContextOut-> Reference["a" (return)]
          */
 
         assertEquals(1, argA.nextDFG.size)
@@ -309,8 +309,8 @@ class DFGFunctionSummariesTest {
         assertNotNull(argA)
         /*
         The flows should be as follows:
-        VariableDeclaration["a"] -> { Reference["a" (argument of call)], Reference["a" (return)] }
-        Reference["a" (argument of call)] -CallingContextIn-> ParameterDeclaration -CallingContextOut-> Reference["a" (argument of call)] -> VariableDeclaration["a"]
+        Variable["a"] -> { Reference["a" (argument of call)], Reference["a" (return)] }
+        Reference["a" (argument of call)] -CallingContextIn-> Parameter -CallingContextOut-> Reference["a" (argument of call)] -> Variable["a"]
          */
 
         assertEquals(2, argA.nextDFG.size)

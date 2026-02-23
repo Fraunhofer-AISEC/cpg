@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authorization
 import de.fraunhofer.aisec.cpg.graph.concepts.auth.RequestContext
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 
 /**
  * Creates a new [HttpClient] concept.
@@ -95,7 +95,7 @@ fun MetadataProvider.newHttpRequestHandler(
  * @return The created [HttpEndpoint] concept.
  */
 fun MetadataProvider.newHttpEndpoint(
-    underlyingNode: FunctionDeclaration,
+    underlyingNode: Function,
     httpMethod: HttpMethod,
     path: String,
     arguments: List<Node>,
