@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.*
+import java.io.File
+import java.util.zip.ZipFile
 import kotlin.reflect.KClass
 
 class JVMLanguage : Language<JVMLanguageFrontend>() {
@@ -51,4 +53,47 @@ class JVMLanguage : Language<JVMLanguageFrontend>() {
         )
 
     override val compoundAssignmentOperators: Set<String> = setOf()
+}
+
+/**
+ * Determines if the given file is an APK file by checking if it is a valid ZIP file and contains
+ * either "AndroidManifest.xml" or "classes.dex".
+ */
+fun File.isApk(): Boolean {
+    if (!this.isFile) {
+        return false
+    }
+    if (this.endsWith(".apk")) {
+        return true
+    }
+    return try {
+        ZipFile(this).use { zip ->
+            zip.getEntry("AndroidManifest.xml") != null || zip.getEntry("classes.dex") != null
+        }
+    } catch (_: Exception) {
+        false
+    }
+}
+
+/**
+ * Determines if the given file is a JAR file by checking if it is a valid ZIP file and contains
+ * either a manifest or compiled classes.
+ */
+fun File.isJar(): Boolean {
+    if (!this.isFile) {
+        return false
+    }
+    if (this.endsWith(".jar")) {
+        return true
+    }
+    return try {
+        ZipFile(this).use { zip ->
+            zip.getEntry("META-INF/MANIFEST.MF") != null ||
+                zip.entries().asSequence().any { entry ->
+                    !entry.isDirectory && entry.name.endsWith(".class")
+                }
+        }
+    } catch (_: Exception) {
+        false
+    }
 }
