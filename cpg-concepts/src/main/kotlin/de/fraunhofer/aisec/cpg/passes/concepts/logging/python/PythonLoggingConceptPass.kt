@@ -216,8 +216,8 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     // the [LogGet] node
                     .flatMap { it.overlays } // move to the "overlays" world
                     .filterIsInstance<LogGet>() // discard not-relevant overlays
-                    .map {
-                        it.linkedConcept
+                    .mapNotNull {
+                        it.concept as? Logging
                     } // move from [LogGet] to the corresponding [Logging] concept node
             if (loggers.size > 1) {
                 log.error("Found multiple loggers. Selecting one at random.")
