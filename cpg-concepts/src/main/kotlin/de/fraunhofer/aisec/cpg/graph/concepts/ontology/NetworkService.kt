@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import java.util.Objects
 import kotlin.Any
-import kotlin.Array
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.Short
@@ -43,8 +42,8 @@ import kotlin.collections.MutableMap
  * provides access to a resource
  */
 public open class NetworkService(
-    public val ips: Array<String>?,
-    public val ports: Array<Short>?,
+    public val ips: List<String>?,
+    public val ports: List<Short>?,
     public val authenticity: Boolean?,
     public val computes: MutableList<Compute?>,
     public val serviceMetadataDocument: ServiceMetadataDocument?,
@@ -85,8 +84,8 @@ public open class NetworkService(
     override fun equals(other: Any?): Boolean =
         other is NetworkService &&
             super.equals(other) &&
-            other.ips.contentEquals(this.ips) &&
-            other.ports.contentEquals(this.ports) &&
+            other.ips == this.ips &&
+            other.ports == this.ports &&
             other.authenticity == this.authenticity &&
             other.computes == this.computes &&
             other.serviceMetadataDocument == this.serviceMetadataDocument &&
