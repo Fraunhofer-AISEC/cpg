@@ -36,7 +36,7 @@ import kotlin.math.max
 import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
-class GoLanguage :
+open class GoLanguage :
     Language<GoLanguageFrontend>(),
     HasShortCircuitOperators,
     HasGenerics,

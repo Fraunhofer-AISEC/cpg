@@ -96,8 +96,8 @@ class JVMLanguageFrontend(
      */
     override fun parse(file: File): TranslationUnit {
         val view =
-            when (file.extension) {
-                "class" -> {
+            when {
+                file.extension == "class" -> {
                     JavaView(
                         JavaClassPathAnalysisInputLocation(
                             ctx.currentComponent?.topLevel()?.path!!,
@@ -106,23 +106,7 @@ class JVMLanguageFrontend(
                         )
                     )
                 }
-                "jar" -> {
-                    JavaView(
-                        JavaClassPathAnalysisInputLocation(
-                            file.path,
-                            SourceType.Library,
-                            bodyInterceptors,
-                        )
-                    )
-                }
-                "java" -> {
-                    JavaView(
-                        JavaSourcePathAnalysisInputLocation(
-                            ctx.currentComponent?.topLevel()?.path!!
-                        )
-                    )
-                }
-                "apk" -> {
+                file.isApk() -> {
                     val apkAnalysis =
                         ApkAnalysisInputLocation(
                             file.toPath(),
@@ -132,7 +116,23 @@ class JVMLanguageFrontend(
 
                     JavaView(listOf(apkAnalysis), LRUCacheProvider(2))
                 }
-                "jimple" -> {
+                file.isJar() -> {
+                    JavaView(
+                        JavaClassPathAnalysisInputLocation(
+                            file.path,
+                            SourceType.Library,
+                            bodyInterceptors,
+                        )
+                    )
+                }
+                file.extension == "java" -> {
+                    JavaView(
+                        JavaSourcePathAnalysisInputLocation(
+                            ctx.currentComponent?.topLevel()?.path!!
+                        )
+                    )
+                }
+                file.extension == "jimple" -> {
                     JimpleView(
                         JimpleAnalysisInputLocation(ctx.currentComponent?.topLevel()?.toPath()!!)
                     )
