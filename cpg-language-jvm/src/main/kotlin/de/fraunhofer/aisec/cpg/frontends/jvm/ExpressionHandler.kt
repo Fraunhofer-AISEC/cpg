@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
-import java.util.IdentityHashMap
 import sootup.core.jimple.basic.Local
 import sootup.core.jimple.basic.Value
 import sootup.core.jimple.common.constant.*
@@ -378,9 +377,10 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         val currentComponent =
             this@ExpressionHandler.frontend.currentTU?.firstParentOrNull<Component>()
 
-        frontend.typeManager.lookAlsoAtThis
-            .computeIfAbsent(currentComponent) { IdentityHashMap() }
-            .computeIfAbsent(parentTypeName) { objectType(parentTypeName) }
+        currentComponent?.lookAlsoAtThis?.computeIfAbsent(parentTypeName) {
+            objectType(parentTypeName)
+        }
+
         ref.type = frontend.typeOf(this.type)
 
         // Make it static

@@ -62,7 +62,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         walker.registerHandler { handleNode(it) }
         walker.iterate(component)
 
-        typeManager.lookAlsoAtThis.values.forEach { it.values.forEach { handleType(it) } }
+        component.lookAlsoAtThis.values.forEach { handleType(it) }
     }
 
     /**
