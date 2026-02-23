@@ -29,6 +29,12 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 
+/**
+ * Language definition for JVM-based artifacts.
+ *
+ * Supports bytecode and source artifacts in the JVM ecosystem and registers JVM built-in types used
+ * by the frontend during parsing and type resolution.
+ */
 open class JVMLanguage : Language<JVMLanguageFrontend>() {
     override val fileExtensions: List<String> = listOf("class", "java", "jimple", "jar", "apk")
 
