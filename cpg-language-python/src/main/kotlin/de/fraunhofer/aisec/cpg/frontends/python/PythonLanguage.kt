@@ -248,6 +248,11 @@ open class PythonLanguage :
                     primitiveType("float")
                 }
             }
+            "or" -> {
+                // In Python, `a or b` returns `a` if truthy, else `b`. If the lhs type is
+                // unknown, the fallback is the rhs type.
+                return if (lhsType is UnknownType) rhsType else lhsType
+            }
 
             // The rest behaves like other languages
             else ->
