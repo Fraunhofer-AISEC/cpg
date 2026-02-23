@@ -44,8 +44,7 @@ class ChatClient(
     private val mcp: McpSdkClient =
         McpSdkClient(
             clientInfo = Implementation(name = "codyze-client", version = "1.0.0"),
-            options =
-                ClientOptions(capabilities = ClientCapabilities(sampling = buildJsonObject {})),
+            options = ClientOptions(),
         )
 
     private var tools: List<Tool> = emptyList()
@@ -53,39 +52,9 @@ class ChatClient(
     /** Connect to the MCP server via SSE */
     suspend fun connect() {
         val transport = SseClientTransport(urlString = mcpServerUrl, client = httpClient)
-        registerSamplingHandler()
         mcp.connect(transport)
         val toolsResult = mcp.listTools()
         tools = toolsResult.tools
-    }
-
-    /** Register handler for incoming sampling requests from the server */
-    private fun registerSamplingHandler() {
-        mcp.setRequestHandler<CreateMessageRequest>(Method.Defined.SamplingCreateMessage) {
-            request,
-            _ ->
-            try {
-                val llmResponse =
-                    llm.query(
-                        messages = request.params.messages,
-                        systemPrompt = request.params.systemPrompt,
-                    )
-
-                CreateMessageResult(
-                    role = Role.Assistant,
-                    content = TextContent(text = llmResponse),
-                    model = llm.modelName,
-                    stopReason = StopReason.EndTurn,
-                )
-            } catch (e: Exception) {
-                CreateMessageResult(
-                    role = Role.Assistant,
-                    content = TextContent(text = "Error: ${e.message}"),
-                    model = llm.modelName,
-                    stopReason = StopReason.EndTurn,
-                )
-            }
-        }
     }
 
     /** Maximum number of tool call iterations before forcing a text response. */

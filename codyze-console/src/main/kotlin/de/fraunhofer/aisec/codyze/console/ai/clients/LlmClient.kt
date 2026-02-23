@@ -26,19 +26,11 @@
 package de.fraunhofer.aisec.codyze.console.ai.clients
 
 import de.fraunhofer.aisec.codyze.console.ai.ChatMessageJSON
-import io.modelcontextprotocol.kotlin.sdk.types.SamplingMessage
 import io.modelcontextprotocol.kotlin.sdk.types.Tool
 
 /** Interface abstracting the underlying LLM provider (Gemini, OpenAI, Ollama, etc.). */
 interface LlmClient {
     val modelName: String
-
-    /** Query for MCP sampling requests. */
-    suspend fun query(
-        messages: List<SamplingMessage>,
-        systemPrompt: String?,
-        maxTokens: Int? = null,
-    ): String
 
     /**
      * Streaming prompt execution for the chat. Calls [onText] for normal content and [onReasoning]

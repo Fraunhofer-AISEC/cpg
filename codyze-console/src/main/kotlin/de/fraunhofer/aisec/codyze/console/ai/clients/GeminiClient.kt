@@ -31,8 +31,6 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.utils.io.*
-import io.modelcontextprotocol.kotlin.sdk.types.SamplingMessage
-import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.Tool
 import kotlinx.serialization.json.*
 
@@ -43,36 +41,6 @@ class GeminiClient(
     private val baseUrl: String,
 ) : LlmClient {
     override val modelName: String = model
-
-    override suspend fun query(
-        messages: List<SamplingMessage>,
-        systemPrompt: String?,
-        maxTokens: Int?,
-    ): String {
-        val request =
-            GeminiRequest(
-                systemInstruction =
-                    systemPrompt?.let { GeminiContent(parts = listOf(GeminiPart(text = it))) },
-                contents =
-                    messages.map { msg ->
-                        GeminiContent(
-                            role =
-                                if (msg.role.toString().lowercase() == "user") "user" else "model",
-                            parts =
-                                listOf(GeminiPart(text = (msg.content as? TextContent)?.text ?: "")),
-                        )
-                    },
-            )
-
-        val response =
-            httpClient.post("$baseUrl/models/$model:generateContent?key=$apiKey") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }
-
-        val result = response.body<JsonObject>()
-        return extractTextFromResponse(result) ?: "No response"
-    }
 
     override suspend fun sendPrompt(
         userMessage: String,
@@ -221,21 +189,5 @@ class GeminiClient(
                 }
             }
         }
-    }
-
-    private fun extractTextFromResponse(result: JsonObject): String? {
-        return result["candidates"]
-            ?.jsonArray
-            ?.firstOrNull()
-            ?.jsonObject
-            ?.get("content")
-            ?.jsonObject
-            ?.get("parts")
-            ?.jsonArray
-            ?.firstOrNull()
-            ?.jsonObject
-            ?.get("text")
-            ?.jsonPrimitive
-            ?.content
     }
 }

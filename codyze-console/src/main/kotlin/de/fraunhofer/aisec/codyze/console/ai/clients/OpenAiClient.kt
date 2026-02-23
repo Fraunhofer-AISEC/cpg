@@ -31,8 +31,6 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.utils.io.*
-import io.modelcontextprotocol.kotlin.sdk.types.SamplingMessage
-import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.Tool
 import kotlinx.serialization.json.*
 
@@ -44,48 +42,6 @@ class OpenAiClient(
 ) : LlmClient {
     override val modelName: String = model
     private val usesThinkTags = model.contains("glm", ignoreCase = true)
-
-    /** Query the LLM when we have a tool that uses sampling */
-    override suspend fun query(
-        messages: List<SamplingMessage>,
-        systemPrompt: String?,
-        maxTokens: Int?,
-    ): String {
-        val openAiMessages = buildList {
-            if (systemPrompt != null) {
-                add(OpenAiMessage(role = "system", content = JsonPrimitive(systemPrompt)))
-            }
-            messages.forEach { msg ->
-                add(
-                    OpenAiMessage(
-                        role = msg.role.toString().lowercase(),
-                        content = JsonPrimitive((msg.content as? TextContent)?.text ?: ""),
-                    )
-                )
-            }
-        }
-
-        val queryRequest =
-            OpenAiRequest(
-                model = model,
-                messages = openAiMessages,
-                maxTokens = maxTokens,
-                stream = false,
-            )
-
-        val response =
-            httpClient.post("$baseUrl/v1/chat/completions") {
-                contentType(ContentType.Application.Json)
-                setBody(queryRequest)
-            }
-
-        if (!response.status.isSuccess()) {
-            return "LLM request failed: ${response.status.value} ${response.status.description}"
-        }
-
-        val result = response.body<JsonObject>()
-        return extractContentFromResponse(result) ?: "No response"
-    }
 
     override suspend fun sendPrompt(
         userMessage: String,
@@ -295,21 +251,5 @@ class OpenAiClient(
                 )
             }
         }
-    }
-
-    private fun extractContentFromResponse(result: JsonObject): String? {
-        val content =
-            result["choices"]
-                ?.jsonArray
-                ?.firstOrNull()
-                ?.jsonObject
-                ?.get("message")
-                ?.jsonObject
-                ?.get("content")
-                ?.jsonPrimitive
-                ?.content
-
-        return if (content == null) null
-        else if (usesThinkTags) stripThinkTags(content) else content
     }
 }
