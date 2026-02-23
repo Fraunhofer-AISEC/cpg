@@ -173,7 +173,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     /**
      * Handles the parsing of [structure types](https://llvm.org/docs/LangRef.html#structure-types).
      * MemberAccess fields of structs in LLVM IR do not have names, so we need to assign dummy names
-     * for easier reading, such s `field_0`.
+     * for easier reading, such as `field_0`.
      *
      * there are two different types of structs:
      * - identified structs, which have a name are explicitly declared
