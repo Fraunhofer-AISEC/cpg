@@ -786,7 +786,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         val shortFSEntry =
                                             FSEntry(
                                                 dstValueDepth,
-                                                v,
+                                                node,
                                                 0,
                                                 subAccessName,
                                                 PowersetLattice.Element(
