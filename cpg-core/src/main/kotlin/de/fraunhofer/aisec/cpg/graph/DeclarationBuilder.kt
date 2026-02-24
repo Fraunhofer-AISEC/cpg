@@ -34,8 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayConstruction
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import kotlin.io.path.Path
 
@@ -364,7 +364,7 @@ fun MetadataProvider.newField(
     node.modifiers = modifiers ?: setOf()
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
     if (initializer != null) {
-        if (initializer is NewArrayExpression) {
+        if (initializer is ArrayConstruction) {
             node.isArray = true
         }
         node.initializer = initializer

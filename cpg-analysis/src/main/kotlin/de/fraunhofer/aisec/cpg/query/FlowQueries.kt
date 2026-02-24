@@ -38,10 +38,10 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -353,26 +353,25 @@ fun Node.generatesNewData(): NodeCollectionWithAssumption {
                 tmp.fulfilled.map { it.nodes.last() }.toSet()
             }
             /* A new object is constructed and our data flow into this object -> track the new object. */
-            this is ConstructExpression ||
+            this is Construction ||
                 /* A collection comprehension (e.g. list, set, dict comprehension) generates a new object similar to calling the constructor. */
                 this is CollectionComprehension -> {
                 setOf(this)
             }
 
-            this.astParent is AssignExpression &&
-                this in (this.astParent as AssignExpression).rhs &&
-                (this.astParent as AssignExpression).operatorCode in
+            this.astParent is Assign &&
+                this in (this.astParent as Assign).rhs &&
+                (this.astParent as Assign).operatorCode in
                     this.language.compoundAssignmentOperators -> {
                 // If we're the rhs of an assignment with an operator like +=, we should track the
                 // lhs value separately.
-                (this as? HasType)?.let { (this.astParent as AssignExpression).findTargets(it) }
-                    ?: setOf()
+                (this as? HasType)?.let { (this.astParent as Assign).findTargets(it) } ?: setOf()
             }
             this is Expression &&
-                this.astParent is AssignExpression &&
-                this in (this.astParent as AssignExpression).rhs &&
+                this.astParent is Assign &&
+                this in (this.astParent as Assign).rhs &&
                 !this.type.isMutable -> {
-                (this.astParent as AssignExpression).findTargets(this)
+                (this.astParent as Assign).findTargets(this)
             }
             else -> emptySet()
         }

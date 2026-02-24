@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.newInitializerList
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -57,7 +57,7 @@ class GraphExamples {
                             body {
                                 declare {
                                     variable("i", t("int")) {
-                                        val initList = newInitializerListExpression()
+                                        val initList = newInitializerList()
                                         initList.initializers = mutableListOf(call("foo"))
                                         initializer = initList
                                     }
@@ -251,7 +251,7 @@ class GraphExamples {
                 }
             }
 
-        fun getNestedComprehensionExpressions(
+        fun getNestedComprehensions(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
@@ -541,7 +541,7 @@ class GraphExamples {
                 }
             }
 
-        fun getConditionalExpression(
+        fun getConditional(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()

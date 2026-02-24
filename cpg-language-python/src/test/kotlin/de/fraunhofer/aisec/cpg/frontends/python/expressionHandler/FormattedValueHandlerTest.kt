@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.python.expressionHandler
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
@@ -71,11 +71,11 @@ class FormattedValueHandlerTest {
     fun testFormattedValues() {
         // Test for a = f'Number: {42:.2f}'
         val aAssExpression = result.variables["a"]?.astParent
-        assertIs<AssignExpression>(aAssExpression)
+        assertIs<Assign>(aAssExpression)
         val aExprRhs = aAssExpression.rhs.singleOrNull()
         assertIs<BinaryOperator>(aExprRhs)
         val aFormatCall = aExprRhs.rhs
-        assertIs<CallExpression>(aFormatCall)
+        assertIs<Call>(aFormatCall)
         assertLocalName("format", aFormatCall)
         val aArguments = aFormatCall.arguments
         assertEquals(2, aArguments.size)
@@ -86,11 +86,11 @@ class FormattedValueHandlerTest {
 
         // Test for b = f'Hexadecimal: {255:#x}'
         val bAssExpression = result.variables["b"]?.astParent
-        assertIs<AssignExpression>(bAssExpression)
+        assertIs<Assign>(bAssExpression)
         val bExprRhs = bAssExpression.rhs.singleOrNull()
         assertIs<BinaryOperator>(bExprRhs)
         val bFormatCall = bExprRhs.rhs
-        assertIs<CallExpression>(bFormatCall)
+        assertIs<Call>(bFormatCall)
         assertLocalName("format", bFormatCall)
         val bArguments = bFormatCall.arguments
         assertEquals(2, bArguments.size)
@@ -101,11 +101,11 @@ class FormattedValueHandlerTest {
 
         // Test for c = f'String with conversion: {"Hello, world!"!r}'
         val cAssExpression = result.variables["c"]?.astParent
-        assertIs<AssignExpression>(cAssExpression)
+        assertIs<Assign>(cAssExpression)
         val cExprRhs = cAssExpression.rhs.singleOrNull()
         assertIs<BinaryOperator>(cExprRhs)
         val cConversionCall = cExprRhs.rhs
-        assertIs<CallExpression>(cConversionCall)
+        assertIs<Call>(cConversionCall)
         assertLocalName("repr", cConversionCall)
         val cArguments = cConversionCall.arguments.singleOrNull()
         assertNotNull(cArguments)
@@ -113,11 +113,11 @@ class FormattedValueHandlerTest {
 
         // Test for d = f'ASCII representation: {"50$"!a}'
         val dAssExpression = result.variables["d"]?.astParent
-        assertIs<AssignExpression>(dAssExpression)
+        assertIs<Assign>(dAssExpression)
         val dExprRhs = dAssExpression.rhs.singleOrNull()
         assertIs<BinaryOperator>(dExprRhs)
         val dConversionCall = dExprRhs.rhs
-        assertIs<CallExpression>(dConversionCall)
+        assertIs<Call>(dConversionCall)
         assertLocalName("ascii", dConversionCall)
         val dArguments = dConversionCall.arguments.singleOrNull()
         assertNotNull(dArguments)
@@ -126,16 +126,16 @@ class FormattedValueHandlerTest {
         // Test for e = f'Combined: {42!s:10}'
         // This is translated to `'Combined: ' +  format(str(b), "10")`
         val eAssExpression = result.variables["e"]?.astParent
-        assertIs<AssignExpression>(eAssExpression)
+        assertIs<Assign>(eAssExpression)
         val eExprRhs = eAssExpression.rhs.singleOrNull()
         assertIs<BinaryOperator>(eExprRhs)
         val eFormatCall = eExprRhs.rhs
-        assertIs<CallExpression>(eFormatCall)
+        assertIs<Call>(eFormatCall)
         assertLocalName("format", eFormatCall)
         val eArguments = eFormatCall.arguments
         assertEquals(2, eArguments.size)
         val eConversionCall = eArguments[0]
-        assertIs<CallExpression>(eConversionCall)
+        assertIs<Call>(eConversionCall)
         assertLocalName("str", eConversionCall)
         assertLiteralValue("42".toLong(), eConversionCall.arguments.singleOrNull())
         assertLiteralValue("10", eArguments[1])

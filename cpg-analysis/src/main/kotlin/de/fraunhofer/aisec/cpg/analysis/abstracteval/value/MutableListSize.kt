@@ -35,9 +35,9 @@ import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.New
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.ListType
 
@@ -74,7 +74,7 @@ class MutableListSize() : MutableCollectionSize() {
             target = node
             variableSize =
                 when (val init = node.initializer) {
-                    is MemberCallExpression -> {
+                    is MemberCall -> {
                         if (init.base?.type is ListType) { // TODO: check the function name
                             // This is a List copying the base, we can use the size of the base
                             createWithElementsFromElement(init.base!!, state)
@@ -83,32 +83,31 @@ class MutableListSize() : MutableCollectionSize() {
                             LatticeInterval.Bounded(size, size)
                         }
                     }
-                    is NewExpression -> {
+                    is New -> {
                         if (
-                            init.initializer !is CallExpression ||
-                                (init.initializer as CallExpression).arguments.isEmpty()
+                            init.initializer !is Call ||
+                                (init.initializer as Call).arguments.isEmpty()
                         ) {
                             // Empty List, we can use the empty collection size
                             createEmptyCollection()
                         } else if (
-                            (init.initializer as CallExpression).arguments.size == 1 &&
-                                (init.initializer as CallExpression).arguments.single().type is
-                                    ListType
+                            (init.initializer as Call).arguments.size == 1 &&
+                                (init.initializer as Call).arguments.single().type is ListType
                         ) {
                             // This is a List with a single element, we can use the size of that
                             // element
-                            val element = (init.initializer as CallExpression).arguments.single()
+                            val element = (init.initializer as Call).arguments.single()
                             createWithElementsFromElement(element, state)
                         } else {
                             // This is a List with multiple elements, we can use the size of those
                             // elements
-                            val elements = (init.initializer as CallExpression).arguments
+                            val elements = (init.initializer as Call).arguments
                             createWithElements(elements, state)
                         }
                     }
                     else -> LatticeInterval.BOTTOM
                 }
-        } else if (node is MemberCallExpression && node.base != null) {
+        } else if (node is MemberCall && node.base != null) {
             target = node.base!!
 
             variableSize =

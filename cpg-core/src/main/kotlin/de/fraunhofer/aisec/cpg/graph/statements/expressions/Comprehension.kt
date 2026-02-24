@@ -38,7 +38,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** This class holds the variable, iterable and predicate of the [CollectionComprehension]. */
-class ComprehensionExpression : Expression(), ArgumentHolder {
+class Comprehension : Expression(), ArgumentHolder {
     @Relationship("VARIABLE")
     var variableEdge =
         astEdgeOf<Statement>(
@@ -50,14 +50,14 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
      * This field contains the iteration variable of the comprehension. It can be either a new
      * variable declaration or a reference (probably to a new variable).
      */
-    var variable by unwrapping(ComprehensionExpression::variableEdge)
+    var variable by unwrapping(Comprehension::variableEdge)
 
     @Relationship("ITERABLE")
     var iterableEdge =
         astEdgeOf<Expression>(ProblemExpression("Missing iterable in ${this::class}"))
 
     /** This field contains the iteration subject of the loop. */
-    var iterable by unwrapping(ComprehensionExpression::iterableEdge)
+    var iterable by unwrapping(Comprehension::iterableEdge)
 
     @Relationship("PREDICATE") var predicateEdge = astOptionalEdgeOf<Statement>()
 
@@ -65,7 +65,7 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
      * This field contains the predicate which has to hold to evaluate `statement(variable)` and
      * include it in the result.
      */
-    var predicate by unwrapping(ComprehensionExpression::predicateEdge)
+    var predicate by unwrapping(Comprehension::predicateEdge)
 
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)
@@ -77,7 +77,7 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ComprehensionExpression) return false
+        if (other !is Comprehension) return false
         return super.equals(other) &&
             variable == other.variable &&
             iterable == other.iterable &&

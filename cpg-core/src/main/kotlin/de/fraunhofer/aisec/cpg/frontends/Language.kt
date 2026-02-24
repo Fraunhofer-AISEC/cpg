@@ -51,7 +51,7 @@ import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -405,7 +405,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         // case, we need to check, whether a template matches directly after we have no direct
         // matches
         val source = result.source
-        if (this is HasTemplates && source is CallExpression) {
+        if (this is HasTemplates && source is Call) {
             source.templateArgumentEdges = TemplateArguments(source)
             val (ok, candidates) =
                 this.handleTemplateFunctionCalls(

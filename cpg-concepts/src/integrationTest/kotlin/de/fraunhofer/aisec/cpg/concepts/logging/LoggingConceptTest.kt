@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogLevel
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogWrite
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Logging
 import de.fraunhofer.aisec.cpg.graph.declarations.Import
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.passes.concepts.logging.python.PythonLoggingConceptPass
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.test.BaseTest
@@ -81,13 +81,13 @@ class LoggingConceptTest : BaseTest() {
         assertEquals(LogLevel.WARN, logOp.logLevel)
 
         val getSecretCall = result.calls("get_secret").singleOrNull()
-        assertIs<CallExpression>(getSecretCall)
+        assertIs<Call>(getSecretCall)
         val nextDFG = getSecretCall.nextDFG
         assertTrue(nextDFG.isNotEmpty())
         val secretDFG = getSecretCall.followNextFullDFGEdgesUntilHit { it is LogWrite }
         assertTrue(
             secretDFG.fulfilled.isNotEmpty(),
-            "Expected to find a dataflow from the CallExpression[get_secret] to a logging node.",
+            "Expected to find a dataflow from the Call[get_secret] to a logging node.",
         )
     }
 

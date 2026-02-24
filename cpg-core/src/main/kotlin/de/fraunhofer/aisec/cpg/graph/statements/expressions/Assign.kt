@@ -48,13 +48,13 @@ import org.slf4j.LoggerFactory
  * int b = (a = 1);
  * ```
  *
- * In this example, the [type] of the [AssignExpression] is an `int`.
+ * In this example, the [type] of the [Assign] is an `int`.
  *
  * However, since not all languages support this model, we explicitly introduce the
  * [usedAsExpression]. When this property is set to true (it defaults to false), we model a dataflow
- * from the (first) rhs to the [AssignExpression] itself.
+ * from the (first) rhs to the [Assign] itself.
  */
-class AssignExpression :
+class Assign :
     Expression(), AssignmentHolder, ArgumentHolder, HasType.TypeObserver, HasOperatorCode {
 
     override var operatorCode: String = "="
@@ -65,10 +65,10 @@ class AssignExpression :
         astEdgesOf<Expression>(
             onAdd = {
                 var end = it.end
-                var base = (end as? MemberExpression)?.base as? MemberExpression
+                var base = (end as? MemberAccess)?.base as? MemberAccess
                 while (base != null) {
                     base.access = AccessValues.READWRITE
-                    base = base.base as? MemberExpression
+                    base = base.base as? MemberAccess
                 }
 
                 end.access =
@@ -79,7 +79,7 @@ class AssignExpression :
                     }
             }
         )
-    var lhs by unwrapping(AssignExpression::lhsEdges)
+    var lhs by unwrapping(Assign::lhsEdges)
 
     @Relationship("RHS")
     /** The expressions on the right-hand side. */
@@ -87,7 +87,7 @@ class AssignExpression :
         astEdgesOf<Expression>(onAdd = { it.end.registerTypeObserver(this) }) {
             it.end.unregisterTypeObserver(this)
         }
-    var rhs by unwrapping(AssignExpression::rhsEdges)
+    var rhs by unwrapping(Assign::rhsEdges)
 
     /**
      * This property specifies, that this is actually used as an expression. Not many languages
@@ -133,7 +133,7 @@ class AssignExpression :
      * we need to later resolve this in an additional pass. The declarations are then stored in
      * [declarations].
      */
-    override var declarations by unwrapping(AssignExpression::declarationEdges)
+    override var declarations by unwrapping(Assign::declarationEdges)
 
     /** Finds the value (of [rhs]) that is assigned to the particular [lhs] expression. */
     fun findValue(lhsExpression: HasType): Expression? {

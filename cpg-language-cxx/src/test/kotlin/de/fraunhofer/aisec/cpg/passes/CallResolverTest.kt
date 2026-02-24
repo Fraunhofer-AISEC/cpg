@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -91,7 +91,7 @@ class CallResolverTest : BaseTest() {
         intType: Type,
         stringType: Type,
         methods: Collection<Function>,
-        calls: Collection<CallExpression>,
+        calls: Collection<Call>,
     ) {
         val signatures = listOf(listOf(), listOf(intType, intType), listOf(intType, stringType))
         for (signature in signatures) {
@@ -106,8 +106,7 @@ class CallResolverTest : BaseTest() {
 
         // Check for inferred nodes
         val inferenceSignature = listOf(intType, intType, intType)
-        for (inferredCall in
-            calls.filter { c: CallExpression -> c.signature == inferenceSignature }) {
+        for (inferredCall in calls.filter { c: Call -> c.signature == inferenceSignature }) {
 
             val inferredTarget =
                 findByUniquePredicate(methods) { m: Function ->
@@ -278,7 +277,7 @@ class CallResolverTest : BaseTest() {
 
         // Check call display(1);
         val display1 =
-            findByUniquePredicate(calls) { c: CallExpression ->
+            findByUniquePredicate(calls) { c: Call ->
                 assert(c.code != null)
                 c.code == "display(1);"
             }
@@ -301,7 +300,7 @@ class CallResolverTest : BaseTest() {
             )
         }
         val display =
-            findByUniquePredicate(calls) { c: CallExpression ->
+            findByUniquePredicate(calls) { c: Call ->
                 assert(c.code != null)
                 c.code == "display();"
             }
@@ -310,7 +309,7 @@ class CallResolverTest : BaseTest() {
         assertEquals(0, display.arguments.size)
 
         val displayCount =
-            findByUniquePredicate(calls) { c: CallExpression ->
+            findByUniquePredicate(calls) { c: Call ->
                 assert(c.code != null)
                 c.code == "display(count, '$');"
             }
@@ -320,7 +319,7 @@ class CallResolverTest : BaseTest() {
         assertEquals("'$'", displayCount.arguments[1].code)
 
         val display10 =
-            findByUniquePredicate(calls) { c: CallExpression ->
+            findByUniquePredicate(calls) { c: Call ->
                 assert(c.code != null)
                 c.code == "display(10.0);"
             }
@@ -359,7 +358,7 @@ class CallResolverTest : BaseTest() {
 
         // Check call display();
         val display =
-            findByUniquePredicate(calls) { c: CallExpression ->
+            findByUniquePredicate(calls) { c: Call ->
                 assert(c.code != null)
                 c.code == "display();"
             }
@@ -375,7 +374,7 @@ class CallResolverTest : BaseTest() {
 
         // Check call display('#');
         val displayHash =
-            findByUniquePredicate(calls) { c: CallExpression ->
+            findByUniquePredicate(calls) { c: Call ->
                 assert(c.code != null)
                 c.code == "display('#');"
             }
@@ -387,7 +386,7 @@ class CallResolverTest : BaseTest() {
 
         // Check call display('#');
         val displayCount =
-            findByUniquePredicate(calls) { c: CallExpression ->
+            findByUniquePredicate(calls) { c: Call ->
                 assert(c.code != null)
                 c.code == "display('$', count);"
             }
@@ -422,7 +421,7 @@ class CallResolverTest : BaseTest() {
 
         // Check call add();
         val add =
-            findByUniquePredicate(calls) { c: CallExpression ->
+            findByUniquePredicate(calls) { c: Call ->
                 assert(c.code != null)
                 c.code == "add();"
             }
@@ -431,7 +430,7 @@ class CallResolverTest : BaseTest() {
 
         // Check call add(1, 2);
         val add12 =
-            findByUniquePredicate(calls) { c: CallExpression ->
+            findByUniquePredicate(calls) { c: Call ->
                 assert(c.code != null)
                 c.code == "add(1,2);"
             }
@@ -457,7 +456,7 @@ class CallResolverTest : BaseTest() {
 
         // Check call add(1, 2, 5, 6);
         val add1256 =
-            findByUniquePredicate(calls) { c: CallExpression ->
+            findByUniquePredicate(calls) { c: Call ->
                 assert(c.code != null)
                 c.code == "add(1,2,5,6);"
             }
@@ -503,8 +502,7 @@ class CallResolverTest : BaseTest() {
             findByUniquePredicate(functionDeclarations) { f: Function ->
                 f.name.localName == "doSmth" && !f.isImplicit
             }
-        val callDoSmth =
-            findByUniquePredicate(calls) { f: CallExpression -> f.name.localName == "doSmth" }
+        val callDoSmth = findByUniquePredicate(calls) { f: Call -> f.name.localName == "doSmth" }
         val literal1 = findByUniquePredicate(result.literals) { it.value == 1 }
         val literal2 = findByUniquePredicate(result.literals) { it.value == 2 }
         assertEquals(1, callDoSmth.invokes.size)
@@ -557,12 +555,12 @@ class CallResolverTest : BaseTest() {
 
     private fun testScopedFunctionResolutionFunctionGlobal(
         result: TranslationResult,
-        calls: List<CallExpression>,
+        calls: List<Call>,
     ) {
         val fh =
             findByUniquePredicate(
                 calls,
-                Predicate { c: CallExpression -> c.location!!.region.startLine == 4 },
+                Predicate { c: Call -> c.location!!.region.startLine == 4 },
             )
         val literal7 = findByUniquePredicate(result.literals) { it.value == 7 }
         assertEquals(1, fh.invokes.size)
@@ -578,12 +576,12 @@ class CallResolverTest : BaseTest() {
 
     private fun testScopedFunctionResolutionRedeclaration(
         result: TranslationResult,
-        calls: List<CallExpression>,
+        calls: List<Call>,
     ) {
         val fm1 =
             findByUniquePredicate(
                 calls,
-                Predicate { c: CallExpression -> c.location!!.region.startLine == 8 },
+                Predicate { c: Call -> c.location!!.region.startLine == 8 },
             )
         assertEquals(1, fm1.invokes.size)
         assertEquals(1, fm1.arguments.size)
@@ -592,7 +590,7 @@ class CallResolverTest : BaseTest() {
         val fm2 =
             findByUniquePredicate(
                 calls,
-                Predicate { c: CallExpression -> c.location!!.region.startLine == 10 },
+                Predicate { c: Call -> c.location!!.region.startLine == 10 },
             )
         val literal5 = findByUniquePredicate(result.literals) { it.value == 5 }
         assertEquals(1, fm2.invokes.size)
@@ -607,7 +605,7 @@ class CallResolverTest : BaseTest() {
 
     private fun testScopedFunctionResolutionAfterRedeclaration(
         result: TranslationResult,
-        calls: List<CallExpression>,
+        calls: List<Call>,
     ) {
         val fn = findByUniquePredicate(calls, Predicate { it.location?.region?.startLine == 13 })
         val literal7 = findByUniquePredicate(result.literals) { it.value == 7 }
@@ -674,7 +672,7 @@ class CallResolverTest : BaseTest() {
 
         // This call must resolve to implicit cast of the overloaded class and not to the base class
         val calcInt =
-            findByUniquePredicate(calls) { c: CallExpression ->
+            findByUniquePredicate(calls) { c: Call ->
                 if (c.location != null) {
                     return@findByUniquePredicate c.location!!.region.startLine == 24
                 }
@@ -683,7 +681,7 @@ class CallResolverTest : BaseTest() {
         assertEquals(1, calcInt.invokes.size)
         assertEquals(calcOverload, calcInt.invokes[0])
         val calcDouble =
-            findByUniquePredicate(calls) { c: CallExpression ->
+            findByUniquePredicate(calls) { c: Call ->
                 if (c.location != null) {
                     return@findByUniquePredicate c.location!!.region.startLine == 25
                 }

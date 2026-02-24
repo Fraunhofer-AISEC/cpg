@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bound.*
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
@@ -209,14 +209,14 @@ class IntegerValueTest {
     }
 
     @Test
-    fun applyAssignExpression() {
+    fun applyAssign() {
         val startState =
             TupleStateElement<Any>(
                 DeclarationState.DeclarationStateElement(),
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "="
                 lhs +=
                     Reference().apply {
@@ -247,7 +247,7 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "="
                 lhs +=
                     Reference().apply {
@@ -270,7 +270,7 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "+="
                 lhs +=
                     Reference().apply {
@@ -301,7 +301,7 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "+="
                 lhs +=
                     Reference().apply {
@@ -324,7 +324,7 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "-="
                 lhs +=
                     Reference().apply {
@@ -355,7 +355,7 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "-="
                 lhs +=
                     Reference().apply {
@@ -378,7 +378,7 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "*="
                 lhs +=
                     Reference().apply {
@@ -409,7 +409,7 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "*="
                 lhs +=
                     Reference().apply {
@@ -432,7 +432,7 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "/="
                 lhs +=
                     Reference().apply {
@@ -463,7 +463,7 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "/="
                 lhs +=
                     Reference().apply {
@@ -486,7 +486,7 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "%="
                 lhs +=
                     Reference().apply {
@@ -517,7 +517,7 @@ class IntegerValueTest {
                 NewIntervalStateElement(),
             )
         val assignment =
-            AssignExpression().apply {
+            Assign().apply {
                 operatorCode = "%="
                 lhs +=
                     Reference().apply {

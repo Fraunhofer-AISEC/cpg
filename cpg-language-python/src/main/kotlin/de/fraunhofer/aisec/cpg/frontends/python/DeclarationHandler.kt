@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util
 
@@ -386,7 +386,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                     is Python.AST.Attribute -> {
                         val parsedDecorator = frontend.expressionHandler.handle(decorator)
                         val name =
-                            if (parsedDecorator is MemberExpression) {
+                            if (parsedDecorator is MemberAccess) {
                                 parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
                             } else {
                                 parsedDecorator.name
@@ -396,7 +396,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                     is Python.AST.Call -> {
                         val parsedDecorator = frontend.expressionHandler.handle(decorator.func)
                         val name =
-                            if (parsedDecorator is MemberExpression) {
+                            if (parsedDecorator is MemberAccess) {
                                 parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
                             } else {
                                 parsedDecorator.name

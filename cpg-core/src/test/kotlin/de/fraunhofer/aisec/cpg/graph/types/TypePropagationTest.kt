@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.*
@@ -124,7 +124,7 @@ class TypePropagationTest {
             val main = result.functions["main"]
             assertNotNull(main)
 
-            val assign = (main.body as? Block)?.statements?.get(2) as? AssignExpression
+            val assign = (main.body as? Block)?.statements?.get(2) as? Assign
             assertNotNull(assign)
 
             val shortVar = main.variables["shortVar"]
@@ -373,7 +373,7 @@ class TypePropagationTest {
                     .commonType,
             )
 
-            val assign = (body as Block).statements<AssignExpression>(1)
+            val assign = (body as Block).statements<Assign>(1)
             assertNotNull(assign)
 
             val bb = variables["bb"]

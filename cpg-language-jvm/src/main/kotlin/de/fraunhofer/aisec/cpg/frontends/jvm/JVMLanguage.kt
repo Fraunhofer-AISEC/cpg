@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.io.File
@@ -76,7 +76,7 @@ open class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctio
         // Therefore, it can be that we both import a field and a method with the same name. We
         // therefore do some additional filtering of the candidates here, before handling it.
         if (ref.candidates.size > 1) {
-            if (ref.resolutionHelper is CallExpression) {
+            if (ref.resolutionHelper is Call) {
                 val functionDecls = ref.candidates.filterIsInstance<Function>()
                 // We can also check if the signature matches to account for overloading.
                 val targetType = ref.type as? FunctionType

@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import kotlin.jvm.optionals.getOrNull
@@ -50,7 +50,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
                 is JInvokeStmt -> handleInvokeStmt(ctx)
                 is JReturnStmt -> handleReturnStmt(ctx)
                 is JReturnVoidStmt -> handleReturnVoidStmt(ctx)
-                is JThrowStmt -> handleThrowExpression(ctx)
+                is JThrowStmt -> handleThrow(ctx)
                 is JNopStmt -> newEmptyStatement(ctx)
                 else -> {
                     log.warn("Unhandled statement type: ${ctx.javaClass.simpleName}")
@@ -69,8 +69,8 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         }
     }
 
-    private fun handleThrowExpression(throwStmt: JThrowStmt): ThrowExpression {
-        val expr = newThrowExpression(rawNode = throwStmt)
+    private fun handleThrow(throwStmt: JThrowStmt): Throw {
+        val expr = newThrow(rawNode = throwStmt)
         expr.exception = frontend.expressionHandler.handle(throwStmt.op)
 
         return expr
@@ -129,8 +129,8 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         return outerBlock
     }
 
-    private fun handleAbstractDefinitionStmt(defStmt: AbstractDefinitionStmt): AssignExpression {
-        val assign = newAssignExpression("=", rawNode = defStmt)
+    private fun handleAbstractDefinitionStmt(defStmt: AbstractDefinitionStmt): Assign {
+        val assign = newAssign("=", rawNode = defStmt)
         assign.lhs =
             listOfNotNull(frontend.expressionHandler.handle(defStmt.leftOp)).toMutableList()
         assign.rhs =

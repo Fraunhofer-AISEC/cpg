@@ -35,11 +35,11 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Comprehension
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -70,16 +70,15 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     /**
-     * This function checks for each [AssignExpression], [ComprehensionExpression] and
-     * [ForEachStatement] whether there is already a matching variable or not. New variables can be
-     * one of:
+     * This function checks for each [Assign], [Comprehension] and [ForEachStatement] whether there
+     * is already a matching variable or not. New variables can be one of:
      * - [Field] if we are currently in a record
      * - [Variable] otherwise
      */
     private fun handle(node: Node?) {
         when (node) {
-            is ComprehensionExpression -> handleComprehensionExpression(node)
-            is AssignExpression -> handleAssignExpression(node)
+            is Comprehension -> handleComprehension(node)
+            is Assign -> handleAssign(node)
             is ForEachStatement -> handleForEach(node)
             else -> {
                 // Nothing to do for all other types of nodes
@@ -99,7 +98,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         // declaration. However, we need to exclude the receiver (self) because its type is
         // not yet resolved at this point, but we still need to
         // create fields for assignments.
-        if (ref is MemberExpression && ref.base.type is UnknownType && !ref.refersToReceiver) {
+        if (ref is MemberAccess && ref.base.type is UnknownType && !ref.refersToReceiver) {
             return null
         }
 
@@ -147,7 +146,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                     // add the field. These are instance attributes
                     scopeManager.withScope(recordScope) { newField(ref.name) }
                 }
-                scopeManager.isInRecord && scopeManager.isInFunction && ref is MemberExpression -> {
+                scopeManager.isInRecord && scopeManager.isInFunction && ref is MemberAccess -> {
                     // If this is any other member expression, we are usually not interested in
                     // creating fields, except if this is a receiver
                     return null
@@ -203,15 +202,15 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
     private val Reference.refersToReceiver: Boolean
         get() {
-            return this is MemberExpression &&
+            return this is MemberAccess &&
                 this.base.name == scopeManager.currentMethod?.receiver?.name
         }
 
     /**
-     * Generates a new [Variable] for [Reference] (and those included in a
-     * [InitializerListExpression]) in the [ComprehensionExpression.variable].
+     * Generates a new [Variable] for [Reference] (and those included in a [InitializerList]) in the
+     * [Comprehension.variable].
      */
-    private fun handleComprehensionExpression(comprehensionExpression: ComprehensionExpression) {
+    private fun handleComprehension(comprehensionExpression: Comprehension) {
         when (val variable = comprehensionExpression.variable) {
             is Reference -> {
                 variable.access = AccessValues.WRITE
@@ -221,7 +220,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                     }
                 }
             }
-            is InitializerListExpression -> {
+            is InitializerList -> {
                 variable.initializers.forEach {
                     (it as? Reference)?.let { ref ->
                         ref.access = AccessValues.WRITE
@@ -241,7 +240,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
      * yet.
      */
     private fun handleAssignmentToTarget(
-        assignExpression: AssignExpression,
+        assignExpression: Assign,
         target: Node,
         setAccessValue: Boolean = false,
     ) {
@@ -266,7 +265,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         }
     }
 
-    private fun handleAssignExpression(assignExpression: AssignExpression) {
+    private fun handleAssign(assignExpression: Assign) {
         val parentCollectionComprehensions = ArrayDeque<CollectionComprehension>()
         var parentCollectionComprehension =
             assignExpression.firstParentOrNull<CollectionComprehension>()
@@ -278,9 +277,9 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         }
         for (target in assignExpression.lhs) {
             handleAssignmentToTarget(assignExpression, target, setAccessValue = false)
-            // If the lhs is an InitializerListExpression, we have to handle the individual elements
+            // If the lhs is an InitializerList, we have to handle the individual elements
             // in the initializers.
-            (target as? InitializerListExpression)?.let {
+            (target as? InitializerList)?.let {
                 it.initializers.forEach { initializer ->
                     handleAssignmentToTarget(assignExpression, initializer, setAccessValue = true)
                 }

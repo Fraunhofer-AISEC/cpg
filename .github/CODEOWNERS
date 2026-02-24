@@ -15,7 +15,7 @@
 */TypeResolver*.kt @oxisto @konradweiss
 */TypeHierarchyResolver*.kt @oxisto @konradweiss
 */DynamicInvokeResolver*.kt @oxisto @peckto
-*/ResolveCallExpressionAmbiguityPass*.kt @oxisto @peckto
+*/ResolveCallAmbiguityPass*.kt @oxisto @peckto
 */ResolveMemberExpressionAmbiguityPass*.kt @oxisto @peckto
 
 # Extra Passes

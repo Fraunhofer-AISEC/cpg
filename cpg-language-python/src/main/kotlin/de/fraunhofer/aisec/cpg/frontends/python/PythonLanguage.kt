@@ -52,7 +52,7 @@ open class PythonLanguage :
     HasShortCircuitOperators,
     HasOperatorOverloading,
     HasFunctionStyleConstruction,
-    HasMemberExpressionAmbiguity,
+    HasMemberAmbiguity,
     HasBuiltins,
     HasDefaultArguments {
     override val fileExtensions = listOf("py", "pyi")

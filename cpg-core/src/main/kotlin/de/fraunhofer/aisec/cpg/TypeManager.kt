@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
-import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.ResolveCallAmbiguityPass
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -338,7 +338,7 @@ val Collection<Type>.commonType: Type?
 /**
  * A utility function that checks whether our [Reference] refers to a [Type]. This is used by many
  * passes that replace certain [Reference] nodes with other nodes, e.g., the
- * [ResolveCallExpressionAmbiguityPass].
+ * [ResolveCallAmbiguityPass].
  *
  * Note: This involves some symbol lookup (using [ScopeManager.lookupTypeSymbolByName]), so this can
  * only be used in passes.
