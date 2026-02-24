@@ -35,10 +35,10 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.io.File
-import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.Transient
 
 /**
  * A node which presents some kind of complete piece of software, e.g., an application, a library,
@@ -57,7 +57,7 @@ open class Component : AstNode() {
      * The import dependencies of [TranslationUnit] nodes of this component. The preferred way to
      * access this is via [Strategy.TRANSLATION_UNITS_LEAST_IMPORTS].
      */
-    @Transient
+    @DoNotPersist
     @PopulatedByPass(ImportResolver::class)
     var translationUnitDependencies: ImportDependencies<TranslationUnit>? = null
 

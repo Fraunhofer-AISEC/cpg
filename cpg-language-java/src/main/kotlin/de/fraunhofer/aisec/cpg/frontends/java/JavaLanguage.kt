@@ -37,8 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
-import org.neo4j.ogm.annotation.Transient
 
 /** The Java language. */
 open class JavaLanguage :
@@ -53,7 +53,8 @@ open class JavaLanguage :
     HasImplicitReceiver {
     override val fileExtensions = listOf("java")
     override val namespaceDelimiter = "."
-    @Transient override val frontend: KClass<out JavaLanguageFrontend> = JavaLanguageFrontend::class
+    @DoNotPersist
+    override val frontend: KClass<out JavaLanguageFrontend> = JavaLanguageFrontend::class
     override val superClassKeyword = "super"
 
     override val qualifiers = listOf("final", "volatile")
@@ -72,7 +73,7 @@ open class JavaLanguage :
      * See
      * [Java Language Specification](https://docs.oracle.com/javase/specs/jls/se19/html/jls-4.html).
      */
-    @Transient
+    @DoNotPersist
     @JsonIgnore
     override val builtInTypes =
         mapOf(

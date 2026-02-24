@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Declaration of a field within a [Record]. It contains the modifiers associated with the field as

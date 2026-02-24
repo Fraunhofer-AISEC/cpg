@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
-import org.neo4j.ogm.annotation.Relationship
 
 /** A [Statement] which represents a try/catch block, primarily used for exception handling. */
 class TryStatement : Statement() {

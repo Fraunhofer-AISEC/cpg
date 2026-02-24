@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
-import org.neo4j.ogm.annotation.Transient
 
 const val CONST = "const"
 
@@ -45,7 +45,8 @@ open class CLanguage :
     HasGlobalFunctions {
     override val fileExtensions = listOf("c", "h")
     override val namespaceDelimiter = "::"
-    @Transient override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class
+    @DoNotPersist
+    override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class
     override val qualifiers = listOf(CONST, "volatile", "restrict", "atomic")
     override val elaboratedTypeSpecifier = listOf("struct", "union", "enum")
     override val conjunctiveOperators = listOf("&&")
@@ -64,7 +65,7 @@ open class CLanguage :
      * The list of built-in types. See https://en.cppreference.com/w/c/language/arithmetic_types for
      * a reference. We only list equivalent types here and use the canonical form of integer values.
      */
-    @Transient
+    @DoNotPersist
     @JsonIgnore
     override val builtInTypes: Map<String, Type> =
         mapOf(

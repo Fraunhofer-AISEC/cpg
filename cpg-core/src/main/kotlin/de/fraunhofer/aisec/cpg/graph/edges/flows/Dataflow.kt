@@ -32,11 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
-import de.fraunhofer.aisec.cpg.helpers.neo4j.DataflowGranularityConverter
+import de.fraunhofer.aisec.cpg.persistence.Convert
+import de.fraunhofer.aisec.cpg.persistence.converters.DataflowGranularityConverter
 import java.util.Objects
 import kotlin.reflect.KProperty
-import org.neo4j.ogm.annotation.*
-import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /**
  * The granularity of the data-flow, e.g., whether the flow contains the whole object, or just a
@@ -144,7 +143,6 @@ fun indexed(idx: String): StringIndexedDataflowGranularity {
  * This edge class defines a flow of data between [start] and [end]. The flow can have a certain
  * [granularity].
  */
-@RelationshipEntity
 open class Dataflow(
     start: Node,
     end: Node,
@@ -185,7 +183,6 @@ class CallingContextOut(
  * [callingContext] which allows for a context-sensitive dataflow analysis. This edge can also have
  * a certain [granularity].
  */
-@RelationshipEntity
 class ContextSensitiveDataflow(
     start: Node,
     end: Node,

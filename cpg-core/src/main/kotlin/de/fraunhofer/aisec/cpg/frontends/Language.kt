@@ -64,7 +64,6 @@ import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
-import org.neo4j.ogm.annotation.Transient
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -132,7 +131,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     open val simpleAssignmentOperators: Set<String> = setOf("=")
 
     /** The standard evaluator to be used with this language. */
-    @Transient @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
+    @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
 
     init {
         this.language = this

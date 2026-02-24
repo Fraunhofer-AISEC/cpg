@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents a Java or C++ switch statement of the `switch (selector) {...}` that can include case

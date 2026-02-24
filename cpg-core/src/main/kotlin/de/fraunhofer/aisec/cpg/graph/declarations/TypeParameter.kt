@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.graph.HasDefault
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
-import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration of a type template parameter */
 class TypeParameter : ValueDeclaration(), HasDefault<TypeExpression?> {

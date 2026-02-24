@@ -33,9 +33,9 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 
 /** This class holds the variable, iterable and predicate of the [CollectionComprehension]. */
 class ComprehensionExpression : Expression(), ArgumentHolder {

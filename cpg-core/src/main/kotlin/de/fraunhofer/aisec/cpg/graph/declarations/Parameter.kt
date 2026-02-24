@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.HasDefault
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
-import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration of a function or nontype template parameter. */
 class Parameter : ValueDeclaration(), HasDefault<Expression?>, ArgumentHolder {

@@ -35,15 +35,13 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
-import org.neo4j.ogm.annotation.NodeEntity
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * This [Node] is the most basic node type that represents source code elements which represents
  * executable code.
  */
-@NodeEntity
 abstract class Statement : AstNode(), DeclarationHolder {
     /**
      * A list of local variables (or other values) associated to this statement, defined by their

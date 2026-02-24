@@ -45,8 +45,8 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
-import org.neo4j.ogm.annotation.Transient
 
 /** The C++ language. */
 @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
@@ -65,7 +65,7 @@ open class CPPLanguage :
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
 
-    @Transient
+    @DoNotPersist
     override val overloadedOperatorNames:
         Map<Pair<KClass<out HasOverloadedOperation>, String>, Symbol> =
         mapOf(
@@ -116,7 +116,7 @@ open class CPPLanguage :
      * The list of built-in types. See https://en.cppreference.com/w/cpp/language/types for a
      * reference. We only list equivalent types here and use the canonical form of integer values.
      */
-    @Transient
+    @DoNotPersist
     override val builtInTypes =
         mapOf(
             // Integer types

@@ -33,8 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.NodeEntity
-import org.neo4j.ogm.annotation.Transient
 
 /**
  * Represents one expression. It is used as a base class for multiple different types of
@@ -47,7 +45,6 @@ import org.neo4j.ogm.annotation.Transient
  *
  * <p>This is not possible in Java, the aforementioned code example would prompt a compile error.
  */
-@NodeEntity
 abstract class Expression : Statement(), HasType {
 
     @DoNotPersist override var observerEnabled: Boolean = true
@@ -57,7 +54,7 @@ abstract class Expression : Statement(), HasType {
      */
     open var access: AccessValues = AccessValues.READ
 
-    @Transient override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
+    @DoNotPersist override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
     override var language: Language<*> = UnknownLanguage
         set(value) {

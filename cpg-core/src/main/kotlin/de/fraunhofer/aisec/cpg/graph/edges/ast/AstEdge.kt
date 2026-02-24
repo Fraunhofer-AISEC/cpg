@@ -30,10 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSingletonList
-import org.neo4j.ogm.annotation.*
 
 /** This property edge describes a parent/child relationship in the Abstract Syntax Tree (AST). */
-@RelationshipEntity
 open class AstEdge<T : AstNode>(start: AstNode, end: T) : Edge<T>(start, end) {
     init {
         end.astParent = start
