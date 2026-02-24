@@ -192,7 +192,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * @param callExpression The call to handle.
      * @return The [Logging] if found.
      */
-    private fun findLogger(callExpression: Call): Log? {
+    private fun findLogger(callExpression: Call): Logging? {
         val callee = callExpression.callee
         if (callee is MemberAccess) {
             // might be a call like `logger.error`
@@ -237,7 +237,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * @param logger The [Log] this call expression operates on.
      * @return n/a (The new node is created and added to the graph)
      */
-    private fun logOpHelper(callExpression: Call, logger: Log) {
+    private fun logOpHelper(callExpression: Call, logger: Logging) {
         val callee = callExpression.callee
         when (callee.name.localName) {
             "fatal",
