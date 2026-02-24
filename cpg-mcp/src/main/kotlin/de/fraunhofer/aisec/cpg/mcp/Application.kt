@@ -41,32 +41,38 @@ import picocli.CommandLine
 
 @CommandLine.Command(name = "cpg-mcp")
 class Application : Runnable {
-    @CommandLine.Option(
-        names = ["--sse"],
-        description =
-            [
-                "Provide the port to run SSE (Server Sent Events). If not specified, the MCP server will run using stdio or http."
-            ],
-    )
-    var ssePort: Int? = null
+    @CommandLine.ArgGroup(exclusive = true, multiplicity = "0..1")
+    var transport: TransportOptions? = null
 
-    @CommandLine.Option(
-        names = ["--http"],
-        description =
-            [
-                "Provide the port to run HTTP. If not specified, the MCP server will run using stdio or sse."
-            ],
-    )
-    var httpPort: Int? = null
+    class TransportOptions {
+        @CommandLine.Option(
+            names = ["--stdio"],
+            description = ["Run the MCP server using stdio (default option)."],
+        )
+        var stdio: Boolean = false
+
+        @CommandLine.Option(
+            names = ["--sse"],
+            description = ["Provide the port to run SSE (Server Sent Events)."],
+        )
+        var ssePort: Int? = null
+
+        @CommandLine.Option(names = ["--http"], description = ["Provide the port to run HTTP."])
+        var httpPort: Int? = null
+    }
 
     override fun run() {
-        val httpPort = httpPort
-        val ssePort = ssePort
+        val httpPort = transport?.httpPort
+        val ssePort = transport?.ssePort
         if (httpPort != null) {
             runHttpMcpServerUsingKtorPlugin(httpPort, configureServer())
         } else if (ssePort != null) {
             runSseMcpServerUsingKtorPlugin(ssePort, configureServer())
+        } else if (transport?.stdio == true) {
+            runMcpServerUsingStdio()
         } else {
+            // this is the default / fallback case if no transport option is provided, we run the
+            // stdio server
             runMcpServerUsingStdio()
         }
     }
