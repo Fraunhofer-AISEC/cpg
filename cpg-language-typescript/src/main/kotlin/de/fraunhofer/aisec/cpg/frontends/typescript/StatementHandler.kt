@@ -50,13 +50,13 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
             "VariableStatement" -> return handleVariableStatement(node)
             "ExpressionStatement" -> return handleExpressionStatement(node)
             "ReturnStatement" -> return handleReturnStatement(node)
-            "FunctionDeclaration" -> return handleFunctionDeclaration(node)
+            "FunctionDeclaration" -> return handleFunction(node)
         }
 
         return ProblemExpression("No handler was implemented for nodes of type " + node.type)
     }
 
-    private fun handleFunctionDeclaration(node: TypeScriptNode): Statement {
+    private fun handleFunction(node: TypeScriptNode): Statement {
         // typescript allows to declare function on a statement level, e.g. within a compound
         // statement. We can wrap it into a declaration statement
         val statement = newDeclarationStatement(rawNode = node)

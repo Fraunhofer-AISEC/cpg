@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import kotlin.jvm.optionals.getOrNull
@@ -40,32 +40,38 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     Handler<Statement?, Any, JVMLanguageFrontend>(::ProblemExpression, frontend) {
 
     override fun handle(ctx: Any): Statement? {
-        return when (ctx) {
-            is Body -> handleBody(ctx)
-            is JAssignStmt -> handleAbstractDefinitionStmt(ctx)
-            is JIdentityStmt -> handleAbstractDefinitionStmt(ctx)
-            is JIfStmt -> handleIfStmt(ctx)
-            is JGotoStmt -> handleGotoStmt(ctx)
-            is JInvokeStmt -> handleInvokeStmt(ctx)
-            is JReturnStmt -> handleReturnStmt(ctx)
-            is JReturnVoidStmt -> handleReturnVoidStmt(ctx)
-            is JThrowStmt -> handleThrowExpression(ctx)
-            is JNopStmt -> newEmptyStatement(ctx)
-            else -> {
-                log.warn("Unhandled statement type: ${ctx.javaClass.simpleName}")
-                newProblemExpression(
-                    "Unhandled statement type: ${ctx.javaClass.simpleName}",
-                    rawNode = ctx,
-                )
+        try {
+            return when (ctx) {
+                is Body -> handleBody(ctx)
+                is JAssignStmt -> handleAbstractDefinitionStmt(ctx)
+                is JIdentityStmt -> handleAbstractDefinitionStmt(ctx)
+                is JIfStmt -> handleIfStmt(ctx)
+                is JGotoStmt -> handleGotoStmt(ctx)
+                is JInvokeStmt -> handleInvokeStmt(ctx)
+                is JReturnStmt -> handleReturnStmt(ctx)
+                is JReturnVoidStmt -> handleReturnVoidStmt(ctx)
+                is JThrowStmt -> handleThrow(ctx)
+                is JNopStmt -> newEmptyStatement(ctx)
+                else -> {
+                    log.warn("Unhandled statement type: ${ctx.javaClass.simpleName}")
+                    newProblemExpression(
+                        "Unhandled statement type: ${ctx.javaClass.simpleName}",
+                        rawNode = ctx,
+                    )
+                }
             }
+        } catch (e: Exception) {
+            log.error("Error while handling a statement", e)
+            return newProblemExpression(
+                "Error handling statement ${ctx}: ${e.message}",
+                rawNode = ctx,
+            )
         }
     }
 
-    private fun handleThrowExpression(throwStmt: JThrowStmt): ThrowExpression {
-        val expr = newThrowExpression(rawNode = throwStmt)
-        expr.exception =
-            frontend.expressionHandler.handle(throwStmt.op)
-                ?: newProblemExpression("missing throwable expression")
+    private fun handleThrow(throwStmt: JThrowStmt): Throw {
+        val expr = newThrow(rawNode = throwStmt)
+        expr.exception = frontend.expressionHandler.handle(throwStmt.op)
 
         return expr
     }
@@ -84,14 +90,12 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         for (local in body.locals) {
             val decl = frontend.declarationHandler.handle(local)
 
-            if (decl != null) {
-                // We need to wrap them into a declaration statement and put them into the outer
-                // block
-                val stmt = newDeclarationStatement(rawNode = local)
-                frontend.scopeManager.addDeclaration(decl)
-                stmt.declarations += decl
-                outerBlock += stmt
-            }
+            // We need to wrap them into a declaration statement and put them into the outer
+            // block
+            val stmt = newDeclarationStatement(rawNode = local)
+            frontend.scopeManager.addDeclaration(decl)
+            stmt.declarations += decl
+            outerBlock += stmt
         }
 
         // Parse statements and segment them into (sub)-blocks.
@@ -125,8 +129,8 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         return outerBlock
     }
 
-    private fun handleAbstractDefinitionStmt(defStmt: AbstractDefinitionStmt): AssignExpression {
-        val assign = newAssignExpression("=", rawNode = defStmt)
+    private fun handleAbstractDefinitionStmt(defStmt: AbstractDefinitionStmt): Assign {
+        val assign = newAssign("=", rawNode = defStmt)
         assign.lhs =
             listOfNotNull(frontend.expressionHandler.handle(defStmt.leftOp)).toMutableList()
         assign.rhs =
@@ -137,9 +141,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleIfStmt(ifStmt: JIfStmt): IfStatement {
         val stmt = newIfStatement(rawNode = ifStmt)
-        stmt.condition =
-            frontend.expressionHandler.handle(ifStmt.condition)
-                ?: newProblemExpression("missing condition")
+        stmt.condition = frontend.expressionHandler.handle(ifStmt.condition)
         stmt.thenStatement = handleBranchingStmt(ifStmt)
 
         return stmt
@@ -178,9 +180,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleReturnStmt(returnStmt: JReturnStmt): ReturnStatement {
         val stmt = newReturnStatement(rawNode = returnStmt)
-        stmt.returnValue =
-            frontend.expressionHandler.handle(returnStmt.op)
-                ?: newProblemExpression("missing return value")
+        stmt.returnValue = frontend.expressionHandler.handle(returnStmt.op)
 
         return stmt
     }

@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -86,9 +86,9 @@ class LLVMIRLanguageFrontendTest {
         val declarationStmt = mainBody.statements.firstOrNull()
         assertIs<DeclarationStatement>(declarationStmt)
         val xVector = declarationStmt.singleDeclaration
-        assertIs<VariableDeclaration>(xVector)
+        assertIs<Variable>(xVector)
         val xInit = xVector.initializer
-        assertIs<InitializerListExpression>(xInit)
+        assertIs<InitializerList>(xInit)
         assertIs<Reference>(xInit.initializers[0])
         assertLocalName("poison", xInit.initializers[0])
         assertLiteralValue(0L, xInit.initializers[1])
@@ -145,7 +145,7 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("&", unary.operatorCode)
 
         var arrayExpr = unary.input
-        assertIs<SubscriptExpression>(arrayExpr)
+        assertIs<Subscription>(arrayExpr)
         assertLocalName("13", arrayExpr)
         assertLiteralValue(
             13L,
@@ -153,7 +153,7 @@ class LLVMIRLanguageFrontendTest {
         ) // should this be integer instead of long?
 
         arrayExpr = arrayExpr.arrayExpression
-        assertIs<SubscriptExpression>(arrayExpr)
+        assertIs<Subscription>(arrayExpr)
         assertLocalName("5", arrayExpr)
         assertLiteralValue(
             5L,
@@ -161,15 +161,15 @@ class LLVMIRLanguageFrontendTest {
         ) // should this be integer instead of long?
 
         var memberExpression = arrayExpr.arrayExpression
-        assertIs<MemberExpression>(memberExpression)
+        assertIs<MemberAccess>(memberExpression)
         assertLocalName("field_1", memberExpression)
 
         memberExpression = memberExpression.base
-        assertIs<MemberExpression>(memberExpression)
+        assertIs<MemberAccess>(memberExpression)
         assertLocalName("field_2", memberExpression)
 
         arrayExpr = memberExpression.base
-        assertIs<SubscriptExpression>(arrayExpr)
+        assertIs<Subscription>(arrayExpr)
         assertLocalName("1", arrayExpr)
         assertLiteralValue(
             1L,
@@ -261,7 +261,7 @@ class LLVMIRLanguageFrontendTest {
         val icmpStatement = main.bodyOrNull<DeclarationStatement>(1)
         assertNotNull(icmpStatement)
         val variableDecl = icmpStatement.declarations[0]
-        assertIs<VariableDeclaration>(variableDecl)
+        assertIs<Variable>(variableDecl)
         val comparison = variableDecl.initializer
         assertIs<BinaryOperator>(comparison)
         assertEquals("==", comparison.operatorCode)
@@ -273,7 +273,7 @@ class LLVMIRLanguageFrontendTest {
         assertIs<Reference>(lhsRef)
         assertLocalName("x", lhsRef)
         val lhsDeclaration = lhsRef.refersTo
-        assertIs<VariableDeclaration>(lhsDeclaration)
+        assertIs<Variable>(lhsDeclaration)
         assertLocalName("x", lhsDeclaration)
         assertSame(tu.primitiveType("i32"), lhsDeclaration.type)
 
@@ -303,19 +303,19 @@ class LLVMIRLanguageFrontendTest {
         val ifBranchDeclarationStatement = thenBranch.statements[0]
         assertIs<DeclarationStatement>(ifBranchDeclarationStatement)
         val ifBranchVariableDeclaration = ifBranchDeclarationStatement.declarations[0]
-        assertIs<VariableDeclaration>(ifBranchVariableDeclaration)
+        assertIs<Variable>(ifBranchVariableDeclaration)
         val ifBranchComp = ifBranchVariableDeclaration.initializer
         assertIs<BinaryOperator>(ifBranchComp)
         assertEquals(">", ifBranchComp.operatorCode)
-        assertIs<CastExpression>(ifBranchComp.rhs)
-        assertIs<CastExpression>(ifBranchComp.lhs)
+        assertIs<Cast>(ifBranchComp.rhs)
+        assertIs<Cast>(ifBranchComp.lhs)
 
         val ifBranchCompRhs = ifBranchComp.rhs
-        assertIs<CastExpression>(ifBranchCompRhs)
+        assertIs<Cast>(ifBranchCompRhs)
         assertEquals(tu.objectType("ui32"), ifBranchCompRhs.castType)
         assertEquals(tu.objectType("ui32"), ifBranchCompRhs.type)
         val ifBranchCompLhs = ifBranchComp.lhs
-        assertIs<CastExpression>(ifBranchCompLhs)
+        assertIs<Cast>(ifBranchCompLhs)
         assertEquals(tu.objectType("ui32"), ifBranchCompLhs.castType)
         assertEquals(tu.objectType("ui32"), ifBranchCompLhs.type)
 
@@ -355,13 +355,13 @@ class LLVMIRLanguageFrontendTest {
         // Check that the first statement is "literal_i32_i1 val_success = literal_i32_i1(*ptr, *ptr
         // == 5)"
         val declaration = cmpxchgStatement.statements[0].declarations[0]
-        assertIs<VariableDeclaration>(declaration)
+        assertIs<Variable>(declaration)
         assertLocalName("val_success", declaration)
         assertLocalName("literal_i32_i1", declaration.type)
 
         // Check that the first value is *ptr
         val declarationInitializer = declaration.initializer
-        assertIs<ConstructExpression>(declarationInitializer)
+        assertIs<Construction>(declarationInitializer)
         val value1 = declarationInitializer.arguments[0]
         assertIs<UnaryOperator>(value1)
         assertEquals("*", value1.operatorCode)
@@ -390,7 +390,7 @@ class LLVMIRLanguageFrontendTest {
         assertLiteralValue(5L, ifExpr.rhs)
 
         val thenExpr = ifStatement.thenStatement
-        assertIs<AssignExpression>(thenExpr)
+        assertIs<Assign>(thenExpr)
         assertEquals(1, thenExpr.lhs.size)
         assertEquals(1, thenExpr.rhs.size)
         assertEquals("=", thenExpr.operatorCode)
@@ -423,7 +423,7 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("i1", declaration.type)
 
         val initializer = declaration.initializer
-        assertIs<MemberExpression>(initializer)
+        assertIs<MemberAccess>(initializer)
         assertLocalName("val_success", initializer.base)
         assertEquals(".", initializer.operatorCode)
         assertLocalName("field_1", initializer)
@@ -457,7 +457,7 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(returnStatement)
 
         val construct = returnStatement.returnValue
-        assertIs<ConstructExpression>(construct)
+        assertIs<Construction>(construct)
         assertEquals(2, construct.arguments.size)
 
         assertEquals("i32", construct.arguments[0].type.typeName)
@@ -497,7 +497,7 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("locX", loadXStatement.singleDeclaration)
 
         val initXOpDeclaration = loadXStatement.singleDeclaration
-        assertIs<VariableDeclaration>(initXOpDeclaration)
+        assertIs<Variable>(initXOpDeclaration)
         val initXOp = initXOpDeclaration.initializer
         assertIs<UnaryOperator>(initXOp)
         assertEquals("*", initXOp.operatorCode)
@@ -510,7 +510,7 @@ class LLVMIRLanguageFrontendTest {
         val loadAStatement = main.bodyOrNull<DeclarationStatement>(2)
         assertNotNull(loadAStatement)
         val loadADeclaration = loadAStatement.singleDeclaration
-        assertIs<VariableDeclaration>(loadADeclaration)
+        assertIs<Variable>(loadADeclaration)
         assertLocalName("locA", loadAStatement.singleDeclaration)
         val initAOp = loadADeclaration.initializer
         assertIs<UnaryOperator>(initAOp)
@@ -537,10 +537,10 @@ class LLVMIRLanguageFrontendTest {
 
         // %ptr = alloca i32
         val ptr = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
-        assertIs<VariableDeclaration>(ptr)
+        assertIs<Variable>(ptr)
 
         val alloca = ptr.initializer
-        assertIs<NewArrayExpression>(alloca)
+        assertIs<ArrayConstruction>(alloca)
         assertEquals("i32*", alloca.type.typeName)
 
         // store i32 3, i32* %ptr
@@ -590,11 +590,11 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(declarationStatement)
 
         val varDeclaration = declarationStatement.singleDeclaration
-        assertIs<VariableDeclaration>(varDeclaration)
+        assertIs<Variable>(varDeclaration)
         assertLocalName("a", varDeclaration)
         assertEquals("literal_i32_i8", varDeclaration.type.typeName)
         val initializer = varDeclaration.initializer
-        assertIs<ConstructExpression>(initializer)
+        assertIs<Construction>(initializer)
         val args = initializer.arguments
         assertEquals(2, args.size)
         assertLiteralValue(100L, args[0])
@@ -617,7 +617,7 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(1, assign.lhs.size)
         assertEquals(1, assign.rhs.size)
         val assignLhs = assign.lhs.first()
-        assertIs<MemberExpression>(assignLhs)
+        assertIs<MemberAccess>(assignLhs)
         assertLocalName("b", assignLhs.base)
         assertEquals(".", assignLhs.operatorCode)
         assertLocalName("field_1", assignLhs)
@@ -650,10 +650,10 @@ class LLVMIRLanguageFrontendTest {
         val resDeclarationStatement = tryStatement.tryBlock?.statements?.get(0)
         assertIs<DeclarationStatement>(resDeclarationStatement)
         val resDeclaration = resDeclarationStatement.singleDeclaration
-        assertIs<VariableDeclaration>(resDeclaration)
+        assertIs<Variable>(resDeclaration)
         assertLocalName("res", resDeclaration)
         val call = resDeclaration.initializer
-        assertIs<CallExpression>(call)
+        assertIs<Call>(call)
         assertLocalName("throwingFoo", call)
         assertContains(call.invokes, throwingFoo)
         assertEquals(0, call.arguments.size)
@@ -662,7 +662,7 @@ class LLVMIRLanguageFrontendTest {
         val aDeclarationStatement = tryStatement.tryBlock?.statements?.get(1)
         assertIs<DeclarationStatement>(aDeclarationStatement)
         val aDeclaration = aDeclarationStatement.singleDeclaration
-        assertIs<VariableDeclaration>(aDeclaration)
+        assertIs<Variable>(aDeclaration)
         assertLocalName("a", aDeclaration)
         val resStatement = tryStatement.tryBlock?.statements?.get(2)
         assertIs<ReturnStatement>(resStatement)
@@ -707,7 +707,7 @@ class LLVMIRLanguageFrontendTest {
         val yDeclarationStatement = mainBody.statements[0]
         assertIs<DeclarationStatement>(yDeclarationStatement)
         val yDecl = yDeclarationStatement.singleDeclaration
-        assertIs<VariableDeclaration>(yDecl)
+        assertIs<Variable>(yDecl)
 
         val ifStatement = mainBody.statements[3]
         assertIs<IfStatement>(ifStatement)
@@ -718,9 +718,9 @@ class LLVMIRLanguageFrontendTest {
         val aDeclarationStatement = thenStmt.statements[0]
         assertIs<DeclarationStatement>(aDeclarationStatement)
         val aDecl = aDeclarationStatement.singleDeclaration
-        assertIs<VariableDeclaration>(aDecl)
+        assertIs<Variable>(aDecl)
         val thenY = thenStmt.statements[1]
-        assertIs<AssignExpression>(thenY)
+        assertIs<Assign>(thenY)
         assertEquals(1, thenY.lhs.size)
         assertEquals(1, thenY.rhs.size)
         assertRefersTo(thenY.rhs.first(), aDecl)
@@ -732,9 +732,9 @@ class LLVMIRLanguageFrontendTest {
         val bDeclarationStatement = elseStmt.statements[0]
         assertIs<DeclarationStatement>(bDeclarationStatement)
         val bDecl = bDeclarationStatement.singleDeclaration
-        assertIs<VariableDeclaration>(bDecl)
+        assertIs<Variable>(bDecl)
         val elseY = elseStmt.statements[1]
-        assertIs<AssignExpression>(elseY)
+        assertIs<Assign>(elseY)
         assertEquals(1, elseY.lhs.size)
         assertEquals(1, elseY.lhs.size)
         assertRefersTo(elseY.rhs.first(), bDecl)
@@ -766,9 +766,9 @@ class LLVMIRLanguageFrontendTest {
         val xDeclarationStatement = mainBody.statements[0]
         assertIs<DeclarationStatement>(xDeclarationStatement)
         val origX = xDeclarationStatement.singleDeclaration
-        assertIs<VariableDeclaration>(origX)
+        assertIs<Variable>(origX)
         val xInit = origX.initializer
-        assertIs<InitializerListExpression>(xInit)
+        assertIs<InitializerList>(xInit)
         assertLiteralValue(10L, xInit.initializers[0])
         assertLiteralValue(9L, xInit.initializers[1])
         assertLiteralValue(6L, xInit.initializers[2])
@@ -779,9 +779,9 @@ class LLVMIRLanguageFrontendTest {
         val yDeclarationStatement = mainBody.statements[1]
         assertIs<DeclarationStatement>(yDeclarationStatement)
         val origY = yDeclarationStatement.singleDeclaration
-        assertIs<VariableDeclaration>(origY)
+        assertIs<Variable>(origY)
         val yInit = origY.initializer
-        assertIs<InitializerListExpression>(yInit)
+        assertIs<InitializerList>(yInit)
         assertLiteralValue(15L, yInit.initializers[0])
         assertLiteralValue(34L, yInit.initializers[1])
         assertLiteralValue(99L, yInit.initializers[2])
@@ -791,9 +791,9 @@ class LLVMIRLanguageFrontendTest {
         val zDeclarationStatement = mainBody.statements[2]
         assertIs<DeclarationStatement>(zDeclarationStatement)
         val origZ = zDeclarationStatement.singleDeclaration
-        assertIs<VariableDeclaration>(origZ)
+        assertIs<Variable>(origZ)
         val zInit = origZ.initializer
-        assertIs<SubscriptExpression>(zInit)
+        assertIs<Subscription>(zInit)
         assertLiteralValue(0L, zInit.subscriptExpression)
         assertLocalName("x", zInit.arrayExpression)
         assertRefersTo(zInit.arrayExpression, origX)
@@ -804,7 +804,7 @@ class LLVMIRLanguageFrontendTest {
         val yModDeclarationStatement = yModDeclarationStatementBlock.statements[0]
         assertIs<DeclarationStatement>(yModDeclarationStatement)
         val modY = yModDeclarationStatement.singleDeclaration
-        assertIs<VariableDeclaration>(modY)
+        assertIs<Variable>(modY)
         val yModInit = modY.initializer
         assertIs<Reference>(yModInit)
         assertLocalName("y", yModInit)
@@ -812,11 +812,11 @@ class LLVMIRLanguageFrontendTest {
 
         // Now, test the modification of yMod[3] = 8
         val yMod = yModDeclarationStatementBlock.statements[1]
-        assertIs<AssignExpression>(yMod)
+        assertIs<Assign>(yMod)
         assertEquals(1, yMod.lhs.size)
         assertEquals(1, yMod.rhs.size)
         val yModLhs = yMod.lhs.first()
-        assertIs<SubscriptExpression>(yModLhs)
+        assertIs<Subscription>(yModLhs)
         assertLiteralValue(3L, yModLhs.subscriptExpression)
         assertRefersTo(yModLhs.arrayExpression, modY)
         assertLiteralValue(8L, yMod.rhs.first())
@@ -825,15 +825,15 @@ class LLVMIRLanguageFrontendTest {
         val shuffledInitDeclarationStatement = mainBody.statements[4]
         assertIs<DeclarationStatement>(shuffledInitDeclarationStatement)
         val shuffledInitDeclaration = shuffledInitDeclarationStatement.singleDeclaration
-        assertIs<VariableDeclaration>(shuffledInitDeclaration)
+        assertIs<Variable>(shuffledInitDeclaration)
         val shuffledInit = shuffledInitDeclaration.initializer
-        assertIs<InitializerListExpression>(shuffledInit)
+        assertIs<InitializerList>(shuffledInit)
         val shuffledInit0 = shuffledInit.initializers[0]
-        assertIs<SubscriptExpression>(shuffledInit0)
+        assertIs<Subscription>(shuffledInit0)
         val shuffledInit1 = shuffledInit.initializers[1]
-        assertIs<SubscriptExpression>(shuffledInit1)
+        assertIs<Subscription>(shuffledInit1)
         val shuffledInit2 = shuffledInit.initializers[2]
-        assertIs<SubscriptExpression>(shuffledInit2)
+        assertIs<Subscription>(shuffledInit2)
         assertRefersTo(shuffledInit0.arrayExpression, origX)
         assertRefersTo(shuffledInit1.arrayExpression, modY)
         assertRefersTo(shuffledInit2.arrayExpression, modY)
@@ -857,12 +857,12 @@ class LLVMIRLanguageFrontendTest {
         assertIs<Block>(mainBody)
 
         val fenceCall = mainBody.statements[0]
-        assertIs<CallExpression>(fenceCall)
+        assertIs<Call>(fenceCall)
         assertEquals(1, fenceCall.arguments.size)
         assertLiteralValue(2, fenceCall.arguments[0])
 
         val fenceCallScope = mainBody.statements[2]
-        assertIs<CallExpression>(fenceCallScope)
+        assertIs<Call>(fenceCallScope)
         assertEquals(2, fenceCallScope.arguments.size)
         // TODO: This doesn't match but it doesn't seem to be our mistake
         // assertEquals(5, (fenceCallScope.arguments[0] as Literal<*>).value)
@@ -889,7 +889,7 @@ class LLVMIRLanguageFrontendTest {
         val tryBlock = tryStatement.tryBlock
         assertNotNull(tryBlock)
         assertEquals(2, tryBlock.statements.size)
-        assertIs<CallExpression>(tryBlock.statements[0])
+        assertIs<Call>(tryBlock.statements[0])
         assertFullName("_CxxThrowException", tryBlock.statements[0])
         val gotoStatement = tryBlock.statements[1]
         assertIs<GotoStatement>(gotoStatement)
@@ -901,14 +901,14 @@ class LLVMIRLanguageFrontendTest {
         val catchSwitchExpr = catchBody.statements[0]
         assertIs<DeclarationStatement>(catchSwitchExpr)
         val catchSwitchDeclaration = catchSwitchExpr.singleDeclaration
-        assertIs<VariableDeclaration>(catchSwitchDeclaration)
+        assertIs<Variable>(catchSwitchDeclaration)
         val catchswitchCall = catchSwitchDeclaration.initializer
-        assertIs<CallExpression>(catchswitchCall)
+        assertIs<Call>(catchswitchCall)
         assertFullName("llvm.catchswitch", catchswitchCall)
         val ifExceptionMatches = tryStatement.catchClauses[0].body?.statements?.get(1)
         assertIs<IfStatement>(ifExceptionMatches)
         val matchesExceptionCall = ifExceptionMatches.condition
-        assertIs<CallExpression>(matchesExceptionCall)
+        assertIs<Call>(matchesExceptionCall)
         assertFullName("llvm.matchesCatchpad", matchesExceptionCall)
         assertRefersTo(matchesExceptionCall.arguments[0], catchSwitchDeclaration)
         assertLiteralValue(null, matchesExceptionCall.arguments[1])
@@ -920,15 +920,15 @@ class LLVMIRLanguageFrontendTest {
         val catchpadDeclarationStatement = catchBlock.statements[0]
         assertIs<DeclarationStatement>(catchpadDeclarationStatement)
         val catchpadDeclaration = catchpadDeclarationStatement.singleDeclaration
-        assertIs<VariableDeclaration>(catchpadDeclaration)
-        assertIs<CallExpression>(catchpadDeclaration.initializer)
+        assertIs<Variable>(catchpadDeclaration)
+        assertIs<Call>(catchpadDeclaration.initializer)
         assertFullName("llvm.catchpad", catchpadDeclaration.initializer)
 
         val innerTry = catchBlock.statements[1]
         assertIs<TryStatement>(innerTry)
         val innerTryBlock = innerTry.tryBlock
         assertNotNull(innerTryBlock)
-        assertIs<CallExpression>(innerTryBlock.statements[0])
+        assertIs<Call>(innerTryBlock.statements[0])
         assertFullName("_CxxThrowException", innerTryBlock.statements[0])
         val innerTryGoto = innerTryBlock.statements[1]
         assertIs<GotoStatement>(innerTryGoto)
@@ -943,7 +943,7 @@ class LLVMIRLanguageFrontendTest {
         val innerCatchpadDeclarationStatement = innerCatchClause.statements[0]
         assertIs<DeclarationStatement>(innerCatchpadDeclarationStatement)
         val innerCatchDeclaration = innerCatchpadDeclarationStatement.singleDeclaration
-        assertIs<VariableDeclaration>(innerCatchDeclaration)
+        assertIs<Variable>(innerCatchDeclaration)
         assertFullName("llvm.catchpad", innerCatchDeclaration.initializer)
 
         val innerCatchGoto = innerCatchClause.statements[1]
@@ -951,7 +951,7 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("try.cont", innerCatchGoto.targetLabel)
 
         val innerCatchThrows = innerCatchIf.elseStatement
-        assertIs<ThrowExpression>(innerCatchThrows)
+        assertIs<Throw>(innerCatchThrows)
         assertNotNull(innerCatchThrows.exception)
         assertRefersTo(innerCatchThrows.exception, innerTry.catchClauses[0].parameter)
     }

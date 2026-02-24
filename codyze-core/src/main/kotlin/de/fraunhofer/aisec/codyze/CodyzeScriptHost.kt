@@ -46,19 +46,14 @@ import kotlin.script.experimental.jvmhost.createJvmEvaluationConfigurationFromTe
  * [CodyzeScript.projectBuilder].
  */
 fun evaluateScriptAndIncludes(scriptFile: Path): CodyzeScript? {
-    val script = evaluateScript(scriptFile)
-    if (script == null) {
-        return null
-    }
+    val script = evaluateScript(scriptFile) ?: return null
 
     // Evaluate any included files based on our project builder
     for (include in script.includeBuilder.includes.values) {
         val includedScript =
             evaluateScript(script.projectBuilder.projectDir.resolve(include), script.projectBuilder)
+                ?: return null
         // We also want to fail if an included script cannot be evaluated
-        if (includedScript == null) {
-            return null
-        }
     }
 
     return script
@@ -72,7 +67,7 @@ fun evaluateScript(
     val b = Benchmark(TranslationResult::class.java, "Compiling query script $scriptFile")
     val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<CodyzeScript>()
     val evaluationConfiguration =
-        createJvmEvaluationConfigurationFromTemplate<CodyzeScript>() {
+        createJvmEvaluationConfigurationFromTemplate<CodyzeScript> {
             constructorArgs(projectBuilder)
             scriptsInstancesSharing(false)
         }

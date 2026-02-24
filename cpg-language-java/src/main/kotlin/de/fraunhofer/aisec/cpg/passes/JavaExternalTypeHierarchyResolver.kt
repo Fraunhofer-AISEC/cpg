@@ -45,6 +45,9 @@ import org.slf4j.LoggerFactory
 @DependsOn(TypeHierarchyResolver::class)
 @ExecuteBefore(JavaImportResolver::class)
 @RequiredFrontend(JavaLanguageFrontend::class)
+@Description(
+    "Adds some java types and their hierarchy information that are not part of the analyzed code (e.g., from the standard library) to the CPG's type hierarchy."
+)
 class JavaExternalTypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
         val provider =

@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
 import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -420,8 +420,8 @@ internal class EOGTest : BaseTest() {
     @Throws(Exception::class)
     fun testCPPCallGraph() {
         val nodes = translateToNodes("src/test/resources/cg.cpp")
-        val calls = nodes.filterIsInstance<CallExpression>()
-        val functions = nodes.filterIsInstance<FunctionDeclaration>()
+        val calls = nodes.filterIsInstance<Call>()
+        val functions = nodes.filterIsInstance<Function>()
         val first = findByUniqueName(calls, "first")
         assertNotNull(first)
 
@@ -593,8 +593,7 @@ internal class EOGTest : BaseTest() {
     @Throws(Exception::class)
     fun testSwitch(relPath: String, refNodeString: String) {
         val nodes = translateToNodes(relPath)
-        val functions =
-            nodes.filterIsInstance<FunctionDeclaration>().filter { it !is ConstructorDeclaration }
+        val functions = nodes.filterIsInstance<Function>().filter { it !is Constructor }
 
         // main()
         var swch = functions[0].allChildren<SwitchStatement>()[0]
@@ -941,7 +940,7 @@ internal class EOGTest : BaseTest() {
     }
 
     @Test
-    fun testLambdaExpression() {
+    fun testLambda() {
         val config =
             TranslationConfiguration.builder()
                 .sourceLocations(File("src/test/resources/cxx/lambdas.cpp"))
@@ -957,7 +956,7 @@ internal class EOGTest : BaseTest() {
 
         val lambdaVar = function.variables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
-        val lambda = lambdaVar.initializer as? LambdaExpression
+        val lambda = lambdaVar.initializer as? Lambda
         assertNotNull(lambda)
 
         // The "outer" EOG is assembled correctly.

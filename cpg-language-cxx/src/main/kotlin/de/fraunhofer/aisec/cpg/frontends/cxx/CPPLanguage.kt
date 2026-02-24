@@ -33,12 +33,13 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.matchesSignature
@@ -49,7 +50,7 @@ import org.neo4j.ogm.annotation.Transient
 
 /** The C++ language. */
 @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
-open class CPPLanguage() :
+open class CPPLanguage :
     CLanguage(),
     HasDefaultArguments,
     HasTemplates,
@@ -98,16 +99,16 @@ open class CPPLanguage() :
             BinaryOperator::class of "<=" to "operator<=",
             BinaryOperator::class of "=>" to "operator=>",
 
-            // Member access operators. See
+            // MemberAccess access operators. See
             // https://en.cppreference.com/w/cpp/language/operator_member_access
-            MemberExpression::class of "[]" to "operator[]",
+            MemberAccess::class of "[]" to "operator[]",
             UnaryOperator::class of "*" to "operator*",
             UnaryOperator::class of "&" to "operator&",
-            MemberExpression::class of "->" to "operator->",
-            MemberExpression::class of "->*" to "operator->*",
+            MemberAccess::class of "->" to "operator->",
+            MemberAccess::class of "->*" to "operator->*",
 
             // Other operators. See https://en.cppreference.com/w/cpp/language/operator_other
-            MemberCallExpression::class of "()" to "operator()",
+            MemberCall::class of "()" to "operator()",
             BinaryOperator::class of "," to "operator,",
         )
 
@@ -181,9 +182,7 @@ open class CPPLanguage() :
         // call, this will match the type T because this means that the parameter is given by
         // reference rather than by value.
         if (
-            targetType is ReferenceType &&
-                targetType.elementType == type &&
-                targetHint is ParameterDeclaration
+            targetType is ReferenceType && targetType.elementType == type && targetHint is Parameter
         ) {
             return DirectMatch
         }
@@ -205,7 +204,7 @@ open class CPPLanguage() :
     context(_: ContextProvider)
     override fun bestViableResolution(
         result: CallResolutionResult
-    ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
+    ): Pair<Set<Function>, CallResolutionResult.SuccessKind> {
         // There is a sort of weird workaround in C++ to select a prefix vs. postfix operator for
         // increment and decrement operators. See
         // https://en.cppreference.com/w/cpp/language/operator_incdec. If it is a postfix, we need
@@ -239,18 +238,17 @@ open class CPPLanguage() :
      * @return true if resolution was successful, false if not
      */
     override fun handleTemplateFunctionCalls(
-        curClass: RecordDeclaration?,
-        templateCall: CallExpression,
+        curClass: Record?,
+        templateCall: Call,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration?,
+        currentTU: TranslationUnit?,
         needsExactMatch: Boolean,
-    ): Pair<Boolean, List<FunctionDeclaration>> {
+    ): Pair<Boolean, List<Function>> {
         val instantiationCandidates =
-            ctx.scopeManager.lookupSymbolByNodeNameOfType<FunctionTemplateDeclaration>(templateCall)
+            ctx.scopeManager.lookupSymbolByNodeNameOfType<FunctionTemplate>(templateCall)
         for (functionTemplateDeclaration in instantiationCandidates) {
-            val initializationType =
-                mutableMapOf<AstNode?, TemplateDeclaration.TemplateInitialization?>()
+            val initializationType = mutableMapOf<AstNode?, Template.TemplateInitialization?>()
             val orderedInitializationSignature = mutableMapOf<Declaration, Int>()
             val explicitInstantiation = mutableListOf<ParameterizedType>()
             if (
@@ -309,7 +307,7 @@ open class CPPLanguage() :
             val edges = templateCall.templateArgumentEdges
             // Set instantiation propertyEdges
             for (edge in edges ?: listOf()) {
-                edge.instantiation = TemplateDeclaration.TemplateInitialization.EXPLICIT
+                edge.instantiation = Template.TemplateInitialization.EXPLICIT
             }
 
             if (functionTemplateDeclaration == null) {

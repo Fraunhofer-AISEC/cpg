@@ -150,28 +150,28 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     companion object {
         // Externally defined static global
-        private var externalClass: RecordDeclaration? = null
-        private var externVarName: FieldDeclaration? = null
-        private var externStaticVarName: FieldDeclaration? = null
-        private var outerClass: RecordDeclaration? = null
-        private var outerVarName: FieldDeclaration? = null
-        private var outerStaticVarName: FieldDeclaration? = null
-        private var innerClass: RecordDeclaration? = null
-        private var innerVarName: FieldDeclaration? = null
-        private var innerStaticVarName: FieldDeclaration? = null
-        private var implicitOuterThis: FieldDeclaration? = null
-        private var function1Receiver: VariableDeclaration? = null
-        private var function2Receiver: VariableDeclaration? = null
-        private var innerImpOuter: FieldDeclaration? = null
-        private var main: MethodDeclaration? = null
-        private var outerFunction1: MethodDeclaration? = null
+        private var externalClass: Record? = null
+        private var externVarName: Field? = null
+        private var externStaticVarName: Field? = null
+        private var outerClass: Record? = null
+        private var outerVarName: Field? = null
+        private var outerStaticVarName: Field? = null
+        private var innerClass: Record? = null
+        private var innerVarName: Field? = null
+        private var innerStaticVarName: Field? = null
+        private var implicitOuterThis: Field? = null
+        private var function1Receiver: Variable? = null
+        private var function2Receiver: Variable? = null
+        private var innerImpOuter: Field? = null
+        private var main: Method? = null
+        private var outerFunction1: Method? = null
         private var forStatements: List<ForStatement>? = null
-        private var outerFunction2: MethodDeclaration? = null
-        private var outerFunction3: MethodDeclaration? = null
-        private var outerFunction4: MethodDeclaration? = null
-        private var innerFunction1: MethodDeclaration? = null
-        private var innerFunction2: MethodDeclaration? = null
-        private var innerFunction3: MethodDeclaration? = null
+        private var outerFunction2: Method? = null
+        private var outerFunction3: Method? = null
+        private var outerFunction4: Method? = null
+        private var innerFunction1: Method? = null
+        private var innerFunction2: Method? = null
+        private var innerFunction3: Method? = null
         private val callParamMap: MutableMap<String, Expression> = HashMap()
 
         @BeforeAll

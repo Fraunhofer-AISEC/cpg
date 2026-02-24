@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
-import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.newParameter
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier
 import org.eclipse.cdt.core.dom.ast.IASTParameterDeclaration
@@ -41,17 +41,17 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
 
     override fun handleNode(node: IASTParameterDeclaration): Declaration {
         return when (node) {
-            is CPPASTParameterDeclaration -> handleParameterDeclaration(node)
-            is CASTParameterDeclaration -> handleParameterDeclaration(node)
+            is CPPASTParameterDeclaration -> handleParameter(node)
+            is CASTParameterDeclaration -> handleParameter(node)
             else -> {
-                return handleNotSupported(node, node.javaClass.name)
+                handleNotSupported(node, node.javaClass.name)
             }
         }
     }
 
-    private fun handleParameterDeclaration(ctx: IASTParameterDeclaration): ParameterDeclaration {
+    private fun handleParameter(ctx: IASTParameterDeclaration): Parameter {
         var name = ctx.declarator.name.toString()
-        var specifier = ctx.declSpecifier
+        val specifier = ctx.declSpecifier
 
         // Parse the type. If we are running into the situation where the declSpecifier is
         // "unspecified" and the name is not, then this is an unnamed parameter of an unknown type
@@ -67,7 +67,7 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
                 frontend.typeOf(ctx.declarator, ctx.declSpecifier)
             }
 
-        val paramVariableDeclaration = newParameterDeclaration(name, type, false, rawNode = ctx)
+        val paramVariableDeclaration = newParameter(name, type, false, rawNode = ctx)
 
         // We cannot really model "const" as part of the type, but we can model it as part of the
         // parameter, so we can use it later

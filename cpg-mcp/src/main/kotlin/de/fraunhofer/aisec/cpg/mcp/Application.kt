@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.mcp
 
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer
-import io.ktor.server.cio.CIO
-import io.ktor.server.engine.embeddedServer
+import io.ktor.server.cio.*
+import io.ktor.server.engine.*
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
 import io.modelcontextprotocol.kotlin.sdk.server.mcp
@@ -38,22 +38,29 @@ import kotlinx.io.asSource
 import kotlinx.io.buffered
 import picocli.CommandLine
 
-@CommandLine.Option(
-    names = ["--sse"],
-    description =
-        [
-            "Provide the port to run SSE (Server Sent Events). If not specified, the MCP server will run using stdio."
-        ],
-)
-var ssePort: Int? = null
+@CommandLine.Command(name = "cpg-mcp")
+class Application : Runnable {
+    @CommandLine.Option(
+        names = ["--sse"],
+        description =
+            [
+                "Provide the port to run SSE (Server Sent Events). If not specified, the MCP server will run using stdio."
+            ],
+    )
+    var ssePort: Int? = null
 
-fun main() {
-    val port = ssePort
-    if (port == null) {
-        runMcpServerUsingStdio()
-    } else {
-        runSseMcpServerUsingKtorPlugin(port, configureServer())
+    override fun run() {
+        val port = ssePort
+        if (port == null) {
+            runMcpServerUsingStdio()
+        } else {
+            runSseMcpServerUsingKtorPlugin(port, configureServer())
+        }
     }
+}
+
+fun main(args: Array<String>) {
+    CommandLine(Application()).execute(*args)
 }
 
 fun runMcpServerUsingStdio() {

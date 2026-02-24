@@ -137,7 +137,7 @@ private fun Edge<out Node>.label(): String {
     builder.append(this.labels.joinToString(","))
 
     if (this is Dataflow) {
-        var granularity = this.granularity
+        val granularity = this.granularity
         if (granularity is FieldDataflowGranularity) {
             builder.append(" (partial, ${granularity.partialTarget.name})")
         } else {

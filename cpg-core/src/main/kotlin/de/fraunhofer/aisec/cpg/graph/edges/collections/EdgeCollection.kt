@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.types.HasType.TypeObserver
 
 /**
- * This interfaces is an extension of [MutableCollection] that holds specific functions for the
+ * This interface is an extension of [MutableCollection] that holds specific functions for the
  * collection of [Edge] edges.
  */
 interface EdgeCollection<NodeType : Node, EdgeType : Edge<NodeType>> : MutableCollection<EdgeType> {

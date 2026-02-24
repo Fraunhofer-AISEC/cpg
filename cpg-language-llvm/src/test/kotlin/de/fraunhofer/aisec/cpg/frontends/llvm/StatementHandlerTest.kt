@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
@@ -34,12 +34,12 @@ import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Cast
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Conditional
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
@@ -85,7 +85,7 @@ class StatementHandlerTest {
         assertNotNull(xDeclaration)
 
         val call = xDeclaration.initializer
-        assertIs<CallExpression>(call)
+        assertIs<Call>(call)
         assertLocalName("rand", call)
         assertContains(call.invokes, rand)
         assertEquals(0, call.arguments.size)
@@ -94,7 +94,7 @@ class StatementHandlerTest {
         assertNotNull(mulStatement)
 
         val mulDeclaration = mulStatement.singleDeclaration
-        assertIs<VariableDeclaration>(mulDeclaration)
+        assertIs<Variable>(mulDeclaration)
         assertLocalName("a", mulDeclaration)
         assertEquals("i32", mulDeclaration.type.typeName)
 
@@ -106,7 +106,7 @@ class StatementHandlerTest {
         assertNotNull(addStatement)
 
         val addDeclaration = addStatement.singleDeclaration
-        assertIs<VariableDeclaration>(addDeclaration)
+        assertIs<Variable>(addDeclaration)
         assertLocalName("b", addDeclaration)
         assertEquals("i32", addDeclaration.type.typeName)
 
@@ -118,7 +118,7 @@ class StatementHandlerTest {
         assertNotNull(subStatement)
 
         val subDeclaration = subStatement.singleDeclaration
-        assertIs<VariableDeclaration>(subDeclaration)
+        assertIs<Variable>(subDeclaration)
         assertLocalName("c", subDeclaration)
         assertEquals("i32", subDeclaration.type.typeName)
 
@@ -130,7 +130,7 @@ class StatementHandlerTest {
         assertNotNull(divStatement)
 
         val divDeclaration = divStatement.singleDeclaration
-        assertIs<VariableDeclaration>(divDeclaration)
+        assertIs<Variable>(divDeclaration)
         assertLocalName("d", divDeclaration)
         assertEquals("i32", divDeclaration.type.typeName)
 
@@ -142,7 +142,7 @@ class StatementHandlerTest {
         assertNotNull(remStatement)
 
         val remDeclaration = remStatement.singleDeclaration
-        assertIs<VariableDeclaration>(remDeclaration)
+        assertIs<Variable>(remDeclaration)
         assertLocalName("e", remDeclaration)
         assertEquals("i32", remDeclaration.type.typeName)
 
@@ -154,7 +154,7 @@ class StatementHandlerTest {
         assertNotNull(xorStatement)
 
         val xorDeclaration = xorStatement.singleDeclaration
-        assertIs<VariableDeclaration>(xorDeclaration)
+        assertIs<Variable>(xorDeclaration)
         assertLocalName("f", xorDeclaration)
         assertEquals("i32", xorDeclaration.type.typeName)
 
@@ -166,7 +166,7 @@ class StatementHandlerTest {
         assertNotNull(udivStatement)
 
         val udivDeclaration = udivStatement.singleDeclaration
-        assertIs<VariableDeclaration>(udivDeclaration)
+        assertIs<Variable>(udivDeclaration)
         assertLocalName("g", udivDeclaration)
         assertEquals("i32", udivDeclaration.type.typeName)
 
@@ -178,7 +178,7 @@ class StatementHandlerTest {
         assertNotNull(uremStatement)
 
         val uremDeclaration = uremStatement.singleDeclaration
-        assertIs<VariableDeclaration>(uremDeclaration)
+        assertIs<Variable>(uremDeclaration)
         assertLocalName("h", uremDeclaration)
         assertEquals("i32", uremDeclaration.type.typeName)
 
@@ -190,7 +190,7 @@ class StatementHandlerTest {
         assertNotNull(shlStatement)
 
         val shlDeclaration = shlStatement.singleDeclaration
-        assertIs<VariableDeclaration>(shlDeclaration)
+        assertIs<Variable>(shlDeclaration)
         assertLocalName("i", shlDeclaration)
         assertEquals("i32", shlDeclaration.type.typeName)
 
@@ -202,7 +202,7 @@ class StatementHandlerTest {
         assertNotNull(lshrStatement)
 
         val lshrDeclaration = lshrStatement.singleDeclaration
-        assertIs<VariableDeclaration>(lshrDeclaration)
+        assertIs<Variable>(lshrDeclaration)
         assertLocalName("j", lshrDeclaration)
         assertEquals("i32", lshrDeclaration.type.typeName)
 
@@ -214,7 +214,7 @@ class StatementHandlerTest {
         assertNotNull(ashrStatement)
 
         val ashrDeclaration = ashrStatement.singleDeclaration
-        assertIs<VariableDeclaration>(ashrDeclaration)
+        assertIs<Variable>(ashrDeclaration)
         assertLocalName("k", ashrDeclaration)
         assertEquals("i32", ashrDeclaration.type.typeName)
 
@@ -249,7 +249,7 @@ class StatementHandlerTest {
         assertNotNull(xDeclaration)
 
         val call = xDeclaration.initializer
-        assertIs<CallExpression>(call)
+        assertIs<Call>(call)
         assertLocalName("rand", call)
         assertContains(call.invokes, rand)
         assertEquals(0, call.arguments.size)
@@ -258,7 +258,7 @@ class StatementHandlerTest {
         assertNotNull(fmulStatement)
 
         val fmulDeclaration = fmulStatement.singleDeclaration
-        assertIs<VariableDeclaration>(fmulDeclaration)
+        assertIs<Variable>(fmulDeclaration)
         assertLocalName("a", fmulDeclaration)
         assertEquals("half", fmulDeclaration.type.typeName)
 
@@ -270,7 +270,7 @@ class StatementHandlerTest {
         assertNotNull(faddStatement)
 
         val faddDeclaration = faddStatement.singleDeclaration
-        assertIs<VariableDeclaration>(faddDeclaration)
+        assertIs<Variable>(faddDeclaration)
         assertLocalName("b", faddDeclaration)
         assertEquals("half", faddDeclaration.type.typeName)
 
@@ -282,7 +282,7 @@ class StatementHandlerTest {
         assertNotNull(fsubStatement)
 
         val fsubDeclaration = fsubStatement.singleDeclaration
-        assertIs<VariableDeclaration>(fsubDeclaration)
+        assertIs<Variable>(fsubDeclaration)
         assertLocalName("c", fsubDeclaration)
         assertEquals("half", fsubDeclaration.type.typeName)
 
@@ -294,7 +294,7 @@ class StatementHandlerTest {
         assertNotNull(fdivStatement)
 
         val fdivDeclaration = fdivStatement.singleDeclaration
-        assertIs<VariableDeclaration>(fdivDeclaration)
+        assertIs<Variable>(fdivDeclaration)
         assertLocalName("d", fdivDeclaration)
         assertEquals("half", fdivDeclaration.type.typeName)
 
@@ -306,7 +306,7 @@ class StatementHandlerTest {
         assertNotNull(fremStatement)
 
         val fremDeclaration = fremStatement.singleDeclaration
-        assertIs<VariableDeclaration>(fremDeclaration)
+        assertIs<Variable>(fremDeclaration)
         assertLocalName("e", fremDeclaration)
         assertEquals("half", fremDeclaration.type.typeName)
 
@@ -318,7 +318,7 @@ class StatementHandlerTest {
         assertNotNull(fnegStatement)
 
         val fnegDeclaration = fnegStatement.singleDeclaration
-        assertIs<VariableDeclaration>(fnegDeclaration)
+        assertIs<Variable>(fnegDeclaration)
         assertLocalName("f", fnegDeclaration)
         assertEquals("half", fnegDeclaration.type.typeName)
 
@@ -353,7 +353,7 @@ class StatementHandlerTest {
         assertNotNull(xDeclaration)
 
         val call = xDeclaration.initializer
-        assertIs<CallExpression>(call)
+        assertIs<Call>(call)
         assertLocalName("rand", call)
         assertContains(call.invokes, rand)
         assertEquals(0, call.arguments.size)
@@ -362,7 +362,7 @@ class StatementHandlerTest {
         assertNotNull(cmpEqStatement)
 
         val cmpEqDeclaration = cmpEqStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpEqDeclaration)
+        assertIs<Variable>(cmpEqDeclaration)
         assertLocalName("a", cmpEqDeclaration)
         assertEquals("i1", cmpEqDeclaration.type.typeName)
 
@@ -374,7 +374,7 @@ class StatementHandlerTest {
         assertNotNull(cmpNeqStatement)
 
         val cmpNeqDeclaration = cmpNeqStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpNeqDeclaration)
+        assertIs<Variable>(cmpNeqDeclaration)
         assertLocalName("b", cmpNeqDeclaration)
         assertEquals("i1", cmpNeqDeclaration.type.typeName)
 
@@ -386,7 +386,7 @@ class StatementHandlerTest {
         assertNotNull(cmpUgtStatement)
 
         val cmpUgtDeclaration = cmpUgtStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpUgtDeclaration)
+        assertIs<Variable>(cmpUgtDeclaration)
         assertLocalName("c", cmpUgtDeclaration)
         assertEquals("i1", cmpUgtDeclaration.type.typeName)
 
@@ -398,7 +398,7 @@ class StatementHandlerTest {
         assertNotNull(cmpUltStatement)
 
         val cmpUltDeclaration = cmpUltStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpUltDeclaration)
+        assertIs<Variable>(cmpUltDeclaration)
         assertLocalName("d", cmpUltDeclaration)
         assertEquals("i1", cmpUltDeclaration.type.typeName)
 
@@ -410,7 +410,7 @@ class StatementHandlerTest {
         assertNotNull(cmpUgeStatement)
 
         val cmpUgeDeclaration = cmpUgeStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpUgeDeclaration)
+        assertIs<Variable>(cmpUgeDeclaration)
         assertLocalName("e", cmpUgeDeclaration)
         assertEquals("i1", cmpUgeDeclaration.type.typeName)
 
@@ -422,7 +422,7 @@ class StatementHandlerTest {
         assertNotNull(cmpUleStatement)
 
         val cmpUleDeclaration = cmpUleStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpUleDeclaration)
+        assertIs<Variable>(cmpUleDeclaration)
         assertLocalName("f", cmpUleDeclaration)
         assertEquals("i1", cmpUleDeclaration.type.typeName)
 
@@ -434,7 +434,7 @@ class StatementHandlerTest {
         assertNotNull(cmpSgtStatement)
 
         val cmpSgtDeclaration = cmpSgtStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpSgtDeclaration)
+        assertIs<Variable>(cmpSgtDeclaration)
         assertLocalName("g", cmpSgtDeclaration)
         assertEquals("i1", cmpSgtDeclaration.type.typeName)
 
@@ -446,7 +446,7 @@ class StatementHandlerTest {
         assertNotNull(cmpSltStatement)
 
         val cmpSltDeclaration = cmpSltStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpSltDeclaration)
+        assertIs<Variable>(cmpSltDeclaration)
         assertLocalName("h", cmpSltDeclaration)
         assertEquals("i1", cmpSltDeclaration.type.typeName)
 
@@ -458,7 +458,7 @@ class StatementHandlerTest {
         assertNotNull(cmpSgeStatement)
 
         val cmpSgeDeclaration = cmpSgeStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpSgeDeclaration)
+        assertIs<Variable>(cmpSgeDeclaration)
         assertLocalName("i", cmpSgeDeclaration)
         assertEquals("i1", cmpSgeDeclaration.type.typeName)
 
@@ -470,7 +470,7 @@ class StatementHandlerTest {
         assertNotNull(cmpSleStatement)
 
         val cmpSleDeclaration = cmpSleStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpSleDeclaration)
+        assertIs<Variable>(cmpSleDeclaration)
         assertLocalName("j", cmpSleDeclaration)
         assertEquals("i1", cmpSleDeclaration.type.typeName)
 
@@ -508,7 +508,7 @@ class StatementHandlerTest {
         assertNotNull(yDeclaration)
 
         val call = xDeclaration.initializer
-        assertIs<CallExpression>(call)
+        assertIs<Call>(call)
         assertLocalName("rand", call)
         assertContains(call.invokes, rand)
         assertEquals(0, call.arguments.size)
@@ -517,7 +517,7 @@ class StatementHandlerTest {
         assertNotNull(cmpOeqStatement)
 
         val cmpOeqDeclaration = cmpOeqStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpOeqDeclaration)
+        assertIs<Variable>(cmpOeqDeclaration)
         assertLocalName("a", cmpOeqDeclaration)
         assertEquals("i1", cmpOeqDeclaration.type.typeName)
 
@@ -529,7 +529,7 @@ class StatementHandlerTest {
         assertNotNull(cmpOneStatement)
 
         val cmpOneDeclaration = cmpOneStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpOneDeclaration)
+        assertIs<Variable>(cmpOneDeclaration)
         assertLocalName("b", cmpOneDeclaration)
         assertEquals("i1", cmpOneDeclaration.type.typeName)
 
@@ -541,7 +541,7 @@ class StatementHandlerTest {
         assertNotNull(cmpOgtStatement)
 
         val cmpOgtDeclaration = cmpOgtStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpOgtDeclaration)
+        assertIs<Variable>(cmpOgtDeclaration)
         assertLocalName("c", cmpOgtDeclaration)
         assertEquals("i1", cmpOgtDeclaration.type.typeName)
 
@@ -553,7 +553,7 @@ class StatementHandlerTest {
         assertNotNull(cmpOltStatement)
 
         val cmpOltDeclaration = cmpOltStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpOltDeclaration)
+        assertIs<Variable>(cmpOltDeclaration)
         assertLocalName("d", cmpOltDeclaration)
         assertEquals("i1", cmpOltDeclaration.type.typeName)
 
@@ -565,7 +565,7 @@ class StatementHandlerTest {
         assertNotNull(cmpOgeStatement)
 
         val cmpOgeDeclaration = cmpOgeStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpOgeDeclaration)
+        assertIs<Variable>(cmpOgeDeclaration)
         assertLocalName("e", cmpOgeDeclaration)
         assertEquals("i1", cmpOgeDeclaration.type.typeName)
 
@@ -577,7 +577,7 @@ class StatementHandlerTest {
         assertNotNull(cmpOleStatement)
 
         val cmpOleDeclaration = cmpOleStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpOleDeclaration)
+        assertIs<Variable>(cmpOleDeclaration)
         assertLocalName("f", cmpOleDeclaration)
         assertEquals("i1", cmpOleDeclaration.type.typeName)
 
@@ -589,7 +589,7 @@ class StatementHandlerTest {
         assertNotNull(cmpUgtStatement)
 
         val cmpUgtDeclaration = cmpUgtStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpUgtDeclaration)
+        assertIs<Variable>(cmpUgtDeclaration)
         assertLocalName("g", cmpUgtDeclaration)
         assertEquals("i1", cmpUgtDeclaration.type.typeName)
 
@@ -604,7 +604,7 @@ class StatementHandlerTest {
         assertNotNull(cmpUltStatement)
 
         val cmpUltDeclaration = cmpUltStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpUltDeclaration)
+        assertIs<Variable>(cmpUltDeclaration)
         assertLocalName("h", cmpUltDeclaration)
         assertEquals("i1", cmpUltDeclaration.type.typeName)
 
@@ -619,7 +619,7 @@ class StatementHandlerTest {
         assertNotNull(cmpUgeStatement)
 
         val cmpUgeDeclaration = cmpUgeStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpUgeDeclaration)
+        assertIs<Variable>(cmpUgeDeclaration)
         assertLocalName("i", cmpUgeDeclaration)
         assertEquals("i1", cmpUgeDeclaration.type.typeName)
 
@@ -634,7 +634,7 @@ class StatementHandlerTest {
         assertNotNull(cmpUleStatement)
 
         val cmpUleDeclaration = cmpUleStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpUleDeclaration)
+        assertIs<Variable>(cmpUleDeclaration)
         assertLocalName("j", cmpUleDeclaration)
         assertEquals("i1", cmpUleDeclaration.type.typeName)
 
@@ -649,7 +649,7 @@ class StatementHandlerTest {
         assertNotNull(cmpUeqStatement)
 
         val cmpUeqDeclaration = cmpUeqStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpUeqDeclaration)
+        assertIs<Variable>(cmpUeqDeclaration)
         assertLocalName("k", cmpUeqDeclaration)
         assertEquals("i1", cmpUeqDeclaration.type.typeName)
 
@@ -664,7 +664,7 @@ class StatementHandlerTest {
         assertNotNull(cmpUneStatement)
 
         val cmpUneDeclaration = cmpUneStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpUneDeclaration)
+        assertIs<Variable>(cmpUneDeclaration)
         assertLocalName("l", cmpUneDeclaration)
         assertEquals("i1", cmpUneDeclaration.type.typeName)
 
@@ -679,7 +679,7 @@ class StatementHandlerTest {
         assertNotNull(cmpOrdStatement)
 
         val cmpOrdDeclaration = cmpOrdStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpOrdDeclaration)
+        assertIs<Variable>(cmpOrdDeclaration)
         assertLocalName("m", cmpOrdDeclaration)
         assertEquals("i1", cmpOrdDeclaration.type.typeName)
 
@@ -687,7 +687,7 @@ class StatementHandlerTest {
         assertIs<UnaryOperator>(cmpOrdNeg)
         assertEquals("!", cmpOrdNeg.operatorCode)
         val cmpOrd = cmpOrdNeg.input
-        assertIs<CallExpression>(cmpOrd)
+        assertIs<Call>(cmpOrd)
         assertLocalName("isunordered", cmpOrd)
         assertRefersTo(cmpOrd.arguments[0], xDeclaration)
         assertRefersTo(cmpOrd.arguments[1], yDeclaration)
@@ -696,12 +696,12 @@ class StatementHandlerTest {
         assertNotNull(cmpUnoStatement)
 
         val cmpUnoDeclaration = cmpUnoStatement.singleDeclaration
-        assertIs<VariableDeclaration>(cmpUnoDeclaration)
+        assertIs<Variable>(cmpUnoDeclaration)
         assertLocalName("n", cmpUnoDeclaration)
         assertEquals("i1", cmpUnoDeclaration.type.typeName)
 
         val cmpUno = cmpUnoDeclaration.initializer
-        assertIs<CallExpression>(cmpUno)
+        assertIs<Call>(cmpUno)
         assertLocalName("isunordered", cmpUno)
         assertRefersTo(cmpUno.arguments[0], xDeclaration)
         assertRefersTo(cmpUno.arguments[1], yDeclaration)
@@ -727,12 +727,12 @@ class StatementHandlerTest {
         // We expect something like this: x = (w != undef && w != poison) ? w : llvm.freeze(w)
         assertIs<DeclarationStatement>(freezeInstructionDeclaration)
         val xDeclaration = freezeInstructionDeclaration.singleDeclaration
-        assertIs<VariableDeclaration>(xDeclaration)
+        assertIs<Variable>(xDeclaration)
         assertLocalName("x", xDeclaration)
         assertEquals("i32", xDeclaration.type.typeName)
 
         val freezeInstruction = xDeclaration.initializer
-        assertIs<ConditionalExpression>(freezeInstruction)
+        assertIs<Conditional>(freezeInstruction)
         val condition = freezeInstruction.condition
         assertIs<BinaryOperator>(condition)
         assertEquals("&&", condition.operatorCode)
@@ -754,7 +754,7 @@ class StatementHandlerTest {
         assertRefersTo(freezeInstruction.thenExpression, wDeclaration)
 
         val elseExpression = freezeInstruction.elseExpression
-        assertIs<CallExpression>(elseExpression)
+        assertIs<Call>(elseExpression)
         assertFullName("llvm.freeze", elseExpression)
         assertEquals(1, elseExpression.arguments.size)
         assertRefersTo(elseExpression.arguments.firstOrNull(), wDeclaration)
@@ -801,7 +801,7 @@ class StatementHandlerTest {
         // This one is not wrapped in a block and does not have the declaration statement!
         // Check that the replacement equals *ptr = ~(*ptr | 1)
         val replacementNand = fooBody[5]
-        assertIs<AssignExpression>(replacementNand)
+        assertIs<Assign>(replacementNand)
         assertEquals(1, replacementNand.lhs.size)
         assertEquals(1, replacementNand.rhs.size)
         assertEquals("=", replacementNand.operatorCode)
@@ -848,7 +848,7 @@ class StatementHandlerTest {
     ) {
         // Check that the value is assigned to
         val declaration = atomicrmwStatement.statements[0].declarations[0]
-        assertIs<VariableDeclaration>(declaration)
+        assertIs<Variable>(declaration)
         assertLocalName(variableName, declaration)
         assertLocalName("i32", declaration.type)
         val initializer = declaration.initializer
@@ -858,7 +858,7 @@ class StatementHandlerTest {
 
         // Check that the replacement equals *ptr = (*ptr <cmp> 1) ? *ptr : 1
         val replacement = atomicrmwStatement.statements[1]
-        assertIs<AssignExpression>(replacement)
+        assertIs<Assign>(replacement)
         assertEquals(1, replacement.lhs.size)
         assertEquals(1, replacement.rhs.size)
         assertEquals("=", replacement.operatorCode)
@@ -869,13 +869,13 @@ class StatementHandlerTest {
 
         // Check that the rhs is equal to (*ptr <cmp> 1) ? *ptr : 1
         val conditionalExpression = replacement.rhs.first()
-        assertIs<ConditionalExpression>(conditionalExpression)
+        assertIs<Conditional>(conditionalExpression)
         val condition = conditionalExpression.condition
         assertIs<BinaryOperator>(condition)
         assertEquals(cmp, condition.operatorCode)
         var cmpLhs = condition.lhs
         if (requiresUintCast) {
-            assertIs<CastExpression>(cmpLhs)
+            assertIs<Cast>(cmpLhs)
             assertEquals("ui32", cmpLhs.castType.typeName)
             cmpLhs = cmpLhs.expression
         }
@@ -884,7 +884,7 @@ class StatementHandlerTest {
         assertLocalName("ptr", cmpLhs.input)
         var cmpRhs = condition.rhs
         if (requiresUintCast) {
-            assertIs<CastExpression>(cmpRhs)
+            assertIs<Cast>(cmpRhs)
             assertEquals("ui32", cmpRhs.castType.typeName)
             cmpRhs = cmpRhs.expression
         }
@@ -903,7 +903,7 @@ class StatementHandlerTest {
     ) {
         // Check that the value is assigned to
         val declaration = atomicrmwStatement.statements[0].declarations[0]
-        assertIs<VariableDeclaration>(declaration)
+        assertIs<Variable>(declaration)
         assertLocalName(variableName, declaration)
         assertLocalName("i32", declaration.type)
         val initializer = declaration.initializer
@@ -914,7 +914,7 @@ class StatementHandlerTest {
         // Check that the replacement equals *ptr = *ptr <operator> 1
         val replacement = atomicrmwStatement.statements[1]
 
-        assertIs<AssignExpression>(replacement)
+        assertIs<Assign>(replacement)
         assertEquals(1, replacement.lhs.size)
         assertEquals(1, replacement.rhs.size)
         assertEquals("=", replacement.operatorCode)

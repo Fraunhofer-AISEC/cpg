@@ -44,7 +44,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             is GoStandardLibrary.Ast.DeclStmt -> handleDeclStmt(node)
             is GoStandardLibrary.Ast.DeferStmt -> handleDeferStmt(node)
             is GoStandardLibrary.Ast.ExprStmt -> {
-                return frontend.expressionHandler.handle(node.x)
+                frontend.expressionHandler.handle(node.x)
             }
             is GoStandardLibrary.Ast.ForStmt -> handleForStmt(node)
             is GoStandardLibrary.Ast.GoStmt -> handleGoStmt(node)
@@ -60,7 +60,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         }
     }
 
-    private fun handleAssignStmt(assignStmt: GoStandardLibrary.Ast.AssignStmt): AssignExpression {
+    private fun handleAssignStmt(assignStmt: GoStandardLibrary.Ast.AssignStmt): Assign {
         val lhs = assignStmt.lhs.map { frontend.expressionHandler.handle(it) }
         val rhs = assignStmt.rhs.map { frontend.expressionHandler.handle(it) }
 
@@ -74,7 +74,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                 "="
             }
 
-        return newAssignExpression(operatorCode, lhs, rhs, rawNode = assignStmt)
+        return newAssign(operatorCode, lhs, rhs, rawNode = assignStmt)
     }
 
     private fun handleBranchStmt(branchStmt: GoStandardLibrary.Ast.BranchStmt): Statement {
@@ -168,7 +168,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             val stmt = newDeclarationStatement()
             stmt.isImplicit = true
 
-            val decl = newVariableDeclaration(typeSwitchLhs.name)
+            val decl = newVariable(typeSwitchLhs.name)
             if (case is CaseStatement) {
                 decl.type = (case.caseExpression as? TypeExpression)?.type ?: unknownType()
             } else {
@@ -252,9 +252,9 @@ class StatementHandler(frontend: GoLanguageFrontend) :
      * supplied call expression in a separate Go routine. We cannot model this 1:1, so we basically
      * we create a call expression to a built-in call.
      */
-    private fun handleGoStmt(goStmt: GoStandardLibrary.Ast.GoStmt): CallExpression {
+    private fun handleGoStmt(goStmt: GoStandardLibrary.Ast.GoStmt): Call {
         val ref = newReference("go")
-        val call = newCallExpression(ref, "go", rawNode = goStmt)
+        val call = newCall(ref, "go", rawNode = goStmt)
         call += frontend.expressionHandler.handle(goStmt.call)
 
         return call
@@ -327,7 +327,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             rangeStmt.key?.let {
                 val ref = frontend.expressionHandler.handle(it)
                 if (ref is Reference) {
-                    val key = newVariableDeclaration(ref.name, rawNode = it)
+                    val key = newVariable(ref.name, rawNode = it)
                     frontend.scopeManager.addDeclaration(key)
                     stmt.declarationEdges += key
                 }
@@ -337,7 +337,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             rangeStmt.value?.let {
                 val ref = frontend.expressionHandler.handle(it)
                 if (ref is Reference) {
-                    val key = newVariableDeclaration(ref.name, rawNode = it)
+                    val key = newVariable(ref.name, rawNode = it)
                     frontend.scopeManager.addDeclaration(key)
                     stmt.declarationEdges += key
                 }
@@ -407,7 +407,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
         val assign = frontend.statementHandler.handle(typeSwitchStmt.assign)
         val (lhs, rhs) =
-            if (assign is AssignExpression) {
+            if (assign is Assign) {
                 val rhs = assign.rhs.singleOrNull()
                 switch.selector = rhs
                 Pair(assign.lhs.singleOrNull(), (rhs as? UnaryOperator)?.input)

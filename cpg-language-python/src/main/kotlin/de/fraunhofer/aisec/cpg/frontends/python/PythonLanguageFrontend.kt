@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
@@ -84,7 +84,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
     private var lastColumnLength: Int = -1
 
     @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         fileContent = file.readText(Charsets.UTF_8)
         uri = file.toURI()
 
@@ -126,7 +126,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
     }
 
     private fun addCommentsToCPG(
-        tud: TranslationUnitDeclaration,
+        tud: TranslationUnit,
         pyTokens: ArrayList<*>,
         pyCommentCode: Long,
     ) {
@@ -312,8 +312,8 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
         // will be invoked by native function
     }
 
-    private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnitDeclaration {
-        var topLevel = ctx.currentComponent?.topLevel() ?: path.parent.toFile()
+    private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnit {
+        val topLevel = ctx.currentComponent?.topLevel() ?: path.parent.toFile()
 
         val pythonASTModule =
             fromPython(pyAST) as? Python.AST.Module
@@ -322,7 +322,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                 ) // could be one of ast.{Module,Interactive,Expression,FunctionType}
 
         val tud =
-            newTranslationUnitDeclaration(path.toString(), rawNode = pythonASTModule).apply {
+            newTranslationUnit(path.toString(), rawNode = pythonASTModule).apply {
                 this.location =
                     PhysicalLocation(
                         uri = uri,
@@ -341,14 +341,14 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
         // with packages. Note: in reality, only directories that have __init__.py file present are
         // actually packages, but we skip this for now. Since we are dealing with potentially
         // relative paths, we need to canonicalize both paths.
-        var relative =
+        val relative =
             path.toFile().canonicalFile.relativeToOrNull(topLevel.canonicalFile)?.toPath()
-        var module = path.nameWithoutExtension
-        var modulePaths = (relative?.parent?.pathString?.split("/") ?: listOf()) + module
+        val module = path.nameWithoutExtension
+        val modulePaths = (relative?.parent?.pathString?.split("/") ?: listOf()) + module
 
         val lastNamespace =
-            modulePaths.fold(null) { previous: NamespaceDeclaration?, path ->
-                var fqn = previous?.name.fqn(path)
+            modulePaths.fold(null) { previous: Namespace?, path ->
+                val fqn = previous?.name.fqn(path)
 
                 // The __init__ module is very special in Python. The symbols that are declared by
                 // __init__.py are available directly under the path of the package (not module) it
@@ -361,7 +361,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                 if (path == PythonLanguage.IDENTIFIER_INIT) {
                     previous
                 } else {
-                    val nsd = newNamespaceDeclaration(fqn, rawNode = pythonASTModule)
+                    val nsd = newNamespace(fqn, rawNode = pythonASTModule)
                     nsd.path = relative?.parent?.pathString + "/" + module
                     scopeManager.addDeclaration(nsd)
 
@@ -397,7 +397,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
         }
 
         // Leave scopes in reverse order
-        tud.allChildren<NamespaceDeclaration>().reversed().forEach { scopeManager.leaveScope(it) }
+        tud.allChildren<Namespace>().reversed().forEach { scopeManager.leaveScope(it) }
 
         return tud
     }
@@ -446,13 +446,13 @@ val TranslationConfiguration.versionInfo: VersionInfo?
 
 /**
  * Populate system information from defined symbols that represent our environment. We add it as an
- * overlay node to our [TranslationUnitDeclaration].
+ * overlay node to our [TranslationUnit].
  */
 fun populateSystemInformation(
     config: TranslationConfiguration,
-    tu: TranslationUnitDeclaration,
+    tu: TranslationUnit,
 ): SystemInformation {
-    var sysInfo =
+    val sysInfo =
         SystemInformation(
             platform = config.symbols["PYTHON_PLATFORM"],
             versionInfo = config.versionInfo,
@@ -461,8 +461,8 @@ fun populateSystemInformation(
     return sysInfo
 }
 
-/** Returns the system information overlay node from the [TranslationUnitDeclaration]. */
-val TranslationUnitDeclaration.sysInfo: SystemInformation?
+/** Returns the system information overlay node from the [TranslationUnit]. */
+val TranslationUnit.sysInfo: SystemInformation?
     get() {
         return this.overlays.firstOrNull { it is SystemInformation } as? SystemInformation
     }

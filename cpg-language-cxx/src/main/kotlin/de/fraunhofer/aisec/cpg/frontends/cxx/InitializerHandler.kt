@@ -26,12 +26,12 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.newConstructExpression
-import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.newConstruction
+import de.fraunhofer.aisec.cpg.graph.newInitializerList
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import java.util.function.Supplier
@@ -49,15 +49,15 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
             is IASTInitializerList -> handleInitializerList(node)
             is CPPASTConstructorInitializer -> handleConstructorInitializer(node)
             else -> {
-                return handleNotSupported(node, node.javaClass.name)
+                handleNotSupported(node, node.javaClass.name)
             }
         }
     }
 
     private fun handleConstructorInitializer(ctx: CPPASTConstructorInitializer): Expression {
-        val constructExpression = newConstructExpression(rawNode = ctx)
+        val constructExpression = newConstruction(rawNode = ctx)
         constructExpression.type =
-            (frontend.declaratorHandler.lastNode as? VariableDeclaration)?.type ?: unknownType()
+            (frontend.declaratorHandler.lastNode as? Variable)?.type ?: unknownType()
 
         for ((i, argument) in ctx.arguments.withIndex()) {
             val arg = frontend.expressionHandler.handle(argument)
@@ -70,20 +70,17 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
         return constructExpression
     }
 
-    private fun handleInitializerList(ctx: IASTInitializerList): InitializerListExpression {
+    private fun handleInitializerList(ctx: IASTInitializerList): InitializerList {
         // Because an initializer list expression is used for many different things, it is important
         // for us to know which kind of variable (or rather of which kind), we are initializing.
         // This information can be found in the lastNode property of our declarator handler.
         val targetType =
             (frontend.declaratorHandler.lastNode as? ValueDeclaration)?.type ?: unknownType()
 
-        val expression = newInitializerListExpression(targetType, rawNode = ctx)
+        val expression = newInitializerList(targetType, rawNode = ctx)
 
         for (clause in ctx.clauses) {
-            frontend.expressionHandler.handle(clause)?.let {
-                expression.initializerEdges.add(it)
-                expression.prevDFGEdges += it
-            }
+            frontend.expressionHandler.handle(clause)?.let { expression.initializerEdges.add(it) }
         }
 
         return expression

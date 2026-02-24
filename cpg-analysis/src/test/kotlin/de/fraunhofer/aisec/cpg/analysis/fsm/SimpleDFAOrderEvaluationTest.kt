@@ -44,7 +44,7 @@ import org.junit.jupiter.api.TestInstance
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SimpleDFAOrderEvaluationTest {
     private var dfa = DFA()
-    private lateinit var tu: TranslationUnitDeclaration
+    private lateinit var tu: TranslationUnit
 
     @BeforeTest
     fun getDFABeforeTest() {

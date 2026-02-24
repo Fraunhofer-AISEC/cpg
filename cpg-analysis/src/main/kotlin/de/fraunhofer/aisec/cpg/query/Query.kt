@@ -191,8 +191,7 @@ fun min(n: List<Node>?, eval: ValueEvaluator = IntegerIntervalEvaluator()): Quer
         )
 
     for (node in n) {
-        val evalRes = eval.evaluate(node)
-        when (evalRes) {
+        when (val evalRes = eval.evaluate(node)) {
             is LatticeInterval -> {
                 val minValue =
                     ((evalRes as? LatticeInterval.Bounded)?.upper as? LatticeInterval.Bound.Value)
@@ -234,8 +233,7 @@ fun max(n: List<Node>?, eval: ValueEvaluator = IntegerIntervalEvaluator()): Quer
         )
 
     for (node in n) {
-        val evalRes = eval.evaluate(node)
-        when (evalRes) {
+        when (val evalRes = eval.evaluate(node)) {
             is LatticeInterval -> {
                 val maxValue =
                     ((evalRes as? LatticeInterval.Bounded)?.upper as? LatticeInterval.Bound.Value)

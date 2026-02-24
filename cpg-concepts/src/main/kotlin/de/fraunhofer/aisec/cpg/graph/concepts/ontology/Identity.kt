@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInDFGPath
 import java.time.ZonedDateTime
 import java.util.Objects
 import kotlin.Any
@@ -36,27 +37,27 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public open class Identity(
-    public val disablePasswordPolicy: Boolean?,
-    public val enforceMFA: Boolean?,
-    public val lastActivity: ZonedDateTime?,
-    public val loginDefenderEnabled: Boolean?,
-    public val privileged: Boolean?,
-    activated: Boolean?,
-    authenticity: Authenticity?,
-    authorization: Authorization?,
-    internetAccessibleEndpoint: Boolean?,
-    geoLocation: GeoLocation?,
-    loggings: MutableList<Logging?>,
-    redundancies: Redundancy?,
-    usageStatistics: UsageStatistics?,
-    creation_time: ZonedDateTime?,
-    description: String?,
-    resourceId: String?,
-    labels: MutableMap<String, String>?,
-    name: String?,
-    raw: String?,
-    parent: Resource?,
+open class Identity(
+    val disablePasswordPolicy: Boolean? = null,
+    val enforceMFA: Boolean? = null,
+    val lastActivity: ZonedDateTime? = null,
+    val loginDefenderEnabled: Boolean? = null,
+    val privileged: Boolean? = null,
+    activated: Boolean? = null,
+    authenticity: Authenticity? = null,
+    authorization: Authorization? = null,
+    internetAccessibleEndpoint: Boolean? = null,
+    geoLocation: GeoLocation? = null,
+    loggings: MutableList<Logging?> = mutableListOf(),
+    redundancies: Redundancy? = null,
+    usageStatistics: UsageStatistics? = null,
+    creation_time: ZonedDateTime? = null,
+    description: String? = null,
+    resourceId: String? = null,
+    labels: MutableMap<String, String>? = null,
+    name: String? = null,
+    raw: String? = null,
+    parent: Resource? = null,
     underlyingNode: Node? = null,
 ) :
     Identifiable(
@@ -99,4 +100,8 @@ public open class Identity(
             loginDefenderEnabled,
             privileged,
         )
+
+    override fun setDFG() {
+        underlyingNode?.insertNodeAfterwardInDFGPath(this)
+    }
 }

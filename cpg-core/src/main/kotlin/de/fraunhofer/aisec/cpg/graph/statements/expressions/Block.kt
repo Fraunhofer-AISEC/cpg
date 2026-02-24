@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -38,7 +38,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 /**
  * A statement which contains a list of statements. A common example is a function body within a
- * [FunctionDeclaration].
+ * [Function].
  */
 open class Block : Expression(), StatementHolder {
     /** The list of statements. */

@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
@@ -47,7 +48,7 @@ import kotlin.math.absoluteValue
 /**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
  * optional predicate function [predicate] can be supplied, which will be applied via
- * [Collection.filter]
+ * [Iterable.filter].
  *
  * @param stopAtNode Indicates if the node should be stopped at, i.e., we do not visit this node and
  *   its children.
@@ -86,7 +87,7 @@ fun Node.hasLocation(pathSuffix: String?, startLine: Int?, endLine: Int?): Boole
 /**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
  * optional predicate function [predicate] can be supplied, which will be applied via
- * [Collection.filter]
+ * [Iterable.filter]
  */
 @JvmOverloads
 inline fun <reified T> Node?.allChildrenWithOverlays(
@@ -110,12 +111,12 @@ inline fun <reified T : OverlayNode> Node.hasOverlay(): Boolean {
 
 /**
  * Returns a list of all [Node]s, starting from the current [Node], which are the beginning of an
- * EOG path created by the [EvaluationOrderGraphPass]. Typical examples include all top-level
- * declarations, such as functions and variables. For a more detailed explanation, see
- * [EOGStarterHolder].
+ * EOG path created by the [de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass]. Typical
+ * examples include all top-level declarations, such as functions and variables. For a more detailed
+ * explanation, see [EOGStarterHolder].
  *
  * While it is in theory possible to retrieve this property from all nodes, most use cases should
- * include retrieving it from either an individual [TranslationUnitDeclaration] or the complete
+ * include retrieving it from either an individual [TranslationUnit] or the complete
  * [TranslationResult].
  */
 val AstNode.allEOGStarters: List<Node>
@@ -154,13 +155,13 @@ inline fun <reified T : Node> Node.dfgFrom(): List<T> {
 }
 
 /**
- * This function retrieves the [CallExpression]s of [this] by their fully qualified name (FQN). The
- * match is performed on the [CallExpression.reconstructedImportName].
+ * This function retrieves the [Call]s of [this] by their fully qualified name (FQN). The match is
+ * performed on the [Call.reconstructedImportName].
  *
  * @param fqn The fully qualified name of the calls to retrieve.
- * @return A list of [CallExpression] nodes matching the provided FQN.
+ * @return A list of [Call] nodes matching the provided FQN.
  */
-fun <T : CallExpression> Collection<T>.byFQN(fqn: String): List<T> {
+fun <T : Call> Collection<T>.byFQN(fqn: String): List<T> {
     return this.filter { call -> call.reconstructedImportName.toString() == fqn }
 }
 
@@ -221,7 +222,7 @@ operator fun <T : Node> Collection<T>.invoke(predicate: (T) -> Boolean): List<T>
 /** A shortcut to filter a list of nodes by their name. */
 operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
     // TODO: I'm not sure if it wouldn't be more intuitive to use
-    // call.reconstructedImportName.toString().endsWith(lookup) for CallExpressions.
+    // call.reconstructedImportName.toString().endsWith(lookup) for Calls.
     return this.filter { it.name.lastPartsMatch(lookup) }
 }
 
@@ -234,11 +235,11 @@ operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
  *
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
-inline fun <reified T : Statement> FunctionDeclaration.bodyOrNull(n: Int = 0): T? {
-    var body = this.body
+inline fun <reified T : Statement> Function.bodyOrNull(n: Int = 0): T? {
+    val body = this.body
     return if (body is Block) {
-        var statements = body.statements
-        var idx =
+        val statements = body.statements
+        val idx =
             if (n < 0) {
                 statements.size - n.absoluteValue
             } else {
@@ -261,7 +262,7 @@ inline fun <reified T : Statement> FunctionDeclaration.bodyOrNull(n: Int = 0): T
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
 @Throws(StatementNotFound::class)
-inline fun <reified T : Statement> FunctionDeclaration.body(n: Int = 0): T {
+inline fun <reified T : Statement> Function.body(n: Int = 0): T {
     return bodyOrNull(n) ?: throw StatementNotFound()
 }
 
@@ -451,7 +452,7 @@ fun Node.followDFGEdgesUntilHit(
  */
 class Context(
     val indexStack: SimpleStack<IndexedDataflowGranularity> = SimpleStack(),
-    val callStack: SimpleStack<CallExpression> = SimpleStack(),
+    val callStack: SimpleStack<Call> = SimpleStack(),
     var steps: Int = 0,
 ) : HasAssumptions {
 
@@ -468,13 +469,11 @@ class Context(
 
     companion object {
         /**
-         * Creates a new [Context] with an empty index stack and call stack given by the
-         * [CallExpression]s provided in [calls].
+         * Creates a new [Context] with an empty index stack and call stack given by the [Call]s
+         * provided in [calls].
          */
-        fun ofCallStack(vararg calls: CallExpression): Context {
-            return Context(
-                callStack = SimpleStack<CallExpression>().apply { calls.forEach { push(it) } }
-            )
+        fun ofCallStack(vararg calls: Call): Context {
+            return Context(callStack = SimpleStack<Call>().apply { calls.forEach { push(it) } })
         }
     }
 }
@@ -697,9 +696,10 @@ fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<NodePath
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest data flow paths (with [ProgramDependencies]) between the starting
- * node [this] and the end node fulfilling [predicate]. The paths are represented as lists of nodes.
- * Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
+ * contains all possible shortest data flow paths (with
+ * [de.fraunhofer.aisec.cpg.graph.edges.flows.ProgramDependences]) between the starting node [this]
+ * and the end node fulfilling [predicate]. The paths are represented as lists of nodes. Paths which
+ * do not end at such a node are included in [FulfilledAndFailedPaths.failed].
  *
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
@@ -712,10 +712,10 @@ fun Node.followNextPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _, loopingPaths ->
+        x = { currentNode, ctx, _, _ ->
             val nextNodes = currentNode.nextPDG.toMutableList()
             if (interproceduralAnalysis) {
-                nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
+                nextNodes.addAll((currentNode as? Call)?.calls ?: listOf())
             }
             nextNodes.map { it to ctx }
         },
@@ -743,10 +743,10 @@ fun Node.followNextCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _, loopingPaths ->
+        x = { currentNode, ctx, _, _ ->
             val nextNodes = currentNode.nextCDG.toMutableList()
             if (interproceduralAnalysis) {
-                nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
+                nextNodes.addAll((currentNode as? Call)?.calls ?: listOf())
             }
             nextNodes.map { it to ctx }
         },
@@ -759,10 +759,10 @@ fun Node.followNextCDGUntilHit(
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest data flow paths (with [ProgramDependencies]) between the starting
- * node [this] and the end node fulfilling [predicate] (backwards analysis). The paths are
- * represented as lists of nodes. Paths which do not end at such a node are included in
- * [FulfilledAndFailedPaths.failed].
+ * contains all possible shortest data flow paths (with
+ * [de.fraunhofer.aisec.cpg.graph.edges.flows.ProgramDependences]) between the starting node [this]
+ * and the end node fulfilling [predicate] (backwards analysis). The paths are represented as lists
+ * of nodes. Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
  *
  * Hence, if "fulfilled" is a non-empty list, a CDG path from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
@@ -776,14 +776,14 @@ fun Node.followPrevPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _, loopingPaths ->
+        x = { currentNode, ctx, _, _ ->
             val nextNodes = currentNode.prevPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
-                    (currentNode as? FunctionDeclaration)?.usages?.mapNotNull {
+                    (currentNode as? Function)?.usages?.mapNotNull {
                         val result =
                             if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true)
-                                it.astParent as? CallExpression
+                                it.astParent as? Call
                             else null
                         result?.let { ctx.callStack.push(it) }
                         result
@@ -818,14 +818,14 @@ fun Node.followPrevCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _, loopingPaths ->
+        x = { currentNode, ctx, _, _ ->
             val nextNodes = currentNode.prevCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
-                    (currentNode as? FunctionDeclaration)?.usages?.mapNotNull {
+                    (currentNode as? Function)?.usages?.mapNotNull {
                         val result =
                             if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true)
-                                it.astParent as? CallExpression
+                                it.astParent as? Call
                             else null
                         result?.let { ctx.callStack.push(it) }
                         result
@@ -1000,27 +1000,27 @@ fun Node.followNextFullDFGEdgesUntilHit(
 }
 
 /**
- * Returns a [Collection] of last nodes in the EOG of this [FunctionDeclaration]. If there's no
- * function body, it will return a list of this function declaration. This function does not
- * propagate assumptions currently.
+ * Returns a [Collection] of last nodes in the EOG of this [Function]. If there's no function body,
+ * it will return a list of this function declaration. This function does not propagate assumptions
+ * currently.
  */
-val FunctionDeclaration.lastEOGNodes: Collection<Node>
+val Function.lastEOGNodes: Collection<Node>
     get() {
         val lastEOG = collectAllNextEOGPaths(false).flatMap { it.nodes.last().prevEOGEdges }
         return if (lastEOG.isEmpty()) {
             // In some cases, we do not have a body, so we have to jump directly to the
             // function declaration.
             listOf(this)
-        } else lastEOG.filter { it.unreachable != true }.map { it.start }
+        } else lastEOG.filter { !it.unreachable }.map { it.start }
     }
 
 /** Returns only potentially reachable previous EOG edges. */
 val Node.reachablePrevEOG: Collection<Node>
-    get() = this.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
+    get() = this.prevEOGEdges.filter { !it.unreachable }.map { it.start }
 
 /** Returns only potentially reachable previous EOG edges. */
 val Node.reachableNextEOG: Collection<Node>
-    get() = this.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
+    get() = this.nextEOGEdges.filter { !it.unreachable }.map { it.end }
 
 /**
  * Returns a list of edges which are from the evaluation order between the starting node [this] and
@@ -1032,7 +1032,7 @@ val Node.reachableNextEOG: Collection<Node>
 fun Node.followNextEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
     val path = mutableListOf<Edge<*>>()
 
-    for (edge in this.nextEOGEdges.filter { it.unreachable != true }) {
+    for (edge in this.nextEOGEdges.filter { !it.unreachable }) {
         val target = edge.end
 
         path.add(edge)
@@ -1062,7 +1062,7 @@ fun Node.followNextEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
 fun Node.followPrevEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
     val path = mutableListOf<Edge<*>>()
 
-    for (edge in this.prevEOGEdges.filter { it.unreachable != true }) {
+    for (edge in this.prevEOGEdges.filter { !it.unreachable }) {
         val source = edge.start
 
         path.add(edge)
@@ -1121,56 +1121,56 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): NodePath? {
 val AstNode?.nodes: List<AstNode>
     get() = this.allChildren()
 
-/** Returns all [CallExpression] children in this graph, starting with this [Node]. */
-val AstNode?.calls: List<CallExpression>
+/** Returns all [Call] children in this graph, starting with this [Node]. */
+val AstNode?.calls: List<Call>
     get() = this.allChildren()
 
-/** Returns all [OperatorCallExpression] children in this graph, starting with this [Node]. */
-val AstNode?.operatorCalls: List<OperatorCallExpression>
+/** Returns all [OperatorCall] children in this graph, starting with this [Node]. */
+val AstNode?.operatorCalls: List<OperatorCall>
     get() = this.allChildren()
 
-/** Returns all [MemberCallExpression] children in this graph, starting with this [Node]. */
-val AstNode?.mcalls: List<MemberCallExpression>
+/** Returns all [MemberCall] children in this graph, starting with this [Node]. */
+val AstNode?.mcalls: List<MemberCall>
     get() = this.allChildren()
 
-/** Returns all [CastExpression] children in this graph, starting with this [Node]. */
-val AstNode?.casts: List<CastExpression>
+/** Returns all [Cast] children in this graph, starting with this [Node]. */
+val AstNode?.casts: List<Cast>
     get() = this.allChildren()
 
-/** Returns all [MethodDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.methods: List<MethodDeclaration>
+/** Returns all [Method] children in this graph, starting with this [Node]. */
+val AstNode?.methods: List<Method>
     get() = this.allChildren()
 
-/** Returns all [OperatorDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.operators: List<OperatorDeclaration>
+/** Returns all [Operator] children in this graph, starting with this [Node]. */
+val AstNode?.operators: List<Operator>
     get() = this.allChildren()
 
-/** Returns all [FieldDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.fields: List<FieldDeclaration>
+/** Returns all [Field] children in this graph, starting with this [Node]. */
+val AstNode?.fields: List<Field>
     get() = this.allChildren()
 
-/** Returns all [ParameterDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.parameters: List<ParameterDeclaration>
+/** Returns all [Parameter] children in this graph, starting with this [Node]. */
+val AstNode?.parameters: List<Parameter>
     get() = this.allChildren()
 
-/** Returns all [FunctionDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.functions: List<FunctionDeclaration>
+/** Returns all [Function] children in this graph, starting with this [Node]. */
+val AstNode?.functions: List<Function>
     get() = this.allChildren()
 
-/** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.records: List<RecordDeclaration>
+/** Returns all [Record] children in this graph, starting with this [Node]. */
+val AstNode?.records: List<Record>
     get() = this.allChildren()
 
-/** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.namespaces: List<NamespaceDeclaration>
+/** Returns all [Record] children in this graph, starting with this [Node]. */
+val AstNode?.namespaces: List<Namespace>
     get() = this.allChildren()
 
-/** Returns all [ImportDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.imports: List<ImportDeclaration>
+/** Returns all [Import] children in this graph, starting with this [Node]. */
+val AstNode?.imports: List<Import>
     get() = this.allChildren()
 
-/** Returns all [VariableDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.variables: List<VariableDeclaration>
+/** Returns all [Variable] children in this graph, starting with this [Node]. */
+val AstNode?.variables: List<Variable>
     get() = this.allChildren()
 
 /** Returns all [Literal] children in this graph, starting with this [Node]. */
@@ -1185,8 +1185,8 @@ val AstNode?.blocks: List<Block>
 val AstNode?.refs: List<Reference>
     get() = this.allChildren()
 
-/** Returns all [MemberExpression] children in this graph, starting with this [Node]. */
-val AstNode?.memberExpressions: List<MemberExpression>
+/** Returns all [MemberAccess] children in this graph, starting with this [Node]. */
+val AstNode?.memberExpressions: List<MemberAccess>
     get() = this.allChildren()
 
 /** Returns all [Statement] child edges in this graph, starting with this [Node]. */
@@ -1201,8 +1201,8 @@ val AstNode?.forLoops: List<ForStatement>
 val AstNode?.trys: List<TryStatement>
     get() = this.allChildren()
 
-/** Returns all [ThrowExpression] child edges in this graph, starting with this [Node]. */
-val AstNode?.throws: List<ThrowExpression>
+/** Returns all [Throw] child edges in this graph, starting with this [Node]. */
+val AstNode?.throws: List<Throw>
     get() = this.allChildren()
 
 /** Returns all [ForEachStatement] child edges in this graph, starting with this [Node]. */
@@ -1241,8 +1241,8 @@ val AstNode?.labels: List<LabelStatement>
 val AstNode?.returns: List<ReturnStatement>
     get() = this.allChildren()
 
-/** Returns all [AssignExpression] child edges in this graph, starting with this [Node]. */
-val AstNode?.assigns: List<AssignExpression>
+/** Returns all [Assign] child edges in this graph, starting with this [Node]. */
+val AstNode?.assigns: List<Assign>
     get() = this.allChildren()
 
 /**
@@ -1331,7 +1331,7 @@ val AstNode?.assignments: List<Assignment>
  * Returns the [Assignment.value] of the first (by EOG order beginning from) [Assignment] that this
  * variable has as its [Assignment.target] in the scope of the variable.
  */
-val VariableDeclaration.firstAssignment: Expression?
+val Variable.firstAssignment: Expression?
     get() {
         val start = this.scope?.astNode ?: return null
         val assignments = start.assignments.filter { (it.target as? Reference)?.refersTo == this }
@@ -1353,20 +1353,20 @@ operator fun <N : Expression> Expression?.invoke(): N? {
     return this as? N
 }
 
-/** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
-fun TranslationResult.callsByName(name: String): List<CallExpression> {
+/** Returns all [Call]s in this graph which call a method with the given [name]. */
+fun TranslationResult.callsByName(name: String): List<Call> {
     @Suppress("UNCHECKED_CAST")
     return SubgraphWalker.flattenAST(this).filter { node ->
-        node is CallExpression && node.invokes.any { it.name.lastPartsMatch(name) }
-    } as List<CallExpression>
+        node is Call && node.invokes.any { it.name.lastPartsMatch(name) }
+    } as List<Call>
 }
 
 /** Set of all functions which are called from this function */
-val FunctionDeclaration.callees: Set<FunctionDeclaration>
+val Function.callees: Set<Function>
     get() {
         return this.calls
             .map { it.invokes }
-            .foldRight(mutableListOf<FunctionDeclaration>()) { l, res ->
+            .foldRight(mutableListOf<Function>()) { l, res ->
                 res.addAll(l)
                 res
             }
@@ -1374,7 +1374,7 @@ val FunctionDeclaration.callees: Set<FunctionDeclaration>
     }
 
 /** Retrieves the n-th statement of the body of this function declaration. */
-operator fun FunctionDeclaration.get(n: Int): Statement? {
+operator fun Function.get(n: Int): Statement? {
     val body = this.body
 
     if (body is Block) {
@@ -1387,7 +1387,7 @@ operator fun FunctionDeclaration.get(n: Int): Statement? {
 }
 
 /** Set of all functions calling [function] */
-fun TranslationResult.callersOf(function: FunctionDeclaration): Set<FunctionDeclaration> {
+fun TranslationResult.callersOf(function: Function): Set<Function> {
     return this.functions.filter { function in it.callees }.toSet()
 }
 
@@ -1403,7 +1403,7 @@ fun IfStatement.controls(): List<Node> {
 fun Node.controlledBy(): List<Node> {
     val result = mutableListOf<Node>()
     var checkedNode: Node? = this
-    while (checkedNode !is FunctionDeclaration) {
+    while (checkedNode !is Function) {
         checkedNode = checkedNode?.astParent
         if (checkedNode == null) {
             break
@@ -1419,10 +1419,10 @@ fun Node.controlledBy(): List<Node> {
  * Returns the expression specifying the dimension (i.e., size) of the array during its
  * initialization.
  */
-val SubscriptExpression.arraySize: Expression
+val Subscription.arraySize: Expression
     get() =
-        (((this.arrayExpression as Reference).refersTo as VariableDeclaration).initializer
-                as NewArrayExpression)
+        (((this.arrayExpression as Reference).refersTo as Variable).initializer
+                as ArrayConstruction)
             .dimensions[0]
 
 /**
@@ -1452,28 +1452,28 @@ private fun Node.eogDistanceTo(to: Node): Int {
  * When called on the right-hand side of this assignment, this function will return `a`.
  */
 fun Expression?.unwrapReference(): Reference? {
-    return when {
-        this is Reference -> this
-        this is UnaryOperator && (this.operatorCode == "*" || this.operatorCode == "&") ->
+    return when (this) {
+        is Reference -> this
+        is UnaryOperator if (this.operatorCode == "*" || this.operatorCode == "&") ->
             this.input.unwrapReference()
 
-        this is CastExpression -> this.expression.unwrapReference()
+        is Cast -> this.expression.unwrapReference()
         else -> null
     }
 }
 
 /**
- * Returns the [TranslationUnitDeclaration] where this node is located in.
+ * Returns the [TranslationUnit] where this node is located in.
  *
  * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
  */
-val Node.translationUnit: TranslationUnitDeclaration?
+val Node.translationUnit: TranslationUnit?
     get() {
-        return this as? TranslationUnitDeclaration
+        return this as? TranslationUnit
             ?: if (this is OverlayNode) {
-                this.underlyingNode?.firstParentOrNull<TranslationUnitDeclaration>()
+                this.underlyingNode?.firstParentOrNull<TranslationUnit>()
             } else {
-                this.firstParentOrNull<TranslationUnitDeclaration>()
+                this.firstParentOrNull<TranslationUnit>()
             }
     }
 
@@ -1508,32 +1508,35 @@ val Node.component: Component?
     }
 
 /**
- * This helper function be used to find out if a particular expression (usually a [CallExpression]
- * or a [Reference]) is imported through a [ImportDeclaration].
+ * This helper function be used to find out if a particular expression (usually a [Call] or a
+ * [Reference]) is imported through a [Import].
  *
  * It returns a [Pair], with the [Pair.first] being a boolean value whether it was imported and
- * [Pair.second] the [ImportDeclaration] if applicable.
+ * [Pair.second] the [Import] if applicable.
  */
-val Expression.importedFrom: List<ImportDeclaration>
+val Expression.importedFrom: List<Import>
     get() {
-        if (this is CallExpression) {
-            return this.callee.importedFrom
-        } else if (this is MemberExpression) {
-            return this.base.importedFrom
-        } else if (this is Reference) {
-            val imports = this.translationUnit.imports
+        when (this) {
+            is Call -> {
+                return this.callee.importedFrom
+            }
+            is MemberAccess -> {
+                return this.base.importedFrom
+            }
+            is Reference -> {
+                val imports = this.translationUnit.imports
 
-            return if (name.parent == null) {
-                // If the name does not have a parent, this reference could directly be the name
-                // of an import, let's check
-                imports.filter { it.import.lastPartsMatch(name) }
-            } else {
-                // Otherwise, the parent name could be the import
-                imports.filter { it.import == this.name.parent }
-            } ?: listOf<ImportDeclaration>()
+                return if (name.parent == null) {
+                    // If the name does not have a parent, this reference could directly be the name
+                    // of an import, let's check
+                    imports.filter { it.import.lastPartsMatch(name) }
+                } else {
+                    // Otherwise, the parent name could be the import
+                    imports.filter { it.import == this.name.parent }
+                } ?: listOf()
+            }
+            else -> return listOf()
         }
-
-        return listOf<ImportDeclaration>()
     }
 
 /**

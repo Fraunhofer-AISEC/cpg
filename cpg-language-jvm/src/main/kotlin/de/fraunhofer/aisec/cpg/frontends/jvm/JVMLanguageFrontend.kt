@@ -30,12 +30,14 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import sootup.apk.frontend.ApkAnalysisInputLocation
+import sootup.apk.frontend.DexBodyInterceptors
+import sootup.core.cache.provider.LRUCacheProvider
 import sootup.core.model.Body
 import sootup.core.model.SootMethod
 import sootup.core.model.SourceType
@@ -43,14 +45,7 @@ import sootup.core.transform.BodyInterceptor
 import sootup.core.types.ArrayType
 import sootup.core.types.UnknownType
 import sootup.core.util.printer.NormalStmtPrinter
-import sootup.interceptors.Aggregator
-import sootup.interceptors.CastAndReturnInliner
-import sootup.interceptors.CopyPropagator
-import sootup.interceptors.EmptySwitchEliminator
-import sootup.interceptors.LocalNameStandardizer
-import sootup.interceptors.NopEliminator
-import sootup.interceptors.TypeAssigner
-import sootup.interceptors.UnreachableCodeEliminator
+import sootup.interceptors.*
 import sootup.java.bytecode.frontend.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.core.views.JavaView
 import sootup.java.frontend.inputlocation.JavaSourcePathAnalysisInputLocation
@@ -69,6 +64,11 @@ class JVMLanguageFrontend(
     val expressionHandler = ExpressionHandler(this)
 
     lateinit var view: JavaView
+
+    override val frontendConfiguration: JVMFrontendConfiguration by lazy {
+        (this.ctx.config.frontendConfigurations[this::class] as? JVMFrontendConfiguration)
+            ?: JVMFrontendConfiguration()
+    }
 
     var body: Body? = null
 
@@ -91,13 +91,13 @@ class JVMLanguageFrontend(
      * Because of a limitation in SootUp, we can only specify the whole classpath for soot to parse.
      * But in the CPG we need to specify one file. In this case, we take the
      * [TranslationConfiguration.topLevel] and hand it over to soot, which parses all appropriate
-     * files within this folder/classpath. This means that the returned [TranslationUnitDeclaration]
-     * will contain not just the content of one file but the whole directory.
+     * files within this folder/classpath. This means that the returned [TranslationUnit] will
+     * contain not just the content of one file but the whole directory.
      */
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         val view =
-            when (file.extension) {
-                "class" -> {
+            when {
+                file.extension == "class" -> {
                     JavaView(
                         JavaClassPathAnalysisInputLocation(
                             ctx.currentComponent?.topLevel()?.path!!,
@@ -106,7 +106,17 @@ class JVMLanguageFrontend(
                         )
                     )
                 }
-                "jar" -> {
+                file.isApk() -> {
+                    val apkAnalysis =
+                        ApkAnalysisInputLocation(
+                            file.toPath(),
+                            "",
+                            DexBodyInterceptors.Default.bodyInterceptors(),
+                        )
+
+                    JavaView(listOf(apkAnalysis), LRUCacheProvider(2))
+                }
+                file.isJar() -> {
                     JavaView(
                         JavaClassPathAnalysisInputLocation(
                             file.path,
@@ -115,19 +125,14 @@ class JVMLanguageFrontend(
                         )
                     )
                 }
-                "java" -> {
+                file.extension == "java" -> {
                     JavaView(
                         JavaSourcePathAnalysisInputLocation(
                             ctx.currentComponent?.topLevel()?.path!!
                         )
                     )
                 }
-                "apk" -> {
-                    val apkAnalysis = ApkAnalysisInputLocation(file.toPath(), "", bodyInterceptors)
-
-                    JavaView(apkAnalysis)
-                }
-                "jimple" -> {
+                file.extension == "jimple" -> {
                     JimpleView(
                         JimpleAnalysisInputLocation(ctx.currentComponent?.topLevel()?.toPath()!!)
                     )
@@ -137,16 +142,16 @@ class JVMLanguageFrontend(
                 }
             }
         // This contains the whole directory
-        val tu = newTranslationUnitDeclaration(file.parent)
+        val tu = newTranslationUnit(file.parent)
         scopeManager.resetToGlobal(tu)
 
-        val packages = mutableMapOf<String, NamespaceDeclaration>()
+        val packages = mutableMapOf<String, Namespace>()
 
         for (sootClass in view.classes) {
             // Create an appropriate namespace, if it does not already exist
             val pkg =
                 packages.computeIfAbsent(sootClass.type.packageName.name) {
-                    val pkg = newNamespaceDeclaration(it)
+                    val pkg = newNamespace(it)
                     scopeManager.addDeclaration(pkg)
                     tu.addDeclaration(pkg)
                     pkg
@@ -156,10 +161,8 @@ class JVMLanguageFrontend(
             scopeManager.enterScope(pkg)
 
             val decl = declarationHandler.handle(sootClass)
-            if (decl != null) {
-                scopeManager.addDeclaration(decl)
-                pkg.addDeclaration(decl)
-            }
+            scopeManager.addDeclaration(decl)
+            pkg.addDeclaration(decl)
 
             // Leave namespace scope
             scopeManager.leaveScope(pkg)
@@ -184,6 +187,12 @@ class JVMLanguageFrontend(
             try {
                 return astNode.body.toString()
             } catch (e: IllegalArgumentException) {
+                log.error("Could not retrieve the code of $astNode", e)
+            }
+        } else {
+            try {
+                return astNode.toString()
+            } catch (e: Exception) {
                 log.error("Could not retrieve the code of $astNode", e)
             }
         }

@@ -38,8 +38,8 @@ import kotlin.collections.MutableMap
 
 /**
  * Represents a possible source for a configuration. For example, when loading an INI file with our
- * INI file frontend, the whole file would be represented as a [TranslationUnitDeclaration]. This
- * translation unit declaration would be the source of the configuration.
+ * INI file frontend, the whole file would be represented as a [TranslationUnit]. This translation
+ * unit declaration would be the source of the configuration.
  */
 public open class ConfigurationSource(
     public val configurationGroupSources: MutableList<ConfigurationGroupSource?>,

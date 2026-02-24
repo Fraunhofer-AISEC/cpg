@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
@@ -45,6 +45,9 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @DependsOn(DFGPass::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
 @DependsOn(DynamicInvokeResolver::class)
+@Description(
+    "Combines the Data Flow Graph (DFG) and Control Dependence Graph (CDG) into a Program Dependence Graph (PDG), providing a comprehensive view of both data and control dependencies within the program."
+)
 class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private val visitor =
         object : IVisitor<AstNode>() {
@@ -125,7 +128,7 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
         return true
     }
 
-    override fun accept(tu: TranslationUnitDeclaration) {
+    override fun accept(tu: TranslationUnit) {
         tu.statements.forEach(::handle)
         tu.namespaces.forEach(::handle)
         tu.declarations.forEach(::handle)

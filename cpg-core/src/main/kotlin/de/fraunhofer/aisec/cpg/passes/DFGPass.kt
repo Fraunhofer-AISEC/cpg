@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
@@ -44,8 +45,9 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(SymbolResolver::class)
+@Description("Adds DFG edges to the graph but without considering the control flow.")
 class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
-    private val callsInferredFunctions = mutableListOf<CallExpression>()
+    private val callsInferredFunctions = mutableListOf<Call>()
 
     override fun accept(component: Component) {
         log.info(
@@ -68,8 +70,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * For inferred functions which have function summaries encoded, we connect the arguments to
-     * modified parameter to propagate the changes to the arguments out of the [FunctionDeclaration]
-     * again.
+     * modified parameter to propagate the changes to the arguments out of the [Function] again.
      */
     private fun connectInferredCallArguments(functionSummaries: DFGFunctionSummaries) {
         for (call in callsInferredFunctions) {
@@ -77,12 +78,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 val changedParams =
                     functionSummaries.functionToChangedParameters[invoked] ?: mapOf()
                 for ((param, _) in changedParams) {
-                    if (param == (invoked as? MethodDeclaration)?.receiver) {
-                        (call as? MemberCallExpression)
+                    if (param == (invoked as? Method)?.receiver) {
+                        (call as? MemberCall)
                             ?.base
                             ?.prevDFGEdges
                             ?.addContextSensitive(param, callingContext = CallingContextOut(call))
-                    } else if (param is ParameterDeclaration) {
+                    } else if (param is Parameter) {
                         val arg = call.arguments[param.argumentIndex]
                         arg.prevDFGEdges.addContextSensitive(
                             param,
@@ -111,23 +112,23 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         when (node) {
             // Expressions
             is CollectionComprehension -> handleCollectionComprehension(node)
-            is ComprehensionExpression -> handleComprehensionExpression(node)
-            is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedSymbols)
-            is CastExpression -> handleCastExpression(node)
+            is Comprehension -> handleComprehension(node)
+            is Call -> handleCall(node, inferDfgForUnresolvedSymbols)
+            is Cast -> handleCast(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
-            is AssignExpression -> handleAssignExpression(node)
-            is NewArrayExpression -> handleNewArrayExpression(node)
-            is SubscriptExpression -> handleSubscriptExpression(node)
-            is ConditionalExpression -> handleConditionalExpression(node)
-            is MemberExpression -> handleMemberExpression(node)
+            is Assign -> handleAssign(node)
+            is ArrayConstruction -> handleArrayConstruction(node)
+            is Subscription -> handleSubscription(node)
+            is Conditional -> handleConditional(node)
+            is MemberAccess -> handleMemberAccess(node)
             is Reference -> handleReference(node)
             is ExpressionList -> handleExpressionList(node)
-            is NewExpression -> handleNewExpression(node)
-            // We keep the logic for the InitializerListExpression in that class because the
+            is New -> handleNew(node)
+            // We keep the logic for the InitializerList in that class because the
             // performance would decrease too much.
-            is InitializerListExpression -> handleInitializerListExpression(node)
-            is KeyValueExpression -> handleKeyValueExpression(node)
-            is LambdaExpression -> handleLambdaExpression(node)
+            is InitializerList -> handleInitializerList(node)
+            is KeyValue -> handleKeyValue(node)
+            is Lambda -> handleLambda(node)
             is UnaryOperator -> handleUnaryOperator(node)
             // Statements
             is ReturnStatement -> handleReturnStatement(node)
@@ -137,12 +138,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is ForStatement -> handleForStatement(node)
             is SwitchStatement -> handleSwitchStatement(node)
             is IfStatement -> handleIfStatement(node)
-            is ThrowExpression -> handleThrowExpression(node)
+            is Throw -> handleThrow(node)
             // Declarations
-            is FieldDeclaration -> handleFieldDeclaration(node)
-            is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
-            is TupleDeclaration -> handleTupleDeclaration(node)
-            is VariableDeclaration -> handleVariableDeclaration(node)
+            is Field -> handleField(node)
+            is Function -> handleFunction(node, functionSummaries)
+            is Tuple -> handleTuple(node)
+            is Variable -> handleVariable(node)
         }
     }
 
@@ -168,19 +169,19 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * The iterable flows to the variable which flows into the whole expression together with the
      * predicate(s).
      */
-    protected fun handleComprehensionExpression(comprehension: ComprehensionExpression) {
+    protected fun handleComprehension(comprehension: Comprehension) {
         comprehension.iterable.nextDFG += comprehension.variable
         comprehension.prevDFG += comprehension.variable
         comprehension.predicate?.let { comprehension.prevDFG += it }
     }
 
-    /** Handle a [ThrowExpression]. The exception and parent exception flow into the node. */
-    protected fun handleThrowExpression(node: ThrowExpression) {
+    /** Handle a [Throw]. The exception and parent exception flow into the node. */
+    protected fun handleThrow(node: Throw) {
         node.exception?.let { node.prevDFGEdges += it }
         node.parentException?.let { node.prevDFGEdges += it }
     }
 
-    protected fun handleAssignExpression(node: AssignExpression) {
+    protected fun handleAssign(node: Assign) {
         // If this is a compound assign, we also need to model a dataflow to the node itself
         if (node.isCompoundAssignment) {
             node.lhs.firstOrNull()?.let {
@@ -204,36 +205,33 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * For a [MemberExpression], the base flows from/to the expression, depending on the
-     * [MemberExpression.access].
+     * For a [MemberAccess], the base flows from/to the expression, depending on the
+     * [MemberAccess.access].
      */
-    protected fun handleMemberExpression(node: MemberExpression) {
+    protected fun handleMemberAccess(node: MemberAccess) {
         when (node.access) {
             AccessValues.WRITE -> {
                 node.nextDFGEdges.add(node.base) {
-                    (node.refersTo as? FieldDeclaration)?.let { granularity = field(it) }
+                    (node.refersTo as? Field)?.let { granularity = field(it) }
                 }
             }
             AccessValues.READWRITE -> {
                 node.nextDFGEdges.add(node.base) {
-                    (node.refersTo as? FieldDeclaration)?.let { granularity = field(it) }
+                    (node.refersTo as? Field)?.let { granularity = field(it) }
                 }
                 // We do not make an edge in the other direction on purpose as a workaround for
                 // nested field accesses on the lhs of an assignment.
             }
             else -> {
                 node.prevDFGEdges.add(node.base) {
-                    (node.refersTo as? FieldDeclaration)?.let { granularity = field(it) }
+                    (node.refersTo as? Field)?.let { granularity = field(it) }
                 }
             }
         }
     }
 
-    /**
-     * Adds the DFG edges for a [TupleDeclaration]. The data flows from initializer to the tuple
-     * elements.
-     */
-    protected fun handleTupleDeclaration(node: TupleDeclaration) {
+    /** Adds the DFG edges for a [Tuple]. The data flows from initializer to the tuple elements. */
+    protected fun handleTuple(node: Tuple) {
         node.initializer?.let { initializer ->
             node.prevDFG += initializer
             node.elements.forEachIndexed { idx, variable ->
@@ -242,22 +240,16 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    /**
-     * Adds the DFG edge for a [VariableDeclaration]. The data flows from initializer to the
-     * variable.
-     */
-    protected fun handleVariableDeclaration(node: VariableDeclaration) {
+    /** Adds the DFG edge for a [Variable]. The data flows from initializer to the variable. */
+    protected fun handleVariable(node: Variable) {
         node.initializer?.let { node.prevDFGEdges += it }
     }
 
     /**
-     * Adds the DFG edge for a [FunctionDeclaration]. The data flows from the return statement(s) to
-     * the function.
+     * Adds the DFG edge for a [Function]. The data flows from the return statement(s) to the
+     * function.
      */
-    protected fun handleFunctionDeclaration(
-        node: FunctionDeclaration,
-        functionSummaries: DFGFunctionSummaries,
-    ) {
+    protected fun handleFunction(node: Function, functionSummaries: DFGFunctionSummaries) {
         if (node.isInferred) {
             val summaryExists = with(functionSummaries) { addFlowsToFunctionDeclaration(node) }
 
@@ -267,7 +259,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 // times, i.e., we only handle the declaration exactly once.
                 node.prevDFGEdges.addAll(node.parameters)
                 // If it's a method with a receiver, we connect that one too.
-                if (node is MethodDeclaration) {
+                if (node is Method) {
                     node.receiver?.let { node.prevDFGEdges += it }
                 }
             }
@@ -276,10 +268,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    /**
-     * Adds the DFG edge for a [FieldDeclaration]. The data flows from the initializer to the field.
-     */
-    protected fun handleFieldDeclaration(node: FieldDeclaration) {
+    /** Adds the DFG edge for a [Field]. The data flows from the initializer to the field. */
+    protected fun handleField(node: Field) {
         node.initializer?.let { node.prevDFGEdges += it }
     }
 
@@ -296,8 +286,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * [ForEachStatement.iterable] to the [ForEachStatement.variable]. However, since the
      * [ForEachStatement.variable] is a [Statement], we have to identify the variable which is used
      * in the loop. In most cases, we should have a [DeclarationStatement] which means that we can
-     * unwrap the [VariableDeclaration]. If this is not the case, we assume that the last
-     * [VariableDeclaration] in the statement is the one we care about.
+     * unwrap the [Variable]. If this is not the case, we assume that the last [Variable] in the
+     * statement is the one we care about.
      */
     protected fun handleForEachStatement(node: ForEachStatement) {
         node.iterable?.let { iterable ->
@@ -309,8 +299,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 node.variable.variables.lastOrNull()?.prevDFGEdges += iterable
                 node.assume(
                     AssumptionType.AmbiguityAssumption,
-                    "We assume that the last VariableDeclaration in the statement kept in \"variable\" is the variable we care about in the ForEachStatement if there is no DeclarationStatement related to the iterable.\n\n" +
-                        "To verify this assumption, we need to check if the last VariableDeclaration of the variable is indeed the one where we assign the iterable's elements to.",
+                    "We assume that the last Variable in the statement kept in \"variable\" is the variable we care about in the ForEachStatement if there is no DeclarationStatement related to the iterable.\n\n" +
+                        "To verify this assumption, we need to check if the last Variable of the variable is indeed the one where we assign the iterable's elements to.",
                 )
             }
         }
@@ -392,32 +382,32 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge for a [LambdaExpression]. The data flow from the function representing the
-     * lambda to the expression.
+     * Adds the DFG edge for a [Lambda]. The data flow from the function representing the lambda to
+     * the expression.
      */
-    protected fun handleLambdaExpression(node: LambdaExpression) {
+    protected fun handleLambda(node: Lambda) {
         node.function?.let { node.prevDFGEdges += it }
     }
 
     /**
-     * Adds the DFG edges for an [KeyValueExpression]. The value flows to this expression. TODO:
-     * Check with python and JS implementation
+     * Adds the DFG edges for an [KeyValue]. The value flows to this expression. TODO: Check with
+     * python and JS implementation
      */
-    protected fun handleKeyValueExpression(node: KeyValueExpression) {
+    protected fun handleKeyValue(node: KeyValue) {
         // TODO: Doesn't the node also contain the key?? Should the value be "partial" or "full"?
         node.prevDFGEdges += node.value
     }
 
     /**
-     * Adds the DFG edges for an [InitializerListExpression]. All values in the initializer flow to
-     * this expression.
+     * Adds the DFG edges for an [InitializerList]. All values in the initializer flow to this
+     * expression.
      */
-    protected fun handleInitializerListExpression(node: InitializerListExpression) {
+    protected fun handleInitializerList(node: InitializerList) {
         node.initializers.forEachIndexed { idx, it ->
             val astParent = node.astParent
             if (
-                astParent is AssignExpression && node in astParent.lhs ||
-                    astParent is ComprehensionExpression && node == astParent.variable
+                astParent is Assign && node in astParent.lhs ||
+                    astParent is Comprehension && node == astParent.variable
             ) {
                 // If we're the target of an assignment or the variable of a comprehension
                 // expression, the DFG flows from the node to the initializers.
@@ -436,11 +426,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         node.expressions.lastOrNull()?.let { node.prevDFGEdges += it }
     }
 
-    /**
-     * Adds the DFG edge to an [NewExpression]. The data of the initializer flow to the whole
-     * expression.
-     */
-    protected fun handleNewExpression(node: NewExpression) {
+    /** Adds the DFG edge to an [New]. The data of the initializer flow to the whole expression. */
+    protected fun handleNew(node: New) {
         node.initializer?.let { node.prevDFGEdges += it }
     }
 
@@ -464,19 +451,19 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge to a [ConditionalExpression]. Data flows from the then and the else
-     * expression to the whole expression.
+     * Adds the DFG edge to a [Conditional]. Data flows from the then and the else expression to the
+     * whole expression.
      */
-    protected fun handleConditionalExpression(node: ConditionalExpression) {
+    protected fun handleConditional(node: Conditional) {
         node.thenExpression?.let { node.prevDFGEdges += it }
         node.elseExpression?.let { node.prevDFGEdges += it }
     }
 
     /**
-     * Adds the DFG edge to an [SubscriptExpression]. The whole array `x` flows to the result `x[i]`
-     * or vice versa depending on the access value.
+     * Adds the DFG edge to an [Subscription]. The whole array `x` flows to the result `x[i]` or
+     * vice versa depending on the access value.
      */
-    protected fun handleSubscriptExpression(node: SubscriptExpression) {
+    protected fun handleSubscription(node: Subscription) {
         if (node.access == AccessValues.WRITE) {
                 node.nextDFGEdges
             } else {
@@ -493,8 +480,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             }
     }
 
-    /** Adds the DFG edge to an [NewArrayExpression]. The initializer flows to the expression. */
-    protected fun handleNewArrayExpression(node: NewArrayExpression) {
+    /** Adds the DFG edge to an [ArrayConstruction]. The initializer flows to the expression. */
+    protected fun handleArrayConstruction(node: ArrayConstruction) {
         node.initializer?.let { node.prevDFGEdges += it }
     }
 
@@ -529,17 +516,15 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    /**
-     * Adds the DFG edge to a [CastExpression]. The inner expression flows to the cast expression.
-     */
-    protected fun handleCastExpression(castExpression: CastExpression) {
+    /** Adds the DFG edge to a [Cast]. The inner expression flows to the cast expression. */
+    protected fun handleCast(castExpression: Cast) {
         castExpression.expression.let { castExpression.prevDFGEdges += it }
     }
 
-    /** Adds the DFG edges to a [CallExpression]. */
-    fun handleCallExpression(call: CallExpression, inferDfgForUnresolvedSymbols: Boolean) {
+    /** Adds the DFG edges to a [Call]. */
+    fun handleCall(call: Call, inferDfgForUnresolvedSymbols: Boolean) {
         // Remove existing DFG edges since they are no longer valid (e.g. after updating the
-        // CallExpression with the invokes edges to the called functions)
+        // Call with the invokes edges to the called functions)
         call.prevDFGEdges.clear()
 
         if (call.invokes.isEmpty() && inferDfgForUnresolvedSymbols) {
@@ -558,11 +543,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * Adds DFG edges for unresolved function calls as follows:
-     * - from base (if available) to the CallExpression
-     * - from all arguments to the CallExpression
+     * - from base (if available) to the Call
+     * - from all arguments to the Call
      */
-    protected fun handleUnresolvedCalls(call: CallExpression, dfgTarget: Node) {
-        if (call is MemberCallExpression && !call.isStatic) {
+    protected fun handleUnresolvedCalls(call: Call, dfgTarget: Node) {
+        if (call is MemberCall && !call.isStatic) {
             call.base?.let { dfgTarget.prevDFGEdges += it }
         }
 

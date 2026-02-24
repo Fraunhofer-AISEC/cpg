@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.manualExtensions.HashFunction
+import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInDFGPath
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
@@ -41,6 +43,7 @@ public open class CryptographicHash(
     override fun equals(other: Any?): Boolean =
         other is CryptographicHash &&
             super.equals(other) &&
+            other.hashFunction == this.hashFunction &&
             other.algorithm == this.algorithm &&
             other.errors == this.errors
 
