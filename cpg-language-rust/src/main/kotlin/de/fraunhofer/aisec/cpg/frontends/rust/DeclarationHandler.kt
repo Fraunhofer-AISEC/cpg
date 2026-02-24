@@ -254,6 +254,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                         frontend.declarationHandler.handleNode(
                             RsAst.RustItem(RsItem.Const(item.v1))
                         )
+                    extensionDeclaration.addDeclaration(const)
+                    frontend.scopeManager.addDeclaration(const)
                 }
                 is RsAssocItem.TypeAlias -> {}
                 is RsAssocItem.MacroCall -> {}
@@ -275,9 +277,12 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         val name = const.name ?: ""
 
-        val type = const.type?.let { frontend.typeOf(it) }
+        val type = const.ty?.let { frontend.typeOf(it) }
 
-        return newVariableDeclaration(name, type ?: unknownType(), rawNode = raw)
-
+        return newVariableDeclaration(name, type ?: unknownType(), rawNode = raw).apply {
+            const.expr.first().let {
+                this.initializer = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            }
+        }
     }
 }

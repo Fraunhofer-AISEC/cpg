@@ -319,14 +319,16 @@ impl From<AsmExpr> for RSAsmExpr {
 pub struct RSConst {
     pub(crate) ast_node: RSNode,
     name: Option<String>,
-    type_: Option<RSType>
+    ty: Option<RSType>,
+    expr: Vec<RSExpr>
 }
 impl From<Const> for RSConst {
     fn from(node:  Const) -> Self {
         RSConst{
             ast_node: node.syntax().into(),
             name: node.name().map(|n|n.to_string()),
-            type_: node.ty().map(Into::into)
+            ty: node.ty().map(Into::into),
+            expr: node.syntax().children().find_map(Expr::cast).map(Into::into).into_iter().collect()
         }
     }
 }

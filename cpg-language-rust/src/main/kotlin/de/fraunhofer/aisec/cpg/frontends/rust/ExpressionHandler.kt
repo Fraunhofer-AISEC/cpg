@@ -38,6 +38,7 @@ import uniffi.cpgrust.RsMacroExpr
 import uniffi.cpgrust.RsMethodCallExpr
 import uniffi.cpgrust.RsPathExpr
 import uniffi.cpgrust.RsPrefixExpr
+import uniffi.cpgrust.RsRecordExpr
 
 class ExpressionHandler(frontend: RustLanguageFrontend) :
     RustHandler<Expression, RsAst.RustExpr>(::ProblemExpression, frontend) {
@@ -58,6 +59,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.BinExpr -> handleBinExpr(node.v1)
             is RsExpr.PrefixExpr -> handlePrefixExpr(node.v1)
             is RsExpr.ParenExpr -> handleNode(node.v1.expr.first())
+            is RsExpr.RecordExpr -> handleRecordExpr(node.v1)
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -236,4 +238,16 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             rawNode = raw,
         )
     }
+
+        fun handleRecordExpr(recordExpr: RsRecordExpr): Expression {
+            val raw = RsAst.RustExpr(RsExpr.RecordExpr(recordExpr))
+            recordExpr.path?.segment?.nameRef?.let {
+                return newReference(it.text, rawNode = raw)
+            }
+
+            return newProblemExpression(
+                problem = "RecordExpression does not contain reference to a name",
+                rawNode = raw,
+            )
+        }
 }
