@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
@@ -67,7 +67,7 @@ class CXXCompilationDatabaseTest {
             assertNotNull(sysFunc)
             assertEquals(sysFunc.isInferred, false)
 
-            val s0 = mainFunc.bodyOrNull<CallExpression>(0)
+            val s0 = mainFunc.bodyOrNull<Call>(0)
             assertNotNull(s0)
 
             val arg1 = s0.arguments[1]
@@ -76,15 +76,15 @@ class CXXCompilationDatabaseTest {
             val lit = arg1 as Literal<*>
             assertEquals(lit.value, "hi")
 
-            val s1 = mainFunc.bodyOrNull<CallExpression>(1)
+            val s1 = mainFunc.bodyOrNull<Call>(1)
             assertNotNull(s1)
             assertInvokes(s1, func1)
 
-            val s2 = mainFunc.bodyOrNull<CallExpression>(2)
+            val s2 = mainFunc.bodyOrNull<Call>(2)
             assertNotNull(s2)
             assertInvokes(s2, func2)
 
-            val s3 = mainFunc.bodyOrNull<CallExpression>(3)
+            val s3 = mainFunc.bodyOrNull<Call>(3)
             assertNotNull(s3)
             assertInvokes(s3, sysFunc)
 

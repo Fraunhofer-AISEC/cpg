@@ -97,7 +97,7 @@ data class ConceptAssignment(
 data class CpgDataflowPayload(
     @Description("Source concept type (e.g., 'ReadData', 'Data', 'Authentication')")
     val from: String,
-    @Description("Target concept type (e.g., 'HttpRequest', 'CallExpression')") val to: String,
+    @Description("Target concept type (e.g., 'HttpRequest', 'Call')") val to: String,
 )
 
 @Serializable

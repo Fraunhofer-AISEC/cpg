@@ -38,7 +38,7 @@ import org.neo4j.ogm.annotation.Relationship
  * ([arrayExpression]) and `index` ([subscriptExpression]) are of type [Expression]. CPP can
  * overload operators thus changing semantics of array access.
  */
-class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
+class Subscription : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
     override var access = AccessValues.READ
         set(value) {
             field = value
@@ -53,7 +53,7 @@ class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, Argumen
             onChanged = ::exchangeTypeObserverWithoutAccessPropagation,
         )
     /** The array on which the access is happening. This is most likely a [Reference]. */
-    var arrayExpression by unwrapping(SubscriptExpression::arrayExpressionEdge)
+    var arrayExpression by unwrapping(Subscription::arrayExpressionEdge)
 
     @Relationship("SUBSCRIPT_EXPRESSION")
     var subscriptExpressionEdge =
@@ -61,9 +61,9 @@ class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, Argumen
     /**
      * The expression which represents the "subscription" or index on which the array is accessed.
      * This can for example be a reference to another variable ([Reference]), a [Literal] or a
-     * [RangeExpression].
+     * [Range].
      */
-    var subscriptExpression by unwrapping(SubscriptExpression::subscriptExpressionEdge)
+    var subscriptExpression by unwrapping(Subscription::subscriptExpressionEdge)
 
     override val base: Expression
         get() = arrayExpression
@@ -74,13 +74,13 @@ class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, Argumen
     /**
      * This helper function returns the subscript type of the [arrayType]. We have to differentiate
      * here between to types of subscripts:
-     * * Slices (in the form of a [RangeExpression] return the same type as the array
+     * * Slices (in the form of a [Range] return the same type as the array
      * * Everything else (for example a [Literal] or any other [Expression] that is being evaluated)
      *   returns the de-referenced type
      */
     private fun getSubscriptType(arrayType: Type): Type {
         return when (subscriptExpression) {
-            is RangeExpression -> arrayType
+            is Range -> arrayType
             else -> arrayType.dereference()
         }
     }
@@ -129,7 +129,7 @@ class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, Argumen
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is SubscriptExpression) return false
+        if (other !is Subscription) return false
         return super.equals(other) &&
             arrayExpression == other.arrayExpression &&
             subscriptExpression == other.subscriptExpression

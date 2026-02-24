@@ -25,25 +25,47 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.AstNode
+import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
+import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-class DeleteExpression : Expression() {
-    @Relationship("OPERANDS") var operandEdges = astEdgesOf<Expression>()
-    var operands by unwrapping(DeleteExpression::operandEdges)
+/** Represents the creation of a new object through the `new` keyword. */
+class New : Expression(), HasInitializer {
+    @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
+
+    /** The initializer expression. */
+    override var initializer by unwrapping(New::initializerEdge)
+
+    /**
+     * We need a way to store the templateParameters that a New might have before the Construction
+     * is created
+     */
+    @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
+    var templateParameterEdges = astEdgesOf<AstNode>()
+    var templateParameters by unwrapping(New::templateParameterEdges)
+
+    override fun toString(): String {
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("initializer", initializer)
+            .toString()
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is DeleteExpression) return false
-        return super.equals(other) && operands == other.operands
+        if (other !is New) return false
+        return super.equals(other) && initializer == other.initializer
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), operands)
+    override fun hashCode() = Objects.hash(super.hashCode(), initializer)
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        return this.operands.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+        return this.initializer?.getStartingPrevEOG() ?: this.prevEOG
     }
 }

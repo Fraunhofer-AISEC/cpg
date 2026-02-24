@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.argumentValueByNameOrPosition
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
@@ -56,10 +56,7 @@ import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 )
 class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
-    override fun handleCallExpression(
-        state: NodeToOverlayStateElement,
-        node: CallExpression,
-    ): Collection<OverlayNode> {
+    override fun handleCall(state: NodeToOverlayStateElement, node: Call): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
         if (node.language.name.localName != "PythonLanguage") {
@@ -92,9 +89,9 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         }
     }
 
-    override fun handleMemberCallExpression(
+    override fun handleMemberCall(
         state: NodeToOverlayStateElement,
-        node: MemberCallExpression,
+        node: MemberCall,
     ): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
@@ -131,7 +128,7 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * `tempfile.gettempdir(<UUID>)`, where `<UUID>` is a unique identifier to avoid collisions. It
      * also sets the file as a temporary file.
      */
-    private fun handleGetTempDir(callExpression: CallExpression): Collection<OverlayNode> {
+    private fun handleGetTempDir(callExpression: Call): Collection<OverlayNode> {
         return listOf(
             newFile(
                     underlyingNode = callExpression,
@@ -148,7 +145,7 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * file is deleted when the file is closed (default is `true`) and creates a new [File] concept,
      * [OpenFile] operation and [SetFileMask] operation and returns them in the list.
      */
-    private fun handleTempFile(callExpression: CallExpression): Collection<OverlayNode> {
+    private fun handleTempFile(callExpression: Call): Collection<OverlayNode> {
         val deleteOnClose =
             when (callExpression.callee.name.toString()) {
                 "tempfile.TemporaryFile" -> {
@@ -186,7 +183,7 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * Handles the `tempfile.mkstemp` function. It creates a temporary file with a unique name based
      * on the provided prefix and suffix and the id of the [callExpression].
      */
-    private fun handleMkstemp(callExpression: CallExpression): Collection<OverlayNode> {
+    private fun handleMkstemp(callExpression: Call): Collection<OverlayNode> {
         return listOf(
             newFileHandle(
                 underlyingNode = callExpression,
@@ -221,7 +218,7 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * Handles the `tempfile.mkdtemp` function. It creates a temporary directory with a unique name
      * based on the provided prefix and suffix and the id of the [callExpression].
      */
-    private fun handleMkdtemp(callExpression: CallExpression): Collection<OverlayNode> {
+    private fun handleMkdtemp(callExpression: Call): Collection<OverlayNode> {
         return listOf(
             newFileHandle(
                 underlyingNode = callExpression,
@@ -259,7 +256,7 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     fun createFilename(
         prefix: String,
         middle: String,
-        callExpression: CallExpression,
+        callExpression: Call,
         suffix: String,
     ): String {
         return prefix + middle + callExpression.id.toString() + suffix
@@ -270,7 +267,7 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * creates a temporary file with a unique name based on the provided prefix and suffix and the
      * id of the [callExpression].
      */
-    private fun handleMktemp(callExpression: CallExpression): Collection<OverlayNode> {
+    private fun handleMktemp(callExpression: Call): Collection<OverlayNode> {
         return listOf(
             newFileHandle(
                 underlyingNode = callExpression,

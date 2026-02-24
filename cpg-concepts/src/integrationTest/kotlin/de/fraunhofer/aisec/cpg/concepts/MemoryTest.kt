@@ -41,7 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.memory.MemoryManagementMode
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newDeallocate
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newMemory
 import de.fraunhofer.aisec.cpg.graph.edges.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Delete
 import de.fraunhofer.aisec.cpg.query.Must
 import de.fraunhofer.aisec.cpg.query.allExtended
 import de.fraunhofer.aisec.cpg.query.alwaysFlowsTo
@@ -257,7 +257,7 @@ class MemoryTest {
                 mode = MemoryManagementMode.MANAGED_WITH_GARBAGE_COLLECTION,
                 connect = true,
             )
-        allChildren<DeleteExpression>().flatMap { delete ->
+        allChildren<Delete>().flatMap { delete ->
             delete.operands.map {
                 newDeallocate(underlyingNode = delete, concept = memory, what = it, connect = true)
                     .apply { this.prevDFG += it }

@@ -66,15 +66,15 @@ interface HasTemplates : HasGenerics {
     /**
      * This function can be used to fine-tune the resolution of template function calls.
      *
-     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
-     * list of possible candidates.
+     * Note: The function itself should NOT set the [Call.invokes] but rather return a list of
+     * possible candidates.
      *
      * @return a pair in which the first member denotes whether resolution was successful and the
      *   second parameter is a list of [Function] candidates.
      */
     fun handleTemplateFunctionCalls(
         curClass: Record?,
-        templateCall: CallExpression,
+        templateCall: Call,
         applyInference: Boolean,
         ctx: TranslationContext,
         currentTU: TranslationUnit?,
@@ -119,7 +119,7 @@ interface HasSuperClasses : LanguageTrait {
     val superClassKeyword: String
 
     fun SymbolResolver.handleSuperExpression(
-        memberExpression: MemberExpression,
+        memberExpression: MemberAccess,
         curClass: Record,
     ): Boolean
 }
@@ -225,36 +225,36 @@ interface HasGlobalFunctions : LanguageTrait
  * and a qualified call because of an import, if "a" is an import / namespace.
  *
  * We can only resolve this after we have dealt with imports and know all symbols. Therefore, we
- * invoke the [ResolveMemberExpressionAmbiguityPass].
+ * invoke the [ResolveMemberAmbiguityPass].
  */
-interface HasMemberExpressionAmbiguity : LanguageTrait
+interface HasMemberAmbiguity : LanguageTrait
 
 /**
  * A common super-class for all language traits that arise because they are an ambiguity of a
  * function call, e.g., function-style casts. This means that we cannot differentiate between a
- * [CallExpression] and other expressions during the frontend, and we need to invoke the
- * [ResolveCallExpressionAmbiguityPass] to resolve this.
+ * [Call] and other expressions during the frontend, and we need to invoke the
+ * [ResolveCallAmbiguityPass] to resolve this.
  */
-sealed interface HasCallExpressionAmbiguity : LanguageTrait
+sealed interface HasCallAmbiguity : LanguageTrait
 
 /**
  * A language trait, that specifies that the language has so-called functional style casts, meaning
  * that they look like regular call expressions. Since we can therefore not distinguish between a
- * [CallExpression] and a [CastExpression], we need to employ an additional pass
- * ([ResolveCallExpressionAmbiguityPass]) after the initial language frontends are done.
+ * [Call] and a [Cast], we need to employ an additional pass ([ResolveCallAmbiguityPass]) after the
+ * initial language frontends are done.
  */
-interface HasFunctionStyleCasts : HasCallExpressionAmbiguity
+interface HasFunctionStyleCasts : HasCallAmbiguity
 
 /**
  * A language trait, that specifies that the language has functional style (object) construction,
  * meaning that constructor calls look like regular call expressions (usually meaning that the
  * language has no dedicated `new` keyword).
  *
- * Since we can therefore not distinguish between a [CallExpression] and a [ConstructExpression] in
- * the frontend, we need to employ an additional pass ([ResolveCallExpressionAmbiguityPass]) after
- * the initial language frontends are done.
+ * Since we can therefore not distinguish between a [Call] and a [Construction] in the frontend, we
+ * need to employ an additional pass ([ResolveCallAmbiguityPass]) after the initial language
+ * frontends are done.
  */
-interface HasFunctionStyleConstruction : HasCallExpressionAmbiguity
+interface HasFunctionStyleConstruction : HasCallAmbiguity
 
 /**
  * A language trait that specifies that this language allowed overloading functions, meaning that

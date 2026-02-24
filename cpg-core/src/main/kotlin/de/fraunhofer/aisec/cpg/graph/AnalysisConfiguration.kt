@@ -41,8 +41,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Invoke
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerList
 import kotlin.collections.mapNotNull
 
 /** A generic interface used to determine potential next steps. */
@@ -103,10 +103,7 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
         loopingPaths: MutableList<NodePath>,
         analysisDirection: AnalysisDirection,
     ): Boolean {
-        if (
-            analysisDirection.edgeRequiresCallPush(currentNode, edge) &&
-                currentNode is CallExpression
-        ) {
+        if (analysisDirection.edgeRequiresCallPush(currentNode, edge) && currentNode is Call) {
             // Check if the call expression is already in the call stack because this would indicate
             // a loop (recursion).
             if (currentNode in ctx.callStack) {
@@ -147,7 +144,7 @@ class InterproceduralWithDfgTermination(
         if (
             currentNode != nextNode &&
                 edge is Invoke &&
-                currentNode !is CallExpression &&
+                currentNode !is Call &&
                 ctx.callStack.isEmpty()
         ) {
             // We're leaving the current function and will go to a scope we haven't seen before
@@ -228,14 +225,12 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
     }
 
     /**
-     * Determines if the [edge] starting at [currentNode] requires to push a [CallExpression] on the
-     * stack.
+     * Determines if the [edge] starting at [currentNode] requires to push a [Call] on the stack.
      */
     abstract fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean
 
     /**
-     * Determines if the [edge] starting at [currentNode] requires to pop a [CallExpression] from
-     * the stack.
+     * Determines if the [edge] starting at [currentNode] requires to pop a [Call] from the stack.
      */
     abstract fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean
 
@@ -267,7 +262,7 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
 
     /**
      * In some cases, we have to skip one step to actually continue in the graph. Typical examples
-     * are [CallExpression]s where we have a loop through the function's code and return to the same
+     * are [Call]s where we have a loop through the function's code and return to the same
      * expression in the EOG. We then have to skip the call to proceed with the next step in the
      * EOG. This method applies the filtering (based on [scope] and [sensitivities]) as usual to
      * determine valid next steps but instead of doing it once, it does the same logic twice, first
@@ -276,8 +271,8 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
      * new starting node, it calculates the possible next edges by applying [nextStep].
      *
      * Note that the [nodeStart] may not be the same node as [unwrapNextStepFromEdge] would return,
-     * e.g. because a [CallExpression] is the start-node of an [Invoke] edge and may be required
-     * even when following the graph with [Forward].
+     * e.g. because a [Call] is the start-node of an [Invoke] edge and may be required even when
+     * following the graph with [Forward].
      */
     internal fun filterAndJump(
         currentNode: Node,
@@ -301,7 +296,7 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
                 sensitivities = sensitivities,
             )
         // This is a bit more tricky because we need to go to the next step when we
-        // return to the CallExpression. Therefore, we make one more step.
+        // return to the Call. Therefore, we make one more step.
 
         return filteredToJump.flatMap { (nextEdge, newCtx) ->
             // nextEdge.start is the call expression
@@ -347,7 +342,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
             }
             GraphToFollow.EOG -> {
                 val interprocedural =
-                    if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
+                    if (currentNode is Call && currentNode.invokes.isNotEmpty()) {
                         // Enter the functions/methods which are/can be invoked here
                         val called = currentNode.invokeEdges as Collection<Edge<Node>>
 
@@ -419,7 +414,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                 edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn
             }
             GraphToFollow.EOG -> {
-                edge is Invoke && currentNode is CallExpression
+                edge is Invoke && currentNode is Call
             }
         }
     }
@@ -466,7 +461,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
             GraphToFollow.EOG -> {
                 val interprocedural =
                     when (currentNode) {
-                        is CallExpression if currentNode.invokes.isNotEmpty() -> {
+                        is Call if currentNode.invokes.isNotEmpty() -> {
                             val returnedFrom = currentNode.invokeEdges as Collection<Edge<Node>>
 
                             filterEdges(
@@ -538,7 +533,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
             }
 
             GraphToFollow.EOG -> {
-                edge is Invoke && currentNode is CallExpression
+                edge is Invoke && currentNode is Call
             }
         }
     }
@@ -643,7 +638,7 @@ object ContextSensitive : AnalysisSensitivity() {
             }
                 ?:
                 // This is for following the EOG
-                (currentNode as? CallExpression)?.let { ctx.callStack.push(it) }
+                (currentNode as? Call)?.let { ctx.callStack.push(it) }
             true
         } else if (analysisDirection.edgeRequiresCallPop(currentNode, edge)) {
             // We are only interested in outgoing edges from our current
@@ -652,9 +647,7 @@ object ContextSensitive : AnalysisSensitivity() {
                 (edge as? ContextSensitiveDataflow)?.callingContext?.call?.let {
                     ctx.callStack.popIfOnTop(it)
                 } == true ||
-                ((edge as? Invoke)?.start as? CallExpression)?.let {
-                    ctx.callStack.popIfOnTop(it)
-                } == true
+                ((edge as? Invoke)?.start as? Call)?.let { ctx.callStack.popIfOnTop(it) } == true
         } else {
             true
         }
@@ -676,7 +669,7 @@ object FieldSensitive : AnalysisSensitivity() {
     ): Boolean {
         return if (edge is Dataflow) {
             if (
-                currentNode is InitializerListExpression &&
+                currentNode is InitializerList &&
                     analysisDirection.unwrapNextStepFromEdge(edge) in currentNode.initializers &&
                     edge.granularity is IndexedDataflowGranularity
             ) {
@@ -687,7 +680,7 @@ object FieldSensitive : AnalysisSensitivity() {
                 ctx.indexStack.isEmpty() ||
                     ctx.indexStack.popIfOnTop(edge.granularity as IndexedDataflowGranularity)
             } else if (
-                analysisDirection.unwrapNextStepFromEdge(edge) is InitializerListExpression &&
+                analysisDirection.unwrapNextStepFromEdge(edge) is InitializerList &&
                     edge.granularity is IndexedDataflowGranularity
             ) {
                 // CurrentNode is the child and nextDFG goes to ILE => currentNode's written

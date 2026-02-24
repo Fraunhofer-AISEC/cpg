@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import java.util.Objects
 import kotlin.test.Test
@@ -78,7 +78,7 @@ class TagOverlaysPassTest {
                                                 tag {
                                                     each<Record>("Encryption").with { Cipher() }
                                                     each<Variable>("key").with { Secret() }
-                                                    each<CallExpression>("encrypt").withMultiple {
+                                                    each<Call>("encrypt").withMultiple {
                                                         propagate { node.arguments[0] }
                                                             .with { SecretKey() }
 

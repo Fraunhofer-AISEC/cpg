@@ -768,7 +768,7 @@ class ValueEvaluatorTest {
     }
 
     @Test
-    fun testHandleConditionalExpression() {
+    fun testHandleConditional() {
         with(TestLanguageFrontend()) {
             val a = newVariable("a")
             a.initializer = newLiteral(1)
@@ -782,7 +782,7 @@ class ValueEvaluatorTest {
             comparison.lhs = aRef
             comparison.rhs = newLiteral(1)
 
-            var cond = newConditionalExpression(comparison, newLiteral(2), aRef)
+            var cond = newConditional(comparison, newLiteral(2), aRef)
             assertEquals(1, cond.evaluate())
 
             // handle equals
@@ -790,11 +790,11 @@ class ValueEvaluatorTest {
             comparison.lhs = aRef
             comparison.rhs = newLiteral(1)
 
-            cond = newConditionalExpression(comparison, newLiteral(2), aRef)
+            cond = newConditional(comparison, newLiteral(2), aRef)
             assertEquals(2, cond.evaluate())
 
             // handle invalid
-            cond = newConditionalExpression(newProblemExpression(), newLiteral(2), aRef)
+            cond = newConditional(newProblemExpression(), newLiteral(2), aRef)
             assertEquals("{}", cond.evaluate())
         }
     }

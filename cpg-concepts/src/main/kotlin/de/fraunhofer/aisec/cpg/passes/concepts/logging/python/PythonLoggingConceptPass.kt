@@ -33,8 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogLevel
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogWrite
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Logging
 import de.fraunhofer.aisec.cpg.graph.declarations.Import
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
@@ -105,13 +105,13 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * This pass is interested in [Import]s and
-     * [de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression]s as these are the
-     * relevant parts of the Python code for logging.
+     * [de.fraunhofer.aisec.cpg.graph.statements.expressions.Call]s as these are the relevant parts
+     * of the Python code for logging.
      */
     private fun handleNode(node: Node) {
         when (node) {
             is Import -> handleImport(node)
-            is CallExpression -> handleCall(node)
+            is Call -> handleCall(node)
         }
     }
 
@@ -148,11 +148,11 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * - `logging.critical(...)` (and similar for `error` / `warn` / ...) is translated to a
      *   [de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogWrite]
      *
-     * @param callExpression The
-     *   [de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression] to handle
+     * @param callExpression The [de.fraunhofer.aisec.cpg.graph.statements.expressions.Call] to
+     *   handle
      * @return n/a (The new node is created and added to the graph)
      */
-    private fun handleCall(callExpression: CallExpression) {
+    private fun handleCall(callExpression: Call) {
         val callee = callExpression.callee
 
         if (callee.name.toString() == "logging.getLogger") {
@@ -192,9 +192,9 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * @param callExpression The call to handle.
      * @return The [Logging] if found.
      */
-    private fun findLogger(callExpression: CallExpression): Logging? {
+    private fun findLogger(callExpression: Call): Logging? {
         val callee = callExpression.callee
-        if (callee is MemberExpression) {
+        if (callee is MemberAccess) {
             // might be a call like `logger.error`
             val base = callee.base
             val fulfilledPaths: List<NodePath> =
@@ -233,11 +233,11 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      *
      * A warning is logged if the call cannot be handled (i.e. not implemented).
      *
-     * @param callExpression The underlying [CallExpression] to handle.
-     * @param logger The [Logging] this call expression operates on.
+     * @param callExpression The underlying [Call] to handle.
+     * @param logger The [Log] this call expression operates on.
      * @return n/a (The new node is created and added to the graph)
      */
-    private fun logOpHelper(callExpression: CallExpression, logger: Logging) {
+    private fun logOpHelper(callExpression: Call, logger: Logging) {
         val callee = callExpression.callee
         when (callee.name.localName) {
             "fatal",

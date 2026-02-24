@@ -30,10 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Operator
 
 /**
  * This special call expression is used when an operator (such as a [BinaryOperator]) is overloaded.
- * In this case, we replace the original [BinaryOperator] with an [OperatorCallExpression], which
- * points to its respective [Operator].
+ * In this case, we replace the original [BinaryOperator] with an [OperatorCall], which points to
+ * its respective [Operator].
  */
-class OperatorCallExpression : CallExpression(), HasOperatorCode, HasBase {
+class OperatorCall : Call(), HasOperatorCode, HasBase {
 
     override var operatorCode: String? = null
 
@@ -46,7 +46,7 @@ class OperatorCallExpression : CallExpression(), HasOperatorCode, HasBase {
     /**
      * The base object. This is basically a shortcut to accessing the base of the [callee], if it
      * has one (i.e., if it implements [HasBase]). This is the case for example, if it is a
-     * [MemberExpression].
+     * [MemberAccess].
      */
     override val base: Expression?
         get() {
@@ -55,21 +55,17 @@ class OperatorCallExpression : CallExpression(), HasOperatorCode, HasBase {
 }
 
 /**
- * Creates a new [OperatorCallExpression] to a [Operator] and also sets the appropriate fields such
- * as [CallExpression.invokes] and [Reference.refersTo].
+ * Creates a new [OperatorCall] to a [Operator] and also sets the appropriate fields such as
+ * [Call.invokes] and [Reference.refersTo].
  */
-fun operatorCallFromDeclaration(
-    decl: Operator,
-    op: HasOverloadedOperation,
-): OperatorCallExpression {
+fun operatorCallFromDeclaration(decl: Operator, op: HasOverloadedOperation): OperatorCall {
     return with(decl) {
         val ref =
-            newMemberExpression(decl.name, op.operatorBase, operatorCode = ".")
+            newMemberAccess(decl.name, op.operatorBase, operatorCode = ".")
                 .implicit(decl.name.localName, location = op.location)
         ref.refersTo = decl
         val call =
-            newOperatorCallExpression(operatorCode = op.operatorCode ?: "", ref)
-                .codeAndLocationFrom(ref)
+            newOperatorCall(operatorCode = op.operatorCode ?: "", ref).codeAndLocationFrom(ref)
         call.invokes = mutableListOf(decl)
         call
     }

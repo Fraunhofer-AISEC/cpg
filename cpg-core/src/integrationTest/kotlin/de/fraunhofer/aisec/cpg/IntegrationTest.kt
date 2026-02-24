@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.persistence.createJsonGraph
 import de.fraunhofer.aisec.cpg.persistence.persistJson
 import de.fraunhofer.aisec.cpg.test.GraphExamples
@@ -57,8 +57,7 @@ class IntegrationTest {
 
         val connectToCallExpr =
             graph.nodes.firstOrNull {
-                it.labels.contains(CallExpression::class.simpleName) &&
-                    it.properties["name"] == "foo"
+                it.labels.contains(Call::class.simpleName) && it.properties["name"] == "foo"
             }
         assertNotNull(connectToCallExpr)
 
