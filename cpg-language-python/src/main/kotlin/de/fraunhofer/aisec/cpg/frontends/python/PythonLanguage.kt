@@ -46,7 +46,7 @@ import org.neo4j.ogm.annotation.Transient
 import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /** The Python language. */
-class PythonLanguage :
+open class PythonLanguage :
     Language<PythonLanguageFrontend>(),
     HasShortCircuitOperators,
     HasOperatorOverloading,

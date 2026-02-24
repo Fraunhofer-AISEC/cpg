@@ -186,3 +186,43 @@ fun Node.insertNodeAfterwardInEOGPath(
     // Add the new edge as a next edge of the current node
     return this.nextEOGEdges.add(edge)
 }
+
+/**
+ * This function inserts the given [newNode] after the current node ([this]) in its existing DFG
+ * path.
+ *
+ * Before:
+ * ```
+ *         -- DFG --> <node1>
+ * <this>
+ *         -- DFG --> <node2>
+ * ```
+ *
+ * We want to insert a new [Dataflow] edge between all outgoing edges of [this].
+ *
+ * Afterward:
+ * ```
+ *                              -- DFG --> <node1>
+ * <this> -- DFG --> <new node>
+ *                              -- DFG --> <node2>
+ * ```
+ */
+fun Node.insertNodeAfterwardInDFGPath(newNode: Node, builder: ((Dataflow) -> Unit) = {}): Boolean {
+    // Construct a new edge from the current node to the given node
+    val edge = Dataflow(this, newNode).also(builder)
+
+    // Make a copy of the outgoing edges of the current node and set the end of the new edge as
+    // the start
+    val copy = this.nextDFGEdges.toList()
+    copy.forEach { it.start = newNode }
+
+    // Clear the outgoing edges of the current node
+    this.nextDFGEdges.clear()
+
+    // Add the old edges as the next edges of the new edge's end. We cannot use "addAll" because
+    // otherwise our mirroring will not be triggered.
+    copy.forEach { newNode.nextDFGEdges += it }
+
+    // Add the new edge as a next edge of the current node
+    return this.nextDFGEdges.add(edge)
+}
