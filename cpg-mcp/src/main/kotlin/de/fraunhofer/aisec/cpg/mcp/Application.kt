@@ -31,6 +31,7 @@ import io.ktor.server.engine.*
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
 import io.modelcontextprotocol.kotlin.sdk.server.mcp
+import io.modelcontextprotocol.kotlin.sdk.server.mcpStreamableHttp
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.asSink
@@ -44,17 +45,29 @@ class Application : Runnable {
         names = ["--sse"],
         description =
             [
-                "Provide the port to run SSE (Server Sent Events). If not specified, the MCP server will run using stdio."
+                "Provide the port to run SSE (Server Sent Events). If not specified, the MCP server will run using stdio or http."
             ],
     )
     var ssePort: Int? = null
 
+    @CommandLine.Option(
+        names = ["--http"],
+        description =
+            [
+                "Provide the port to run HTTP. If not specified, the MCP server will run using stdio or sse."
+            ],
+    )
+    var httpPort: Int? = null
+
     override fun run() {
-        val port = ssePort
-        if (port == null) {
-            runMcpServerUsingStdio()
+        val httpPort = httpPort
+        val ssePort = ssePort
+        if (httpPort != null) {
+            runHttpMcpServerUsingKtorPlugin(httpPort, configureServer())
+        } else if (ssePort != null) {
+            runSseMcpServerUsingKtorPlugin(ssePort, configureServer())
         } else {
-            runSseMcpServerUsingKtorPlugin(port, configureServer())
+            runMcpServerUsingStdio()
         }
     }
 }
@@ -84,4 +97,13 @@ fun runMcpServerUsingStdio() {
  */
 fun runSseMcpServerUsingKtorPlugin(port: Int, server: Server) = runBlocking {
     embeddedServer(CIO, host = "0.0.0.0", port = port) { mcp { server } }.start(wait = true)
+}
+
+fun runHttpMcpServerUsingKtorPlugin(port: Int, server: Server) {
+    runBlocking {
+        embeddedServer(factory = CIO, host = "0.0.0.0", port = port) {
+                mcpStreamableHttp { server }
+            }
+            .start(wait = true)
+    }
 }
