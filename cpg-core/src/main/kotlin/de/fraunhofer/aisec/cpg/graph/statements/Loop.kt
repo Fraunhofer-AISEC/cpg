@@ -36,7 +36,7 @@ import org.neo4j.ogm.annotation.Relationship
  * This [Node] is a generalization of all looping statements and serves duplication reduction. All
  * Looping statements can be identified by if they inherit from this class. Loops deviate from other
  * nods in the way they change a programs control flow, and do so in combination with other nodes,
- * e.g. [BreakStatement].
+ * e.g. [Break].
  *
  * The looping criterion can be a condition or the iteration over all elements in a list and is
  * defined by the subclass.
