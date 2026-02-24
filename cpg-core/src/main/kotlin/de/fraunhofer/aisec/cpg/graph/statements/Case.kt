@@ -43,8 +43,7 @@ class Case : Statement() {
     var caseExpressionEdge = astOptionalEdgeOf<Expression>()
 
     /**
-     * Primitive side effect free statement that has to match with the evaluated selector in
-     * SwitchStatement
+     * Primitive side effect free statement that has to match with the evaluated selector in Switch
      */
     var caseExpression by unwrapping(Case::caseExpressionEdge)
 

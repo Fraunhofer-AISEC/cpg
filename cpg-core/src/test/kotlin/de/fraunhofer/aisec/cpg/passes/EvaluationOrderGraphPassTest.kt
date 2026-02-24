@@ -36,7 +36,7 @@ import kotlin.test.assertTrue
 class EvaluationOrderGraphPassTest {
 
     @Test
-    fun testWhileStatement() {
+    fun testWhile() {
         val whileTest = GraphExamples.getWhileWithElseAndBreak()
 
         val whileStmt = whileTest.whileLoops.firstOrNull()
@@ -86,7 +86,7 @@ class EvaluationOrderGraphPassTest {
     }
 
     @Test
-    fun testDoStatement() {
+    fun testDo() {
         val doTest = GraphExamples.getDoWithElseAndBreak()
 
         val doStmt = doTest.doLoops.firstOrNull()
@@ -136,7 +136,7 @@ class EvaluationOrderGraphPassTest {
     }
 
     @Test
-    fun testForStatement() {
+    fun testFor() {
         val forTest = GraphExamples.getForWithElseAndBreak()
 
         val forStmt = forTest.forLoops.firstOrNull()

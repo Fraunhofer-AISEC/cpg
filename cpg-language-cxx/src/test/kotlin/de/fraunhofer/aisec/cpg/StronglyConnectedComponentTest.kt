@@ -55,7 +55,7 @@ class StronglyConnectedComponentTest : BaseTest() {
             val forStmt = nestedFD.allChildren<For>()[level]
             assertNotNull(forStmt)
             ///////// First, check on node-level
-            // All 3 ForStatements should have one edge with an SCC of priority respective to their
+            // All 3 Fors should have one edge with an SCC of priority respective to their
             // level ( +1 b/c we start counting at 1), and one without or with different SCC
             // (exiting the loop)
             assertEquals(1, forStmt.nextEOGEdges.filter { it.scc == (level + 1) }.size)

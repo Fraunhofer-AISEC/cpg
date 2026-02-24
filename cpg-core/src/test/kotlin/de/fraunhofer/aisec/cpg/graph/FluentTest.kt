@@ -112,7 +112,7 @@ class FluentTest {
         assertTrue(lit1.scope is LocalScope)
         assertEquals(1, lit1.value)
 
-        // Second line should be an IfStatement
+        // Second line should be an If
         val ifStatement = main[1] as? If
         assertNotNull(ifStatement)
         assertTrue(ifStatement.scope is LocalScope)
@@ -155,7 +155,7 @@ class FluentTest {
         assertNotNull(mce)
         assertFullName("UNKNOWN.func", mce)
 
-        // Fifth line is the ReturnStatement
+        // Fifth line is the Return
         val returnStatement = main[4] as? Return
         assertNotNull(returnStatement)
         assertNotNull(returnStatement.scope)

@@ -58,7 +58,7 @@ internal class VariableResolverCppTest : BaseTest() {
     private var innerStaticVarName: Field? = null
     private var main: Function? = null
     private var outerFunction1: Method? = null
-    private var forStatements: List<For>? = null
+    private var fors: List<For>? = null
     private var outerFunction2: Method? = null
     private var outerFunction3: Method? = null
     private var outerFunction4: Method? = null
@@ -100,7 +100,7 @@ internal class VariableResolverCppTest : BaseTest() {
 
         // Functions in the outer and inner object
         outerFunction1 = outerClass?.methods["function1"]
-        forStatements = outerFunction1.forLoops
+        fors = outerFunction1.forLoops
         outerFunction2 = outerClass?.methods["function2"]
         outerFunction3 = outerClass?.methods["function3"]
         outerFunction4 = outerClass?.methods["function4"]
@@ -129,20 +129,20 @@ internal class VariableResolverCppTest : BaseTest() {
     fun testVarNameOfFirstLoopAccessed() {
         val asReference = callParamMap["func1_first_loop_varName"] as? Reference
         assertNotNull(asReference)
-        val vDeclaration = forStatements?.first().variables["varName"]
+        val vDeclaration = fors?.first().variables["varName"]
         assertUsageOf(callParamMap["func1_first_loop_varName"], vDeclaration)
     }
 
     @Test
     fun testAccessLocalVarNameInNestedBlock() {
-        val innerBlock = forStatements?.get(1).allChildren<Block>()[""]
+        val innerBlock = fors?.get(1).allChildren<Block>()[""]
         val nestedDeclaration = innerBlock.variables["varName"]
         assertUsageOf(callParamMap["func1_nested_block_shadowed_local_varName"], nestedDeclaration)
     }
 
     @Test
     fun testVarNameOfSecondLoopAccessed() {
-        val vDeclaration = forStatements?.get(1)?.initializerStatement.variables["varName"]
+        val vDeclaration = fors?.get(1)?.initializerStatement.variables["varName"]
         assertUsageOf(callParamMap["func1_second_loop_varName"], vDeclaration)
     }
 
@@ -163,8 +163,7 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testVarNameDeclaredInIfClause() {
-        val declaration =
-            outerFunction2.allChildren<If>()[Node.EMPTY_NAME].variables["varName"]
+        val declaration = outerFunction2.allChildren<If>()[Node.EMPTY_NAME].variables["varName"]
         assertUsageOf(callParamMap["func2_if_varName"], declaration)
     }
 

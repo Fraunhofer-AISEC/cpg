@@ -37,7 +37,7 @@ import kotlin.test.assertNotNull
 
 class StatementBuilderTest {
     @Test
-    fun testNewLookupScopeStatement() {
+    fun testNewLookupScope() {
         val frontend =
             TestLanguageFrontend(
                 ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())

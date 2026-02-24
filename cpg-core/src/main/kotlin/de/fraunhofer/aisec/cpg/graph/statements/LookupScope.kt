@@ -40,8 +40,8 @@ import java.util.Objects
  * (or the information therein) to [Scope.predefinedLookupScopes]. The reason for this is that we
  * want to avoid AST traversals in the scope/identifier lookup.
  *
- * The [newLookupScope] node builder will add this automatically, so it is STRONGLY
- * encouraged that the node builder is used instead of creating the node itself.
+ * The [newLookupScope] node builder will add this automatically, so it is STRONGLY encouraged that
+ * the node builder is used instead of creating the node itself.
  */
 class LookupScope : Statement() {
 

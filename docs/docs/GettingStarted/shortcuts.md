@@ -91,7 +91,7 @@ stable than the information from above!
   `Subscription.arraySize`. Unfortunately, this only works if the
   size is given in the initialization. Updates are not considered.
 * Control dependencies are currently available via the extensions
-  `Node.controlledBy()` and `IfStatement.controls()`.
+  `Node.controlledBy()` and `If.controls()`.
 *  `Node.eogDistanceTo(to: Node)` calculates the number of EOG edges between
    this node and `to`.
 * `FunctionDeclaration.get(n: Int)`: Returns the n-th statement of the body of

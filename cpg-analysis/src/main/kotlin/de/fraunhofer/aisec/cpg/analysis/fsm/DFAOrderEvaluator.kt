@@ -395,9 +395,7 @@ open class DFAOrderEvaluator(
      */
     private fun Node.getSuitableDFGTarget(): Node? {
         return this.nextDFG
-            .filter {
-                it is Reference || it is Return || it is Construction || it is Variable
-            }
+            .filter { it is Reference || it is Return || it is Construction || it is Variable }
             .minByOrNull { it.name }
     }
 

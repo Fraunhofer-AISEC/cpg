@@ -120,7 +120,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             when (node) {
                 is Record -> handleRecord(node)
                 is Assign -> handleAssign(node)
-                is ForEach -> handleForEachStatement(node)
+                is ForEach -> handleForEach(node)
                 is InitializerList -> handleInitializerList(node)
             }
         }
@@ -310,11 +310,10 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * handleForEachStatement adds a [HasType.TypeObserver] to the [ForEach.iterable] of an
-     * [ForEach] in order to determine the types used in [ForEach.variable] (index
-     * and iterated value).
+     * handleForEach adds a [HasType.TypeObserver] to the [ForEach.iterable] of an [ForEach] in
+     * order to determine the types used in [ForEach.variable] (index and iterated value).
      */
-    private fun handleForEachStatement(forEach: ForEach) {
+    private fun handleForEach(forEach: ForEach) {
         (forEach.iterable as HasType).registerTypeObserver(
             object : HasType.TypeObserver {
                 override fun typeChanged(newType: Type, src: HasType) {

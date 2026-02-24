@@ -142,11 +142,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             node.nextDFGEdges.removeAll(edgesToRemove)
         }
 
-        removeUnreachableImplicitReturnStatement(
+        removeUnreachableImplicitReturn(
             node,
-            finalState.returnStatements.values.flatMap {
-                it.elements.filterIsInstance<Return>()
-            },
+            finalState.returns.values.flatMap { it.elements.filterIsInstance<Return>() },
         )
 
         for ((key, value) in finalState.generalState) {
@@ -401,7 +399,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         } else if (currentNode is Comprehension) {
             handleComprehension(currentNode, doubleState)
         } else if (currentNode is ForEach && currentNode.variable != null) {
-            // The Variable in the ForEachStatement doesn't have an initializer, so
+            // The Variable in the ForEach doesn't have an initializer, so
             // the "normal" case won't work. We handle this case separately here...
             // This is what we write to the declaration
             val iterable = currentNode.iterable as? Expression
@@ -461,10 +459,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 doubleState.pushToDeclarationsState(it, PowersetLattice(identitySetOf(it)))
             }
         } else if (currentNode is Return) {
-            doubleState.returnStatements.push(
-                currentNode,
-                PowersetLattice(identitySetOf(currentNode)),
-            )
+            doubleState.returns.push(currentNode, PowersetLattice(identitySetOf(currentNode)))
         } else if (currentNode is Call) {
             // If the Call invokes a function for which we have a function summary, we use
             // the summary to identify the last write to a parameter (or receiver) and match it to
@@ -658,24 +653,24 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
     /**
      * Removes the DFG edges for a potential implicit return statement if it is not in
-     * [reachableReturnStatements].
+     * [reachableReturns].
      */
-    protected fun removeUnreachableImplicitReturnStatement(
+    protected fun removeUnreachableImplicitReturn(
         node: Node,
-        reachableReturnStatements: Collection<Return>,
+        reachableReturns: Collection<Return>,
     ) {
         val lastStatement = ((node as? Function)?.body as? Block)?.statements?.lastOrNull()
         if (
             lastStatement is Return &&
                 lastStatement.isImplicit &&
-                lastStatement !in reachableReturnStatements
+                lastStatement !in reachableReturns
         )
             lastStatement.nextDFGEdges.remove(node)
     }
 
     /**
      * A state which actually holds a state for all nodes, one only for declarations and one for
-     * ReturnStatements.
+     * Returns.
      */
     protected class DFGPassState<V>(
         /**
@@ -692,14 +687,14 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
          */
         var declarationsState: State<Any?, V> = State(),
 
-        /** The [returnStatements] which are reachable. */
-        var returnStatements: State<Node, V> = State(),
+        /** The [returns] which are reachable. */
+        var returns: State<Node, V> = State(),
     ) : State<Node, V>() {
         override fun duplicate(): DFGPassState<V> {
             return DFGPassState(
                 generalState.duplicate(),
                 declarationsState.duplicate(),
-                returnStatements.duplicate(),
+                returns.duplicate(),
             )
         }
 
@@ -711,7 +706,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             return if (other is DFGPassState) {
                 val (_, generalUpdate) = generalState.lub(other.generalState)
                 val (_, declUpdate) = declarationsState.lub(other.declarationsState)
-                val (_, returnUpdate) = returnStatements.lub(other.returnStatements)
+                val (_, returnUpdate) = returns.lub(other.returns)
                 Pair(this, generalUpdate || declUpdate || returnUpdate)
             } else {
                 val (_, generalUpdate) = generalState.lub(other)

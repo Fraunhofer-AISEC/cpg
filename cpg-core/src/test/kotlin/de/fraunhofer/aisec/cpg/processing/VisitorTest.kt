@@ -117,21 +117,21 @@ class VisitorTest : BaseTest() {
         assertEquals(37, nodeList.size)
     }
 
-    /** Visits only ReturnStatement nodes. */
+    /** Visits only Return nodes. */
     @Test
     fun testReturnStmtVisitor() {
-        val returnStatements: MutableList<Return> = ArrayList()
+        val returns: MutableList<Return> = ArrayList()
         assertNotNull(recordDeclaration)
 
         recordDeclaration!!.accept(
             Strategy::AST_FORWARD,
             object : IVisitor<AstNode>() {
                 fun visit(r: Return) {
-                    returnStatements.add(r)
+                    returns.add(r)
                 }
             },
         )
-        assertEquals(2, returnStatements.size)
+        assertEquals(2, returns.size)
     }
 
     @Test

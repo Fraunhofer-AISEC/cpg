@@ -104,7 +104,7 @@ internal class EOGTest : BaseTest() {
         )
 
         // Assert: All EOGs going into the then branch (=the 2nd print stmt) come from the
-        // IfStatement
+        // If
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
@@ -115,7 +115,7 @@ internal class EOGTest : BaseTest() {
             )
         )
         // Assert: The EOGs going into the second print come either from the then branch or the
-        // IfStatement
+        // If
         assertTrue(
             Util.eogConnect(
                 connectStart = Connect.NODE,
@@ -159,7 +159,7 @@ internal class EOGTest : BaseTest() {
             )
         )
 
-        // IfStatement has exactly 2 outgoing EOGS: true (then) and false (else) branch
+        // If has exactly 2 outgoing EOGS: true (then) and false (else) branch
         assertTrue(
             Util.eogConnect(
                 connectStart = Connect.NODE,
@@ -772,8 +772,7 @@ internal class EOGTest : BaseTest() {
             }
 
         // Test If-Block
-        val firstIf =
-            result.allChildren<If>().filter { l -> l.location?.region?.startLine == 6 }[0]
+        val firstIf = result.allChildren<If>().filter { l -> l.location?.region?.startLine == 6 }[0]
         val a =
             result.refs[
                     { l: Reference ->
@@ -796,9 +795,7 @@ internal class EOGTest : BaseTest() {
             }
         }
         val elseIf: If =
-            result
-                .allChildren<If>()
-                .filter { l: If -> l.location?.region?.startLine == 8 }[0]
+            result.allChildren<If>().filter { l: If -> l.location?.region?.startLine == 8 }[0]
         assertEquals(elseIf, firstIf.elseStatement)
         val b2 = result.refs[{ it.location?.region?.startLine == 9 && it.name.localName == "b" }]
         assertNotNull(b2)

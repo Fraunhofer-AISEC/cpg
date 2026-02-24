@@ -146,8 +146,7 @@ class TypePropagationTest {
             assertEquals(primitiveType("short"), shortVarRefLhs.type)
             assertEquals(setOf(primitiveType("short")), shortVarRefLhs.assignedTypes)
 
-            val shortVarRefReturnValue =
-                main.allChildren<Return>().firstOrNull()?.returnValue
+            val shortVarRefReturnValue = main.allChildren<Return>().firstOrNull()?.returnValue
             assertNotNull(shortVarRefReturnValue)
             // Finally, the assigned types should propagate along the DFG
             assertEquals(setOf(primitiveType("short")), shortVarRefLhs.assignedTypes)

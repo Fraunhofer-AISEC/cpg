@@ -83,7 +83,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 handleBrStatement(instr)
             }
             LLVMSwitch -> {
-                handleSwitchStatement(instr)
+                handleSwitch(instr)
             }
             LLVMIndirectBr -> {
                 handleIndirectbrStatement(instr)
@@ -246,7 +246,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 }
             )
         return if (unwindDest != null) { // For "unwind to caller", the destination is null
-            assembleGotoStatement(instr, unwindDest).apply { this.name = name }
+            assembleGoto(instr, unwindDest).apply { this.name = name }
         } else {
             newEmpty(rawNode = instr).apply { this.name = name }
         }
@@ -316,7 +316,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             currentIfStatement.condition = matchesCatchpad
 
             // Get the label of the goto statement.
-            val gotoStatement = assembleGotoStatement(instr, bbTarget)
+            val gotoStatement = assembleGoto(instr, bbTarget)
             currentIfStatement.thenStatement = gotoStatement
 
             idx++
@@ -324,7 +324,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val unwindDest = LLVMGetUnwindDest(instr)
         if (unwindDest != null) { // For "unwind to caller", the destination is null
-            val gotoStatement = assembleGotoStatement(instr, LLVMBasicBlockAsValue(unwindDest))
+            val gotoStatement = assembleGoto(instr, LLVMBasicBlockAsValue(unwindDest))
             if (currentIfStatement == null) {
                 currentIfStatement = ifStatement
             }
@@ -988,7 +988,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             caseStatements.statements += caseStatement
 
             // Get the label of the goto statement.
-            val gotoStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, idx))
+            val gotoStatement = assembleGoto(instr, LLVMGetOperand(instr, idx))
             caseStatements.statements += gotoStatement
             caseStatements.statements += newBreak().implicit()
             idx++
@@ -1008,15 +1008,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             ifStatement.condition = condition
 
             // Get the label of the "else" branch
-            ifStatement.elseStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, 1))
+            ifStatement.elseStatement = assembleGoto(instr, LLVMGetOperand(instr, 1))
 
             // Get the label of the "if" branch
-            ifStatement.thenStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, 2))
+            ifStatement.thenStatement = assembleGoto(instr, LLVMGetOperand(instr, 2))
 
             return ifStatement
         } else if (LLVMGetNumOperands(instr) == 1) {
             // goto defaultLocation
-            return assembleGotoStatement(instr, LLVMGetOperand(instr, 0))
+            return assembleGoto(instr, LLVMGetOperand(instr, 0))
         } else {
             throw TranslationException("Wrong number of operands in br statement")
         }
@@ -1030,7 +1030,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      *
      * Returns a [Switch].
      */
-    private fun handleSwitchStatement(instr: LLVMValueRef): Statement {
+    private fun handleSwitch(instr: LLVMValueRef): Statement {
         val numOps = LLVMGetNumOperands(instr)
         if (numOps < 2 || numOps % 2 != 0)
             throw TranslationException("Switch statement without operand and default branch")
@@ -1044,20 +1044,20 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         var idx = 2
         while (idx < numOps) {
-            // Get the comparison value and add it to the CaseStatement
+            // Get the comparison value and add it to the Case
             val caseStatement = newCase(rawNode = instr)
             caseStatement.caseExpression = frontend.getOperandValueAtIndex(instr, idx)
             caseStatements.statements += caseStatement
             idx++
-            // Get the "case" statements and add it to the CaseStatement
-            val gotoStatement = assembleGotoStatement(instr, LLVMGetOperand(instr, idx))
+            // Get the "case" statements and add it to the Case
+            val gotoStatement = assembleGoto(instr, LLVMGetOperand(instr, idx))
             caseStatements.statements += gotoStatement
             idx++
         }
 
         // Get the label of the "default" branch
         caseStatements.statements += newDefault(rawNode = instr)
-        val defaultGoto = assembleGotoStatement(instr, LLVMGetOperand(instr, 1))
+        val defaultGoto = assembleGoto(instr, LLVMGetOperand(instr, 1))
         caseStatements.statements += defaultGoto
 
         switchStatement.statement = caseStatements
@@ -1090,11 +1090,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         if (instr.opCode == LLVMInvoke) {
             max-- // Last one is the Decl.Expr of the function
             // Get the label of the catch clause.
-            gotoCatch = assembleGotoStatement(instr, LLVMGetOperand(instr, max))
+            gotoCatch = assembleGoto(instr, LLVMGetOperand(instr, max))
             max--
             // Get the label of the basic block where the control flow continues (e.g. if no error
             // occurs).
-            tryContinue = assembleGotoStatement(instr, LLVMGetOperand(instr, max))
+            tryContinue = assembleGoto(instr, LLVMGetOperand(instr, max))
             max--
             log.info(
                 "Invoke expression: Usually continues at ${tryContinue.labelName}, exception continues at ${gotoCatch.labelName}"
@@ -1546,17 +1546,17 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Generates a [Goto] and either links it to the [Label] if that statement has
-     * already been processed or uses the listeners to generate the relation once the label
-     * statement has been processed.
+     * Generates a [Goto] and either links it to the [Label] if that statement has already been
+     * processed or uses the listeners to generate the relation once the label statement has been
+     * processed.
      */
-    private fun assembleGotoStatement(instr: LLVMValueRef, bbTarget: LLVMValueRef): Goto {
+    private fun assembleGoto(instr: LLVMValueRef, bbTarget: LLVMValueRef): Goto {
         val goto = newGoto(rawNode = instr)
         val assigneeTargetLabel = BiConsumer { _: Any, to: Node ->
             if (to is Label) {
                 goto.targetLabel = to
             } else if (goto.targetLabel != to) {
-                log.error("$to is not a LabelStatement")
+                log.error("$to is not a Label")
             }
         }
         val bb: LLVMBasicBlockRef = LLVMValueAsBasicBlock(bbTarget)

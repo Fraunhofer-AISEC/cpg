@@ -312,7 +312,7 @@ interface Lattice<T : Lattice.Element> {
 
                 val oldGlobalIt = globalState[it]
 
-                // If we're on the loop head (some node is LoopStatement), and we use WIDENING or
+                // If we're on the loop head (some node is Loop), and we use WIDENING or
                 // WIDENING_NARROWING, we have to apply the widening/narrowing here (if oldGlobalIt
                 // is not null).
                 val newGlobalIt =

@@ -84,7 +84,7 @@ sealed class Scope(
     @Relationship(value = "PARENT", direction = Relationship.Direction.INCOMING)
     var children = mutableListOf<Scope>()
 
-    @Transient var labelStatements = mutableMapOf<String, Label>()
+    @Transient var labels = mutableMapOf<String, Label>()
 
     /** A map of symbols and their respective [Declaration] nodes that declare them. */
     @Transient var symbols: SymbolMap = mutableMapOf()
@@ -113,8 +113,8 @@ sealed class Scope(
      * In some languages, the lookup scope of a symbol that is being resolved (e.g. of a
      * [Reference]) can be adjusted through keywords (such as `global` in Python or PHP).
      *
-     * We store this information in the form of a [LookupScope] in the AST, but we need to
-     * also store this information in the scope to avoid unnecessary AST traversals when resolving
+     * We store this information in the form of a [LookupScope] in the AST, but we need to also
+     * store this information in the scope to avoid unnecessary AST traversals when resolving
      * symbols using [lookupSymbol].
      */
     @Transient var predefinedLookupScopes: MutableMap<Symbol, LookupScope> = mutableMapOf()
@@ -262,8 +262,8 @@ sealed class Scope(
         return list ?: listOf()
     }
 
-    fun addLabelStatement(labelStatement: Label) {
-        labelStatement.label?.let { labelStatements[it] = labelStatement }
+    fun addLabel(label: Label) {
+        label.label?.let { labels[it] = label }
     }
 
     override fun equals(other: Any?): Boolean {

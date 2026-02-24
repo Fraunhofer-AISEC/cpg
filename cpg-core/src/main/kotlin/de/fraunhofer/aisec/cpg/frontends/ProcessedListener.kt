@@ -37,9 +37,7 @@ import java.util.function.BiPredicate
  * [interestingStatements]).
  */
 open class ProcessedListener {
-    @JvmField
-    protected var interestingStatements =
-        listOf(Goto::class.java, Label::class.java)
+    @JvmField protected var interestingStatements = listOf(Goto::class.java, Label::class.java)
     @JvmField
     protected var predicateListeners = mutableMapOf<BiPredicate<Any, Node>, BiConsumer<Any, Node>>()
     @JvmField protected var processedMapping = mutableMapOf<Any, Node>()

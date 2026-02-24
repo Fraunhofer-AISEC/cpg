@@ -396,9 +396,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return switch
     }
 
-    private fun handleTypeSwitchStmt(
-        typeSwitchStmt: GoStandardLibrary.Ast.TypeSwitchStmt
-    ): Switch {
+    private fun handleTypeSwitchStmt(typeSwitchStmt: GoStandardLibrary.Ast.TypeSwitchStmt): Switch {
         val switch = newSwitch(rawNode = typeSwitchStmt)
 
         frontend.scopeManager.enterScope(switch)

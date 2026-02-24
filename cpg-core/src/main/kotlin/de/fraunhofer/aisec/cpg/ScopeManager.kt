@@ -425,16 +425,16 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
-     * This function retrieves the [Label] associated with the [labelString]. This depicts
-     * the feature of some languages to attach a label to a point in the source code and use it as
-     * the target for control flow manipulation, e.g. [Break], [Goto].
+     * This function retrieves the [Label] associated with the [labelString]. This depicts the
+     * feature of some languages to attach a label to a point in the source code and use it as the
+     * target for control flow manipulation, e.g. [Break], [Goto].
      */
-    fun getLabelStatement(labelString: String?): Label? {
+    fun getLabel(labelString: String?): Label? {
         if (labelString == null) return null
         var labelStatement: Label?
         var searchScope: Scope? = currentScope
         while (searchScope != null) {
-            labelStatement = searchScope.labelStatements[labelString]
+            labelStatement = searchScope.labels[labelString]
             if (labelStatement != null) {
                 return labelStatement
             }

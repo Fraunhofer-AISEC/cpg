@@ -47,16 +47,16 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
         val flatAST = SubgraphWalker.flattenAST(component)
         // Get all goto statements
         val allGotos = flatAST.filterIsInstance<Goto>()
-        // Get all LabelStatements which are only referenced from a single GotoStatement
+        // Get all Labels which are only referenced from a single Goto
         val singleEntryLabels =
             flatAST.filterIsInstance<Label>().filter { l ->
                 allGotos.filter { g -> g.targetLabel == l }.size == 1
             }
 
-        // Get all GotoStatements which have to be replaced in the AST
+        // Get all Gotos which have to be replaced in the AST
         val gotosToReplace = allGotos.filter { g -> g.targetLabel in singleEntryLabels }
 
-        // Enforce the order: First IfStatements, then SwitchStatements, then the rest. This
+        // Enforce the order: First Ifs, then Switchs, then the rest. This
         // prevents to treat the final goto in the case or default statement as a normal
         // compound
         // statement which would lead to inlining the instructions BB, but we want to keep the BB
@@ -75,10 +75,10 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     handleIfStatement(node, gotosToReplace)
                 }
                 is Switch -> {
-                    handleSwitchStatement(node, gotosToReplace)
+                    handleSwitch(node, gotosToReplace)
                 }
                 is Try -> {
-                    handleTryStatement(node)
+                    handleTry(node)
                 }
                 is Block -> {
                     handleBlock(node, gotosToReplace)
@@ -105,7 +105,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Iterates over all statements in a body of the switch/case and replace a goto statement if it
      * is the only one jumping to the target
      */
-    private fun handleSwitchStatement(node: Switch, gotosToReplace: List<Goto>) {
+    private fun handleSwitch(node: Switch, gotosToReplace: List<Goto>) {
         val caseBodyStatements = node.statement as? Block ?: return
         val newStatements = caseBodyStatements.statements.toMutableList()
         for (i in 0 until newStatements.size) {
@@ -138,7 +138,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    private fun handleTryStatement(node: Try) {
+    private fun handleTry(node: Try) {
         val firstCatch = node.catchClauses.singleOrNull()
         val firstStatement = firstCatch?.body?.statements?.get(0)
         when (firstStatement) {
@@ -208,7 +208,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * Iterates through all [AstNode]s which are reachable from the catch clause. Note: When
-     * reaching a `TryStatement`, we do not follow the path further. This is why we can't use the
+     * reaching a `Try`, we do not follow the path further. This is why we can't use the
      * `allChildren` extension.
      */
     private fun getAllChildrenRecursively(node: CatchClause?): Set<AstNode> {

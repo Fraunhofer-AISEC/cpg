@@ -131,13 +131,13 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is Lambda -> handleLambda(node)
             is UnaryOperator -> handleUnaryOperator(node)
             // Statements
-            is Return -> handleReturnStatement(node)
-            is ForEach -> handleForEachStatement(node)
-            is Do -> handleDoStatement(node)
-            is While -> handleWhileStatement(node)
-            is For -> handleForStatement(node)
-            is Switch -> handleSwitchStatement(node)
-            is If -> handleIfStatement(node)
+            is Return -> handleReturn(node)
+            is ForEach -> handleForEach(node)
+            is Do -> handleDo(node)
+            is While -> handleWhile(node)
+            is For -> handleFor(node)
+            is Switch -> handleSwitch(node)
+            is If -> handleIf(node)
             is Throw -> handleThrow(node)
             // Declarations
             is Field -> handleField(node)
@@ -273,23 +273,19 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         node.initializer?.let { node.prevDFGEdges += it }
     }
 
-    /**
-     * Adds the DFG edge for a [Return]. The data flows from the return value to the
-     * statement.
-     */
-    protected fun handleReturnStatement(node: Return) {
+    /** Adds the DFG edge for a [Return]. The data flows from the return value to the statement. */
+    protected fun handleReturn(node: Return) {
         node.returnValues.forEach { node.prevDFGEdges += it }
     }
 
     /**
-     * Adds the DFG edge for a [ForEach]. The data flows from the
-     * [ForEach.iterable] to the [ForEach.variable]. However, since the
-     * [ForEach.variable] is a [Statement], we have to identify the variable which is used
-     * in the loop. In most cases, we should have a [DeclarationStatement] which means that we can
-     * unwrap the [Variable]. If this is not the case, we assume that the last [Variable] in the
-     * statement is the one we care about.
+     * Adds the DFG edge for a [ForEach]. The data flows from the [ForEach.iterable] to the
+     * [ForEach.variable]. However, since the [ForEach.variable] is a [Statement], we have to
+     * identify the variable which is used in the loop. In most cases, we should have a
+     * [DeclarationStatement] which means that we can unwrap the [Variable]. If this is not the
+     * case, we assume that the last [Variable] in the statement is the one we care about.
      */
-    protected fun handleForEachStatement(node: ForEach) {
+    protected fun handleForEach(node: ForEach) {
         node.iterable?.let { iterable ->
             if (node.variable is DeclarationStatement) {
                 (node.variable as DeclarationStatement).declarations.forEach {
@@ -299,7 +295,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 node.variable.variables.lastOrNull()?.prevDFGEdges += iterable
                 node.assume(
                     AssumptionType.AmbiguityAssumption,
-                    "We assume that the last Variable in the statement kept in \"variable\" is the variable we care about in the ForEachStatement if there is no DeclarationStatement related to the iterable.\n\n" +
+                    "We assume that the last Variable in the statement kept in \"variable\" is the variable we care about in the ForEach if there is no DeclarationStatement related to the iterable.\n\n" +
                         "To verify this assumption, we need to check if the last Variable of the variable is indeed the one where we assign the iterable's elements to.",
                 )
             }
@@ -309,19 +305,19 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge from [ForEach.variable] to the [ForEach] to show the
-     * dependence between data and the branching node.
+     * Adds the DFG edge from [ForEach.variable] to the [ForEach] to show the dependence between
+     * data and the branching node.
      */
-    protected fun handleDoStatement(node: Do) {
+    protected fun handleDo(node: Do) {
         node.condition?.let { node.prevDFGEdges += it }
     }
 
     /**
-     * Adds the DFG edge from [For.condition] or [For.conditionDeclaration] to the
-     * [For] to show the dependence between data and the branching node. Usage of one or
-     * the other in the statement is mutually exclusive.
+     * Adds the DFG edge from [For.condition] or [For.conditionDeclaration] to the [For] to show the
+     * dependence between data and the branching node. Usage of one or the other in the statement is
+     * mutually exclusive.
      */
-    protected fun handleForStatement(node: For) {
+    protected fun handleFor(node: For) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
@@ -330,11 +326,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge from [If.condition] or [If.conditionDeclaration] to the
-     * [If] to show the dependence between data and the branching node. Usage of one or the
-     * other in the statement is mutually exclusive.
+     * Adds the DFG edge from [If.condition] or [If.conditionDeclaration] to the [If] to show the
+     * dependence between data and the branching node. Usage of one or the other in the statement is
+     * mutually exclusive.
      */
-    protected fun handleIfStatement(node: If) {
+    protected fun handleIf(node: If) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,
@@ -343,11 +339,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge from [Switch.selector] or [Switch.selectorDeclaration] to
-     * the [Switch] to show the dependence between data and the branching node. Usage of
-     * one or the other in the statement is mutually exclusive.
+     * Adds the DFG edge from [Switch.selector] or [Switch.selectorDeclaration] to the [Switch] to
+     * show the dependence between data and the branching node. Usage of one or the other in the
+     * statement is mutually exclusive.
      */
-    protected fun handleSwitchStatement(node: Switch) {
+    protected fun handleSwitch(node: Switch) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.selector,
@@ -356,11 +352,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge from [While.condition] or [While.conditionDeclaration] to
-     * the [While] to show the dependence between data and the branching node. Usage of one
-     * or the other in the statement is mutually exclusive.
+     * Adds the DFG edge from [While.condition] or [While.conditionDeclaration] to the [While] to
+     * show the dependence between data and the branching node. Usage of one or the other in the
+     * statement is mutually exclusive.
      */
-    protected fun handleWhileStatement(node: While) {
+    protected fun handleWhile(node: While) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,

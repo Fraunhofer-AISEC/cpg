@@ -277,7 +277,7 @@ class DFGTest {
      * [ControlFlowSensitiveDFGPass].
      */
     @Test
-    fun testReturnStatement() {
+    fun testReturn() {
         val result = GraphExamples.getReturnTest()
 
         val returnFunction = result.functions["testReturn"]

@@ -377,8 +377,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                     log.debug("{}", node)
                     assertTrue(
                         node is DeclarationStatement ||
-                            statements.indexOf(node) == statements.size - 1 &&
-                                node is Return
+                            statements.indexOf(node) == statements.size - 1 && node is Return
                     )
                 }
             )

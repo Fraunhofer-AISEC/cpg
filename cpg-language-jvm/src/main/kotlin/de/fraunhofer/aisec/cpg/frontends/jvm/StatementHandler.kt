@@ -185,6 +185,5 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         return stmt
     }
 
-    private fun handleReturnVoidStmt(returnStmt: JReturnVoidStmt) =
-        newReturn(rawNode = returnStmt)
+    private fun handleReturnVoidStmt(returnStmt: JReturnVoidStmt) = newReturn(rawNode = returnStmt)
 }

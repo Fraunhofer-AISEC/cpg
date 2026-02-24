@@ -280,10 +280,8 @@ class MultiValueEvaluator : ValueEvaluator() {
     private fun handleSimpleLoopVariable(expr: Reference, depth: Int): Collection<Any?> {
         val loop =
             expr.prevDFG.firstOrNull { it.astParent is For }?.astParent as? For
-                ?: expr.prevDFG
-                    .firstOrNull { it.astParent?.astParent is For }
-                    ?.astParent
-                    ?.astParent as? For
+                ?: expr.prevDFG.firstOrNull { it.astParent?.astParent is For }?.astParent?.astParent
+                    as? For
         if (loop == null || loop.condition !is BinaryOperator) return setOf()
 
         var loopVar: Any? =

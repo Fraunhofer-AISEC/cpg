@@ -70,8 +70,8 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     /**
-     * This function checks for each [Assign], [Comprehension] and [ForEach] whether there
-     * is already a matching variable or not. New variables can be one of:
+     * This function checks for each [Assign], [Comprehension] and [ForEach] whether there is
+     * already a matching variable or not. New variables can be one of:
      * - [Field] if we are currently in a record
      * - [Variable] otherwise
      */
@@ -287,7 +287,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         }
     }
 
-    // New variables can also be declared as `variable` in a [ForEachStatement]
+    // New variables can also be declared as `variable` in a [ForEach]
     private fun handleForEach(node: ForEach) {
         when (val forVar = node.variable) {
             is Reference -> {
