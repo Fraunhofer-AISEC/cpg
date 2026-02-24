@@ -192,7 +192,7 @@ class JVMLanguageFrontendTest {
     }
 
     @Ignore(
-        "This test is too slow (around 4 minutes) and is not meant to be ran in the regular test suite (yet)."
+        "This test is too slow (around 30 seconds) and is not meant to be ran in the regular test suite (yet)."
     )
     @Test
     fun testRealHelloWorldApk() {

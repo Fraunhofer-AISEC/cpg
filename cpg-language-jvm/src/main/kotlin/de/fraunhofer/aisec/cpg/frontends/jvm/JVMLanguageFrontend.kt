@@ -149,23 +149,33 @@ class JVMLanguageFrontend(
 
         for (sootClass in view.classes) {
             // Create an appropriate namespace, if it does not already exist
-            val pkg =
-                packages.computeIfAbsent(sootClass.type.packageName.name) {
-                    val pkg = newNamespace(it)
-                    scopeManager.addDeclaration(pkg)
-                    tu.addDeclaration(pkg)
-                    pkg
+            var pkg =
+                sootClass.type.packageName?.name?.split(language.namespaceDelimiter)?.fold(null) {
+                    previous: Namespace?,
+                    path ->
+                    val fqn = previous?.name.fqn(path)
+                    val innerPkg =
+                        packages.computeIfAbsent(fqn.toString()) {
+                            val pkg = newNamespace(it)
+                            scopeManager.addDeclaration(pkg)
+                            val holder = previous ?: tu
+                            holder.addDeclaration(pkg)
+                            pkg
+                        }
+                    // Enter namespace scope
+                    scopeManager.enterScope(innerPkg)
+                    innerPkg
                 }
-
-            // Enter namespace scope
-            scopeManager.enterScope(pkg)
 
             val decl = declarationHandler.handle(sootClass)
             scopeManager.addDeclaration(decl)
-            pkg.addDeclaration(decl)
+            pkg?.addDeclaration(decl)
 
             // Leave namespace scope
-            scopeManager.leaveScope(pkg)
+            while (pkg is Namespace) {
+                scopeManager.leaveScope(pkg)
+                pkg = pkg.astParent as? Namespace
+            }
 
             // We need to clear the processed because they need to be per-file and we only have one
             // frontend for all files
