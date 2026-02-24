@@ -33,9 +33,9 @@ import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Cipher
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.CipherSuite
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.InitializationVector
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Input
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Key
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.MessageAuthenticationCode
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Secret
-import de.fraunhofer.aisec.cpg.graph.concepts.ontology.SelectorKey
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.TransportEncryption
 import kotlin.collections.toMutableList
 
@@ -59,14 +59,15 @@ open class TLS(
     underlyingNode: Node,
 ) :
     TransportEncryption(
-        true,
-        true,
-        "TLS",
-        versionNumber,
-        cipherSuites,
-        basedOn,
-        secret,
-        underlyingNode,
+        enabled = true,
+        enforced = true,
+        protocol = "TLS",
+        protocolVersion = versionNumber,
+        tlsSignatureAlgorithm = null,
+        cipherSuites = cipherSuites,
+        secret = secret,
+        basedOn = basedOn,
+        underlyingNode = underlyingNode,
     )
 
 class TLS1_2(
@@ -171,11 +172,11 @@ class ECDHKeyExchange(val parameter: String?, pSize: Int?, underlyingNode: Node?
         underlyingNode = underlyingNode,
     )
 
-class CMAC(val cipher: Cipher?, input: Input?, key: SelectorKey?, underlyingNode: Node?) :
+class CMAC(val cipher: Cipher?, input: Input?, key: Key?, underlyingNode: Node?) :
     MessageAuthenticationCode(
         type = "CMAC",
         input = input,
-        selectorKey = key,
+        key = key,
         underlyingNode = underlyingNode,
     )
 
@@ -183,13 +184,13 @@ class GMAC(
     val cipher: Cipher?,
     val iv: InitializationVector?,
     input: Input?,
-    key: SelectorKey?,
+    key: Key?,
     underlyingNode: Node?,
 ) :
     MessageAuthenticationCode(
         type = "GMAC",
         input = input,
-        selectorKey = key,
+        key = key,
         underlyingNode = underlyingNode,
     )
 
@@ -197,36 +198,31 @@ class KMAC(
     val hashFunction: HashFunction?,
     val strength: Int?,
     input: Input?,
-    key: SelectorKey?,
+    key: Key?,
     underlyingNode: Node?,
 ) :
     MessageAuthenticationCode(
         type = "KMAC",
         input = input,
-        selectorKey = key,
+        key = key,
         underlyingNode = underlyingNode,
     )
 
-class HMAC(
-    val hashFunction: HashFunction?,
-    input: Input?,
-    key: SelectorKey?,
-    underlyingNode: Node?,
-) :
+class HMAC(val hashFunction: HashFunction?, input: Input?, key: Key?, underlyingNode: Node?) :
     MessageAuthenticationCode(
         type = "HMAC",
         input = input,
-        selectorKey = key,
+        key = key,
         underlyingNode = underlyingNode,
     )
 
-open class Signature(val schemeName: String?, val key: SelectorKey?, underlyingNode: Node?) :
+open class Signature(val schemeName: String?, val key: Key?, underlyingNode: Node?) :
     Concept(underlyingNode = underlyingNode)
 
 class RSASignature(
     val rsaCipher: AsymmetricCipher?,
     val formattingScheme: FormattingScheme?,
-    key: SelectorKey?,
+    key: Key?,
     underlyingNode: Node?,
 ) : Signature(schemeName = "RSA", key = key, underlyingNode = underlyingNode)
 
@@ -234,7 +230,7 @@ class DSASignature(
     val primePSize: Int?,
     val primeQSize: Int?,
     val hashFunction: HashFunction?,
-    key: SelectorKey?,
+    key: Key?,
     underlyingNode: Node?,
 ) : Signature(schemeName = "DSA", key = key, underlyingNode = underlyingNode)
 
@@ -242,7 +238,7 @@ class ECDSASignature(
     val parameter: String?,
     val algorithmName: String?,
     val hashFunction: HashFunction?,
-    key: SelectorKey?,
+    key: Key?,
     underlyingNode: Node?,
 ) : Signature(schemeName = "DSA", key = key, underlyingNode = underlyingNode)
 
@@ -252,7 +248,7 @@ class SlhDsaSignature(
     val variant: Variant?,
     val hashFunction: HashFunction?,
     val version: Version?,
-    key: SelectorKey?,
+    key: Key?,
     underlyingNode: Node?,
 ) : Signature(schemeName = "SLH-DSA", key = key, underlyingNode = underlyingNode)
 
@@ -262,7 +258,7 @@ class MlDsaSignature(
     val variant: Variant?,
     val hashFunction: HashFunction?,
     val version: Version?,
-    key: SelectorKey?,
+    key: Key?,
     underlyingNode: Node?,
 ) : Signature(schemeName = "ML-DSA", key = key, underlyingNode = underlyingNode)
 
@@ -272,7 +268,7 @@ class StatefulHashBasedSignature(
     val variant: Variant?,
     val hashFunction: HashFunction?,
     val version: Version?,
-    key: SelectorKey?,
+    key: Key?,
     underlyingNode: Node?,
 ) : Signature(schemeName = schemeName, key = key, underlyingNode = underlyingNode)
 

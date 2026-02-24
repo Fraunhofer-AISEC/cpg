@@ -34,7 +34,7 @@ import kotlin.test.*
 class ExpressionTest {
 
     @Test
-    fun testCast() {
+    fun testCastExpression() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(
@@ -58,13 +58,13 @@ class ExpressionTest {
         val s = mainFunc.variables["s"]
         assertNotNull(s)
 
-        val cast = s.initializer as? Cast
+        val cast = s.initializer as? CastExpression
         assertNotNull(cast)
         assertFullName("main.MyStruct", cast.castType)
         assertSame(f, (cast.expression as? Reference)?.refersTo)
 
         val ignored = main.variables("_")
-        ignored.forEach { assertIs<Cast>(it.initializer) }
+        ignored.forEach { assertIs<CastExpression>(it.initializer) }
     }
 
     @Test
@@ -85,7 +85,10 @@ class ExpressionTest {
         assertLocalName("int[]", b.type)
 
         // [:1]
-        var slice = assertIs<Range>(assertIs<Subscription>(b.firstAssignment).subscriptExpression)
+        var slice =
+            assertIs<RangeExpression>(
+                assertIs<SubscriptExpression>(b.firstAssignment).subscriptExpression
+            )
         assertNull(slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
@@ -95,7 +98,7 @@ class ExpressionTest {
         assertLocalName("int[]", c.type)
 
         // [1:]
-        slice = assertIs(assertIs<Subscription>(c.firstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(c.firstAssignment).subscriptExpression)
         assertLiteralValue(1, slice.floor)
         assertNull(slice.ceiling)
         assertNull(slice.third)
@@ -105,7 +108,7 @@ class ExpressionTest {
         assertLocalName("int[]", d.type)
 
         // [0:1]
-        slice = assertIs(assertIs<Subscription>(d.firstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(d.firstAssignment).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
@@ -115,7 +118,7 @@ class ExpressionTest {
         assertLocalName("int[]", e.type)
 
         // [0:1:1]
-        slice = assertIs(assertIs<Subscription>(e.firstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(e.firstAssignment).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertLiteralValue(1, slice.third)

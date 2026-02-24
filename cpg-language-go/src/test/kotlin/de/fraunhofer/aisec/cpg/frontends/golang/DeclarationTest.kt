@@ -163,9 +163,9 @@ class DeclarationTest {
         assertNotNull(field)
 
         val init = s.initializer
-        assertIs<InitializerList>(init)
+        assertIs<InitializerListExpression>(init)
 
-        val keyValue = init.initializers<KeyValue>(0)
+        val keyValue = init.initializers<KeyValueExpression>(0)
         assertNotNull(keyValue)
 
         val key = keyValue.key
@@ -232,9 +232,9 @@ class DeclarationTest {
         assertNull(e.initializer)
 
         // The tuple (e,f) does have an initializer
-        val ef = main.allChildren<Tuple> { it.name.toString() == "(e,f)" }.firstOrNull()
+        val ef = main.allChildren<TupleDeclaration> { it.name.toString() == "(e,f)" }.firstOrNull()
         assertNotNull(ef)
-        assertIs<Call>(ef.initializer)
+        assertIs<CallExpression>(ef.initializer)
         assertEquals(ef, e.astParent)
 
         // The next two variables are using a short assignment, therefore they do not have an
@@ -340,7 +340,7 @@ class DeclarationTest {
         assertNotNull(callPrintf)
         assertInvokes(callPrintf, printf)
 
-        val expr = result.allChildren<MemberAccess>().firstOrNull()
+        val expr = result.allChildren<MemberExpression>().firstOrNull()
         assertNotNull(expr)
 
         val fmt = result.variables["fmt"]
@@ -378,7 +378,7 @@ class DeclarationTest {
 
         val mce = assign.target
         assertNotNull(mce)
-        assertIs<MemberAccess>(mce)
+        assertIs<MemberExpression>(mce)
         assertRefersTo(mce, field)
     }
 }

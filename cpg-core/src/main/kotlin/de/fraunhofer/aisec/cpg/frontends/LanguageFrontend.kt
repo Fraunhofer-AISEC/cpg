@@ -27,8 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -36,19 +35,6 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.util.*
 import org.slf4j.LoggerFactory
-
-/** Configuration specific to the frontend. */
-abstract class FrontendConfiguration<L : LanguageFrontend<*, *>> {
-    /**
-     * Determines whether the body of a function should NOT be parsed.
-     *
-     * @param frontend The language frontend
-     * @param node The function declaration to check
-     * @return true if the function's body should not be parsed, false otherwise (parse the body)
-     */
-    context(provider: FrontendProvider<L>)
-    abstract fun doNotParseBody(node: Function): Boolean
-}
 
 /**
  * The main task of the language frontend is to translate the programming language-specific files to
@@ -80,15 +66,11 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
     val typeManager: TypeManager = ctx.typeManager
     val config: TranslationConfiguration = ctx.config
 
-    open val frontendConfiguration: FrontendConfiguration<out LanguageFrontend<*, *>>? by lazy {
-        this.ctx.config.frontendConfigurations[this::class]
-    }
-
-    var currentTU: TranslationUnit? = null
+    var currentTU: TranslationUnitDeclaration? = null
 
     @Throws(TranslationException::class)
-    fun parseAll(): List<TranslationUnit> {
-        val units = ArrayList<TranslationUnit>()
+    fun parseAll(): List<TranslationUnitDeclaration> {
+        val units = ArrayList<TranslationUnitDeclaration>()
         for (componentFiles in config.softwareComponents.values) {
             for (sourceFile in componentFiles) {
                 units.add(parse(sourceFile))
@@ -97,7 +79,7 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
         return units
     }
 
-    @Throws(TranslationException::class) abstract fun parse(file: File): TranslationUnit
+    @Throws(TranslationException::class) abstract fun parse(file: File): TranslationUnitDeclaration
 
     /**
      * This function returns a [TranslationResult], but rather than parsing source code, the

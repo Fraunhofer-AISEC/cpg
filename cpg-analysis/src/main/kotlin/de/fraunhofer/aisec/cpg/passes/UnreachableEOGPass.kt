@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
@@ -47,7 +47,6 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * by setting the [EvaluationOrder.unreachable] property to true.
  */
 @DependsOn(ControlFlowSensitiveDFGPass::class)
-@Description("A pass which marks unreachable EOG edges.")
 open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     override fun cleanup() {
@@ -64,7 +63,7 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * We perform the actions for each [Function].
+     * We perform the actions for each [FunctionDeclaration].
      *
      * @param node every node in the TranslationResult
      */
@@ -157,24 +156,20 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val evalResult = n.language.evaluator.evaluate(n.condition)
 
         val (unreachableEdges, remainingEdges) =
-            when (evalResult) {
-                true -> {
-                    // If the condition is always true, the "false" branch is always unreachable
-                    Pair(
-                        n.nextEOGEdges.filter { e -> e.branch == false },
-                        n.nextEOGEdges.filter { e -> e.branch != false },
-                    )
-                }
-                false -> {
-                    // If the condition is always false, the "true" branch is always unreachable
-                    Pair(
-                        n.nextEOGEdges.filter { e -> e.branch == true },
-                        n.nextEOGEdges.filter { e -> e.branch != true },
-                    )
-                }
-                else -> {
-                    Pair(listOf(), n.nextEOGEdges)
-                }
+            if (evalResult == true) {
+                // If the condition is always true, the "false" branch is always unreachable
+                Pair(
+                    n.nextEOGEdges.filter { e -> e.branch == false },
+                    n.nextEOGEdges.filter { e -> e.branch != false },
+                )
+            } else if (evalResult == false) {
+                // If the condition is always false, the "true" branch is always unreachable
+                Pair(
+                    n.nextEOGEdges.filter { e -> e.branch == true },
+                    n.nextEOGEdges.filter { e -> e.branch != true },
+                )
+            } else {
+                Pair(listOf(), n.nextEOGEdges)
             }
 
         return propagateState(
@@ -210,24 +205,18 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val evalResult = n.language.evaluator.evaluate(condition)
 
         val (unreachableEdges, remainingEdges) =
-            when (evalResult) {
-                is Boolean if evalResult -> {
-                    Pair(
-                        n.nextEOGEdges.filter { e -> e.branch == false },
-                        n.nextEOGEdges.filter { e -> e.branch != false },
-                    )
-                }
-
-                is Boolean if !evalResult -> {
-                    Pair(
-                        n.nextEOGEdges.filter { e -> e.branch == true },
-                        n.nextEOGEdges.filter { e -> e.branch != true },
-                    )
-                }
-
-                else -> {
-                    Pair(listOf(), n.nextEOGEdges)
-                }
+            if (evalResult is Boolean && evalResult == true) {
+                Pair(
+                    n.nextEOGEdges.filter { e -> e.branch == false },
+                    n.nextEOGEdges.filter { e -> e.branch != false },
+                )
+            } else if (evalResult is Boolean && evalResult == false) {
+                Pair(
+                    n.nextEOGEdges.filter { e -> e.branch == true },
+                    n.nextEOGEdges.filter { e -> e.branch != true },
+                )
+            } else {
+                Pair(listOf(), n.nextEOGEdges)
             }
         return propagateState(
             unreachableEdges = unreachableEdges,

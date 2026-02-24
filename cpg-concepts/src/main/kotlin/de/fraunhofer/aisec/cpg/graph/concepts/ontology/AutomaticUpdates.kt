@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import java.time.Duration
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
-import kotlin.time.Duration
 
 /**
  * This feature is, e.g., available on some VM services to automatically update their software. It

@@ -27,11 +27,11 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construction
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.*
@@ -53,22 +53,22 @@ class CXXResolveTest {
         val main = tu.functions["main"]
         assertNotNull(main)
 
-        val realCalls = main.calls.filter { it !is Construction }
+        val realCalls = main.calls.filter { it !is ConstructExpression }
 
         // 0, 1 and 2 are construct expressions -> our "real" calls start at index 3
         val aFoo = realCalls.getOrNull(0)
-        assertIs<MemberCall>(aFoo)
+        assertIs<MemberCallExpression>(aFoo)
         assertLocalName("foo", aFoo)
         assertLocalName("a", aFoo.base)
         // a.foo should connect to A::foo
-        assertLocalName("A", (aFoo.invokes.firstOrNull() as? Method)?.recordDeclaration)
+        assertLocalName("A", (aFoo.invokes.firstOrNull() as? MethodDeclaration)?.recordDeclaration)
 
         val bFoo = realCalls.getOrNull(1)
-        assertIs<MemberCall>(bFoo)
+        assertIs<MemberCallExpression>(bFoo)
         assertLocalName("foo", bFoo)
         assertLocalName("b", bFoo.base)
         // b.foo should connect to B::foo
-        assertLocalName("B", (bFoo.invokes.firstOrNull() as? Method)?.recordDeclaration)
+        assertLocalName("B", (bFoo.invokes.firstOrNull() as? MethodDeclaration)?.recordDeclaration)
 
         val foo = realCalls.getOrNull(2)
         assertNotNull(foo)
@@ -77,7 +77,7 @@ class CXXResolveTest {
         val func = foo.invokes.firstOrNull()
         assertNotNull(func)
         assertLocalName("foo", func)
-        assertFalse(func is Method)
+        assertFalse(func is MethodDeclaration)
         assertTrue(func.isInferred)
 
         val cFoo = main.calls.getOrNull(6)
@@ -85,7 +85,7 @@ class CXXResolveTest {
 
         // c.foo should connect to C::foo
         // and C as well as C:foo should be inferred
-        val method = cFoo.invokes.firstOrNull() as? Method
+        val method = cFoo.invokes.firstOrNull() as? MethodDeclaration
         assertNotNull(method)
         assertLocalName("foo", method)
         assertTrue(method.isInferred)
@@ -112,20 +112,20 @@ class CXXResolveTest {
         val main = tu.functions["main"]
         assertNotNull(main)
 
-        val foo = main.bodyOrNull<Call>(0)
+        val foo = main.bodyOrNull<CallExpression>(0)
         assertNotNull(foo)
 
         var func = foo.invokes.firstOrNull()
         assertNotNull(func)
         assertFalse(func.isInferred)
-        assertFalse(func is Method)
+        assertFalse(func is MethodDeclaration)
 
-        val cFoo = main.bodyOrNull<MemberCall>(2)
+        val cFoo = main.bodyOrNull<MemberCallExpression>(2)
         assertNotNull(cFoo)
 
         func = cFoo.invokes.firstOrNull()
         assertNotNull(func)
         assertTrue(func.isInferred)
-        assertTrue(func is Method)
+        assertTrue(func is MethodDeclaration)
     }
 }

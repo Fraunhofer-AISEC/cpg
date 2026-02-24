@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.newArrayConstruction
+import de.fraunhofer.aisec.cpg.graph.newNewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.pointer
 
 class Query {
@@ -108,7 +108,7 @@ class Query {
                         record("Dataflow") {
                             field("logger", t("Logger")) {
                                 // TODO: this field is static. How do we model this?
-                                this.modifiers = setOf("static")
+                                this.modifiers = listOf("static")
                                 memberCall("getLogger", ref("Logger")) {
                                     literal("DataflowLogger", t("string"))
                                 }
@@ -186,7 +186,7 @@ class Query {
                         record("Dataflow") {
                             field("logger", t("Logger")) {
                                 // TODO: this field is static. How do we model this?
-                                this.modifiers = setOf("static")
+                                this.modifiers = listOf("static")
                                 memberCall("getLogger", ref("Logger")) {
                                     literal("DataflowLogger", t("string"))
                                 }
@@ -261,7 +261,7 @@ class Query {
                         record("Dataflow") {
                             field("logger", t("Logger")) {
                                 // TODO: this field is static. How do we model this?
-                                this.modifiers = setOf("static")
+                                this.modifiers = listOf("static")
                                 memberCall("getLogger", ref("Logger")) {
                                     literal("DataflowLogger", t("string"))
                                 }
@@ -339,7 +339,7 @@ class Query {
                             body {
                                 declare {
                                     variable("c", t("char").pointer()) {
-                                        val creationExpr = newArrayConstruction()
+                                        val creationExpr = newNewArrayExpression()
                                         creationExpr.addDimension(literal(4, t("int")))
                                         creationExpr.type = t("char")
                                         this.initializer = creationExpr
@@ -368,7 +368,7 @@ class Query {
                         function("some_other_function", t("char")) {
                             declare {
                                 variable("c", t("char").pointer()) {
-                                    val creationExpr = newArrayConstruction()
+                                    val creationExpr = newNewArrayExpression()
                                     creationExpr.addDimension(literal(100, t("int")))
                                     creationExpr.type = t("char")
                                     this.initializer = creationExpr
@@ -399,7 +399,7 @@ class Query {
                             body {
                                 declare {
                                     variable("c", t("char").pointer()) {
-                                        val creationExpr = newArrayConstruction()
+                                        val creationExpr = newNewArrayExpression()
                                         creationExpr.addDimension(literal(4, t("int")))
                                         creationExpr.type = t("char")
                                         this.initializer = creationExpr
@@ -451,7 +451,7 @@ class Query {
                                     thenStmt {
                                         ref("c") assign
                                             run {
-                                                val creationExpr = newArrayConstruction()
+                                                val creationExpr = newNewArrayExpression()
                                                 creationExpr.addDimension(literal(4, t("int")))
                                                 creationExpr.type = t("char")
                                                 (creationExpr)
@@ -460,7 +460,7 @@ class Query {
                                     elseStmt {
                                         ref("c") assign
                                             run {
-                                                val creationExpr = newArrayConstruction()
+                                                val creationExpr = newNewArrayExpression()
                                                 creationExpr.addDimension(literal(5, t("int")))
                                                 creationExpr.type = t("char")
                                                 (creationExpr)
@@ -510,7 +510,7 @@ class Query {
                             body {
                                 declare {
                                     variable("c", t("char").pointer()) {
-                                        val creationExpr = newArrayConstruction()
+                                        val creationExpr = newNewArrayExpression()
                                         creationExpr.addDimension(literal(4, t("int")))
                                         creationExpr.type = t("char")
                                         this.initializer = creationExpr

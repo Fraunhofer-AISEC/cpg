@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import java.util.Objects
 import kotlin.Any
+import kotlin.Array
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.Short
@@ -46,8 +47,8 @@ public open class ObjectStorageService(
     public val httpEndpoint: HttpEndpoint?,
     activityLogging: ActivityLogging?,
     storage: MutableList<Storage?>,
-    ips: List<String>?,
-    ports: List<Short>?,
+    ips: Array<String>?,
+    ports: Array<Short>?,
     authenticity: Boolean?,
     computes: MutableList<Compute?>,
     serviceMetadataDocument: ServiceMetadataDocument?,

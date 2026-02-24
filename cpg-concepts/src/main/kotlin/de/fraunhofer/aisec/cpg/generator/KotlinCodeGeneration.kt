@@ -84,14 +84,13 @@ fun writeKotlinClassesToFolder(
             ktSource.objectProperties
                 .sortedWith(
                     compareBy<Properties> {
-                            it.propertyName ==
-                                "linkedConcept" // linkedConcept always last Property.
+                            it.propertyName == "operatesOn" // operatesOn always last Property.
                         } // Hacky but needed because we ignore concept and always replace it with
-                        // linkedConcept.
+                        // operatesOn.
                         // When generating Operations, we always inherit from Operation which has a
-                        // concept and underlying node property. When now linkedConcept is directly
-                        // processed before concept then we skip linkedConcept and replace the
-                        // processing of concept with linkedConcept. When doing that the order stays
+                        // concept and underlying node property. When now operatesOn is directly
+                        // processed before concept then we skip operatesOn and replace the
+                        // processing of concept with operatesOn. When doing that the order stays
                         // the same.
                         .thenBy { it.propertyName }
                 )
@@ -275,7 +274,7 @@ private fun addEqualsMethod(classBuilder: TypeSpec.Builder, ktSource: ClassAbstr
     // Add conditions for all data and object properties of the current class
     for (property in
         ktSource.dataProperties +
-            ktSource.objectProperties.filter { !it.propertyName.equals("linkedConcept") }) {
+            ktSource.objectProperties.filter { !it.propertyName.equals("operatesOn") }) {
         val propertyName = property.propertyName.replaceFirstChar { it.lowercase() }
         conditions.add("other.${propertyName} == this.${propertyName}")
     }
@@ -300,7 +299,7 @@ private fun addHashCodeMethod(
     // Add all data and object properties of the current class
     for (property in
         ktSource.dataProperties +
-            ktSource.objectProperties.filter { !it.propertyName.equals("linkedConcept") }) {
+            ktSource.objectProperties.filter { !it.propertyName.equals("operatesOn") }) {
         val propertyName = property.propertyName.replaceFirstChar { it.lowercase() }
         hashProperties.add(propertyName)
     }
@@ -412,12 +411,12 @@ private fun addPropertiesToClass(
             constructorBuilder.addParameter(propertyName, parameterType)
         } else if (propertyName != "concept") {
             val parameterType =
-                if (propertyName == "linkedConcept") typeName else typeName.copy(nullable = true)
+                if (propertyName == "operatesOn") typeName else typeName.copy(nullable = true)
 
             // For own properties: add as property stored in class
             // For parent properties: just pass through without storing
-            // Special case: linkedConcept should only be stored in Operation class
-            if (!isParent && (propertyName != "linkedConcept" || className == "Operation")) {
+            // Special case: operatesOn should only be stored in Operation class
+            if (!isParent && (propertyName != "operatesOn" || className == "Operation")) {
                 classBuilder.addProperty(
                     PropertySpec.builder(propertyName, parameterType)
                         .initializer(propertyName)
@@ -441,8 +440,8 @@ private fun addPropertiesToClass(
         if (isParent) {
             // Add SuperclassConstructorParameter for the property.
             if (propertyName == "concept") {
-                classBuilder.addSuperclassConstructorParameter("linkedConcept").build()
-            } else if (propertyName == "linkedConcept") {
+                classBuilder.addSuperclassConstructorParameter("operatesOn").build()
+            } else if (propertyName == "operatesOn") {
                 continue
             } else {
                 classBuilder.addSuperclassConstructorParameter(propertyName).build()
@@ -517,8 +516,8 @@ private val dataPropertyTypeMap: Map<String, TypeName> =
         put("float", FLOAT)
         put("boolean", BOOLEAN)
         put(
-            "de.fraunhofer.aisec.cpg.graph.declarations.Function",
-            ClassName("de.fraunhofer.aisec.cpg.graph.declarations", "Function"),
+            "de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration",
+            ClassName("de.fraunhofer.aisec.cpg.graph.declarations", "FunctionDeclaration"),
         )
         put(
             "de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression",
@@ -529,21 +528,27 @@ private val dataPropertyTypeMap: Map<String, TypeName> =
             ClassName("de.fraunhofer.aisec.cpg.graph", "Node"),
         )
         put(
-            "de.fraunhofer.aisec.cpg.graph.statements.expressions.Call",
-            ClassName("de.fraunhofer.aisec.cpg.graph.statements.expressions", "Call"),
+            "de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression",
+            ClassName("de.fraunhofer.aisec.cpg.graph.statements.expressions", "CallExpression"),
         )
         put(
-            "java.util.List<de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit>",
+            "java.util.List<de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration>",
             ClassName("java.util", "List")
                 .parameterizedBy(
-                    ClassName("de.fraunhofer.aisec.cpg.graph.declarations", "TranslationUnit")
+                    ClassName(
+                        "de.fraunhofer.aisec.cpg.graph.declarations",
+                        "TranslationUnitDeclaration",
+                    )
                 ),
         )
         put(
-            "java.util.List<de.fraunhofer.aisec.cpg.graph.statements.expressions.Call>",
+            "java.util.List<de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression>",
             ClassName("java.util", "List")
                 .parameterizedBy(
-                    ClassName("de.fraunhofer.aisec.cpg.graph.statements.expressions", "Call")
+                    ClassName(
+                        "de.fraunhofer.aisec.cpg.graph.statements.expressions",
+                        "CallExpression",
+                    )
                 ),
         )
         put("java.util.Map<String, String>", MUTABLE_MAP.parameterizedBy(STRING, STRING))

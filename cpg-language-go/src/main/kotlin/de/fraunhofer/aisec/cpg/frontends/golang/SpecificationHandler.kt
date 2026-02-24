@@ -40,12 +40,12 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             is GoStandardLibrary.Ast.TypeSpec -> handleTypeSpec(node)
             is GoStandardLibrary.Ast.ValueSpec -> handleValueSpec(node)
             else -> {
-                handleNotSupported(node, node.goType)
+                return handleNotSupported(node, node.goType)
             }
         }
     }
 
-    private fun handleImportSpec(importSpec: GoStandardLibrary.Ast.ImportSpec): Import {
+    private fun handleImportSpec(importSpec: GoStandardLibrary.Ast.ImportSpec): ImportDeclaration {
         // We set the filename of the include declaration to the package path, i.e., its full path
         // including any module identifiers. This way we can match the include declaration back to
         // the namespace's path and name
@@ -65,7 +65,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             }
 
         val import =
-            newImport(
+            newImportDeclaration(
                 import = name,
                 alias = alias,
                 style = ImportStyle.IMPORT_NAMESPACE,
@@ -97,7 +97,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
     private fun handleStructTypeSpec(
         typeSpec: GoStandardLibrary.Ast.TypeSpec,
         structType: GoStandardLibrary.Ast.StructType,
-    ): Record {
+    ): RecordDeclaration {
         val record = buildRecordDeclaration(structType, typeSpec.name.name, typeSpec)
 
         return record
@@ -107,8 +107,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         structType: GoStandardLibrary.Ast.StructType,
         name: CharSequence,
         typeSpec: GoStandardLibrary.Ast.TypeSpec? = null,
-    ): Record {
-        val record = newRecord(name, "struct", rawNode = typeSpec)
+    ): RecordDeclaration {
+        val record = newRecordDeclaration(name, "struct", rawNode = typeSpec)
 
         frontend.scopeManager.enterScope(record)
 
@@ -123,12 +123,12 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 val (fieldName, modifiers) =
                     if (field.names.isEmpty()) {
                         // Retrieve the root type local name
-                        Pair(type.root.name.localName, setOf("embedded"))
+                        Pair(type.root.name.localName, listOf("embedded"))
                     } else {
-                        Pair(field.names[0].name, setOf())
+                        Pair(field.names[0].name, listOf())
                     }
 
-                val decl = newField(fieldName, type, modifiers, rawNode = field)
+                val decl = newFieldDeclaration(fieldName, type, modifiers, rawNode = field)
                 frontend.scopeManager.addDeclaration(decl)
                 record.fields += decl
             }
@@ -143,7 +143,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         typeSpec: GoStandardLibrary.Ast.TypeSpec,
         interfaceType: GoStandardLibrary.Ast.InterfaceType,
     ): Declaration {
-        val record = newRecord(typeSpec.name.name, "interface", rawNode = typeSpec)
+        val record = newRecordDeclaration(typeSpec.name.name, "interface", rawNode = typeSpec)
 
         frontend.scopeManager.enterScope(record)
 
@@ -156,7 +156,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 // "method" actually has a name, we declare a new method
                 // declaration.
                 if (field.names.isNotEmpty()) {
-                    val method = newMethod(field.names[0].name, rawNode = field)
+                    val method = newMethodDeclaration(field.names[0].name, rawNode = field)
                     method.type = type
 
                     frontend.scopeManager.enterScope(method)
@@ -200,13 +200,12 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         if (lenValues == 1 && lenValues != valueSpec.names.size) {
             // We need to construct a "tuple" declaration on the left side that holds all the
             // variables
-            val tuple = newTuple(listOf(), null, rawNode = valueSpec)
+            val tuple = newTupleDeclaration(listOf(), null, rawNode = valueSpec)
             tuple.type = autoType()
 
             for (ident in valueSpec.names) {
                 // We want to make sure that top-level declarations, i.e, the ones that are directly
-                // in a namespace are FQNs. Otherwise, we cannot resolve them properly when we
-                // access
+                // in a namespace are FQNs. Otherwise we cannot resolve them properly when we access
                 // them outside of the package.
                 val fqn =
                     if (frontend.scopeManager.currentScope is NameScope) {
@@ -214,7 +213,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     } else {
                         ident.name
                     }
-                val decl = newVariable(fqn, rawNode = valueSpec)
+                val decl = newVariableDeclaration(fqn, rawNode = valueSpec)
 
                 if (valueSpec.type != null) {
                     decl.type = frontend.typeOf(valueSpec.type!!)
@@ -238,8 +237,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
             for ((nameIdx, ident) in valueSpec.names.withIndex()) {
                 // We want to make sure that top-level declarations, i.e, the ones that are directly
-                // in a namespace are FQNs. Otherwise, we cannot resolve them properly when we
-                // access
+                // in a namespace are FQNs. Otherwise we cannot resolve them properly when we access
                 // them outside of the package.
                 val fqn =
                     if (frontend.scopeManager.currentScope is NameScope) {
@@ -247,7 +245,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     } else {
                         ident.name
                     }
-                val decl = newVariable(fqn, rawNode = valueSpec)
+                val decl = newVariableDeclaration(fqn, rawNode = valueSpec)
                 if (type != null) {
                     decl.type = type
                 } else {
@@ -301,14 +299,13 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         }
     }
 
-    @Suppress("unused")
     private fun handleFuncTypeSpec(
         spec: GoStandardLibrary.Ast.TypeSpec,
         type: GoStandardLibrary.Ast.FuncType,
     ): Declaration {
         // We model function types as typedef's, so that we can resolve it later
         val funcType = frontend.typeOf(type)
-        val typedef = newTypedef(funcType, frontend.typeOf(spec.name), rawNode = spec)
+        val typedef = newTypedefDeclaration(funcType, frontend.typeOf(spec.name), rawNode = spec)
 
         frontend.scopeManager.addTypedef(typedef)
 
@@ -328,7 +325,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             // alias.
             spec.assign != 0 -> {
                 val aliasType = frontend.typeOf(spec.name)
-                val typedef = newTypedef(targetType, aliasType, rawNode = spec)
+                val typedef = newTypedefDeclaration(targetType, aliasType, rawNode = spec)
 
                 frontend.scopeManager.addTypedef(typedef)
                 typedef
@@ -338,7 +335,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             // use the special kind "type" to identity such records and put the target type (also
             // called the "underlying type") in the list of superclasses.
             else -> {
-                val record = newRecord(spec.name.name, "type")
+                val record = newRecordDeclaration(spec.name.name, "type")
 
                 // We add the underlying type as the single super class
                 record.superClasses = mutableListOf(targetType)

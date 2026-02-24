@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import java.util.Objects
 import kotlin.Any
+import kotlin.Array
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.Short
@@ -42,8 +43,8 @@ import kotlin.collections.MutableMap
  * provides access to a resource
  */
 public open class NetworkService(
-    public val ips: List<String>?,
-    public val ports: List<Short>?,
+    public val ips: Array<String>?,
+    public val ports: Array<Short>?,
     public val authenticity: Boolean?,
     public val computes: MutableList<Compute?>,
     public val serviceMetadataDocument: ServiceMetadataDocument?,

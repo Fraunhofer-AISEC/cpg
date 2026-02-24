@@ -28,30 +28,32 @@ package de.fraunhofer.aisec.cpg.graph.concepts.http
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authentication
+import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authorization
+import de.fraunhofer.aisec.cpg.graph.concepts.auth.RequestContext
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
-import de.fraunhofer.aisec.cpg.graph.concepts.ontology.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 
 /**
  * Creates a new [HttpClient] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
- * @param protocol The [TransportEncryption] protocol used by the client.
  * @param isTLS Whether the client uses TLS.
- * @param authenticity The [Authenticity] method used by the client.
+ * @param authentication The [Authentication] method used by the client.
  * @param connect If `true`, the created [Concept] will be connected to the underlying node by
  *   setting its `underlyingNode`.
  * @return The created [HttpClient] concept.
  */
 fun MetadataProvider.newHttpClient(
     underlyingNode: Node,
-    protocol: TransportEncryption?,
     isTLS: Boolean?,
-    authenticity: Authenticity?,
+    authentication: Authentication?,
     connect: Boolean,
 ) =
     newConcept(
-        { HttpClient(protocol = protocol, isTLS = isTLS, authenticity = authenticity) },
+        { HttpClient(isTLS = isTLS, authentication = authentication) },
         underlyingNode = underlyingNode,
         connect = connect,
     )
@@ -60,28 +62,20 @@ fun MetadataProvider.newHttpClient(
  * Creates a new [HttpRequestHandler] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
- * @param path The base path of the [HttpRequestHandler].
- * @param application The [Application] associated with the [HttpRequestHandler].
- * @param httpEndpoints A list of the [HttpEndpoint]s exposed by the [HttpRequestHandler].
+ * @param basePath The base path of the [HttpRequestHandler].
+ * @param endpoints A list of the [HttpEndpoint]s exposed by the [HttpRequestHandler].
  * @param connect If `true`, the created [Concept] will be connected to the underlying node by
  *   setting its `underlyingNode`.
  * @return The created [HttpRequestHandler] concept.
  */
 fun MetadataProvider.newHttpRequestHandler(
     underlyingNode: Node,
-    path: String?,
-    application: Application?,
-    httpEndpoints: MutableList<HttpEndpoint?>,
+    basePath: String,
+    endpoints: MutableList<HttpEndpoint>,
     connect: Boolean,
 ) =
     newConcept(
-        {
-            HttpRequestHandler(
-                path = path,
-                application = application,
-                httpEndpoints = httpEndpoints,
-            )
-        },
+        { HttpRequestHandler(basePath = basePath, endpoints = endpoints) },
         underlyingNode = underlyingNode,
         connect = connect,
     )
@@ -90,53 +84,35 @@ fun MetadataProvider.newHttpRequestHandler(
  * Creates a new [HttpEndpoint] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
- * @param rateLimiting The [RateLimiting] configuration for the endpoint.
- * @param maxInputSize The maximum input size allowed for the endpoint.
- * @param userInput A list of the [Node]s representing the user input passed to the [HttpEndpoint].
- * @param handler The handler name for the endpoint.
- * @param method The [HttpMethod] the created [HttpEndpoint] listens to.
+ * @param httpMethod The [HttpMethod] the created [HttpEndpoint] listens to.
  * @param path The path of the created [HttpEndpoint].
- * @param url The URL of the created [HttpEndpoint].
- * @param authenticity The [Authenticity] method used by the [HttpEndpoint].
+ * @param arguments A list of the [Node]s representing the arguments passed to the [HttpEndpoint].
+ * @param authentication The [Authentication] method used by the [HttpEndpoint].
  * @param authorization The [Authorization] mechanism defining access control.
- * @param httpRequestContext The [HttpRequestContext] providing additional contextual metadata.
- * @param proxyTarget The [HttpEndpoint] this endpoint proxies to.
- * @param transportEncryption The [TransportEncryption] configuration for the endpoint.
+ * @param requestContext The [RequestContext] providing additional contextual metadata.
  * @param connect If `true`, the created [Concept] will be connected to the underlying node by
  *   setting its `underlyingNode`.
  * @return The created [HttpEndpoint] concept.
  */
 fun MetadataProvider.newHttpEndpoint(
-    underlyingNode: Node,
-    rateLimiting: RateLimiting?,
-    maxInputSize: Int?,
-    userInput: MutableList<Node>,
-    handler: String?,
-    method: HttpMethod,
-    path: String?,
-    url: String?,
-    authenticity: Authenticity?,
+    underlyingNode: FunctionDeclaration,
+    httpMethod: HttpMethod,
+    path: String,
+    arguments: List<Node>,
+    authentication: Authentication?,
     authorization: Authorization?,
-    httpRequestContext: HttpRequestContext?,
-    proxyTarget: HttpEndpoint?,
-    transportEncryption: TransportEncryption?,
+    requestContext: RequestContext?,
     connect: Boolean,
 ) =
     newConcept(
         {
             HttpEndpoint(
-                rateLimiting = rateLimiting,
-                maxInputSize = maxInputSize,
-                userInput = userInput,
-                handler = handler,
-                method = method,
+                httpMethod = httpMethod,
                 path = path,
-                url = url,
-                authenticity = authenticity,
+                arguments = arguments,
+                authentication = authentication,
                 authorization = authorization,
-                httpRequestContext = httpRequestContext,
-                proxyTarget = proxyTarget,
-                transportEncryption = transportEncryption,
+                requestContext = requestContext,
             )
         },
         underlyingNode = underlyingNode,
@@ -144,39 +120,30 @@ fun MetadataProvider.newHttpEndpoint(
     )
 
 /**
- * Creates a new [HttpRequest] operation for the given [HttpClient].
+ * Creates a new [HttpRequest] operation for the given [HttpEndpoint].
  *
  * @param underlyingNode The underlying [Node] representing the request.
  * @param concept The [HttpClient] concept this operation belongs to.
- * @param arguments A list of [Node]s representing the arguments passed to the request.
- * @param method The [HttpMethod] of the request.
- * @param call The call identifier for the request.
- * @param reqBody The request body content.
- * @param httpEndpoint The [HttpEndpoint] being requested.
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
  *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
  *   [Concept.ops].
- * @return The created [HttpRequest] operation.
+ * @return The created [HttpRequest] concept.
  */
 fun MetadataProvider.newHttpRequest(
     underlyingNode: Node,
     concept: HttpClient,
+    url: String,
     arguments: List<Node>,
-    method: HttpMethod,
-    call: String?,
-    reqBody: String?,
-    httpEndpoint: HttpEndpoint?,
+    httpMethod: HttpMethod,
     connect: Boolean,
 ) =
     newOperation(
-        {
+        { concept ->
             HttpRequest(
+                url = url,
                 arguments = arguments,
-                method = method,
-                call = call,
-                reqBody = reqBody,
-                httpEndpoint = httpEndpoint,
-                linkedConcept = it,
+                httpMethod = httpMethod,
+                concept = concept,
             )
         },
         underlyingNode = underlyingNode,
@@ -188,21 +155,21 @@ fun MetadataProvider.newHttpRequest(
  * Creates a new [RegisterHttpEndpoint] operation for the given [HttpEndpoint].
  *
  * @param underlyingNode The underlying [Node] registering the endpoint method.
- * @param concept The [HttpRequestHandler] concept to which this operation belongs.
+ * @param concept The [Concept] to which this operation belongs.
  * @param httpEndpoint The [HttpEndpoint] which is registered by this operation.
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
  *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
  *   [Concept.ops].
- * @return The created [RegisterHttpEndpoint] operation.
+ * @return The created [RegisterHttpEndpoint] concept.
  */
 fun MetadataProvider.newRegisterHttpEndpoint(
     underlyingNode: Node,
-    concept: HttpRequestHandler,
-    httpEndpoint: HttpEndpoint?,
+    concept: Concept,
+    httpEndpoint: HttpEndpoint,
     connect: Boolean,
 ) =
     newOperation(
-        { RegisterHttpEndpoint(httpEndpoint = httpEndpoint, linkedConcept = it) },
+        { concept -> RegisterHttpEndpoint(concept = concept, httpEndpoint = httpEndpoint) },
         underlyingNode = underlyingNode,
         concept = concept,
         connect = connect,

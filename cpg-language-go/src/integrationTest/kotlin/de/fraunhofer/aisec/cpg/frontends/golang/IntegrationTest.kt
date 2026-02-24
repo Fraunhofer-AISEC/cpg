@@ -41,9 +41,13 @@ class IntegrationTest {
     @Test
     fun testProject() {
         val project =
-            Project.buildProject("src/test/resources/golang/integration", "darwin", "arm64")
+            Project.Companion.buildProject(
+                "src/test/resources/golang/integration",
+                "darwin",
+                "arm64",
+            )
 
-        val app = project.components[TranslationResult.DEFAULT_APPLICATION_NAME]
+        val app = project.components[TranslationResult.Companion.DEFAULT_APPLICATION_NAME]
         assertNotNull(app)
         assertNotNull(app.firstOrNull { it.endsWith("main.go") })
         assertNotNull(app.firstOrNull { it.endsWith("func_darwin.go") })
@@ -54,7 +58,7 @@ class IntegrationTest {
 
         val tus =
             analyzeWithBuilder(
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .softwareComponents(project.components)
                     .symbols(project.symbols)
                     .includePath(project.includePaths.first().path)

@@ -31,13 +31,12 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.edges.get
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.DFGPass
-import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayState
@@ -58,9 +57,6 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 @DependsOn(EvaluationOrderGraphPass::class, false)
 @DependsOn(PythonFileJoinPass::class, false)
 @DependsOn(PythonTempFilePass::class, false)
-@Description(
-    "Applies file concepts to the CPG, enriching the graph with additional semantic information relevant to handling files. It only considers code written in python."
-)
 class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     companion object {
         /**
@@ -76,14 +72,14 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
          *
          * This is currently done per [Component].
          */
-        // TODO: Is TranslationUnit better?
+        // TODO: Is TranslationUnitDeclaration better?
         internal val fileCache = mutableMapOf<Component?, MutableMap<String, File>>()
     }
 
-    override fun handleMemberCall(
+    override fun handleMemberCallExpression(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
-        node: MemberCall,
+        node: MemberCallExpression,
     ): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
@@ -145,10 +141,10 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         return stateChanges
     }
 
-    override fun handleCall(
+    override fun handleCallExpression(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
-        node: Call,
+        node: CallExpression,
     ): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
@@ -184,7 +180,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * `true` for the [fileNode].
      */
     private fun handleCloseFileObject(
-        callExpression: MemberCall,
+        callExpression: MemberCallExpression,
         fileNode: File,
     ): Collection<OverlayNode> {
         val fileClose =
@@ -205,13 +201,13 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      *
      * @param lattice The [NodeToOverlayState] which the [EOGConceptPass] operates on.
      * @param state The [NodeToOverlayStateElement] which is used to store the [File] nodes.
-     * @param callExpression The [Call] representing the `open` call.
+     * @param callExpression The [CallExpression] representing the `open` call.
      * @return A collection of [OverlayNode]s representing the file open operations.
      */
     private fun handleOpen(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
-        callExpression: Call,
+        callExpression: CallExpression,
     ): Collection<OverlayNode> {
 
         /**
@@ -252,13 +248,13 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      *
      * @param lattice The [NodeToOverlayState] which the [EOGConceptPass] operates on.
      * @param state The [NodeToOverlayStateElement] which is used to store the [File] nodes.
-     * @param callExpression The [Call] representing the `os.open` call.
+     * @param callExpression The [CallExpression] representing the `os.open` call.
      * @return A collection of [OverlayNode]s representing the file open operations.
      */
     private fun handleOsOpen(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
-        callExpression: Call,
+        callExpression: CallExpression,
     ): Collection<OverlayNode> {
         val files = getOrCreateFile(callExpression, "path", lattice, state)
 
@@ -300,12 +296,12 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      *
      * @param lattice The [NodeToOverlayState] which the [EOGConceptPass] operates on.
      * @param state The [NodeToOverlayStateElement] which is used to store the [File] nodes.
-     * @param callExpression The [Call] representing the `os.fdopen` call.
+     * @param callExpression The [CallExpression] representing the `os.fdopen` call.
      */
     private fun handleOsFdOpen(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
-        callExpression: Call,
+        callExpression: CallExpression,
     ): Collection<OverlayNode> {
         val file = getOrCreateFile(callExpression, "fd", lattice, state)
 
@@ -334,13 +330,13 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      *
      * @param lattice The [NodeToOverlayState] which the [EOGConceptPass] operates on.
      * @param state The [NodeToOverlayStateElement] which is used to store the [File] nodes.
-     * @param callExpression The [Call] representing the `os.chmod` call.
+     * @param callExpression The [CallExpression] representing the `os.chmod` call.
      * @return A collection of [SetFileMask] nodes representing the file chmod operations.
      */
     private fun handleOsChmod(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
-        callExpression: Call,
+        callExpression: CallExpression,
     ): Collection<SetFileMask> {
         val files = getOrCreateFile(callExpression, "path", lattice, state)
         val mode = callExpression.argumentValueByNameOrPosition<Long>(name = "mode", position = 1)
@@ -369,13 +365,13 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      *
      * @param lattice The [NodeToOverlayState] which the [EOGConceptPass] operates on.
      * @param state The [NodeToOverlayStateElement] which is used to store the [File] nodes.
-     * @param callExpression The [Call] representing the `os.remove` call.
+     * @param callExpression The [CallExpression] representing the `os.remove` call.
      * @return A collection of [DeleteFile] nodes representing the file deletion operations.
      */
     private fun handleOsRemove(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
-        callExpression: Call,
+        callExpression: CallExpression,
     ): Collection<OverlayNode> {
         val files = getOrCreateFile(callExpression, "path", lattice, state)
 
@@ -389,10 +385,10 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * and added to the [state] and the [fileCache]. Note: As this method already adds the [File] to
      * the [state], it should not be added again to the set of overlays to create for the node.
      *
-     * @param callExpression The [Call] triggering the call lookup. It is used as a basis
+     * @param callExpression The [CallExpression] triggering the call lookup. It is used as a basis
      *   ([File.underlyingNode]) if a new file has to be created.
      * @param argumentName The name of the argument which holds the name/path of the file in the
-     *   given [Call]'s [Call.arguments] if named arguments are used.
+     *   given [CallExpression]'s [CallExpression.arguments] if named arguments are used.
      * @param lattice The [NodeToOverlayState] which the [EOGConceptPass] operates on. It is used to
      *   add the [File].
      * @param state The [NodeToOverlayStateElement] which is used to store the [File]. If a new
@@ -411,7 +407,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      *   [fileCache].
      *
      * The logic is as follows:
-     * - Input: a [Call] that has a file argument (via `argumentName`)
+     * - Input: a [CallExpression] that has a file argument (via `argumentName`)
      * - Output: a list of [File] objects
      * - How:
      *     - traverse the DFG and collect all [FileLikeObject] overlays that are reachable from the
@@ -422,7 +418,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      *       name
      */
     internal fun getOrCreateFile(
-        callExpression: Call,
+        callExpression: CallExpression,
         argumentName: String,
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
@@ -507,7 +503,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                         Util.errorWithFileLocation(
                             callExpression,
                             log,
-                            "Failed to evaluate the file name for the call expression. Ignoring the entire Call \"$callExpression\".",
+                            "Failed to evaluate the file name for the call expression. Ignoring the entire CallExpression \"$callExpression\".",
                         )
                         return@map null
                     }
@@ -564,7 +560,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * open(file, mode='r', buffering=-1, encoding=None, errors=None, newline=None, closefd=True, opener=None)
      * ```
      */
-    internal fun getBuiltinOpenMode(call: Call): String? {
+    internal fun getBuiltinOpenMode(call: CallExpression): String? {
         return call.argumentValueByNameOrPosition<String>(name = "mode", position = 1)
     }
 
@@ -581,7 +577,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * @param call The `os.open` call.
      * @return The `mode`
      */
-    internal fun getOsOpenMode(call: Call): Long? {
+    internal fun getOsOpenMode(call: CallExpression): Long? {
         return call.argumentValueByNameOrPosition<Long>(name = "mode", position = 2)
     }
 
@@ -593,7 +589,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * os.open(path, flags, mode=0o777, *, dir_fd=None)
      * ```
      */
-    internal fun getOsOpenFlags(call: Call): Long? {
+    internal fun getOsOpenFlags(call: CallExpression): Long? {
         return call.argumentValueByNameOrPosition<Long>(name = "flags", position = 1)
     }
 

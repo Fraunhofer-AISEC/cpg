@@ -33,10 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
-import de.fraunhofer.aisec.cpg.graph.declarations.Import
-import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
-import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import as ScopeImport
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
@@ -54,14 +54,12 @@ import java.util.IdentityHashMap
 
 /**
  * This class holds the information about import dependencies between nodes that represent some kind
- * of "module" (usually either a [TranslationUnit] or a [Component]). The dependency is based on
- * which module imports symbols of another module (usually in the form of a [Namespace]). The idea
- * is to provide a sorted list of modules in which to resolve symbols and imports ideally. This is
- * stored in [sorted] and is automatically computed the fist time someone accesses the property.
+ * of "module" (usually either a [TranslationUnitDeclaration] or a [Component]). The dependency is
+ * based on which module imports symbols of another module (usually in the form of a
+ * [NamespaceDeclaration]). The idea is to provide a sorted list of modules in which to resolve
+ * symbols and imports ideally. This is stored in [sorted] and is automatically computed the fist
+ * time someone accesses the property.
  */
-@Description(
-    "Resolves import statements in the code, linking imported entities to their definitions within the CPG."
-)
 class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T, IdentitySet<T>>() {
 
     init {
@@ -83,8 +81,10 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
             return false
         }
 
-        val list = this.computeIfAbsent(importer) { identitySetOf<T>() }
-        return list.add(imported)
+        var list = this.computeIfAbsent(importer) { identitySetOf<T>() }
+        var added = list.add(imported)
+
+        return added
     }
 
     /**
@@ -126,13 +126,13 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
          *   the list
          */
         fun resolveDependencies(): List<T> {
-            val list = mutableListOf<T>()
+            var list = mutableListOf<T>()
 
             while (true) {
                 // Try to get the next module
                 var tu = nextWithoutDependencies()
                 if (tu == null) {
-                    val remaining = keys
+                    var remaining = keys
                     // No modules without dependencies found. If there are no modules left, this
                     // means we are done
                     if (remaining.isEmpty()) {
@@ -193,9 +193,9 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
 }
 
 /**
- * This pass looks for [Import] nodes and imports symbols into their respective [Scope]. It does so
- * by first building a dependency map between [TranslationUnit] nodes, based on their [Import]
- * nodes.
+ * This pass looks for [ImportDeclaration] nodes and imports symbols into their respective [Scope].
+ * It does so by first building a dependency map between [TranslationUnitDeclaration] nodes, based
+ * on their [ImportDeclaration] nodes.
  */
 class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
@@ -217,7 +217,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
                 // Create a new import dependency object for the component, to make sure that all
                 // TUs are included.
                 node.translationUnitDependencies = ImportDependencies(node.translationUnits)
-            } else if (node is Import) {
+            } else if (node is ImportDeclaration) {
                 collectImportDependencies(node)
             }
         }
@@ -226,8 +226,8 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         // Now we need to iterate through all modules
         walker.clearCallbacks()
         walker.registerHandler { node ->
-            if (node is Import) {
-                handleImport(node)
+            if (node is ImportDeclaration) {
+                handleImportDeclaration(node)
             }
         }
 
@@ -240,8 +240,11 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         }
     }
 
-    /** This callback collects dependencies between [TranslationUnit] nodes based on a [Import]. */
-    private fun collectImportDependencies(import: Import) {
+    /**
+     * This callback collects dependencies between [TranslationUnitDeclaration] nodes based on a
+     * [ImportDeclaration].
+     */
+    private fun collectImportDependencies(import: ImportDeclaration) {
         val currentComponent = import.component
         if (currentComponent == null) {
             errorWithFileLocation(import, log, "Cannot determine component of import node")
@@ -253,7 +256,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
         // Let's look for imported namespaces
         // First, we collect the individual parts of the name
-        val parts = mutableListOf<Name>()
+        var parts = mutableListOf<Name>()
         var name: Name? = import.import
         while (name != null) {
             parts += name
@@ -268,7 +271,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         // whether `backend.app.db` is a namespace, if not, we look at `backend.app` and lastly at
         // `backend`. We do this in order to make the dependency as fine-grained as possible.
         for (part in parts) {
-            val namespaces =
+            var namespaces =
                 scopeManager.lookupSymbolByName(
                     part,
                     import.language,
@@ -286,9 +289,9 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
                     // leaf namespaces. However, this can be extremely slow because it first gathers
                     // all children and then filters them. Instead, we can directly filter for the
                     // child declarations.
-                    it is Namespace &&
+                    it is NamespaceDeclaration &&
                         !it.isInferred &&
-                        it.declarations.filterIsInstance<Namespace>().isEmpty()
+                        it.declarations.filterIsInstance<NamespaceDeclaration>().isEmpty()
                 }
 
             // We are only interested in "leaf" namespace declarations, meaning that they do not
@@ -301,9 +304,9 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
             // Next, we loop through all namespaces in order to "connect" them to our current module
             for (declaration in namespaces) {
                 // Retrieve the module of the declarations
-                val namespaceTu = declaration.translationUnit
-                val namespaceComponent = declaration.component
-                val importTu = import.translationUnit
+                var namespaceTu = declaration.translationUnit
+                var namespaceComponent = declaration.component
+                var importTu = import.translationUnit
                 // Skip, if we cannot find the module or if they belong to the same module (we do
                 // not want self-references)
                 if (
@@ -341,15 +344,15 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         }
     }
 
-    private fun handleImport(import: Import) {
+    private fun handleImportDeclaration(import: ImportDeclaration) {
         ctx.scopeManager.updateImportedSymbols(import)
     }
 
     /**
-     * This function populates the [Scope.importedScopes] property of the [Scope] that the [Import]
-     * "lives" in.
+     * This function populates the [Scope.importedScopes] property of the [Scope] that the
+     * [ImportDeclaration] "lives" in.
      */
-    private fun Import.populateImportedScopes() {
+    private fun ImportDeclaration.populateImportedScopes() {
         val startScope = scope
         val name =
             when (style) {
@@ -383,7 +386,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
         // If we have a target scope, we can create an "import" edge
         if (targetScope != null) {
             // Create a new import edge with all the necessary information
-            val edge = ScopeImport(startScope, targetScope, this)
+            val edge = Import(startScope, targetScope, this)
             startScope.importedScopeEdges += edge
         }
     }
@@ -394,15 +397,15 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 }
 
 /**
- * This function updates the [Import.importedSymbols]. This is done once at the beginning by the
- * [ImportResolver]. However, we need to update this list once we infer new symbols in namespaces
- * that are imported at a later stage (e.g., in the [TypeResolver]), otherwise they won't be visible
- * to the later passes.
+ * This function updates the [ImportDeclaration.importedSymbols]. This is done once at the beginning
+ * by the [ImportResolver]. However, we need to update this list once we infer new symbols in
+ * namespaces that are imported at a later stage (e.g., in the [TypeResolver]), otherwise they won't
+ * be visible to the later passes.
  */
-fun ScopeManager.updateImportedSymbols(import: Import) {
+fun ScopeManager.updateImportedSymbols(import: ImportDeclaration) {
     // We always need to search at the global scope because we are "importing" something, so by
     // definition, this is not in the scope of the current file.
-    val scope = globalScope
+    val scope = globalScope ?: return
 
     // Let's do some importing. We need to import either a wildcard
     if (import.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE) {

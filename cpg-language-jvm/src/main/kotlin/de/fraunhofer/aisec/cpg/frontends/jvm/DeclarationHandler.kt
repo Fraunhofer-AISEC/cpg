@@ -37,32 +37,24 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
     Handler<Declaration, Any, JVMLanguageFrontend>(::ProblemDeclaration, frontend) {
 
     override fun handle(ctx: Any): Declaration {
-        try {
-            return when (ctx) {
-                is SootClass -> handleClass(ctx)
-                is SootMethod -> handleMethod(ctx)
-                is SootField -> handleField(ctx)
-                is Local -> handleLocal(ctx)
-                else -> {
-                    log.warn("Unhandled declaration type: ${ctx.javaClass.simpleName}")
-                    newProblemDeclaration(
-                        "Unhandled declaration type: ${ctx.javaClass.simpleName}",
-                        rawNode = ctx,
-                    )
-                }
+        return when (ctx) {
+            is SootClass -> handleClass(ctx)
+            is SootMethod -> handleMethod(ctx)
+            is SootField -> handleField(ctx)
+            is Local -> handleLocal(ctx)
+            else -> {
+                log.warn("Unhandled declaration type: ${ctx.javaClass.simpleName}")
+                newProblemDeclaration(
+                    "Unhandled declaration type: ${ctx.javaClass.simpleName}",
+                    rawNode = ctx,
+                )
             }
-        } catch (e: Exception) {
-            log.error("Error while handling a declaration", e)
-            return newProblemDeclaration(
-                "Error handling declaration ${ctx}: ${e.message}",
-                rawNode = ctx,
-            )
         }
     }
 
-    private fun handleClass(sootClass: SootClass): Record {
+    private fun handleClass(sootClass: SootClass): RecordDeclaration {
         val record =
-            newRecord(
+            newRecordDeclaration(
                 sootClass.getName(),
                 if (sootClass.isInterface()) {
                     "interface"
@@ -88,7 +80,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         // Loop through all fields
         for (sootField in sootClass.fields) {
-            val field = handle(sootField) as? Field
+            val field = handle(sootField) as? FieldDeclaration
             if (field != null) {
                 frontend.scopeManager.addDeclaration(field)
                 record.addDeclaration(field)
@@ -97,7 +89,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         // Loop through all methods
         for (sootMethod in sootClass.methods) {
-            val method = handle(sootMethod) as? Method
+            val method = handle(sootMethod) as? MethodDeclaration
             if (method != null) {
                 frontend.scopeManager.addDeclaration(method)
                 record.addDeclaration(method)
@@ -110,14 +102,14 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         return record
     }
 
-    private fun handleMethod(sootMethod: SootMethod): Method {
+    private fun handleMethod(sootMethod: SootMethod): MethodDeclaration {
         val record = frontend.scopeManager.currentRecord
 
         val method =
             if (sootMethod.name == "<init>") {
-                newConstructor(sootMethod.name, record, rawNode = sootMethod)
+                newConstructorDeclaration(sootMethod.name, record, rawNode = sootMethod)
             } else {
-                newMethod(
+                newMethodDeclaration(
                     sootMethod.name,
                     sootMethod.isStatic,
                     frontend.scopeManager.currentRecord,
@@ -130,20 +122,19 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         // Add "@this" as the receiver
         val receiver =
-            newVariable("@this", method.recordDeclaration?.toType() ?: unknownType())
+            newVariableDeclaration("@this", method.recordDeclaration?.toType() ?: unknownType())
                 .implicit("@this")
         frontend.scopeManager.addDeclaration(receiver)
         method.receiver = receiver
 
         // Add method parameters
         for ((index, type) in sootMethod.parameterTypes.withIndex()) {
-            val param = newParameter("@parameter${index}", frontend.typeOf(type))
+            val param = newParameterDeclaration("@parameter${index}", frontend.typeOf(type))
             frontend.scopeManager.addDeclaration(param)
             method.parameters += param
         }
 
-        // Parse body if doNotParseBody returns false
-        if (!frontend.frontendConfiguration.doNotParseBody(method) && sootMethod.isConcrete) {
+        if (sootMethod.isConcrete) {
             // Handle method body
             method.body = frontend.statementHandler.handle(sootMethod.body)
         }
@@ -154,16 +145,16 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         return method
     }
 
-    fun handleField(field: SootField): Field {
-        return newField(
+    fun handleField(field: SootField): FieldDeclaration {
+        return newFieldDeclaration(
             field.name,
             frontend.typeOf(field.type),
-            field.modifiers.map { it.name.lowercase() }.toSet(),
+            field.modifiers.map { it.name.lowercase() },
             rawNode = field,
         )
     }
 
-    private fun handleLocal(local: Local): Variable {
-        return newVariable(local.name, frontend.typeOf(local.type), rawNode = local)
+    private fun handleLocal(local: Local): VariableDeclaration {
+        return newVariableDeclaration(local.name, frontend.typeOf(local.type), rawNode = local)
     }
 }

@@ -35,10 +35,10 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.Agnostic
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.Main
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import io.github.detekt.sarif4k.*
 import io.ktor.client.call.*
@@ -56,21 +56,23 @@ val mockConfig =
 
 /** A mock translation unit. */
 val mockTu =
-    TranslationUnit().apply {
+    TranslationUnitDeclaration().apply {
         name = Name("tu1")
         var func =
-            Function().apply {
+            FunctionDeclaration().apply {
                 name = Name("main")
                 Main(this, os = Agnostic(this))
                 body =
                     Block().apply {
                         statements +=
-                            Call().apply { callee = Reference().apply { name = Name("open") } }
+                            CallExpression().apply {
+                                callee = Reference().apply { name = Name("open") }
+                            }
                     }
             }
         declarations += func
         statements +=
-            Call().apply {
+            CallExpression().apply {
                 name = Name("main")
                 prevDFG += func
             }
@@ -294,7 +296,7 @@ class ApplicationTest {
 
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }
-        val response =
+        var response =
             client.post("/api/concepts") {
                 contentType(ContentType.Application.Json)
                 setBody(

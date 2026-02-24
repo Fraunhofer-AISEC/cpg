@@ -33,8 +33,6 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
@@ -47,7 +45,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.lang.reflect.Field
-import java.lang.reflect.Method as ReflectMethod
+import java.lang.reflect.Method
 import java.nio.file.Path
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTReferenceOperator
@@ -202,7 +200,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
     val statementHandler = StatementHandler(this)
 
     @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnit {
+    override fun parse(file: File): TranslationUnitDeclaration {
         val content = FileContent.createForExternalFileLocation(file.absolutePath)
 
         // include paths
@@ -449,7 +447,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
         type: Class<*>,
         methodName: String,
         vararg parameterTypes: Class<*>,
-    ): ReflectMethod {
+    ): Method {
         return try {
             type.getDeclaredMethod(methodName, *parameterTypes)
         } catch (e: NoSuchMethodException) {
@@ -480,7 +478,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
      * behind this, is that in some scenarios we create the [Declaration] before the type and in
      * some, we derive the declaration from the type. In the first one, we might get some necessary
      * information from the declaration, that influences the type parsing. One such example is that
-     * we check, whether a declaration is a [Constructor] and return an [ObjectType] that
+     * we check, whether a declaration is a [ConstructorDeclaration] and return an [ObjectType] that
      * corresponds with the record name it instantiates.
      *
      * @param hint an optional [Declaration], which serves as a parsing hint.
@@ -590,18 +588,19 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
                 )
             }
             // The type of constructor declaration is always the declaration itself
-            specifier.type == IASTSimpleDeclSpecifier.t_unspecified && hint is Constructor -> {
+            specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
+                hint is ConstructorDeclaration -> {
                 hint.name.parent?.let { objectType(it, rawNode = specifier) } ?: unknownType()
             }
             // The type of conversion operator is also always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
-                hint is Method &&
+                hint is MethodDeclaration &&
                 hint.name.localName == "operator#0" -> {
                 hint.name.parent?.let { objectType(it, rawNode = specifier) } ?: unknownType()
             }
             // The type of conversion operator is also always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
-                hint is Method &&
+                hint is MethodDeclaration &&
                 hint.name.localName == "operator#0*" -> {
                 hint.name.parent?.let { objectType(it, rawNode = specifier).pointer() }
                     ?: unknownType()
@@ -609,7 +608,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
             // The type of destructor is unspecified, but we model it as a void type to make it
             // compatible with other methods.
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
-                hint is Method &&
+                hint is MethodDeclaration &&
                 hint.isDestructor -> {
                 incompleteType()
             }
@@ -767,9 +766,9 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
             // so far is the return value. We then add the parameters and give it a name.
             val name =
                 paramTypes.joinToString(
-                    Function.COMMA + Function.WHITESPACE,
-                    Function.BRACKET_LEFT,
-                    Function.BRACKET_RIGHT,
+                    FunctionDeclaration.COMMA + FunctionDeclaration.WHITESPACE,
+                    FunctionDeclaration.BRACKET_LEFT,
+                    FunctionDeclaration.BRACKET_RIGHT,
                 ) {
                     it.typeName
                 } + type.typeName
@@ -884,7 +883,7 @@ private val IASTSimpleDeclSpecifier.canonicalName: CharSequence
  * Returns whether this method is a
  * [Destructor](https://en.cppreference.com/w/cpp/language/destructor).
  */
-val Method.isDestructor: Boolean
+val MethodDeclaration.isDestructor: Boolean
     get() {
         return "~" + this.name.parent?.localName == this.name.localName
     }

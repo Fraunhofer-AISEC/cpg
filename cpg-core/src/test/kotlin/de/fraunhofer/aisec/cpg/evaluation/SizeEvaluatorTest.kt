@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.evaluation
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Subscription
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -39,7 +39,7 @@ import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SizeEvaluatorTest {
-    private lateinit var tu: TranslationUnit
+    private lateinit var tu: TranslationUnitDeclaration
 
     @BeforeAll
     fun beforeAll() {
@@ -86,7 +86,9 @@ class SizeEvaluatorTest {
         assertNotNull(forLoop)
 
         val subscriptExpr =
-            ((forLoop.statement as Block).statements[0] as Assign).lhs<Subscription>()
+            ((forLoop.statement as Block).statements[0] as AssignExpression).lhs<
+                SubscriptExpression
+            >()
 
         value = evaluator.evaluate(subscriptExpr) as Int
         assertEquals(3, value)

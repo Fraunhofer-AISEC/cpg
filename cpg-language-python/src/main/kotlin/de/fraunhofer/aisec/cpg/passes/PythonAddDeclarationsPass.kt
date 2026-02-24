@@ -31,15 +31,15 @@ import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Field
-import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Comprehension
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerList
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -51,7 +51,6 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @ExecuteBefore(ImportResolver::class)
 @ExecuteBefore(SymbolResolver::class)
 @RequiredFrontend(PythonLanguageFrontend::class)
-@Description("Adds declarations for python's variables as the CPG requires them.")
 class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), LanguageProvider {
 
     lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
@@ -70,15 +69,16 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     /**
-     * This function checks for each [Assign], [Comprehension] and [ForEachStatement] whether there
-     * is already a matching variable or not. New variables can be one of:
-     * - [Field] if we are currently in a record
-     * - [Variable] otherwise
+     * This function checks for each [AssignExpression], [ComprehensionExpression] and
+     * [ForEachStatement] whether there is already a matching variable or not. New variables can be
+     * one of:
+     * - [FieldDeclaration] if we are currently in a record
+     * - [VariableDeclaration] otherwise
      */
     private fun handle(node: Node?) {
         when (node) {
-            is Comprehension -> handleComprehension(node)
-            is Assign -> handleAssign(node)
+            is ComprehensionExpression -> handleComprehensionExpression(node)
+            is AssignExpression -> handleAssignExpression(node)
             is ForEachStatement -> handleForEach(node)
             else -> {
                 // Nothing to do for all other types of nodes
@@ -87,26 +87,27 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     /**
-     * This function will create a new dynamic [Variable] if there is a write access to the [ref].
+     * This function will create a new dynamic [VariableDeclaration] if there is a write access to
+     * the [ref].
      */
-    private fun handleWriteToReference(ref: Reference): Variable? {
+    private fun handleWriteToReference(ref: Reference): VariableDeclaration? {
         if (ref.access != AccessValues.WRITE) {
             return null
         }
 
         // If this is a member expression, and we do not know the base's type, we cannot create a
         // declaration
-        if (ref is MemberAccess && ref.base.type is UnknownType) {
+        if (ref is MemberExpression && ref.base.type is UnknownType) {
             return null
         }
 
         // Look for a potential scope modifier for this reference
-        val targetScope =
+        var targetScope =
             scopeManager.currentScope.predefinedLookupScopes[ref.name.toString()]?.targetScope
 
         // Try to see whether our symbol already exists. There are basically three rules to follow
         // here.
-        val symbol =
+        var symbol =
             when {
                 // When a target scope is set, then we have a `global` or `nonlocal` keyword for
                 // this symbol, and we need to start looking in this scope
@@ -131,17 +132,17 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         if (symbol.isNotEmpty()) return null
 
         // First, check if we need to create a field
-        var decl: Variable? =
+        var decl: VariableDeclaration? =
             when {
                 // Check, whether we are referring to a "self.X", which would create a field
                 scopeManager.isInRecord && scopeManager.isInFunction && ref.refersToReceiver -> {
                     // We need to temporarily jump into the scope of the current record to
                     // add the field. These are instance attributes
                     scopeManager.withScope(scopeManager.firstScopeIsInstanceOrNull<RecordScope>()) {
-                        newField(ref.name)
+                        newFieldDeclaration(ref.name)
                     }
                 }
-                scopeManager.isInRecord && scopeManager.isInFunction && ref is MemberAccess -> {
+                scopeManager.isInRecord && scopeManager.isInFunction && ref is MemberExpression -> {
                     // If this is any other member expression, we are usually not interested in
                     // creating fields, except if this is a receiver
                     return null
@@ -149,7 +150,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                 scopeManager.isInRecord && !scopeManager.isInFunction -> {
                     // We end up here for fields declared directly in the class body. These are
                     // class attributes; more or less static fields.
-                    newField(scopeManager.currentNamespace.fqn(ref.name.localName))
+                    newFieldDeclaration(scopeManager.currentNamespace.fqn(ref.name.localName))
                 }
                 else -> {
                     null
@@ -161,9 +162,9 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         if (decl == null) {
             decl =
                 if (targetScope != null) {
-                    scopeManager.withScope(targetScope) { newVariable(ref.name) }
+                    scopeManager.withScope(targetScope) { newVariableDeclaration(ref.name) }
                 } else {
-                    newVariable(ref.name)
+                    newVariableDeclaration(ref.name)
                 }
         }
 
@@ -173,7 +174,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
         log.debug(
             "Creating dynamic {} {} in {}",
-            if (decl is Field) {
+            if (decl is FieldDeclaration) {
                 "field"
             } else {
                 "variable"
@@ -186,7 +187,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         // creation time
         scopeManager.withScope(decl.scope) {
             scopeManager.addDeclaration(decl)
-            if (decl is Field) {
+            if (decl is FieldDeclaration) {
                 (it?.astNode as? DeclarationHolder)?.addDeclaration(decl)
             }
             decl
@@ -197,30 +198,30 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
 
     private val Reference.refersToReceiver: Boolean
         get() {
-            return this is MemberAccess &&
+            return this is MemberExpression &&
                 this.base.name == scopeManager.currentMethod?.receiver?.name
         }
 
     /**
-     * Generates a new [Variable] for [Reference] (and those included in a [InitializerList]) in the
-     * [Comprehension.variable].
+     * Generates a new [VariableDeclaration] for [Reference] (and those included in a
+     * [InitializerListExpression]) in the [ComprehensionExpression.variable].
      */
-    private fun handleComprehension(comprehensionExpression: Comprehension) {
+    private fun handleComprehensionExpression(comprehensionExpression: ComprehensionExpression) {
         when (val variable = comprehensionExpression.variable) {
             is Reference -> {
                 variable.access = AccessValues.WRITE
                 handleWriteToReference(variable)?.let {
-                    if (it !is Field) {
+                    if (it !is FieldDeclaration) {
                         comprehensionExpression.addDeclaration(it)
                     }
                 }
             }
-            is InitializerList -> {
+            is InitializerListExpression -> {
                 variable.initializers.forEach {
                     (it as? Reference)?.let { ref ->
                         ref.access = AccessValues.WRITE
                         handleWriteToReference(ref)?.let {
-                            if (it !is Field) {
+                            if (it !is FieldDeclaration) {
                                 comprehensionExpression.addDeclaration(it)
                             }
                         }
@@ -231,11 +232,11 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     /**
-     * Generates a new [Variable] if [target] is a [Reference] and there is no existing declaration
-     * yet.
+     * Generates a new [VariableDeclaration] if [target] is a [Reference] and there is no existing
+     * declaration yet.
      */
     private fun handleAssignmentToTarget(
-        assignExpression: Assign,
+        assignExpression: AssignExpression,
         target: Node,
         setAccessValue: Boolean = false,
     ) {
@@ -252,7 +253,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
                     .findValue(target)
                     ?.registerTypeObserver(InitializerTypePropagation(handled))
 
-                if (handled !is Field) {
+                if (handled !is FieldDeclaration) {
                     // Add it to our assign expression, so that we can find it in the AST
                     assignExpression.declarations += handled
                 }
@@ -260,7 +261,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         }
     }
 
-    private fun handleAssign(assignExpression: Assign) {
+    private fun handleAssignExpression(assignExpression: AssignExpression) {
         val parentCollectionComprehensions = ArrayDeque<CollectionComprehension>()
         var parentCollectionComprehension =
             assignExpression.firstParentOrNull<CollectionComprehension>()
@@ -272,9 +273,9 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         }
         for (target in assignExpression.lhs) {
             handleAssignmentToTarget(assignExpression, target, setAccessValue = false)
-            // If the lhs is an InitializerList, we have to handle the individual elements
+            // If the lhs is an InitializerListExpression, we have to handle the individual elements
             // in the initializers.
-            (target as? InitializerList)?.let {
+            (target as? InitializerListExpression)?.let {
                 it.initializers.forEach { initializer ->
                     handleAssignmentToTarget(assignExpression, initializer, setAccessValue = true)
                 }
@@ -292,7 +293,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         when (val forVar = node.variable) {
             is Reference -> {
                 val handled = handleWriteToReference(forVar)
-                if (handled != null && handled !is Field) {
+                if (handled != null && handled !is FieldDeclaration) {
                     handled.let { node.addDeclaration(it) }
                 }
             }

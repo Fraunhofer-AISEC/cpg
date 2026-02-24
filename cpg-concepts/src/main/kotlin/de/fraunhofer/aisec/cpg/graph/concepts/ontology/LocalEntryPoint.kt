@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,11 +33,11 @@ import kotlin.Int
 
 /** Represents a local entry point into the execution of the program, such as a main function. */
 public open class LocalEntryPoint(
-    public val target: OperatingSystemArchitecture?,
+    public val usedBy: OperatingSystemArchitecture?,
     underlyingNode: Node? = null,
 ) : EntryPoint(underlyingNode) {
     override fun equals(other: Any?): Boolean =
-        other is LocalEntryPoint && super.equals(other) && other.target == this.target
+        other is LocalEntryPoint && super.equals(other) && other.usedBy == this.usedBy
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), target)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), usedBy)
 }

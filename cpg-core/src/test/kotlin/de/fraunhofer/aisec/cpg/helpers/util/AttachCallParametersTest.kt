@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.helpers.util
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.newCall
-import de.fraunhofer.aisec.cpg.graph.newFunction
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.newCallExpression
+import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.newLiteral
-import de.fraunhofer.aisec.cpg.graph.newParameter
+import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.Util.attachCallParameters
@@ -55,7 +55,7 @@ class AttachCallParametersTest {
              * Case: Positional 'a', named 'b', and variadic keyword arguments*
              */
             val call =
-                newCall().apply {
+                newCallExpression().apply {
                     argumentEdges.add(newLiteral("test", primitiveType("string"))) {
                         this.index = 0
                     }
@@ -114,7 +114,7 @@ class AttachCallParametersTest {
              * Case: Positional 'a', default 'b', and variadic keyword arguments
              */
             val call =
-                newCall().apply {
+                newCallExpression().apply {
                     argumentEdges.add(newLiteral("test", primitiveType("string"))) {
                         this.index = 0
                     }
@@ -170,7 +170,7 @@ class AttachCallParametersTest {
              * Case: Named 'b' and 'a', no variadic keyword arguments
              */
             val call =
-                newCall().apply {
+                newCallExpression().apply {
                     argumentEdges.add(newLiteral(false, primitiveType("boolean"))) {
                         this.name = "b"
                         this.index = 0
@@ -216,7 +216,7 @@ class AttachCallParametersTest {
              * Case: Positional 'a' and *args, no **kwargs
              */
             val call =
-                newCall().apply {
+                newCallExpression().apply {
                     argumentEdges.add(newLiteral("test", primitiveType("string"))) {
                         this.index = 0
                     }
@@ -267,7 +267,7 @@ class AttachCallParametersTest {
              * Case: Positional 'a', no *args only **kwargs
              */
             val call =
-                newCall().apply {
+                newCallExpression().apply {
                     argumentEdges.add(newLiteral("test", primitiveType("string"))) {
                         this.index = 0
                     }
@@ -318,7 +318,7 @@ class AttachCallParametersTest {
              * Case: Positional 'a', *args, and **kwargs
              */
             val call =
-                newCall().apply {
+                newCallExpression().apply {
                     argumentEdges.add(newLiteral("test", primitiveType("string"))) {
                         this.index = 0
                     }
@@ -373,40 +373,44 @@ class AttachCallParametersTest {
     }
 
     /**
-     * Returns a Function with the following parameters:
+     * Returns a FunctionDeclaration with the following parameters:
      * - 'a': A required positional parameter.
      * - 'b': An optional parameter with a default value of true.
      * - 'kwargs': A variadic parameter that captures additional keyword arguments.
      */
-    private fun getFuncWithDefaultAndVariadicParameters(): Function {
+    private fun getFuncWithDefaultAndVariadicParameters(): FunctionDeclaration {
         with(frontend) {
-            val func = newFunction("kw_args_and_default")
+            val func = newFunctionDeclaration("kw_args_and_default")
             func.parameters =
                 mutableListOf(
-                    newParameter("a", primitiveType("string")),
-                    newParameter("b", primitiveType("boolean")).apply {
+                    newParameterDeclaration("a", primitiveType("string")),
+                    newParameterDeclaration("b", primitiveType("boolean")).apply {
                         default = newLiteral(true, primitiveType("boolean"))
                     },
-                    newParameter("**kwargs").apply { isVariadic = true },
+                    newParameterDeclaration("**kwargs").apply { isVariadic = true },
                 )
             return func
         }
     }
 
     /**
-     * Returns a Function with the following parameters:
+     * Returns a FunctionDeclaration with the following parameters:
      * - 'a': A required positional parameter.
      * - 'args': A variadic parameter that captures additional positional arguments.
      * - 'kwargs': A variadic parameter that captures additional keyword arguments.
      */
-    private fun getFuncWithArgsAndKwargs(): Function {
+    private fun getFuncWithArgsAndKwargs(): FunctionDeclaration {
         with(frontend) {
-            val func = newFunction("variadic_params")
+            val func = newFunctionDeclaration("variadic_params")
             func.parameters =
                 mutableListOf(
-                    newParameter("a", primitiveType("string")),
-                    newParameter("*args", primitiveType("string")).apply { isVariadic = true },
-                    newParameter("**kwargs", primitiveType("string")).apply { isVariadic = true },
+                    newParameterDeclaration("a", primitiveType("string")),
+                    newParameterDeclaration("*args", primitiveType("string")).apply {
+                        isVariadic = true
+                    },
+                    newParameterDeclaration("**kwargs", primitiveType("string")).apply {
+                        isVariadic = true
+                    },
                 )
             return func
         }

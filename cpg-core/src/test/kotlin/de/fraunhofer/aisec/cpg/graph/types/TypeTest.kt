@@ -38,10 +38,10 @@ class TypeTest {
     @Test
     fun testType() {
         with(TestLanguageFrontend()) {
-            val tu = newTranslationUnit("file.extension")
+            val tu = newTranslationUnitDeclaration("file.extension")
             this.scopeManager.resetToGlobal(tu)
 
-            val func = newFunction("main")
+            val func = newFunctionDeclaration("main")
             assertLocalName("main", func)
 
             val simpleType = objectType("SomeObject")

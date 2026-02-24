@@ -56,8 +56,8 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -103,7 +103,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
     }
 
     @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnit {
+    override fun parse(file: File): TranslationUnitDeclaration {
         // load in the file
         return try {
             val parserConfiguration = ParserConfiguration()
@@ -119,7 +119,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             context?.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
 
             // starting point is always a translation declaration
-            val tud = newTranslationUnit(file.toString(), rawNode = context)
+            val tud = newTranslationUnitDeclaration(file.toString(), rawNode = context)
             currentTU = tud
             scopeManager.resetToGlobal(tud)
             val packDecl = context?.packageDeclaration?.orElse(null)
@@ -129,11 +129,11 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             // translation unit
             val holder =
                 packDecl?.name?.toString()?.split(language.namespaceDelimiter)?.fold(null) {
-                    previous: Namespace?,
+                    previous: NamespaceDeclaration?,
                     path ->
-                    val fqn = previous?.name.fqn(path)
+                    var fqn = previous?.name.fqn(path)
 
-                    val nsd = newNamespace(fqn, rawNode = packDecl)
+                    val nsd = newNamespaceDeclaration(fqn, rawNode = packDecl)
                     scopeManager.addDeclaration(nsd)
                     val holder = previous ?: tud
                     holder.addDeclaration(nsd)
@@ -156,14 +156,14 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             // import would be visible as symbols in the whole namespace
             scopeManager.enterScope(tud)
             for (anImport in context?.imports ?: listOf()) {
-                val incl = newInclude(anImport.nameAsString)
+                val incl = newIncludeDeclaration(anImport.nameAsString)
                 scopeManager.addDeclaration(incl)
                 tud.addDeclaration(incl)
             }
 
             // We create an implicit import for "java.lang.*"
             val decl =
-                newImport(
+                newImportDeclaration(
                         parseName("java.lang"),
                         style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
                     )
@@ -172,8 +172,10 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             tud.addDeclaration(decl)
             scopeManager.leaveScope(tud)
 
-            if (holder is Namespace) {
-                tud.allChildren<Namespace>().reversed().forEach { scopeManager.leaveScope(it) }
+            if (holder is NamespaceDeclaration) {
+                tud.allChildren<NamespaceDeclaration>().reversed().forEach {
+                    scopeManager.leaveScope(it)
+                }
             }
             bench.addMeasurement()
             tud
@@ -246,9 +248,9 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             if (type == "var") {
                 unknownType()
             } else typeOf(resolved.type)
-        } catch (_: RuntimeException) {
+        } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(nodeWithType.type)
-        } catch (_: NoClassDefFoundError) {
+        } catch (ex: NoClassDefFoundError) {
             getTypeFromImportIfPossible(nodeWithType.type)
         }
     }
@@ -258,9 +260,9 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             if (type.toString() == "var") {
                 unknownType()
             } else typeOf(type.resolve())
-        } catch (_: RuntimeException) {
+        } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(type)
-        } catch (_: NoClassDefFoundError) {
+        } catch (ex: NoClassDefFoundError) {
             getTypeFromImportIfPossible(type)
         }
     }
@@ -269,7 +271,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
     fun getQualifiedMethodNameAsGoodAsPossible(callExpr: MethodCallExpr): String {
         return try {
             callExpr.resolve().qualifiedName
-        } catch (_: RuntimeException) {
+        } catch (ex: RuntimeException) {
             val scope = callExpr.scope
             if (scope.isPresent) {
                 val expression = scope.get()
@@ -283,7 +285,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                 }
                 if (scope.get().toString() == THIS) {
                     // this is not strictly true. This could also be a function of a superclass,
-                    // but is the best we can do for now. If the superclass was known,
+                    // but is the best we can do for now. If the superclass would be known,
                     // this would already be resolved by the Java resolver
                     fqn(callExpr.nameAsString).toString()
                 } else {
@@ -302,7 +304,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                 // this is not strictly true. This could also be a function of a superclass or from
                 // a static asterisk import
             }
-        } catch (_: NoClassDefFoundError) {
+        } catch (ex: NoClassDefFoundError) {
             val scope = callExpr.scope
             if (scope.isPresent) {
                 val expression = scope.get()
@@ -386,9 +388,9 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                 type = typeOf(resolved.returnType)
             }
             type
-        } catch (_: RuntimeException) {
+        } catch (ex: RuntimeException) {
             getTypeFromImportIfPossible(nodeWithType.type)
-        } catch (_: NoClassDefFoundError) {
+        } catch (ex: NoClassDefFoundError) {
             getTypeFromImportIfPossible(nodeWithType.type)
         }
     }
@@ -403,10 +405,10 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
     private fun getFQNInCurrentPackage(simpleName: String): String {
         // TODO: Somehow we cannot use scopeManager.currentNamespace. not sure why
         val theScope =
-            scopeManager.firstScopeOrNull { scope: Scope -> scope.astNode is Namespace }
+            scopeManager.firstScopeOrNull { scope: Scope -> scope.astNode is NamespaceDeclaration }
                 ?: return simpleName
         // If scope is null we are in a default package
-        return theScope.name.fqn(simpleName).toString()
+        return theScope.name?.fqn(simpleName).toString()
     }
 
     private fun getTypeFromImportIfPossible(type: Type): de.fraunhofer.aisec.cpg.graph.types.Type {

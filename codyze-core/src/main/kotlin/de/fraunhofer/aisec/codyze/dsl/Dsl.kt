@@ -442,7 +442,10 @@ fun RequirementBuilder.fulfilledBy(query: TranslationResult.() -> QueryTree<Bool
 context(builder: ProjectBuilder, _: RequirementsBuilder, result: TranslationResult)
 @CodyzeDsl
 fun manualAssessmentOf(id: String): QueryTree<Boolean> {
-    val manualAssessment = builder.manualAssessmentBuilder.assessments[id] ?: return NotYetEvaluated
+    val manualAssessment = builder.manualAssessmentBuilder.assessments[id]
+    if (manualAssessment == null) {
+        return NotYetEvaluated
+    }
 
     return manualAssessment(result)
 }
@@ -511,11 +514,12 @@ fun AssumptionsBuilder.DecisionBuilder.accept(uuid: String) {
 }
 
 /**
- * Describes that the assumptions matching [filter] were assessed and considered as
+ * Describes that the assumption with the given [uuid] was assessed and considered as
  * acceptable/valid.
  *
- * @param [filter] A function that takes an [Assumption] and returns `true` if the assumption is
- *   accepted. It must make sure that this only matches the intended assumptions.
+ * @param uuid The UUID of the assumption must be provided in string in the format
+ *   "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", where each 'x' is a hexadecimal digit, either lowercase
+ *   or uppercase.
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.accept(filter: (Assumption) -> Boolean) {

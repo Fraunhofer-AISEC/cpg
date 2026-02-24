@@ -30,7 +30,7 @@ import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
- * A node where the statement could not be translated by the graph. We use `ProblemExpression`s
+ * A node where the statement could not be translated by the graph. We use ProblemExpressions
  * whenever the CPG library requires an [Expression].
  */
 class ProblemExpression(

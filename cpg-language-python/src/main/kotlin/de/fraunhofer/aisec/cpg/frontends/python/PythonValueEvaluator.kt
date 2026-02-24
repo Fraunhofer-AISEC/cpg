@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -56,7 +56,7 @@ class PythonValueEvaluator : ValueEvaluator() {
 
     override val cannotEvaluate: (Node?, ValueEvaluator) -> Any?
         get() = { node, evaluator ->
-            if (node is InitializerList) {
+            if (node is InitializerListExpression) {
                 // We can evaluate initializer lists if all elements are constant
                 val values = node.initializers.map { evaluator.evaluate(it) }
                 if (values.all { it is Number }) {
@@ -88,15 +88,19 @@ class PythonValueEvaluator : ValueEvaluator() {
         }
     }
 
-    override fun handleCall(node: Call, depth: Int): Any? {
-        return when (node.reconstructedImportName.toString()) {
+    override fun handleCallExpression(call: CallExpression, depth: Int): Any? {
+        return when (call.reconstructedImportName.toString()) {
             "os.path.join" -> {
-                node.arguments.joinToString(separator = "/") { arg ->
+                call.arguments.joinToString(separator = "/") { arg ->
                     super.evaluate(arg).toString()
                 }
             }
-            else -> super.handleCall(node, depth)
+            else -> super.handleCallExpression(call, depth)
         }
+    }
+
+    override fun handlePrevDFG(node: Node, depth: Int): Any? {
+        return super.handlePrevDFG(node, depth)
     }
 
     override fun computeBinaryOpEffect(

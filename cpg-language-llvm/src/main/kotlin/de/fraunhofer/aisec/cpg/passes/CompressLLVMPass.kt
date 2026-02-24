@@ -39,9 +39,6 @@ import java.util.*
 
 @ExecuteFirst
 @RequiredFrontend(LLVMIRLanguageFrontend::class)
-@Description(
-    "Re-organizes some nodes in the CPG if they originate from LLVM IR code, removing redundant nodes and edges to optimize the graph structure for analysis."
-)
 class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
         val flatAST = SubgraphWalker.flattenAST(component)
@@ -167,7 +164,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 firstCatch.body?.statements = firstStatement.statements
             }
         }
-        node.catchClauses.forEach(::fixThrowsForCatch)
+        node.catchClauses.forEach(::fixThrowExpressionsForCatch)
     }
 
     /**
@@ -175,15 +172,15 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Those expressions have been artificially added e.g. by a catchswitch and need to be filled
      * now.
      */
-    private fun fixThrowsForCatch(catch: CatchClause) {
+    private fun fixThrowExpressionsForCatch(catch: CatchClause) {
         val reachableThrowNodes =
-            getAllChildrenRecursively(catch).filterIsInstance<Throw>().filter { n ->
+            getAllChildrenRecursively(catch).filterIsInstance<ThrowExpression>().filter { n ->
                 n.exception is ProblemExpression
             }
         if (reachableThrowNodes.isNotEmpty()) {
             val catchParameter =
                 catch.parameter
-                    ?: newVariable(
+                    ?: newVariableDeclaration(
                             "e_${catch.name}",
                             UnknownType.getUnknownType(catch.language),
                             implicitInitializerAllowed = true,

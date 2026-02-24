@@ -29,8 +29,8 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.declarations.Template
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
-import de.fraunhofer.aisec.cpg.passes.ResolveCallAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -53,11 +53,12 @@ class TypeManager {
     /**
      * Stores the relationship between parameterized RecordDeclarations (e.g. Classes using
      * Generics) to the ParameterizedType to be able to resolve the Type of the fields, since
-     * ParameterizedTypes are unique to the Record and are not merged.
+     * ParameterizedTypes are unique to the RecordDeclaration and are not merged.
      */
-    private val recordToTypeParameters: MutableMap<Record, List<ParameterizedType>> =
+    private val recordToTypeParameters: MutableMap<RecordDeclaration, List<ParameterizedType>> =
         ConcurrentHashMap()
-    private val templateToTypeParameters: MutableMap<Template, MutableList<ParameterizedType>> =
+    private val templateToTypeParameters:
+        MutableMap<TemplateDeclaration, MutableList<ParameterizedType>> =
         ConcurrentHashMap()
 
     /**
@@ -72,7 +73,7 @@ class TypeManager {
      * @return ParameterizedType if there is a parameterized type defined in the recordDeclaration
      *   with matching name, null instead
      */
-    fun getTypeParameter(recordDeclaration: Record?, name: String): ParameterizedType? {
+    fun getTypeParameter(recordDeclaration: RecordDeclaration?, name: String): ParameterizedType? {
         if (recordToTypeParameters.containsKey(recordDeclaration)) {
             for (parameterizedType in recordToTypeParameters[recordDeclaration] ?: listOf()) {
                 if (parameterizedType.name.toString() == name) {
@@ -90,7 +91,10 @@ class TypeManager {
      * @param typeParameters List containing all ParameterizedTypes used by the recordDeclaration
      *   and will be stored as value in the map
      */
-    fun addTypeParameter(recordDeclaration: Record, typeParameters: List<ParameterizedType>) {
+    fun addTypeParameter(
+        recordDeclaration: RecordDeclaration,
+        typeParameters: List<ParameterizedType>,
+    ) {
         recordToTypeParameters[recordDeclaration] = typeParameters
     }
 
@@ -102,7 +106,10 @@ class TypeManager {
      * @param name name of the ParameterizedType we are looking for
      * @return
      */
-    private fun getTypeParameter(templateDeclaration: Template, name: String): ParameterizedType? {
+    private fun getTypeParameter(
+        templateDeclaration: TemplateDeclaration,
+        name: String,
+    ): ParameterizedType? {
         if (templateToTypeParameters.containsKey(templateDeclaration)) {
             for (parameterizedType in templateToTypeParameters[templateDeclaration] ?: listOf()) {
                 if (parameterizedType.name.toString() == name) {
@@ -118,7 +125,7 @@ class TypeManager {
      * @return List containing all ParameterizedTypes the templateDeclaration defines. If the
      *   templateDeclaration is not registered, an empty list is returned.
      */
-    fun getAllParameterizedType(templateDeclaration: Template): List<ParameterizedType> {
+    fun getAllParameterizedType(templateDeclaration: TemplateDeclaration): List<ParameterizedType> {
         return if (templateToTypeParameters.containsKey(templateDeclaration)) {
             templateToTypeParameters[templateDeclaration] ?: listOf()
         } else ArrayList()
@@ -143,7 +150,7 @@ class TypeManager {
 
             // We need an additional check here, because of parsing or other errors, the AST node
             // might not necessarily be a template declaration.
-            if (node is Template) {
+            if (node is TemplateDeclaration) {
                 val parameterizedType = getTypeParameter(node, name)
                 if (parameterizedType != null) {
                     return parameterizedType
@@ -162,7 +169,10 @@ class TypeManager {
      * @param templateDeclaration key for [TypeManager.templateToTypeParameters]
      * @param typeParameter ParameterizedType we want to register
      */
-    fun addTypeParameter(templateDeclaration: Template, typeParameter: ParameterizedType) {
+    fun addTypeParameter(
+        templateDeclaration: TemplateDeclaration,
+        typeParameter: ParameterizedType,
+    ) {
         val parameters =
             templateToTypeParameters.computeIfAbsent(templateDeclaration) { mutableListOf() }
 
@@ -178,7 +188,7 @@ class TypeManager {
      * @return
      */
     fun createOrGetTypeParameter(
-        templateDeclaration: Template,
+        templateDeclaration: TemplateDeclaration,
         typeName: String,
         language: Language<*>,
     ): ParameterizedType {
@@ -338,7 +348,7 @@ val Collection<Type>.commonType: Type?
 /**
  * A utility function that checks whether our [Reference] refers to a [Type]. This is used by many
  * passes that replace certain [Reference] nodes with other nodes, e.g., the
- * [ResolveCallAmbiguityPass].
+ * [ResolveCallExpressionAmbiguityPass].
  *
  * Note: This involves some symbol lookup (using [ScopeManager.lookupTypeSymbolByName]), so this can
  * only be used in passes.

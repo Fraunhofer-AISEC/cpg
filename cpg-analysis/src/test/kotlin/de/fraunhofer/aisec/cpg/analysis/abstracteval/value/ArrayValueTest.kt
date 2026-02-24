@@ -30,9 +30,9 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.IntervalLattice
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.array
-import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayConstruction
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import kotlin.test.Test
@@ -51,11 +51,11 @@ class ArrayValueTest {
             )
 
         val correctDeclaration =
-            Variable().apply {
+            VariableDeclaration().apply {
                 this.name = name
                 this.type = IntegerType(language = TestLanguage()).array()
                 this.initializer =
-                    ArrayConstruction().apply {
+                    NewArrayExpression().apply {
                         this.dimensions += Literal<Int>().apply { this.value = 5 }
                     }
             }
@@ -76,11 +76,11 @@ class ArrayValueTest {
             )
 
         val decl =
-            Variable().apply {
+            VariableDeclaration().apply {
                 this.name = name
                 this.type = IntegerType(language = TestLanguage()).array()
                 this.initializer =
-                    ArrayConstruction().apply {
+                    NewArrayExpression().apply {
                         this.dimensions += Literal<Int>().apply { this.value = 5 }
                     }
             }
@@ -105,7 +105,7 @@ class ArrayValueTest {
                 NewIntervalStateElement(),
             )
         val noInitializerDeclaration =
-            Variable().apply {
+            VariableDeclaration().apply {
                 this.name = name
                 this.type = IntegerType(language = TestLanguage()).array()
             }

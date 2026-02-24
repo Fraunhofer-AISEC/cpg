@@ -27,28 +27,27 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
-import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.followEOGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 
 /** This pass contains fine-grained improvements to the EOG for the [GoLanguage]. */
-@Description("This pass contains fine-grained improvements to the EOG for the go language.")
 class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraphPass(ctx) {
 
     /**
      * Go allows the automatic execution of certain cleanup calls before we exit the function (using
      * `defer`). We need to gather the appropriate deferred call expressions and then connect them
-     * in [handleFunction].
+     * in [handleFunctionDeclaration].
      */
-    private var deferredCalls = mutableMapOf<Function, MutableList<UnaryOperator>>()
+    private var deferredCalls = mutableMapOf<FunctionDeclaration, MutableList<UnaryOperator>>()
 
     override fun handleUnspecificUnaryOperator(node: UnaryOperator) {
         val input = node.input
-        if (node.operatorCode == "defer" && input is Call) {
+        if (node.operatorCode == "defer" && input is CallExpression) {
             handleDeferUnaryOperator(node, input)
         } else {
             super.handleUnspecificUnaryOperator(node)
@@ -56,11 +55,11 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
     }
 
     /** Handles the EOG for a [`defer`](https://go.dev/ref/spec#Defer_statements) statement. */
-    private fun handleDeferUnaryOperator(node: UnaryOperator, input: Call) {
+    private fun handleDeferUnaryOperator(node: UnaryOperator, input: CallExpression) {
         val function = scopeManager.currentFunction
         if (function != null) {
             // We need to disrupt the regular EOG handling here and store this deferred call. We
-            // will pick it up again in handleFunction.
+            // will pick it up again in handleFunctionDeclaration.
             val calls = deferredCalls.computeIfAbsent(function) { mutableListOf() }
             calls += node
 
@@ -70,7 +69,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
             attachToEOG(node)
 
             // Evaluate the callee
-            handleEOG(input.callee)
+            input.callee?.let { handleEOG(it) }
 
             // Then the arguments
             for (arg in input.arguments) {
@@ -84,25 +83,25 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
     }
 
     /**
-     * We need to intentionally override [handleRecord] to NOT create the EOG for its children,
-     * e.g., [Record.methods]. The reason for this is that Go only has external methods
-     * declarations, and we do a little cheat by adding the methods both to the namespace of the
-     * current file and to the [Record.methods].
+     * We need to intentionally override [handleRecordDeclaration] to NOT create the EOG for its
+     * children, e.g., [RecordDeclaration.methods]. The reason for this is that Go only has external
+     * methods declarations, and we do a little cheat by adding the methods both to the namespace of
+     * the current file and to the [RecordDeclaration.methods].
      *
      * But, due to this, the original [EvaluationOrderGraphPass] would create the EOG for methods
-     * twice, once for the object in the [Record] and once for the declaration inside the
-     * [Namespace] of the current file.
+     * twice, once for the object in the [RecordDeclaration] and once for the declaration inside the
+     * [NamespaceDeclaration] of the current file.
      */
-    override fun handleRecord(node: Record) {
+    override fun handleRecordDeclaration(node: RecordDeclaration) {
         scopeManager.enterScope(node)
         handleStatementHolder(node)
         currentPredecessors.clear()
         scopeManager.leaveScope(node)
     }
 
-    override fun handleFunction(node: Function) {
+    override fun handleFunctionDeclaration(node: FunctionDeclaration) {
         // First, call the regular EOG handler
-        super.handleFunction(node)
+        super.handleFunctionDeclaration(node)
 
         // Before we exit the function, we need to call the deferred calls for this function
         val defers = deferredCalls[node]
@@ -115,7 +114,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
                 // It is a bit philosophical whether the deferred call happens before or after the
                 // return statement in the EOG. For now, it is easier to have it as the last node
                 // AFTER the return statement
-                addEOGEdge(path.nodes.last(), defer.input)
+                val eogEdge = addEOGEdge(path.nodes.last(), defer.input)
             }
         }
     }

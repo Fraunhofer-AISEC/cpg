@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ import kotlin.collections.MutableMap
  */
 public open class ConfigurationOption(
     public val configurationGroup: ConfigurationGroup?,
-    public val selectorKey: SelectorKey?,
+    public val key: Key?,
     public val `value`: Value?,
     dataLocation: DataLocation?,
     creation_time: ZonedDateTime?,
@@ -72,9 +72,8 @@ public open class ConfigurationOption(
         other is ConfigurationOption &&
             super.equals(other) &&
             other.configurationGroup == this.configurationGroup &&
-            other.selectorKey == this.selectorKey &&
+            other.key == this.key &&
             other.value == this.value
 
-    override fun hashCode(): Int =
-        Objects.hash(super.hashCode(), configurationGroup, selectorKey, value)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), configurationGroup, key, value)
 }

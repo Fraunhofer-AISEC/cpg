@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,8 +37,8 @@ import kotlin.collections.MutableMap
 
 /**
  * Represents a possible group source for a configuration group. For example, when loading an INI
- * file with our INI file frontend, each section is presented as a [Record]. This record declaration
- * would be the source of the configuration group.
+ * file with our INI file frontend, each section is presented as a [RecordDeclaration]. This record
+ * declaration would be the source of the configuration group.
  */
 public open class ConfigurationGroupSource(
     dataLocation: DataLocation?,

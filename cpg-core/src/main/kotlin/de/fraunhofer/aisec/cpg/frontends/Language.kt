@@ -43,15 +43,15 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -120,10 +120,12 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     @get:JsonIgnore abstract val builtInTypes: Map<String, Type>
 
     /** The access modifiers of this programming language */
-    open val accessModifiers: Set<String> = setOf("public", "protected", "private")
+    open val accessModifiers: Set<String>
+        get() = setOf("public", "protected", "private")
 
     /** The arithmetic operations of this language */
-    open val arithmeticOperations: Set<String> = setOf("+", "-", "*", "/", "%", "<<", ">>")
+    open val arithmeticOperations: Set<String>
+        get() = setOf("+", "-", "*", "/", "%", "<<", ">>")
 
     /** All operators which perform and assignment and an operation using lhs and rhs. */
     abstract val compoundAssignmentOperators: Set<String>
@@ -153,10 +155,10 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * [builtInTypes] map, it returns null. The [typeString] must precisely match the key in the
      * map.
      */
-    open fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString.toString()]
+    fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString.toString()]
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
-    open fun handlesFile(file: File): Boolean {
+    fun handlesFile(file: File): Boolean {
         return file.extension in fileExtensions
     }
 
@@ -380,7 +382,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     context(provider: ContextProvider)
     open fun bestViableResolution(
         result: CallResolutionResult
-    ): Pair<Set<Function>, CallResolutionResult.SuccessKind> {
+    ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
         // Check for direct matches. Let's hope there is only one, otherwise we have an ambiguous
         // result
         val directMatches = result.signatureResults.entries.filter { it.value.isDirectMatch }
@@ -405,7 +407,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         // case, we need to check, whether a template matches directly after we have no direct
         // matches
         val source = result.source
-        if (this is HasTemplates && source is Call) {
+        if (this is HasTemplates && source is CallExpression) {
             source.templateArgumentEdges = TemplateArguments(source)
             val (ok, candidates) =
                 this.handleTemplateFunctionCalls(
@@ -471,23 +473,24 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
     /**
      * There are some cases where our [Inference] system needs to place declarations, e.g., a
-     * [Namespace] in the [GlobalScope]. The issue with that is that the [Scope.astNode] of the
-     * global scope is always the last parsed [TranslationUnit] and we might end up adding the
-     * declaration to some random translation unit, where it does not really belong.
+     * [NamespaceDeclaration] in the [GlobalScope]. The issue with that is that the [Scope.astNode]
+     * of the global scope is always the last parsed [TranslationUnitDeclaration] and we might end
+     * up adding the declaration to some random translation unit, where it does not really belong.
      *
-     * Therefore, we give the language a chance to return a [TranslationUnit] where the declaration
-     * should be placed. If the language does not override this function, the default implementation
-     * will return the first [TranslationUnit] in the [Component] of [source].
+     * Therefore, we give the language a chance to return a [TranslationUnitDeclaration] where the
+     * declaration should be placed. If the language does not override this function, the default
+     * implementation will return the first [TranslationUnitDeclaration] in the [Component] of
+     * [source].
      *
      * But languages might choose to take the information of [TypeToInfer] and [source] and create a
-     * specific [TranslationUnit], e.g., for each namespace that is inferred globally or try to put
-     * all inferred declarations into one specific (inferred) new translation unit.
+     * specific [TranslationUnitDeclaration], e.g., for each namespace that is inferred globally or
+     * try to put all inferred declarations into one specific (inferred) new translation unit.
      *
      * @param TypeToInfer the type of the node that should be inferred
      * @param source the source that was responsible for the inference
      */
     context(provider: ContextProvider)
-    open fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnit {
+    fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
         // The easiest way to identify the current component would be traversing the AST, but that
         // does not work for types. But types have a scope and the scope (should) have the
         // connection to the AST. We add several fallbacks here to make sure that we have a

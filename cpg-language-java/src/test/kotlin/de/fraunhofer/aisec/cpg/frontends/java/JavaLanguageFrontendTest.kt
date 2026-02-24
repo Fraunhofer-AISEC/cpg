@@ -92,7 +92,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<JavaLanguage>()
             }
 
-        val declaration = tu.declarations[0] as? Record
+        val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
 
         val main = declaration.methods[0]
@@ -119,7 +119,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<JavaLanguage>()
             }
-        val declaration = tu.declarations[0] as? Record
+        val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
 
         val main = declaration.methods[0]
@@ -138,13 +138,13 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertTrue(s is DeclarationStatement)
         assertTrue(s.isSingleDeclaration())
 
-        val sDecl = s.singleDeclaration as? Variable
+        val sDecl = s.singleDeclaration as? VariableDeclaration
         assertNotNull(sDecl)
         assertLocalName("s", sDecl)
         assertEquals(tu.primitiveType("java.lang.String"), sDecl.type)
 
         // should contain a single statement
-        val sce = forEachStatement.statement as? MemberCall
+        val sce = forEachStatement.statement as? MemberCallExpression
         assertNotNull(sce)
 
         assertLocalName("println", sce)
@@ -168,7 +168,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu = result.components.firstOrNull()?.translationUnits?.firstOrNull()
         assertNotNull(tu)
 
-        val declaration = tu.declarations[0] as? Record
+        val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
 
         val main = declaration.methods[0]
@@ -224,7 +224,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<JavaLanguage>()
             }
 
-        val declaration = tu.declarations[0] as? Record
+        val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
 
         val main = declaration.methods[0]
@@ -281,14 +281,14 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
     @Test
     fun testRecordDeclaration() {
-        val file = File("src/test/resources/compiling/Record.java")
+        val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<JavaLanguage>()
             }
         assertNotNull(tu)
 
-        val namespaceDeclaration = tu.declarations<Namespace>(0)
+        val namespaceDeclaration = tu.declarations<NamespaceDeclaration>(0)
         assertNotNull(namespaceDeclaration)
 
         val recordDeclaration = namespaceDeclaration.records["SimpleClass"]
@@ -300,25 +300,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertLiteralValue(1, recordDeclaration.fields["field1"]?.initializer)
         assertLiteralValue(2, recordDeclaration.fields["field2"]?.initializer)
 
-        // Check visibility modifiers for fields
-        val field = recordDeclaration.fields["field"]
-        assertNotNull(field)
-        assertContains(field.modifiers, "private")
-        val field1 = recordDeclaration.fields["field1"]
-        assertNotNull(field1)
-        assertContains(field1.modifiers, "private")
-
         val method = recordDeclaration.methods[0]
         assertNotNull(method)
         assertEquals(recordDeclaration, method.recordDeclaration)
         assertLocalName("method", method)
         assertEquals(tu.primitiveType("java.lang.Integer"), method.returnTypes.firstOrNull())
-
-        // Method has no visibility modifier, so it should have package-private (no modifier in set)
-        // In Java, package-private means no access modifier keyword is present
-        assertFalse(method.modifiers.contains("private"))
-        assertFalse(method.modifiers.contains("public"))
-        assertFalse(method.modifiers.contains("protected"))
 
         val functionType = method.type as? FunctionType
         assertNotNull(functionType)
@@ -372,7 +358,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(declaration)
 
-        val namespaceDeclaration = declaration.declarations<Namespace>(0)
+        val namespaceDeclaration = declaration.declarations<NamespaceDeclaration>(0)
         assertNotNull(namespaceDeclaration)
 
         val record = namespaceDeclaration.records["Cast"]
@@ -399,7 +385,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         )
 
         // initializer
-        val cast = b.initializer as? Cast
+        val cast = b.initializer as? CastExpression
         assertNotNull(cast)
         assertTrue(
             cast.type.name.localName == "BaseClass" || cast.type.name.toString() == "cast.BaseClass"
@@ -420,7 +406,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val namespaceDeclaration = tu.declarations<Namespace>(0)
+        val namespaceDeclaration = tu.declarations<NamespaceDeclaration>(0)
         assertNotNull(namespaceDeclaration)
 
         val record = namespaceDeclaration.records["Arrays"]
@@ -432,7 +418,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val statements = (main.body as? Block)?.statements
         assertNotNull(statements)
 
-        val a = (statements[0] as? DeclarationStatement)?.singleDeclaration as? Variable
+        val a = (statements[0] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
         assertNotNull(a)
 
         with(tu) {
@@ -441,11 +427,11 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         }
 
         // it has an array creation initializer
-        val ace = a.initializer as? ArrayConstruction
+        val ace = a.initializer as? NewArrayExpression
         assertNotNull(ace)
 
         // which has a initializer list (1 entry)
-        val ile = ace.initializer as? InitializerList
+        val ile = ace.initializer as? InitializerListExpression
         assertNotNull(ile)
         assertEquals(1, ile.initializers.size)
 
@@ -454,10 +440,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals(1, literal?.value)
 
         // next one is a declaration with array subscription
-        val b = (statements[1] as? DeclarationStatement)?.singleDeclaration as? Variable
+        val b = (statements[1] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
 
         // initializer is array subscription
-        val ase = b?.initializer as? Subscription
+        val ase = b?.initializer as? SubscriptExpression
         assertNotNull(ase)
         assertEquals(a, (ase.arrayExpression as? Reference)?.refersTo)
         assertEquals(0, (ase.subscriptExpression as? Literal<*>)?.value)
@@ -472,7 +458,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val namespaceDeclaration = tu.declarations<Namespace>(0)
+        val namespaceDeclaration = tu.declarations<NamespaceDeclaration>(0)
         assertNotNull(namespaceDeclaration)
 
         val record = namespaceDeclaration.records["FieldAccess"]
@@ -484,18 +470,18 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val statements = (main.body as? Block)?.statements
         assertNotNull(statements)
 
-        val l = (statements[1] as? DeclarationStatement)?.singleDeclaration as? Variable
+        val l = (statements[1] as? DeclarationStatement)?.singleDeclaration as? VariableDeclaration
         assertLocalName("l", l)
 
-        val length = l?.initializer as? MemberAccess
+        val length = l?.initializer as? MemberExpression
         assertNotNull(length)
         assertLocalName("length", length)
         assertLocalName("int", length.type)
     }
 
     @Test
-    fun testMemberCalls() {
-        val file = File("src/test/resources/compiling/MemberCall.java")
+    fun testMemberCallExpressions() {
+        val file = File("src/test/resources/compiling/MemberCallExpression.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<JavaLanguage>()
@@ -515,10 +501,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val namespaceDeclaration = tu.declarations<Namespace>(0)
+        val namespaceDeclaration = tu.declarations<NamespaceDeclaration>(0)
         assertNotNull(namespaceDeclaration)
 
-        val record = namespaceDeclaration.declarations<Record>(0)
+        val record = namespaceDeclaration.declarations<RecordDeclaration>(0)
         assertNotNull(record)
 
         val main = record.methods[0]
@@ -549,7 +535,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val tu = declarations[0]
         assertNotNull(tu)
 
-        val record = tu.declarations<Record>(0)
+        val record = tu.declarations<RecordDeclaration>(0)
         assertNotNull(record)
 
         var annotations: List<Annotation> = record.annotations
@@ -591,7 +577,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<JavaLanguage>()
             }
-        val record = tu.declarations<Record>(0)
+        val record = tu.declarations<RecordDeclaration>(0)
         assertNotNull(record)
 
         val func = record.methods.stream().findFirst().orElse(null)
@@ -602,19 +588,21 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val request =
             nodes
                 .stream()
-                .filter { node: Node -> (node is Variable && "request" == node.name.localName) }
-                .map { node: Node? -> node as? Variable? }
+                .filter { node: Node ->
+                    (node is VariableDeclaration && "request" == node.name.localName)
+                }
+                .map { node: Node? -> node as? VariableDeclaration? }
                 .findFirst()
                 .orElse(null)
         assertNotNull(request)
 
         val initializer = request.initializer
         assertNotNull(initializer)
-        assertTrue(initializer is MemberCall)
+        assertTrue(initializer is MemberCallExpression)
 
         val call = initializer
         assertLocalName("get", call)
-        val staticCall = nodes.filterIsInstance<MemberCall>().firstOrNull { it.isStatic }
+        val staticCall = nodes.filterIsInstance<MemberCallExpression>().firstOrNull { it.isStatic }
         assertNotNull(staticCall)
         assertLocalName("doSomethingStatic", staticCall)
     }
@@ -631,18 +619,18 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             findByUniqueName(result.components.flatMap { it.translationUnits }, file1.toString())
 
         with(result) {
-            val namespace = tu.declarations<Namespace>(0)
+            val namespace = tu.declarations<NamespaceDeclaration>(0)
             assertNotNull(namespace)
 
-            val record = namespace.declarations<Record>(0)
+            val record = namespace.declarations<RecordDeclaration>(0)
             assertNotNull(record)
 
             val constructor = record.constructors[0]
-            val op = constructor.bodyOrNull<Assign>(0)
+            val op = constructor.bodyOrNull<AssignExpression>(0)
             assertNotNull(op)
 
-            val lhs = op.lhs<MemberAccess>()
-            val receiver = (lhs?.base as? Reference)?.refersTo as? Variable?
+            val lhs = op.lhs<MemberExpression>()
+            val receiver = (lhs?.base as? Reference)?.refersTo as? VariableDeclaration?
             assertNotNull(receiver)
             assertLocalName("this", receiver)
             assertEquals(assertResolvedType("my.Animal"), receiver.type)
@@ -659,7 +647,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                     object : DeclarationHandler(this@MyJavaLanguageFrontend) {
                         override fun handleClassOrInterfaceDeclaration(
                             classInterDecl: ClassOrInterfaceDeclaration
-                        ): Record {
+                        ): RecordDeclaration {
                             // take the original class and replace the name
                             val declaration =
                                 super.handleClassOrInterfaceDeclaration(classInterDecl)
@@ -680,7 +668,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             override val frontend = MyJavaLanguageFrontend::class
         }
 
-        val file = File("src/test/resources/compiling/Record.java")
+        val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<MyJavaLanguage>()
@@ -773,10 +761,10 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val doSomething = evenMoreInnerClass.methods["doSomething"]
         assertNotNull(doSomething)
 
-        val assign = doSomething.bodyOrNull<Assign>()
+        val assign = doSomething.bodyOrNull<AssignExpression>()
         assertNotNull(assign)
 
-        val ref = ((assign.rhs<MemberAccess>())?.base as Reference).refersTo
+        val ref = ((assign.rhs<MemberExpression>())?.base as Reference).refersTo
         assertNotNull(ref)
         assertSame(ref, thisOuterClass)
     }
@@ -861,7 +849,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val result =
             analyze(".java", parentFile.toPath(), true) { it.registerLanguage<JavaLanguage>() }
 
-        val enum = result.records["Enums"] as Enumeration
+        val enum = result.records["Enums"] as EnumDeclaration
         assertNotNull(enum)
 
         assertNotNull(enum.imports["EnumsImport"])
@@ -879,22 +867,24 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals(1, enum.constructors.size)
         val constructor = enum.constructors.first()
         assertNotNull(constructor.parameters["value"])
-        assertNotNull(constructor.bodyOrNull<Assign>(0))
+        assertNotNull(constructor.bodyOrNull<AssignExpression>(0))
 
         val entryOne = enum.entries.singleOrNull { it.name.localName == "VALUE_ONE" }
         assertEquals(
             1,
-            ((entryOne?.initializer as? Construction)?.arguments?.singleOrNull() as? Literal<*>)
+            ((entryOne?.initializer as? ConstructExpression)?.arguments?.singleOrNull()
+                    as? Literal<*>)
                 ?.value,
         )
-        assertEquals(constructor, (entryOne?.initializer as? Construction)?.constructor)
+        assertEquals(constructor, (entryOne?.initializer as? ConstructExpression)?.constructor)
         val entryTwo = enum.entries.singleOrNull { it.name.localName == "VALUE_TWO" }
         assertEquals(
             2,
-            ((entryTwo?.initializer as? Construction)?.arguments?.singleOrNull() as? Literal<*>)
+            ((entryTwo?.initializer as? ConstructExpression)?.arguments?.singleOrNull()
+                    as? Literal<*>)
                 ?.value,
         )
-        assertEquals(constructor, (entryTwo?.initializer as? Construction)?.constructor)
+        assertEquals(constructor, (entryTwo?.initializer as? ConstructExpression)?.constructor)
 
         val mainMethod = enum.methods["main"]
         assertNotNull(mainMethod)

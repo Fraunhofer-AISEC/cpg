@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,8 +38,8 @@ import kotlin.collections.MutableMap
 
 /**
  * Represents a possible source for a configuration. For example, when loading an INI file with our
- * INI file frontend, the whole file would be represented as a [TranslationUnit]. This translation
- * unit declaration would be the source of the configuration.
+ * INI file frontend, the whole file would be represented as a [TranslationUnitDeclaration]. This
+ * translation unit declaration would be the source of the configuration.
  */
 public open class ConfigurationSource(
     public val configurationGroupSources: MutableList<ConfigurationGroupSource?>,

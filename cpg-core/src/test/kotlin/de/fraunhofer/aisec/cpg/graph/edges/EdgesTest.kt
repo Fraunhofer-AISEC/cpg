@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.edges
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.newMethod
-import de.fraunhofer.aisec.cpg.graph.newRecord
+import de.fraunhofer.aisec.cpg.graph.newMethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -35,15 +35,15 @@ class EdgesTest {
     @Test
     fun testUnwrap() {
         with(TestLanguageFrontend()) {
-            val record = newRecord("myRecord", kind = "class")
-            val method = newMethod("myFunc")
+            val record = newRecordDeclaration("myRecord", kind = "class")
+            val method = newMethodDeclaration("myFunc")
             record.methods += method
 
             assertEquals(1, record.methods.size)
             assertEquals(method, record.methods.firstOrNull())
 
             assertEquals(
-                "Record[name=myRecord,location=<null>,name=myRecord,kind=class,superTypeDeclarations=[],fields=[],methods=[Method[name=myFunc,location=<null>,parameters=[]]],constructors=[],records=[]]",
+                "RecordDeclaration[name=myRecord,location=<null>,name=myRecord,kind=class,superTypeDeclarations=[],fields=[],methods=[MethodDeclaration[name=myFunc,location=<null>,parameters=[]]],constructors=[],records=[]]",
                 record.toString(),
             )
         }

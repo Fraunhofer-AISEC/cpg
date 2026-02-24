@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,31 +26,23 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.manualExtensions.HashFunction
-import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInDFGPath
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
+import kotlin.collections.MutableList
 
-open class CryptographicHash(
-    val algorithm: String?,
-    val hashFunction: HashFunction,
-    val usesSalt: Boolean?,
-    linkedConcept: Confidentiality,
+public open class CryptographicHash(
+    public val algorithm: String?,
+    public val errors: MutableList<Error?>,
     underlyingNode: Node? = null,
-) : CryptographicOperation(linkedConcept, underlyingNode) {
+) : Integrity(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is CryptographicHash &&
             super.equals(other) &&
-            other.hashFunction == this.hashFunction &&
             other.algorithm == this.algorithm &&
-            other.usesSalt == this.usesSalt
+            other.errors == this.errors
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), algorithm, usesSalt)
-
-    override fun setDFG() {
-        underlyingNode?.insertNodeAfterwardInDFGPath(this)
-    }
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), algorithm, errors)
 }

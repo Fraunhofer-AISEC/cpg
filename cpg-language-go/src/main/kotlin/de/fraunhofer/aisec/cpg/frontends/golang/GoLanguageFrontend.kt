@@ -34,11 +34,11 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Modfile
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Parser
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
-import de.fraunhofer.aisec.cpg.graph.declarations.Import
-import de.fraunhofer.aisec.cpg.graph.declarations.Method
-import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
-import de.fraunhofer.aisec.cpg.graph.newNamespace
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.newNamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -73,11 +73,6 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
     private var currentModule: GoStandardLibrary.Modfile.File? = null
     private var commentMap: GoStandardLibrary.Ast.CommentMap? = null
     var currentFile: GoStandardLibrary.Ast.File? = null
-
-    override val frontendConfiguration: GoFrontendConfiguration by lazy {
-        this.ctx.config.frontendConfigurations[this::class] as? GoFrontendConfiguration
-            ?: NoDependenciesGoFrontendConfiguration()
-    }
 
     var isDependency: Boolean = false
 
@@ -131,13 +126,13 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
     var declCtx = DeclarationContext()
 
     @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnit {
+    override fun parse(file: File): TranslationUnitDeclaration {
         if (!shouldBeBuild(file, ctx.config.symbols)) {
             log.debug(
                 "Ignoring the contents of {} because of missing build tags or different GOOS/GOARCH.",
                 file,
             )
-            return newTranslationUnit(file.name)
+            return newTranslationUnitDeclaration(file.name)
         }
 
         val dependency =
@@ -147,7 +142,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
 
         // Make sure, that our top level is set either way
         val topLevel =
-            // If this file is part of an include, we set the top level to the root of the include.
+            // If this file is part of an include, we set the top level to the root of the include
             when {
                 dependency != null -> {
                     isDependency = true
@@ -173,7 +168,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
         currentFile = f
         currentFileSet = fset
 
-        val tu = newTranslationUnit(file.absolutePath, rawNode = f)
+        val tu = newTranslationUnitDeclaration(file.absolutePath, rawNode = f)
         scopeManager.resetToGlobal(tu)
         currentTU = tu
 
@@ -184,13 +179,13 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
         // We parse the imports specifically and not as part of the handler later
         for (spec in f.imports) {
             val import = specificationHandler.handle(spec)
-            if (import is Import) {
+            if (import is ImportDeclaration) {
                 scopeManager.addDeclaration(import)
                 tu.addDeclaration(import)
             }
         }
 
-        val p = newNamespace(f.name.name)
+        val p = newNamespaceDeclaration(f.name.name)
         scopeManager.enterScope(p)
 
         try {
@@ -226,7 +221,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                 // We need to be careful with method declarations. We need to put them in the
                 // respective name scope of the record and NOT on the global scope / namespace scope
                 // TODO: this is broken if we see the declaration of the method before the class :(
-                if (declaration is Method) {
+                if (declaration is MethodDeclaration) {
                     declaration.recordDeclaration?.let {
                         scopeManager.enterScope(it)
                         scopeManager.addDeclaration(declaration)
@@ -326,9 +321,9 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                     // Create an anonymous struct, this will add it to the scope manager. This is
                     // somewhat duplicate, but the easiest for now. We need to create it in the
                     // global scope to avoid namespace issues
-                    val record =
+                    var record =
                         scopeManager.withScope(scopeManager.globalScope) {
-                            val record = specificationHandler.buildRecordDeclaration(type, name)
+                            var record = specificationHandler.buildRecordDeclaration(type, name)
                             scopeManager.addDeclaration(record)
                             currentTU?.declarations += record
                             record
@@ -400,7 +395,6 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
         return Pair(type, variadic)
     }
 
-    // TODO function is never used -> missing implementation?
     private fun isBuiltinType(name: String): Boolean {
         return language.primitiveTypeNames.contains(name)
     }
@@ -500,7 +494,7 @@ val Type?.underlyingType: Type?
  *
  * Since these named types can also be augmented with methods (see
  * https://go.dev/ref/spec#Method_sets), we need to model them as an [ObjectType] with an associated
- * [Record] (of kind "type").
+ * [RecordDeclaration] (of kind "type").
  */
 val Type?.namedType: Boolean
     get() {
@@ -555,7 +549,7 @@ fun funcTypeName(paramTypes: List<Type>, returnTypes: List<Type>): String {
     return pn.joinToString(", ", prefix = "func(", postfix = ")$rs")
 }
 
-val Record.embeddedStructs: List<Record>
+val RecordDeclaration.embeddedStructs: List<RecordDeclaration>
     get() {
         return this.fields
             .filter { "embedded" in it.modifiers }

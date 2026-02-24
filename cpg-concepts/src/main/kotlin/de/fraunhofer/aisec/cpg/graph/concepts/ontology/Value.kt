@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ import kotlin.collections.MutableMap
 
 /**
  * The node that represents the "value" of this option. For example, in an INI file, this would be
- * the [Field.initializer] node that represents the value.
+ * the [FieldDeclaration.initializer] node that represents the value.
  */
 public open class Value(
     dataLocation: DataLocation?,

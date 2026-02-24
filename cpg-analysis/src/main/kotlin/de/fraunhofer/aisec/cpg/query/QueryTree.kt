@@ -64,11 +64,7 @@ import kotlin.uuid.Uuid
 open class QueryTree<T>(
     value: T,
     var children: List<QueryTree<*>> = emptyList(),
-    /**
-     * A human-readable string representation of the query tree element. This should contain info
-     * about the (syntactic) meaning or interpretation of this query tree.
-     */
-    stringRepresentation: String = "",
+    var stringRepresentation: String = "",
 
     /**
      * The node, to which this current element of the query tree is associated with. This is useful
@@ -99,18 +95,6 @@ open class QueryTree<T>(
     open val confidence: AcceptanceStatus
         get() {
             return calculateConfidence()
-        }
-
-    /**
-     * A human-readable string representation of the query tree element. This should contain info
-     * about the (syntactic) meaning or interpretation of this query tree.
-     */
-    var stringRepresentation: String = stringRepresentation
-        set(fieldValue) {
-            field = fieldValue
-
-            // Update the ID whenever the value changes
-            id = computeId()
         }
 
     /** The value of the [QueryTree] is the result of the query evaluation. */
@@ -273,10 +257,7 @@ open class QueryTree<T>(
                 }
             }
 
-        return Uuid.fromLongs(
-            nodePart ?: 0,
-            childrenIds + Objects.hash(value, stringRepresentation),
-        )
+        return Uuid.fromLongs(nodePart ?: 0, childrenIds + Objects.hash(value))
     }
 
     fun printNicely(depth: Int = 0): String {
@@ -330,7 +311,8 @@ open class QueryTree<T>(
                 // If there are no children, we collect the assumptions from the value
                 // This is useful for cases where the value itself is a HasAssumptions
                 // or a Collection of HasAssumptions
-                when (val value = this.value) {
+                val value = this.value
+                when (value) {
                     is HasAssumptions -> {
                         value.relevantAssumptions()
                     }

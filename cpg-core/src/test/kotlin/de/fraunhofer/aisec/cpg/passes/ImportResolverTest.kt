@@ -31,10 +31,10 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
-import de.fraunhofer.aisec.cpg.graph.newImport
-import de.fraunhofer.aisec.cpg.graph.newNamespace
-import de.fraunhofer.aisec.cpg.graph.newTranslationUnit
-import de.fraunhofer.aisec.cpg.graph.newVariable
+import de.fraunhofer.aisec.cpg.graph.newImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.newNamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.parseName
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -55,21 +55,24 @@ class ImportResolverTest {
                             // directly imports the other namespace (let's start easy). We
                             // intentionally
                             // create them in reverse order
-                            var tuB = newTranslationUnit("file.b")
+                            var tuB = newTranslationUnitDeclaration("file.b")
                             scopeManager.resetToGlobal(tuB)
 
-                            var pkgB = newNamespace("b")
+                            var pkgB = newNamespaceDeclaration("b")
                             scopeManager.addDeclaration(pkgB)
                             tuB.declarations += pkgB
 
                             scopeManager.enterScope(pkgB)
                             var import =
-                                newImport(parseName("a"), style = ImportStyle.IMPORT_NAMESPACE)
+                                newImportDeclaration(
+                                    parseName("a"),
+                                    style = ImportStyle.IMPORT_NAMESPACE,
+                                )
                             scopeManager.addDeclaration(import)
                             pkgB.declarations += import
 
                             import =
-                                newImport(
+                                newImportDeclaration(
                                     parseName("c.bar"),
                                     style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                                 )
@@ -82,15 +85,15 @@ class ImportResolverTest {
                         .also { this.addTranslationUnit(it) }
 
                     with(frontend) {
-                            var tuA = newTranslationUnit("file.a")
+                            var tuA = newTranslationUnitDeclaration("file.a")
                             scopeManager.resetToGlobal(tuA)
 
-                            var pkgA = newNamespace("a")
+                            var pkgA = newNamespaceDeclaration("a")
                             scopeManager.addDeclaration(pkgA)
                             tuA.declarations += pkgA
 
                             scopeManager.enterScope(pkgA)
-                            var foo = newVariable(parseName("a.foo"))
+                            var foo = newVariableDeclaration(parseName("a.foo"))
                             scopeManager.addDeclaration(foo)
                             pkgA.declarations += foo
 
@@ -100,15 +103,15 @@ class ImportResolverTest {
                         .also { this.addTranslationUnit(it) }
 
                     with(frontend) {
-                            var tuA = newTranslationUnit("file.c")
+                            var tuA = newTranslationUnitDeclaration("file.c")
                             scopeManager.resetToGlobal(tuA)
 
-                            var pkgA = newNamespace("c")
+                            var pkgA = newNamespaceDeclaration("c")
                             scopeManager.addDeclaration(pkgA)
                             tuA.declarations += pkgA
 
                             scopeManager.enterScope(pkgA)
-                            var foo = newVariable(parseName("c.bar"))
+                            var foo = newVariableDeclaration(parseName("c.bar"))
                             scopeManager.addDeclaration(foo)
                             pkgA.declarations += foo
 

@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.declarations.Field
-import de.fraunhofer.aisec.cpg.graph.declarations.Method
-import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
-import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.astEdges
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -45,16 +45,16 @@ import org.junit.jupiter.api.assertTimeout
 class WalkerTest : BaseTest() {
     @Test
     fun testWalkerSpeed() {
-        val tu = TranslationUnit()
+        val tu = TranslationUnitDeclaration()
 
         // Let's build some fake CPG trees with a good amount of classes
         for (i in 0..100) {
-            val record = Record()
+            val record = RecordDeclaration()
             record.name = Name("class${i}")
 
             // Each class should have a couple of dozen functions
             for (j in 0..20) {
-                val method = Method()
+                val method = MethodDeclaration()
                 method.name = Name("method${j}", record.name)
 
                 val comp = Block()
@@ -62,7 +62,7 @@ class WalkerTest : BaseTest() {
                 // Each method has a body with contains a fair amount of variable declarations
                 for (k in 0..10) {
                     val stmt = DeclarationStatement()
-                    val decl = Variable()
+                    val decl = VariableDeclaration()
                     decl.name = Name("var${i}")
 
                     // With a literal initializer
@@ -81,7 +81,7 @@ class WalkerTest : BaseTest() {
 
             // And a couple of fields
             for (j in 0..40) {
-                val field = Field()
+                val field = FieldDeclaration()
                 field.name = Name("field${j}", record.name)
 
                 // With a literal initializer
@@ -127,7 +127,7 @@ class WalkerTest : BaseTest() {
         val stmt = DeclarationStatement()
 
         for (k in 0..1000) {
-            val decl = Variable()
+            val decl = VariableDeclaration()
             decl.name = Name("var${k}")
 
             stmt.declarationEdges.add(decl)

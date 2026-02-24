@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,6 @@ import kotlin.Int
 
 /** HTTP Client. */
 public open class HttpClient(
-    val protocol: TransportEncryption?,
     public val isTLS: Boolean?,
     public val authenticity: Authenticity?,
     underlyingNode: Node? = null,
@@ -42,8 +41,7 @@ public open class HttpClient(
         other is HttpClient &&
             super.equals(other) &&
             other.isTLS == this.isTLS &&
-            other.authenticity == this.authenticity &&
-            other.protocol == this.protocol
+            other.authenticity == this.authenticity
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), isTLS, authenticity, protocol)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), isTLS, authenticity)
 }

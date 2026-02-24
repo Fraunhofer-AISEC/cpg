@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,18 +26,19 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import java.util.List
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
+import kotlin.String
 
 public open class DatabaseConnect(
-    calls: List<Node>?,
+    calls: List<String>?,
     databaseService: DatabaseService?,
-    storage: DatabaseStorage?,
-    linkedConcept: DatabaseStorage,
+    operatesOn: DatabaseStorage,
     underlyingNode: Node? = null,
-) : DatabaseOperation(calls, databaseService, storage, linkedConcept, underlyingNode) {
+) : DatabaseOperation(calls, databaseService, operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is DatabaseConnect && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

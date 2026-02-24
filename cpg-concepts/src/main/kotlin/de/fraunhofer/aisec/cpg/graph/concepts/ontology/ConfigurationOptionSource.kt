@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,8 +37,8 @@ import kotlin.collections.MutableMap
 
 /**
  * Represents a possible option source for a configuration option. For example, when loading an INI
- * file with our INI file frontend, each key-value pair is presented as a [Field]. This field
- * declaration would be the source to the configuration option.
+ * file with our INI file frontend, each key-value pair is presented as a [FieldDeclaration]. This
+ * field declaration would be the source to the configuration option.
  */
 public open class ConfigurationOptionSource(
     dataLocation: DataLocation?,

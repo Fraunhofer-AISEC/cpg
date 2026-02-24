@@ -25,23 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.test.assertNotNull
-
-/** This is a variant of the test language with [HasShortCircuitOperators]. */
-open class TestLanguageWithShortCircuit() : TestLanguage(), HasShortCircuitOperators {
-    override val conjunctiveOperators: List<String> = listOf("&&")
-    override val disjunctiveOperators: List<String> = listOf("||")
-}
 
 /**
  * This is a variant of the test language with `::` as a [namespaceDelimiter] to simulate languages
@@ -110,7 +103,7 @@ open class TestLanguageFrontend(
     ctx: TranslationContext = TranslationContext(TranslationConfiguration.builder().build()),
     language: Language<TestLanguageFrontend> = TestLanguage(),
 ) : LanguageFrontend<Any, Any>(ctx, language) {
-    override fun parse(file: File): TranslationUnit {
+    override fun parse(file: File): TranslationUnitDeclaration {
         TODO("Not yet implemented")
     }
 

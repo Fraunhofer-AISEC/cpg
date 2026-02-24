@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertNotNull
@@ -58,7 +58,7 @@ class MermaidPrinterTest {
     fun testPrintAST() {
         with(TestLanguageFrontend()) {
             val ref = newReference("foo")
-            val call = newCall(ref)
+            val call = newCallExpression(ref)
             val lit = newLiteral(1337).also { it.name = Name("1337") }
             call.arguments += lit
             assertNotNull(ref.astParent)
@@ -68,7 +68,7 @@ class MermaidPrinterTest {
             val ast = ref.printAST()
             println(ast)
             assertContains(ast, "foo")
-            assertContains(ast, "Call")
+            assertContains(ast, "CallExpression")
             assertContains(ast, "Literal")
             assertContains(ast, "1337")
         }

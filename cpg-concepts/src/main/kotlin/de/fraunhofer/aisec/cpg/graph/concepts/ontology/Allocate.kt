@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +31,8 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public open class Allocate(linkedConcept: Memory, underlyingNode: Node? = null) :
-    MemoryOperation(linkedConcept, underlyingNode) {
+public open class Allocate(operatesOn: Memory, underlyingNode: Node? = null) :
+    MemoryOperation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is Allocate && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

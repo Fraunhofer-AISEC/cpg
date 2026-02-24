@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -36,7 +36,7 @@ import kotlin.math.max
 import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
-open class GoLanguage :
+class GoLanguage :
     Language<GoLanguageFrontend>(),
     HasShortCircuitOperators,
     HasGenerics,
@@ -199,7 +199,7 @@ open class GoLanguage :
         }
 
         // We accept all kind of numbers if the literal is part of the call expression
-        if (targetHint is Parameter && hint is Literal<*>) {
+        if (targetHint is ParameterDeclaration && hint is Literal<*>) {
             return if (type is NumericType && targetType is NumericType) {
                 DirectMatch
             } else {
@@ -207,7 +207,7 @@ open class GoLanguage :
             }
         }
 
-        // We additionally want to emulate the behavior of Go's interface system here
+        // We additionally want to emulate the behaviour of Go's interface system here
         if (targetType.isInterface) {
             var b: CastResult = DirectMatch
             val target = (type.root as? ObjectType)?.recordDeclaration

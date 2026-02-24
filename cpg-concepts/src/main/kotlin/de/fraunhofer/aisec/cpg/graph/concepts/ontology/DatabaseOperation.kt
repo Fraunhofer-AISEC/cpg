@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,24 +27,24 @@ package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import java.util.List
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
+import kotlin.String
 
 public open class DatabaseOperation(
-    public val calls: List<Node>?,
+    public val calls: List<String>?,
     public val databaseService: DatabaseService?,
-    public val storage: DatabaseStorage?,
-    linkedConcept: DatabaseStorage,
+    operatesOn: DatabaseStorage,
     underlyingNode: Node? = null,
-) : Operation(linkedConcept, underlyingNode) {
+) : Operation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is DatabaseOperation &&
             super.equals(other) &&
             other.calls == this.calls &&
-            other.databaseService == this.databaseService &&
-            other.storage == this.storage
+            other.databaseService == this.databaseService
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), calls, databaseService, storage)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), calls, databaseService)
 }

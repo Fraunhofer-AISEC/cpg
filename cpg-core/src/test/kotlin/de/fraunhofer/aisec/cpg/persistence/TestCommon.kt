@@ -26,14 +26,14 @@
 package de.fraunhofer.aisec.cpg.persistence
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class TestCommon {
     @Test
     fun testSchemaProperties() {
-        val properties = Function::class.schemaProperties
+        val properties = FunctionDeclaration::class.schemaProperties
         assertEquals(
             setOf(
                 "complexity",
@@ -45,7 +45,6 @@ class TestCommon {
                 "id",
                 "isImplicit",
                 "isInferred",
-                "isStatic",
                 "location",
                 "name",
             ),
@@ -55,20 +54,18 @@ class TestCommon {
 
     @Test
     fun testSchemaRelationships() {
-        var relationships = Function::class.schemaRelationships
+        var relationships = FunctionDeclaration::class.schemaRelationships
         assertEquals(
             listOf(
                 "ANNOTATIONS",
                 "ASSIGNED_TYPES",
                 "AST",
-                "BB",
                 "BODY",
                 "CDG",
                 "DECLARING_SCOPE",
                 "DEFINES",
                 "DFG",
                 "EOG",
-                "FIRST_BASIC_BLOCK",
                 "LANGUAGE",
                 "OVERLAY",
                 "OVERRIDES",
@@ -91,7 +88,6 @@ class TestCommon {
                 "ADDITIONAL_NODES",
                 "ANNOTATIONS",
                 "AST",
-                "BB",
                 "CDG",
                 "COMPONENTS",
                 "DFG",

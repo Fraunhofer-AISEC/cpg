@@ -69,7 +69,7 @@ class CXXAmbiguitiesTest {
         assertNotNull(someFunction)
 
         // CDT now (incorrectly) thinks the first line is a declaration statement, when in reality
-        // it should be a Call. But we cannot fix that at the moment
+        // it should be a CallExpression. But we cannot fix that at the moment
         val crazy = someFunction.allChildren<DeclarationStatement>().firstOrNull()
         assertNotNull(crazy) // if we ever fix it, this will FAIL
 
@@ -80,7 +80,7 @@ class CXXAmbiguitiesTest {
 
     /**
      * In CXX there is an ambiguity with the statement: "(A)(B);" 1) If A is a function pointer,
-     * this is a [Call] 2) If A is a type, this is a [Cast]
+     * this is a [CallExpression] 2) If A is a type, this is a [CastExpression]
      */
     @Test
     fun testFunctionCallOrTypeCast() {
@@ -100,26 +100,26 @@ class CXXAmbiguitiesTest {
         val body = mainFunc.body
         assertIs<Block>(body)
 
-        // First two Statements after declaration statement are Calls
+        // First two Statements after declaration statement are CallExpressions
         val s1 = body.statements.getOrNull(1)
-        assertIs<Call>(s1)
+        assertIs<CallExpression>(s1)
         assertInvokes(s1, fooFunc)
 
         val s2 = body.statements.getOrNull(2)
-        assertIs<Call>(s2)
+        assertIs<CallExpression>(s2)
         assertInvokes(s2, fooFunc)
 
-        // Last two Statements are Casts
+        // Last two Statements are CastExpressions
         val s3 = body.statements.getOrNull(3)
-        assertIs<Cast>(s3)
+        assertIs<CastExpression>(s3)
 
         val s4 = body.statements.getOrNull(4)
-        assertIs<Cast>(s4)
+        assertIs<CastExpression>(s4)
     }
 
     /**
      * In CXX there is an ambiguity with the statement: "(A.B)(C);" 1) If B is a method, this is a
-     * [MemberCall] 2) if B is a function pointer, this is a [Call].
+     * [MemberCallExpression] 2) if B is a function pointer, this is a [CallExpression].
      *
      * Function pointer as a struct member are currently not supported in the cpg. This test case
      * will just ensure that there will be no crash when parsing such a statement. When adding this

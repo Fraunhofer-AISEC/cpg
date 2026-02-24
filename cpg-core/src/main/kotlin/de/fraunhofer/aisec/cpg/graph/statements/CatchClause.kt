@@ -28,17 +28,16 @@ package de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
 class CatchClause : Statement(), BranchingNode, EOGStarterHolder {
-    @Relationship(value = "PARAMETER") var parameterEdge = astOptionalEdgeOf<Variable>()
+    @Relationship(value = "PARAMETER") var parameterEdge = astOptionalEdgeOf<VariableDeclaration>()
 
     var parameter by unwrapping(CatchClause::parameterEdge)
 
@@ -52,8 +51,6 @@ class CatchClause : Statement(), BranchingNode, EOGStarterHolder {
     @DoNotPersist
     override val eogStarters: List<Node>
         get() = listOf(this)
-
-    override var firstBasicBlock: BasicBlock? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

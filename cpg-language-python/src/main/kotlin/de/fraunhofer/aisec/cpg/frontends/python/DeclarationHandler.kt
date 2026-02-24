@@ -33,11 +33,9 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util
 
@@ -60,10 +58,10 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`ClassDef`](https://docs.python.org/3/library/ast.html#ast.ClassDef)
-     * into an [Record].
+     * into an [RecordDeclaration].
      */
-    private fun handleClassDef(stmt: Python.AST.ClassDef): Record {
-        val cls = newRecord(stmt.name, "class", rawNode = stmt)
+    private fun handleClassDef(stmt: Python.AST.ClassDef): RecordDeclaration {
+        val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
         stmt.bases.map { cls.superClasses.add(frontend.typeOf(it)) }
 
         frontend.scopeManager.enterScope(cls)
@@ -95,28 +93,29 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     /**
      * We have to consider multiple things when matching Python's FunctionDef to the CPG:
      * - A [Python.AST.FunctionDef] could be one of
-     *     - a [Constructor] if it appears in a record and its [name] is `__init__`
-     *     - a [Method] if it appears in a record, and it isn't a [Constructor]
-     *     - a [Function] if neither of the above apply
+     *     - a [ConstructorDeclaration] if it appears in a record and its [name] is `__init__`
+     *     - a [MethodDeclaration] if it appears in a record, and it isn't a
+     *       [ConstructorDeclaration]
+     *     - a [FunctionDeclaration] if neither of the above apply
      *
-     * In case of a [Constructor] or[Method]: the first argument is the `receiver` (most often
-     * called `self`).
+     * In case of a [ConstructorDeclaration] or[MethodDeclaration]: the first argument is the
+     * `receiver` (most often called `self`).
      */
-    private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): Function {
-        val recordDeclaration =
-            (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? Record
+    private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): FunctionDeclaration {
+        var recordDeclaration =
+            (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? RecordDeclaration
         val language = language
         val func =
             if (recordDeclaration != null) {
                 if (s.name == IDENTIFIER_INIT) {
-                    newConstructor(
+                    newConstructorDeclaration(
                         name = s.name,
                         recordDeclaration = recordDeclaration,
                         rawNode = s,
                     )
                 } else if (language is HasOperatorOverloading && s.name.isKnownOperatorName) {
-                    val decl =
-                        newOperator(
+                    var decl =
+                        newOperatorDeclaration(
                             name = s.name,
                             recordDeclaration = recordDeclaration,
                             operatorCode = language.operatorCodeFor(s.name) ?: "",
@@ -132,7 +131,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                     }
                     decl
                 } else {
-                    newMethod(
+                    newMethodDeclaration(
                         name = s.name,
                         recordDeclaration = recordDeclaration,
                         isStatic = false,
@@ -140,7 +139,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                     )
                 }
             } else {
-                newFunction(name = s.name, rawNode = s)
+                newFunctionDeclaration(name = s.name, rawNode = s)
             }
         frontend.scopeManager.enterScope(func)
 
@@ -150,7 +149,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         func.annotations += handleAnnotations(s)
 
         // Handle return type and calculate function type
-        if (func is Constructor) {
+        if (func is ConstructorDeclaration) {
             // Return type of the constructor is always its record declaration type
             func.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
         } else {
@@ -164,21 +163,6 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
             func.body = frontend.statementHandler.makeBlock(s.body, parentNode = s)
         }
 
-        if (func is Constructor) {
-            (func.body as? Block)?.let { block ->
-                block +=
-                    newReturnStatement().apply {
-                        this.isImplicit = true
-                        this.returnValue =
-                            newReference("self").apply {
-                                this.isImplicit = true
-                                this.access = AccessValues.READ
-                            }
-                        this.codeAndLocationFrom(func)
-                    }
-            }
-        }
-
         frontend.scopeManager.leaveScope(func)
 
         return func
@@ -187,8 +171,8 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     /** Adds the arguments to [func] which might be located in a [recordDeclaration]. */
     private fun handleArguments(
         args: Python.AST.arguments,
-        func: Function,
-        recordDeclaration: Record?,
+        func: FunctionDeclaration,
+        recordDeclaration: RecordDeclaration?,
     ) {
         // We can merge posonlyargs and args because both are positional arguments. We do not
         // enforce that posonlyargs can ONLY be used in a positional style, whereas args can be used
@@ -215,21 +199,21 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * This function creates a [newParameter] for the argument, setting any modifiers (like
-     * positional-only or keyword-only) and [defaultValue] if applicable.
+     * This function creates a [newParameterDeclaration] for the argument, setting any modifiers
+     * (like positional-only or keyword-only) and [defaultValue] if applicable.
      *
-     * This also adds the [Parameter] to the [Function.parameters].
+     * This also adds the [ParameterDeclaration] to the [FunctionDeclaration.parameters].
      */
     internal fun handleArgument(
-        func: Function,
+        func: FunctionDeclaration,
         node: Python.AST.arg,
         isPosOnly: Boolean = false,
         isVariadic: Boolean = false,
         isKwoOnly: Boolean = false,
         defaultValue: Expression? = null,
-    ): Parameter {
+    ): ParameterDeclaration {
         val arg =
-            newParameter(
+            newParameterDeclaration(
                 name = node.arg,
                 type = dynamicType(),
                 variadic = isVariadic,
@@ -261,8 +245,8 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     private fun handleReceiverArgument(
         positionalArguments: List<Python.AST.arg>,
         args: Python.AST.arguments,
-        result: Function,
-        recordDeclaration: Record,
+        result: FunctionDeclaration,
+        recordDeclaration: RecordDeclaration,
     ) {
         // first argument is the receiver
         val recvPythonNode = positionalArguments.firstOrNull()
@@ -271,7 +255,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         } else {
             val tpe = recordDeclaration.toType()
             val recvNode =
-                newVariable(
+                newVariableDeclaration(
                     name = recvPythonNode.arg,
                     type = tpe,
                     implicitInitializerAllowed = false,
@@ -284,16 +268,15 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                 val defaultValue =
                     args.defaults.getOrNull(0)?.let { frontend.expressionHandler.handle(it) }
                 defaultValue?.let {
+                    frontend.scopeManager.addDeclaration(recvNode)
                     result.additionalProblems +=
                         newProblemExpression("Receiver with default value", rawNode = args)
                 }
             }
-            // Add the receiver to the scope so that references to it can be resolved
-            frontend.scopeManager.addDeclaration(recvNode)
 
             when (result) {
-                is Constructor,
-                is Method -> result.receiver = recvNode
+                is ConstructorDeclaration,
+                is MethodDeclaration -> result.receiver = recvNode
                 else ->
                     result.additionalProblems +=
                         newProblemExpression(
@@ -321,7 +304,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * From the Python docs: "If there are fewer defaults, they correspond to the last n arguments."
      */
     private fun handlePositionalArguments(
-        func: Function,
+        func: FunctionDeclaration,
         positionalArguments: List<Python.AST.arg>,
         args: Python.AST.arguments,
     ) {
@@ -351,7 +334,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * This method extracts the keyword-only arguments from [args] and maps them to the
      * corresponding function parameters.
      */
-    private fun handleKeywordOnlyArguments(func: Function, args: Python.AST.arguments) {
+    private fun handleKeywordOnlyArguments(func: FunctionDeclaration, args: Python.AST.arguments) {
         for (idx in args.kwonlyargs.indices) {
             val arg = args.kwonlyargs[idx]
             val default = args.kw_defaults.getOrNull(idx)
@@ -377,7 +360,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     ): List<Annotation> {
         val annotations = mutableListOf<Annotation>()
         for (decorator in decoratorList) {
-            val annotation =
+            var annotation =
                 when (decorator) {
                     is Python.AST.Name -> {
                         val parsedDecorator = frontend.expressionHandler.handle(decorator)
@@ -386,7 +369,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                     is Python.AST.Attribute -> {
                         val parsedDecorator = frontend.expressionHandler.handle(decorator)
                         val name =
-                            if (parsedDecorator is MemberAccess) {
+                            if (parsedDecorator is MemberExpression) {
                                 parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
                             } else {
                                 parsedDecorator.name
@@ -396,7 +379,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                     is Python.AST.Call -> {
                         val parsedDecorator = frontend.expressionHandler.handle(decorator.func)
                         val name =
-                            if (parsedDecorator is MemberAccess) {
+                            if (parsedDecorator is MemberExpression) {
                                 parsedDecorator.base.name.fqn(parsedDecorator.name.localName)
                             } else {
                                 parsedDecorator.name

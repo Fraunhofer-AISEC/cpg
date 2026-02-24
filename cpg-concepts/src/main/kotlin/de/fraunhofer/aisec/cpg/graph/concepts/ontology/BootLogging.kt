@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,15 +27,14 @@ package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import java.time.Duration
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
-import kotlin.time.Duration
 
 public open class BootLogging(
-    logLevelThreshold: LogLevel?,
     enabled: Boolean?,
     monitoringEnabled: Boolean?,
     name: String?,
@@ -45,7 +44,6 @@ public open class BootLogging(
     underlyingNode: Node? = null,
 ) :
     Logging(
-        logLevelThreshold,
         enabled,
         monitoringEnabled,
         name,

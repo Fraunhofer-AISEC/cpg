@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Represents an Initialization Vector of a cipher. */
-public open class InitializationVector(var size: Int? = null, underlyingNode: Node? = null) :
+public open class InitializationVector(underlyingNode: Node? = null) :
     Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is InitializationVector && super.equals(other)
 

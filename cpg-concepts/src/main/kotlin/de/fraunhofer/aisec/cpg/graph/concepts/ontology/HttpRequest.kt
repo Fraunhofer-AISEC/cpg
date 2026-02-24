@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,23 +33,18 @@ import kotlin.Int
 import kotlin.String
 
 public open class HttpRequest(
-    val arguments: List<Node>,
-    val method: HttpMethod,
     public val call: String?,
     public val reqBody: String?,
     public val httpEndpoint: HttpEndpoint?,
-    linkedConcept: HttpClient,
+    operatesOn: HttpClient,
     underlyingNode: Node? = null,
-) : HttpClientOperation(linkedConcept, underlyingNode) {
+) : HttpClientOperation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is HttpRequest &&
             super.equals(other) &&
             other.call == this.call &&
             other.reqBody == this.reqBody &&
-            other.httpEndpoint == this.httpEndpoint &&
-            other.arguments == this.arguments &&
-            other.method == this.method
+            other.httpEndpoint == this.httpEndpoint
 
-    override fun hashCode(): Int =
-        Objects.hash(super.hashCode(), call, reqBody, httpEndpoint, arguments, method)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), call, reqBody, httpEndpoint)
 }

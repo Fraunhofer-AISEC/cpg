@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Cast
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
 import de.fraunhofer.aisec.cpg.test.assertLocalName
@@ -80,79 +80,79 @@ class ExpressionHandlerTest {
         assertNotNull(globalX)
 
         val aInitCall = tu.variables["a"]?.initializer
-        assertIs<Call>(aInitCall)
+        assertIs<CallExpression>(aInitCall)
         assertLocalName("foo", aInitCall)
         val argumentA = aInitCall.arguments.singleOrNull()
         assertIs<BinaryOperator>(argumentA)
         assertEquals("+", argumentA.operatorCode)
         val argumentAX = argumentA.lhs
-        assertIs<Cast>(argumentAX)
+        assertIs<CastExpression>(argumentAX)
         assertRefersTo(argumentAX.expression, globalX)
         assertLiteralValue(5L, argumentA.rhs)
 
         val bInitCall = tu.variables["b"]?.initializer
-        assertIs<Call>(bInitCall)
+        assertIs<CallExpression>(bInitCall)
         assertLocalName("foo", bInitCall)
         val argumentB = bInitCall.arguments.singleOrNull()
         assertIs<BinaryOperator>(argumentB)
         assertEquals("-", argumentB.operatorCode)
         val argumenBtX = argumentB.lhs
-        assertIs<Cast>(argumenBtX)
+        assertIs<CastExpression>(argumenBtX)
         assertRefersTo(argumenBtX.expression, globalX)
         assertLiteralValue(5L, argumentB.rhs)
 
         val cInitCall = tu.variables["c"]?.initializer
-        assertIs<Call>(cInitCall)
+        assertIs<CallExpression>(cInitCall)
         assertLocalName("foo", cInitCall)
         val argumentC = cInitCall.arguments.singleOrNull()
         assertIs<BinaryOperator>(argumentC)
         assertEquals("*", argumentC.operatorCode)
         val argumentCX = argumentC.lhs
-        assertIs<Cast>(argumentCX)
+        assertIs<CastExpression>(argumentCX)
         assertRefersTo(argumentCX.expression, globalX)
         assertLiteralValue(5L, argumentC.rhs)
 
         val dInitCall = tu.variables["d"]?.initializer
-        assertIs<Call>(dInitCall)
+        assertIs<CallExpression>(dInitCall)
         assertLocalName("foo", dInitCall)
         val argumentD = dInitCall.arguments.singleOrNull()
         assertIs<BinaryOperator>(argumentD)
         assertEquals("<<", argumentD.operatorCode)
         val argumentDX = argumentD.lhs
-        assertIs<Cast>(argumentDX)
+        assertIs<CastExpression>(argumentDX)
         assertRefersTo(argumentDX.expression, globalX)
         assertLiteralValue(5L, argumentD.rhs)
 
         val eInitCall = tu.variables["e"]?.initializer
-        assertIs<Call>(eInitCall)
+        assertIs<CallExpression>(eInitCall)
         assertLocalName("foo", eInitCall)
         val argumentE = eInitCall.arguments.singleOrNull()
         assertIs<BinaryOperator>(argumentE)
         assertEquals(">>", argumentE.operatorCode)
         val argumentEX = argumentE.lhs
-        assertIs<Cast>(argumentEX)
+        assertIs<CastExpression>(argumentEX)
         assertRefersTo(argumentEX.expression, globalX)
         assertLiteralValue(5L, argumentE.rhs)
 
         val fInitCall = tu.variables["f"]?.initializer
-        assertIs<Call>(fInitCall)
+        assertIs<CallExpression>(fInitCall)
         assertLocalName("foo", fInitCall)
         val argumentF = fInitCall.arguments.singleOrNull()
         assertIs<BinaryOperator>(argumentF)
         assertEquals("^", argumentF.operatorCode)
         val argumentFX = argumentF.lhs
-        assertIs<Cast>(argumentFX)
+        assertIs<CastExpression>(argumentFX)
         assertRefersTo(argumentFX.expression, globalX)
         assertLiteralValue(5L, argumentF.rhs)
 
         val gInitCall = tu.variables["g"]?.initializer
-        assertIs<Call>(gInitCall)
+        assertIs<CallExpression>(gInitCall)
         assertLocalName("foo1", gInitCall)
         val argumentG = gInitCall.arguments.singleOrNull()
         assertIs<BinaryOperator>(argumentG)
         assertEquals("==", argumentG.operatorCode)
         val argumentGX = argumentG.lhs
-        assertIs<Cast>(argumentGX)
+        assertIs<CastExpression>(argumentGX)
         assertRefersTo(argumentGX.expression, globalX)
         assertLiteralValue(5L, argumentG.rhs)
     }

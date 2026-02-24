@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import java.util.Objects
 import kotlin.Any
+import kotlin.Array
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.Short
@@ -43,10 +44,10 @@ import kotlin.collections.MutableMap
  * sign the advisory documents.
  */
 public open class SecurityAdvisoryService(
+    public val keies: MutableList<Key?>,
     public val securityAdvisoryFeeds: MutableList<SecurityAdvisoryFeed?>,
-    public val selectorKeies: MutableList<SelectorKey?>,
-    ips: List<String>?,
-    ports: List<Short>?,
+    ips: Array<String>?,
+    ports: Array<Short>?,
     authenticity: Boolean?,
     computes: MutableList<Compute?>,
     serviceMetadataDocument: ServiceMetadataDocument?,
@@ -93,9 +94,8 @@ public open class SecurityAdvisoryService(
     override fun equals(other: Any?): Boolean =
         other is SecurityAdvisoryService &&
             super.equals(other) &&
-            other.securityAdvisoryFeeds == this.securityAdvisoryFeeds &&
-            other.selectorKeies == this.selectorKeies
+            other.keies == this.keies &&
+            other.securityAdvisoryFeeds == this.securityAdvisoryFeeds
 
-    override fun hashCode(): Int =
-        Objects.hash(super.hashCode(), securityAdvisoryFeeds, selectorKeies)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), keies, securityAdvisoryFeeds)
 }

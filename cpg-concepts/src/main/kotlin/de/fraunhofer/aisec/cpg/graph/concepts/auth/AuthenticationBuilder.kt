@@ -31,86 +31,47 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
-import de.fraunhofer.aisec.cpg.graph.concepts.ontology.*
 
 /**
- * Creates a new [TokenBasedAuthentication] concept.
+ * Creates a new [TokenBasedAuth] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
- * @param token The authentication token.
- * @param enabled Whether the authentication is enabled.
- * @param enforced Whether the authentication is enforced.
- * @param contextIsChecked Whether the context is checked.
- * @param rotationInterval The token rotation interval.
+ * @param token The authentication token, which may be an opaque token.
  * @param connect If `true`, the created [Concept] will be connected to the underlying node by
  *   setting its `underlyingNode`.
- * @return The created [TokenBasedAuthentication] concept.
+ * @return The created [TokenBasedAuth] concept.
  */
-fun MetadataProvider.newTokenBasedAuth(
-    underlyingNode: Node,
-    token: Token? = null,
-    enabled: Boolean? = null,
-    enforced: Boolean? = null,
-    contextIsChecked: Boolean? = null,
-    rotationInterval: Int? = null,
-    connect: Boolean,
-) =
+fun MetadataProvider.newTokenBasedAuth(underlyingNode: Node, token: Node, connect: Boolean) =
     newConcept(
-        {
-            TokenBasedAuthentication(
-                enabled = enabled,
-                enforced = enforced,
-                token = token,
-                contextIsChecked = contextIsChecked,
-                rotationInterval = rotationInterval,
-            )
-        },
+        { TokenBasedAuth(token = token) },
         underlyingNode = underlyingNode,
         connect = connect,
     )
 
 /**
- * Creates a new [JwtAuthentication] concept.
+ * Creates a new [JwtAuth] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
- * @param token The JWT token.
- * @param enabled Whether the authentication is enabled.
- * @param enforced Whether the authentication is enforced.
- * @param contextIsChecked Whether the context is checked.
- * @param rotationInterval The token rotation interval.
+ * @param jwt The JWT containing encoded authentication information.
+ * @param payload The payload.
  * @param connect If `true`, the created [Concept] will be connected to the underlying node by
  *   setting its `underlyingNode`.
- * @return The created [JwtAuthentication] concept.
+ * @return The created [JwtAuth] concept.
  */
-fun MetadataProvider.newJwtAuth(
-    underlyingNode: Node,
-    token: Token? = null,
-    enabled: Boolean? = null,
-    enforced: Boolean? = null,
-    contextIsChecked: Boolean? = null,
-    rotationInterval: Int? = null,
-    connect: Boolean,
-) =
+fun MetadataProvider.newJwtAuth(underlyingNode: Node, jwt: Node, payload: Node, connect: Boolean) =
     newConcept(
-        {
-            JwtAuthentication(
-                enabled = enabled,
-                enforced = enforced,
-                token = token,
-                contextIsChecked = contextIsChecked,
-                rotationInterval = rotationInterval,
-            )
-        },
+        { JwtAuth(jwt = jwt, payload = payload) },
         underlyingNode = underlyingNode,
         connect = connect,
     )
 
 /**
- * Creates a new [Authenticate] operation belonging to a certain [Authenticity] concept.
+ * Creates a new [Authenticate] operation belonging to a certain [Authentication] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
- * @param concept The [Authenticity] concept to which the operation belongs.
- * @param credential The credential used for authentication.
+ * @param concept The [Authentication] concept to which the operation belongs.
+ * @param credential The credential can be a call (e.g., a function call that reads a header) or a
+ *   variable that holds the value, e.g. the token * @return The created [Authenticate] operation.
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
  *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
  *   [Concept.ops].
@@ -118,64 +79,60 @@ fun MetadataProvider.newJwtAuth(
  */
 fun MetadataProvider.newAuthenticate(
     underlyingNode: Node,
-    concept: Authenticity,
-    credential: Credential? = null,
+    concept: Authentication,
+    credential: Node,
     connect: Boolean,
 ) =
     newOperation(
-        { linkedConcept -> Authenticate(credential = credential, linkedConcept = linkedConcept) },
+        { concept -> Authenticate(concept = concept, credential = credential) },
         underlyingNode = underlyingNode,
         concept = concept,
         connect = connect,
     )
 
 /**
- * Creates a new [IssueJwt] operation belonging to a certain [Authenticity] concept.
+ * Creates a new [IssueJwt] operation belonging to a certain [JwtAuth] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
- * @param concept The [Authenticity] concept to which the operation belongs.
+ * @param concept The [JwtAuth] concept to which the operation belongs.
  * @param connect If `true`, the created [Concept] will be connected to the underlying node by
  *   setting its `underlyingNode`.
  */
-fun MetadataProvider.newIssueJwt(underlyingNode: Node, concept: Authenticity, connect: Boolean) =
+fun MetadataProvider.newIssueJwt(underlyingNode: Node, concept: JwtAuth, connect: Boolean) =
     newOperation(
-        { linkedConcept -> IssueJwt(linkedConcept = linkedConcept) },
+        { concept -> IssueJwt(underlyingNode = underlyingNode, jwt = concept) },
         underlyingNode = underlyingNode,
         concept = concept,
         connect = connect,
     )
 
 /**
- * Creates a new [ValidateJwt] operation belonging to a certain [Authenticity] concept.
+ * Creates a new [ValidateJwt] operation belonging to a certain [JwtAuth] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
- * @param concept The [Authenticity] concept to which the operation belongs.
+ * @param concept The [JwtAuth] concept to which the operation belongs.
  * @param connect If `true`, the created [Concept] will be connected to the underlying node by
  *   setting its `underlyingNode`.
  */
-fun MetadataProvider.newValidateJwt(underlyingNode: Node, concept: Authenticity, connect: Boolean) =
+fun MetadataProvider.newValidateJwt(underlyingNode: Node, concept: JwtAuth, connect: Boolean) =
     newOperation(
-        { linkedConcept -> ValidateJwt(linkedConcept = linkedConcept) },
+        { concept -> ValidateJwt(underlyingNode = underlyingNode, jwt = concept) },
         underlyingNode = underlyingNode,
         concept = concept,
         connect = connect,
     )
 
 /**
- * Creates a new [AuthorizeJwt] operation belonging to a certain [Authenticity] concept.
+ * Creates a new [AuthorizeJwt] operation belonging to a certain [JwtAuth] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
- * @param concept The [Authenticity] concept to which the operation belongs.
+ * @param concept The [JwtAuth] concept to which the operation belongs.
  * @param connect If `true`, the created [Concept] will be connected to the underlying node by
  *   setting its `underlyingNode`.
  */
-fun MetadataProvider.newAuthorizeJwt(
-    underlyingNode: Node,
-    concept: Authenticity,
-    connect: Boolean,
-) =
+fun MetadataProvider.newAuthorizeJwt(underlyingNode: Node, concept: JwtAuth, connect: Boolean) =
     newOperation(
-        { linkedConcept -> AuthorizeJwt(linkedConcept = linkedConcept) },
+        { concept -> AuthorizeJwt(underlyingNode = underlyingNode, jwt = concept) },
         underlyingNode = underlyingNode,
         concept = concept,
         connect = connect,

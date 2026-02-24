@@ -74,18 +74,19 @@ internal class NameTest {
     @Test
     fun testParentNames() {
         with(testFrontend { it.registerLanguage<TestLanguageWithColon>() }) {
-            val tu = newTranslationUnit("file.extension")
+            val tu = newTranslationUnitDeclaration("file.extension")
             this.scopeManager.resetToGlobal(tu)
 
-            val func = newFunction("main")
+            val func = newFunctionDeclaration("main")
             assertLocalName("main", func)
 
-            val myClass = newRecord("MyClass", "class")
+            val myClass = newRecordDeclaration("MyClass", "class")
             assertLocalName("MyClass", myClass)
 
             this.scopeManager.enterScope(myClass)
 
-            val method = newMethod("doSomething", isStatic = false, recordDeclaration = myClass)
+            val method =
+                newMethodDeclaration("doSomething", isStatic = false, recordDeclaration = myClass)
             assertLocalName("doSomething", method)
             assertFullName("MyClass::doSomething", method)
 

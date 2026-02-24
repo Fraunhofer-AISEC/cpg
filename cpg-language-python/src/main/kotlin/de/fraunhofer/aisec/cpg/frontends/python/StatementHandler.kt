@@ -205,10 +205,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`Raise`](https://docs.python.org/3/library/ast.html#ast.Raise) into a
-     * [Throw].
+     * [ThrowExpression].
      */
-    private fun handleRaise(node: Python.AST.Raise): Throw {
-        val ret = newThrow(rawNode = node)
+    private fun handleRaise(node: Python.AST.Raise): ThrowExpression {
+        val ret = newThrowExpression(rawNode = node)
         node.exc?.let { ret.exception = frontend.expressionHandler.handle(it) }
         node.cause?.let { ret.parentException = frontend.expressionHandler.handle(it) }
         return ret
@@ -258,7 +258,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         fun generateManagerAssignment(
             withItem: Python.AST.withitem,
             currentBlock: Block,
-        ): Pair<Assign, Name> {
+        ): Pair<AssignExpression, Name> {
             // Create a temporary unique reference for the context manager
             val managerName =
                 Name.temporary(prefix = CONTEXT_MANAGER, separatorChar = '_', currentBlock)
@@ -268,17 +268,21 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             // Represents the line `manager = ContextManager()`
             val contextExpr = frontend.expressionHandler.handle(withItem.context_expr)
             val managerAssignment =
-                newAssign(operatorCode = "=", lhs = listOf(manager), rhs = listOf(contextExpr))
+                newAssignExpression(
+                        operatorCode = "=",
+                        lhs = listOf(manager),
+                        rhs = listOf(contextExpr),
+                    )
                     .implicit()
             return Pair(managerAssignment, managerName)
         }
 
         /** Prepares the `manager.__exit__(None, None, None)` call for the else-block. */
-        fun generateExitCallWithNone(managerName: Name): MemberCall {
+        fun generateExitCallWithNone(managerName: Name): MemberCallExpression {
             val exitCallWithNone =
-                newMemberCall(
+                newMemberCallExpression(
                         callee =
-                            newMemberAccess(
+                            newMemberExpression(
                                     name = "__exit__",
                                     base = newReference(name = managerName).implicit(),
                                 )
@@ -298,9 +302,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
          */
         fun generateExitCallWithSysExcInfo(managerName: Name): IfStatement {
             val exitCallWithSysExec =
-                newMemberCall(
+                newMemberCallExpression(
                         callee =
-                            newMemberAccess(
+                            newMemberExpression(
                                     name = "__exit__",
                                     base = newReference(name = managerName).implicit(),
                                 )
@@ -308,15 +312,15 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         rawNode = node,
                     )
                     .implicit()
-            val starOp = newUnaryOperator("*", postfix = false, prefix = false)
+            val starOp = newUnaryOperator("*", false, false)
             starOp.input =
-                newMemberAccess(name = "exec_info", base = newReference("sys").implicit())
+                newMemberExpression(name = "exec_info", base = newReference("sys").implicit())
                     .implicit()
             exitCallWithSysExec.addArgument(starOp)
 
             val ifStmt = newIfStatement().implicit()
-            ifStmt.thenStatement = newThrow().implicit()
-            val neg = newUnaryOperator("not", postfix = false, prefix = false).implicit()
+            ifStmt.thenStatement = newThrowExpression().implicit()
+            val neg = newUnaryOperator("not", false, false).implicit()
             neg.input = exitCallWithSysExec
             ifStmt.condition = neg
             return ifStmt
@@ -331,15 +335,15 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
          */
         fun generateEnterCallAndAssignment(
             managerName: Name,
-            managerAssignment: Assign,
-        ): Pair<Assign, Name> {
+            managerAssignment: AssignExpression,
+        ): Pair<AssignExpression, Name> {
             val tmpValName =
                 Name.temporary(prefix = WITH_TMP_VAL, separatorChar = '_', managerAssignment)
             val enterVar = newReference(name = tmpValName).implicit()
             val enterCall =
-                newMemberCall(
+                newMemberCallExpression(
                         callee =
-                            newMemberAccess(
+                            newMemberExpression(
                                     name = "__enter__",
                                     base = newReference(name = managerName).implicit(),
                                 )
@@ -349,7 +353,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     .implicit()
 
             return Pair(
-                newAssign(operatorCode = "=", lhs = listOf(enterVar), rhs = listOf(enterCall))
+                newAssignExpression(
+                        operatorCode = "=",
+                        lhs = listOf(enterVar),
+                        rhs = listOf(enterCall),
+                    )
                     .implicit(),
                 tmpValName,
             )
@@ -392,7 +400,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                                         // Represents the line "cm = tmpVal # Doesn't exist if no
                                         // variable is used"
                                         this.statements.add(
-                                            newAssign(
+                                            newAssignExpression(
                                                     operatorCode = "=",
                                                     lhs = listOf(optionalVar),
                                                     rhs =
@@ -458,7 +466,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (node.type != null) {
                     // the parameter can have a name, or we use the anonymous identifier _
                     catchClause.parameter =
-                        newVariable(
+                        newVariableDeclaration(
                             name = node.name ?: "",
                             type = frontend.typeOf(node.type),
                             rawNode = node,
@@ -491,10 +499,10 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`Delete`](https://docs.python.org/3/library/ast.html#ast.Delete) into a
-     * [Delete].
+     * [DeleteExpression].
      */
-    private fun handleDelete(node: Python.AST.Delete): Delete {
-        val delete = newDelete(rawNode = node)
+    private fun handleDelete(node: Python.AST.Delete): DeleteExpression {
+        val delete = newDeleteExpression(rawNode = node)
         node.targets.forEach { target ->
             delete.operands.add(frontend.expressionHandler.handle(target))
 
@@ -546,7 +554,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 // If we have an alias, we import the package with the alias and do NOT import the
                 // parent packages
                 val decl =
-                    newImport(
+                    newImportDeclaration(
                         parseName(imp.name),
                         style = ImportStyle.IMPORT_NAMESPACE,
                         parseName(alias),
@@ -561,7 +569,11 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 var importName: Name? = parseName(imp.name)
                 while (importName != null) {
                     val decl =
-                        newImport(importName, style = ImportStyle.IMPORT_NAMESPACE, rawNode = imp)
+                        newImportDeclaration(
+                            importName,
+                            style = ImportStyle.IMPORT_NAMESPACE,
+                            rawNode = imp,
+                        )
                     conditionallyAddAdditionalSourcesToAnalysis(decl.import)
                     frontend.scopeManager.addDeclaration(decl)
                     declStmt.declarations += decl
@@ -613,7 +625,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     // In the wildcard case, our "import" is the module name, and we set "wildcard"
                     // to true
                     conditionallyAddAdditionalSourcesToAnalysis(module)
-                    newImport(
+                    newImportDeclaration(
                         module,
                         style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
                         rawNode = imp,
@@ -625,14 +637,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     val alias = imp.asname
                     conditionallyAddAdditionalSourcesToAnalysis(name)
                     if (alias != null) {
-                        newImport(
+                        newImportDeclaration(
                             name,
                             style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                             parseName(alias),
                             rawNode = imp,
                         )
                     } else {
-                        newImport(
+                        newImportDeclaration(
                             name,
                             style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                             rawNode = imp,
@@ -678,7 +690,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /** Small utility function to check, whether we are inside an __init__ module. */
     private fun isInitModule(): Boolean =
-        (frontend.scopeManager.firstScopeIsInstanceOrNull<NameScope>()?.astNode as? Namespace)
+        (frontend.scopeManager.firstScopeIsInstanceOrNull<NameScope>()?.astNode
+                as? NamespaceDeclaration)
             ?.path
             ?.endsWith(PythonLanguage.IDENTIFIER_INIT) == true
 
@@ -718,7 +731,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         ret.iterable = frontend.expressionHandler.handle(node.iter)
 
         when (val loopVar = frontend.expressionHandler.handle(node.target)) {
-            is InitializerList -> { // unpacking
+            is InitializerListExpression -> { // unpacking
                 val (tempVarRef, unpackingAssignment) = getUnpackingNodes(loopVar)
 
                 ret.variable = tempVarRef
@@ -754,17 +767,23 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     /**
      * This function creates two things:
      * - A [Reference] to a variable with a random [Name]
-     * - An [Assign] assigning the reference above to the [loopVar] input
+     * - An [AssignExpression] assigning the reference above to the [loopVar] input
      *
      * This is used in [handleFor] when loops have multiple loop variables to iterate over with
      * automatic unpacking. We translate this implicit unpacking to multiple CPG nodes, as the CPG
      * does not support automatic unpacking.
      */
-    private fun getUnpackingNodes(loopVar: InitializerList): Pair<Reference, Assign> {
+    private fun getUnpackingNodes(
+        loopVar: InitializerListExpression
+    ): Pair<Reference, AssignExpression> {
         val tempVarName = Name.temporary(prefix = LOOP_VAR_PREFIX, separatorChar = '_', loopVar)
         val tempRef = newReference(name = tempVarName).implicit().codeAndLocationFrom(loopVar)
         val assign =
-            newAssign(operatorCode = "=", lhs = (loopVar).initializers, rhs = listOf(tempRef))
+            newAssignExpression(
+                    operatorCode = "=",
+                    lhs = (loopVar).initializers,
+                    rhs = listOf(tempRef),
+                )
                 .implicit()
                 .codeAndLocationFrom(loopVar)
         return Pair(tempRef, assign)
@@ -776,13 +795,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`AnnAssign`](https://docs.python.org/3/library/ast.html#ast.AnnAssign)
-     * into an [Assign].
+     * into an [AssignExpression].
      */
-    private fun handleAnnAssign(node: Python.AST.AnnAssign): Assign {
+    private fun handleAnnAssign(node: Python.AST.AnnAssign): AssignExpression {
         val lhs = frontend.expressionHandler.handle(node.target)
         lhs.assignedTypes += frontend.typeOf(node.annotation)
         val rhs = node.value?.let { listOf(frontend.expressionHandler.handle(it)) } ?: emptyList()
-        return newAssign(lhs = listOf(lhs), rhs = rhs, rawNode = node)
+        return newAssignExpression(lhs = listOf(lhs), rhs = rhs, rawNode = node)
     }
 
     private fun handleIf(node: Python.AST.If): Statement {
@@ -811,9 +830,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`Assign`](https://docs.python.org/3/library/ast.html#ast.Assign) into an
-     * [Assign].
+     * [AssignExpression].
      */
-    private fun handleAssign(node: Python.AST.Assign): Assign {
+    private fun handleAssign(node: Python.AST.Assign): AssignExpression {
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
         node.type_comment?.let { typeComment ->
             val tpe = frontend.typeOf(typeComment)
@@ -821,7 +840,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         }
         val rhs = frontend.expressionHandler.handle(node.value)
         if (rhs is List<*>)
-            newAssign(
+            newAssignExpression(
                 lhs = lhs,
                 rhs =
                     rhs.map {
@@ -833,14 +852,19 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     },
                 rawNode = node,
             )
-        return newAssign(lhs = lhs, rhs = listOf(rhs), rawNode = node)
+        return newAssignExpression(lhs = lhs, rhs = listOf(rhs), rawNode = node)
     }
 
     private fun handleAugAssign(node: Python.AST.AugAssign): Statement {
         val lhs = frontend.expressionHandler.handle(node.target)
         val rhs = frontend.expressionHandler.handle(node.value)
         val op = frontend.operatorToString(node.op) + "="
-        return newAssign(operatorCode = op, lhs = listOf(lhs), rhs = listOf(rhs), rawNode = node)
+        return newAssignExpression(
+            operatorCode = op,
+            lhs = listOf(lhs),
+            rhs = listOf(rhs),
+            rawNode = node,
+        )
     }
 
     /**
@@ -851,8 +875,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // Technically, our global scope is not identical to the python "global" scope. The reason
         // behind that is that we wrap each file in a namespace (as defined in the python spec). So
         // the "global" scope is actually our current namespace scope.
-        val pythonGlobalScope =
-            frontend.scopeManager.globalScope.children.firstOrNull { it is NamespaceScope }
+        var pythonGlobalScope =
+            frontend.scopeManager.globalScope?.children?.firstOrNull { it is NamespaceScope }
 
         return newLookupScopeStatement(
             global.names.map { parseName(it).localName },
@@ -867,7 +891,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleNonLocal(global: Python.AST.Nonlocal): LookupScopeStatement {
         // We need to find the first outer function scope
-        val outerFunctionScope =
+        var outerFunctionScope =
             frontend.scopeManager.firstScopeOrNull {
                 it is FunctionScope && it != frontend.scopeManager.currentScope
             }
@@ -929,12 +953,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     problemType = ProblemNode.ProblemType.TRANSLATION,
                     rawNode = mightBeAsync,
                 )
-
-            // We don't fully support the semantics of async expressions yet, but we can add the
-            // modifier if it is a declaration
-            if (parentNode is Declaration) {
-                parentNode.modifiers += "async"
-            }
         }
     }
 }

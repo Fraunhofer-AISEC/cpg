@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,10 @@ import kotlin.collections.MutableMap
 public open class QPU(
     public val oneQubitErrorRate: Float?,
     public val spamErrorRate: Float?,
+    public val t1CoherenceTime: Float?,
+    public val t2CoherenceTime: Float?,
     public val twoQubitErrorRate: Float?,
+    public val universalGateSetEnabled: Boolean?,
     public val errorCorrectionEnabled: Boolean?,
     encryptionInUse: EncryptionInUse?,
     networkInterfaces: MutableList<NetworkInterface?>,
@@ -88,7 +91,10 @@ public open class QPU(
             super.equals(other) &&
             other.oneQubitErrorRate == this.oneQubitErrorRate &&
             other.spamErrorRate == this.spamErrorRate &&
+            other.t1CoherenceTime == this.t1CoherenceTime &&
+            other.t2CoherenceTime == this.t2CoherenceTime &&
             other.twoQubitErrorRate == this.twoQubitErrorRate &&
+            other.universalGateSetEnabled == this.universalGateSetEnabled &&
             other.errorCorrectionEnabled == this.errorCorrectionEnabled
 
     override fun hashCode(): Int =
@@ -96,7 +102,10 @@ public open class QPU(
             super.hashCode(),
             oneQubitErrorRate,
             spamErrorRate,
+            t1CoherenceTime,
+            t2CoherenceTime,
             twoQubitErrorRate,
+            universalGateSetEnabled,
             errorCorrectionEnabled,
         )
 }
