@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import uniffi.cpgrust.RsAssocItem
 import uniffi.cpgrust.RsAst
+import uniffi.cpgrust.RsConst
 import uniffi.cpgrust.RsFieldList
 import uniffi.cpgrust.RsFn
 import uniffi.cpgrust.RsImpl
@@ -37,6 +38,7 @@ import uniffi.cpgrust.RsModule
 import uniffi.cpgrust.RsParam
 import uniffi.cpgrust.RsPat
 import uniffi.cpgrust.RsStruct
+import uniffi.cpgrust.RsTrait
 import uniffi.cpgrust.RsType
 
 class DeclarationHandler(frontend: RustLanguageFrontend) :
@@ -49,6 +51,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             is RsItem.Module -> handleModule(item.v1)
             is RsItem.Struct -> handleStruct(item.v1)
             is RsItem.Impl -> handleImpl(item.v1)
+            is RsItem.Trait -> handleTrait(item.v1)
+            is RsItem.Const -> handleConst(item.v1)
             else -> handleNotSupported(node, item::class.simpleName ?: "")
         }
     }
@@ -172,6 +176,36 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return record
     }
 
+    private fun handleTrait(trait: RsTrait): Declaration {
+        val raw = RsAst.RustItem(RsItem.Trait(trait))
+
+        val record = newRecordDeclaration(trait.name ?: "", "trait", raw)
+
+        frontend.scopeManager.enterScope(record)
+
+        for (item in trait.items) {
+            when (item) {
+                is RsAssocItem.Fn -> {
+                    val func = handleFunctionDeclaration(item.v1)
+                    record.addDeclaration(func)
+                    frontend.scopeManager.addDeclaration(func)
+                }
+                is RsAssocItem.Const -> {
+                    val const =
+                        frontend.declarationHandler.handleNode(
+                            RsAst.RustItem(RsItem.Const(item.v1))
+                        )
+                }
+                is RsAssocItem.TypeAlias -> {}
+                is RsAssocItem.MacroCall -> {}
+            }
+        }
+
+        frontend.scopeManager.leaveScope(record)
+
+        return record
+    }
+
     private fun handleImpl(impl: RsImpl): Declaration {
         val implTarget = impl.pathTypes.last()
         // The last part of the implementation block path is the target of the implementation, the
@@ -215,7 +249,12 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     }
                     extensionDeclaration.declarations += func
                 }
-                is RsAssocItem.Const -> {}
+                is RsAssocItem.Const -> {
+                    val const =
+                        frontend.declarationHandler.handleNode(
+                            RsAst.RustItem(RsItem.Const(item.v1))
+                        )
+                }
                 is RsAssocItem.TypeAlias -> {}
                 is RsAssocItem.MacroCall -> {}
             }
@@ -229,5 +268,16 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         frontend.scopeManager.leaveScope(extensionDeclaration)
 
         return extensionDeclaration
+    }
+
+    private fun handleConst(const: RsConst): Declaration {
+        val raw = RsAst.RustItem(RsItem.Const(const))
+
+        val name = const.name ?: ""
+
+        val type = const.type?.let { frontend.typeOf(it) }
+
+        return newVariableDeclaration(name, type ?: unknownType(), rawNode = raw)
+
     }
 }

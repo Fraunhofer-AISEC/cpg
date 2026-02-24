@@ -122,7 +122,7 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
             is RsType.PathType -> typeFromPath(type)
             is RsType.PtrType -> typeOf(type.v1.ty.first()).pointer()
             is RsType.RefType -> typeOf(type.v1.ty.first()).ref()
-            is RsType.SliceType -> unknownType()
+            is RsType.SliceType -> typeOf(type.v1.ty.first()).array()
         }
     }
 

@@ -316,9 +316,19 @@ impl From<AsmExpr> for RSAsmExpr {
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSConst {pub(crate) ast_node: RSNode}
+pub struct RSConst {
+    pub(crate) ast_node: RSNode,
+    name: Option<String>,
+    type_: Option<RSType>
+}
 impl From<Const> for RSConst {
-    fn from(node:  Const) -> Self {RSConst{ast_node: node.syntax().into()}}
+    fn from(node:  Const) -> Self {
+        RSConst{
+            ast_node: node.syntax().into(),
+            name: node.name().map(|n|n.to_string()),
+            type_: node.ty().map(Into::into)
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -440,11 +450,17 @@ impl From<Struct> for RSStruct {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSTrait {pub(crate) ast_node: RSNode}
+pub struct RSTrait {
+    pub(crate) ast_node: RSNode,
+    name: Option<String>,
+    items: Vec<RSAssocItem>
+}
 impl From<Trait> for RSTrait {
     fn from(node:  Trait) -> Self {
         RSTrait{
-            ast_node: node.syntax().into()
+            ast_node: node.syntax().into(),
+            name: node.name().map(|n|n.to_string()),
+            items: node.assoc_item_list().map(|ail|ail.assoc_items().map(Into::into).collect::<Vec<_>>()).unwrap_or_default()
         }
     }
 }
@@ -780,9 +796,14 @@ impl From<OffsetOfExpr> for RSOffsetOfExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSParenExpr {pub(crate) ast_node: RSNode}
+pub struct RSParenExpr {pub(crate) ast_node: RSNode, expr: Vec<RSExpr>}
 impl From<ParenExpr> for RSParenExpr {
-    fn from(node:  ParenExpr) -> Self {RSParenExpr{ast_node: node.syntax().into()}}
+    fn from(node:  ParenExpr) -> Self {
+        RSParenExpr{
+            ast_node: node.syntax().into(),
+            expr: node.expr().map(Into::into).into_iter().collect()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

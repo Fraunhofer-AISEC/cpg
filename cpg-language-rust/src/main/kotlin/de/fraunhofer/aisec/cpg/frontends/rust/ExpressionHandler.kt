@@ -57,6 +57,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.PathExpr -> handlePathExpr(node.v1)
             is RsExpr.BinExpr -> handleBinExpr(node.v1)
             is RsExpr.PrefixExpr -> handlePrefixExpr(node.v1)
+            is RsExpr.ParenExpr -> handleNode(node.v1.expr.first())
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
