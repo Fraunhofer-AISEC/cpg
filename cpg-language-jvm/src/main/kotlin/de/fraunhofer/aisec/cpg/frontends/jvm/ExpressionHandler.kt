@@ -372,7 +372,19 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun SootClassMemberSignature<*>.toStaticRef(): Reference {
         // First, construct the name using <parent-type>.<fun>
-        val ref = newReference("${this.declClassType.fullyQualifiedName}.${this.name}")
+        val parentTypeName = "${this.declClassType.fullyQualifiedName}"
+        val ref = newReference("$parentTypeName.${this.name}")
+        val currentComponent =
+            this@ExpressionHandler.frontend.currentTU?.firstParentOrNull<Component>()
+
+        // We want to ensure that the parent type is available to the type manager when it handles
+        // the current component. This helps to infer the respective record declarations correctly
+        // and helps to speed up the overall analysis.
+        currentComponent?.additionalTypes?.computeIfAbsent(parentTypeName) {
+            objectType(parentTypeName)
+        }
+
+        ref.type = frontend.typeOf(this.type)
 
         // Make it static
         ref.isStaticAccess = true
