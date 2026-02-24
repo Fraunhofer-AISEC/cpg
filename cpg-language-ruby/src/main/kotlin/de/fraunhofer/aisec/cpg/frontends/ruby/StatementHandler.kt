@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.graph.newBlock
-import de.fraunhofer.aisec.cpg.graph.newReturnStatement
+import de.fraunhofer.aisec.cpg.graph.newReturn
 import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -59,7 +59,7 @@ class StatementHandler(lang: RubyLanguageFrontend) :
     }
 
     private fun handleReturnNode(node: ReturnNode): Return {
-        val stmt = newReturnStatement()
+        val stmt = newReturn()
         stmt.returnValue = frontend.expressionHandler.handleNode(node.valueNode)
 
         return stmt

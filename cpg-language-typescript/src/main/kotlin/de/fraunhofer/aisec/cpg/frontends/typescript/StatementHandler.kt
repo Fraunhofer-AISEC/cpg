@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.newBlock
 import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.newReturnStatement
+import de.fraunhofer.aisec.cpg.graph.newReturn
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
@@ -72,7 +72,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleReturnStatement(node: TypeScriptNode): Return {
-        val returnStmt = newReturnStatement(rawNode = node)
+        val returnStmt = newReturn(rawNode = node)
 
         node.children?.first()?.let {
             returnStmt.returnValue = this.frontend.expressionHandler.handle(it)

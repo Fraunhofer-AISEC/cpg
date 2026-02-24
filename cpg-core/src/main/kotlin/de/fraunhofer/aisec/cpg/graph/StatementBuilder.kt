@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newReturnStatement(rawNode: Any? = null): Return {
+fun MetadataProvider.newReturn(rawNode: Any? = null): Return {
     val node = Return()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -69,7 +69,7 @@ fun MetadataProvider.newCatchClause(rawNode: Any? = null): CatchClause {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newTryStatement(rawNode: Any? = null): Try {
+fun MetadataProvider.newTry(rawNode: Any? = null): Try {
     val node = Try()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -84,7 +84,7 @@ fun MetadataProvider.newTryStatement(rawNode: Any? = null): Try {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newAssertStatement(rawNode: Any? = null): Assert {
+fun MetadataProvider.newAssert(rawNode: Any? = null): Assert {
     val node = Assert()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -114,7 +114,7 @@ fun MetadataProvider.newDistinctLanguageBlock(rawNode: Any? = null): DistinctLan
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newSynchronizedStatement(rawNode: Any? = null): Synchronized {
+fun MetadataProvider.newSynchronized(rawNode: Any? = null): Synchronized {
     val node = Synchronized()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -129,7 +129,7 @@ fun MetadataProvider.newSynchronizedStatement(rawNode: Any? = null): Synchronize
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newEmptyStatement(rawNode: Any? = null): Empty {
+fun MetadataProvider.newEmpty(rawNode: Any? = null): Empty {
     val node = Empty()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -159,7 +159,7 @@ fun MetadataProvider.newDeclarationStatement(rawNode: Any? = null): DeclarationS
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newIfStatement(rawNode: Any? = null): If {
+fun MetadataProvider.newIf(rawNode: Any? = null): If {
     val node = If()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -174,7 +174,7 @@ fun MetadataProvider.newIfStatement(rawNode: Any? = null): If {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newLabelStatement(rawNode: Any? = null): Label {
+fun MetadataProvider.newLabel(rawNode: Any? = null): Label {
     val node = Label()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -189,7 +189,7 @@ fun MetadataProvider.newLabelStatement(rawNode: Any? = null): Label {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newGotoStatement(rawNode: Any? = null): Goto {
+fun MetadataProvider.newGoto(rawNode: Any? = null): Goto {
     val node = Goto()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -204,7 +204,7 @@ fun MetadataProvider.newGotoStatement(rawNode: Any? = null): Goto {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newWhileStatement(rawNode: Any? = null): While {
+fun MetadataProvider.newWhile(rawNode: Any? = null): While {
     val node = While()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -219,7 +219,7 @@ fun MetadataProvider.newWhileStatement(rawNode: Any? = null): While {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newDoStatement(rawNode: Any? = null): Do {
+fun MetadataProvider.newDo(rawNode: Any? = null): Do {
     val node = Do()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -234,7 +234,7 @@ fun MetadataProvider.newDoStatement(rawNode: Any? = null): Do {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newForEachStatement(rawNode: Any? = null): ForEach {
+fun MetadataProvider.newForEach(rawNode: Any? = null): ForEach {
     val node = ForEach()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -249,7 +249,7 @@ fun MetadataProvider.newForEachStatement(rawNode: Any? = null): ForEach {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newForStatement(rawNode: Any? = null): For {
+fun MetadataProvider.newFor(rawNode: Any? = null): For {
     val node = For()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -264,7 +264,7 @@ fun MetadataProvider.newForStatement(rawNode: Any? = null): For {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newContinueStatement(rawNode: Any? = null): Continue {
+fun MetadataProvider.newContinue(rawNode: Any? = null): Continue {
     val node = Continue()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -279,7 +279,7 @@ fun MetadataProvider.newContinueStatement(rawNode: Any? = null): Continue {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newBreakStatement(rawNode: Any? = null): Break {
+fun MetadataProvider.newBreak(rawNode: Any? = null): Break {
     val node = Break()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -294,7 +294,7 @@ fun MetadataProvider.newBreakStatement(rawNode: Any? = null): Break {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newSwitchStatement(rawNode: Any? = null): Switch {
+fun MetadataProvider.newSwitch(rawNode: Any? = null): Switch {
     val node = Switch()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -309,7 +309,7 @@ fun MetadataProvider.newSwitchStatement(rawNode: Any? = null): Switch {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newCaseStatement(rawNode: Any? = null): Case {
+fun MetadataProvider.newCase(rawNode: Any? = null): Case {
     val node = Case()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -324,7 +324,7 @@ fun MetadataProvider.newCaseStatement(rawNode: Any? = null): Case {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newDefaultStatement(rawNode: Any? = null): Default {
+fun MetadataProvider.newDefault(rawNode: Any? = null): Default {
     val node = Default()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
@@ -339,7 +339,7 @@ fun MetadataProvider.newDefaultStatement(rawNode: Any? = null): Default {
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newLookupScopeStatement(
+fun MetadataProvider.newLookupScope(
     symbols: List<Symbol>,
     targetScope: Scope?,
     rawNode: Any? = null,

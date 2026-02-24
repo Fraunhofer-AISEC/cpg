@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.newLookupScopeStatement
+import de.fraunhofer.aisec.cpg.graph.newLookupScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -40,7 +40,7 @@ import java.util.Objects
  * (or the information therein) to [Scope.predefinedLookupScopes]. The reason for this is that we
  * want to avoid AST traversals in the scope/identifier lookup.
  *
- * The [newLookupScopeStatement] node builder will add this automatically, so it is STRONGLY
+ * The [newLookupScope] node builder will add this automatically, so it is STRONGLY
  * encouraged that the node builder is used instead of creating the node itself.
  */
 class LookupScope : Statement() {

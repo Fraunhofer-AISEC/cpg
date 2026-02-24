@@ -48,7 +48,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     override fun handleNode(node: Python.AST.BaseStmt): Statement {
         return when (node) {
-            is Python.AST.Pass -> return newEmptyStatement(rawNode = node)
+            is Python.AST.Pass -> return newEmpty(rawNode = node)
             is Python.AST.ImportFrom -> handleImportFrom(node)
             is Python.AST.Assign -> handleAssign(node)
             is Python.AST.AugAssign -> handleAugAssign(node)
@@ -60,8 +60,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             is Python.AST.AsyncFor -> handleFor(node)
             is Python.AST.While -> handleWhile(node)
             is Python.AST.Import -> handleImport(node)
-            is Python.AST.Break -> newBreakStatement(rawNode = node)
-            is Python.AST.Continue -> newContinueStatement(rawNode = node)
+            is Python.AST.Break -> newBreak(rawNode = node)
+            is Python.AST.Continue -> newContinue(rawNode = node)
             is Python.AST.Assert -> handleAssert(node)
             is Python.AST.Try -> handleTryStatement(node)
             is Python.AST.Delete -> handleDelete(node)
@@ -154,9 +154,9 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val guard = node.guard
         statements +=
             if (pattern is Python.AST.MatchAs && pattern.pattern == null) {
-                newDefaultStatement(rawNode = pattern)
+                newDefault(rawNode = pattern)
             } else if (guard != null) {
-                newCaseStatement(rawNode = node).apply {
+                newCase(rawNode = node).apply {
                     this.caseExpression =
                         newBinaryOperator(operatorCode = "and")
                             .implicit(
@@ -169,7 +169,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                             }
                 }
             } else {
-                newCaseStatement(rawNode = node).apply {
+                newCase(rawNode = node).apply {
                     this.caseExpression = handlePattern(node = node.pattern, subject = subject)
                 }
             }
@@ -178,7 +178,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // Currently, the EOG pass requires a break statement to work as expected. For this reason,
         // we insert an implicit break statement at the end of the block.
         statements +=
-            newBreakStatement()
+            newBreak()
                 .implicit(
                     code = frontend.codeOf(astNode = node),
                     location = frontend.locationOf(astNode = node),
@@ -191,7 +191,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * [Switch].
      */
     private fun handleMatch(node: Python.AST.Match): Switch =
-        newSwitchStatement(rawNode = node).apply {
+        newSwitch(rawNode = node).apply {
             val subject = frontend.expressionHandler.handle(ctx = node.subject)
             this.selector = subject
 
@@ -314,7 +314,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     .implicit()
             exitCallWithSysExec.addArgument(starOp)
 
-            val ifStmt = newIfStatement().implicit()
+            val ifStmt = newIf().implicit()
             ifStmt.thenStatement = newThrow().implicit()
             val neg = newUnaryOperator("not", postfix = false, prefix = false).implicit()
             neg.input = exitCallWithSysExec
@@ -376,7 +376,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
                 // Create the try statement with __exit__ calls in the finally block
                 val tryStatement =
-                    newTryStatement(rawNode = node).apply {
+                    newTry(rawNode = node).apply {
                         // We set it as implicit below because there we also have a code and
                         // location.
                         this.tryBlock =
@@ -474,7 +474,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * [Try].
      */
     private fun handleTryStatement(node: Python.AST.Try): Try {
-        val tryStatement = newTryStatement(rawNode = node)
+        val tryStatement = newTry(rawNode = node)
         tryStatement.tryBlock = makeBlock(node.body, node)
         tryStatement.catchClauses.addAll(node.handlers.map { handleBaseExcepthandler(it) })
 
@@ -516,7 +516,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * [Assert].
      */
     private fun handleAssert(node: Python.AST.Assert): Assert {
-        val assertStatement = newAssertStatement(rawNode = node)
+        val assertStatement = newAssert(rawNode = node)
         val testExpression = frontend.expressionHandler.handle(node.test)
         assertStatement.condition = testExpression
         node.msg?.let { assertStatement.message = frontend.expressionHandler.handle(it) }
@@ -683,7 +683,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             ?.endsWith(PythonLanguage.IDENTIFIER_INIT) == true
 
     private fun handleWhile(node: Python.AST.While): Statement {
-        val ret = newWhileStatement(rawNode = node)
+        val ret = newWhile(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.statement = makeBlock(node.body, parentNode = node)
         if (node.orelse.isNotEmpty()) {
@@ -712,7 +712,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * ```
      */
     private fun handleFor(node: Python.AST.NormalOrAsyncFor): ForEach {
-        val ret = newForEachStatement(rawNode = node)
+        val ret = newForEach(rawNode = node)
         addAsyncWarning(node, ret)
 
         ret.iterable = frontend.expressionHandler.handle(node.iter)
@@ -786,7 +786,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleIf(node: Python.AST.If): Statement {
-        val ret = newIfStatement(rawNode = node)
+        val ret = newIf(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.thenStatement =
             if (node.body.isNotEmpty()) {
@@ -804,7 +804,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleReturn(node: Python.AST.Return): Statement {
-        val ret = newReturnStatement(rawNode = node)
+        val ret = newReturn(rawNode = node)
         node.value?.let { ret.returnValue = frontend.expressionHandler.handle(it) }
         return ret
     }
@@ -854,7 +854,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val pythonGlobalScope =
             frontend.scopeManager.globalScope.children.firstOrNull { it is NamespaceScope }
 
-        return newLookupScopeStatement(
+        return newLookupScope(
             global.names.map { parseName(it).localName },
             pythonGlobalScope,
             rawNode = global,
@@ -872,7 +872,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 it is FunctionScope && it != frontend.scopeManager.currentScope
             }
 
-        return newLookupScopeStatement(
+        return newLookupScope(
             global.names.map { parseName(it).localName },
             outerFunctionScope,
             rawNode = global,

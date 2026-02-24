@@ -51,7 +51,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
                 is JReturnStmt -> handleReturnStmt(ctx)
                 is JReturnVoidStmt -> handleReturnVoidStmt(ctx)
                 is JThrowStmt -> handleThrow(ctx)
-                is JNopStmt -> newEmptyStatement(ctx)
+                is JNopStmt -> newEmpty(ctx)
                 else -> {
                     log.warn("Unhandled statement type: ${ctx.javaClass.simpleName}")
                     newProblemExpression(
@@ -105,7 +105,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
             if (label != null) {
                 // If we have a label, we need to create a new label statement, that starts a new
                 // block
-                val stmt = newLabelStatement()
+                val stmt = newLabel()
                 block = newBlock()
                 stmt.label = label
                 stmt.subStatement = block
@@ -140,7 +140,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     }
 
     private fun handleIfStmt(ifStmt: JIfStmt): If {
-        val stmt = newIfStatement(rawNode = ifStmt)
+        val stmt = newIf(rawNode = ifStmt)
         stmt.condition = frontend.expressionHandler.handle(ifStmt.condition)
         stmt.thenStatement = handleBranchingStmt(ifStmt)
 
@@ -152,7 +152,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     }
 
     private fun handleBranchingStmt(branchingStmt: BranchingStmt): Goto {
-        val stmt = newGotoStatement(rawNode = branchingStmt)
+        val stmt = newGoto(rawNode = branchingStmt)
 
         frontend.body?.let {
             val target = branchingStmt.getTargetStmts(it).firstOrNull()
@@ -179,12 +179,12 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         }
 
     private fun handleReturnStmt(returnStmt: JReturnStmt): Return {
-        val stmt = newReturnStatement(rawNode = returnStmt)
+        val stmt = newReturn(rawNode = returnStmt)
         stmt.returnValue = frontend.expressionHandler.handle(returnStmt.op)
 
         return stmt
     }
 
     private fun handleReturnVoidStmt(returnStmt: JReturnVoidStmt) =
-        newReturnStatement(rawNode = returnStmt)
+        newReturn(rawNode = returnStmt)
 }

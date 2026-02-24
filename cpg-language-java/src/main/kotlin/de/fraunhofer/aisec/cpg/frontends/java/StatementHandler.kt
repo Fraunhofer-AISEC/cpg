@@ -98,7 +98,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 frontend.expressionHandler.handle(expr)
                     as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
         }
-        val returnStatement = this.newReturnStatement(rawNode = stmt)
+        val returnStatement = this.newReturn(rawNode = stmt)
         // JavaParser seems to add implicit return statements, that are not part of the original
         // source code. We mark it as such
         returnStatement.isImplicit = !returnStmt.tokenRange.isPresent
@@ -114,7 +114,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val conditionExpression = ifStmt.condition
         val thenStatement = ifStmt.thenStmt
         val optionalElseStatement = ifStmt.elseStmt
-        val ifStatement = newIfStatement(rawNode = stmt)
+        val ifStatement = newIf(rawNode = stmt)
         frontend.scopeManager.enterScope(ifStatement)
         ifStatement.thenStatement = handle(thenStatement)
         ifStatement.condition =
@@ -129,7 +129,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val assertStmt = stmt.asAssertStmt()
         val conditionExpression = assertStmt.check
         val thenStatement = assertStmt.message
-        val assertStatement = newAssertStatement(rawNode = stmt)
+        val assertStatement = newAssert(rawNode = stmt)
         assertStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -143,7 +143,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val whileStmt = stmt.asWhileStmt()
         val conditionExpression = whileStmt.condition
         val statement = whileStmt.body
-        val whileStatement = newWhileStatement(rawNode = stmt)
+        val whileStatement = newWhile(rawNode = stmt)
         frontend.scopeManager.enterScope(whileStatement)
         whileStatement.statement = handle(statement)
         whileStatement.condition =
@@ -154,7 +154,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     }
 
     private fun handleForEachStatement(stmt: Statement): ForEach {
-        val statement = newForEachStatement(rawNode = stmt)
+        val statement = newForEach(rawNode = stmt)
         frontend.scopeManager.enterScope(statement)
         val forEachStmt = stmt.asForEachStmt()
         val variable = frontend.expressionHandler.handle(forEachStmt.variable)
@@ -172,7 +172,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     private fun handleForStatement(stmt: Statement): For {
         val forStmt = stmt.asForStmt()
-        val statement = this.newForStatement(rawNode = stmt)
+        val statement = this.newFor(rawNode = stmt)
         frontend.scopeManager.enterScope(statement)
         if (forStmt.initialization.size > 1) {
             // code will be set later
@@ -234,7 +234,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val doStmt = stmt.asDoStmt()
         val conditionExpression = doStmt.condition
         val statement = doStmt.body
-        val doStatement = newDoStatement(rawNode = stmt)
+        val doStatement = newDo(rawNode = stmt)
         frontend.scopeManager.enterScope(doStatement)
         doStatement.statement = handle(statement)
         doStatement.condition =
@@ -245,12 +245,12 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     }
 
     private fun handleEmptyStatement(stmt: Statement): Empty {
-        return this.newEmptyStatement(rawNode = stmt)
+        return this.newEmpty(rawNode = stmt)
     }
 
     private fun handleSynchronizedStatement(stmt: Statement): Synchronized {
         val synchronizedJava = stmt.asSynchronizedStmt()
-        val synchronizedCPG = newSynchronizedStatement(rawNode = stmt)
+        val synchronizedCPG = newSynchronized(rawNode = stmt)
         synchronizedCPG.expression =
             frontend.expressionHandler.handle(synchronizedJava.expression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -262,7 +262,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val labelStmt = stmt.asLabeledStmt()
         val label = labelStmt.label.identifier
         val statement = labelStmt.statement
-        val labelStatement = newLabelStatement(rawNode = stmt)
+        val labelStatement = newLabel(rawNode = stmt)
         labelStatement.subStatement = handle(statement)
         labelStatement.label = label
         return labelStatement
@@ -270,14 +270,14 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     private fun handleBreakStatement(stmt: Statement): Break {
         val breakStmt = stmt.asBreakStmt()
-        val breakStatement = newBreakStatement(rawNode = stmt)
+        val breakStatement = newBreak(rawNode = stmt)
         breakStmt.label.ifPresent { label -> breakStatement.label = label.toString() }
         return breakStatement
     }
 
     private fun handleContinueStatement(stmt: Statement): Continue {
         val continueStmt = stmt.asContinueStmt()
-        val continueStatement = newContinueStatement(rawNode = stmt)
+        val continueStatement = newContinue(rawNode = stmt)
         continueStmt.label.ifPresent { label -> continueStatement.label = label.toString() }
         return continueStatement
     }
@@ -321,7 +321,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                         getNextTokenWith(":", optionalTokenRange.get().begin),
                     )
             }
-            val defaultStatement = newDefaultStatement()
+            val defaultStatement = newDefault()
             defaultStatement.location =
                 getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b)
             return defaultStatement
@@ -335,7 +335,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                     getNextTokenWith(":", caseExprTokenRange.get().end),
                 )
         }
-        val caseStatement = this.newCaseStatement()
+        val caseStatement = this.newCase()
         caseStatement.caseExpression =
             frontend.expressionHandler.handle(caseExpression)
                 as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -409,7 +409,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     fun handleSwitchStatement(stmt: Statement): Switch {
         val switchStmt = stmt.asSwitchStmt()
-        val switchStatement = newSwitchStatement(rawNode = stmt)
+        val switchStatement = newSwitch(rawNode = stmt)
 
         frontend.scopeManager.enterScope(switchStatement)
         switchStatement.selector =
@@ -485,7 +485,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     private fun handleTryStatement(stmt: Statement): Try {
         val tryStmt = stmt.asTryStmt()
-        val tryStatement = newTryStatement(rawNode = stmt)
+        val tryStatement = newTry(rawNode = stmt)
         frontend.scopeManager.enterScope(tryStatement)
         val resources =
             tryStmt.resources

@@ -215,7 +215,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                 // add an implicit return statement, if there is none
                 if (lastStatement !is Return) {
-                    val returnStatement = newReturnStatement()
+                    val returnStatement = newReturn()
                     returnStatement.isImplicit = true
                     bodyStatement.statements += returnStatement
                 }

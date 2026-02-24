@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.newFunction
 import de.fraunhofer.aisec.cpg.graph.newParameter
-import de.fraunhofer.aisec.cpg.graph.newReturnStatement
+import de.fraunhofer.aisec.cpg.graph.newReturn
 import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import org.jruby.ast.ArgumentNode
@@ -75,7 +75,7 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
 
             // add an implicit return statement, if there is no return statement
             if (lastStatement !is Return) {
-                val returnStatement = newReturnStatement()
+                val returnStatement = newReturn()
                 returnStatement.isImplicit = true
                 body += returnStatement
 

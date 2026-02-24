@@ -66,7 +66,7 @@ class StatementBuilderTest {
                             scopeManager.addDeclaration(localA)
                             body += stmt
 
-                            body += newLookupScopeStatement(listOf("a"), scopeManager.globalScope)
+                            body += newLookupScope(listOf("a"), scopeManager.globalScope)
                             body += newReference("a")
 
                             scopeManager.leaveScope(body)

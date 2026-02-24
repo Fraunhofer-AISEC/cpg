@@ -80,17 +80,17 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     private fun handleBranchStmt(branchStmt: GoStandardLibrary.Ast.BranchStmt): Statement {
         when (branchStmt.tokString) {
             "break" -> {
-                val stmt = newBreakStatement(rawNode = branchStmt)
+                val stmt = newBreak(rawNode = branchStmt)
                 branchStmt.label?.let { stmt.label = it.name }
                 return stmt
             }
             "continue" -> {
-                val stmt = newContinueStatement(rawNode = branchStmt)
+                val stmt = newContinue(rawNode = branchStmt)
                 branchStmt.label?.let { stmt.label = it.name }
                 return stmt
             }
             "goto" -> {
-                val stmt = newGotoStatement(rawNode = branchStmt)
+                val stmt = newGoto(rawNode = branchStmt)
                 branchStmt.label?.let { stmt.labelName = it.name }
                 return stmt
             }
@@ -127,9 +127,9 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
         val case =
             if (caseClause.list.isEmpty()) {
-                newDefaultStatement(rawNode = caseClause)
+                newDefault(rawNode = caseClause)
             } else {
-                val case = newCaseStatement(rawNode = caseClause)
+                val case = newCase(rawNode = caseClause)
                 if (isTypeSwitch) {
                     // If this case is within a type switch, we want to wrap the case expression in
                     // a TypeExpression
@@ -261,7 +261,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleForStmt(forStmt: GoStandardLibrary.Ast.ForStmt): For {
-        val stmt = newForStatement(rawNode = forStmt)
+        val stmt = newFor(rawNode = forStmt)
 
         frontend.scopeManager.enterScope(stmt)
 
@@ -289,7 +289,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleIfStmt(ifStmt: GoStandardLibrary.Ast.IfStmt): If {
-        val stmt = newIfStatement(rawNode = ifStmt)
+        val stmt = newIf(rawNode = ifStmt)
 
         frontend.scopeManager.enterScope(stmt)
 
@@ -306,7 +306,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleLabeledStmt(labeledStmt: GoStandardLibrary.Ast.LabeledStmt): Label {
-        val stmt = newLabelStatement(rawNode = labeledStmt)
+        val stmt = newLabel(rawNode = labeledStmt)
         stmt.subStatement = handle(labeledStmt.stmt)
         stmt.label = labeledStmt.label.name
 
@@ -314,7 +314,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleRangeStmt(rangeStmt: GoStandardLibrary.Ast.RangeStmt): ForEach {
-        val forEach = newForEachStatement(rawNode = rangeStmt)
+        val forEach = newForEach(rawNode = rangeStmt)
 
         frontend.scopeManager.enterScope(forEach)
 
@@ -355,7 +355,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleReturnStmt(returnStmt: GoStandardLibrary.Ast.ReturnStmt): Return {
-        val `return` = newReturnStatement(rawNode = returnStmt)
+        val `return` = newReturn(rawNode = returnStmt)
 
         val results = returnStmt.results
         if (results.isNotEmpty()) {
@@ -379,7 +379,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleSwitchStmt(switchStmt: GoStandardLibrary.Ast.SwitchStmt): Statement {
-        val switch = newSwitchStatement(rawNode = switchStmt)
+        val switch = newSwitch(rawNode = switchStmt)
 
         frontend.scopeManager.enterScope(switch)
 
@@ -399,7 +399,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     private fun handleTypeSwitchStmt(
         typeSwitchStmt: GoStandardLibrary.Ast.TypeSwitchStmt
     ): Switch {
-        val switch = newSwitchStatement(rawNode = typeSwitchStmt)
+        val switch = newSwitch(rawNode = typeSwitchStmt)
 
         frontend.scopeManager.enterScope(switch)
 

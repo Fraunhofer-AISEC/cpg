@@ -141,7 +141,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
             if (body is Block) {
                 val last = body.statements.lastOrNull()
                 if (last !is Return) {
-                    val ret = newReturnStatement()
+                    val ret = newReturn()
                     ret.isImplicit = true
                     body += ret
                 }

@@ -86,11 +86,11 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleEmptyStatement(nullStatement: IASTNullStatement): Empty {
-        return newEmptyStatement(rawNode = nullStatement)
+        return newEmpty(rawNode = nullStatement)
     }
 
     private fun handleTryBlockStatement(tryBlockStatement: CPPASTTryBlockStatement): Try {
-        val tryStatement = newTryStatement()
+        val tryStatement = newTry()
         frontend.scopeManager.enterScope(tryStatement)
         val statement = handle(tryBlockStatement.tryBody) as Block?
         val catchClauses =
@@ -126,7 +126,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleIfStatement(ctx: IASTIfStatement): If {
-        val statement = newIfStatement(rawNode = ctx)
+        val statement = newIf(rawNode = ctx)
 
         frontend.scopeManager.enterScope(statement)
 
@@ -156,7 +156,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleLabelStatement(ctx: IASTLabelStatement): Label {
-        val statement = newLabelStatement(rawNode = ctx)
+        val statement = newLabel(rawNode = ctx)
         statement.subStatement = handle(ctx.nestedStatement)
         statement.label = ctx.name.toString()
         statement.name = newName(name = ctx.name.toString())
@@ -164,7 +164,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleGotoStatement(ctx: IASTGotoStatement): Goto {
-        val statement = newGotoStatement(rawNode = ctx)
+        val statement = newGoto(rawNode = ctx)
         val assigneeTargetLabel = BiConsumer { _: Any, to: Node ->
             statement.targetLabel = to as Label
             to.label?.let {
@@ -192,7 +192,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleWhileStatement(ctx: IASTWhileStatement): While {
-        val statement = newWhileStatement(rawNode = ctx)
+        val statement = newWhile(rawNode = ctx)
 
         frontend.scopeManager.enterScope(statement)
 
@@ -214,7 +214,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleDoStatement(ctx: IASTDoStatement): Do {
-        val statement = newDoStatement(rawNode = ctx)
+        val statement = newDo(rawNode = ctx)
         frontend.scopeManager.enterScope(statement)
         statement.condition = frontend.expressionHandler.handle(ctx.condition)
         statement.statement = handle(ctx.body)
@@ -223,7 +223,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleForStatement(ctx: IASTForStatement): For {
-        val statement = newForStatement(rawNode = ctx)
+        val statement = newFor(rawNode = ctx)
 
         frontend.scopeManager.enterScope(statement)
 
@@ -260,7 +260,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleForEachStatement(ctx: CPPASTRangeBasedForStatement): ForEach {
-        val statement = newForEachStatement(rawNode = ctx)
+        val statement = newForEach(rawNode = ctx)
         frontend.scopeManager.enterScope(statement)
         val decl = frontend.declarationHandler.handle(ctx.declaration)
         val `var` = newDeclarationStatement()
@@ -274,12 +274,12 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleBreakStatement(ctx: IASTBreakStatement): Break {
-        return newBreakStatement(rawNode = ctx)
+        return newBreak(rawNode = ctx)
         // C++ has no labeled break
     }
 
     private fun handleContinueStatement(ctx: IASTContinueStatement): Continue {
-        return newContinueStatement(rawNode = ctx)
+        return newContinue(rawNode = ctx)
         // C++ has no labeled continue
     }
 
@@ -314,7 +314,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleReturnStatement(ctx: IASTReturnStatement): Return {
-        val returnStatement = newReturnStatement(rawNode = ctx)
+        val returnStatement = newReturn(rawNode = ctx)
 
         // Parse the return value
         if (ctx.returnValue != null) {
@@ -342,7 +342,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleSwitchStatement(ctx: IASTSwitchStatement): Switch {
-        val switchStatement = newSwitchStatement(rawNode = ctx)
+        val switchStatement = newSwitch(rawNode = ctx)
 
         frontend.scopeManager.enterScope(switchStatement)
 
@@ -369,12 +369,12 @@ class StatementHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleCaseStatement(ctx: IASTCaseStatement): Case {
-        val caseStatement = newCaseStatement(rawNode = ctx)
+        val caseStatement = newCase(rawNode = ctx)
         caseStatement.caseExpression = frontend.expressionHandler.handle(ctx.expression)
         return caseStatement
     }
 
     private fun handleDefaultStatement(ctx: IASTDefaultStatement): Default {
-        return newDefaultStatement(rawNode = ctx)
+        return newDefault(rawNode = ctx)
     }
 }

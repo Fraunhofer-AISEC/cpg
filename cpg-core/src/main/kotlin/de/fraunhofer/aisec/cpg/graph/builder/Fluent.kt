@@ -327,7 +327,7 @@ fun LanguageFrontend<*, *>.param(
  */
 context(holder: StatementHolder)
 fun LanguageFrontend<*, *>.returnStmt(init: Return.() -> Unit): Return {
-    val node = newReturnStatement().apply { this.location = getCallerFileAndLine() }
+    val node = newReturn().apply { this.location = getCallerFileAndLine() }
     init(node)
 
     holder += node
@@ -635,7 +635,7 @@ fun LanguageFrontend<*, *>.memberOrRef(name: Name, type: Type = unknownType()): 
  */
 context(holder: StatementHolder)
 fun LanguageFrontend<*, *>.ifStmt(init: If.() -> Unit): If {
-    val node = newIfStatement().apply { this.location = getCallerFileAndLine() }
+    val node = newIf().apply { this.location = getCallerFileAndLine() }
 
     init(node)
 
@@ -651,7 +651,7 @@ fun LanguageFrontend<*, *>.ifStmt(init: If.() -> Unit): If {
  */
 context(holder: StatementHolder)
 fun LanguageFrontend<*, *>.forEachStmt(init: ForEach.() -> Unit): ForEach {
-    val node = newForEachStatement().apply { this.location = getCallerFileAndLine() }
+    val node = newForEach().apply { this.location = getCallerFileAndLine() }
 
     init(node)
 
@@ -668,7 +668,7 @@ fun LanguageFrontend<*, *>.forEachStmt(init: ForEach.() -> Unit): ForEach {
 context(holder: StatementHolder)
 fun LanguageFrontend<*, *>.forStmt(init: For.() -> Unit): For {
 
-    val node = newForStatement().apply { this.location = getCallerFileAndLine() }
+    val node = newFor().apply { this.location = getCallerFileAndLine() }
 
     init(node)
 
@@ -747,7 +747,7 @@ fun LanguageFrontend<*, *>.switchStmt(
     needsScope: Boolean = true,
     init: Switch.() -> Unit,
 ): Switch {
-    val node = newSwitchStatement().apply { this.location = getCallerFileAndLine() }
+    val node = newSwitch().apply { this.location = getCallerFileAndLine() }
     node.selector = selector
     scopeIfNecessary(needsScope, node, init)
 
@@ -766,7 +766,7 @@ fun LanguageFrontend<*, *>.whileStmt(
     needsScope: Boolean = true,
     init: While.() -> Unit,
 ): While {
-    val node = newWhileStatement().apply { this.location = getCallerFileAndLine() }
+    val node = newWhile().apply { this.location = getCallerFileAndLine() }
     scopeIfNecessary(needsScope, node, init)
 
     holder += node
@@ -784,7 +784,7 @@ fun LanguageFrontend<*, *>.doStmt(
     needsScope: Boolean = true,
     init: Do.() -> Unit,
 ): Do {
-    val node = newDoStatement().apply { this.location = getCallerFileAndLine() }
+    val node = newDo().apply { this.location = getCallerFileAndLine() }
     scopeIfNecessary(needsScope, node, init)
 
     holder += node
@@ -846,7 +846,7 @@ fun LanguageFrontend<*, *>.thenStmt(needsScope: Boolean = true, init: Block.() -
  */
 context(stmt: If)
 fun LanguageFrontend<*, *>.elseIf(init: If.() -> Unit): If {
-    val node = this.newIfStatement().apply { this.location = getCallerFileAndLine() }
+    val node = this.newIf().apply { this.location = getCallerFileAndLine() }
     init(node)
 
     stmt.elseStatement = node
@@ -955,7 +955,7 @@ fun LanguageFrontend<*, *>.label(
     label: String,
     init: (Label.() -> Statement)? = null,
 ): Label {
-    val node = newLabelStatement().apply { this.location = getCallerFileAndLine() }
+    val node = newLabel().apply { this.location = getCallerFileAndLine() }
     node.label = label
     if (init != null) {
         node.subStatement = init(node)
@@ -975,7 +975,7 @@ fun LanguageFrontend<*, *>.label(
  */
 context(holder: StatementHolder)
 fun LanguageFrontend<*, *>.continueStmt(label: String? = null): Continue {
-    val node = newContinueStatement().apply { this.location = getCallerFileAndLine() }
+    val node = newContinue().apply { this.location = getCallerFileAndLine() }
     node.label = label
 
     holder += node
@@ -989,7 +989,7 @@ fun LanguageFrontend<*, *>.continueStmt(label: String? = null): Continue {
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.breakStmt(label: String? = null): Break {
-    val node = newBreakStatement().apply { this.location = getCallerFileAndLine() }
+    val node = newBreak().apply { this.location = getCallerFileAndLine() }
     node.label = label
 
     // Only add this to a statement holder if the nearest holder is a statement holder
@@ -1006,7 +1006,7 @@ fun LanguageFrontend<*, *>.breakStmt(label: String? = null): Break {
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.case(caseExpression: Expression? = null): Case {
-    val node = newCaseStatement().apply { this.location = getCallerFileAndLine() }
+    val node = newCase().apply { this.location = getCallerFileAndLine() }
     node.caseExpression = caseExpression
 
     // Only add this to a statement holder if the nearest holder is a statement holder
@@ -1023,7 +1023,7 @@ fun LanguageFrontend<*, *>.case(caseExpression: Expression? = null): Case {
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.default(): Default {
-    val node = newDefaultStatement().apply { this.location = getCallerFileAndLine() }
+    val node = newDefault().apply { this.location = getCallerFileAndLine() }
 
     // Only add this to a statement holder if the nearest holder is a statement holder
     if (holder is StatementHolder) {
