@@ -35,8 +35,9 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.*
 import de.fraunhofer.aisec.cpg.query.*
 import io.github.detekt.sarif4k.ArtifactLocation
@@ -114,14 +115,14 @@ data class ComponentJSON(
     val topLevel: String?,
 )
 
-/** JSON data class for a [TranslationUnit]. */
+/** JSON data class for a [TranslationUnitDeclaration]. */
 @Serializable
 data class TranslationUnitJSON(
     val name: String,
     @Serializable(with = UuidSerializer::class) val id: Uuid,
     val path: String,
     val code: String,
-    @Transient val cpgTU: TranslationUnit? = null,
+    @Transient val cpgTU: TranslationUnitDeclaration? = null,
 )
 
 /** JSON data class holding all relevant information required to instantiate a [Concept]. */
@@ -285,7 +286,7 @@ data class ConceptRequestJSON(
                         ),
                     constructorArguments =
                         this.constructorArgs?.map {
-                            ConstructorArgumentEntry(
+                            LoadPersistedConcepts.ConstructorArgumentEntry(
                                 name = it.argumentName,
                                 value = it.argumentValue,
                             )
@@ -330,9 +331,9 @@ fun AnalysisProject.toJSON(): AnalysisProjectJSON {
     )
 }
 
-/** Converts a [TranslationUnit] into its JSON representation. */
+/** Converts a [TranslationUnitDeclaration] into its JSON representation. */
 context(_: ContextProvider)
-fun TranslationUnit.toJSON(): TranslationUnitJSON {
+fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
     val localName =
         component?.topLevel()?.let {
             this.location?.artifactLocation?.uri?.toPath()?.toFile()?.relativeToOrNull(it)

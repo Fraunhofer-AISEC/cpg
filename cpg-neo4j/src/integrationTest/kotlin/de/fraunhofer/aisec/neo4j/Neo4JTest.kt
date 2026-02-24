@@ -25,50 +25,30 @@
  */
 package de.fraunhofer.aisec.neo4j
 
-import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.persistence.pushToNeo4j
-import de.fraunhofer.aisec.cpg_vis_neo4j.Application
 import java.math.BigInteger
-import java.nio.file.Paths
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
-import picocli.CommandLine
-
-fun createTranslationResult(file: String = "client.cpp"): Pair<Application, TranslationResult> {
-    val topLevel = Paths.get("src").resolve("integrationTest").resolve("resources").toAbsolutePath()
-    val path = topLevel.resolve(file).toAbsolutePath()
-
-    val cmd = CommandLine(Application::class.java)
-    cmd.parseArgs(path.toString())
-    val application = cmd.getCommand<Application>()
-
-    val translationConfiguration = application.setupTranslationConfiguration()
-    val translationResult =
-        TranslationManager.builder().config(translationConfiguration).build().analyze().get()
-    return application to translationResult
-}
 
 class Neo4JTest {
     @Test
     fun testPush() {
-        val (_, result) = createTranslationResult()
+        val (application, result) = createTranslationResult()
 
         // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
         assertEquals(36, result.functions.size)
 
-        result.pushToNeo4j()
+        application.pushToNeo4j(result)
     }
 
     @Test
     fun testPushVeryLong() {
-        val (_, result) = createTranslationResult("very_long.cpp")
+        val (application, result) = createTranslationResult("very_long.cpp")
 
         assertEquals(1, result.variables.size)
 
@@ -76,14 +56,14 @@ class Neo4JTest {
         assertIs<Literal<BigInteger>>(lit)
         assertEquals(BigInteger("10958011617037158669"), lit.value)
 
-        result.pushToNeo4j()
+        application.pushToNeo4j(result)
     }
 
     @Test
     fun testPushConcepts() {
-        val (_, result) = createTranslationResult()
+        val (application, result) = createTranslationResult()
 
-        val tu = result.components.firstOrNull()?.translationUnits?.firstOrNull()
+        val tu = result.translationUnits.firstOrNull()
         assertNotNull(tu)
 
         val connectCall = result.calls["connect"]
@@ -119,6 +99,6 @@ class Neo4JTest {
         )
         assertEquals(1, tu.operationNodes.size, "Expected to find the `Connect` operation.")
 
-        result.pushToNeo4j()
+        application.pushToNeo4j(result)
     }
 }

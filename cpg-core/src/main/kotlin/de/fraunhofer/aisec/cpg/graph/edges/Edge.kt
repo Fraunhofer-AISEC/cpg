@@ -45,14 +45,18 @@ import org.neo4j.ogm.annotation.*
  * store additional information that relate to the relationship between the two nodes that belong to
  * neither of the two nodes directly.
  *
- * An example would be the name (in this case `a`) of an argument between a [Call] (`foo`) and its
- * argument (a [Literal] of `2`) in languages that support keyword arguments, such as Python:
+ * An example would be the name (in this case `a`) of an argument between a [CallExpression] (`foo`)
+ * and its argument (a [Literal] of `2`) in languages that support keyword arguments, such as
+ * Python:
  * ```python
  * foo("bar", a = 2)
  * ```
  */
 @RelationshipEntity
 abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
+    /** Required field for object graph mapping. It contains the node id. */
+    @field:Id @field:GeneratedValue private val id: Long? = null
+
     // Node where the edge is outgoing
     @JsonIgnore @field:StartNode var start: Node
 
@@ -90,8 +94,8 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
         if (this === other) return true
         if (other !is Edge<*>) return false
 
-        return start === other.start &&
-            end === other.end &&
+        return start == other.start &&
+            end == other.end &&
             index == other.index &&
             name == other.name
     }

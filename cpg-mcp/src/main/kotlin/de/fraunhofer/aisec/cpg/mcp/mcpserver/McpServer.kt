@@ -29,9 +29,6 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgApplyConceptsTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgDataflowTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgLlmAnalyzeTool
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgTranslate
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addListPasses
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addRunPass
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getAllArgs
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getArgByIndexOrName
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableConcepts
@@ -41,32 +38,12 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCallsTo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listConceptsAndOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listFunctions
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listRecords
+import io.modelcontextprotocol.kotlin.sdk.Implementation
+import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
-import io.modelcontextprotocol.kotlin.sdk.types.Implementation
-import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 
-fun configureServer(
-    configure: Server.() -> Server = {
-        this.addCpgTranslate()
-        this.addListPasses()
-        this.addRunPass()
-        this.addCpgAnalyzeTool()
-        this.addCpgLlmAnalyzeTool()
-        this.addCpgApplyConceptsTool()
-        this.addCpgDataflowTool()
-        this.listFunctions()
-        this.listRecords()
-        this.listCalls()
-        this.listCallsTo()
-        this.listAvailableConcepts()
-        this.listAvailableOperations()
-        this.getAllArgs()
-        this.getArgByIndexOrName()
-        this.listConceptsAndOperations()
-        this
-    }
-): Server {
+fun configureServer(): Server {
     val info = Implementation(name = "cpg-mcp-server", version = "1.0.0")
 
     val options =
@@ -79,7 +56,22 @@ fun configureServer(
                 )
         )
 
-    return Server(info, options).configure()
+    val server = Server(info, options)
+    server.addCpgAnalyzeTool()
+    server.addCpgLlmAnalyzeTool()
+    server.addCpgApplyConceptsTool()
+    server.addCpgDataflowTool()
+    server.listFunctions()
+    server.listRecords()
+    server.listCalls()
+    server.listCallsTo()
+    server.listAvailableConcepts()
+    server.listAvailableOperations()
+    server.getAllArgs()
+    server.getArgByIndexOrName()
+    server.listConceptsAndOperations()
+
+    return server
 }
 
 const val cpgDescription =
@@ -94,7 +86,7 @@ The PDG (Program Dependence Graph) combines the DFG and CDG to represent both da
 Each edge in the DFG, EOG, CDG and PDG works as follows: There is a source node and a target node and the source flows into target during a forward analysis, which is indicated by nextDFG, nextEOG, nextCDG or nextPDG.
 Each edge is mirrored in the reverse direction, i.e., there is a prevDFG, prevEOG, prevCDG or prevPDG edge. For the edges in the AST, the children are the target node of the ast edge, the opposite direction is called astParent.
 
-Further edges are the invokes edges which represent (potential) function and method calls between a Call and a Function or Method.
+Further edges are the invokes edges which represent (potential) function and method calls between a CallExpression and a FunctionDeclaration or MethodDeclaration.
 The DFG is inter-procedural, meaning that it can also represent data flows between different functions or methods.
 
 Each node in the CPG has a unique ID, a name, a location in the file, and potentially one or multiple OverlayNodes which associate a node with additional information.

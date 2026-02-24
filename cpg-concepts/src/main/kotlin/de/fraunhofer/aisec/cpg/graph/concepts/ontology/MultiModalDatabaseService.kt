@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import java.util.Objects
 import kotlin.Any
+import kotlin.Array
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.Short
@@ -47,8 +48,8 @@ public open class MultiModalDatabaseService(
     malwareProtection: MalwareProtection?,
     activityLogging: ActivityLogging?,
     storage: MutableList<Storage?>,
-    ips: List<String>?,
-    ports: List<Short>?,
+    ips: Array<String>?,
+    ports: Array<Short>?,
     authenticity: Boolean?,
     computes: MutableList<Compute?>,
     serviceMetadataDocument: ServiceMetadataDocument?,

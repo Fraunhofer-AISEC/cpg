@@ -42,18 +42,14 @@ public enum class LogLevel {
     UNKNOWN,
 }
 
-/** A log write operation e.g. `logging.warn("...")`. */
+/** A log write operation e.g. `loggint.warn("...")`. */
 public open class LogWrite(
-    val logArguments: List<Node?>,
     public val logLevel: LogLevel?,
     operatesOn: Logging,
     underlyingNode: Node? = null,
 ) : LogOperation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
-        other is LogWrite &&
-            super.equals(other) &&
-            other.logLevel == this.logLevel &&
-            other.logArguments == this.logArguments
+        other is LogWrite && super.equals(other) && other.logLevel == this.logLevel
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), logLevel, logArguments)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), logLevel)
 }

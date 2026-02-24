@@ -131,7 +131,7 @@ class Schema {
      * have this relationship also has the label of the defining child entity. Saves
      * MutableMap<EntityName,Set<Pair<FieldName, RelationshipName>>>
      */
-    private val childrenRels: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
+    private val childrensRels: MutableMap<String, Set<Pair<String, String>>> = mutableMapOf()
 
     /**
      * Stores a mapping from class information in combination with a relationship name, to the field
@@ -220,7 +220,7 @@ class Schema {
         entityRoots.forEach { extractFieldInformationFromHierarchy(it) }
 
         allRels.forEach {
-            childrenRels[it.key] =
+            childrensRels[it.key] =
                 it.value
                     .subtract(inheritedRels[it.key] ?: emptySet())
                     .subtract(inherentRels[it.key] ?: emptySet())
@@ -435,7 +435,7 @@ class Schema {
             }
         }
 
-        val relationships: MutableSet<SchemaRelationship> = mutableSetOf()
+        val relationships: MutableSet<SchemaRelationship> = mutableSetOf<SchemaRelationship>()
         if (inherentRels.isNotEmpty() && inheritedRels.isNotEmpty()) {
 
             if (inheritedRels[className]?.isNotEmpty() == true) {
@@ -450,7 +450,7 @@ class Schema {
                         }
                         hierarchy[current]?.first?.let { current = it }
                     }
-                    relationships.add(relationshipToJson(baseClass, inheritedRel, true))
+                    baseClass?.let { relationships.add(relationshipToJson(it, inheritedRel, true)) }
                 }
             }
 
@@ -459,7 +459,7 @@ class Schema {
             }
         }
 
-        val properties = mutableSetOf<SchemaProperty>()
+        val properties: MutableSet<SchemaProperty> = mutableSetOf<SchemaProperty>()
         if (inherentProperties.isNotEmpty() && inheritedProperties.isNotEmpty()) {
 
             removeLabelDuplicates(inherentProperties[className])?.forEach {
@@ -473,7 +473,7 @@ class Schema {
         }
         val entityNodes =
             hierarchy[classInfo]?.second?.flatMap { entitiesToJson(it) }?.toMutableList()
-                ?: mutableListOf()
+                ?: mutableListOf<Schema.SchemaNode>()
         entityNodes.add(
             0,
             SchemaNode(

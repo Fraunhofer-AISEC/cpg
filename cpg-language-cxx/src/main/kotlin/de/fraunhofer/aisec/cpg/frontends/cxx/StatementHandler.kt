@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
-import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -69,7 +69,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             is CPPASTTryBlockStatement -> handleTryBlockStatement(node)
             is CPPASTCatchHandler -> handleCatchHandler(node)
             else -> {
-                handleNotSupported(node, node.javaClass.name)
+                return handleNotSupported(node, node.javaClass.name)
             }
         }
     }
@@ -117,7 +117,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
         catchClause.body = body as? Block
 
-        if (decl is Variable) {
+        if (decl is VariableDeclaration) {
             frontend.scopeManager.addDeclaration(decl)
             catchClause.parameter = decl
         }
@@ -180,7 +180,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
                 // to the CPG goto statement
                 frontend.registerObjectListener(b.labelStatement, assigneeTargetLabel)
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             // If the Label AST node could not be resolved, the matching is done based on label
             // names of CPG nodes using the predicate listeners
             frontend.registerPredicateListener(

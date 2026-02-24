@@ -40,18 +40,18 @@ class ArgumentHolderTest {
                 listOf(
                     newBinaryOperator("?"),
                     newUnaryOperator("?", false, false),
-                    newCall(),
-                    newCast(),
+                    newCallExpression(),
+                    newCastExpression(),
                     newIfStatement(),
                     newReturnStatement(),
-                    newConditional(newLiteral(true)),
+                    newConditionalExpression(newLiteral(true)),
                     newDoStatement(),
-                    newInitializerList(),
-                    newKeyValue(key = ProblemExpression(), value = ProblemExpression()),
-                    newSubscription(),
+                    newInitializerListExpression(),
+                    newKeyValueExpression(key = ProblemExpression(), value = ProblemExpression()),
+                    newSubscriptExpression(),
                     newWhileStatement(),
-                    newAssign(),
-                    newVariable("test"),
+                    newAssignExpression(),
+                    newVariableDeclaration("test"),
                 )
 
             for (node in list) {

@@ -26,13 +26,15 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import java.util.List
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
+import kotlin.String
 
 public open class DatabaseConnect(
-    calls: List<Node>?,
+    calls: List<String>?,
     databaseService: DatabaseService?,
     operatesOn: DatabaseStorage,
     underlyingNode: Node? = null,

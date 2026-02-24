@@ -29,8 +29,6 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Enumeration
-import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
@@ -43,13 +41,12 @@ import java.util.regex.Pattern
  * Some piece of legacy code that deals with Java imports. We need to convert this to the new import
  * system.
  *
- * We need to remove this class and use [ImportResolver] and [Import] instead.
+ * We need to remove this class and use [ImportResolver] and [ImportDeclaration] instead.
  */
 @DependsOn(TypeHierarchyResolver::class)
 @RequiredFrontend(JavaLanguageFrontend::class)
-@Description("Pass that resolves Java imports.")
 open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
-    protected val records: MutableList<Record> = ArrayList()
+    protected val records: MutableList<RecordDeclaration> = ArrayList()
     protected val importables: MutableMap<String, Declaration> = HashMap()
 
     override fun cleanup() {
@@ -69,7 +66,9 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun getStaticImports(recordDeclaration: Record): MutableSet<ValueDeclaration> {
+    protected fun getStaticImports(
+        recordDeclaration: RecordDeclaration
+    ): MutableSet<ValueDeclaration> {
         val partitioned =
             recordDeclaration.staticImportStatements.groupBy { it.endsWith("*") }.toMutableMap()
 
@@ -83,7 +82,7 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
             val base = importables[matcher.group("base")]
             var members = setOf<ValueDeclaration>()
-            if (base is Record) {
+            if (base is RecordDeclaration) {
                 members = getOrCreateMembers(base, matcher.group("member"))
             }
             staticImports.addAll(members)
@@ -91,12 +90,14 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         for (asteriskImport in partitioned[true] ?: listOf()) {
             val base = importables[asteriskImport.replace(".*", "")]
-            if (base is Enumeration) {
+            if (base is EnumDeclaration) {
                 staticImports.addAll(base.entries)
-            } else if (base is Record) {
+            } else if (base is RecordDeclaration) {
                 val classes = listOf(base, *base.superTypeDeclarations.toTypedArray())
                 // Add all the static methods implemented in the class "base" and its superclasses
-                staticImports.addAll(classes.flatMap { it.methods }.filter(Method::isStatic))
+                staticImports.addAll(
+                    classes.flatMap { it.methods }.filter(MethodDeclaration::isStatic)
+                )
                 // Add all the static fields implemented in the class "base" and its superclasses
                 staticImports.addAll(
                     classes.flatMap { it.fields }.filter { "static" in it.modifiers }
@@ -110,7 +111,7 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return targetTypes.mapNotNull { importables[it] }.toMutableSet()
     }
 
-    protected fun getOrCreateMembers(base: Record, name: String): Set<ValueDeclaration> {
+    protected fun getOrCreateMembers(base: RecordDeclaration, name: String): Set<ValueDeclaration> {
         val memberMethods = base.methods.filter { it.name.localName.endsWith(name) }.toMutableSet()
 
         // add methods from superclasses
@@ -125,8 +126,8 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             base.superTypeDeclarations.flatMap { it.fields }.filter { it.name.localName == name }
         )
 
-        val memberEntries = mutableSetOf<EnumConstant>()
-        if (base is Enumeration) {
+        val memberEntries = mutableSetOf<EnumConstantDeclaration>()
+        if (base is EnumDeclaration) {
             base.entries[name]?.let { memberEntries.add(it) }
         }
 
@@ -140,11 +141,17 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (result.isEmpty()) {
             // the target might be a field or a method, we don't know. Thus, we need to create both
             val targetField =
-                newField(name, UnknownType.getUnknownType(base.language), setOf(), null, false)
+                newFieldDeclaration(
+                    name,
+                    UnknownType.getUnknownType(base.language),
+                    ArrayList(),
+                    null,
+                    false,
+                )
             targetField.language = base.language
             targetField.isInferred = true
 
-            val targetMethod = newMethod(name, true, base)
+            val targetMethod = newMethodDeclaration(name, true, base)
             targetMethod.language = base.language
             targetMethod.isInferred = true
 
@@ -162,7 +169,7 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             Strategy::AST_FORWARD,
             object : IVisitor<AstNode>() {
                 override fun visit(t: AstNode) {
-                    if (t is Record) {
+                    if (t is RecordDeclaration) {
                         records.add(t)
                         importables.putIfAbsent(t.name.toString(), t)
                     }

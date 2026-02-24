@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import java.util.Objects
 import kotlin.Any
+import kotlin.Array
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.Short
@@ -40,8 +41,8 @@ import kotlin.collections.MutableMap
 public open class MachineLearningService(
     public val machineLearnings: MutableList<MachineLearning?>,
     public val storage: MutableList<Storage?>,
-    ips: List<String>?,
-    ports: List<Short>?,
+    ips: Array<String>?,
+    ports: Array<Short>?,
     authenticity: Boolean?,
     computes: MutableList<Compute?>,
     serviceMetadataDocument: ServiceMetadataDocument?,

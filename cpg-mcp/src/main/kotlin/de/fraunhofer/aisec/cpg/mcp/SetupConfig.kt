@@ -55,7 +55,6 @@ fun setupTranslationConfiguration(
     loadIncludes: Boolean = true,
     exclusionPatterns: Collection<String> = listOf(),
     useUnityBuild: Boolean = false,
-    runPasses: Boolean,
 ): TranslationConfiguration {
     val translationConfiguration =
         TranslationConfiguration.builder()
@@ -74,6 +73,7 @@ fun setupTranslationConfiguration(
             .addIncludesToGraph(loadIncludes)
             .debugParser(DEBUG_PARSER)
             .useUnityBuild(useUnityBuild)
+            .useParallelPasses(false)
 
     topLevel?.let { translationConfiguration.topLevel(it) }
 
@@ -88,12 +88,10 @@ fun setupTranslationConfiguration(
     val filePaths = getFilesOfList(files)
     translationConfiguration.sourceLocations(filePaths)
 
-    if (runPasses) {
-        translationConfiguration.defaultPasses()
-        translationConfiguration.registerPass<ControlDependenceGraphPass>()
-        translationConfiguration.registerPass<ProgramDependenceGraphPass>()
-        translationConfiguration.registerPass<PythonFileConceptPass>()
-    }
+    translationConfiguration.defaultPasses()
+    translationConfiguration.registerPass<ControlDependenceGraphPass>()
+    translationConfiguration.registerPass<ProgramDependenceGraphPass>()
+    translationConfiguration.registerPass<PythonFileConceptPass>()
 
     translationConfiguration.registerPass(PrepareSerialization::class)
 

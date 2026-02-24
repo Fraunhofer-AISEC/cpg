@@ -23,15 +23,18 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.persistence
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import java.net.ConnectException
-import org.neo4j.driver.GraphDatabase
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import org.neo4j.driver.Session
 import org.slf4j.LoggerFactory
 
@@ -60,35 +63,6 @@ internal val log = LoggerFactory.getLogger("Persistence")
 internal typealias Relationship = Map<String, Any?>
 
 /**
- * This function creates a new Neo4j session, optionally purges the database, and persists the
- * current [TranslationResult] into the database using the [persistNeo4j] function (which requires a
- * session context often not available at the call-site).
- *
- * @param noPurgeDb A boolean flag indicating whether to skip the database purge step. If set to
- *   true, the existing data in the database will not be deleted before persisting the new data.
- * @param protocol The protocol to use for connecting to the Neo4j database
- * @param host The host address of the Neo4j database
- * @param port The port number for the Neo4j database connection
- * @param neo4jUsername The username for authenticating with the Neo4j database
- * @param neo4jPassword The password for authenticating with the Neo4j database
- */
-fun TranslationResult.pushToNeo4j(
-    noPurgeDb: Boolean = false,
-    protocol: String = Neo4jConnectionDefaults.PROTOCOL,
-    host: String = Neo4jConnectionDefaults.HOST,
-    port: Int = Neo4jConnectionDefaults.PORT,
-    neo4jUsername: String = Neo4jConnectionDefaults.USERNAME,
-    neo4jPassword: String = Neo4jConnectionDefaults.PASSWORD,
-) {
-    val session: Session = connect(protocol, host, port, neo4jUsername, neo4jPassword)
-    with(session) {
-        if (!noPurgeDb) executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
-        this@pushToNeo4j.persistNeo4j()
-    }
-    session.close()
-}
-
-/**
  * Persists the current [TranslationResult] into a graph database.
  *
  * This method performs the following actions:
@@ -108,10 +82,10 @@ fun TranslationResult.pushToNeo4j(
  * - A [Session] context to perform persistence actions.
  */
 context(_: Session)
-fun TranslationResult.persistNeo4j() {
+fun TranslationResult.persist() {
     val b = Benchmark(Persistable::class.java, "Persisting translation result")
 
-    val astNodes = this@persistNeo4j.nodes
+    val astNodes = this@persist.nodes
     val connected = astNodes.flatMap { it.connectedNodes }.toSet()
     val nodes = (astNodes + connected).distinct()
 
@@ -121,12 +95,12 @@ fun TranslationResult.persistNeo4j() {
         astNodes.size,
         connected.size,
     )
-    nodes.persistNeo4j()
+    nodes.persist()
 
     val relationships = nodes.collectRelationships()
 
     log.info("Persisting {} relationships", relationships.size)
-    relationships.persistNeo4j()
+    relationships.persist()
 
     b.stop()
 }
@@ -146,15 +120,15 @@ fun TranslationResult.persistNeo4j() {
  * it extracts the labels and properties and executes the Cypher query to persist the node.
  */
 context(session: Session)
-private fun List<Node>.persistNeo4j() {
+private fun List<Node>.persist() {
     this.chunked(nodeChunkSize).map { chunk ->
         val b = Benchmark(Persistable::class.java, "Persisting chunk of ${chunk.size} nodes")
         val params =
             mapOf("props" to chunk.map { mapOf("labels" to it::class.labels) + it.properties() })
         session.executeWrite { tx ->
             tx.run(
-                    $$"""
-                   UNWIND $props AS map
+                    """
+                   UNWIND ${"$"}props AS map
                    WITH map, apoc.map.removeKeys(map, ['labels']) AS properties
                    CALL apoc.create.node(map.labels, properties) YIELD node
                    RETURN node
@@ -186,7 +160,7 @@ private fun List<Node>.persistNeo4j() {
  * - Relationship properties and labels are mapped before using database utilities for creation.
  */
 context(session: Session)
-private fun Collection<Relationship>.persistNeo4j() {
+private fun Collection<Relationship>.persist() {
     // Create an index for the "id" field of node, because we are "MATCH"ing on it in the edge
     // creation. We need to wait for this to be finished
     session.executeWrite { tx ->
@@ -209,8 +183,8 @@ private fun Session.createRelationships(props: List<Relationship>) {
     val params = mapOf("props" to props)
     executeWrite { tx ->
         tx.run(
-                $$"""
-            UNWIND $props AS map
+                """
+            UNWIND ${'$'}props AS map
             MATCH (s:Node {id: map.startId})
             MATCH (e:Node {id: map.endId})
             WITH s, e, map, apoc.map.removeKeys(map, ['startId', 'endId', 'type']) AS properties
@@ -226,26 +200,70 @@ private fun Session.createRelationships(props: List<Relationship>) {
 }
 
 /**
- * Connects to the neo4j db.
- *
- * @return the [Session] object for interacting with the database.
- * @throws InterruptedException, if the thread is interrupted while it tries to connect to the neo4j
- *   db.
- * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
+ * Returns all [Node] objects that are connected with this node with some kind of relationship
+ * defined in [schemaRelationships].
  */
-@Throws(InterruptedException::class, ConnectException::class)
-fun connect(
-    protocol: String = Neo4jConnectionDefaults.PROTOCOL,
-    host: String = Neo4jConnectionDefaults.HOST,
-    port: Int = Neo4jConnectionDefaults.PORT,
-    neo4jUsername: String = Neo4jConnectionDefaults.USERNAME,
-    neo4jPassword: String = Neo4jConnectionDefaults.PASSWORD,
-): Session {
-    val driver =
-        GraphDatabase.driver(
-            "$protocol$host:$port",
-            org.neo4j.driver.AuthTokens.basic(neo4jUsername, neo4jPassword),
-        )
-    driver.verifyConnectivity()
-    return driver.session()
+val Persistable.connectedNodes: IdentitySet<Node>
+    get() {
+        val nodes = identitySetOf<Node>()
+
+        for (entry in this::class.schemaRelationships) {
+            val value = entry.value.call(this)
+            if (value is EdgeCollection<*, *>) {
+                nodes += value.toNodeCollection()
+            } else if (value is List<*>) {
+                nodes += value.filterIsInstance<Node>()
+            } else if (value is Node) {
+                nodes += value
+            }
+        }
+
+        return nodes
+    }
+
+private fun List<Node>.collectRelationships(): List<Relationship> {
+    val relationships = mutableListOf<Relationship>()
+
+    for (node in this) {
+        for (entry in node::class.schemaRelationships) {
+            val value = entry.value.call(node)
+            if (value is EdgeCollection<*, *>) {
+                relationships +=
+                    value.map { edge ->
+                        mapOf(
+                            "startId" to edge.start.id.toString(),
+                            "endId" to edge.end.id.toString(),
+                            "type" to entry.key,
+                        ) + edge.properties()
+                    }
+            } else if (value is List<*>) {
+                relationships +=
+                    value.filterIsInstance<Node>().map { end ->
+                        mapOf(
+                            "startId" to node.id.toString(),
+                            "endId" to end.id.toString(),
+                            "type" to entry.key,
+                        )
+                    }
+            } else if (value is Node) {
+                relationships +=
+                    mapOf(
+                        "startId" to node.id.toString(),
+                        "endId" to value.id.toString(),
+                        "type" to entry.key,
+                    )
+            }
+        }
+    }
+
+    // Since Neo4J does not support multiple labels on edges, but we do internally, we
+    // duplicate the edge for each label
+    /*edge.labels.map { label ->
+        mapOf(
+            "startId" to edge.start.id.toString(),
+            "endId" to edge.end.id.toString(),
+            "type" to label
+        ) + edge.properties()
+    }*/
+    return relationships
 }

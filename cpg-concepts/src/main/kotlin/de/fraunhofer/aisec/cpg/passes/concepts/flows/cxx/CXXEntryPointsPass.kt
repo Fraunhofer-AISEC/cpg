@@ -32,25 +32,24 @@ import de.fraunhofer.aisec.cpg.graph.concepts.arch.Win32
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.EntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.newLibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.newMain
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
-import de.fraunhofer.aisec.cpg.passes.Description
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 
 /** A pass that fills the [EntryPoint] concept into the CPG. */
-@Description(
-    "A pass that identifies C/C++ entry points like main and DllMain and adds the respective concepts to the CPG."
-)
 class CXXEntryPointsPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
-    override fun handleNode(node: Node, tu: TranslationUnit) {
+    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         when (node) {
-            is Function -> handleFunction(node, tu)
+            is FunctionDeclaration -> handleFunctionDeclaration(node, tu)
         }
     }
 
-    /** Translates a suitable [Function] into an [EntryPoint] concept. */
-    private fun handleFunction(func: Function, tu: TranslationUnit) {
+    /** Translates a suitable [FunctionDeclaration] into an [EntryPoint] concept. */
+    private fun handleFunctionDeclaration(
+        func: FunctionDeclaration,
+        tu: TranslationUnitDeclaration,
+    ) {
         val entry =
             when (func.name.toString()) {
                 "main" ->

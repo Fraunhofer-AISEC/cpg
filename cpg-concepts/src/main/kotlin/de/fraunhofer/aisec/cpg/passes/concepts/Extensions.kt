@@ -29,7 +29,7 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass.Companion.filterDuplicates
 import kotlin.reflect.KClass
@@ -45,10 +45,11 @@ import kotlin.reflect.safeCast
  * nodes are "tagged" with [OverlayNode]s. Currently, the only allowed statements are:
  * - [each]: Applies the specified overlay nodes to "each" of the nodes selected.
  *
- * In the following example, each [Call] with the name "foo" is tagged with an overlay class `Bar`:
+ * In the following example, each [CallExpression] with the name "foo" is tagged with an overlay
+ * class `Bar`:
  * ```Kotlin
  * tag {
- *   each<Call>("foo").with {
+ *   each<CallExpression>("foo").with {
  *     Bar()
  *   }
  * }
@@ -211,7 +212,8 @@ data class Selector<T : Node>(
      */
     operator fun invoke(node: Node): T? {
         // Try to cast the node to T, if it's not an instance of T, it is null
-        val tNode = klass.safeCast(node) ?: return null
+        val tNode = klass.safeCast(node)
+        if (tNode == null) return null
 
         // Check, if predicate matches
         return if (
@@ -226,8 +228,10 @@ data class Selector<T : Node>(
 }
 
 /**
- * Starting from a given [Node], we also want to propagate information to other nodes. This node is
- * identified by [transformation].
+ * A selector that describes a possible selection of a CPG [Node] by the following properties:
+ * - its [KClass] (mandatory, see [klass]),
+ * - its [Node.name] (see [namePredicate]),
+ * - any other property (see [predicate])
  */
 data class Propagator<S : Node, T : Node>(val transformation: ((S) -> T)) {
     var builders = mutableListOf<(BuilderContext<T>) -> List<OverlayNode>>()

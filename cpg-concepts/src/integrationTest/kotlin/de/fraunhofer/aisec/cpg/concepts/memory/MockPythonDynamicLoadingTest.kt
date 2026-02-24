@@ -31,12 +31,12 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DynamicLoading
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newDynamicLoading
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadSymbol
-import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -53,14 +53,14 @@ import kotlin.test.assertNotNull
 @DependsOn(SymbolResolver::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class)
 class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
-    override fun handleNode(node: Node, tu: TranslationUnit) {
+    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         when {
-            node is Call && node.name.toString() == "loader.Loader" -> {
+            node is CallExpression && node.name.toString() == "loader.Loader" -> {
                 // Create a new DynamicLoading concept
                 val dynamicLoading = newDynamicLoading(node, connect = true)
                 node.prevDFG += dynamicLoading
             }
-            node is MemberAccess && node.name.localName == "impl" -> {
+            node is MemberExpression && node.name.localName == "impl" -> {
                 var paths =
                     node.followDFGEdgesUntilHit(direction = Backward(GraphToFollow.DFG)) {
                         it is DynamicLoading
@@ -75,12 +75,12 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
                     }
 
                     // Create an implicit construct expression
-                    val construct = newConstruction(record.name).implicit()
+                    val construct = newConstructExpression(record.name).implicit()
                     construct.type = record.toType()
                     node.prevDFG += construct
 
                     val loadSymbol =
-                        newLoadSymbol<Constructor>(
+                        newLoadSymbol<ConstructorDeclaration>(
                             node,
                             dynamicLoading,
                             what = null,
@@ -91,7 +91,8 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
                     node.prevDFGEdges.addContextSensitive(
                         node = construct,
                         granularity = FullDataflowGranularity,
-                        callingContext = CallingContextOut(dynamicLoading.underlyingNode as Call),
+                        callingContext =
+                            CallingContextOut(dynamicLoading.underlyingNode as CallExpression),
                     )
 
                     // Mark it as "dirty" for symbol resolver

@@ -47,20 +47,20 @@ class StatementBuilderTest {
                 translationResult {
                     var tu =
                         with(frontend) {
-                            var tu = newTranslationUnit("main.file")
+                            var tu = newTranslationUnitDeclaration("main.file")
                             scopeManager.resetToGlobal(tu)
 
-                            var globalA = newVariable("a")
+                            var globalA = newVariableDeclaration("a")
                             scopeManager.addDeclaration(globalA)
                             tu.declarations += globalA
 
-                            var func = newFunction("main")
+                            var func = newFunctionDeclaration("main")
                             scopeManager.enterScope(func)
 
                             var body = newBlock()
                             scopeManager.enterScope(body)
 
-                            var localA = newVariable("a")
+                            var localA = newVariableDeclaration("a")
                             var stmt = newDeclarationStatement()
                             stmt.declarations += localA
                             scopeManager.addDeclaration(localA)

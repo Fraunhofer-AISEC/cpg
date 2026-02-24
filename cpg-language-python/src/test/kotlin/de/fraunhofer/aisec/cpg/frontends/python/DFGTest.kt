@@ -26,19 +26,19 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.StringIndexedDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Subscription
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.nio.file.Path
@@ -52,11 +52,11 @@ import kotlin.test.assertTrue
 class DFGTest {
     fun checkCallFlowsToTupleElements(body: Block, functionName: String) {
         val assignment = body.statements[0]
-        assertIs<Assign>(assignment)
+        assertIs<AssignExpression>(assignment)
         assertEquals(1, assignment.lhs.size)
         assertEquals(1, assignment.rhs.size)
         val lhsTuple = assignment.lhs[0]
-        assertIs<InitializerList>(lhsTuple)
+        assertIs<InitializerListExpression>(lhsTuple)
         assertEquals(2, lhsTuple.initializers.size)
 
         val cRef = lhsTuple.initializers[0]
@@ -66,7 +66,7 @@ class DFGTest {
 
         assertLocalName("c", cRef)
         val cRefPrevDFG = cRef.prevDFG.singleOrNull()
-        assertIs<InitializerList>(cRefPrevDFG)
+        assertIs<InitializerListExpression>(cRefPrevDFG)
         val cRefPrevDFGGranularity = cRef.prevDFGEdges.single().granularity
         assertIs<IndexedDataflowGranularity>(cRefPrevDFGGranularity)
         assertEquals(0, cRefPrevDFGGranularity.partialTarget)
@@ -79,7 +79,7 @@ class DFGTest {
         assertEquals(1, dRefPrevDFGGranularity.partialTarget)
 
         val tuplePrevDFG = cRefPrevDFG.prevDFG.singleOrNull()
-        assertIs<Call>(tuplePrevDFG)
+        assertIs<CallExpression>(tuplePrevDFG)
         assertLocalName(functionName, tuplePrevDFG)
 
         val c = body.variables["c"]
@@ -91,11 +91,11 @@ class DFGTest {
         assertTrue(d.prevDFG.isEmpty())
     }
 
-    fun checkReturnTuple(functionDeclaration: Function) {
+    fun checkReturnTuple(functionDeclaration: FunctionDeclaration) {
         val returnStmt = functionDeclaration.returns.singleOrNull()
         assertNotNull(returnStmt)
         val returnVal = returnStmt.returnValue
-        assertIs<InitializerList>(returnVal)
+        assertIs<InitializerListExpression>(returnVal)
         assertEquals(2, returnVal.initializers.size)
         val a = returnVal.initializers[0]
         assertIs<Reference>(a)
@@ -250,7 +250,7 @@ class DFGTest {
 
         val paths =
             keyStartRef.followDFGEdgesUntilHit(collectFailedPaths = false) {
-                it is Call &&
+                it is CallExpression &&
                     it.name.localName == "cipher_operation" &&
                     it.arguments[0].evaluate() == "encrypt"
             }
@@ -284,8 +284,10 @@ class DFGTest {
             "We expect that there is a reference called \"d\" in line 9 of the file.",
         )
         val dBLine9 =
-            result.allChildren<Subscription> { it.location?.region?.startLine == 9 }.singleOrNull()
-        assertIs<Subscription>(
+            result
+                .allChildren<SubscriptExpression> { it.location?.region?.startLine == 9 }
+                .singleOrNull()
+        assertIs<SubscriptExpression>(
             dBLine9,
             "We expect that there is a subscript expression representing \"d['b']\" in line 9 of the file.",
         )
@@ -369,8 +371,10 @@ class DFGTest {
         )
 
         val subscriptLine10 =
-            result.allChildren<Subscription> { it.location?.region?.startLine == 10 }.singleOrNull()
-        assertIs<Subscription>(
+            result
+                .allChildren<SubscriptExpression> { it.location?.region?.startLine == 10 }
+                .singleOrNull()
+        assertIs<SubscriptExpression>(
             subscriptLine10,
             "We expect that there is a subscript expression simulating \"d['b']\" in line 10 of the file.",
         )
@@ -443,8 +447,10 @@ class DFGTest {
         )
 
         val subscriptLine11 =
-            result.allChildren<Subscription> { it.location?.region?.startLine == 11 }.singleOrNull()
-        assertIs<Subscription>(
+            result
+                .allChildren<SubscriptExpression> { it.location?.region?.startLine == 11 }
+                .singleOrNull()
+        assertIs<SubscriptExpression>(
             subscriptLine11,
             "We expect that there is a subscript expression simulating \"d['a']\" in line 11 of the file.",
         )
@@ -518,8 +524,10 @@ class DFGTest {
             "We expect that there is a reference called \"d\" in line 9 of the file.",
         )
         val d1Line9 =
-            result.allChildren<Subscription> { it.location?.region?.startLine == 9 }.singleOrNull()
-        assertIs<Subscription>(
+            result
+                .allChildren<SubscriptExpression> { it.location?.region?.startLine == 9 }
+                .singleOrNull()
+        assertIs<SubscriptExpression>(
             d1Line9,
             "We expect that there is a subscript expression representing \"d[1]\" in line 9 of the file.",
         )
@@ -603,8 +611,10 @@ class DFGTest {
         )
 
         val subscriptLine10 =
-            result.allChildren<Subscription> { it.location?.region?.startLine == 10 }.singleOrNull()
-        assertIs<Subscription>(
+            result
+                .allChildren<SubscriptExpression> { it.location?.region?.startLine == 10 }
+                .singleOrNull()
+        assertIs<SubscriptExpression>(
             subscriptLine10,
             "We expect that there is a subscript expression simulating \"d[1]\" in line 10 of the file.",
         )
@@ -677,8 +687,10 @@ class DFGTest {
         )
 
         val subscriptLine11 =
-            result.allChildren<Subscription> { it.location?.region?.startLine == 11 }.singleOrNull()
-        assertIs<Subscription>(
+            result
+                .allChildren<SubscriptExpression> { it.location?.region?.startLine == 11 }
+                .singleOrNull()
+        assertIs<SubscriptExpression>(
             subscriptLine11,
             "We expect that there is a subscript expression simulating \"d[0]\" in line 11 of the file.",
         )
@@ -757,8 +769,10 @@ class DFGTest {
             "We expect that there is a reference called \"d\" in line 9 of the file.",
         )
         val dBLine9 =
-            result.allChildren<MemberAccess> { it.location?.region?.startLine == 9 }.singleOrNull()
-        assertIs<MemberAccess>(
+            result
+                .allChildren<MemberExpression> { it.location?.region?.startLine == 9 }
+                .singleOrNull()
+        assertIs<MemberExpression>(
             dBLine9,
             "We expect that there is a subscript expression representing \"d.b\" in line 9 of the file.",
         )
@@ -842,8 +856,10 @@ class DFGTest {
         )
 
         val subscriptLine10 =
-            result.allChildren<MemberAccess> { it.location?.region?.startLine == 10 }.singleOrNull()
-        assertIs<MemberAccess>(
+            result
+                .allChildren<MemberExpression> { it.location?.region?.startLine == 10 }
+                .singleOrNull()
+        assertIs<MemberExpression>(
             subscriptLine10,
             "We expect that there is a subscript expression simulating \"d.b\" in line 10 of the file.",
         )
@@ -916,8 +932,10 @@ class DFGTest {
         )
 
         val subscriptLine11 =
-            result.allChildren<MemberAccess> { it.location?.region?.startLine == 11 }.singleOrNull()
-        assertIs<MemberAccess>(
+            result
+                .allChildren<MemberExpression> { it.location?.region?.startLine == 11 }
+                .singleOrNull()
+        assertIs<MemberExpression>(
             subscriptLine11,
             "We expect that there is a subscript expression simulating \"d.a\" in line 11 of the file.",
         )
@@ -987,39 +1005,6 @@ class DFGTest {
             dLine9,
             dfgTodB.start,
             "We expect two incoming DFG edges: The full edge from line 9.",
-        )
-    }
-
-    @Test
-    fun testConstructorDFG() {
-        val topLevel = Path.of("src", "test", "resources", "python")
-        val result =
-            analyze(listOf(topLevel.resolve("constructor_dfg.py").toFile()), topLevel, true) {
-                it.registerLanguage<PythonLanguage>()
-            }
-        assertNotNull(result)
-
-        val fooClass = result.records["Foo"]
-        assertNotNull(fooClass)
-        val init = fooClass.constructors.singleOrNull()
-        assertNotNull(init)
-        val implicitReturn = init.returns.singleOrNull { it.isImplicit }
-        assertNotNull(implicitReturn, "Expected implicit return self in constructor")
-        val selfRef = implicitReturn.returnValue
-        assertIs<Reference>(selfRef)
-        assertEquals(init.receiver, selfRef.refersTo)
-
-        val baz = result.literals.singleOrNull { it.value == "baz" }
-        assertNotNull(baz)
-        val barFunc = result.functions["bar"]
-        assertNotNull(barFunc)
-        val returnF = barFunc.returns.singleOrNull()
-        assertNotNull(returnF)
-
-        val paths = baz.followDFGEdgesUntilHit(collectFailedPaths = false) { it == returnF }
-        assertTrue(
-            paths.fulfilled.isNotEmpty(),
-            "Expected DFG path from 'baz' through the constructor to return f",
         )
     }
 }

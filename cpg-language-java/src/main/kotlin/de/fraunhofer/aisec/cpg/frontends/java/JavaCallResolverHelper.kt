@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java
 
-import de.fraunhofer.aisec.cpg.graph.declarations.Method
-import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
@@ -46,18 +46,18 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.LOGGER
  * @param curClass The class containing the call
  */
 fun SymbolResolver.handleSuperExpressionHelper(
-    memberExpression: MemberAccess,
-    curClass: Record,
+    memberExpression: MemberExpression,
+    curClass: RecordDeclaration,
 ): Boolean {
     // Because the "super" keyword still refers to "this" (but cast to another class), we
     // still need to connect the super reference to the receiver of this method.
     val func = scopeManager.currentFunction
-    if (func is Method) {
+    if (func is MethodDeclaration) {
         (memberExpression.base as Reference?)?.refersTo = func.receiver
     }
 
     // In the next step we can "cast" the base to the correct type, by setting the base
-    var target: Record? = null
+    var target: RecordDeclaration? = null
 
     // In case the reference is just called "super", this is a direct superclass, either
     // defined explicitly or java.lang.Object by default
@@ -101,7 +101,10 @@ fun SymbolResolver.handleSuperExpressionHelper(
     return false
 }
 
-fun SymbolResolver.handleSpecificSupertype(callee: MemberAccess, curClass: Record): Record? {
+fun SymbolResolver.handleSpecificSupertype(
+    callee: MemberExpression,
+    curClass: RecordDeclaration,
+): RecordDeclaration? {
     val baseName = callee.base.name.parent ?: return null
 
     val type = typeManager.lookupResolvedType(baseName.toString()) ?: callee.unknownType()

@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.*
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.helpers.functional.*
@@ -97,8 +97,12 @@ class DeclarationState<NodeId>(innerLattice: Lattice<IntervalLattice.Element>) :
         widen: Boolean,
     ): Element<NodeId, IntervalLattice.Element> {
         val result = super.lub(one, two, allowModify, widen)
-        // If the result is a DeclarationStateElement, we can return it directly
-        return result as? DeclarationStateElement<NodeId> ?: DeclarationStateElement<NodeId>(result)
+        if (result is DeclarationStateElement<NodeId>) {
+            // If the result is a DeclarationStateElement, we can return it directly
+            return result
+        } else {
+            return DeclarationStateElement<NodeId>(result)
+        }
     }
 
     override fun glb(
@@ -106,8 +110,12 @@ class DeclarationState<NodeId>(innerLattice: Lattice<IntervalLattice.Element>) :
         two: Element<NodeId, IntervalLattice.Element>,
     ): Element<NodeId, IntervalLattice.Element> {
         val result = super.glb(one, two)
-        // If the result is a DeclarationStateElement, we can return it directly
-        return result as? DeclarationStateElement<NodeId> ?: DeclarationStateElement<NodeId>(result)
+        if (result is DeclarationStateElement<NodeId>) {
+            // If the result is a DeclarationStateElement, we can return it directly
+            return result
+        } else {
+            return DeclarationStateElement<NodeId>(result)
+        }
     }
 
     class DeclarationStateElement<NodeId>(expectedMaxSize: Int) :
@@ -143,13 +151,13 @@ class DeclarationState<NodeId>(innerLattice: Lattice<IntervalLattice.Element>) :
         }
 
         fun findKey(nodeId: NodeId): NodeId {
-            return if (nodeId is Int) {
+            return if (nodeId is Integer) {
                 this.entries.singleOrNull { it.key == nodeId }?.key ?: nodeId
             } else nodeId
         }
 
         override fun containsKey(key: NodeId?): Boolean {
-            return if (key is Int) {
+            return if (key is Integer) {
                 this.entries.singleOrNull { it.key == key } != null
             } else {
                 super.containsKey(key)
@@ -168,7 +176,7 @@ class DeclarationState<NodeId>(innerLattice: Lattice<IntervalLattice.Element>) :
          * @return The [IntervalLattice.Element] for the node, or null if not found.
          */
         override operator fun get(nodeId: NodeId): IntervalLattice.Element? {
-            return if (nodeId is Int) {
+            return if (nodeId is Integer) {
                 this.entries.singleOrNull { it.key == nodeId }?.value
             } else {
                 super.get(nodeId)
@@ -364,7 +372,8 @@ class AbstractIntervalEvaluator {
      *   [LatticeInterval.BOTTOM] if not found.
      */
     fun evaluate(node: Node, targetType: KClass<out Value<LatticeInterval>>): LatticeInterval {
-        val startNode = node.firstParentOrNull<Function>() ?: return LatticeInterval.BOTTOM
+        val startNode =
+            node.firstParentOrNull<FunctionDeclaration>() ?: return LatticeInterval.BOTTOM
         return evaluate(startNode, node, targetType, LatticeInterval.BOTTOM)
     }
 
@@ -442,7 +451,6 @@ class AbstractIntervalEvaluator {
  * @param node The [Node] whose interval is to be fetched.
  * @return The [LatticeInterval] associated with the node, or [LatticeInterval.TOP] if not found.
  */
-@Suppress("UNCHECKED_CAST")
 fun <NodeId> TupleStateElement<NodeId>.intervalOf(node: Node): LatticeInterval {
     val id =
         node.objectIdentifier()?.let { tmpId ->
@@ -461,7 +469,6 @@ fun <NodeId> TupleStateElement<NodeId>.intervalOf(node: Node): LatticeInterval {
  * @param interval The new [LatticeInterval] to set.
  * @return The updated tuple state element.
  */
-@Suppress("UNCHECKED_CAST")
 fun <NodeId> TupleState<NodeId>.changeDeclarationState(
     current: TupleStateElement<NodeId>,
     node: Node,
@@ -483,7 +490,6 @@ fun <NodeId> TupleState<NodeId>.changeDeclarationState(
  * @param interval The [LatticeInterval] to push.
  * @return The updated tuple state element.
  */
-@Suppress("UNCHECKED_CAST")
 fun <NodeId> TupleState<NodeId>.pushToDeclarationState(
     current: TupleStateElement<NodeId>,
     node: Node,

@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import java.util.Objects
 import kotlin.Any
+import kotlin.Array
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.Short
@@ -43,8 +44,8 @@ public open class LoadBalancer(
     public val accessRestriction: Boolean?,
     public val httpEndpoints: MutableList<HttpEndpoint?>,
     public val networkServices: MutableList<NetworkService?>,
-    ips: List<String>?,
-    ports: List<Short>?,
+    ips: Array<String>?,
+    ports: Array<Short>?,
     authenticity: Boolean?,
     computes: MutableList<Compute?>,
     serviceMetadataDocument: ServiceMetadataDocument?,

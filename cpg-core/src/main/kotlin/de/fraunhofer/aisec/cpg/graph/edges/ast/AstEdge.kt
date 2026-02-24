@@ -97,6 +97,4 @@ open class AstEdges<NodeType : AstNode, PropertyEdgeType : AstEdge<NodeType>>(
         init = init,
         onAdd = onAdd,
         onRemove = onRemove,
-        // The AST can have more than a single element, so we set a higher initial capacity.
-        initialCapacity = 8,
     )

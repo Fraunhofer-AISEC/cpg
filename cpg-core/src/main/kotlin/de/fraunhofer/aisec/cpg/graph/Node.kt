@@ -35,14 +35,12 @@ import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
-import de.fraunhofer.aisec.cpg.graph.declarations.Method
-import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
-import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.Overlays
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -95,10 +93,10 @@ abstract class Node() :
      * The scope this node "lives" in / in which it is defined. This property is set in
      * [Node.applyMetadata] by a [ScopeProvider] at the time when the node is created.
      *
-     * For example, if a [Record] is defined in a [TranslationUnit] (without any namespaces), the
-     * scope of the [Record] is most likely a [GlobalScope]. Since the declaration itself creates a
-     * [RecordScope], the scope of a [Method] within the class would be a [RecordScope] pointing to
-     * the [Record].
+     * For example, if a [RecordDeclaration] is defined in a [TranslationUnitDeclaration] (without
+     * any namespaces), the scope of the [RecordDeclaration] is most likely a [GlobalScope]. Since
+     * the declaration itself creates a [RecordScope], the scope of a [MethodDeclaration] within the
+     * class would be a [RecordScope] pointing to the [RecordDeclaration].
      */
     @Relationship(value = "SCOPE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference
@@ -122,16 +120,6 @@ abstract class Node() :
     var nextEOGEdges: EvaluationOrders<Node> =
         EvaluationOrders<Node>(this, mirrorProperty = Node::prevEOGEdges, outgoing = true)
         protected set
-
-    /** The [BasicBlockEdgeList] leading to the basic block this node belongs to. */
-    @Relationship(value = "BB", direction = Relationship.Direction.OUTGOING)
-    @PopulatedByPass(BasicBlockCollectorPass::class)
-    var basicBlockEdges: BasicBlockEdgeList<Node> =
-        BasicBlockEdgeList<Node>(this, mirrorProperty = BasicBlock::nodeEdges, outgoing = true)
-        protected set
-
-    /** The basic block this node belongs to. */
-    var basicBlock by unwrapping(Node::basicBlockEdges)
 
     /**
      * The nodes which are control-flow dominated, i.e., the children of the Control Dependence
@@ -246,8 +234,8 @@ abstract class Node() :
      */
     var isImplicit = false
 
-    /** Required field for persistence. It contains the node ID. */
-    @DoNotPersist @Id @GeneratedValue var legacyId: Long = NodeIdGenerator.next()
+    /** Required field for object graph mapping. It contains the node id. */
+    @DoNotPersist @Id @GeneratedValue var legacyId: Long? = null
 
     /**
      * A (more or less) unique identifier for this node. It is a [Uuid] derived from

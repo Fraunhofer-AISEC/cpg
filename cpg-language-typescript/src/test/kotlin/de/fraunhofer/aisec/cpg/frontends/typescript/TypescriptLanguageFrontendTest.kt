@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -46,7 +46,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val functions = tu.declarations.filterIsInstance<Function>()
+        val functions = tu.declarations.filterIsInstance<FunctionDeclaration>()
         assertNotNull(functions)
 
         assertEquals(2, functions.size)
@@ -81,7 +81,8 @@ class TypeScriptLanguageFrontendTest {
 
         // actually, our frontend returns 3 functions (1 inferred), because our function inference
         // cannot handle non-typed languages very well
-        val functions = tu.declarations.filterIsInstance<Function>().filter { !it.isInferred }
+        val functions =
+            tu.declarations.filterIsInstance<FunctionDeclaration>().filter { !it.isInferred }
         assertNotNull(functions)
 
         assertEquals(2, functions.size)
@@ -157,7 +158,7 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(token)
         assertLocalName("token", token)
 
-        val callInitializer = token.initializer as? Call
+        val callInitializer = token.initializer as? CallExpression
         assertNotNull(callInitializer)
 
         val stringArg = callInitializer.arguments.first() as? Literal<*>
@@ -165,10 +166,10 @@ class TypeScriptLanguageFrontendTest {
 
         assertEquals("access_token", stringArg.value)
 
-        val chainedCall = function.bodyOrNull<MemberCall>(3)
+        val chainedCall = function.bodyOrNull<MemberCallExpression>(3)
         assertNotNull(chainedCall)
 
-        val fetch = chainedCall.base as? Call
+        val fetch = chainedCall.base as? CallExpression
         assertNotNull(fetch)
 
         val refArg = fetch.arguments.first() as? Reference
@@ -177,27 +178,27 @@ class TypeScriptLanguageFrontendTest {
         assertLocalName("apiUrl", refArg)
         assertSame(apiUrl, refArg.refersTo)
 
-        var objectArg = fetch.arguments.last() as? InitializerList
+        var objectArg = fetch.arguments.last() as? InitializerListExpression
         assertNotNull(objectArg)
 
         assertEquals(3, objectArg.initializers.size)
 
-        var keyValue = objectArg.initializers.first() as? KeyValue
+        var keyValue = objectArg.initializers.first() as? KeyValueExpression
         assertNotNull(keyValue)
 
         assertLocalName("method", keyValue.key as? Reference)
         assertEquals("POST", (keyValue.value as? Literal<*>)?.value)
 
-        keyValue = objectArg.initializers.last() as? KeyValue
+        keyValue = objectArg.initializers.last() as? KeyValueExpression
         assertNotNull(keyValue)
 
         // nested object creation
-        objectArg = keyValue.value as? InitializerList
+        objectArg = keyValue.value as? InitializerListExpression
         assertNotNull(objectArg)
 
         assertEquals(2, objectArg.initializers.size)
 
-        keyValue = objectArg.initializers.first() as? KeyValue
+        keyValue = objectArg.initializers.first() as? KeyValueExpression
         assertNotNull(keyValue)
 
         assertEquals("Authorization", (keyValue.key as? Literal<*>)?.value)
@@ -205,7 +206,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertLocalName("then", chainedCall)
 
-        val funcArg = chainedCall.arguments.firstOrNull() as? Lambda
+        val funcArg = chainedCall.arguments.firstOrNull() as? LambdaExpression
         assertNotNull(funcArg)
 
         val arrowFunction = funcArg.function
@@ -295,7 +296,7 @@ class TypeScriptLanguageFrontendTest {
         val loginForm = tu.variables["LoginForm"]
         assertNotNull(loginForm)
 
-        val lambdaFunction = (loginForm.initializer as? Lambda)?.function
+        val lambdaFunction = (loginForm.initializer as? LambdaExpression)?.function
         assertNotNull(lambdaFunction)
 
         val validateForm = lambdaFunction.functions["validateForm"]
@@ -348,11 +349,12 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(tu)
 
         val onPost =
-            tu.statements.firstOrNull { it is MemberCall && it.name.localName == "onPost" }
-                as? MemberCall
+            tu.statements.firstOrNull {
+                it is MemberCallExpression && it.name.localName == "onPost"
+            } as? MemberCallExpression
         assertNotNull(onPost)
 
-        val lambda = onPost.arguments.drop(1).firstOrNull() as? Lambda
+        val lambda = onPost.arguments.drop(1).firstOrNull() as? LambdaExpression
         assertNotNull(lambda)
 
         val func = lambda.function

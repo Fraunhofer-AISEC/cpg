@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -41,12 +40,12 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
             is GoStandardLibrary.Ast.FuncDecl -> handleFuncDecl(node)
             is GoStandardLibrary.Ast.GenDecl -> handleGenDecl(node)
             else -> {
-                handleNotSupported(node, node.goType)
+                return handleNotSupported(node, node.goType)
             }
         }
     }
 
-    private fun handleFuncDecl(funcDecl: GoStandardLibrary.Ast.FuncDecl): Function {
+    private fun handleFuncDecl(funcDecl: GoStandardLibrary.Ast.FuncDecl): FunctionDeclaration {
         val recv = funcDecl.recv
         val func =
             if (recv != null) {
@@ -57,7 +56,8 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 val fqnRecord =
                     frontend.scopeManager.currentNamespace.fqn(recordType.root.name.localName)
 
-                val method = newMethod(Name(funcDecl.name.name, fqnRecord), rawNode = funcDecl)
+                val method =
+                    newMethodDeclaration(Name(funcDecl.name.name, fqnRecord), rawNode = funcDecl)
 
                 // The name of the Go receiver is optional. In fact, if the name is not
                 // specified we probably do not need any receiver variable at all,
@@ -65,13 +65,18 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 // of the struct, but it is not modifying the receiver.
                 if (recvField?.names?.isNotEmpty() == true) {
                     method.receiver =
-                        newVariable(recvField.names[0].name, recordType, rawNode = recvField)
+                        newVariableDeclaration(
+                            recvField.names[0].name,
+                            recordType,
+                            rawNode = recvField,
+                        )
                 }
 
                 if (recordType !is UnknownType) {
                     // TODO: this will only find methods within the current translation unit.
                     //  this is a limitation that we have for C++ as well
-                    val record = frontend.scopeManager.lookupScope(fqnRecord)?.astNode as? Record
+                    val record =
+                        frontend.scopeManager.lookupScope(fqnRecord)?.astNode as? RecordDeclaration
 
                     // Enter scope of record, so we can later resolve this correctly. We do NOT add
                     // the method to the AST methods property because it is declared outside of the
@@ -90,12 +95,12 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                     localNameOnly = true
                 }
 
-                newFunction(funcDecl.name.name, localNameOnly, rawNode = funcDecl)
+                newFunctionDeclaration(funcDecl.name.name, localNameOnly, rawNode = funcDecl)
             }
 
         frontend.scopeManager.enterScope(func)
 
-        val receiver = (func as? Method)?.receiver
+        val receiver = (func as? MethodDeclaration)?.receiver
         if (receiver != null) {
             // Add the receiver do the scope manager, so we can resolve the receiver value
             frontend.scopeManager.addDeclaration(receiver)
@@ -112,7 +117,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 // If the function has named return variables, be sure to declare them as well
                 if (returnVar.names.isNotEmpty()) {
                     val returnParam =
-                        newVariable(
+                        newVariableDeclaration(
                             returnVar.names[0].name,
                             frontend.typeOf(returnVar.type),
                             rawNode = returnVar,
@@ -134,7 +139,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         handleFuncParams(func, funcDecl.type.params)
 
         // Only parse function body in non-dependencies
-        if (!frontend.frontendConfiguration.doNotParseBody(func)) {
+        if (!frontend.isDependency) {
             // Check, if the last statement is a return statement, otherwise we insert an implicit
             // one
             val body = funcDecl.body?.let { frontend.statementHandler.handle(it) }
@@ -152,12 +157,17 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         frontend.scopeManager.leaveScope(func)
 
         // Leave scope of record, if applicable
-        (func as? Method)?.recordDeclaration?.let { frontend.scopeManager.leaveScope(it) }
+        (func as? MethodDeclaration)?.recordDeclaration?.let {
+            frontend.scopeManager.leaveScope(it)
+        }
 
         return func
     }
 
-    internal fun handleFuncParams(func: Function, list: GoStandardLibrary.Ast.FieldList) {
+    internal fun handleFuncParams(
+        func: FunctionDeclaration,
+        list: GoStandardLibrary.Ast.FieldList,
+    ) {
         for (param in list.list) {
             // We need to differentiate between three cases:
             // - an empty list of names, which means that the parameter is unnamed; and we also give
@@ -191,10 +201,10 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
             // Create one param variable per name
             for (name in names) {
                 // Check for varargs. In this case we want to parse the element type
-                // (and make it an array afterward)
+                // (and make it an array afterwards)
                 val (type, variadic) = frontend.fieldTypeOf(param.type)
 
-                val p = newParameter(name, type, variadic, rawNode = param)
+                val p = newParameterDeclaration(name, type, variadic, rawNode = param)
 
                 frontend.scopeManager.addDeclaration(p)
                 func.parameters += p
