@@ -43,6 +43,7 @@ public open class TransportEncryption(
     public val enforced: Boolean?,
     public val protocol: String?,
     public val protocolVersion: Float?,
+    public val tlsSignatureAlgorithm: String?,
     public val cipherSuites: MutableList<CipherSuite?>,
     basedOn: Cipher?,
     secret: Secret?,
@@ -55,8 +56,17 @@ public open class TransportEncryption(
             other.enforced == this.enforced &&
             other.protocol == this.protocol &&
             other.protocolVersion == this.protocolVersion &&
+            other.tlsSignatureAlgorithm == this.tlsSignatureAlgorithm &&
             other.cipherSuites == this.cipherSuites
 
     override fun hashCode(): Int =
-        Objects.hash(super.hashCode(), enabled, enforced, protocol, protocolVersion, cipherSuites)
+        Objects.hash(
+            super.hashCode(),
+            enabled,
+            enforced,
+            protocol,
+            protocolVersion,
+            tlsSignatureAlgorithm,
+            cipherSuites,
+        )
 }

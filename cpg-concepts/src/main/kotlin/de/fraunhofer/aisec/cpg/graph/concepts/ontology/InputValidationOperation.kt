@@ -33,12 +33,12 @@ import kotlin.Boolean
 import kotlin.Int
 
 public open class InputValidationOperation(
+    public val output: Output?,
     operatesOn: Input,
-    operatesOn: Output,
     underlyingNode: Node? = null,
 ) : Operation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
-        other is InputValidationOperation && super.equals(other)
+        other is InputValidationOperation && super.equals(other) && other.output == this.output
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode())
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), output)
 }

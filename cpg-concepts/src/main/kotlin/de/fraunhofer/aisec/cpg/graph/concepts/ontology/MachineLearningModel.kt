@@ -38,12 +38,14 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public open class MachineLearningModel(
-    public val adv_robustness: Float?,
+    public val adversarialRobustnessScore: Float?,
+    public val evasionEfficacyLevel: Float?,
     public val explainability: Float?,
-    public val poisonLevel: Float?,
-    public val privacyLabel: Float?,
-    public val privacyLevel: Float?,
-    public val robustness: Float?,
+    public val explainabilityEnabled: Boolean?,
+    public val membershipInferenceResilience: Float?,
+    public val modelStealResilience: Float?,
+    public val poisonedDataLevel: Float?,
+    public val poisoningResilienceLevel: Float?,
     public val vulnerabilities: MutableList<Vulnerability?>,
     dataLocation: DataLocation?,
     creation_time: ZonedDateTime?,
@@ -73,23 +75,27 @@ public open class MachineLearningModel(
     override fun equals(other: Any?): Boolean =
         other is MachineLearningModel &&
             super.equals(other) &&
-            other.adv_robustness == this.adv_robustness &&
+            other.adversarialRobustnessScore == this.adversarialRobustnessScore &&
+            other.evasionEfficacyLevel == this.evasionEfficacyLevel &&
             other.explainability == this.explainability &&
-            other.poisonLevel == this.poisonLevel &&
-            other.privacyLabel == this.privacyLabel &&
-            other.privacyLevel == this.privacyLevel &&
-            other.robustness == this.robustness &&
+            other.explainabilityEnabled == this.explainabilityEnabled &&
+            other.membershipInferenceResilience == this.membershipInferenceResilience &&
+            other.modelStealResilience == this.modelStealResilience &&
+            other.poisonedDataLevel == this.poisonedDataLevel &&
+            other.poisoningResilienceLevel == this.poisoningResilienceLevel &&
             other.vulnerabilities == this.vulnerabilities
 
     override fun hashCode(): Int =
         Objects.hash(
             super.hashCode(),
-            adv_robustness,
+            adversarialRobustnessScore,
+            evasionEfficacyLevel,
             explainability,
-            poisonLevel,
-            privacyLabel,
-            privacyLevel,
-            robustness,
+            explainabilityEnabled,
+            membershipInferenceResilience,
+            modelStealResilience,
+            poisonedDataLevel,
+            poisoningResilienceLevel,
             vulnerabilities,
         )
 }
