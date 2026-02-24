@@ -377,7 +377,10 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         val currentComponent =
             this@ExpressionHandler.frontend.currentTU?.firstParentOrNull<Component>()
 
-        currentComponent?.lookAlsoAtThis?.computeIfAbsent(parentTypeName) {
+        // We want to ensure that the parent type is available to the type manager when it handles
+        // the current component. This helps to infer the respective record declarations correctly
+        // and helps to speed up the overall analysis.
+        currentComponent?.additionalTypes?.computeIfAbsent(parentTypeName) {
             objectType(parentTypeName)
         }
 

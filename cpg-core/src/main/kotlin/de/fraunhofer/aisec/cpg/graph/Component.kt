@@ -72,7 +72,7 @@ open class Component : AstNode() {
      * Stores types that are not directly connected to a node, but are still relevant for the type
      * resolution of this component.
      */
-    val lookAlsoAtThis = IdentityHashMap<String, Type>()
+    val additionalTypes = IdentityHashMap<String, Type>()
 
     /**
      * In contrast to other Nodes we do not add the assumptions collected over the component because
