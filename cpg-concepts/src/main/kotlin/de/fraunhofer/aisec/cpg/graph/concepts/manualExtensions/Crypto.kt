@@ -59,14 +59,15 @@ open class TLS(
     underlyingNode: Node,
 ) :
     TransportEncryption(
-        true,
-        true,
-        "TLS",
-        versionNumber,
-        cipherSuites,
-        basedOn,
-        secret,
-        underlyingNode,
+        enabled = true,
+        enforced = true,
+        protocol = "TLS",
+        protocolVersion = versionNumber,
+        tlsSignatureAlgorithm = null,
+        cipherSuites = cipherSuites,
+        secret = secret,
+        basedOn = basedOn,
+        underlyingNode = underlyingNode,
     )
 
 class TLS1_2(
