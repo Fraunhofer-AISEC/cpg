@@ -84,10 +84,9 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  *
  * ## Adjust Names of Keys in Key Value Expressions to FQN
  *
- * This pass also adjusts the names of keys in a [KeyValueExpression], which is part of an
- * [InitializerListExpression] to a fully-qualified name that contains the name of the [ObjectType]
- * that the expression is creating. This way we can resolve the static references to the field to
- * the actual field.
+ * This pass also adjusts the names of keys in a [KeyValue], which is part of an [InitializerList]
+ * to a fully-qualified name that contains the name of the [ObjectType] that the expression is
+ * creating. This way we can resolve the static references to the field to the actual field.
  *
  * ## Add Methods of Embedded Structs to the Record's Scope
  *
@@ -120,9 +119,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         walker.registerHandler { node ->
             when (node) {
                 is Record -> handleRecord(node)
-                is AssignExpression -> handleAssign(node)
+                is Assign -> handleAssign(node)
                 is ForEachStatement -> handleForEachStatement(node)
-                is InitializerListExpression -> handleInitializerListExpression(node)
+                is InitializerList -> handleInitializerList(node)
             }
         }
 
@@ -235,10 +234,10 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * handleInitializerListExpression changes the references of keys in a [KeyValueExpression] to
-     * include the object it is creating as a parent name.
+     * handleInitializerList changes the references of keys in a [KeyValue] to include the object it
+     * is creating as a parent name.
      */
-    private fun handleInitializerListExpression(node: InitializerListExpression) {
+    private fun handleInitializerList(node: InitializerList) {
         var type: Type? = node.type
 
         // If our type is an "overlay", we need to look for the underlying type
@@ -265,25 +264,25 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (type is PointerType && type.isArray) {
             for (init in node.initializers) {
                 when (init) {
-                    is InitializerListExpression -> {
+                    is InitializerList -> {
                         init.type = type.elementType
                     }
 
-                    is KeyValueExpression if init.value is InitializerListExpression -> {
+                    is KeyValue if init.value is InitializerList -> {
                         init.value.type = type.elementType
                     }
 
-                    is KeyValueExpression if init.key is InitializerListExpression -> {
+                    is KeyValue if init.key is InitializerList -> {
                         init.key.type = type.elementType
                     }
                 }
             }
         } else if (type?.isMap == true) {
             for (init in node.initializers) {
-                if (init is KeyValueExpression) {
-                    if (init.key is InitializerListExpression) {
+                if (init is KeyValue) {
+                    if (init.key is InitializerList) {
                         init.key.type = (type as ObjectType).generics.getOrNull(0) ?: unknownType()
-                    } else if (init.value is InitializerListExpression) {
+                    } else if (init.value is InitializerList) {
                         init.value.type =
                             (type as ObjectType).generics.getOrNull(1) ?: unknownType()
                     }
@@ -301,7 +300,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             return
         }
 
-        for (keyValue in node.initializers.filterIsInstance<KeyValueExpression>()) {
+        for (keyValue in node.initializers.filterIsInstance<KeyValue>()) {
             val key = keyValue.key
             if (key is Reference) {
                 key.name = Name(key.name.localName, node.type.root.name)
@@ -345,10 +344,10 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This function gets called for every [AssignExpression], to check, whether we need to
-     * implicitly define any variables assigned in the statement.
+     * This function gets called for every [Assign], to check, whether we need to implicitly define
+     * any variables assigned in the statement.
      */
-    private fun handleAssign(assign: AssignExpression) {
+    private fun handleAssign(assign: Assign) {
         // Only filter nodes that could potentially declare
         if (assign.operatorCode != ":=") {
             return

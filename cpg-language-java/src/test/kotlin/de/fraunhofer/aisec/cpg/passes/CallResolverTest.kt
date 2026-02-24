@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -68,7 +68,7 @@ class CallResolverTest : BaseTest() {
         intType: Type,
         stringType: Type,
         methods: Collection<Function>,
-        calls: Collection<CallExpression>,
+        calls: Collection<Call>,
     ) {
         val signatures = listOf(listOf(), listOf(intType, intType), listOf(intType, stringType))
         for (signature in signatures) {
@@ -83,8 +83,7 @@ class CallResolverTest : BaseTest() {
 
         // Check for inferred nodes
         val inferenceSignature = listOf(intType, intType, intType)
-        for (inferredCall in
-            calls.filter { c: CallExpression -> c.signature == inferenceSignature }) {
+        for (inferredCall in calls.filter { c: Call -> c.signature == inferenceSignature }) {
             val inferredTarget =
                 findByUniquePredicate(methods) { m: Function ->
                     m.matchesSignature(inferenceSignature) != IncompatibleSignature

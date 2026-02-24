@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -43,7 +43,7 @@ class ExpressionBuilderTest {
             val node1 = newLiteral(1)
             val node2 = newReference("node2")
             val granularity = FieldDataflowGranularity(Field())
-            val callingContextIn = CallingContextIn(CallExpression())
+            val callingContextIn = CallingContextIn(Call())
             node1.prevDFGEdges.addContextSensitive(node2, granularity, callingContextIn)
 
             val clone = node1.duplicate(false)
@@ -62,7 +62,7 @@ class ExpressionBuilderTest {
             val node1 = newLiteral(1)
             val node2 = newReference("node2")
             val granularity = FieldDataflowGranularity(Field())
-            val callingContextIn = CallingContextIn(CallExpression())
+            val callingContextIn = CallingContextIn(Call())
             node1.nextDFGEdges.addContextSensitive(node2, granularity, callingContextIn)
 
             val clone = node1.duplicate(false)

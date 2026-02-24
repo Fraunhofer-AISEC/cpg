@@ -69,19 +69,19 @@ class MultiValueEvaluator : ValueEvaluator() {
 
         when (node) {
             is Field -> return handleHasInitializer(node, depth)
-            is NewArrayExpression -> return handleHasInitializer(node, depth)
+            is ArrayConstruction -> return handleHasInitializer(node, depth)
             is Variable -> return handleHasInitializer(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
             is UnaryOperator -> return handleUnaryOp(node, depth)
-            is AssignExpression -> return handleAssignExpression(node, depth)
+            is Assign -> return handleAssign(node, depth)
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
-            is CastExpression -> return this.evaluateInternal(node.expression, depth + 1)
-            is SubscriptExpression -> return handleSubscriptExpression(node, depth)
+            is Cast -> return this.evaluateInternal(node.expression, depth + 1)
+            is Subscription -> return handleSubscription(node, depth)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
-            is ConditionalExpression -> return handleConditionalExpression(node, depth)
+            is Conditional -> return handleConditional(node, depth)
             else -> return handlePrevDFG(node, depth)
         }
 
@@ -94,10 +94,10 @@ class MultiValueEvaluator : ValueEvaluator() {
      * We are handling some basic arithmetic compound assignment operations and string operations
      * that are more or less language-independent.
      */
-    override fun handleAssignExpression(node: AssignExpression, depth: Int): Any? {
+    override fun handleAssign(node: Assign, depth: Int): Any? {
         // This only works for compound assignments
         if (!node.isCompoundAssignment) {
-            return super.handleAssignExpression(node, depth)
+            return super.handleAssign(node, depth)
         }
 
         // Resolve lhs
@@ -164,7 +164,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         return result
     }
 
-    override fun handleConditionalExpression(expr: ConditionalExpression, depth: Int): Any {
+    override fun handleConditional(expr: Conditional, depth: Int): Any {
         val result = mutableSetOf<Any?>()
         val elseResult = evaluateInternal(expr.elseExpression, depth + 1)
         val thenResult = evaluateInternal(expr.thenExpression, depth + 1)
@@ -315,7 +315,7 @@ class MultiValueEvaluator : ValueEvaluator() {
             val loopOp = loop.iterationStatement
             loopVar =
                 when (loopOp) {
-                    is AssignExpression -> {
+                    is Assign -> {
                         if (
                             loopOp.operatorCode == "=" &&
                                 (loopOp.lhs.singleOrNull() as? Reference)?.refersTo ==

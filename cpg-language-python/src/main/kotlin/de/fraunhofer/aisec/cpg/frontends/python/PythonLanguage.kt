@@ -46,12 +46,12 @@ import org.neo4j.ogm.annotation.Transient
 import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /** The Python language. */
-class PythonLanguage :
+open class PythonLanguage :
     Language<PythonLanguageFrontend>(),
     HasShortCircuitOperators,
     HasOperatorOverloading,
     HasFunctionStyleConstruction,
-    HasMemberExpressionAmbiguity,
+    HasMemberAmbiguity,
     HasBuiltins,
     HasDefaultArguments {
     override val fileExtensions = listOf("py", "pyi")

@@ -40,15 +40,14 @@ import org.neo4j.ogm.annotation.Relationship
  * `[statement(variable) : variable in iterable if predicate(variable)]`.
  *
  * Some languages provide a way to have multiple variables, iterables and predicates. For this
- * reason, we represent the `variable, iterable and predicate in its own class
- * [ComprehensionExpression].
+ * reason, we represent the `variable, iterable and predicate in its own class [Comprehension].
  */
 class CollectionComprehension : Expression(), ArgumentHolder {
 
     @Relationship("COMPREHENSION_EXPRESSIONS")
-    var comprehensionExpressionEdges = astEdgesOf<ComprehensionExpression>()
+    var comprehensionExpressionEdges = astEdgesOf<Comprehension>()
     /**
-     * This field contains one or multiple [ComprehensionExpression]s.
+     * This field contains one or multiple [Comprehension]s.
      *
      * Note: Instead of having a list here, we could also enforce that the frontend nests the
      * expressions in a meaningful way (in particular this would help us to satisfy dependencies
@@ -88,7 +87,7 @@ class CollectionComprehension : Expression(), ArgumentHolder {
     override fun addArgument(expression: Expression) {
         if (this.statement is ProblemExpression) {
             this.statement = expression
-        } else if (expression is ComprehensionExpression) {
+        } else if (expression is Comprehension) {
             this.comprehensionExpressions += expression
         }
     }
@@ -98,7 +97,7 @@ class CollectionComprehension : Expression(), ArgumentHolder {
             this.statement = new
             return true
         }
-        if (new !is ComprehensionExpression) return false
+        if (new !is Comprehension) return false
         var changedSomething = false
         val newCompExp =
             this.comprehensionExpressions.map {

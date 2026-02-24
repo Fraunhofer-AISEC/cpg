@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.policy
 
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.concepts.http.HttpEndpoint
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.HttpEndpoint
 
 /**
  * Represents a boundary in data processing, which can be used to define the scope of a policy or

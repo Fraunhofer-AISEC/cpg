@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.newReference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
@@ -60,19 +60,19 @@ class JavaExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node ->
             when (node) {
-                is MemberExpression -> handleMemberExpression(node)
+                is MemberAccess -> handleMemberAccess(node)
             }
         }
 
         walker.iterate(tu)
     }
 
-    fun handleMemberExpression(me: MemberExpression) {
+    fun handleMemberAccess(me: MemberAccess) {
         val parent = me.astParent
 
         // For now, we are only interested in fields and not in calls, since this will open another
         // can of worms
-        if (parent is CallExpression && parent.callee == me) return
+        if (parent is Call && parent.callee == me) return
 
         // Look at the "base" of the member expression and check if this is referring to a type
         var base = me.base as? Reference

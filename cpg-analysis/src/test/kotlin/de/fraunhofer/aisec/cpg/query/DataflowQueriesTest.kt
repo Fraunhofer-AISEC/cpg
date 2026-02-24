@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.query
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.assertLocalName
@@ -68,7 +68,7 @@ class DataflowQueriesTest {
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = May,
-                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+                predicate = { (it.astParent as? Call)?.name?.localName == "baz" },
             )
         assertTrue(
             queryResultMayA.value,
@@ -96,7 +96,7 @@ class DataflowQueriesTest {
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(1),
                 type = May,
-                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+                predicate = { (it.astParent as? Call)?.name?.localName == "baz" },
             )
         assertFalse(queryResultMayAMax1.value, "The path is just too short to arrive in baz.")
         queryResultMayAMax1.children.forEach {
@@ -126,7 +126,7 @@ class DataflowQueriesTest {
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = Must,
-                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+                predicate = { (it.astParent as? Call)?.name?.localName == "baz" },
             )
         assertFalse(
             queryResultMustA.value,
@@ -155,7 +155,7 @@ class DataflowQueriesTest {
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = May,
-                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+                predicate = { (it.astParent as? Call)?.name?.localName == "baz" },
             )
         assertTrue(
             queryResultMayB.value,
@@ -184,7 +184,7 @@ class DataflowQueriesTest {
                 direction = Forward(GraphToFollow.DFG),
                 scope = Intraprocedural(),
                 type = Must,
-                predicate = { (it.astParent as? CallExpression)?.name?.localName == "baz" },
+                predicate = { (it.astParent as? Call)?.name?.localName == "baz" },
             )
         assertFalse(
             queryResultMustB.value,
@@ -232,7 +232,7 @@ class DataflowQueriesTest {
                 type = May,
                 predicate = {
                     (it as? Literal<*>)?.value == 5 ||
-                        (it.astParent as? CallExpression)?.name?.localName == "baz"
+                        (it.astParent as? Call)?.name?.localName == "baz"
                 },
             )
         assertTrue(
@@ -264,7 +264,7 @@ class DataflowQueriesTest {
                 type = Must,
                 predicate = {
                     (it as? Literal<*>)?.value == 5 ||
-                        (it.astParent as? CallExpression)?.name?.localName == "baz"
+                        (it.astParent as? Call)?.name?.localName == "baz"
                 },
             )
         assertFalse(
@@ -535,11 +535,9 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = linearStartA,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    (node.astParent as? Call)?.name?.localName == "print"
                 },
-                sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
-                },
+                sinkPredicate = { node -> (node.astParent as? Call)?.name?.localName == "baz" },
                 scope = Intraprocedural(),
             )
         assertTrue(
@@ -557,11 +555,9 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = linearStartAWithB,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    (node.astParent as? Call)?.name?.localName == "print"
                 },
-                sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
-                },
+                sinkPredicate = { node -> (node.astParent as? Call)?.name?.localName == "baz" },
                 scope = Intraprocedural(),
             )
         assertTrue(
@@ -579,11 +575,9 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = linearStartAWithBInterProc,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    (node.astParent as? Call)?.name?.localName == "print"
                 },
-                sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
-                },
+                sinkPredicate = { node -> (node.astParent as? Call)?.name?.localName == "baz" },
                 scope = Intraprocedural(),
             )
         assertFalse(
@@ -598,11 +592,9 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifStartA,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    (node.astParent as? Call)?.name?.localName == "print"
                 },
-                sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
-                },
+                sinkPredicate = { node -> (node.astParent as? Call)?.name?.localName == "baz" },
                 scope = Intraprocedural(),
             )
         assertFalse(
@@ -620,11 +612,9 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifStartAWithB,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    (node.astParent as? Call)?.name?.localName == "print"
                 },
-                sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
-                },
+                sinkPredicate = { node -> (node.astParent as? Call)?.name?.localName == "baz" },
                 scope = Intraprocedural(),
             )
         assertTrue(
@@ -642,11 +632,9 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifStartAWithBInterProc,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    (node.astParent as? Call)?.name?.localName == "print"
                 },
-                sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
-                },
+                sinkPredicate = { node -> (node.astParent as? Call)?.name?.localName == "baz" },
                 scope = Intraprocedural(),
             )
         assertFalse(
@@ -664,11 +652,9 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifElseStartA,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    (node.astParent as? Call)?.name?.localName == "print"
                 },
-                sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
-                },
+                sinkPredicate = { node -> (node.astParent as? Call)?.name?.localName == "baz" },
                 scope = Intraprocedural(),
             )
         assertTrue(ifElseResult.value, "Both paths go from the variable through print to baz.")
@@ -683,11 +669,9 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifElseStartA,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    (node.astParent as? Call)?.name?.localName == "print"
                 },
-                sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
-                },
+                sinkPredicate = { node -> (node.astParent as? Call)?.name?.localName == "baz" },
                 scope = Intraprocedural(),
             )
         assertTrue(
@@ -705,11 +689,9 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifElseStartAWithB,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    (node.astParent as? Call)?.name?.localName == "print"
                 },
-                sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
-                },
+                sinkPredicate = { node -> (node.astParent as? Call)?.name?.localName == "baz" },
                 scope = Intraprocedural(),
             )
         assertTrue(ifElseWithBResult.value, "Both paths go from the variable through print to baz.")
@@ -724,11 +706,9 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifElseStartAWithBInterProc,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    (node.astParent as? Call)?.name?.localName == "print"
                 },
-                sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
-                },
+                sinkPredicate = { node -> (node.astParent as? Call)?.name?.localName == "baz" },
                 scope = Intraprocedural(),
             )
         assertFalse(
@@ -746,11 +726,9 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = linearStartAWithBInterProc,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    (node.astParent as? Call)?.name?.localName == "print"
                 },
-                sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
-                },
+                sinkPredicate = { node -> (node.astParent as? Call)?.name?.localName == "baz" },
                 scope = Interprocedural(),
                 sensitivities = ContextSensitive + FieldSensitive + FilterUnreachableEOG,
             )
@@ -769,11 +747,9 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifStartAWithBInterProc,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    (node.astParent as? Call)?.name?.localName == "print"
                 },
-                sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
-                },
+                sinkPredicate = { node -> (node.astParent as? Call)?.name?.localName == "baz" },
                 scope = Interprocedural(),
             )
         assertTrue(
@@ -791,11 +767,9 @@ class DataflowQueriesTest {
             dataFlowWithValidator(
                 source = ifElseStartAWithBInterProc,
                 validatorPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                    (node.astParent as? Call)?.name?.localName == "print"
                 },
-                sinkPredicate = { node ->
-                    (node.astParent as? CallExpression)?.name?.localName == "baz"
-                },
+                sinkPredicate = { node -> (node.astParent as? Call)?.name?.localName == "baz" },
                 scope = Interprocedural(),
             )
         assertTrue(

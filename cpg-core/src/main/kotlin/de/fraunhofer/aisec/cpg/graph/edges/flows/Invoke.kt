@@ -30,11 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import kotlin.reflect.KProperty
 import org.neo4j.ogm.annotation.RelationshipEntity
 
-/** This edge class denotes the invocation of a [Function] by a [CallExpression]. */
+/** This edge class denotes the invocation of a [Function] by a [Call]. */
 @RelationshipEntity
 class Invoke(
     start: Node,
@@ -73,7 +73,7 @@ class Invokes<NodeType : Function>(
 
         // TODO: Make thisRef generic :(
         if (outgoing) {
-            edge.end.registerTypeObserver(thisRef as CallExpression)
+            edge.end.registerTypeObserver(thisRef as Call)
         }
     }
 }
