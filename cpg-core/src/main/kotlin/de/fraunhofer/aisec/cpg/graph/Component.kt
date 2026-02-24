@@ -33,10 +33,12 @@ import de.fraunhofer.aisec.cpg.frontends.multiLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.io.File
+import java.util.IdentityHashMap
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
@@ -65,6 +67,12 @@ open class Component : AstNode() {
     fun addTranslationUnit(tu: TranslationUnit) {
         translationUnits.add(tu)
     }
+
+    /**
+     * Stores types that are not directly connected to a node, but are still relevant for the type
+     * resolution of this component.
+     */
+    val additionalTypes = IdentityHashMap<String, Type>()
 
     /**
      * In contrast to other Nodes we do not add the assumptions collected over the component because
