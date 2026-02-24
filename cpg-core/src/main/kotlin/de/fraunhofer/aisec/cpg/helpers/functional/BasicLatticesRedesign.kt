@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.helpers.functional
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Loop
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.io.Serializable
@@ -317,7 +317,7 @@ interface Lattice<T : Lattice.Element> {
                 // is not null).
                 val newGlobalIt =
                     if (
-                        nextEdge.end is LoopStatement &&
+                        nextEdge.end is Loop &&
                             (strategy == Strategy.WIDENING ||
                                 strategy == Strategy.WIDENING_NARROWING) &&
                             oldGlobalIt != null

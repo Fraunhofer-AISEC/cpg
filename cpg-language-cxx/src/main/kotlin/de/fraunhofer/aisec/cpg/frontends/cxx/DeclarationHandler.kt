@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -214,7 +214,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 }
 
                 // add an implicit return statement, if there is none
-                if (lastStatement !is ReturnStatement) {
+                if (lastStatement !is Return) {
                     val returnStatement = newReturnStatement()
                     returnStatement.isImplicit = true
                     bodyStatement.statements += returnStatement

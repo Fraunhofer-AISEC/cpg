@@ -30,4 +30,4 @@ package de.fraunhofer.aisec.cpg.graph.statements
  * statements executed after the entry are on the same AST hierarchy in the parent compound
  * statement.
  */
-class DefaultStatement : Statement()
+class Default : Statement()

@@ -38,7 +38,7 @@ import org.neo4j.ogm.annotation.Relationship
  * choose from. THe statements executed after the entry are on the same AST hierarchy in the parent
  * compound statement.
  */
-class CaseStatement : Statement() {
+class Case : Statement() {
     @Relationship(value = "CASE_EXPRESSION")
     var caseExpressionEdge = astOptionalEdgeOf<Expression>()
 
@@ -46,11 +46,11 @@ class CaseStatement : Statement() {
      * Primitive side effect free statement that has to match with the evaluated selector in
      * SwitchStatement
      */
-    var caseExpression by unwrapping(CaseStatement::caseExpressionEdge)
+    var caseExpression by unwrapping(Case::caseExpressionEdge)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is CaseStatement) return false
+        if (other !is Case) return false
         return super.equals(other) && caseExpression == other.caseExpression
     }
 

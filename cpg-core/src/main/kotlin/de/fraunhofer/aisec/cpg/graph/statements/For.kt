@@ -42,21 +42,21 @@ import org.neo4j.ogm.annotation.Relationship
  * that declares variables, can change them in an iteration statement and is executed until the
  * condition evaluates to false.
  */
-class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
+class For : Loop(), BranchingNode, StatementHolder {
 
     @Relationship("INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Statement>()
-    var initializerStatement by unwrapping(ForStatement::initializerStatementEdge)
+    var initializerStatement by unwrapping(For::initializerStatementEdge)
 
     @Relationship("CONDITION_DECLARATION")
     var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
-    var conditionDeclaration by unwrapping(ForStatement::conditionDeclarationEdge)
+    var conditionDeclaration by unwrapping(For::conditionDeclarationEdge)
 
     @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
-    var condition by unwrapping(ForStatement::conditionEdge)
+    var condition by unwrapping(For::conditionEdge)
 
     @Relationship("ITERATION_STATEMENT") var iterationStatementEdge = astOptionalEdgeOf<Statement>()
-    var iterationStatement by unwrapping(ForStatement::iterationStatementEdge)
+    var iterationStatement by unwrapping(For::iterationStatementEdge)
 
     override val branchedBy
         get() = condition ?: conditionDeclaration
@@ -75,7 +75,7 @@ class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
         }
 
     override var statements: MutableList<Statement>
-        get() = unwrapping(ForStatement::statementEdges)
+        get() = unwrapping(For::statementEdges)
         set(value) {}
 
     override fun toString() =
@@ -91,7 +91,7 @@ class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
         if (this === other) {
             return true
         }
-        if (other !is ForStatement) {
+        if (other !is For) {
             return false
         }
 

@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.invoke
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.variables
 import java.io.File
@@ -97,7 +97,7 @@ class JavaLambdaTest {
         val applyMethod = anonymousRecord.methods["apply"]
         assertNotNull(applyMethod)
         val returnStatement =
-            (applyMethod.body as? Block)?.statements?.firstOrNull() as? ReturnStatement
+            (applyMethod.body as? Block)?.statements?.firstOrNull() as? Return
         assertNotNull(returnStatement)
         assertEquals(
             outerVar,

@@ -33,13 +33,13 @@ import java.util.Objects
  * loop condition. Can have a loop label, e.g. in Java, to specify which of the nested loops
  * condition should be reevaluated.
  */
-class ContinueStatement : Statement() {
+class Continue : Statement() {
     /** Specifies the loop in a nested structure that the label will 'continue' */
     var label: String? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ContinueStatement) return false
+        if (other !is Continue) return false
         return super.equals(other) && label == other.label
     }
 

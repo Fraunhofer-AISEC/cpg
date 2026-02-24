@@ -40,7 +40,7 @@ import org.neo4j.ogm.annotation.Relationship
  * Represent a for statement of the form `for(variable ... iterable){...}` that executes the loop
  * body for each instance of an element in `iterable` that is temporarily stored in `variable`.
  */
-class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
+class ForEach : Loop(), BranchingNode, StatementHolder {
 
     @Relationship("VARIABLE")
     var variableEdge =
@@ -52,11 +52,11 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
      * This field contains the iteration variable of the loop. It can be either a new variable
      * declaration or a reference to an existing variable.
      */
-    var variable by unwrapping(ForEachStatement::variableEdge)
+    var variable by unwrapping(ForEach::variableEdge)
 
     @Relationship("ITERABLE") var iterableEdge = astOptionalEdgeOf<Statement>()
     /** This field contains the iteration subject of the loop. */
-    var iterable by unwrapping(ForEachStatement::iterableEdge)
+    var iterable by unwrapping(ForEach::iterableEdge)
 
     override val branchedBy
         get() = iterable
@@ -75,7 +75,7 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
         }
 
     override var statements: MutableList<Statement>
-        get() = unwrapping(ForEachStatement::statementEdges)
+        get() = unwrapping(ForEach::statementEdges)
         set(value) {}
 
     override fun toString() =
@@ -87,7 +87,7 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ForEachStatement) return false
+        if (other !is ForEach) return false
         return super.equals(other) && variable == other.variable && iterable == other.iterable
     }
 

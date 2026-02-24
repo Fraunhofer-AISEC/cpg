@@ -711,7 +711,7 @@ class JVMLanguageFrontendTest {
         assertNotNull(testGoto)
 
         // Test that goto statements are created for labeled blocks
-        val gotoStmts = testGoto.allChildren<GotoStatement>()
+        val gotoStmts = testGoto.allChildren<Goto>()
         assertTrue(gotoStmts.isNotEmpty(), "Should have goto statements")
     }
 

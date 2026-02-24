@@ -43,7 +43,7 @@ import java.util.Objects
  * The [newLookupScopeStatement] node builder will add this automatically, so it is STRONGLY
  * encouraged that the node builder is used instead of creating the node itself.
  */
-class LookupScopeStatement : Statement() {
+class LookupScope : Statement() {
 
     /** The symbols this statement affects. */
     var symbols: List<Symbol> = listOf()
@@ -53,7 +53,7 @@ class LookupScopeStatement : Statement() {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is LookupScopeStatement) return false
+        if (other !is LookupScope) return false
         return super.equals(other) && symbols == other.symbols && targetScope == other.targetScope
     }
 

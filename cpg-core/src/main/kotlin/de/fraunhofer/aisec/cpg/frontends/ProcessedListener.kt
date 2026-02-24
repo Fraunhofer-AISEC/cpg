@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement
-import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Goto
+import de.fraunhofer.aisec.cpg.graph.statements.Label
 import java.util.function.BiConsumer
 import java.util.function.BiPredicate
 
@@ -39,7 +39,7 @@ import java.util.function.BiPredicate
 open class ProcessedListener {
     @JvmField
     protected var interestingStatements =
-        listOf(GotoStatement::class.java, LabelStatement::class.java)
+        listOf(Goto::class.java, Label::class.java)
     @JvmField
     protected var predicateListeners = mutableMapOf<BiPredicate<Any, Node>, BiConsumer<Any, Node>>()
     @JvmField protected var processedMapping = mutableMapOf<Any, Node>()

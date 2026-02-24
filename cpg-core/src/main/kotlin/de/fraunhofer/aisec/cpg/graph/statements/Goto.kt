@@ -29,15 +29,15 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
-class GotoStatement : Statement() {
+class Goto : Statement() {
     var labelName: String = ""
-    var targetLabel: LabelStatement? = null
+    var targetLabel: Label? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
         }
-        if (other !is GotoStatement) {
+        if (other !is Goto) {
             return false
         }
         return super.equals(other) && labelName == other.labelName

@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.enhancements.variable_resolution
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.For
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.*
@@ -165,7 +165,7 @@ internal class VariableResolverJavaTest : BaseTest() {
         private var innerImpOuter: Field? = null
         private var main: Method? = null
         private var outerFunction1: Method? = null
-        private var forStatements: List<ForStatement>? = null
+        private var forStatements: List<For>? = null
         private var outerFunction2: Method? = null
         private var outerFunction3: Method? = null
         private var outerFunction4: Method? = null

@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEach
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
@@ -145,7 +145,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         removeUnreachableImplicitReturnStatement(
             node,
             finalState.returnStatements.values.flatMap {
-                it.elements.filterIsInstance<ReturnStatement>()
+                it.elements.filterIsInstance<Return>()
             },
         )
 
@@ -400,7 +400,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         } else if (currentNode is Comprehension) {
             handleComprehension(currentNode, doubleState)
-        } else if (currentNode is ForEachStatement && currentNode.variable != null) {
+        } else if (currentNode is ForEach && currentNode.variable != null) {
             // The Variable in the ForEachStatement doesn't have an initializer, so
             // the "normal" case won't work. We handle this case separately here...
             // This is what we write to the declaration
@@ -460,7 +460,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             currentNode.parameters.forEach {
                 doubleState.pushToDeclarationsState(it, PowersetLattice(identitySetOf(it)))
             }
-        } else if (currentNode is ReturnStatement) {
+        } else if (currentNode is Return) {
             doubleState.returnStatements.push(
                 currentNode,
                 PowersetLattice(identitySetOf(currentNode)),
@@ -662,11 +662,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      */
     protected fun removeUnreachableImplicitReturnStatement(
         node: Node,
-        reachableReturnStatements: Collection<ReturnStatement>,
+        reachableReturnStatements: Collection<Return>,
     ) {
         val lastStatement = ((node as? Function)?.body as? Block)?.statements?.lastOrNull()
         if (
-            lastStatement is ReturnStatement &&
+            lastStatement is Return &&
                 lastStatement.isImplicit &&
                 lastStatement !in reachableReturnStatements
         )

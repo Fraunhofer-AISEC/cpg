@@ -1193,52 +1193,52 @@ val AstNode?.memberExpressions: List<MemberAccess>
 val AstNode?.statements: List<Statement>
     get() = this.allChildren()
 
-/** Returns all [ForStatement] child edges in this graph, starting with this [Node]. */
-val AstNode?.forLoops: List<ForStatement>
+/** Returns all [For] child edges in this graph, starting with this [Node]. */
+val AstNode?.forLoops: List<For>
     get() = this.allChildren()
 
-/** Returns all [TryStatement] child edges in this graph, starting with this [Node]. */
-val AstNode?.trys: List<TryStatement>
+/** Returns all [Try] child edges in this graph, starting with this [Node]. */
+val AstNode?.trys: List<Try>
     get() = this.allChildren()
 
 /** Returns all [Throw] child edges in this graph, starting with this [Node]. */
 val AstNode?.throws: List<Throw>
     get() = this.allChildren()
 
-/** Returns all [ForEachStatement] child edges in this graph, starting with this [Node]. */
-val AstNode?.forEachLoops: List<ForEachStatement>
+/** Returns all [ForEach] child edges in this graph, starting with this [Node]. */
+val AstNode?.forEachLoops: List<ForEach>
     get() = this.allChildren()
 
-/** Returns all [SwitchStatement] child edges in this graph, starting with this [Node]. */
-val AstNode?.switches: List<SwitchStatement>
+/** Returns all [Switch] child edges in this graph, starting with this [Node]. */
+val AstNode?.switches: List<Switch>
     get() = this.allChildren()
 
-/** Returns all [WhileStatement] child edges in this graph, starting with this [Node]. */
-val AstNode?.whileLoops: List<WhileStatement>
+/** Returns all [While] child edges in this graph, starting with this [Node]. */
+val AstNode?.whileLoops: List<While>
     get() = this.allChildren()
 
-/** Returns all [DoStatement] child edges in this graph, starting with this [Node]. */
-val AstNode?.doLoops: List<DoStatement>
+/** Returns all [Do] child edges in this graph, starting with this [Node]. */
+val AstNode?.doLoops: List<Do>
     get() = this.allChildren()
 
-/** Returns all [BreakStatement] child edges in this graph, starting with this [Node]. */
-val AstNode?.breaks: List<BreakStatement>
+/** Returns all [Break] child edges in this graph, starting with this [Node]. */
+val AstNode?.breaks: List<Break>
     get() = this.allChildren()
 
-/** Returns all [ContinueStatement] child edges in this graph, starting with this [Node]. */
-val AstNode?.continues: List<ContinueStatement>
+/** Returns all [Continue] child edges in this graph, starting with this [Node]. */
+val AstNode?.continues: List<Continue>
     get() = this.allChildren()
 
-/** Returns all [IfStatement] child edges in this graph, starting with this [Node]. */
-val AstNode?.ifs: List<IfStatement>
+/** Returns all [If] child edges in this graph, starting with this [Node]. */
+val AstNode?.ifs: List<If>
     get() = this.allChildren()
 
-/** Returns all [LabelStatement] child edges in this graph, starting with this [Node]. */
-val AstNode?.labels: List<LabelStatement>
+/** Returns all [Label] child edges in this graph, starting with this [Node]. */
+val AstNode?.labels: List<Label>
     get() = this.allChildren()
 
-/** Returns all [ReturnStatement] child edges in this graph, starting with this [Node]. */
-val AstNode?.returns: List<ReturnStatement>
+/** Returns all [Return] child edges in this graph, starting with this [Node]. */
+val AstNode?.returns: List<Return>
     get() = this.allChildren()
 
 /** Returns all [Assign] child edges in this graph, starting with this [Node]. */
@@ -1392,7 +1392,7 @@ fun TranslationResult.callersOf(function: Function): Set<Function> {
 }
 
 /** All nodes which depend on this if statement */
-fun IfStatement.controls(): List<Node> {
+fun If.controls(): List<Node> {
     val result = mutableListOf<Node>()
     result.addAll(SubgraphWalker.flattenAST(this.thenStatement))
     result.addAll(SubgraphWalker.flattenAST(this.elseStatement))
@@ -1408,7 +1408,7 @@ fun Node.controlledBy(): List<Node> {
         if (checkedNode == null) {
             break
         }
-        if (checkedNode is IfStatement || checkedNode is SwitchStatement) {
+        if (checkedNode is If || checkedNode is Switch) {
             result.add(checkedNode)
         }
     }

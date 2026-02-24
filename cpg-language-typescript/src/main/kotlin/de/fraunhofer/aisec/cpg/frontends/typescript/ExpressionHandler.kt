@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 
 class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
@@ -120,7 +120,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         // the function will (probably) not have a defined return type, so we try to deduce this
         // from a return statement
         if (func?.type == unknownType()) {
-            val returnValue = func.bodyOrNull<ReturnStatement>()?.returnValue
+            val returnValue = func.bodyOrNull<Return>()?.returnValue
 
             /*if (returnValue == null) {
                 // we have a void function

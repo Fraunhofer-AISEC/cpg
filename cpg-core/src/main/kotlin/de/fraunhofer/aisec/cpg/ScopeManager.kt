@@ -231,14 +231,14 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         if (!scopeMap.containsKey(nodeToScope)) {
             val newScope =
                 when (nodeToScope) {
-                    is WhileStatement,
-                    is DoStatement,
-                    is AssertStatement,
-                    is ForStatement,
-                    is ForEachStatement,
-                    is SwitchStatement,
-                    is TryStatement,
-                    is IfStatement,
+                    is While,
+                    is Do,
+                    is Assert,
+                    is For,
+                    is ForEach,
+                    is Switch,
+                    is Try,
+                    is If,
                     is CatchClause,
                     is CollectionComprehension,
                     is Block -> LocalScope(nodeToScope)
@@ -425,13 +425,13 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
-     * This function retrieves the [LabelStatement] associated with the [labelString]. This depicts
+     * This function retrieves the [Label] associated with the [labelString]. This depicts
      * the feature of some languages to attach a label to a point in the source code and use it as
-     * the target for control flow manipulation, e.g. [BreakStatement], [GotoStatement].
+     * the target for control flow manipulation, e.g. [Break], [Goto].
      */
-    fun getLabelStatement(labelString: String?): LabelStatement? {
+    fun getLabelStatement(labelString: String?): Label? {
         if (labelString == null) return null
-        var labelStatement: LabelStatement?
+        var labelStatement: Label?
         var searchScope: Scope? = currentScope
         while (searchScope != null) {
             labelStatement = searchScope.labelStatements[labelString]

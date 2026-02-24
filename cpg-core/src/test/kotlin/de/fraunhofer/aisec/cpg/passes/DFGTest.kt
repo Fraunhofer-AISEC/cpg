@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.test.*
@@ -285,7 +285,7 @@ class DFGTest {
 
         assertEquals(2, returnFunction.prevDFG.size)
 
-        val allRealReturns = returnFunction.allChildren<ReturnStatement> { !it.isImplicit }
+        val allRealReturns = returnFunction.allChildren<Return> { !it.isImplicit }
         assertEquals(allRealReturns.toSet() as Set<Node>, returnFunction.prevDFG)
 
         assertEquals(1, allRealReturns[0].prevDFG.size)

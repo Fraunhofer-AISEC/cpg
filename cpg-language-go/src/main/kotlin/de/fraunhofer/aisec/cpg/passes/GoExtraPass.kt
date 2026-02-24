@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEach
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -120,7 +120,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             when (node) {
                 is Record -> handleRecord(node)
                 is Assign -> handleAssign(node)
-                is ForEachStatement -> handleForEachStatement(node)
+                is ForEach -> handleForEachStatement(node)
                 is InitializerList -> handleInitializerList(node)
             }
         }
@@ -310,11 +310,11 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * handleForEachStatement adds a [HasType.TypeObserver] to the [ForEachStatement.iterable] of an
-     * [ForEachStatement] in order to determine the types used in [ForEachStatement.variable] (index
+     * handleForEachStatement adds a [HasType.TypeObserver] to the [ForEach.iterable] of an
+     * [ForEach] in order to determine the types used in [ForEach.variable] (index
      * and iterated value).
      */
-    private fun handleForEachStatement(forEach: ForEachStatement) {
+    private fun handleForEachStatement(forEach: ForEach) {
         (forEach.iterable as HasType).registerTypeObserver(
             object : HasType.TypeObserver {
                 override fun typeChanged(newType: Type, src: HasType) {

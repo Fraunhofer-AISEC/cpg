@@ -30,11 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
-import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Do
+import de.fraunhofer.aisec.cpg.graph.statements.For
+import de.fraunhofer.aisec.cpg.graph.statements.If
+import de.fraunhofer.aisec.cpg.graph.statements.Loop
+import de.fraunhofer.aisec.cpg.graph.statements.While
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
@@ -98,10 +98,10 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * to process, [currentState] contains the state which was observed before arriving here.
      *
      * This method modifies the state for the next eog edge as follows:
-     * - If the next node in the eog is an [IfStatement], the condition is evaluated and if it is
+     * - If the next node in the eog is an [If], the condition is evaluated and if it is
      *   either always true or false, the else or then branch receives set to
      *   [Reachability.UNREACHABLE].
-     * - If the next node in the eog is a [WhileStatement], the condition is evaluated and if it's
+     * - If the next node in the eog is a [While], the condition is evaluated and if it's
      *   always true or false, either the EOG edge to the loop body or out of the loop body is set
      *   to [Reachability.UNREACHABLE].
      * - For all other nodes, we simply propagate the state which led us here.
@@ -116,11 +116,11 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val lattice = lattice as? UnreachabilityState ?: return currentState
         var newState = currentState
         when (val currentNode = currentEdge.end) {
-            is IfStatement -> {
+            is If -> {
                 newState = handleIfStatement(lattice, currentEdge, currentNode, newState)
             }
 
-            is LoopStatement -> {
+            is Loop -> {
                 newState = handleLoopStatement(lattice, currentEdge, currentNode, newState)
             }
             // TODO: Add handling of SwitchStatement once we have a good way to follow the EOG edges
@@ -143,7 +143,7 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * Evaluates the condition of the [IfStatement] [n] (which is the end node of [enteringEdge]).
+     * Evaluates the condition of the [If] [n] (which is the end node of [enteringEdge]).
      * If it is always true, then the else-branch receives the [state] [Reachability.UNREACHABLE].
      * If the condition is always false, then the then-branch receives the [state]
      * [Reachability.UNREACHABLE]. All other cases simply copy the state which led us here.
@@ -151,7 +151,7 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     private fun handleIfStatement(
         lattice: UnreachabilityState,
         enteringEdge: EvaluationOrder,
-        n: IfStatement,
+        n: If,
         state: UnreachabilityStateElement,
     ): UnreachabilityStateElement {
         val evalResult = n.language.evaluator.evaluate(n.condition)
@@ -187,7 +187,7 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * Evaluates the condition of the [LoopStatement] [n] (which is the end node of [enteringEdge]).
+     * Evaluates the condition of the [Loop] [n] (which is the end node of [enteringEdge]).
      * If it is always false, then the edge to the code inside the loop receives the [state]
      * [Reachability.UNREACHABLE]. If the condition is always true, then the edge after the loop
      * body receives the [state] [Reachability.UNREACHABLE]. All other cases simply copy the state
@@ -197,14 +197,14 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     private fun handleLoopStatement(
         lattice: UnreachabilityState,
         enteringEdge: EvaluationOrder,
-        n: LoopStatement,
+        n: Loop,
         state: UnreachabilityStateElement,
     ): UnreachabilityStateElement {
         val condition =
             when (n) {
-                is WhileStatement -> n.condition
-                is DoStatement -> n.condition
-                is ForStatement -> n.condition
+                is While -> n.condition
+                is Do -> n.condition
+                is For -> n.condition
                 else -> return state
             }
         val evalResult = n.language.evaluator.evaluate(condition)

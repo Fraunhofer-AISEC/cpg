@@ -37,19 +37,19 @@ import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
-import de.fraunhofer.aisec.cpg.graph.statements.EmptyStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
-import de.fraunhofer.aisec.cpg.graph.statements.SynchronizedStatement
-import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
-import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Assert
+import de.fraunhofer.aisec.cpg.graph.statements.Break
+import de.fraunhofer.aisec.cpg.graph.statements.Continue
+import de.fraunhofer.aisec.cpg.graph.statements.Do
+import de.fraunhofer.aisec.cpg.graph.statements.Empty
+import de.fraunhofer.aisec.cpg.graph.statements.ForEach
+import de.fraunhofer.aisec.cpg.graph.statements.For
+import de.fraunhofer.aisec.cpg.graph.statements.If
+import de.fraunhofer.aisec.cpg.graph.statements.Return
+import de.fraunhofer.aisec.cpg.graph.statements.Switch
+import de.fraunhofer.aisec.cpg.graph.statements.Synchronized
+import de.fraunhofer.aisec.cpg.graph.statements.Try
+import de.fraunhofer.aisec.cpg.graph.statements.While
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -86,7 +86,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return throwOperation
     }
 
-    private fun handleReturnStatement(stmt: Statement): ReturnStatement {
+    private fun handleReturnStatement(stmt: Statement): Return {
         val returnStmt = stmt.asReturnStmt()
         val optionalExpression = returnStmt.expression
         var expression: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression? = null
@@ -109,7 +109,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return returnStatement
     }
 
-    private fun handleIfStatement(stmt: Statement): IfStatement {
+    private fun handleIfStatement(stmt: Statement): If {
         val ifStmt = stmt.asIfStmt()
         val conditionExpression = ifStmt.condition
         val thenStatement = ifStmt.thenStmt
@@ -125,7 +125,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return ifStatement
     }
 
-    private fun handleAssertStatement(stmt: Statement): AssertStatement {
+    private fun handleAssertStatement(stmt: Statement): Assert {
         val assertStmt = stmt.asAssertStmt()
         val conditionExpression = assertStmt.check
         val thenStatement = assertStmt.message
@@ -139,7 +139,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return assertStatement
     }
 
-    private fun handleWhileStatement(stmt: Statement): WhileStatement {
+    private fun handleWhileStatement(stmt: Statement): While {
         val whileStmt = stmt.asWhileStmt()
         val conditionExpression = whileStmt.condition
         val statement = whileStmt.body
@@ -153,7 +153,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return whileStatement
     }
 
-    private fun handleForEachStatement(stmt: Statement): ForEachStatement {
+    private fun handleForEachStatement(stmt: Statement): ForEach {
         val statement = newForEachStatement(rawNode = stmt)
         frontend.scopeManager.enterScope(statement)
         val forEachStmt = stmt.asForEachStmt()
@@ -170,7 +170,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return statement
     }
 
-    private fun handleForStatement(stmt: Statement): ForStatement {
+    private fun handleForStatement(stmt: Statement): For {
         val forStmt = stmt.asForStmt()
         val statement = this.newForStatement(rawNode = stmt)
         frontend.scopeManager.enterScope(statement)
@@ -230,7 +230,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return statement
     }
 
-    private fun handleDoStatement(stmt: Statement): DoStatement {
+    private fun handleDoStatement(stmt: Statement): Do {
         val doStmt = stmt.asDoStmt()
         val conditionExpression = doStmt.condition
         val statement = doStmt.body
@@ -244,11 +244,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return doStatement
     }
 
-    private fun handleEmptyStatement(stmt: Statement): EmptyStatement {
+    private fun handleEmptyStatement(stmt: Statement): Empty {
         return this.newEmptyStatement(rawNode = stmt)
     }
 
-    private fun handleSynchronizedStatement(stmt: Statement): SynchronizedStatement {
+    private fun handleSynchronizedStatement(stmt: Statement): Synchronized {
         val synchronizedJava = stmt.asSynchronizedStmt()
         val synchronizedCPG = newSynchronizedStatement(rawNode = stmt)
         synchronizedCPG.expression =
@@ -258,7 +258,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return synchronizedCPG
     }
 
-    private fun handleLabelStatement(stmt: Statement): LabelStatement {
+    private fun handleLabelStatement(stmt: Statement): Label {
         val labelStmt = stmt.asLabeledStmt()
         val label = labelStmt.label.identifier
         val statement = labelStmt.statement
@@ -268,14 +268,14 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return labelStatement
     }
 
-    private fun handleBreakStatement(stmt: Statement): BreakStatement {
+    private fun handleBreakStatement(stmt: Statement): Break {
         val breakStmt = stmt.asBreakStmt()
         val breakStatement = newBreakStatement(rawNode = stmt)
         breakStmt.label.ifPresent { label -> breakStatement.label = label.toString() }
         return breakStatement
     }
 
-    private fun handleContinueStatement(stmt: Statement): ContinueStatement {
+    private fun handleContinueStatement(stmt: Statement): Continue {
         val continueStmt = stmt.asContinueStmt()
         val continueStatement = newContinueStatement(rawNode = stmt)
         continueStmt.label.ifPresent { label -> continueStatement.label = label.toString() }
@@ -407,7 +407,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return newCode.toString()
     }
 
-    fun handleSwitchStatement(stmt: Statement): SwitchStatement {
+    fun handleSwitchStatement(stmt: Statement): Switch {
         val switchStmt = stmt.asSwitchStmt()
         val switchStatement = newSwitchStatement(rawNode = stmt)
 
@@ -483,7 +483,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return node
     }
 
-    private fun handleTryStatement(stmt: Statement): TryStatement {
+    private fun handleTryStatement(stmt: Statement): Try {
         val tryStmt = stmt.asTryStmt()
         val tryStatement = newTryStatement(rawNode = stmt)
         frontend.scopeManager.enterScope(tryStatement)

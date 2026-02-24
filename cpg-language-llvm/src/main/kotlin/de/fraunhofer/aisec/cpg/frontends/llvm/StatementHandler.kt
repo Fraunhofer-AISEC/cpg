@@ -277,7 +277,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         compoundStatement.statements += tokenGeneration
 
         val ifStatement = newIfStatement(rawNode = instr)
-        var currentIfStatement: IfStatement? = null
+        var currentIfStatement: If? = null
         var idx = 1
         while (idx < numOps) {
             if (currentIfStatement == null) {
@@ -1028,7 +1028,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * used for the comparison of the "case" statements, the second one is the default location) or
      * if the number of operands is not even.
      *
-     * Returns a [SwitchStatement].
+     * Returns a [Switch].
      */
     private fun handleSwitchStatement(instr: LLVMValueRef): Statement {
         val numOps = LLVMGetNumOperands(instr)
@@ -1085,8 +1085,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             calledFuncName = opName.name
         }
 
-        var gotoCatch: GotoStatement = newGotoStatement(rawNode = instr)
-        var tryContinue: GotoStatement = newGotoStatement(rawNode = instr)
+        var gotoCatch: Goto = newGotoStatement(rawNode = instr)
+        var tryContinue: Goto = newGotoStatement(rawNode = instr)
         if (instr.opCode == LLVMInvoke) {
             max-- // Last one is the Decl.Expr of the function
             // Get the label of the catch clause.
@@ -1312,7 +1312,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * declared and initialized. The original phi instruction is not added to the CPG.
      */
     fun handlePhi(instr: LLVMValueRef, tu: TranslationUnit, flatAST: MutableList<AstNode>) {
-        val labelMap = mutableMapOf<LabelStatement, Expression>()
+        val labelMap = mutableMapOf<Label, Expression>()
         val numOps = LLVMGetNumOperands(instr)
         var i = 0
         var bbsFunction: LLVMValueRef? = null
@@ -1331,12 +1331,12 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             }
 
             val labelName = getBasicBlockName(incomingBB)
-            val labelI = flatAST.firstOrNull { s -> s is LabelStatement && s.label == labelName }
+            val labelI = flatAST.firstOrNull { s -> s is Label && s.label == labelName }
             i++
             if (labelI == null) {
                 log.error("Expecting to find a label with name $labelName for Phi statement.")
             }
-            labelMap[labelI as LabelStatement] = valI
+            labelMap[labelI as Label] = valI
         }
         if (labelMap.keys.size == 1) {
             // We only have a single pair, so we insert a declaration in that one BB.
@@ -1438,7 +1438,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Handles a basic block and returns a [Block] comprised of the statements of this block or a
-     * [LabelStatement] if the basic block has a label.
+     * [Label] if the basic block has a label.
      */
     private fun handleBasicBlock(bb: LLVMBasicBlockRef): Statement {
         val compound = newBlock(rawNode = bb)
@@ -1546,14 +1546,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Generates a [GotoStatement] and either links it to the [LabelStatement] if that statement has
+     * Generates a [Goto] and either links it to the [Label] if that statement has
      * already been processed or uses the listeners to generate the relation once the label
      * statement has been processed.
      */
-    private fun assembleGotoStatement(instr: LLVMValueRef, bbTarget: LLVMValueRef): GotoStatement {
+    private fun assembleGotoStatement(instr: LLVMValueRef, bbTarget: LLVMValueRef): Goto {
         val goto = newGotoStatement(rawNode = instr)
         val assigneeTargetLabel = BiConsumer { _: Any, to: Node ->
-            if (to is LabelStatement) {
+            if (to is Label) {
                 goto.targetLabel = to
             } else if (goto.targetLabel != to) {
                 log.error("$to is not a LabelStatement")
@@ -1571,7 +1571,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             // If the Label AST node could not be resolved, the matching is done based on label
             // names of CPG nodes using the predicate listeners
             frontend.registerPredicateListener(
-                { _: Any?, to: Any? -> (to is LabelStatement && to.label == goto.labelName) },
+                { _: Any?, to: Any? -> (to is Label && to.label == goto.labelName) },
                 assigneeTargetLabel,
             )
         }

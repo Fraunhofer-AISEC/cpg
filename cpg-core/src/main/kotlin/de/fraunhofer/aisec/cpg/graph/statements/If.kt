@@ -39,20 +39,20 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
-class IfStatement : Statement(), BranchingNode, ArgumentHolder {
+class If : Statement(), BranchingNode, ArgumentHolder {
     @Relationship(value = "INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Statement>()
     /** C++ initializer statement. */
-    var initializerStatement by unwrapping(IfStatement::initializerStatementEdge)
+    var initializerStatement by unwrapping(If::initializerStatementEdge)
 
     @Relationship(value = "CONDITION_DECLARATION")
     var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
     /** C++ alternative to the condition. */
-    var conditionDeclaration by unwrapping(IfStatement::conditionDeclarationEdge)
+    var conditionDeclaration by unwrapping(If::conditionDeclarationEdge)
 
     @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /** The condition to be evaluated. */
-    var condition by unwrapping(IfStatement::conditionEdge)
+    var condition by unwrapping(If::conditionEdge)
 
     override val branchedBy
         get() = condition ?: conditionDeclaration
@@ -62,13 +62,13 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
 
     @Relationship(value = "THEN_STATEMENT") var thenStatementEdge = astOptionalEdgeOf<Statement>()
     /** The statement that is executed, if the condition is evaluated as true. Usually a [Block]. */
-    var thenStatement by unwrapping(IfStatement::thenStatementEdge)
+    var thenStatement by unwrapping(If::thenStatementEdge)
 
     @Relationship(value = "ELSE_STATEMENT") var elseStatementEdge = astOptionalEdgeOf<Statement>()
     /**
      * The statement that is executed, if the condition is evaluated as false. Usually a [Block].
      */
-    var elseStatement by unwrapping(IfStatement::elseStatementEdge)
+    var elseStatement by unwrapping(If::elseStatementEdge)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -94,7 +94,7 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is IfStatement) return false
+        if (other !is If) return false
         return super.equals(other) &&
             isConstExpression == other.isConstExpression &&
             initializerStatement == other.initializerStatement &&

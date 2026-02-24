@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.graph.newBlock
 import de.fraunhofer.aisec.cpg.graph.newReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
@@ -58,7 +58,7 @@ class StatementHandler(lang: RubyLanguageFrontend) :
         return compoundStatement
     }
 
-    private fun handleReturnNode(node: ReturnNode): ReturnStatement {
+    private fun handleReturnNode(node: ReturnNode): Return {
         val stmt = newReturnStatement()
         stmt.returnValue = frontend.expressionHandler.handleNode(node.valueNode)
 

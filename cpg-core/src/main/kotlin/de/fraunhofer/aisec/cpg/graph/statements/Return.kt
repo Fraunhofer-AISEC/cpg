@@ -38,7 +38,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a statement that returns out of the current function. */
-class ReturnStatement : Statement(), ArgumentHolder {
+class Return : Statement(), ArgumentHolder {
     @Relationship(value = "RETURN_VALUES")
     var returnValueEdges =
         astEdgesOf<Expression>(
@@ -54,7 +54,7 @@ class ReturnStatement : Statement(), ArgumentHolder {
         )
 
     /** The expression whose value will be returned. */
-    var returnValues by unwrapping(ReturnStatement::returnValueEdges)
+    var returnValues by unwrapping(Return::returnValueEdges)
 
     /**
      * A utility property to handle single-valued return statements. In case [returnValues] contains
@@ -96,7 +96,7 @@ class ReturnStatement : Statement(), ArgumentHolder {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ReturnStatement) return false
+        if (other !is Return) return false
         return super.equals(other) && returnValues == other.returnValues
     }
 

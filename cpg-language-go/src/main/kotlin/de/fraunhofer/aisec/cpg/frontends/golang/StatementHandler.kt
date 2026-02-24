@@ -108,7 +108,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             val node = handle(stmt)
             // Do not add case statements to the block because the already add themselves in
             // handleCaseClause. Otherwise, the order of case's would be wrong
-            if (node !is CaseStatement) {
+            if (node !is Case) {
                 compound += node
             }
         }
@@ -169,7 +169,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             stmt.isImplicit = true
 
             val decl = newVariable(typeSwitchLhs.name)
-            if (case is CaseStatement) {
+            if (case is Case) {
                 decl.type = (case.caseExpression as? TypeExpression)?.type ?: unknownType()
             } else {
                 // We need to work with type listeners here because they might not have their type
@@ -260,7 +260,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return call
     }
 
-    private fun handleForStmt(forStmt: GoStandardLibrary.Ast.ForStmt): ForStatement {
+    private fun handleForStmt(forStmt: GoStandardLibrary.Ast.ForStmt): For {
         val stmt = newForStatement(rawNode = forStmt)
 
         frontend.scopeManager.enterScope(stmt)
@@ -288,7 +288,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return op
     }
 
-    private fun handleIfStmt(ifStmt: GoStandardLibrary.Ast.IfStmt): IfStatement {
+    private fun handleIfStmt(ifStmt: GoStandardLibrary.Ast.IfStmt): If {
         val stmt = newIfStatement(rawNode = ifStmt)
 
         frontend.scopeManager.enterScope(stmt)
@@ -305,7 +305,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return stmt
     }
 
-    private fun handleLabeledStmt(labeledStmt: GoStandardLibrary.Ast.LabeledStmt): LabelStatement {
+    private fun handleLabeledStmt(labeledStmt: GoStandardLibrary.Ast.LabeledStmt): Label {
         val stmt = newLabelStatement(rawNode = labeledStmt)
         stmt.subStatement = handle(labeledStmt.stmt)
         stmt.label = labeledStmt.label.name
@@ -313,7 +313,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return stmt
     }
 
-    private fun handleRangeStmt(rangeStmt: GoStandardLibrary.Ast.RangeStmt): ForEachStatement {
+    private fun handleRangeStmt(rangeStmt: GoStandardLibrary.Ast.RangeStmt): ForEach {
         val forEach = newForEachStatement(rawNode = rangeStmt)
 
         frontend.scopeManager.enterScope(forEach)
@@ -354,7 +354,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return forEach
     }
 
-    private fun handleReturnStmt(returnStmt: GoStandardLibrary.Ast.ReturnStmt): ReturnStatement {
+    private fun handleReturnStmt(returnStmt: GoStandardLibrary.Ast.ReturnStmt): Return {
         val `return` = newReturnStatement(rawNode = returnStmt)
 
         val results = returnStmt.results
@@ -398,7 +398,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
     private fun handleTypeSwitchStmt(
         typeSwitchStmt: GoStandardLibrary.Ast.TypeSwitchStmt
-    ): SwitchStatement {
+    ): Switch {
         val switch = newSwitchStatement(rawNode = typeSwitchStmt)
 
         frontend.scopeManager.enterScope(switch)

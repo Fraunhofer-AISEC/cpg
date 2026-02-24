@@ -33,16 +33,16 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
-class SynchronizedStatement : Statement() {
+class Synchronized : Statement() {
     @Relationship(value = "EXPRESSION") var expressionEdge = astOptionalEdgeOf<Expression>()
-    var expression by unwrapping(SynchronizedStatement::expressionEdge)
+    var expression by unwrapping(Synchronized::expressionEdge)
 
     @Relationship(value = "BLOCK") var blockEdge = astOptionalEdgeOf<Block>()
-    var block by unwrapping(SynchronizedStatement::blockEdge)
+    var block by unwrapping(Synchronized::blockEdge)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is SynchronizedStatement) return false
+        if (other !is Synchronized) return false
         return super.equals(other) && expression == other.expression && block == other.block
     }
 

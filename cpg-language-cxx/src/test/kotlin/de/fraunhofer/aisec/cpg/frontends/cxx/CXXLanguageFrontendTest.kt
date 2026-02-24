@@ -272,7 +272,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val statements = (functionBody as Block).statements
         assertEquals(1, statements.size)
 
-        val returnStatement = statements[0] as ReturnStatement
+        val returnStatement = statements[0] as Return
         assertNotNull(returnStatement)
 
         val returnValue = returnStatement.returnValue
@@ -324,13 +324,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val statements = declaration.declarations<Function>(0)?.statements
         assertNotNull(statements)
 
-        val ifStatement = statements[0] as IfStatement
+        val ifStatement = statements[0] as If
         assertNotNull(ifStatement)
         assertNotNull(ifStatement.condition)
         assertEquals("bool", ifStatement.condition!!.type.typeName)
         assertEquals(true, (ifStatement.condition as Literal<*>).value)
-        assertTrue((ifStatement.thenStatement as Block).statements[0] is ReturnStatement)
-        assertTrue((ifStatement.elseStatement as Block).statements[0] is ReturnStatement)
+        assertTrue((ifStatement.thenStatement as Block).statements[0] is Return)
+        assertTrue((ifStatement.elseStatement as Block).statements[0] is Return)
     }
 
     @Test
@@ -344,16 +344,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         assertTrue(tu.allChildren<Node>().isNotEmpty())
 
-        val switchStatements = tu.allChildren<SwitchStatement>()
+        val switchStatements = tu.allChildren<Switch>()
         assertTrue(switchStatements.size == 3)
 
         val switchStatement = switchStatements[0]
         assertTrue((switchStatement.statement as Block).statements.size == 11)
 
-        val caseStatements = switchStatement.allChildren<CaseStatement>()
+        val caseStatements = switchStatement.allChildren<Case>()
         assertTrue(caseStatements.size == 4)
 
-        val defaultStatements = switchStatement.allChildren<DefaultStatement>()
+        val defaultStatements = switchStatement.allChildren<Default>()
         assertTrue(defaultStatements.size == 1)
     }
 
@@ -378,7 +378,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                     assertTrue(
                         node is DeclarationStatement ||
                             statements.indexOf(node) == statements.size - 1 &&
-                                node is ReturnStatement
+                                node is Return
                     )
                 }
             )
@@ -1033,7 +1033,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(statements[1] is DeclarationStatement)
         assertTrue(statements[2] is DeclarationStatement)
         assertTrue(statements[3] is DeclarationStatement)
-        assertTrue(statements[4] is ReturnStatement)
+        assertTrue(statements[4] is Return)
 
         var initializer =
             ((statements[0] as DeclarationStatement).singleDeclaration as Variable).initializer
@@ -1339,7 +1339,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val classSFoo = classS.methods.firstOrNull()
         assertNotNull(classSFoo)
 
-        val classSReturn = classSFoo.bodyOrNull<ReturnStatement>()
+        val classSReturn = classSFoo.bodyOrNull<Return>()
         assertNotNull(classSReturn)
 
         val classSReturnMember = classSReturn.returnValue as? MemberAccess
@@ -1367,7 +1367,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val main = tu.functions["main"]
         assertNotNull(main)
 
-        val returnStatement = main.bodyOrNull<ReturnStatement>()
+        val returnStatement = main.bodyOrNull<Return>()
         assertNotNull(returnStatement)
         assertNotNull((returnStatement.returnValue as? Reference)?.refersTo)
     }
@@ -1387,7 +1387,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val main = tu.functions["main"]
         assertNotNull(main)
 
-        val returnStatement = main.bodyOrNull<ReturnStatement>()
+        val returnStatement = main.bodyOrNull<Return>()
         assertNotNull(returnStatement)
         assertNotNull((returnStatement.returnValue as? Reference)?.refersTo)
     }
@@ -1781,13 +1781,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val labelCName = "LAB_123"
 
-        val goto = tu.allChildren<GotoStatement>().firstOrNull()
-        assertIs<GotoStatement>(goto)
+        val goto = tu.allChildren<Goto>().firstOrNull()
+        assertIs<Goto>(goto)
         assertEquals(labelCName, goto.labelName)
         assertLocalName(labelCName, goto)
 
         val label = tu.labels[labelCName]
-        assertIs<LabelStatement>(label)
+        assertIs<Label>(label)
         assertLocalName(labelCName, label)
 
         assertEquals(label, goto.targetLabel)

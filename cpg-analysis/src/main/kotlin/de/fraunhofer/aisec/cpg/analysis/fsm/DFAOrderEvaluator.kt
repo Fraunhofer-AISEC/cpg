@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
@@ -396,7 +396,7 @@ open class DFAOrderEvaluator(
     private fun Node.getSuitableDFGTarget(): Node? {
         return this.nextDFG
             .filter {
-                it is Reference || it is ReturnStatement || it is Construction || it is Variable
+                it is Reference || it is Return || it is Construction || it is Variable
             }
             .minByOrNull { it.name }
     }
