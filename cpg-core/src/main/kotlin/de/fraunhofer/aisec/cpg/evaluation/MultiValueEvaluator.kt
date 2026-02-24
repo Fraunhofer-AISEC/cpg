@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.For
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -182,7 +182,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                 }
             }
             "--" -> {
-                if (expr.astParent is ForStatement) {
+                if (expr.astParent is For) {
                     evaluateInternal(expr.input, depth + 1)
                 } else {
                     when (val input = evaluateInternal(expr.input, depth + 1)) {
@@ -192,7 +192,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                 }
             }
             "++" -> {
-                if (expr.astParent is ForStatement) {
+                if (expr.astParent is For) {
                     evaluateInternal(expr.input, depth + 1)
                 } else {
                     when (val input = evaluateInternal(expr.input, depth + 1)) {
@@ -257,8 +257,8 @@ class MultiValueEvaluator : ValueEvaluator() {
 
     private fun isSimpleForLoop(node: Node): Boolean {
         // Are we in the for statement somehow?
-        var forStatement = node.astParent as? ForStatement
-        if (forStatement == null) forStatement = node.astParent?.astParent as? ForStatement
+        var forStatement = node.astParent as? For
+        if (forStatement == null) forStatement = node.astParent?.astParent as? For
 
         if (forStatement == null) return false // ...no, we're not.
 
@@ -279,11 +279,9 @@ class MultiValueEvaluator : ValueEvaluator() {
 
     private fun handleSimpleLoopVariable(expr: Reference, depth: Int): Collection<Any?> {
         val loop =
-            expr.prevDFG.firstOrNull { it.astParent is ForStatement }?.astParent as? ForStatement
-                ?: expr.prevDFG
-                    .firstOrNull { it.astParent?.astParent is ForStatement }
-                    ?.astParent
-                    ?.astParent as? ForStatement
+            expr.prevDFG.firstOrNull { it.astParent is For }?.astParent as? For
+                ?: expr.prevDFG.firstOrNull { it.astParent?.astParent is For }?.astParent?.astParent
+                    as? For
         if (loop == null || loop.condition !is BinaryOperator) return setOf()
 
         var loopVar: Any? =

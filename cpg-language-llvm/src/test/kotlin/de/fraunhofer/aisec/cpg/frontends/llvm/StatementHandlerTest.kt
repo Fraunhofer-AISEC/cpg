@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
-import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Break
+import de.fraunhofer.aisec.cpg.graph.statements.Case
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement
-import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Goto
+import de.fraunhofer.aisec.cpg.graph.statements.Switch
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -968,24 +968,24 @@ class StatementHandlerTest {
         val fooBody = foo.body
         assertIs<Block>(fooBody)
         val indirectbrInstruction = fooBody.statements[0]
-        assertIs<SwitchStatement>(indirectbrInstruction)
+        assertIs<Switch>(indirectbrInstruction)
         assertRefersTo(indirectbrInstruction.selector, foo.parameters.single())
         val jumps = indirectbrInstruction.statement
         assertIs<Block>(jumps)
         val caseBB1 = jumps.statements[0]
-        assertIs<CaseStatement>(caseBB1)
+        assertIs<Case>(caseBB1)
         assertIs<Literal<*>>(caseBB1.caseExpression)
         val jumpBB1 = jumps.statements[1]
-        assertIs<GotoStatement>(jumpBB1)
+        assertIs<Goto>(jumpBB1)
         assertEquals("bb1", jumpBB1.targetLabel?.label)
-        assertIs<BreakStatement>(jumps.statements[2])
+        assertIs<Break>(jumps.statements[2])
 
         val caseBB2 = jumps.statements[3]
-        assertIs<CaseStatement>(caseBB2)
+        assertIs<Case>(caseBB2)
         assertIs<Literal<*>>(caseBB2.caseExpression)
         val jumpBB2 = jumps.statements[4]
-        assertIs<GotoStatement>(jumpBB2)
+        assertIs<Goto>(jumpBB2)
         assertEquals("bb2", jumpBB2.targetLabel?.label)
-        assertIs<BreakStatement>(jumps.statements[5])
+        assertIs<Break>(jumps.statements[5])
     }
 }

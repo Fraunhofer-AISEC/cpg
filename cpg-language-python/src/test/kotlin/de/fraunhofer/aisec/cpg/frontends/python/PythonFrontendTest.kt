@@ -270,7 +270,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(2, rhsValue.toInt())
 
         val r = compStmt.statements[3]
-        assertIs<ReturnStatement>(r)
+        assertIs<Return>(r)
 
         val s3 = tu.variables["s3"]
         assertNotNull(s3)
@@ -310,7 +310,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("True", firstAssignment.code)
 
         val `if` = body.statements[1]
-        assertIs<IfStatement>(`if`)
+        assertIs<If>(`if`)
     }
 
     @Test
@@ -676,7 +676,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Block>(methCountBody)
 
         val countStmt = methCountBody.statements[0]
-        assertIs<IfStatement>(countStmt)
+        assertIs<If>(countStmt)
 
         val ifCond = countStmt.condition
         assertIs<BinaryOperator>(ifCond)
@@ -737,7 +737,7 @@ class PythonFrontendTest : BaseTest() {
         assertRefersTo(assignRhsLhs.base, selfReceiver)
 
         val r = methBody.statements[1]
-        assertIs<ReturnStatement>(r)
+        assertIs<Return>(r)
         val retVal = r.returnValue
         assertIs<MemberAccess>(retVal)
         assertRefersTo(retVal.base, selfReceiver)
@@ -918,7 +918,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Block>(mainBody)
 
         val whlStmt = mainBody.statements[3]
-        assertIs<WhileStatement>(whlStmt)
+        assertIs<While>(whlStmt)
 
         val whlBody = whlStmt.statement
         assertIs<Block>(whlBody)
@@ -927,11 +927,11 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Assign>(xDeclaration)
 
         val ifStatement = whlBody.statements[1]
-        assertIs<IfStatement>(ifStatement)
+        assertIs<If>(ifStatement)
 
         val brk = ifStatement.elseStatement
         assertIs<Block>(brk)
-        assertIs<BreakStatement>(brk.statements[0])
+        assertIs<Break>(brk.statements[0])
     }
 
     @Test
@@ -968,7 +968,7 @@ class PythonFrontendTest : BaseTest() {
             print("bug ... {} {} {}".format(t1, t2, t3))
          */
         val forStmt = p.statements[1]
-        assertIs<ForEachStatement>(forStmt)
+        assertIs<ForEach>(forStmt)
 
         val forVariable = forStmt.variable
         assertIs<Reference>(forVariable)
@@ -1049,7 +1049,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(p)
 
         val ifStatement = p.statements[0]
-        assertIs<IfStatement>(ifStatement)
+        assertIs<If>(ifStatement)
         val ifCond = ifStatement.condition
         assertIs<BinaryOperator>(ifCond)
         val ifThen = ifStatement.thenStatement
@@ -1177,10 +1177,10 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Block>(functionBody)
 
         val firstLoop = functionBody.statements[1]
-        assertIs<ForEachStatement>(firstLoop)
+        assertIs<ForEach>(firstLoop)
 
         val secondLoop = functionBody.statements[2]
-        assertIs<ForEachStatement>(secondLoop)
+        assertIs<ForEach>(secondLoop)
 
         val fooCall = functionBody.statements[3]
         assertIs<Call>(fooCall)

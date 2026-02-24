@@ -167,7 +167,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         if (func is Constructor) {
             (func.body as? Block)?.let { block ->
                 block +=
-                    newReturnStatement().apply {
+                    newReturn().apply {
                         this.isImplicit = true
                         this.returnValue =
                             newReference("self").apply {

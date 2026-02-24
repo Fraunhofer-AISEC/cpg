@@ -25,9 +25,35 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-/**
- * Default statement of the form `default:` that serves as entry point for switch statements. The
- * statements executed after the entry are on the same AST hierarchy in the parent compound
- * statement.
- */
-class DefaultStatement : Statement()
+import de.fraunhofer.aisec.cpg.graph.Node
+import java.util.*
+import org.apache.commons.lang3.builder.ToStringBuilder
+
+class Goto : Statement() {
+    var labelName: String = ""
+    var targetLabel: Label? = null
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other !is Goto) {
+            return false
+        }
+        return super.equals(other) && labelName == other.labelName
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), labelName, targetLabel)
+
+    override fun toString(): String {
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .append("labelName", labelName)
+            .append("targetName", targetLabel)
+            .append("location", location)
+            .toString()
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.prevEOG
+    }
+}

@@ -605,7 +605,7 @@ class GoLanguageFrontendTest : BaseTest() {
         // also enable all features, such as value resolution based on literal values.
         assertLiteralValue(true, b.initializer)
 
-        val `if` = body.statements[1] as? IfStatement
+        val `if` = body.statements[1] as? If
         assertNotNull(`if`)
     }
 
@@ -625,13 +625,13 @@ class GoLanguageFrontendTest : BaseTest() {
         val body = myFunc.body as? Block
         assertNotNull(body)
 
-        val switch = body.statements.first() as? SwitchStatement
+        val switch = body.statements.first() as? Switch
         assertNotNull(switch)
 
         val list = switch.statement as? Block
         assertNotNull(list)
 
-        val case1 = list.statements[0] as? CaseStatement
+        val case1 = list.statements[0] as? Case
 
         assertNotNull(case1)
         assertEquals(1, (case1.caseExpression as? Literal<*>)?.value)
@@ -641,7 +641,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(first)
         assertLocalName("first", first)
 
-        val case2 = list.statements[2] as? CaseStatement
+        val case2 = list.statements[2] as? Case
 
         assertNotNull(case2)
         assertEquals(2, (case2.caseExpression as? Literal<*>)?.value)
@@ -651,7 +651,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(second)
         assertLocalName("second", second)
 
-        val case3 = list.statements[4] as? CaseStatement
+        val case3 = list.statements[4] as? Case
 
         assertNotNull(case3)
         assertEquals(3, (case3.caseExpression as? Literal<*>)?.value)

@@ -246,36 +246,36 @@ val Statement.cyclomaticComplexity: Int
         var i = 0
         for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {
             when (stmt) {
-                is ForEachStatement -> {
+                is ForEach -> {
                     // add one and include the children
                     i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
                 }
-                is ForStatement -> {
+                is For -> {
                     // add one and include the children
                     i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
                 }
-                is IfStatement -> {
+                is If -> {
                     // add one for each branch (and include the children)
                     stmt.thenStatement?.let { i += it.cyclomaticComplexity + 1 }
                     stmt.elseStatement?.let { i += it.cyclomaticComplexity + 1 }
                 }
-                is SwitchStatement -> {
+                is Switch -> {
                     // forward it to the block containing the case statements
                     stmt.statement?.let { i += it.cyclomaticComplexity }
                 }
-                is CaseStatement -> {
+                is Case -> {
                     // add one for each branch (and include the children)
                     stmt.caseExpression?.let { i += it.cyclomaticComplexity }
                 }
-                is DoStatement -> {
+                is Do -> {
                     // add one for the do statement (and include the children)
                     i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
                 }
-                is WhileStatement -> {
+                is While -> {
                     // add one for the while statement (and include the children)
                     i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
                 }
-                is GotoStatement -> {
+                is Goto -> {
                     // add one
                     i++
                 }

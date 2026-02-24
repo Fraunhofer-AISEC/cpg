@@ -41,15 +41,15 @@ import org.neo4j.ogm.annotation.Relationship
  * Represents a conditional loop statement of the form: `while(...){...}`. The loop body is executed
  * until condition evaluates to false for the first time.
  */
-class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
+class While : Loop(), BranchingNode, ArgumentHolder {
     @Relationship(value = "CONDITION_DECLARATION")
     var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
     /** C++ allows defining a declaration instead of a pure logical expression as condition */
-    var conditionDeclaration by unwrapping(WhileStatement::conditionDeclarationEdge)
+    var conditionDeclaration by unwrapping(While::conditionDeclarationEdge)
 
     @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /** The condition that decides if the block is executed. */
-    var condition by unwrapping(WhileStatement::conditionEdge)
+    var condition by unwrapping(While::conditionEdge)
 
     override val branchedBy
         get() = condition ?: conditionDeclaration
@@ -77,7 +77,7 @@ class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is WhileStatement) return false
+        if (other !is While) return false
 
         return super.equals(other) &&
             conditionDeclaration == other.conditionDeclaration &&

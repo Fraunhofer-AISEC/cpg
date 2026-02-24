@@ -321,13 +321,13 @@ fun LanguageFrontend<*, *>.param(
 }
 
 /**
- * Creates a new [ReturnStatement] in the Fluent Node DSL and adds it to the
- * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
- * used to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [Return] in the Fluent Node DSL and adds it to the [StatementHolder.statements] of
+ * the nearest enclosing [StatementHolder]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(holder: StatementHolder)
-fun LanguageFrontend<*, *>.returnStmt(init: ReturnStatement.() -> Unit): ReturnStatement {
-    val node = newReturnStatement().apply { this.location = getCallerFileAndLine() }
+fun LanguageFrontend<*, *>.returnStmt(init: Return.() -> Unit): Return {
+    val node = newReturn().apply { this.location = getCallerFileAndLine() }
     init(node)
 
     holder += node
@@ -629,13 +629,13 @@ fun LanguageFrontend<*, *>.memberOrRef(name: Name, type: Type = unknownType()): 
 }
 
 /**
- * Creates a new [IfStatement] in the Fluent Node DSL and adds it to the
- * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
- * used to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [If] in the Fluent Node DSL and adds it to the [StatementHolder.statements] of the
+ * nearest enclosing [StatementHolder]. The [init] block can be used to create further sub-nodes as
+ * well as configuring the created node itself.
  */
 context(holder: StatementHolder)
-fun LanguageFrontend<*, *>.ifStmt(init: IfStatement.() -> Unit): IfStatement {
-    val node = newIfStatement().apply { this.location = getCallerFileAndLine() }
+fun LanguageFrontend<*, *>.ifStmt(init: If.() -> Unit): If {
+    val node = newIf().apply { this.location = getCallerFileAndLine() }
 
     init(node)
 
@@ -645,13 +645,13 @@ fun LanguageFrontend<*, *>.ifStmt(init: IfStatement.() -> Unit): IfStatement {
 }
 
 /**
- * Creates a new [ForEachStatement] in the Fluent Node DSL and adds it to the
- * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
- * used to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [ForEach] in the Fluent Node DSL and adds it to the [StatementHolder.statements] of
+ * the nearest enclosing [StatementHolder]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(holder: StatementHolder)
-fun LanguageFrontend<*, *>.forEachStmt(init: ForEachStatement.() -> Unit): ForEachStatement {
-    val node = newForEachStatement().apply { this.location = getCallerFileAndLine() }
+fun LanguageFrontend<*, *>.forEachStmt(init: ForEach.() -> Unit): ForEach {
+    val node = newForEach().apply { this.location = getCallerFileAndLine() }
 
     init(node)
 
@@ -661,14 +661,14 @@ fun LanguageFrontend<*, *>.forEachStmt(init: ForEachStatement.() -> Unit): ForEa
 }
 
 /**
- * Creates a new [ForStatement] in the Fluent Node DSL and adds it to the
- * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
- * used to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [For] in the Fluent Node DSL and adds it to the [StatementHolder.statements] of the
+ * nearest enclosing [StatementHolder]. The [init] block can be used to create further sub-nodes as
+ * well as configuring the created node itself.
  */
 context(holder: StatementHolder)
-fun LanguageFrontend<*, *>.forStmt(init: ForStatement.() -> Unit): ForStatement {
+fun LanguageFrontend<*, *>.forStmt(init: For.() -> Unit): For {
 
-    val node = newForStatement().apply { this.location = getCallerFileAndLine() }
+    val node = newFor().apply { this.location = getCallerFileAndLine() }
 
     init(node)
 
@@ -678,12 +678,11 @@ fun LanguageFrontend<*, *>.forStmt(init: ForStatement.() -> Unit): ForStatement 
 }
 
 /**
- * Configures the [ForStatement.condition] in the Fluent Node DSL of the nearest enclosing
- * [ForStatement]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Configures the [For.condition] in the Fluent Node DSL of the nearest enclosing [For]. The [init]
+ * block can be used to create further sub-nodes as well as configuring the created node itself.
  */
-context(stmt: ForStatement)
-fun LanguageFrontend<*, *>.forCondition(init: ForStatement.() -> Expression): Expression {
+context(stmt: For)
+fun LanguageFrontend<*, *>.forCondition(init: For.() -> Expression): Expression {
 
     var node = init(stmt)
     stmt.condition = node
@@ -692,25 +691,23 @@ fun LanguageFrontend<*, *>.forCondition(init: ForStatement.() -> Expression): Ex
 }
 
 /**
- * Configures the [ForStatement.condition] in the Fluent Node DSL of the nearest enclosing
- * [ForStatement]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Configures the [For.condition] in the Fluent Node DSL of the nearest enclosing [For]. The [init]
+ * block can be used to create further sub-nodes as well as configuring the created node itself.
  */
-context(stmt: ForStatement)
-fun LanguageFrontend<*, *>.forInitializerExpr(init: ForStatement.() -> Statement): Statement {
+context(stmt: For)
+fun LanguageFrontend<*, *>.forInitializerExpr(init: For.() -> Statement): Statement {
     val node = init(stmt)
     stmt.initializerStatement = node
     return node
 }
 
 /**
- * Configures the [ForStatement.condition] in the Fluent Node DSL of the nearest enclosing
- * [ForStatement]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Configures the [For.condition] in the Fluent Node DSL of the nearest enclosing [For]. The [init]
+ * block can be used to create further sub-nodes as well as configuring the created node itself.
  */
-context(stmt: ForStatement)
+context(stmt: For)
 fun LanguageFrontend<*, *>.forInitializer(
-    init: ForStatement.() -> DeclarationStatement
+    init: For.() -> DeclarationStatement
 ): DeclarationStatement {
     val node = init(stmt)
     stmt.initializerStatement = node
@@ -724,12 +721,12 @@ fun LanguageFrontend<*, *>.forInitializer(
 }
 
 /**
- * Configures the [ForStatement.iterationStatement] in the Fluent Node DSL of the nearest enclosing
- * [ForStatement]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Configures the [For.iterationStatement] in the Fluent Node DSL of the nearest enclosing [For].
+ * The [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
  */
-context(stmt: ForStatement)
-fun LanguageFrontend<*, *>.forIteration(init: ForStatement.() -> Statement): Statement {
+context(stmt: For)
+fun LanguageFrontend<*, *>.forIteration(init: For.() -> Statement): Statement {
     val node = init(stmt)
     stmt.iterationStatement = node
 
@@ -737,17 +734,17 @@ fun LanguageFrontend<*, *>.forIteration(init: ForStatement.() -> Statement): Sta
 }
 
 /**
- * Creates a new [SwitchStatement] in the Fluent Node DSL and adds it to the
- * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
- * used to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [Switch] in the Fluent Node DSL and adds it to the [StatementHolder.statements] of
+ * the nearest enclosing [StatementHolder]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(holder: StatementHolder)
 fun LanguageFrontend<*, *>.switchStmt(
     selector: Expression,
     needsScope: Boolean = true,
-    init: SwitchStatement.() -> Unit,
-): SwitchStatement {
-    val node = newSwitchStatement().apply { this.location = getCallerFileAndLine() }
+    init: Switch.() -> Unit,
+): Switch {
+    val node = newSwitch().apply { this.location = getCallerFileAndLine() }
     node.selector = selector
     scopeIfNecessary(needsScope, node, init)
 
@@ -757,16 +754,13 @@ fun LanguageFrontend<*, *>.switchStmt(
 }
 
 /**
- * Creates a new [WhileStatement] in the Fluent Node DSL and adds it to the
- * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
- * used to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [While] in the Fluent Node DSL and adds it to the [StatementHolder.statements] of
+ * the nearest enclosing [StatementHolder]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(holder: StatementHolder)
-fun LanguageFrontend<*, *>.whileStmt(
-    needsScope: Boolean = true,
-    init: WhileStatement.() -> Unit,
-): WhileStatement {
-    val node = newWhileStatement().apply { this.location = getCallerFileAndLine() }
+fun LanguageFrontend<*, *>.whileStmt(needsScope: Boolean = true, init: While.() -> Unit): While {
+    val node = newWhile().apply { this.location = getCallerFileAndLine() }
     scopeIfNecessary(needsScope, node, init)
 
     holder += node
@@ -775,16 +769,13 @@ fun LanguageFrontend<*, *>.whileStmt(
 }
 
 /**
- * Creates a new [DoStatement] in the Fluent Node DSL and adds it to the
- * [StatementHolder.statements] of the nearest enclosing [StatementHolder]. The [init] block can be
- * used to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [Do] in the Fluent Node DSL and adds it to the [StatementHolder.statements] of the
+ * nearest enclosing [StatementHolder]. The [init] block can be used to create further sub-nodes as
+ * well as configuring the created node itself.
  */
 context(holder: StatementHolder)
-fun LanguageFrontend<*, *>.doStmt(
-    needsScope: Boolean = true,
-    init: DoStatement.() -> Unit,
-): DoStatement {
-    val node = newDoStatement().apply { this.location = getCallerFileAndLine() }
+fun LanguageFrontend<*, *>.doStmt(needsScope: Boolean = true, init: Do.() -> Unit): Do {
+    val node = newDo().apply { this.location = getCallerFileAndLine() }
     scopeIfNecessary(needsScope, node, init)
 
     holder += node
@@ -795,41 +786,39 @@ fun LanguageFrontend<*, *>.doStmt(
 // TODO: Combine the condition functions
 
 /**
- * Configures the [IfStatement.condition] in the Fluent Node DSL of the nearest enclosing
- * [IfStatement]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Configures the [If.condition] in the Fluent Node DSL of the nearest enclosing [If]. The [init]
+ * block can be used to create further sub-nodes as well as configuring the created node itself.
  */
-context(stmt: IfStatement)
-fun LanguageFrontend<*, *>.condition(init: IfStatement.() -> Expression): Expression {
+context(stmt: If)
+fun LanguageFrontend<*, *>.condition(init: If.() -> Expression): Expression {
     return init(stmt)
 }
 
 /**
- * Configures the [WhileStatement.condition] in the Fluent Node DSL of the nearest enclosing
- * [WhileStatement]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Configures the [While.condition] in the Fluent Node DSL of the nearest enclosing [While]. The
+ * [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
  */
-context(stmt: WhileStatement)
-fun LanguageFrontend<*, *>.whileCondition(init: WhileStatement.() -> Expression): Expression {
+context(stmt: While)
+fun LanguageFrontend<*, *>.whileCondition(init: While.() -> Expression): Expression {
     return init(stmt)
 }
 
 /**
- * Configures the [DoStatement.condition] in the Fluent Node DSL of the nearest enclosing
- * [DoStatement]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Configures the [Do.condition] in the Fluent Node DSL of the nearest enclosing [Do]. The [init]
+ * block can be used to create further sub-nodes as well as configuring the created node itself.
  */
-context(stmt: DoStatement)
-fun LanguageFrontend<*, *>.doCondition(init: DoStatement.() -> Expression): Expression {
+context(stmt: Do)
+fun LanguageFrontend<*, *>.doCondition(init: Do.() -> Expression): Expression {
     return init(stmt)
 }
 
 /**
- * Creates a new [Block] in the Fluent Node DSL and sets it to the [IfStatement.thenStatement] of
- * the nearest enclosing [IfStatement]. The [init] block can be used to create further sub-nodes as
- * well as configuring the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [If.thenStatement] of the nearest
+ * enclosing [If]. The [init] block can be used to create further sub-nodes as well as configuring
+ * the created node itself.
  */
-context(stmt: IfStatement)
+context(stmt: If)
 fun LanguageFrontend<*, *>.thenStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
     val node = this.newBlock().apply { this.location = getCallerFileAndLine() }
     scopeIfNecessary(needsScope, node, init)
@@ -840,13 +829,13 @@ fun LanguageFrontend<*, *>.thenStmt(needsScope: Boolean = true, init: Block.() -
 }
 
 /**
- * Creates a new [IfStatement] in the Fluent Node DSL and sets it to the [IfStatement.elseStatement]
- * of the nearest enclosing [IfStatement]. This simulates an `else-if` scenario. The [init] block
- * can be used to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [If] in the Fluent Node DSL and sets it to the [If.elseStatement] of the nearest
+ * enclosing [If]. This simulates an `else-if` scenario. The [init] block can be used to create
+ * further sub-nodes as well as configuring the created node itself.
  */
-context(stmt: IfStatement)
-fun LanguageFrontend<*, *>.elseIf(init: IfStatement.() -> Unit): IfStatement {
-    val node = this.newIfStatement().apply { this.location = getCallerFileAndLine() }
+context(stmt: If)
+fun LanguageFrontend<*, *>.elseIf(init: If.() -> Unit): If {
+    val node = this.newIf().apply { this.location = getCallerFileAndLine() }
     init(node)
 
     stmt.elseStatement = node
@@ -855,11 +844,11 @@ fun LanguageFrontend<*, *>.elseIf(init: IfStatement.() -> Unit): IfStatement {
 }
 
 /**
- * Creates a new [Block] in the Fluent Node DSL and sets it to the [LoopStatement.statement] of the
- * nearest enclosing [LoopStatement]. The [init] block can be used to create further sub-nodes as
- * well as configuring the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [Loop.statement] of the nearest
+ * enclosing [Loop]. The [init] block can be used to create further sub-nodes as well as configuring
+ * the created node itself.
  */
-context(stmt: LoopStatement)
+context(stmt: Loop)
 fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
     val node = this.newBlock().apply { this.location = getCallerFileAndLine() }
     init(node)
@@ -869,45 +858,45 @@ fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
 }
 
 /**
- * Configures the [ForEachStatement.variable] in the Fluent Node DSL of the nearest enclosing
- * [ForEachStatement]. The [init] block can be used to create further sub-nodes as well as
- * configuring the created node itself.
+ * Configures the [ForEach.variable] in the Fluent Node DSL of the nearest enclosing [ForEach]. The
+ * [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
  */
-context(stmt: ForEachStatement)
-fun LanguageFrontend<*, *>.variable(init: ForEachStatement.() -> Statement): Statement {
+context(stmt: ForEach)
+fun LanguageFrontend<*, *>.variable(init: ForEach.() -> Statement): Statement {
     val variable = init(stmt)
     stmt.variable = variable
     return variable
 }
 
 /**
- * Configures the [ForEachStatement.iterable] in the Fluent Node DSL of the nearest enclosing
- * [ForEachStatement]. The [init] block can be used to create further sub-nodes as well as
- * configuring the created node itself.
+ * Configures the [ForEach.iterable] in the Fluent Node DSL of the nearest enclosing [ForEach]. The
+ * [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
  */
-context(stmt: ForEachStatement)
-fun LanguageFrontend<*, *>.iterable(init: ForEachStatement.() -> Statement): Statement {
+context(stmt: ForEach)
+fun LanguageFrontend<*, *>.iterable(init: ForEach.() -> Statement): Statement {
     val iterable = init(stmt)
     stmt.iterable = iterable
     return iterable
 }
 
 /**
- * Configures the [ForStatement.initializerStatement] in the Fluent Node DSL of the nearest
- * enclosing [ForStatement]. The [init] block can be used to create further sub-nodes as well as
- * configuring the created node itself.
+ * Configures the [For.initializerStatement] in the Fluent Node DSL of the nearest enclosing [For].
+ * The [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
  */
-context(stmt: ForStatement)
-fun LanguageFrontend<*, *>.initializer(init: ForStatement.() -> Expression): Expression {
+context(stmt: For)
+fun LanguageFrontend<*, *>.initializer(init: For.() -> Expression): Expression {
     return init(stmt)
 }
 
 /**
- * Creates a new [Block] in the Fluent Node DSL and sets it to the [SwitchStatement.statement] of
- * the nearest enclosing [SwitchStatement]. The [init] block can be used to create further sub-nodes
- * as well as configuring the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [Switch.statement] of the nearest
+ * enclosing [Switch]. The [init] block can be used to create further sub-nodes as well as
+ * configuring the created node itself.
  */
-context(stmt: SwitchStatement)
+context(stmt: Switch)
 fun LanguageFrontend<*, *>.switchBody(init: Block.() -> Unit): Block {
     val node = this.newBlock().apply { this.location = getCallerFileAndLine() }
     init(node)
@@ -917,11 +906,11 @@ fun LanguageFrontend<*, *>.switchBody(init: Block.() -> Unit): Block {
 }
 
 /**
- * Creates a new [Block] in the Fluent Node DSL and sets it to the [IfStatement.elseStatement] of
- * the nearest enclosing [IfStatement]. The [init] block can be used to create further sub-nodes as
- * well as configuring the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [If.elseStatement] of the nearest
+ * enclosing [If]. The [init] block can be used to create further sub-nodes as well as configuring
+ * the created node itself.
  */
-context(stmt: IfStatement)
+context(stmt: If)
 fun LanguageFrontend<*, *>.elseStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
     val node = this.newBlock().apply { this.location = getCallerFileAndLine() }
     scopeIfNecessary(needsScope, node, init)
@@ -932,11 +921,11 @@ fun LanguageFrontend<*, *>.elseStmt(needsScope: Boolean = true, init: Block.() -
 }
 
 /**
- * Creates a new [Block] in the Fluent Node DSL and sets it to the [LoopStatement.elseStatement] of
- * the nearest enclosing [LoopStatement]. The [init] block can be used to create further sub-nodes
- * as well as configuring the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [Loop.elseStatement] of the
+ * nearest enclosing [Loop]. The [init] block can be used to create further sub-nodes as well as
+ * configuring the created node itself.
  */
-context(stmt: LoopStatement)
+context(stmt: Loop)
 fun LanguageFrontend<*, *>.loopElseStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
     val node = this.newBlock().apply { this.location = getCallerFileAndLine() }
     scopeIfNecessary(needsScope, node, init)
@@ -947,15 +936,12 @@ fun LanguageFrontend<*, *>.loopElseStmt(needsScope: Boolean = true, init: Block.
 }
 
 /**
- * Creates a new [LabelStatement] in the Fluent Node DSL and adds it to the nearest enclosing
+ * Creates a new [Label] in the Fluent Node DSL and adds it to the nearest enclosing
  * [StatementHolder].
  */
 context(holder: Holder<out Statement>)
-fun LanguageFrontend<*, *>.label(
-    label: String,
-    init: (LabelStatement.() -> Statement)? = null,
-): LabelStatement {
-    val node = newLabelStatement().apply { this.location = getCallerFileAndLine() }
+fun LanguageFrontend<*, *>.label(label: String, init: (Label.() -> Statement)? = null): Label {
+    val node = newLabel().apply { this.location = getCallerFileAndLine() }
     node.label = label
     if (init != null) {
         node.subStatement = init(node)
@@ -970,12 +956,12 @@ fun LanguageFrontend<*, *>.label(
 }
 
 /**
- * Creates a new [ContinueStatement] in the Fluent Node DSL and adds it to the nearest enclosing
+ * Creates a new [Continue] in the Fluent Node DSL and adds it to the nearest enclosing
  * [StatementHolder].
  */
 context(holder: StatementHolder)
-fun LanguageFrontend<*, *>.continueStmt(label: String? = null): ContinueStatement {
-    val node = newContinueStatement().apply { this.location = getCallerFileAndLine() }
+fun LanguageFrontend<*, *>.continueStmt(label: String? = null): Continue {
+    val node = newContinue().apply { this.location = getCallerFileAndLine() }
     node.label = label
 
     holder += node
@@ -984,12 +970,12 @@ fun LanguageFrontend<*, *>.continueStmt(label: String? = null): ContinueStatemen
 }
 
 /**
- * Creates a new [BreakStatement] in the Fluent Node DSL and adds it to the nearest enclosing
- * [Holder], but only if it is an [StatementHolder].
+ * Creates a new [Break] in the Fluent Node DSL and adds it to the nearest enclosing [Holder], but
+ * only if it is an [StatementHolder].
  */
 context(holder: Holder<out Statement>)
-fun LanguageFrontend<*, *>.breakStmt(label: String? = null): BreakStatement {
-    val node = newBreakStatement().apply { this.location = getCallerFileAndLine() }
+fun LanguageFrontend<*, *>.breakStmt(label: String? = null): Break {
+    val node = newBreak().apply { this.location = getCallerFileAndLine() }
     node.label = label
 
     // Only add this to a statement holder if the nearest holder is a statement holder
@@ -1001,12 +987,12 @@ fun LanguageFrontend<*, *>.breakStmt(label: String? = null): BreakStatement {
 }
 
 /**
- * Creates a new [CaseStatement] in the Fluent Node DSL and adds it to the nearest enclosing
- * [Holder], but only if it is an [StatementHolder].
+ * Creates a new [Case] in the Fluent Node DSL and adds it to the nearest enclosing [Holder], but
+ * only if it is an [StatementHolder].
  */
 context(holder: Holder<out Statement>)
-fun LanguageFrontend<*, *>.case(caseExpression: Expression? = null): CaseStatement {
-    val node = newCaseStatement().apply { this.location = getCallerFileAndLine() }
+fun LanguageFrontend<*, *>.case(caseExpression: Expression? = null): Case {
+    val node = newCase().apply { this.location = getCallerFileAndLine() }
     node.caseExpression = caseExpression
 
     // Only add this to a statement holder if the nearest holder is a statement holder
@@ -1018,12 +1004,12 @@ fun LanguageFrontend<*, *>.case(caseExpression: Expression? = null): CaseStateme
 }
 
 /**
- * Creates a new [DefaultStatement] in the Fluent Node DSL and adds it to the nearest enclosing
+ * Creates a new [Default] in the Fluent Node DSL and adds it to the nearest enclosing
  * [StatementHolder].
  */
 context(holder: Holder<out Statement>)
-fun LanguageFrontend<*, *>.default(): DefaultStatement {
-    val node = newDefaultStatement().apply { this.location = getCallerFileAndLine() }
+fun LanguageFrontend<*, *>.default(): Default {
+    val node = newDefault().apply { this.location = getCallerFileAndLine() }
 
     // Only add this to a statement holder if the nearest holder is a statement holder
     if (holder is StatementHolder) {

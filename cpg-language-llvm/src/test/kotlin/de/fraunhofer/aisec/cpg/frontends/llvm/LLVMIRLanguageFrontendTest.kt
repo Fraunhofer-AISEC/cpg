@@ -229,18 +229,18 @@ class LLVMIRLanguageFrontendTest {
         assertIs<Block>(cases)
         // Check that the first case is case 0 -> goto onzero and that the BB is inlined
         val case1 = cases.statements[0]
-        assertIs<CaseStatement>(case1)
+        assertIs<Case>(case1)
         assertLiteralValue(0L, case1.caseExpression)
         assertSame(onzeroLabel.subStatement, cases.statements[1])
         // Check that the second case is case 1 -> goto onone and that the BB is inlined
         val case2 = cases.statements[2]
-        assertIs<CaseStatement>(case2)
+        assertIs<Case>(case2)
         assertLiteralValue(1L, case2.caseExpression)
         assertSame(ononeLabel.subStatement, cases.statements[3])
 
         // Check that the default location is inlined
-        val defaultStatement = cases.statements[4] as? DefaultStatement
-        assertIs<DefaultStatement>(defaultStatement)
+        val defaultStatement = cases.statements[4] as? Default
+        assertIs<Default>(defaultStatement)
         assertSame(defaultLabel.subStatement, cases.statements[5])
     }
 
@@ -281,7 +281,7 @@ class LLVMIRLanguageFrontendTest {
         val ifStatement = main.ifs.firstOrNull()
         assertNotNull(ifStatement)
         val elseStatement = ifStatement.elseStatement
-        assertIs<GotoStatement>(elseStatement)
+        assertIs<Goto>(elseStatement)
         assertEquals("IfUnequal", elseStatement.labelName)
         val thenBranch = ifStatement.thenStatement
         assertIs<Block>(thenBranch)
@@ -326,7 +326,7 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(declRefExpr.refersTo)
 
         val ifBranchSecondStatement = thenBranch.statements[1]
-        assertIs<IfStatement>(ifBranchSecondStatement)
+        assertIs<If>(ifBranchSecondStatement)
         val ifRet = ifBranchSecondStatement.thenStatement
         assertIs<Block>(ifRet)
         assertEquals(1, ifRet.statements.size)
@@ -378,7 +378,7 @@ class LLVMIRLanguageFrontendTest {
         assertLiteralValue(5L, value2.rhs)
 
         val ifStatement = cmpxchgStatement.statements[1]
-        assertIs<IfStatement>(ifStatement)
+        assertIs<If>(ifStatement)
         // The condition is the same as the second value above
         val ifExpr = ifStatement.condition
         assertIs<BinaryOperator>(ifExpr)
@@ -644,7 +644,7 @@ class LLVMIRLanguageFrontendTest {
         val mainBody = main.body
         assertIs<Block>(mainBody)
         val tryStatement = mainBody.statements[0]
-        assertIs<TryStatement>(tryStatement)
+        assertIs<Try>(tryStatement)
 
         // Check the assignment of the function call
         val resDeclarationStatement = tryStatement.tryBlock?.statements?.get(0)
@@ -665,14 +665,14 @@ class LLVMIRLanguageFrontendTest {
         assertIs<Variable>(aDeclaration)
         assertLocalName("a", aDeclaration)
         val resStatement = tryStatement.tryBlock?.statements?.get(2)
-        assertIs<ReturnStatement>(resStatement)
+        assertIs<Return>(resStatement)
 
         // Check that the catch block is inlined by the pass
         assertEquals(1, tryStatement.catchClauses.size)
         assertEquals(5, tryStatement.catchClauses[0].body?.statements?.size)
         assertLocalName("_ZTIi | ...", tryStatement.catchClauses[0])
         val ifStatement = tryStatement.catchClauses[0].body?.statements?.get(4)
-        assertIs<IfStatement>(ifStatement)
+        assertIs<If>(ifStatement)
         val thenStatement = ifStatement.thenStatement
         assertIs<Block>(thenStatement)
         assertEquals(4, thenStatement.statements.size)
@@ -710,7 +710,7 @@ class LLVMIRLanguageFrontendTest {
         assertIs<Variable>(yDecl)
 
         val ifStatement = mainBody.statements[3]
-        assertIs<IfStatement>(ifStatement)
+        assertIs<If>(ifStatement)
 
         val thenStmt = ifStatement.thenStatement
         assertIs<Block>(thenStmt)
@@ -741,11 +741,11 @@ class LLVMIRLanguageFrontendTest {
         assertRefersTo(elseY.lhs.first(), yDecl)
 
         val gotoStatement = thenStmt.statements[2]
-        assertIs<GotoStatement>(gotoStatement)
+        assertIs<Goto>(gotoStatement)
         val continueBlock = gotoStatement.targetLabel?.subStatement
         assertIs<Block>(continueBlock)
         val returnStatement = continueBlock.statements[1]
-        assertIs<ReturnStatement>(returnStatement)
+        assertIs<Return>(returnStatement)
         assertIs<Reference>(returnStatement.returnValue)
         assertRefersTo(returnStatement.returnValue, yDecl)
     }
@@ -884,7 +884,7 @@ class LLVMIRLanguageFrontendTest {
         val funcF = tu.functions["f"]
         assertNotNull(funcF)
 
-        val tryStatement = funcF.bodyOrNull<LabelStatement>(0)?.subStatement?.trys?.firstOrNull()
+        val tryStatement = funcF.bodyOrNull<Label>(0)?.subStatement?.trys?.firstOrNull()
         assertNotNull(tryStatement)
         val tryBlock = tryStatement.tryBlock
         assertNotNull(tryBlock)
@@ -892,7 +892,7 @@ class LLVMIRLanguageFrontendTest {
         assertIs<Call>(tryBlock.statements[0])
         assertFullName("_CxxThrowException", tryBlock.statements[0])
         val gotoStatement = tryBlock.statements[1]
-        assertIs<GotoStatement>(gotoStatement)
+        assertIs<Goto>(gotoStatement)
         assertLocalName("end", gotoStatement.targetLabel)
 
         assertEquals(1, tryStatement.catchClauses.size)
@@ -906,7 +906,7 @@ class LLVMIRLanguageFrontendTest {
         assertIs<Call>(catchswitchCall)
         assertFullName("llvm.catchswitch", catchswitchCall)
         val ifExceptionMatches = tryStatement.catchClauses[0].body?.statements?.get(1)
-        assertIs<IfStatement>(ifExceptionMatches)
+        assertIs<If>(ifExceptionMatches)
         val matchesExceptionCall = ifExceptionMatches.condition
         assertIs<Call>(matchesExceptionCall)
         assertFullName("llvm.matchesCatchpad", matchesExceptionCall)
@@ -925,19 +925,19 @@ class LLVMIRLanguageFrontendTest {
         assertFullName("llvm.catchpad", catchpadDeclaration.initializer)
 
         val innerTry = catchBlock.statements[1]
-        assertIs<TryStatement>(innerTry)
+        assertIs<Try>(innerTry)
         val innerTryBlock = innerTry.tryBlock
         assertNotNull(innerTryBlock)
         assertIs<Call>(innerTryBlock.statements[0])
         assertFullName("_CxxThrowException", innerTryBlock.statements[0])
         val innerTryGoto = innerTryBlock.statements[1]
-        assertIs<GotoStatement>(innerTryGoto)
+        assertIs<Goto>(innerTryGoto)
         assertLocalName("try.cont", innerTryGoto.targetLabel)
 
         val innerCatchBody = innerTry.catchClauses[0].body
         assertNotNull(innerCatchBody)
         val innerCatchIf = innerCatchBody.statements[1]
-        assertIs<IfStatement>(innerCatchIf)
+        assertIs<If>(innerCatchIf)
         val innerCatchClause = innerCatchIf.thenStatement
         assertIs<Block>(innerCatchClause)
         val innerCatchpadDeclarationStatement = innerCatchClause.statements[0]
@@ -947,7 +947,7 @@ class LLVMIRLanguageFrontendTest {
         assertFullName("llvm.catchpad", innerCatchDeclaration.initializer)
 
         val innerCatchGoto = innerCatchClause.statements[1]
-        assertIs<GotoStatement>(innerCatchGoto)
+        assertIs<Goto>(innerCatchGoto)
         assertLocalName("try.cont", innerCatchGoto.targetLabel)
 
         val innerCatchThrows = innerCatchIf.elseStatement

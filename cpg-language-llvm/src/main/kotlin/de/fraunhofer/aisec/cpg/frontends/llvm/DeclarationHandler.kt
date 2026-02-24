@@ -142,7 +142,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // *body*, which comprises *all* statements within the abstract syntax tree of
             // that function, hierarchically organized by compound statements. To emulate that, we
             // take the first basic block as our body and add subsequent blocks as statements to
-            // the body. More specifically, we use the CPG node LabelStatement, which denotes the
+            // the body. More specifically, we use the CPG node Label, which denotes the
             // use of a label. Its property substatement contains the original basic block, parsed
             // as a compound statement
 

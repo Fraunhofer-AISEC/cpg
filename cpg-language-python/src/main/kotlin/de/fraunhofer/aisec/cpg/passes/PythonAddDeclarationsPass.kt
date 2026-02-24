@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ForEach
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Comprehension
@@ -70,8 +70,8 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     /**
-     * This function checks for each [Assign], [Comprehension] and [ForEachStatement] whether there
-     * is already a matching variable or not. New variables can be one of:
+     * This function checks for each [Assign], [Comprehension] and [ForEach] whether there is
+     * already a matching variable or not. New variables can be one of:
      * - [Field] if we are currently in a record
      * - [Variable] otherwise
      */
@@ -79,7 +79,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         when (node) {
             is Comprehension -> handleComprehension(node)
             is Assign -> handleAssign(node)
-            is ForEachStatement -> handleForEach(node)
+            is ForEach -> handleForEach(node)
             else -> {
                 // Nothing to do for all other types of nodes
             }
@@ -287,8 +287,8 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         }
     }
 
-    // New variables can also be declared as `variable` in a [ForEachStatement]
-    private fun handleForEach(node: ForEachStatement) {
+    // New variables can also be declared as `variable` in a [ForEach]
+    private fun handleForEach(node: ForEach) {
         when (val forVar = node.variable) {
             is Reference -> {
                 val handled = handleWriteToReference(forVar)

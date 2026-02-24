@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.followEOGEdgesUntilHit
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 
@@ -110,7 +110,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
         // We need to follow the path from the defer statement to all return statements that are
         // reachable from this point.
         for (defer in defers ?: listOf()) {
-            val paths = defer.followEOGEdgesUntilHit { it is ReturnStatement }
+            val paths = defer.followEOGEdgesUntilHit { it is Return }
             for (path in paths.fulfilled) {
                 // It is a bit philosophical whether the deferred call happens before or after the
                 // return statement in the EOG. For now, it is easier to have it as the last node
