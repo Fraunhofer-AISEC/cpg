@@ -160,7 +160,7 @@ class SymbolResolverTest {
     }
 
     @Test
-    fun testFieldCallResolution2() {
+    fun testFieldCallResolutionWithOrOperator() {
         val topLevel = File("src/test/resources/python/field_call.py")
         val result =
             analyze(listOf(topLevel), topLevel.toPath(), true) {

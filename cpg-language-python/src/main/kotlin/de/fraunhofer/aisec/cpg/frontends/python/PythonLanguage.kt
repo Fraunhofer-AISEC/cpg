@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -248,10 +249,25 @@ open class PythonLanguage :
                     primitiveType("float")
                 }
             }
-            "or" -> {
-                // In Python, `a or b` returns `a` if truthy, else `b`. If the lhs type is
-                // unknown, the fallback is the rhs type.
-                return if (lhsType is UnknownType) rhsType else lhsType
+            /**
+             * Python boolean operators 'or' and 'and' are interpreted as follows: `x or y` returns
+             * `x` if `x` is truthy, else `y`. `x and y` returns `x` if `x` is falsy, else `y`.
+             *
+             * Since we cannot determine the boolean value of `x`, one of the operands could be
+             * returned. Thus, we return `lhsType` if both operands have the same type. If either
+             * side is dynamic, `DynamicType` is returned, and otherwise fall back to
+             * `unknownType()`.
+             *
+             * See https://docs.python.org/3/reference/expressions.html#boolean-operations
+             * *
+             */
+            "or",
+            "and" -> {
+                return when {
+                    lhsType == rhsType -> lhsType
+                    lhsType is DynamicType || rhsType is DynamicType -> DynamicType(this)
+                    else -> unknownType()
+                }
             }
 
             // The rest behaves like other languages
