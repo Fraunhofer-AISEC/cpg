@@ -141,7 +141,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is Throw -> handleThrow(node)
             // Declarations
             is Field -> handleField(node)
-            is Function -> handleFunction(node, functionSummaries)
+            is Function -> handleFunction(node, functionSummaries, inferDfgForUnresolvedSymbols)
             is Tuple -> handleTuple(node)
             is Variable -> handleVariable(node)
         }
