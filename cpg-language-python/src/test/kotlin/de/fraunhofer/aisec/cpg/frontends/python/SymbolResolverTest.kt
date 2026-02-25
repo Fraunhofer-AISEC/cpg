@@ -149,6 +149,7 @@ class SymbolResolverTest {
 
         val fieldType = clientField.type
         assertIs<ObjectType>(fieldType)
+        assertEquals("Client", fieldType.name.localName)
 
         val sendMethod = clientClass.methods["send"]
         assertNotNull(sendMethod)
