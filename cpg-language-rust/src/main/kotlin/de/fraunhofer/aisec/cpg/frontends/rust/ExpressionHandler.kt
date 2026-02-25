@@ -241,12 +241,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
         fun handleRecordExpr(recordExpr: RsRecordExpr): Expression {
             val raw = RsAst.RustExpr(RsExpr.RecordExpr(recordExpr))
-            recordExpr.path?.segment?.nameRef?.let {
-                return newReference(it.text, rawNode = raw)
-            }
 
             return newProblemExpression(
-                problem = "RecordExpression does not contain reference to a name",
+                problem = "RecordExpression needs more complex initialization, which is not supported yet",
                 rawNode = raw,
             )
         }
