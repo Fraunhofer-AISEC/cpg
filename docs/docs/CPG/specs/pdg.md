@@ -60,7 +60,7 @@ val dfgOnly =
         direction = Forward(GraphToFollow.DFG),
         sensitivities = FieldSensitive + ContextSensitive
     ) {
-        (it as? CallExpression)?.name?.localName == "println"
+        (it as? Call)?.name?.localName == "println"
     }
 println(dfgOnly.fulfilled)
 ```
@@ -75,7 +75,7 @@ val pdg =
         direction = Forward(GraphToFollow.DFG),
         sensitivities = FieldSensitive + ContextSensitive + Implicit
     ) {
-        (it as? CallExpression)?.name?.localName == "println"
+        (it as? Call)?.name?.localName == "println"
     }
 println(pdg.fulfilled)
 ```

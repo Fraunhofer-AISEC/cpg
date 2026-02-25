@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.enhancements.variable_resolution
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.For
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.*
@@ -43,13 +43,13 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testVarNameDeclaredInLoop() {
-        val firstLoopLocal = forStatements?.get(0).variables["varName"]
+        val firstLoopLocal = fors?.get(0).variables["varName"]
         assertUsageOf(callParamMap["func1_first_loop_varName"], firstLoopLocal)
     }
 
     @Test
     fun testVarNameInSecondLoop() {
-        val secondLoopLocal = forStatements?.get(1).variables["varName"]
+        val secondLoopLocal = fors?.get(1).variables["varName"]
         assertUsageOf(callParamMap["func1_second_loop_varName"], secondLoopLocal)
     }
 
@@ -150,28 +150,28 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     companion object {
         // Externally defined static global
-        private var externalClass: RecordDeclaration? = null
-        private var externVarName: FieldDeclaration? = null
-        private var externStaticVarName: FieldDeclaration? = null
-        private var outerClass: RecordDeclaration? = null
-        private var outerVarName: FieldDeclaration? = null
-        private var outerStaticVarName: FieldDeclaration? = null
-        private var innerClass: RecordDeclaration? = null
-        private var innerVarName: FieldDeclaration? = null
-        private var innerStaticVarName: FieldDeclaration? = null
-        private var implicitOuterThis: FieldDeclaration? = null
-        private var function1Receiver: VariableDeclaration? = null
-        private var function2Receiver: VariableDeclaration? = null
-        private var innerImpOuter: FieldDeclaration? = null
-        private var main: MethodDeclaration? = null
-        private var outerFunction1: MethodDeclaration? = null
-        private var forStatements: List<ForStatement>? = null
-        private var outerFunction2: MethodDeclaration? = null
-        private var outerFunction3: MethodDeclaration? = null
-        private var outerFunction4: MethodDeclaration? = null
-        private var innerFunction1: MethodDeclaration? = null
-        private var innerFunction2: MethodDeclaration? = null
-        private var innerFunction3: MethodDeclaration? = null
+        private var externalClass: Record? = null
+        private var externVarName: Field? = null
+        private var externStaticVarName: Field? = null
+        private var outerClass: Record? = null
+        private var outerVarName: Field? = null
+        private var outerStaticVarName: Field? = null
+        private var innerClass: Record? = null
+        private var innerVarName: Field? = null
+        private var innerStaticVarName: Field? = null
+        private var implicitOuterThis: Field? = null
+        private var function1Receiver: Variable? = null
+        private var function2Receiver: Variable? = null
+        private var innerImpOuter: Field? = null
+        private var main: Method? = null
+        private var outerFunction1: Method? = null
+        private var fors: List<For>? = null
+        private var outerFunction2: Method? = null
+        private var outerFunction3: Method? = null
+        private var outerFunction4: Method? = null
+        private var innerFunction1: Method? = null
+        private var innerFunction2: Method? = null
+        private var innerFunction3: Method? = null
         private val callParamMap: MutableMap<String, Expression> = HashMap()
 
         @BeforeAll
@@ -208,7 +208,7 @@ internal class VariableResolverJavaTest : BaseTest() {
             innerImpOuter = innerClass.fields["this\$ScopeVariables"]
             main = outerClass.methods["main"]
             outerFunction1 = outerClass.methods["function1"]
-            forStatements = outerFunction1.allChildren()
+            fors = outerFunction1.allChildren()
 
             // Functions in the outer and inner object
             outerFunction2 = outerClass.methods["function2"]

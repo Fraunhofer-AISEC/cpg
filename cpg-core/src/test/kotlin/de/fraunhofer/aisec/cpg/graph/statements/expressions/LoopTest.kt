@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements
+import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertNotEquals
@@ -37,7 +37,7 @@ import kotlin.test.assertNotNull
 class LoopTest {
 
     @Test
-    fun testWhileStatement() {
+    fun testWhile() {
         val whileTest = GraphExamples.getWhileWithElseAndBreak()
         val func = whileTest.functions["someRecord.func"]
         assertNotNull(func)
@@ -61,7 +61,7 @@ class LoopTest {
     }
 
     @Test
-    fun testDoStatement() {
+    fun testDo() {
         val doTest = GraphExamples.getDoWithElseAndBreak()
         val func = doTest.functions["someRecord.func"]
         assertNotNull(func)
@@ -85,7 +85,7 @@ class LoopTest {
     }
 
     @Test
-    fun testForStatement() {
+    fun testFor() {
         val forTest = GraphExamples.getForWithElseAndBreak()
         val func = forTest.functions["someRecord.func"]
         assertNotNull(func)

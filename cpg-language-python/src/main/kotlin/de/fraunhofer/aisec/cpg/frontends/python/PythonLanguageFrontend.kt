@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
@@ -84,7 +84,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
     private var lastColumnLength: Int = -1
 
     @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         fileContent = file.readText(Charsets.UTF_8)
         uri = file.toURI()
 
@@ -126,7 +126,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
     }
 
     private fun addCommentsToCPG(
-        tud: TranslationUnitDeclaration,
+        tud: TranslationUnit,
         pyTokens: ArrayList<*>,
         pyCommentCode: Long,
     ) {
@@ -312,7 +312,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
         // will be invoked by native function
     }
 
-    private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnitDeclaration {
+    private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnit {
         val topLevel = ctx.currentComponent?.topLevel() ?: path.parent.toFile()
 
         val pythonASTModule =
@@ -322,7 +322,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                 ) // could be one of ast.{Module,Interactive,Expression,FunctionType}
 
         val tud =
-            newTranslationUnitDeclaration(path.toString(), rawNode = pythonASTModule).apply {
+            newTranslationUnit(path.toString(), rawNode = pythonASTModule).apply {
                 this.location =
                     PhysicalLocation(
                         uri = uri,
@@ -347,7 +347,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
         val modulePaths = (relative?.parent?.pathString?.split("/") ?: listOf()) + module
 
         val lastNamespace =
-            modulePaths.fold(null) { previous: NamespaceDeclaration?, path ->
+            modulePaths.fold(null) { previous: Namespace?, path ->
                 val fqn = previous?.name.fqn(path)
 
                 // The __init__ module is very special in Python. The symbols that are declared by
@@ -361,7 +361,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                 if (path == PythonLanguage.IDENTIFIER_INIT) {
                     previous
                 } else {
-                    val nsd = newNamespaceDeclaration(fqn, rawNode = pythonASTModule)
+                    val nsd = newNamespace(fqn, rawNode = pythonASTModule)
                     nsd.path = relative?.parent?.pathString + "/" + module
                     scopeManager.addDeclaration(nsd)
 
@@ -397,7 +397,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
         }
 
         // Leave scopes in reverse order
-        tud.allChildren<NamespaceDeclaration>().reversed().forEach { scopeManager.leaveScope(it) }
+        tud.allChildren<Namespace>().reversed().forEach { scopeManager.leaveScope(it) }
 
         return tud
     }
@@ -446,11 +446,11 @@ val TranslationConfiguration.versionInfo: VersionInfo?
 
 /**
  * Populate system information from defined symbols that represent our environment. We add it as an
- * overlay node to our [TranslationUnitDeclaration].
+ * overlay node to our [TranslationUnit].
  */
 fun populateSystemInformation(
     config: TranslationConfiguration,
-    tu: TranslationUnitDeclaration,
+    tu: TranslationUnit,
 ): SystemInformation {
     val sysInfo =
         SystemInformation(
@@ -461,8 +461,8 @@ fun populateSystemInformation(
     return sysInfo
 }
 
-/** Returns the system information overlay node from the [TranslationUnitDeclaration]. */
-val TranslationUnitDeclaration.sysInfo: SystemInformation?
+/** Returns the system information overlay node from the [TranslationUnit]. */
+val TranslationUnit.sysInfo: SystemInformation?
     get() {
         return this.overlays.firstOrNull { it is SystemInformation } as? SystemInformation
     }

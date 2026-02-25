@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.byFQN
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.helpers.getNodesByRegion
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -123,8 +123,8 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
 
     /**
      * This function retrieves the nodes matching the provided [signature] from the [this].
-     * Currently, this function only matches on the node being a [CallExpression] and the
-     * [CallExpression.reconstructedImportName] matching the provided FQN.
+     * Currently, this function only matches on the node being a [Call] and the
+     * [Call.reconstructedImportName] matching the provided FQN.
      *
      * @param signature The [SignatureEntry] containing the signature to match.
      * @return A list of nodes matching the provided [SignatureEntry].
@@ -265,15 +265,14 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @param file The file this entry applies to. E.g. `file:/foo/bar/baz/concepts.yaml`.
      * @param region The region within the [file]. E.g. `1:1-2:2`.
      * @param type Optionally, the type of the node to match against. E.g.
-     *   `de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression`.
+     *   `de.fraunhofer.aisec.cpg.graph.statements.expressions.Call`.
      */
     data class LocationEntry(val file: String, val region: String, val type: String?)
 
     /**
      * This class represents a single signature entry in the YAML/JSON file.
      *
-     * @param fqn The fully qualified name of the [CallExpression] to match against. E.g.
-     *   `foo.bar.baz`.
+     * @param fqn The fully qualified name of the [Call] to match against. E.g. `foo.bar.baz`.
      */
     data class SignatureEntry(val fqn: String)
 }

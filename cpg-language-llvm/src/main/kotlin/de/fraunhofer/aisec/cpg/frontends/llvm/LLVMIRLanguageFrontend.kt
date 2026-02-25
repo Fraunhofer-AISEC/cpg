@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -74,7 +74,7 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
      */
     var bindingsCache = mutableMapOf<String, Declaration>()
 
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         var bench = Benchmark(this.javaClass, "Parsing sourcefile")
         // clear the bindings cache, because it is just valid within one module
         bindingsCache.clear()
@@ -117,7 +117,7 @@ class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRL
         bench.addMeasurement()
         bench = Benchmark(this.javaClass, "Transform to CPG")
 
-        val tu = newTranslationUnitDeclaration(file.name)
+        val tu = newTranslationUnit(file.name)
         currentTU = tu
 
         // we need to set our translation unit as the global scope

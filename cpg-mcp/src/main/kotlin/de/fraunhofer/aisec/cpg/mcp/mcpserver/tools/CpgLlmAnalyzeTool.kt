@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgLlmAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableConcepts
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toSchema
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -51,22 +52,10 @@ fun Server.addCpgLlmAnalyzeTool() {
         """
             .trimIndent()
 
-    val inputSchema =
-        ToolSchema(
-            properties =
-                buildJsonObject {
-                    putJsonObject("description") {
-                        put("type", "string")
-                        put("description", "Additional context for the analysis")
-                    }
-                },
-            required = listOf(),
-        )
-
     this.addTool(
         name = "cpg_llm_analyze",
         description = toolDescription,
-        inputSchema = inputSchema,
+        inputSchema = CpgLlmAnalyzePayload::class.toSchema(),
         //        outputSchema = outputSchema - not supported by all LLMs yet
     ) { request ->
         try {
