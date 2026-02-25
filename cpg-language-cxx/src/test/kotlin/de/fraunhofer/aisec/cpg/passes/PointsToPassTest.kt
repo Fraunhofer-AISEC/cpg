@@ -972,7 +972,7 @@ class PointsToPassTest {
         )
         assertEquals(
             1,
-            paDecl.nextDFGEdges
+            aDecl.nextDFGEdges
                 .filter {
                     it is ContextSensitiveDataflow &&
                         (it.callingContext as? CallingContextIn)?.calls ==
@@ -3661,5 +3661,31 @@ class PointsToPassTest {
         assertNotNull(literal0)
 
         assertEquals(literal0, numbers0.prevFullDFG.single())
+    }
+
+    @Test
+    fun testPMVDataflows() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        val fD = tu.functions["test_PMV_flows"]
+        assertNotNull(fD)
+
+        val lastvVar7 = fD.refs[9]
+        assertNotNull(lastvVar7)
+
+        // We expect exactly one DFG from the derefderefPMV of the "main" function to the vVar7 in
+        // the printf
+        val startNode = lastvVar7.collectAllPrevFullDFGPaths().single().nodes.last()
+        assertEquals(
+            "test_PMV_flows.param_1.derefderefvalue",
+            (startNode as? ParameterMemoryValue)?.name?.toString(),
+        )
     }
 }

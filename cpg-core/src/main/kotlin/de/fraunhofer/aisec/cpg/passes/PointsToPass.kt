@@ -1230,8 +1230,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             )
                                         )
                                     else {
-                                        doubleState
-                                            .getCachedLastWrites(getLastWritesCache, argVal)
+                                        argDerefVals
+                                            .flatMapTo(PowersetLattice.Element()) {
+                                                doubleState.getCachedLastWrites(
+                                                    getLastWritesCache,
+                                                    it,
+                                                )
+                                            }
                                             .mapTo(PowersetLattice.Element()) {
                                                 NodeWithPropertiesKey(
                                                     it.node,
@@ -1242,20 +1247,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 )
                                             }
                                     }
-                                val lastDerefDerefWrites =
-                                    argDerefVals
-                                        .flatMapTo(PowersetLattice.Element()) {
-                                            doubleState.getCachedLastWrites(getLastWritesCache, it)
-                                        }
-                                        .mapTo(PowersetLattice.Element()) {
-                                            NodeWithPropertiesKey(
-                                                it.node,
-                                                equalLinkedHashSetOf<Any>(callingContext),
-                                            )
-                                        }
                                 // Also draw the edges for the (deref)derefvalues if we have
-                                // any and are
-                                // dealing with a pointer parameter (AKA memoryValue is not
+                                // any and are dealing with a pointer parameter (AKA memoryValue is
+                                // not
                                 // null)
                                 val argDerefValsElement =
                                     PowersetLattice.Element(
@@ -1263,7 +1257,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             NodeWithPropertiesKey(it, equalLinkedHashSetOf())
                                         }
                                     )
-                                val derefderefElement =
+                                val argDerefDerefVals =
                                     argDerefVals
                                         .flatMap {
                                             doubleState.getCachedNestedValues(
@@ -1273,10 +1267,24 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 fetchFields = false,
                                             )
                                         }
-                                        .mapTo(PowersetLattice.Element()) { (derefderefValue, _) ->
+                                        .mapTo(equalLinkedHashSetOf()) { it.first }
+                                val derefderefElement =
+                                    argDerefDerefVals.mapTo(PowersetLattice.Element()) {
+                                        derefderefValue ->
+                                        NodeWithPropertiesKey(
+                                            derefderefValue,
+                                            equalLinkedHashSetOf(),
+                                        )
+                                    }
+                                val lastDerefDerefWrites =
+                                    argDerefDerefVals
+                                        .flatMapTo(PowersetLattice.Element()) {
+                                            doubleState.getCachedLastWrites(getLastWritesCache, it)
+                                        }
+                                        .mapTo(PowersetLattice.Element()) {
                                             NodeWithPropertiesKey(
-                                                derefderefValue,
-                                                equalLinkedHashSetOf(),
+                                                it.node,
+                                                equalLinkedHashSetOf<Any>(callingContext),
                                             )
                                         }
                                 derefPMVs.await().forEach { derefPMV ->
@@ -2103,6 +2111,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             destinations.mapTo(ConcurrentHashMap.newKeySet()) {
                 NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>(false))
             }
+
+        /* For literals, we store the address and the lastWrite as "theirs" in the DeclarationState so that we know from where we have to draw DFGEdges in the future */
+        val l = currentNode.rhs.singleOrNull() as? Literal<*>
+        l?.let {
+            doubleState =
+                lattice.pushToDeclarationsState(
+                    doubleState,
+                    l,
+                    DeclarationStateEntryElement(
+                        PowersetLattice.Element(destinationsAddresses),
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(lastWrites),
+                    ),
+                )
+        }
         /* For compound assigns, we need to a DFG Edge to the lhs, so we store that before overwriting the state */
         val destinationLastWrites =
             if (currentNode.isCompoundAssignment)
@@ -2291,7 +2314,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     GeneralStateEntryElement(
                         PowersetLattice.Element(doubleState.getAddresses(currentNode, currentNode)),
                         PowersetLattice.Element(),
-                        PowersetLattice.Element(),
+                        PowersetLattice.Element(
+                            NodeWithPropertiesKey(currentNode, equalLinkedHashSetOf())
+                        ),
                     ),
                 )
         }
@@ -2345,6 +2370,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 declEntriesMap.forEach {
                     it.value.second.addAll(
                         values.mapTo(PowersetLattice.Element()) { Pair(it.node, false) }
+                    )
+                }
+                // Hacky: Also add the info to the declarationState of the literal so that when we
+                // want to draw a prevDFG later we know the "address" (we use the declaration here)
+                // and the lastwrite (again, the declaration)
+                declEntriesMap.computeIfAbsent(initializer) {
+                    DeclarationStateEntryElement(
+                        PowersetLattice.Element(addresses),
+                        PowersetLattice.Element(),
+                        lastWrites,
                     )
                 }
             } else {
@@ -2469,12 +2504,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         ParameterMemoryValue(
                             Name(pmvName, Name(param.name.localName, function.name))
                         )
+                    (src as? MemoryAddress)?.let { pmv.memoryAddresses = mutableSetOf(it) }
 
                     // In the first step, we link the ParameterDeclaration to the PMV to be
-                    // able to
-                    // also access it outside the function
+                    // able to also access it outside the function
                     if (src is ParameterDeclaration) {
-                        // src.memoryValue = pmv
                         doubleState =
                             lattice.push(
                                 doubleState,
@@ -2542,7 +2576,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             )
                         else
                             DeclarationStateEntryElement(
-                                PowersetLattice.Element(prevAddresses),
+                                PowersetLattice.Element(addresses),
                                 PowersetLattice.Element(Pair(pmv, false)),
                                 PowersetLattice.Element(
                                     NodeWithPropertiesKey(pmv, equalLinkedHashSetOf())
@@ -2936,13 +2970,16 @@ fun PointsToState.Element.getLastWrites(
         is ParameterMemoryValue -> {
             // For parameterMemoryValues, we have to check if there was a write within the function.
             // If not, it's the deref value itself.
-            val entries = this.declarationsState[node]?.third
-            if (entries?.isNotEmpty() == true)
-                return entries.mapTo(PowersetLattice.Element()) {
+            val entries = identitySetOf<NodeWithPropertiesKey>()
+            this.getAddresses(node, node).forEach { addr ->
+                this.declarationsState[addr]?.third?.forEach { entries.add(it) }
+            }
+            if (entries.isNotEmpty())
+                entries.mapTo(PowersetLattice.Element()) {
                     NodeWithPropertiesKey(it.node, equalLinkedHashSetOf())
                 }
             else
-                return node.memoryValues
+                node.memoryValues
                     .filter { it.name.localName == "deref" + node.name.localName }
                     .mapTo(PowersetLattice.Element()) {
                         NodeWithPropertiesKey(it, equalLinkedHashSetOf())
@@ -2987,7 +3024,10 @@ fun PointsToState.Element.getValues(
             /* To find the value for PointerDereferences, we first fetch the values form its input from the generalstate, which is probably a MemoryAddress
              * Then we look up the current value at this MemoryAddress
              */
-            val inputVals = this.fetchValueFromGeneralState(node.input).map { it.node }
+            val inputVals =
+                if (node.input is Reference)
+                    this.fetchValueFromGeneralState(node.input).map { it.node }
+                else this.getValues(node.input, node.input).map { it.first }
             val retVal = PowersetLattice.Element<Pair<Node, Boolean>>()
             /* If the node is not the same as the startNode, we should have already assigned a value, so we fetch it from the generalstate */
             if (node != startNode && node !in ((startNode as? AstNode)?.astChildren ?: listOf()))
