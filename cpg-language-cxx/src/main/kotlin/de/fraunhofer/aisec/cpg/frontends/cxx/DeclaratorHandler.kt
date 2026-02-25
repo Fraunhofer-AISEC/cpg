@@ -151,9 +151,9 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * A small utility function that creates a [Constructor], [Method] or [Function] depending on which
-     * scope the function should live in. This basically checks if the scope is a namespace or a
-     * record and if the name matches to the record (in case of a constructor).
+     * A small utility function that creates a [Constructor], [Method] or [Function] depending on
+     * which scope the function should live in. This basically checks if the scope is a namespace or
+     * a record and if the name matches to the record (in case of a constructor).
      */
     private fun createAppropriateFunction(name: Name, scope: Scope?, ctx: IASTNode): Function {
         // Retrieve the AST node for the scope we need to put the function in
