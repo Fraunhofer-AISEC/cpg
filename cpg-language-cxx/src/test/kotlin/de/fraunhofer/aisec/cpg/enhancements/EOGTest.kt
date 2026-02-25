@@ -76,7 +76,7 @@ internal class EOGTest : BaseTest() {
             val binopEOG = SubgraphWalker.getEOGPathEdges(binop)
             assertEquals(1, binopEOG.exits.size)
         }
-        val ifs = nodes.filterIsInstance<If>()
+        val ifs = nodes.filterIsInstance<IfElse>()
         assertEquals(2, ifs.size)
         ifs.forEach { assertNotNull(it.thenStatement) }
         assertTrue(ifs.any { it.elseStatement == null } && ifs.any { it.elseStatement != null })
@@ -530,7 +530,7 @@ internal class EOGTest : BaseTest() {
                 endNodes = listOf(prints[1]),
             )
         )
-        val dostat = nodes.filterIsInstance<Do>().firstOrNull()
+        val dostat = nodes.filterIsInstance<DoWhile>().firstOrNull()
         assertNotNull(dostat)
 
         conditionEOG = SubgraphWalker.getEOGPathEdges(dostat.condition)
@@ -868,7 +868,7 @@ internal class EOGTest : BaseTest() {
                     endNodes = listOf(prints[1]),
                 )
         )
-        val dostat = nodes.filterIsInstance<Do>().firstOrNull()
+        val dostat = nodes.filterIsInstance<DoWhile>().firstOrNull()
         assertNotNull(dostat)
 
         conditionEOG = SubgraphWalker.getEOGPathEdges(dostat.condition)

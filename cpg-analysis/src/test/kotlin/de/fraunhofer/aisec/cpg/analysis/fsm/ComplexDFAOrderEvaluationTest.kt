@@ -247,7 +247,8 @@ class ComplexDFAOrderEvaluationTest {
         nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
         nodesToOp[(functionOk.body as Block).statements[2]] = setOf("init()")
 
-        val thenBranch = ((functionOk.body as Block).statements[3] as? If)?.thenStatement as? Block
+        val thenBranch =
+            ((functionOk.body as Block).statements[3] as? IfElse)?.thenStatement as? Block
         assertNotNull(thenBranch)
         nodesToOp[thenBranch.statements[0]] = setOf("start()")
         nodesToOp[thenBranch.statements[1]] = setOf("process()")
@@ -382,7 +383,7 @@ class ComplexDFAOrderEvaluationTest {
         val nodesToOp = mutableMapOf<Node, Set<String>>()
         nodesToOp[(functionOk.body as Block).statements[1]] = setOf("create()")
         nodesToOp[(functionOk.body as Block).statements[2]] = setOf("init()")
-        val loopBody = ((functionOk.body as Block).statements[3] as Do).statement as? Block
+        val loopBody = ((functionOk.body as Block).statements[3] as DoWhile).statement as? Block
         assertNotNull(loopBody)
         nodesToOp[loopBody.statements[0]] = setOf("start()")
         nodesToOp[loopBody.statements[1]] = setOf("process()")

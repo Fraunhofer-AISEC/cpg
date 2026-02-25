@@ -605,7 +605,7 @@ class GoLanguageFrontendTest : BaseTest() {
         // also enable all features, such as value resolution based on literal values.
         assertLiteralValue(true, b.initializer)
 
-        val `if` = body.statements[1] as? If
+        val `if` = body.statements[1] as? IfElse
         assertNotNull(`if`)
     }
 

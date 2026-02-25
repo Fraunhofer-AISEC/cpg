@@ -40,11 +40,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.Assert
 import de.fraunhofer.aisec.cpg.graph.statements.Break
 import de.fraunhofer.aisec.cpg.graph.statements.Continue
-import de.fraunhofer.aisec.cpg.graph.statements.Do
+import de.fraunhofer.aisec.cpg.graph.statements.DoWhile
 import de.fraunhofer.aisec.cpg.graph.statements.Empty
 import de.fraunhofer.aisec.cpg.graph.statements.For
 import de.fraunhofer.aisec.cpg.graph.statements.ForEach
-import de.fraunhofer.aisec.cpg.graph.statements.If
+import de.fraunhofer.aisec.cpg.graph.statements.IfElse
 import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.Switch
 import de.fraunhofer.aisec.cpg.graph.statements.Synchronized
@@ -109,12 +109,12 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return returnStatement
     }
 
-    private fun handleIf(stmt: Statement): If {
+    private fun handleIf(stmt: Statement): IfElse {
         val ifStmt = stmt.asIfStmt()
         val conditionExpression = ifStmt.condition
         val thenStatement = ifStmt.thenStmt
         val optionalElseStatement = ifStmt.elseStmt
-        val ifStatement = newIf(rawNode = stmt)
+        val ifStatement = newIfElse(rawNode = stmt)
         frontend.scopeManager.enterScope(ifStatement)
         ifStatement.thenStatement = handle(thenStatement)
         ifStatement.condition =
@@ -230,11 +230,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return statement
     }
 
-    private fun handleDo(stmt: Statement): Do {
+    private fun handleDo(stmt: Statement): DoWhile {
         val doStmt = stmt.asDoStmt()
         val conditionExpression = doStmt.condition
         val statement = doStmt.body
-        val doStatement = newDo(rawNode = stmt)
+        val doStatement = newDoWhile(rawNode = stmt)
         frontend.scopeManager.enterScope(doStatement)
         doStatement.statement = handle(statement)
         doStatement.condition =

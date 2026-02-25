@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.If
+import de.fraunhofer.aisec.cpg.graph.statements.IfElse
 import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
@@ -113,7 +113,7 @@ class FluentTest {
         assertEquals(1, lit1.value)
 
         // Second line should be an If
-        val ifStatement = main[1] as? If
+        val ifStatement = main[1] as? IfElse
         assertNotNull(ifStatement)
         assertTrue(ifStatement.scope is LocalScope)
 
@@ -127,7 +127,7 @@ class FluentTest {
         assertEquals("then", printf.arguments[0]<Literal<*>>()?.value)
 
         // The "else" contains another if (else-if) and a call to "printf" with argument "elseIf"
-        val elseIf = ifStatement.elseStatement as? If
+        val elseIf = ifStatement.elseStatement as? IfElse
         assertNotNull(elseIf)
 
         printf = elseIf.thenStatement.calls["printf"]

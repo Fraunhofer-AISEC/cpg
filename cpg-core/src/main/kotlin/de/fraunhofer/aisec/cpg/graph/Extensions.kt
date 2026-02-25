@@ -1217,8 +1217,8 @@ val AstNode?.switches: List<Switch>
 val AstNode?.whileLoops: List<While>
     get() = this.allChildren()
 
-/** Returns all [Do] child edges in this graph, starting with this [Node]. */
-val AstNode?.doLoops: List<Do>
+/** Returns all [DoWhile] child edges in this graph, starting with this [Node]. */
+val AstNode?.doLoops: List<DoWhile>
     get() = this.allChildren()
 
 /** Returns all [Break] child edges in this graph, starting with this [Node]. */
@@ -1229,8 +1229,8 @@ val AstNode?.breaks: List<Break>
 val AstNode?.continues: List<Continue>
     get() = this.allChildren()
 
-/** Returns all [If] child edges in this graph, starting with this [Node]. */
-val AstNode?.ifs: List<If>
+/** Returns all [IfElse] child edges in this graph, starting with this [Node]. */
+val AstNode?.ifs: List<IfElse>
     get() = this.allChildren()
 
 /** Returns all [Label] child edges in this graph, starting with this [Node]. */
@@ -1392,7 +1392,7 @@ fun TranslationResult.callersOf(function: Function): Set<Function> {
 }
 
 /** All nodes which depend on this if statement */
-fun If.controls(): List<Node> {
+fun IfElse.controls(): List<Node> {
     val result = mutableListOf<Node>()
     result.addAll(SubgraphWalker.flattenAST(this.thenStatement))
     result.addAll(SubgraphWalker.flattenAST(this.elseStatement))
@@ -1408,7 +1408,7 @@ fun Node.controlledBy(): List<Node> {
         if (checkedNode == null) {
             break
         }
-        if (checkedNode is If || checkedNode is Switch) {
+        if (checkedNode is IfElse || checkedNode is Switch) {
             result.add(checkedNode)
         }
     }

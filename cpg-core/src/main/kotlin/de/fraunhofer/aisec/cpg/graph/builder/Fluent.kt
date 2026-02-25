@@ -629,13 +629,13 @@ fun LanguageFrontend<*, *>.memberOrRef(name: Name, type: Type = unknownType()): 
 }
 
 /**
- * Creates a new [If] in the Fluent Node DSL and adds it to the [StatementHolder.statements] of the
- * nearest enclosing [StatementHolder]. The [init] block can be used to create further sub-nodes as
- * well as configuring the created node itself.
+ * Creates a new [IfElse] in the Fluent Node DSL and adds it to the [StatementHolder.statements] of
+ * the nearest enclosing [StatementHolder]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(holder: StatementHolder)
-fun LanguageFrontend<*, *>.ifStmt(init: If.() -> Unit): If {
-    val node = newIf().apply { this.location = getCallerFileAndLine() }
+fun LanguageFrontend<*, *>.ifStmt(init: IfElse.() -> Unit): IfElse {
+    val node = newIfElse().apply { this.location = getCallerFileAndLine() }
 
     init(node)
 
@@ -769,13 +769,13 @@ fun LanguageFrontend<*, *>.whileStmt(needsScope: Boolean = true, init: While.() 
 }
 
 /**
- * Creates a new [Do] in the Fluent Node DSL and adds it to the [StatementHolder.statements] of the
- * nearest enclosing [StatementHolder]. The [init] block can be used to create further sub-nodes as
- * well as configuring the created node itself.
+ * Creates a new [DoWhile] in the Fluent Node DSL and adds it to the [StatementHolder.statements] of
+ * the nearest enclosing [StatementHolder]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(holder: StatementHolder)
-fun LanguageFrontend<*, *>.doStmt(needsScope: Boolean = true, init: Do.() -> Unit): Do {
-    val node = newDo().apply { this.location = getCallerFileAndLine() }
+fun LanguageFrontend<*, *>.doStmt(needsScope: Boolean = true, init: DoWhile.() -> Unit): DoWhile {
+    val node = newDoWhile().apply { this.location = getCallerFileAndLine() }
     scopeIfNecessary(needsScope, node, init)
 
     holder += node
@@ -786,11 +786,12 @@ fun LanguageFrontend<*, *>.doStmt(needsScope: Boolean = true, init: Do.() -> Uni
 // TODO: Combine the condition functions
 
 /**
- * Configures the [If.condition] in the Fluent Node DSL of the nearest enclosing [If]. The [init]
- * block can be used to create further sub-nodes as well as configuring the created node itself.
+ * Configures the [IfElse.condition] in the Fluent Node DSL of the nearest enclosing [IfElse]. The
+ * [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
  */
-context(stmt: If)
-fun LanguageFrontend<*, *>.condition(init: If.() -> Expression): Expression {
+context(stmt: IfElse)
+fun LanguageFrontend<*, *>.condition(init: IfElse.() -> Expression): Expression {
     return init(stmt)
 }
 
@@ -805,20 +806,21 @@ fun LanguageFrontend<*, *>.whileCondition(init: While.() -> Expression): Express
 }
 
 /**
- * Configures the [Do.condition] in the Fluent Node DSL of the nearest enclosing [Do]. The [init]
- * block can be used to create further sub-nodes as well as configuring the created node itself.
+ * Configures the [DoWhile.condition] in the Fluent Node DSL of the nearest enclosing [DoWhile]. The
+ * [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
  */
-context(stmt: Do)
-fun LanguageFrontend<*, *>.doCondition(init: Do.() -> Expression): Expression {
+context(stmt: DoWhile)
+fun LanguageFrontend<*, *>.doCondition(init: DoWhile.() -> Expression): Expression {
     return init(stmt)
 }
 
 /**
- * Creates a new [Block] in the Fluent Node DSL and sets it to the [If.thenStatement] of the nearest
- * enclosing [If]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [IfElse.thenStatement] of the
+ * nearest enclosing [IfElse]. The [init] block can be used to create further sub-nodes as well as
+ * configuring the created node itself.
  */
-context(stmt: If)
+context(stmt: IfElse)
 fun LanguageFrontend<*, *>.thenStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
     val node = this.newBlock().apply { this.location = getCallerFileAndLine() }
     scopeIfNecessary(needsScope, node, init)
@@ -829,13 +831,13 @@ fun LanguageFrontend<*, *>.thenStmt(needsScope: Boolean = true, init: Block.() -
 }
 
 /**
- * Creates a new [If] in the Fluent Node DSL and sets it to the [If.elseStatement] of the nearest
- * enclosing [If]. This simulates an `else-if` scenario. The [init] block can be used to create
- * further sub-nodes as well as configuring the created node itself.
+ * Creates a new [IfElse] in the Fluent Node DSL and sets it to the [IfElse.elseStatement] of the
+ * nearest enclosing [IfElse]. This simulates an `else-if` scenario. The [init] block can be used to
+ * create further sub-nodes as well as configuring the created node itself.
  */
-context(stmt: If)
-fun LanguageFrontend<*, *>.elseIf(init: If.() -> Unit): If {
-    val node = this.newIf().apply { this.location = getCallerFileAndLine() }
+context(stmt: IfElse)
+fun LanguageFrontend<*, *>.elseIf(init: IfElse.() -> Unit): IfElse {
+    val node = this.newIfElse().apply { this.location = getCallerFileAndLine() }
     init(node)
 
     stmt.elseStatement = node
@@ -906,11 +908,11 @@ fun LanguageFrontend<*, *>.switchBody(init: Block.() -> Unit): Block {
 }
 
 /**
- * Creates a new [Block] in the Fluent Node DSL and sets it to the [If.elseStatement] of the nearest
- * enclosing [If]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [IfElse.elseStatement] of the
+ * nearest enclosing [IfElse]. The [init] block can be used to create further sub-nodes as well as
+ * configuring the created node itself.
  */
-context(stmt: If)
+context(stmt: IfElse)
 fun LanguageFrontend<*, *>.elseStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
     val node = this.newBlock().apply { this.location = getCallerFileAndLine() }
     scopeIfNecessary(needsScope, node, init)

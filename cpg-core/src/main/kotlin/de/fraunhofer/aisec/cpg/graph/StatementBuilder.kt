@@ -149,13 +149,13 @@ fun MetadataProvider.newDeclarationStatement(rawNode: Any? = null): DeclarationS
 }
 
 /**
- * Creates a new [If]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * Creates a new [IfElse]. The [MetadataProvider] receiver will be used to fill different meta-data
  * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newIf(rawNode: Any? = null): If {
-    val node = If()
+fun MetadataProvider.newIfElse(rawNode: Any? = null): IfElse {
+    val node = IfElse()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
@@ -205,13 +205,13 @@ fun MetadataProvider.newWhile(rawNode: Any? = null): While {
 }
 
 /**
- * Creates a new [Do]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * Creates a new [DoWhile]. The [MetadataProvider] receiver will be used to fill different meta-data
  * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newDo(rawNode: Any? = null): Do {
-    val node = Do()
+fun MetadataProvider.newDoWhile(rawNode: Any? = null): DoWhile {
+    val node = DoWhile()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)

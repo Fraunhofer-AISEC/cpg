@@ -295,7 +295,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
          * Prepares the if-statement which is the body of the catch block. This includes the call of
          * `manager.__exit__(*sys.exc_info())`, the negation and the throw statement.
          */
-        fun generateExitCallWithSysExcInfo(managerName: Name): If {
+        fun generateExitCallWithSysExcInfo(managerName: Name): IfElse {
             val exitCallWithSysExec =
                 newMemberCall(
                         callee =
@@ -313,7 +313,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     .implicit()
             exitCallWithSysExec.addArgument(starOp)
 
-            val ifStmt = newIf().implicit()
+            val ifStmt = newIfElse().implicit()
             ifStmt.thenStatement = newThrow().implicit()
             val neg = newUnaryOperator("not", postfix = false, prefix = false).implicit()
             neg.input = exitCallWithSysExec
@@ -784,7 +784,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleIf(node: Python.AST.If): Statement {
-        val ret = newIf(rawNode = node)
+        val ret = newIfElse(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.thenStatement =
             if (node.body.isNotEmpty()) {

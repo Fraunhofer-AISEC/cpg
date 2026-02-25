@@ -276,14 +276,14 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val tokenGeneration = declarationOrNot(dummyCall, instr) as DeclarationStatement
         compoundStatement.statements += tokenGeneration
 
-        val ifStatement = newIf(rawNode = instr)
-        var currentIfStatement: If? = null
+        val ifStatement = newIfElse(rawNode = instr)
+        var currentIfStatement: IfElse? = null
         var idx = 1
         while (idx < numOps) {
             if (currentIfStatement == null) {
                 currentIfStatement = ifStatement
             } else {
-                val newIf = newIf(rawNode = instr)
+                val newIf = newIfElse(rawNode = instr)
                 currentIfStatement.elseStatement = newIf
                 currentIfStatement = newIf
             }
@@ -820,7 +820,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
         val assignment = newAssign("=", listOf(ptrDerefAssign), listOf(value), rawNode = instr)
 
-        val ifStatement = newIf(rawNode = instr)
+        val ifStatement = newIfElse(rawNode = instr)
         ifStatement.condition = cmpExpr
         ifStatement.thenStatement = assignment
 
@@ -1003,7 +1003,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleBrStatement(instr: LLVMValueRef): Statement {
         if (LLVMGetNumOperands(instr) == 3) {
             // if(op) then {goto label1} else {goto label2}
-            val ifStatement = newIf(rawNode = instr)
+            val ifStatement = newIfElse(rawNode = instr)
             val condition = frontend.getOperandValueAtIndex(instr, 0)
             ifStatement.condition = condition
 

@@ -254,7 +254,7 @@ val Statement.cyclomaticComplexity: Int
                     // add one and include the children
                     i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
                 }
-                is If -> {
+                is IfElse -> {
                     // add one for each branch (and include the children)
                     stmt.thenStatement?.let { i += it.cyclomaticComplexity + 1 }
                     stmt.elseStatement?.let { i += it.cyclomaticComplexity + 1 }
@@ -267,7 +267,7 @@ val Statement.cyclomaticComplexity: Int
                     // add one for each branch (and include the children)
                     stmt.caseExpression?.let { i += it.cyclomaticComplexity }
                 }
-                is Do -> {
+                is DoWhile -> {
                     // add one for the do statement (and include the children)
                     i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
                 }

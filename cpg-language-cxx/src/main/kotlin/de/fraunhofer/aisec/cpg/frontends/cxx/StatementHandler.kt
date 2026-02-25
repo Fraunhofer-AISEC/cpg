@@ -125,8 +125,8 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         return catchClause
     }
 
-    private fun handleIf(ctx: IASTIfStatement): If {
-        val statement = newIf(rawNode = ctx)
+    private fun handleIf(ctx: IASTIfStatement): IfElse {
+        val statement = newIfElse(rawNode = ctx)
 
         frontend.scopeManager.enterScope(statement)
 
@@ -213,8 +213,8 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         return statement
     }
 
-    private fun handleDo(ctx: IASTDoStatement): Do {
-        val statement = newDo(rawNode = ctx)
+    private fun handleDo(ctx: IASTDoStatement): DoWhile {
+        val statement = newDoWhile(rawNode = ctx)
         frontend.scopeManager.enterScope(statement)
         statement.condition = frontend.expressionHandler.handle(ctx.condition)
         statement.statement = handle(ctx.body)
