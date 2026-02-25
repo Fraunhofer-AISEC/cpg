@@ -85,8 +85,8 @@ import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.PrepareSerialization
 import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
-import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
-import de.fraunhofer.aisec.cpg.passes.ResolveMemberExpressionAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.ResolveCallAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.ResolveMemberAmbiguityPass
 import de.fraunhofer.aisec.cpg.passes.SccPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.TranslationResultPass
@@ -323,8 +323,8 @@ fun Server.addListPasses() {
                     passToInfo(ProgramDependenceGraphPass::class),
                     passToInfo(TypeResolver::class),
                     passToInfo(TypeHierarchyResolver::class),
-                    passToInfo(ResolveMemberExpressionAmbiguityPass::class),
-                    passToInfo(ResolveCallExpressionAmbiguityPass::class),
+                    passToInfo(ResolveMemberAmbiguityPass::class),
+                    passToInfo(ResolveCallAmbiguityPass::class),
                     passToInfo(SccPass::class),
                     passToInfo(BasicBlockCollectorPass::class),
                 )

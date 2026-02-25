@@ -48,7 +48,6 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
-import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
@@ -296,37 +295,6 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort
     }
 }
 
-fun executePassesInParallel(
-    classes: List<KClass<out Pass<*>>>,
-    ctx: TranslationContext,
-    result: TranslationResult,
-    executedFrontends: Collection<LanguageFrontend<*, *>>,
-) {
-    // Execute a single pass directly sequentially and return
-    val pass = classes.singleOrNull()
-    if (pass != null) {
-        executePass(pass, ctx, result, executedFrontends)
-        return
-    }
-
-    // Otherwise, we build futures out of the list
-    val bench =
-        Benchmark(
-            TranslationManager::class.java,
-            "Executing Passes [${classes.map { it.simpleName }}] in parallel",
-            false,
-            result,
-        )
-
-    val futures =
-        classes.map {
-            CompletableFuture.supplyAsync { executePass(it, ctx, result, executedFrontends) }
-        }
-
-    futures.map(CompletableFuture<Unit>::join)
-    bench.stop()
-}
-
 /**
  * Executes all passes in [TranslationConfiguration.registeredPasses] of [ctx] sequentially. This
  * also takes care of re-running passes using the [markDirty] / [markClean] system.
@@ -449,10 +417,9 @@ fun executePass(
 
 /**
  * This function is a wrapper around [consumeTarget] to apply it to all [targets]. This is primarily
- * needed because of very delicate type inference work of the Kotlin compiler.
+ * needed because of the very delicate type inference work of the Kotlin compiler.
  *
- * Depending on the configuration of [TranslationConfiguration.useParallelPasses], the individual
- * targets will either be consumed sequentially or in parallel.
+ * The individual targets will be consumed sequentially.
  */
 inline fun <reified T : Node> consumeTargets(
     cls: KClass<out Pass<T>>,
@@ -460,15 +427,7 @@ inline fun <reified T : Node> consumeTargets(
     targets: Collection<T>,
     executedFrontends: Collection<LanguageFrontend<*, *>>,
 ) {
-    if (ctx.config.useParallelPasses) {
-        val futures =
-            targets.map {
-                CompletableFuture.supplyAsync { consumeTarget(cls, ctx, it, executedFrontends) }
-            }
-        futures.forEach(CompletableFuture<Pass<T>?>::join)
-    } else {
-        targets.forEach { consumeTarget(cls, ctx, it, executedFrontends) }
-    }
+    targets.forEach { consumeTarget(cls, ctx, it, executedFrontends) }
 }
 
 /**

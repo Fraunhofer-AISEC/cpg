@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.DynamicType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.buildSignature
@@ -75,15 +75,15 @@ open class Function :
     val overrides = mutableListOf<Function>()
 
     /**
-     * The mirror property for [CallExpression.invokeEdges]. This holds all incoming [Invokes] edges
-     * from [CallExpression] nodes to this function.
+     * The mirror property for [Call.invokeEdges]. This holds all incoming [Invokes] edges from
+     * [Call] nodes to this function.
      */
     @Relationship(value = "INVOKES", direction = Relationship.Direction.INCOMING)
     val calledByEdges: Invokes<Function> =
-        Invokes<Function>(this, CallExpression::invokeEdges, outgoing = false)
+        Invokes<Function>(this, Call::invokeEdges, outgoing = false)
 
     /** Virtual property for accessing [calledByEdges] without property edges. */
-    val calledBy: MutableList<CallExpression> by unwrappingIncoming(Function::calledByEdges)
+    val calledBy: MutableList<Call> by unwrappingIncoming(Function::calledByEdges)
 
     /** The list of return types. The default is an empty list. */
     var returnTypes = listOf<Type>()
@@ -246,36 +246,36 @@ val Statement.cyclomaticComplexity: Int
         var i = 0
         for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {
             when (stmt) {
-                is ForEachStatement -> {
+                is ForEach -> {
                     // add one and include the children
                     i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
                 }
-                is ForStatement -> {
+                is For -> {
                     // add one and include the children
                     i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
                 }
-                is IfStatement -> {
+                is If -> {
                     // add one for each branch (and include the children)
                     stmt.thenStatement?.let { i += it.cyclomaticComplexity + 1 }
                     stmt.elseStatement?.let { i += it.cyclomaticComplexity + 1 }
                 }
-                is SwitchStatement -> {
+                is Switch -> {
                     // forward it to the block containing the case statements
                     stmt.statement?.let { i += it.cyclomaticComplexity }
                 }
-                is CaseStatement -> {
+                is Case -> {
                     // add one for each branch (and include the children)
                     stmt.caseExpression?.let { i += it.cyclomaticComplexity }
                 }
-                is DoStatement -> {
+                is Do -> {
                     // add one for the do statement (and include the children)
                     i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
                 }
-                is WhileStatement -> {
+                is While -> {
                     // add one for the while statement (and include the children)
                     i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
                 }
-                is GotoStatement -> {
+                is Goto -> {
                     // add one
                     i++
                 }

@@ -33,6 +33,7 @@ import kotlin.Int
 
 /** HTTP Client. */
 public open class HttpClient(
+    val protocol: TransportEncryption?,
     public val isTLS: Boolean?,
     public val authenticity: Authenticity?,
     underlyingNode: Node? = null,
@@ -41,7 +42,8 @@ public open class HttpClient(
         other is HttpClient &&
             super.equals(other) &&
             other.isTLS == this.isTLS &&
-            other.authenticity == this.authenticity
+            other.authenticity == this.authenticity &&
+            other.protocol == this.protocol
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), isTLS, authenticity)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), isTLS, authenticity, protocol)
 }

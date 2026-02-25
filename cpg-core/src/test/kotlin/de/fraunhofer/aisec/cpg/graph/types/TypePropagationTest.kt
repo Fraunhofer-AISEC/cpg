@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.Return
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.*
@@ -124,7 +124,7 @@ class TypePropagationTest {
             val main = result.functions["main"]
             assertNotNull(main)
 
-            val assign = (main.body as? Block)?.statements?.get(2) as? AssignExpression
+            val assign = (main.body as? Block)?.statements?.get(2) as? Assign
             assertNotNull(assign)
 
             val shortVar = main.variables["shortVar"]
@@ -146,8 +146,7 @@ class TypePropagationTest {
             assertEquals(primitiveType("short"), shortVarRefLhs.type)
             assertEquals(setOf(primitiveType("short")), shortVarRefLhs.assignedTypes)
 
-            val shortVarRefReturnValue =
-                main.allChildren<ReturnStatement>().firstOrNull()?.returnValue
+            val shortVarRefReturnValue = main.allChildren<Return>().firstOrNull()?.returnValue
             assertNotNull(shortVarRefReturnValue)
             // Finally, the assigned types should propagate along the DFG
             assertEquals(setOf(primitiveType("short")), shortVarRefLhs.assignedTypes)
@@ -373,7 +372,7 @@ class TypePropagationTest {
                     .commonType,
             )
 
-            val assign = (body as Block).statements<AssignExpression>(1)
+            val assign = (body as Block).statements<Assign>(1)
             assertNotNull(assign)
 
             val bb = variables["bb"]
@@ -390,7 +389,7 @@ class TypePropagationTest {
                 bb.assignedTypes,
             )
 
-            val returnStatement = (body as Block).statements<ReturnStatement>(3)
+            val returnStatement = (body as Block).statements<Return>(3)
             assertNotNull(returnStatement)
 
             val returnValue = returnStatement.returnValue

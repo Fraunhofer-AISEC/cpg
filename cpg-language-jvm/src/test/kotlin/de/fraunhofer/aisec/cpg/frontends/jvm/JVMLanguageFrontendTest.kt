@@ -130,7 +130,7 @@ class JVMLanguageFrontendTest {
 
         // Call to add should be resolved
         val call = r3ref.prevDFG.firstOrNull()
-        assertIs<MemberCallExpression>(call)
+        assertIs<MemberCall>(call)
         assertLocalName("add", call)
         assertInvokes(call, add)
         assertEquals(listOf("Integer", "Integer"), call.arguments.map { it.type.name.localName })
@@ -138,7 +138,7 @@ class JVMLanguageFrontendTest {
         // All references (which are not part of a call) and not to the stdlib should be resolved
         val refs = tu.refs
         refs
-            .filter { it.astParent !is CallExpression }
+            .filter { it.astParent !is Call }
             .filter { !it.name.startsWith("java.") }
             .forEach {
                 val refersTo = it.refersTo
@@ -191,8 +191,73 @@ class JVMLanguageFrontendTest {
         tu.methods.forEach { println(it.code) }
     }
 
+    @Ignore(
+        "This test is too slow (around 30 seconds) and is not meant to be ran in the regular test suite (yet)."
+    )
     @Test
-    fun testHelloWorldApk() {
+    fun testRealHelloWorldApk() {
+        // This will be our classpath
+        val topLevel = Path.of("src", "test", "resources", "apk", "HelloWorld")
+        val apkFile = topLevel.resolve("real-app-debug.apk").toFile()
+
+        // Assert file exists
+        assertTrue(apkFile.exists(), "APK file not found at ${apkFile.absolutePath}")
+
+        val tu =
+            analyzeAndGetFirstTU(
+                // In case of an APK, the APK is directly used as input
+                listOf(apkFile),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<JVMLanguage>()
+                it.configureFrontend<JVMLanguageFrontend>(
+                    JVMFrontendConfiguration(
+                        packagesToIgnore =
+                            listOf(
+                                "android.",
+                                "androidx.",
+                                "com.android.",
+                                "kotlin.",
+                                "kotlinx.",
+                                "java.",
+                                "javax.",
+                            )
+                    )
+                )
+            }
+        assertNotNull(tu)
+
+        // The error handling improvements should prevent OOM errors
+        // We should get some user code parsed (non-ignored packages)
+        val userMethods =
+            tu.methods.filter { method ->
+                !method.name.toString().startsWith("android.") &&
+                    !method.name.toString().startsWith("androidx.") &&
+                    !method.name.toString().startsWith("kotlin.") &&
+                    !method.name.toString().startsWith("java.")
+            }
+
+        // If the APK contains user code, we should find some methods
+        if (userMethods.isNotEmpty()) {
+            println("Found ${userMethods.size} user methods in APK")
+            // Verify the methods have proper structure
+            userMethods.take(5).forEach { method ->
+                assertNotNull(method.name, "Method should have a name")
+                println("Method: ${method.name}")
+            }
+        }
+
+        // Most importantly, the analysis should complete without OOM errors
+        // The new error handling should catch and handle any parsing issues gracefully
+        assertTrue(
+            tu.problems.isEmpty() ||
+                tu.problems.all { it is ProblemDeclaration || it is ProblemExpression }
+        )
+    }
+
+    @Test
+    fun testHelloWorldFakeApk() {
         // This will be our classpath
         val topLevel = Path.of("src", "test", "resources", "apk", "HelloWorld")
         val apkFile = topLevel.resolve("app-debug.apk").toFile()
@@ -313,7 +378,7 @@ class JVMLanguageFrontendTest {
             appInit.calls[
                     {
                         it.name.localName == "getMyProperty" &&
-                            it is MemberCallExpression &&
+                            it is MemberCall &&
                             it.base in extended.usages
                     }]
         assertNotNull(getMyProperty)
@@ -323,7 +388,7 @@ class JVMLanguageFrontendTest {
             appInit.calls[
                     {
                         it.name.localName == "setMyProperty" &&
-                            it is MemberCallExpression &&
+                            it is MemberCall &&
                             it.base in extended.usages
                     }]
         assertNotNull(setMyProperty)
@@ -347,7 +412,7 @@ class JVMLanguageFrontendTest {
         assertEquals(0, tu.problems.size)
         tu.methods.forEach { println(it.code) }
 
-        val refs = tu.refs.filterIsInstance<MemberExpression>()
+        val refs = tu.refs.filterIsInstance<MemberAccess>()
         refs.forEach {
             val refersTo = it.refersTo
             assertNotNull(refersTo, "${it.name} could not be resolved")
@@ -419,7 +484,7 @@ class JVMLanguageFrontendTest {
         assertNotNull(r3write)
 
         var expr = r3write.prevDFG.singleOrNull()
-        assertIs<NewArrayExpression>(expr)
+        assertIs<ArrayConstruction>(expr)
         assertLiteralValue(2, expr.dimensions.singleOrNull())
 
         var r1 = create.variables["r1"]
@@ -434,7 +499,7 @@ class JVMLanguageFrontendTest {
         assertNotNull(r2write)
 
         val prevDFG = r2write.prevDFG.singleOrNull()
-        assertIs<SubscriptExpression>(prevDFG)
+        assertIs<Subscription>(prevDFG)
         assertRefersTo(prevDFG.arrayExpression, r3)
 
         val createMulti = tu.methods["createMulti"]
@@ -452,7 +517,7 @@ class JVMLanguageFrontendTest {
         assertNotNull(r1write)
 
         expr = r1write.prevDFG.singleOrNull()
-        assertIs<NewArrayExpression>(expr)
+        assertIs<ArrayConstruction>(expr)
         listOf(2, 10).forEachIndexed { index, i -> assertLiteralValue(i, expr.dimensions[index]) }
     }
 
@@ -593,7 +658,7 @@ class JVMLanguageFrontendTest {
     }
 
     @Test
-    fun testCastExpression() {
+    fun testCast() {
         val topLevel = Path.of("src", "test", "resources", "class", "operators")
         val result =
             analyze(listOf(topLevel.resolve("Operators.class").toFile()), topLevel, true) {
@@ -646,7 +711,7 @@ class JVMLanguageFrontendTest {
         assertNotNull(testGoto)
 
         // Test that goto statements are created for labeled blocks
-        val gotoStmts = testGoto.allChildren<GotoStatement>()
+        val gotoStmts = testGoto.allChildren<Goto>()
         assertTrue(gotoStmts.isNotEmpty(), "Should have goto statements")
     }
 

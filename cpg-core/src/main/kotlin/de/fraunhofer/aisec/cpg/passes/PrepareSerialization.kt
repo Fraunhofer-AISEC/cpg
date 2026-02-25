@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import kotlin.reflect.full.memberProperties
@@ -55,9 +55,9 @@ class PrepareSerialization(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         tr.allChildren<AstNode>().map { node ->
             // Add explicit AST edge
             node.astChildren = SubgraphWalker.getAstChildren(node)
-            // CallExpression overwrites name property and must be copied to JvmField
+            // Call overwrites name property and must be copied to JvmField
             // to be visible by Neo4jOGM
-            if (node is CallExpression) nodeNameField?.set(node, node.name)
+            if (node is Call) nodeNameField?.set(node, node.name)
         }
     }
 }

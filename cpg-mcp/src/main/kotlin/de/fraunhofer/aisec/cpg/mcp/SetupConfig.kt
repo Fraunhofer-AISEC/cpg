@@ -74,7 +74,6 @@ fun setupTranslationConfiguration(
             .addIncludesToGraph(loadIncludes)
             .debugParser(DEBUG_PARSER)
             .useUnityBuild(useUnityBuild)
-            .useParallelPasses(false)
 
     topLevel?.let { translationConfiguration.topLevel(it) }
 

@@ -35,11 +35,11 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
-import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
+import de.fraunhofer.aisec.cpg.graph.statements.Do
+import de.fraunhofer.aisec.cpg.graph.statements.If
+import de.fraunhofer.aisec.cpg.graph.statements.Return
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Comprehension
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Conditional
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
@@ -215,7 +215,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                                         branchesSet
                                     }
 
-                                    finalDominator is IfStatement &&
+                                    finalDominator is If &&
                                         (branchingNodeConditionals[finalDominator]?.size ?: 0) >
                                             1 -> { // Note: branchesSet must be empty here The if
                                         // statement has only a then branch but there's a way
@@ -352,12 +352,12 @@ private fun EvaluationOrder.isConditionalBranch(): Boolean {
     return if (branch == true) {
         true
     } else
-        (startNode is IfStatement ||
-            startNode is DoStatement ||
-            startNode is ComprehensionExpression ||
-            (startNode.astParent is ComprehensionExpression &&
-                startNode == (startNode.astParent as ComprehensionExpression).iterable) ||
-            startNode is ConditionalExpression) && branch == false ||
+        (startNode is If ||
+            startNode is Do ||
+            startNode is Comprehension ||
+            (startNode.astParent is Comprehension &&
+                startNode == (startNode.astParent as Comprehension).iterable) ||
+            startNode is Conditional) && branch == false ||
             /*
              * Code like `foo() && bar()` requires us to look-ahead for a [ShortCircuitOperator].
              * The execution of the rhs of the [ShortCircuitOperator] always depends on the lhs:
@@ -365,15 +365,15 @@ private fun EvaluationOrder.isConditionalBranch(): Boolean {
              * `foo() || bar()` -> `bar()` will only be called if `foo() evaluates to `false`
              */
             startNode.nextEOG.filterIsInstance<ShortCircuitOperator>().isNotEmpty() ||
-            (startNode is IfStatement &&
+            (startNode is If &&
                 !startNode.allBranchesFromMyThenBranchGoThrough(startNode.nextUnconditionalNode))
 }
 
-private val IfStatement.nextUnconditionalNode: Node?
+private val If.nextUnconditionalNode: Node?
     get() = this.nextEOGEdges.firstOrNull { it.branch == null }?.end
 
-private fun IfStatement.allBranchesFromMyThenBranchGoThrough(node: Node?): Boolean {
-    if (this.thenStatement.allChildren<ReturnStatement>().isNotEmpty()) return false
+private fun If.allBranchesFromMyThenBranchGoThrough(node: Node?): Boolean {
+    if (this.thenStatement.allChildren<Return>().isNotEmpty()) return false
 
     if (node == null) return true
 

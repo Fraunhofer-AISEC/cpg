@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.helpers.util
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.newCallExpression
+import de.fraunhofer.aisec.cpg.graph.newCall
 import de.fraunhofer.aisec.cpg.graph.newFunction
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newParameter
@@ -55,7 +55,7 @@ class AttachCallParametersTest {
              * Case: Positional 'a', named 'b', and variadic keyword arguments*
              */
             val call =
-                newCallExpression().apply {
+                newCall().apply {
                     argumentEdges.add(newLiteral("test", primitiveType("string"))) {
                         this.index = 0
                     }
@@ -114,7 +114,7 @@ class AttachCallParametersTest {
              * Case: Positional 'a', default 'b', and variadic keyword arguments
              */
             val call =
-                newCallExpression().apply {
+                newCall().apply {
                     argumentEdges.add(newLiteral("test", primitiveType("string"))) {
                         this.index = 0
                     }
@@ -170,7 +170,7 @@ class AttachCallParametersTest {
              * Case: Named 'b' and 'a', no variadic keyword arguments
              */
             val call =
-                newCallExpression().apply {
+                newCall().apply {
                     argumentEdges.add(newLiteral(false, primitiveType("boolean"))) {
                         this.name = "b"
                         this.index = 0
@@ -216,7 +216,7 @@ class AttachCallParametersTest {
              * Case: Positional 'a' and *args, no **kwargs
              */
             val call =
-                newCallExpression().apply {
+                newCall().apply {
                     argumentEdges.add(newLiteral("test", primitiveType("string"))) {
                         this.index = 0
                     }
@@ -267,7 +267,7 @@ class AttachCallParametersTest {
              * Case: Positional 'a', no *args only **kwargs
              */
             val call =
-                newCallExpression().apply {
+                newCall().apply {
                     argumentEdges.add(newLiteral("test", primitiveType("string"))) {
                         this.index = 0
                     }
@@ -318,7 +318,7 @@ class AttachCallParametersTest {
              * Case: Positional 'a', *args, and **kwargs
              */
             val call =
-                newCallExpression().apply {
+                newCall().apply {
                     argumentEdges.add(newLiteral("test", primitiveType("string"))) {
                         this.index = 0
                     }

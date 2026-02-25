@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.file
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import java.util.*
 
 /**
@@ -74,7 +74,7 @@ const val O_ACCMODE_MODE_MASK = 3L
  * This is the base class for all file-like objects. It provides the common properties and methods
  * that are shared by all file-like objects.
  *
- * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param underlyingNode The underlying CPG node (usually a [Call]).
  * @param fileName The name of the file e.g. `foo/bar/example.txt`
  * @param isTempFile Whether this file is a temporary file or not.
  */
@@ -96,7 +96,7 @@ abstract class FileLikeObject(
 /**
  * Represents a file.
  *
- * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param underlyingNode The underlying CPG node (usually a [Call]).
  * @param fileName The name of the file e.g. `foo/bar/example.txt`
  * @param isTempFile Whether this file is a temporary file or not.
  * @param deleteOnClose Whether this file will be automatically deleted when closed.
@@ -117,7 +117,7 @@ open class File(
 /**
  * Represents setting flags on a file. For example when opening the file.
  *
- * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param underlyingNode The underlying CPG node (usually a [Call]).
  * @param concept The corresponding [File] node.
  * @param flags A set of file flags (see [FileAccessModeFlags]).
  */
@@ -137,7 +137,7 @@ open class SetFileFlags(
  * Represents setting the umask, for example with the `mode` parameter in a Python `os.open` call or
  * a `chmod` call.
  *
- * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param underlyingNode The underlying CPG node (usually a [Call]).
  * @param concept The corresponding [File] node.
  * @param mask The file mask in UNIX notation (i.e. 0o644)
  */
@@ -153,7 +153,7 @@ open class SetFileMask(underlyingNode: Node? = null, concept: File, val mask: Lo
 /**
  * Represents closing a file.
  *
- * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param underlyingNode The underlying CPG node (usually a [Call]).
  * @param concept The corresponding [File] node.
  */
 open class CloseFile(underlyingNode: Node? = null, concept: File) :
@@ -162,7 +162,7 @@ open class CloseFile(underlyingNode: Node? = null, concept: File) :
 /**
  * Represents deleting a file.
  *
- * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param underlyingNode The underlying CPG node (usually a [Call]).
  * @param concept The corresponding [File] node.
  */
 open class DeleteFile(underlyingNode: Node? = null, concept: File) :
@@ -172,7 +172,7 @@ open class DeleteFile(underlyingNode: Node? = null, concept: File) :
  * Represents opening a file. This is usually done with the same underlying node the [concept] field
  * is attached to.
  *
- * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param underlyingNode The underlying CPG node (usually a [Call]).
  * @param concept The corresponding [File] node.
  */
 open class OpenFile(underlyingNode: Node? = null, concept: File) :
@@ -181,7 +181,7 @@ open class OpenFile(underlyingNode: Node? = null, concept: File) :
 /**
  * Represents reading from a file.
  *
- * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param underlyingNode The underlying CPG node (usually a [Call]).
  * @param concept The corresponding [File] node.
  */
 open class ReadFile(underlyingNode: Node? = null, concept: File) :
@@ -195,7 +195,7 @@ open class ReadFile(underlyingNode: Node? = null, concept: File) :
 /**
  * Represents writing to a file.
  *
- * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param underlyingNode The underlying CPG node (usually a [Call]).
  * @param concept The corresponding [File] node.
  * @param what The node being written to the file.
  */
@@ -218,7 +218,7 @@ open class WriteFile(underlyingNode: Node? = null, concept: File, val what: Node
  * [FileOperation], resulting in easier to read queries (one can use [FileOperation.file] instead of
  * [Operation.concept]). There is no logic involved - just a simple forwarding of the field.
  *
- * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param underlyingNode The underlying CPG node (usually a [Call]).
  * @param file The corresponding [File] node.
  */
 abstract class FileOperation(underlyingNode: Node? = null, file: File) :
@@ -234,7 +234,7 @@ abstract class FileOperation(underlyingNode: Node? = null, file: File) :
 /**
  * This class represents a file handle.
  *
- * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param underlyingNode The underlying CPG node (usually a [Call]).
  * @param fileName The name of the file this handle is associated with.
  * @param isTempFile Whether this file handle is a temporary file or not.
  */

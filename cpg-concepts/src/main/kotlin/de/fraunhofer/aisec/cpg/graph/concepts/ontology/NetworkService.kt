@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import java.util.Objects
 import kotlin.Any
-import kotlin.Array
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.Short
@@ -43,8 +42,8 @@ import kotlin.collections.MutableMap
  * provides access to a resource
  */
 public open class NetworkService(
-    public val ips: Array<String>?,
-    public val ports: Array<Short>?,
+    public val ips: List<String>?,
+    public val ports: List<Short>?,
     public val authenticity: Boolean?,
     public val computes: MutableList<Compute?>,
     public val serviceMetadataDocument: ServiceMetadataDocument?,

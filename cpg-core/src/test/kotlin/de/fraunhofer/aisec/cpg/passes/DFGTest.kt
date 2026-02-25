@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.test.*
@@ -45,8 +45,8 @@ class DFGTest {
      */
     @Test
     @Throws(Exception::class)
-    fun testConditionalExpression() {
-        val result = GraphExamples.getConditionalExpression()
+    fun testConditional() {
+        val result = GraphExamples.getConditional()
 
         val bJoin = result.refs[{ it.name.localName == "b" && it.location?.region?.startLine == 6 }]
         val a5 =
@@ -96,9 +96,9 @@ class DFGTest {
         assertEquals(1, b3.prevDFG.size)
         assertTrue(b3.prevDFG.contains(val3))
 
-        // We want the ConditionalExpression
+        // We want the Conditional
         assertEquals(1, a5.prevDFG.size)
-        assertTrue(a5.prevDFG.first() is ConditionalExpression)
+        assertTrue(a5.prevDFG.first() is Conditional)
         assertTrue(flattenDFGGraph(a5, false).contains(val2))
         assertTrue(flattenDFGGraph(a5, false).contains(val3))
 
@@ -123,7 +123,7 @@ class DFGTest {
     fun testDelayedAssignment() {
         val result = GraphExamples.getDelayedAssignmentAfterRHS()
 
-        val binaryOperatorAssignment = findByUniqueName(result.allChildren<AssignExpression>(), "=")
+        val binaryOperatorAssignment = findByUniqueName(result.allChildren<Assign>(), "=")
         assertNotNull(binaryOperatorAssignment)
 
         val binaryOperatorAddition = findByUniqueName(result.allChildren<BinaryOperator>(), "+")
@@ -277,7 +277,7 @@ class DFGTest {
      * [ControlFlowSensitiveDFGPass].
      */
     @Test
-    fun testReturnStatement() {
+    fun testReturn() {
         val result = GraphExamples.getReturnTest()
 
         val returnFunction = result.functions["testReturn"]
@@ -285,7 +285,7 @@ class DFGTest {
 
         assertEquals(2, returnFunction.prevDFG.size)
 
-        val allRealReturns = returnFunction.allChildren<ReturnStatement> { !it.isImplicit }
+        val allRealReturns = returnFunction.allChildren<Return> { !it.isImplicit }
         assertEquals(allRealReturns.toSet() as Set<Node>, returnFunction.prevDFG)
 
         assertEquals(1, allRealReturns[0].prevDFG.size)
@@ -308,7 +308,7 @@ class DFGTest {
         val l3 = getLiteral(methodNodes, 3)
         val calls =
             SubgraphWalker.flattenAST(looping).filter { n: Node ->
-                n is CallExpression && n.name.localName == "println"
+                n is Call && n.name.localName == "println"
             }
         val dfgNodes = flattenDFGGraph(calls[0].refs["a"], false)
         assertTrue(dfgNodes.contains(l0))
@@ -330,7 +330,7 @@ class DFGTest {
         val l4 = getLiteral(methodNodes, 4)
         val calls =
             SubgraphWalker.flattenAST(looping)
-                .filter { n: Node -> n is CallExpression && n.name.localName == "println" }
+                .filter { n: Node -> n is Call && n.name.localName == "println" }
                 .toMutableList()
         val dfgNodesA0 = flattenDFGGraph(calls[0].refs["a"], false)
         val dfgNodesA1 = flattenDFGGraph(calls[1].refs["a"], false)
@@ -494,7 +494,7 @@ class DFGTest {
     }
 
     @Test
-    fun testInitializerListExpression() {
+    fun testInitializerList() {
         val result = GraphExamples.getInitializerListExprDFG()
         val variable = result.variables["i"]
         assertNotNull(variable)

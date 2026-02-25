@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.graph.edges.ast
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Template.TemplateInitialization
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 
-/** This edge represents a template argument that is attached to a [CallExpression]. */
+/** This edge represents a template argument that is attached to a [Call]. */
 class TemplateArgument<NodeType : AstNode>(
     start: Node,
     end: NodeType,
