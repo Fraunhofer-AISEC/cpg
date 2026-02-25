@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.helpers.util
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.newCall
-import de.fraunhofer.aisec.cpg.graph.newFunc
+import de.fraunhofer.aisec.cpg.graph.newFunction
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newParameter
 import de.fraunhofer.aisec.cpg.graph.primitiveType
@@ -378,9 +378,9 @@ class AttachCallParametersTest {
      * - 'b': An optional parameter with a default value of true.
      * - 'kwargs': A variadic parameter that captures additional keyword arguments.
      */
-    private fun getFuncWithDefaultAndVariadicParameters(): Func {
+    private fun getFuncWithDefaultAndVariadicParameters(): Function {
         with(frontend) {
-            val func = newFunc("kw_args_and_default")
+            val func = newFunction("kw_args_and_default")
             func.parameters =
                 mutableListOf(
                     newParameter("a", primitiveType("string")),
@@ -399,9 +399,9 @@ class AttachCallParametersTest {
      * - 'args': A variadic parameter that captures additional positional arguments.
      * - 'kwargs': A variadic parameter that captures additional keyword arguments.
      */
-    private fun getFuncWithArgsAndKwargs(): Func {
+    private fun getFuncWithArgsAndKwargs(): Function {
         with(frontend) {
-            val func = newFunc("variadic_params")
+            val func = newFunction("variadic_params")
             func.parameters =
                 mutableListOf(
                     newParameter("a", primitiveType("string")),

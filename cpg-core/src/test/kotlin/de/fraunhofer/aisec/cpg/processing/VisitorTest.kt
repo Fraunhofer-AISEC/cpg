@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -51,7 +51,7 @@ class VisitorTest : BaseTest() {
         // Let's create an intentional loop
         val tu = TranslationUnit()
         val name = Namespace()
-        val func = Func()
+        val func = Function()
         name.addDeclaration(tu)
         name.addDeclaration(func)
         tu.addDeclaration(name)

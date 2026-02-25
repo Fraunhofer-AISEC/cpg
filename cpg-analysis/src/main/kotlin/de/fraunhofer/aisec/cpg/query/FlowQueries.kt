@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.AnalysisSensitivity
 import de.fraunhofer.aisec.cpg.graph.FilterUnreachableEOG
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -512,7 +512,7 @@ internal fun Node.alwaysFlowsToInternal(
                     maxCallDepth = scope.maxCallDepth,
                     maxSteps = scope.maxSteps,
                     allReachableNodes =
-                        nextDFGPaths.filter { it.scope != null && it !is Func }.toSet(),
+                        nextDFGPaths.filter { it.scope != null && it !is Function }.toSet(),
                 )
             } else scope
         val nextEOGEvaluation =

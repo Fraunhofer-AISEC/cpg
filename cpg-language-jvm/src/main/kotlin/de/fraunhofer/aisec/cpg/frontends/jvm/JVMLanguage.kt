@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.HasFunctionOverloading
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -77,7 +77,7 @@ open class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctio
         // therefore do some additional filtering of the candidates here, before handling it.
         if (ref.candidates.size > 1) {
             if (ref.resolutionHelper is Call) {
-                val functionDecls = ref.candidates.filterIsInstance<Func>()
+                val functionDecls = ref.candidates.filterIsInstance<Function>()
                 // We can also check if the signature matches to account for overloading.
                 val targetType = ref.type as? FunctionType
                 val filteredFunctions =

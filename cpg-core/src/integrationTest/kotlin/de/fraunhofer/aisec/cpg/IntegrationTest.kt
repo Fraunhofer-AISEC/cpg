@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.persistence.createJsonGraph
@@ -51,7 +51,7 @@ class IntegrationTest {
         val graph = translationResult.createJsonGraph()
         val connectToFuncDel =
             graph.nodes.firstOrNull {
-                it.labels.contains(Func::class.simpleName) && it.properties["name"] == "foo"
+                it.labels.contains(Function::class.simpleName) && it.properties["name"] == "foo"
             }
         assertNotNull(connectToFuncDel)
 

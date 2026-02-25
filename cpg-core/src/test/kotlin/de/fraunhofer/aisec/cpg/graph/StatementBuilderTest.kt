@@ -54,7 +54,7 @@ class StatementBuilderTest {
                             scopeManager.addDeclaration(globalA)
                             tu.declarations += globalA
 
-                            var func = newFunc("main")
+                            var func = newFunction("main")
                             scopeManager.enterScope(func)
 
                             var body = newBlock()

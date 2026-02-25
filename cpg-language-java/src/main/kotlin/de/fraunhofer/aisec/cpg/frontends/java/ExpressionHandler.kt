@@ -52,7 +52,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     private fun handleLambdaExpr(expr: Expression): Statement {
         val lambdaExpr = expr.asLambdaExpr()
         val lambda = newLambda(rawNode = lambdaExpr)
-        val anonymousFunction = newFunc("", rawNode = lambdaExpr)
+        val anonymousFunction = newFunction("", rawNode = lambdaExpr)
         frontend.scopeManager.enterScope(anonymousFunction)
         for (parameter in lambdaExpr.parameters) {
             val resolvedType = frontend.getTypeAsGoodAsPossible(parameter.type)

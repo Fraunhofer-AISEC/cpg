@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
@@ -95,7 +95,7 @@ class CollectionComprehensionTest {
     fun testComprehensionTuple() {
         // Get the function tuple_comp
         val tupleComp = result.functions["tuple_comp"]
-        assertIs<Func>(
+        assertIs<Function>(
             tupleComp,
             "There must be a function called \"tuple_comp\" in the file. It must be neither null nor any other class than a Function.",
         )
@@ -242,7 +242,7 @@ class CollectionComprehensionTest {
     @Test
     fun testListComprehensions() {
         val listCompFunctionDeclaration = result.functions["list_comp"]
-        assertIs<Func>(
+        assertIs<Function>(
             listCompFunctionDeclaration,
             "There must be a function called \"list_comp\" in the file. It must be neither null nor any other class than a Function.",
         )
@@ -473,7 +473,7 @@ class CollectionComprehensionTest {
     @Test
     fun testSetComprehensions() {
         val setCompFunctionDeclaration = result.functions["set_comp"]
-        assertIs<Func>(
+        assertIs<Function>(
             setCompFunctionDeclaration,
             "There must be a function called \"set_comp\" in the file. It must be neither null nor any other class than a Function.",
         )
@@ -699,7 +699,7 @@ class CollectionComprehensionTest {
     @Test
     fun testDictComprehensions() {
         val dictCompFunctionDeclaration = result.functions["dict_comp"]
-        assertIs<Func>(
+        assertIs<Function>(
             dictCompFunctionDeclaration,
             "There must be a function called \"dict_comp\" in the file. It must be neither null nor any other class than a Function.",
         )
@@ -977,7 +977,7 @@ class CollectionComprehensionTest {
     @Test
     fun testGeneratorExpr() {
         val generatorFunctionDeclaration = result.functions["generator"]
-        assertIs<Func>(
+        assertIs<Function>(
             generatorFunctionDeclaration,
             "There must be a function called \"generator\" in the file. It must be neither null nor any other class than a Function.",
         )
@@ -1039,7 +1039,7 @@ class CollectionComprehensionTest {
      */
     fun testCompBinding() {
         val compBindingFunctionDeclaration = result.functions["comp_binding"]
-        assertIs<Func>(
+        assertIs<Function>(
             compBindingFunctionDeclaration,
             "There must be a function called \"comp_binding\" in the file. It must be neither null nor any other class than a Function.",
         )
@@ -1077,7 +1077,7 @@ class CollectionComprehensionTest {
      */
     fun testCompBindingAssignExpr() {
         val compBindingAssignExprFunctionDeclaration = result.functions["comp_binding_assign_expr"]
-        assertIs<Func>(
+        assertIs<Function>(
             compBindingAssignExprFunctionDeclaration,
             "There must be a function called \"comp_binding_assign_expr\" in the file. It must be neither null nor any other class than a Function.",
         )
@@ -1118,7 +1118,7 @@ class CollectionComprehensionTest {
     fun testCompBindingAssignExprNested() {
         val compBindingAssignExprNestedFunctionDeclaration =
             result.functions["comp_binding_assign_expr_nested"]
-        assertIs<Func>(
+        assertIs<Function>(
             compBindingAssignExprNestedFunctionDeclaration,
             "There must be a function called \"comp_binding_assign_expr_nested\" in the file. It must be neither null nor any other class than a Function.",
         )
@@ -1168,7 +1168,7 @@ class CollectionComprehensionTest {
     fun testCompBindingListAssignment() {
         val comprehensionWithListAssignmentFunctionDeclaration =
             result.functions["comprehension_with_list_assignment"]
-        assertIs<Func>(
+        assertIs<Function>(
             comprehensionWithListAssignmentFunctionDeclaration,
             "There must be a function called \"comprehension_with_list_assignment\" in the file. It must be neither null nor any other class than a Function.",
         )
@@ -1333,7 +1333,7 @@ class CollectionComprehensionTest {
     fun testComprehensionWithListAssignmentAndIndexVariable() {
         val comprehensionWithListAssignmentAndIndexVariableFunctionDeclaration =
             result.functions["comprehension_with_list_assignment_and_index_variable"]
-        assertIs<Func>(
+        assertIs<Function>(
             comprehensionWithListAssignmentAndIndexVariableFunctionDeclaration,
             "There must be a function called \"comprehension_with_list_assignment_and_index_variable\" in the file. It must be neither null nor any other class than a Function.",
         )
@@ -1507,7 +1507,7 @@ class CollectionComprehensionTest {
     fun testComprehensionWithListAssignmentAndIndexVariableReversed() {
         val comprehensionWithListAssignmentAndIndexVariableReversedFunctionDeclaration =
             result.functions["comprehension_with_list_assignment_and_index_variable_reversed"]
-        assertIs<Func>(
+        assertIs<Function>(
             comprehensionWithListAssignmentAndIndexVariableReversedFunctionDeclaration,
             "There must be a function called \"comprehension_with_list_assignment_and_index_variable_reversed\" in the file. It must be neither null nor any other class than a Function.",
         )
@@ -1713,7 +1713,7 @@ class CollectionComprehensionTest {
     fun testComprehensionWithListAssignmentAndLocalIndexVariable() {
         val comprehensionWithListAssignmentAndLocalIndexVariableFunctionDeclaration =
             result.functions["comprehension_with_list_assignment_and_local_index_variable"]
-        assertIs<Func>(
+        assertIs<Function>(
             comprehensionWithListAssignmentAndLocalIndexVariableFunctionDeclaration,
             "There must be a function called \"comprehension_with_list_assignment_and_local_index_variable\" in the file. It must be neither null nor any other class than a Function.",
         )
@@ -1869,7 +1869,7 @@ class CollectionComprehensionTest {
     fun testListComprehensionToListIndex() {
         val moreLoopVariablesFunctionDeclaration =
             result.functions["list_comprehension_to_list_index"]
-        assertIs<Func>(
+        assertIs<Function>(
             moreLoopVariablesFunctionDeclaration,
             "There must be a function called \"list_comprehension_to_list_index\" in the file. It must be neither null nor any other class than a Function.",
         )
@@ -1970,7 +1970,7 @@ class CollectionComprehensionTest {
     fun testListComprehensionToField() {
         val listComprehensionToFieldFunctionDeclaration =
             result.functions["list_comprehension_to_field"]
-        assertIs<Func>(
+        assertIs<Function>(
             listComprehensionToFieldFunctionDeclaration,
             "There must be a function called \"list_comprehension_to_field\" in the file. It must be neither null nor any other class than a Function.",
         )

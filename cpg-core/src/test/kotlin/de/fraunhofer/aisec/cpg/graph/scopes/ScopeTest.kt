@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.newBlock
-import de.fraunhofer.aisec.cpg.graph.newFunc
+import de.fraunhofer.aisec.cpg.graph.newFunction
 import de.fraunhofer.aisec.cpg.graph.newLookupScope
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import kotlin.test.Test
@@ -68,7 +68,7 @@ class ScopeTest {
     @Test
     fun testDeclaringScope() {
         with(TestLanguageFrontend()) {
-            val func = newFunc("foo")
+            val func = newFunction("foo")
             scopeManager.enterScope(func)
 
             scopeManager.leaveScope(func)

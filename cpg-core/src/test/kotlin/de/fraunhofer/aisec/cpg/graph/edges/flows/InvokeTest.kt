@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.edges.flows
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.newCall
-import de.fraunhofer.aisec.cpg.graph.newFunc
+import de.fraunhofer.aisec.cpg.graph.newFunction
 import de.fraunhofer.aisec.cpg.graph.newReference
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -38,7 +38,7 @@ class InvokeTest {
     @Test
     fun testMirror() {
         with(TestLanguageFrontend()) {
-            val func = newFunc("myFunc")
+            val func = newFunction("myFunc")
             val call = newCall(newReference("myFunc"))
             call.invokes += func
 

@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.enhancements.variable_resolution
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
 import de.fraunhofer.aisec.cpg.graph.statements.For
 import de.fraunhofer.aisec.cpg.graph.statements.IfElse
@@ -56,7 +56,7 @@ internal class VariableResolverCppTest : BaseTest() {
     private var innerClass: Record? = null
     private var innerVarName: Field? = null
     private var innerStaticVarName: Field? = null
-    private var main: Func? = null
+    private var main: Function? = null
     private var outerFunction1: Method? = null
     private var fors: List<For>? = null
     private var outerFunction2: Method? = null

@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -48,7 +48,7 @@ class FlowQueriesTest {
 
         // First, without context
         var q =
-            result.allExtended<Func>(sel = { it.name.localName.startsWith("endpoint") }) { func ->
+            result.allExtended<Function>(sel = { it.name.localName.startsWith("endpoint") }) { func ->
                 val innerAuthorizeCalls =
                     func.followEOGEdgesUntilHit(
                         collectFailedPaths = false,
@@ -84,7 +84,7 @@ class FlowQueriesTest {
 
         // Now, with context
         q =
-            result.allExtended<Func>(sel = { it.name.localName.startsWith("endpoint") }) { func ->
+            result.allExtended<Function>(sel = { it.name.localName.startsWith("endpoint") }) { func ->
                 val innerAuthorizeCalls =
                     func.followEOGEdgesUntilHit(
                         collectFailedPaths = false,

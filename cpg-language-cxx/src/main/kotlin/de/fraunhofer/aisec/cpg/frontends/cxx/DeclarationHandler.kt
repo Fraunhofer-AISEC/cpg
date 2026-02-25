@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -158,7 +158,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     /**
      * Translates a C/C++ (function)[https://en.cppreference.com/w/cpp/language/functions]
-     * definition into a [Func]. A definition, in contrast to a declaration also has a function
+     * definition into a [Function]. A definition, in contrast to a declaration also has a function
      * body. Function declarations are most likely handled by [handleSimpleDeclaration]. However, in
      * both cases, the majority of the function is described by a declarator, which gets parsed by
      * [DeclaratorHandler.handleFunctionDeclarator].
@@ -168,7 +168,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         //  as throw(...) is not compiler enforced (Problem for Try)
         val declaration = frontend.declaratorHandler.handle(ctx.declarator)
 
-        if (declaration !is Func) {
+        if (declaration !is Function) {
             return ProblemDeclaration(
                 "declarator of function definition is not a function declarator"
             )
@@ -466,7 +466,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // For function *declarations*, we need to update the return types based on the
                 // function type. For function *definitions*, this is done in
                 // [handleFunctionDefinition].
-                if (declaration is Func) {
+                if (declaration is Function) {
                     declaration.returnTypes =
                         (type as? FunctionType)?.returnTypes ?: listOf(incompleteType())
                 }

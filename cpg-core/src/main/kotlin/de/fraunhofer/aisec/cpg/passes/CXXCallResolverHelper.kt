@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.tryCast
@@ -74,11 +74,11 @@ fun shouldContinueSearchInParent(recordDeclaration: Record?, name: String?): Boo
 fun applyTemplateInstantiation(
     templateCall: Call,
     functionTemplateDeclaration: FunctionTemplate?,
-    function: Func,
+    function: Function,
     initializationSignature: Map<Declaration?, AstNode?>,
     initializationType: Map<AstNode?, Template.TemplateInitialization?>,
     orderedInitializationSignature: Map<Declaration, Int>,
-): List<Func> {
+): List<Function> {
     val templateInstantiationParameters =
         mutableListOf<AstNode>(*orderedInitializationSignature.keys.toTypedArray())
     for ((key, value) in orderedInitializationSignature) {
@@ -381,7 +381,7 @@ fun handleImplicitTemplateParameter(
  *   is instantiated with.
  */
 fun getCallSignature(
-    function: Func,
+    function: Function,
     parameterizedTypeResolution: Map<ParameterizedType, TypeParameter>,
     initializationSignature: Map<Declaration?, Node?>,
 ): List<Type> {
@@ -413,7 +413,7 @@ fun getCallSignature(
  *   false otherwise
  */
 fun checkArgumentValidity(
-    functionDeclaration: Func,
+    functionDeclaration: Function,
     functionDeclarationSignature: List<Type>,
     templateCall: Call,
     explicitInstantiation: List<ParameterizedType>,

@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -83,7 +83,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         signature: List<Type?>,
         incomingReturnType: Type?,
         hint: Call? = null,
-    ): Func? {
+    ): Function? {
         if (!ctx.config.inferenceConfiguration.inferFunctions) {
             return null
         }
@@ -101,11 +101,11 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         }
 
         return inferInScopeOf(start) {
-                val inferred: Func =
+                val inferred: Function =
                     if (record != null) {
                         newMethod(name ?: "", isStatic, record)
                     } else {
-                        newFunc(name ?: "")
+                        newFunction(name ?: "")
                     }
                 inferred.code = code
 
@@ -209,7 +209,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     }
 
     /** This function creates a [Parameter] for each parameter in the [function]'s [signature]. */
-    private fun createInferredParameters(function: Func, signature: List<Type?>) {
+    private fun createInferredParameters(function: Function, signature: List<Type?>) {
         // To save some unnecessary scopes, we only want to "enter" the function if it is necessary,
         // e.g., if we need to create parameters
         if (signature.isNotEmpty()) {
@@ -590,7 +590,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     }
 
     /**
-     * This function tries to infer a return type for an inferred [Func] based the original [Call]
+     * This function tries to infer a return type for an inferred [Function] based the original [Call]
      * (as the [hint]) parameter that was used to infer the function.
      */
     fun inferReturnType(hint: Call): Type? {
@@ -639,7 +639,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             }
             is Return -> {
                 // If this is part of a return statement, we can take the return type
-                val func = hint.firstParentOrNull<Func>()
+                val func = hint.firstParentOrNull<Function>()
                 val returnTypes = func?.returnTypes
 
                 return if (returnTypes != null && returnTypes.size > 1) {
@@ -676,12 +676,12 @@ fun Node.startInference(ctx: TranslationContext): Inference? {
     return Inference(this, ctx)
 }
 
-/** Tries to infer a [Func] from a [Call]. */
+/** Tries to infer a [Function] from a [Call]. */
 fun TranslationUnit.inferFunction(
     call: Call,
     isStatic: Boolean = false,
     ctx: TranslationContext,
-): Func? {
+): Function? {
     return startInference(ctx)
         ?.inferFunctionDeclaration(
             call.name.localName,
@@ -694,8 +694,8 @@ fun TranslationUnit.inferFunction(
         )
 }
 
-/** Tries to infer a [Func] from a [Call]. */
-fun Namespace.inferFunction(call: Call, isStatic: Boolean = false, ctx: TranslationContext): Func? {
+/** Tries to infer a [Function] from a [Call]. */
+fun Namespace.inferFunction(call: Call, isStatic: Boolean = false, ctx: TranslationContext): Function? {
     return startInference(ctx)
         ?.inferFunctionDeclaration(
             call.name,

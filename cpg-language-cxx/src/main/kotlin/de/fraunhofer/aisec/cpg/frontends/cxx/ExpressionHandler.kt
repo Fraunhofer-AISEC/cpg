@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -156,8 +156,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 node.captureDefault == ICPPASTLambdaExpression.CaptureDefault.BY_REFERENCE
 
         val anonymousFunction =
-            node.declarator?.let { frontend.declaratorHandler.handle(it) as? Func }
-                ?: newFunc("lambda${lambda.hashCode()}")
+            node.declarator?.let { frontend.declaratorHandler.handle(it) as? Function }
+                ?: newFunction("lambda${lambda.hashCode()}")
         anonymousFunction.type = computeType(anonymousFunction)
 
         frontend.scopeManager.enterScope(anonymousFunction)

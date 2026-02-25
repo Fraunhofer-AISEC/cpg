@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.followEOGEdgesUntilHit
@@ -42,9 +42,9 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
     /**
      * Go allows the automatic execution of certain cleanup calls before we exit the function (using
      * `defer`). We need to gather the appropriate deferred call expressions and then connect them
-     * in [handleFunc].
+     * in [handleFunction].
      */
-    private var deferredCalls = mutableMapOf<Func, MutableList<UnaryOperator>>()
+    private var deferredCalls = mutableMapOf<Function, MutableList<UnaryOperator>>()
 
     override fun handleUnspecificUnaryOperator(node: UnaryOperator) {
         val input = node.input
@@ -100,9 +100,9 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
         scopeManager.leaveScope(node)
     }
 
-    override fun handleFunc(node: Func) {
+    override fun handleFunction(node: Function) {
         // First, call the regular EOG handler
-        super.handleFunc(node)
+        super.handleFunction(node)
 
         // Before we exit the function, we need to call the deferred calls for this function
         val defers = deferredCalls[node]

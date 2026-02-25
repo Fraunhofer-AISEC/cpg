@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.Enumeration
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -47,7 +47,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * [Record] (if available).
  *
  * After determining the ancestors of a class, all inherited methods are scanned to find out which
- * of them are overridden/implemented in the current class. See [Func.getOverriddenBy]
+ * of them are overridden/implemented in the current class. See [Function.getOverriddenBy]
  *
  * **Attention:** Needs to be run before other analysis passes, as it triggers a type refresh. This
  * is needed e.g. for [de.fraunhofer.aisec.cpg.graph.TypeManager.getCommonType] to be re-evaluated

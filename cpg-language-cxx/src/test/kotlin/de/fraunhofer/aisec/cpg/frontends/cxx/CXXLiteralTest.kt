@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
@@ -229,7 +229,7 @@ internal class CXXLiteralTest : BaseTest() {
     private fun assertLiteral(
         expectedValue: Any,
         expectedType: Type,
-        functionDeclaration: Func,
+        functionDeclaration: Function,
         name: String,
     ) {
         val variableDeclaration = functionDeclaration.variables[name]

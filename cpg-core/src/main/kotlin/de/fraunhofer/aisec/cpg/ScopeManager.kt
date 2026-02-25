@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -93,8 +93,8 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         private set
 
     /** The current function, according to the scope that is currently active. */
-    val currentFunction: Func?
-        get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? Func
+    val currentFunction: Function?
+        get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? Function
 
     /** The current block, according to the scope that is currently active. */
     val currentBlock: Block?
@@ -242,7 +242,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     is CatchClause,
                     is CollectionComprehension,
                     is Block -> LocalScope(nodeToScope)
-                    is Func -> FunctionScope(nodeToScope)
+                    is Function -> FunctionScope(nodeToScope)
                     is Record -> RecordScope(nodeToScope)
                     is Template -> TemplateScope(nodeToScope)
                     is TranslationUnit -> FileScope(nodeToScope)
@@ -819,7 +819,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         val it = list.iterator()
         while (it.hasNext()) {
             val decl = it.next()
-            if (decl is Func) {
+            if (decl is Function) {
                 val definition = decl.definition
                 if (!decl.isDefinition && definition != null && definition in list) {
                     it.remove()
@@ -879,8 +879,8 @@ fun <T : Declaration> ContextProvider.declare(declaration: T): T {
 }
 
 /**
- * [SignatureResult] will be the result of the function [Func.matchesSignature] which calculates
- * whether the provided [Call] will match the signature of the current [Func].
+ * [SignatureResult] will be the result of the function [Function.matchesSignature] which calculates
+ * whether the provided [Call] will match the signature of the current [Function].
  */
 sealed class SignatureResult(open val casts: List<CastResult>? = null) {
     val ranking: Int
@@ -902,7 +902,7 @@ data object IncompatibleSignature : SignatureResult()
 
 data class SignatureMatches(override val casts: List<CastResult>) : SignatureResult(casts)
 
-fun Func.matchesSignature(
+fun Function.matchesSignature(
     signature: List<Type>,
     arguments: List<Expression>? = null,
     useDefaultArguments: Boolean = false,
@@ -983,26 +983,26 @@ data class CallResolutionResult(
 
     /**
      * A set of candidate symbols we discovered based on the [Call.callee] (using
-     * [ScopeManager.lookupSymbolByName]), more specifically a list of [Func] nodes.
+     * [ScopeManager.lookupSymbolByName]), more specifically a list of [Function] nodes.
      */
-    var candidateFunctions: Set<Func>,
+    var candidateFunctions: Set<Function>,
 
     /**
      * A set of functions, that restrict the [candidateFunctions] to those whose signature match.
      */
-    var viableFunctions: Set<Func>,
+    var viableFunctions: Set<Function>,
 
     /**
-     * A helper map to store the [SignatureResult] of each call to [Func.matchesSignature] for each
+     * A helper map to store the [SignatureResult] of each call to [Function.matchesSignature] for each
      * function in [viableFunctions].
      */
-    var signatureResults: Map<Func, SignatureResult>,
+    var signatureResults: Map<Function, SignatureResult>,
 
     /**
      * This set contains the best viable function(s) of the [viableFunctions]. Ideally this is only
      * one, but because of ambiguities or other factors, this can contain multiple functions.
      */
-    var bestViable: Set<Func>,
+    var bestViable: Set<Function>,
 
     /** The kind of success this resolution had. */
     var success: SuccessKind,

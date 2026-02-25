@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -46,7 +46,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         }
     }
 
-    private fun handleFuncDecl(funcDecl: GoStandardLibrary.Ast.FuncDecl): Func {
+    private fun handleFuncDecl(funcDecl: GoStandardLibrary.Ast.FuncDecl): Function {
         val recv = funcDecl.recv
         val func =
             if (recv != null) {
@@ -90,7 +90,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                     localNameOnly = true
                 }
 
-                newFunc(funcDecl.name.name, localNameOnly, rawNode = funcDecl)
+                newFunction(funcDecl.name.name, localNameOnly, rawNode = funcDecl)
             }
 
         frontend.scopeManager.enterScope(func)
@@ -157,7 +157,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         return func
     }
 
-    internal fun handleFuncParams(func: Func, list: GoStandardLibrary.Ast.FieldList) {
+    internal fun handleFuncParams(func: Function, list: GoStandardLibrary.Ast.FieldList) {
         for (param in list.list) {
             // We need to differentiate between three cases:
             // - an empty list of names, which means that the parameter is unnamed; and we also give

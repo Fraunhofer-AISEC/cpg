@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
@@ -212,7 +212,7 @@ fun <T> QueryTree<T>.toQueryTreeNode(): QueryTreeNode {
 
 fun Node.toJson() = Json.encodeToString(NodeInfo(this))
 
-fun Func.toJson() = Json.encodeToString(FunctionInfo(this))
+fun Function.toJson() = Json.encodeToString(FunctionInfo(this))
 
 fun Field.toJson() = Json.encodeToString(FieldInfo(this))
 

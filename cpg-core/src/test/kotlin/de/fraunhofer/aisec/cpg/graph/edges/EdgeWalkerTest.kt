@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.astEdges
 import de.fraunhofer.aisec.cpg.graph.edges.edges
 import de.fraunhofer.aisec.cpg.graph.newBlock
 import de.fraunhofer.aisec.cpg.graph.newCall
-import de.fraunhofer.aisec.cpg.graph.newFunc
+import de.fraunhofer.aisec.cpg.graph.newFunction
 import de.fraunhofer.aisec.cpg.graph.newReference
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -40,7 +40,7 @@ class EdgeWalkerTest {
     @Test
     fun testExtract() {
         with(TestLanguageFrontend()) {
-            var node = newFunc("do")
+            var node = newFunction("do")
             node.body = newBlock()
 
             node.prevDFG += newCall(newReference("do"))

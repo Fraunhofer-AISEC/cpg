@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEach
@@ -172,7 +172,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         scopeManager.resetToGlobal(builtin)
 
         return with(builtin) {
-            val len = newFunc("len", localNameOnly = true)
+            val len = newFunction("len", localNameOnly = true)
             len.parameters = mutableListOf(newParameter("v", autoType()))
             len.returnTypes = listOf(primitiveType("int"))
             addBuiltInFunction(len)
@@ -182,7 +182,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
              * func append(slice []Type, elems ...Type) []Type
              * ```
              */
-            val append = newFunc("append", localNameOnly = true)
+            val append = newFunction("append", localNameOnly = true)
             append.parameters =
                 mutableListOf(
                     newParameter("slice", autoType().array()),
@@ -196,7 +196,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
              * func panic(v any)
              * ```
              */
-            val panic = newFunc("panic", localNameOnly = true)
+            val panic = newFunction("panic", localNameOnly = true)
             panic.parameters = mutableListOf(newParameter("v", primitiveType("any")))
             addBuiltInFunction(panic)
 
@@ -205,7 +205,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
              * func recover() any
              * ```
              */
-            val recover = newFunc("panic", localNameOnly = true)
+            val recover = newFunction("panic", localNameOnly = true)
             panic.returnTypes = listOf(primitiveType("any"))
             addBuiltInFunction(recover)
 
@@ -221,7 +221,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    private fun TranslationUnit.addBuiltInFunction(func: Func) {
+    private fun TranslationUnit.addBuiltInFunction(func: Function) {
         func.type =
             FunctionType(
                 funcTypeName(func.signatureTypes, func.returnTypes),

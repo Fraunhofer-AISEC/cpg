@@ -539,7 +539,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleLambda(node: Python.AST.Lambda): Expression {
         val lambda = newLambda(rawNode = node)
-        val function = newFunc(name = "", rawNode = node)
+        val function = newFunction(name = "", rawNode = node)
         frontend.scopeManager.enterScope(function)
         for (arg in node.args.args) {
             this.frontend.declarationHandler.handleArgument(function, arg)

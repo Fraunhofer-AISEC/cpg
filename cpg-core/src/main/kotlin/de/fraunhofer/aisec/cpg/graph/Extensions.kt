@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Func
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
@@ -235,7 +235,7 @@ operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
  *
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
-inline fun <reified T : Statement> Func.bodyOrNull(n: Int = 0): T? {
+inline fun <reified T : Statement> Function.bodyOrNull(n: Int = 0): T? {
     val body = this.body
     return if (body is Block) {
         val statements = body.statements
@@ -262,7 +262,7 @@ inline fun <reified T : Statement> Func.bodyOrNull(n: Int = 0): T? {
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
 @Throws(StatementNotFound::class)
-inline fun <reified T : Statement> Func.body(n: Int = 0): T {
+inline fun <reified T : Statement> Function.body(n: Int = 0): T {
     return bodyOrNull(n) ?: throw StatementNotFound()
 }
 
@@ -780,7 +780,7 @@ fun Node.followPrevPDGUntilHit(
             val nextNodes = currentNode.prevPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
-                    (currentNode as? Func)?.usages?.mapNotNull {
+                    (currentNode as? Function)?.usages?.mapNotNull {
                         val result =
                             if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true)
                                 it.astParent as? Call
@@ -822,7 +822,7 @@ fun Node.followPrevCDGUntilHit(
             val nextNodes = currentNode.prevCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
-                    (currentNode as? Func)?.usages?.mapNotNull {
+                    (currentNode as? Function)?.usages?.mapNotNull {
                         val result =
                             if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true)
                                 it.astParent as? Call
@@ -1000,11 +1000,11 @@ fun Node.followNextFullDFGEdgesUntilHit(
 }
 
 /**
- * Returns a [Collection] of last nodes in the EOG of this [Func]. If there's no function body, it
+ * Returns a [Collection] of last nodes in the EOG of this [Function]. If there's no function body, it
  * will return a list of this function declaration. This function does not propagate assumptions
  * currently.
  */
-val Func.lastEOGNodes: Collection<Node>
+val Function.lastEOGNodes: Collection<Node>
     get() {
         val lastEOG = collectAllNextEOGPaths(false).flatMap { it.nodes.last().prevEOGEdges }
         return if (lastEOG.isEmpty()) {
@@ -1153,8 +1153,8 @@ val AstNode?.fields: List<Field>
 val AstNode?.parameters: List<Parameter>
     get() = this.allChildren()
 
-/** Returns all [Func] children in this graph, starting with this [Node]. */
-val AstNode?.functions: List<Func>
+/** Returns all [Function] children in this graph, starting with this [Node]. */
+val AstNode?.functions: List<Function>
     get() = this.allChildren()
 
 /** Returns all [Record] children in this graph, starting with this [Node]. */
@@ -1362,11 +1362,11 @@ fun TranslationResult.callsByName(name: String): List<Call> {
 }
 
 /** Set of all functions which are called from this function */
-val Func.callees: Set<Func>
+val Function.callees: Set<Function>
     get() {
         return this.calls
             .map { it.invokes }
-            .foldRight(mutableListOf<Func>()) { l, res ->
+            .foldRight(mutableListOf<Function>()) { l, res ->
                 res.addAll(l)
                 res
             }
@@ -1374,7 +1374,7 @@ val Func.callees: Set<Func>
     }
 
 /** Retrieves the n-th statement of the body of this function declaration. */
-operator fun Func.get(n: Int): Statement? {
+operator fun Function.get(n: Int): Statement? {
     val body = this.body
 
     if (body is Block) {
@@ -1387,7 +1387,7 @@ operator fun Func.get(n: Int): Statement? {
 }
 
 /** Set of all functions calling [function] */
-fun TranslationResult.callersOf(function: Func): Set<Func> {
+fun TranslationResult.callersOf(function: Function): Set<Function> {
     return this.functions.filter { function in it.callees }.toSet()
 }
 
@@ -1403,7 +1403,7 @@ fun IfElse.controls(): List<Node> {
 fun Node.controlledBy(): List<Node> {
     val result = mutableListOf<Node>()
     var checkedNode: Node? = this
-    while (checkedNode !is Func) {
+    while (checkedNode !is Function) {
         checkedNode = checkedNode?.astParent
         if (checkedNode == null) {
             break
