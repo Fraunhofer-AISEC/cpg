@@ -45,12 +45,12 @@ import kotlinx.serialization.json.Json
 
 /** ChatService manages LLM client configuration and provides an API for chat interactions. */
 class ChatService {
+    // /resources/application.conf
     private val config = ConfigFactory.load()
     private val llmProvider: String = config.getString("llm.client")
-
     private val llmModel: String = config.getString("llm.$llmProvider.model")
-
     private val llmBaseUrl: String = config.getString("llm.$llmProvider.baseUrl")
+    private val mcpServerUrl: String = config.getString("mcp.serverUrl")
 
     private val httpClient =
         HttpClient(CIO) {
@@ -82,11 +82,7 @@ class ChatService {
         }
 
     private val chatClient: ChatClient =
-        ChatClient(
-            httpClient = httpClient,
-            llm = llmClient,
-            mcpServerUrl = config.getString("mcp.serverUrl"),
-        )
+        ChatClient(httpClient = httpClient, llm = llmClient, mcpServerUrl = mcpServerUrl)
 
     suspend fun connect() {
         chatClient.connect()

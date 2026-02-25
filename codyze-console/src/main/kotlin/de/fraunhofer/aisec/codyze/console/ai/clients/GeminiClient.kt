@@ -95,13 +95,13 @@ class GeminiClient(
                             GeminiContent(
                                 role = "model",
                                 parts =
-                                    roundtrip.map { tr ->
+                                    roundtrip.map { tool ->
                                         GeminiPart(
                                             functionCall =
                                                 GeminiFunctionCall(
-                                                    name = tr.call.name,
+                                                    name = tool.call.name,
                                                     args =
-                                                        Json.parseToJsonElement(tr.call.arguments)
+                                                        Json.parseToJsonElement(tool.call.arguments)
                                                             .jsonObject,
                                                 )
                                         )
@@ -110,13 +110,15 @@ class GeminiClient(
                             GeminiContent(
                                 role = "user",
                                 parts =
-                                    roundtrip.map { tr ->
+                                    roundtrip.map { tool ->
                                         GeminiPart(
                                             functionResponse =
                                                 GeminiFunctionResponse(
-                                                    name = tr.call.name,
+                                                    name = tool.call.name,
                                                     response =
-                                                        buildJsonObject { put("result", tr.result) },
+                                                        buildJsonObject {
+                                                            put("result", tool.result)
+                                                        },
                                                 )
                                         )
                                     },
@@ -174,15 +176,15 @@ class GeminiClient(
                     ?.jsonArray
 
             parts?.forEach { part ->
-                val partObj = part.jsonObject
+                val partJSON = part.jsonObject
 
-                partObj["text"]?.jsonPrimitive?.contentOrNull?.let { text ->
+                partJSON["text"]?.jsonPrimitive?.contentOrNull?.let { text ->
                     if (text.isNotEmpty()) onText(text)
                 }
 
-                partObj["functionCall"]?.jsonObject?.let { fc ->
-                    val name = fc["name"]?.jsonPrimitive?.contentOrNull
-                    val args = fc["args"]?.jsonObject
+                partJSON["functionCall"]?.jsonObject?.let { functionCall ->
+                    val name = functionCall["name"]?.jsonPrimitive?.contentOrNull
+                    val args = functionCall["args"]?.jsonObject
                     if (name != null) {
                         toolCalls.add(ToolCall(name, args?.toString() ?: "{}"))
                     }
