@@ -38,7 +38,7 @@ public open class HttpRequest(
     val url: String,
     public val call: String?,
     public val reqBody: String?,
-    public val httpEndpoint: HttpEndpoint?,
+    public var httpEndpoint: HttpEndpoint?,
     linkedConcept: HttpClient,
     underlyingNode: Node? = null,
 ) : HttpClientOperation(linkedConcept, underlyingNode) {
