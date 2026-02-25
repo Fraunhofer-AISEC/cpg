@@ -96,7 +96,6 @@ fun MetadataProvider.newHttpRequestHandler(
  * @param handler The handler name for the endpoint.
  * @param method The [HttpMethod] the created [HttpEndpoint] listens to.
  * @param path The path of the created [HttpEndpoint].
- * @param url The URL of the created [HttpEndpoint].
  * @param authenticity The [Authenticity] method used by the [HttpEndpoint].
  * @param authorization The [Authorization] mechanism defining access control.
  * @param httpRequestContext The [HttpRequestContext] providing additional contextual metadata.
@@ -114,7 +113,6 @@ fun MetadataProvider.newHttpEndpoint(
     handler: String?,
     method: HttpMethod,
     path: String?,
-    url: String?,
     authenticity: Authenticity?,
     authorization: Authorization?,
     httpRequestContext: HttpRequestContext?,
@@ -131,7 +129,6 @@ fun MetadataProvider.newHttpEndpoint(
                 handler = handler,
                 method = method,
                 path = path,
-                url = url,
                 authenticity = authenticity,
                 authorization = authorization,
                 httpRequestContext = httpRequestContext,
@@ -163,6 +160,7 @@ fun MetadataProvider.newHttpRequest(
     concept: HttpClient,
     arguments: List<Node>,
     method: HttpMethod,
+    url: String,
     call: String?,
     reqBody: String?,
     httpEndpoint: HttpEndpoint?,
@@ -173,6 +171,7 @@ fun MetadataProvider.newHttpRequest(
             HttpRequest(
                 arguments = arguments,
                 method = method,
+                url = url,
                 call = call,
                 reqBody = reqBody,
                 httpEndpoint = httpEndpoint,

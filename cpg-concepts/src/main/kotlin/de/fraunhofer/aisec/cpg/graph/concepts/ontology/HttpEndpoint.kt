@@ -43,7 +43,6 @@ open class HttpEndpoint(
     var handler: String?,
     var method: HttpMethod,
     var path: String?,
-    var url: String?,
     var authenticity: Authenticity?,
     var authorization: Authorization?,
     var httpRequestContext: HttpRequestContext?,
@@ -57,7 +56,6 @@ open class HttpEndpoint(
             other.handler == this.handler &&
             other.method == this.method &&
             other.path == this.path &&
-            other.url == this.url &&
             other.authenticity == this.authenticity &&
             other.authorization == this.authorization &&
             other.httpRequestContext == this.httpRequestContext &&
@@ -73,7 +71,6 @@ open class HttpEndpoint(
             handler,
             method,
             path,
-            url,
             authenticity,
             authorization,
             httpRequestContext,
