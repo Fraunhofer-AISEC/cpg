@@ -246,7 +246,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge for a [Function]. The data flows from the return statement(s) to the function.
+     * Adds the DFG edge for a [Function]. The data flows from the return statement(s) to the
+     * function.
      */
     protected fun handleFunction(node: Function, functionSummaries: DFGFunctionSummaries) {
         if (node.isInferred) {

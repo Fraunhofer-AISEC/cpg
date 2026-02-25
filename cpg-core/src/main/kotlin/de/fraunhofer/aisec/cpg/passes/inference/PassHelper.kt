@@ -251,8 +251,8 @@ internal fun Pass<*>.tryFieldInference(ref: Reference, targetType: ObjectType): 
 }
 
 /**
- * Tries to infer a [Function] or a [Method] from a [Call]. This will return an empty list, if inference
- * was not possible, or if it was turned off in the [InferenceConfiguration].
+ * Tries to infer a [Function] or a [Method] from a [Call]. This will return an empty list, if
+ * inference was not possible, or if it was turned off in the [InferenceConfiguration].
  *
  * Depending on several factors, e.g., whether the callee has an FQN, was a [MemberAccess] or
  * whether the language supports [HasImplicitReceiver] we either infer
@@ -263,7 +263,10 @@ internal fun Pass<*>.tryFieldInference(ref: Reference, targetType: ObjectType): 
  * Since potentially multiple suitable bases exist for the inference of methods (derived by
  * [getPossibleContainingTypes]), we infer a method for all of them and return a list.
  */
-internal fun Pass<*>.tryFunctionInference(call: Call, result: CallResolutionResult): List<Function> {
+internal fun Pass<*>.tryFunctionInference(
+    call: Call,
+    result: CallResolutionResult,
+): List<Function> {
     // We need to see, whether we have any suitable base (e.g. a class) or not; There are two
     // main cases
     // a) we have a member expression -> easy

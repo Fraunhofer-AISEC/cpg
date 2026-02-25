@@ -67,7 +67,8 @@ class DFGFunctionSummaries {
     val functionToChangedParameters =
         mutableMapOf<Function, MutableMap<ValueDeclaration, MutableSet<Node>>>()
 
-    fun hasSummary(functionDeclaration: Function) = functionDeclaration in functionToChangedParameters
+    fun hasSummary(functionDeclaration: Function) =
+        functionDeclaration in functionToChangedParameters
 
     fun getLastWrites(functionDeclaration: Function): Map<ValueDeclaration, Set<Node>> =
         functionToChangedParameters[functionDeclaration] ?: mapOf()
@@ -317,8 +318,9 @@ class DFGFunctionSummaries {
         /** The FQN of the [Function] or [Method]. */
         val methodName: String,
         /**
-         * The signature of the [Function]. We use a list of the FQN of the [Type]s of parameter. This
-         * is optional and if not specified, we perform the matching only based on the [methodName].
+         * The signature of the [Function]. We use a list of the FQN of the [Type]s of parameter.
+         * This is optional and if not specified, we perform the matching only based on the
+         * [methodName].
          */
         val signature: List<String>? = null,
     )

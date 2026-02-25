@@ -40,8 +40,8 @@ import org.neo4j.ogm.annotation.NodeEntity
  *
  * Note: We do NOT (currently) distinguish between the definition and the declaration of a function.
  * This means, that if a function is first declared and later defined with a function body, we will
- * currently have two [Function] nodes. This is very similar to the behaviour of clang, however clang
- * does establish a connection between those nodes, we currently do not.
+ * currently have two [Function] nodes. This is very similar to the behaviour of clang, however
+ * clang does establish a connection between those nodes, we currently do not.
  */
 @NodeEntity
 abstract class Declaration : AstNode(), HasModifiers {

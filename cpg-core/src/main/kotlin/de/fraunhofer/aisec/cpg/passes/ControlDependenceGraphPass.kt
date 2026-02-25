@@ -57,8 +57,8 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
     class Configuration(
         /**
          * This specifies the maximum complexity (as calculated per
-         * [de.fraunhofer.aisec.cpg.graph.statements.Statement.cyclomaticComplexity]) a [Function] must
-         * have in order to be considered.
+         * [de.fraunhofer.aisec.cpg.graph.statements.Statement.cyclomaticComplexity]) a [Function]
+         * must have in order to be considered.
          */
         var maxComplexity: Int? = null,
         /**

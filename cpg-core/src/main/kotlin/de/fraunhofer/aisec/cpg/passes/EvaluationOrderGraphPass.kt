@@ -94,10 +94,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected var nextEdgeBranch: Boolean? = null
 
     /**
-     * This maps nodes that have to handle throws, i.e. [Try] and [Function], to the [Type]s of errors
-     * that were thrown and the EOG exits of the throwing statements. Entries to the outer map will
-     * only be created if the node was identified to handle or relay a throw. Entries to the inner
-     * throw will only be created when the mapping type was thrown.
+     * This maps nodes that have to handle throws, i.e. [Try] and [Function], to the [Type]s of
+     * errors that were thrown and the EOG exits of the throwing statements. Entries to the outer
+     * map will only be created if the node was identified to handle or relay a throw. Entries to
+     * the inner throw will only be created when the mapping type was thrown.
      */
     val nodesToInternalThrows = mutableMapOf<Node, MutableMap<Type, MutableList<Node>>>()
 

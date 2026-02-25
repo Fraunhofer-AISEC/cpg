@@ -590,8 +590,8 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     }
 
     /**
-     * This function tries to infer a return type for an inferred [Function] based the original [Call]
-     * (as the [hint]) parameter that was used to infer the function.
+     * This function tries to infer a return type for an inferred [Function] based the original
+     * [Call] (as the [hint]) parameter that was used to infer the function.
      */
     fun inferReturnType(hint: Call): Type? {
         // Try to find out, if the supplied hint is part of an assignment. If yes, we can use their
@@ -695,7 +695,11 @@ fun TranslationUnit.inferFunction(
 }
 
 /** Tries to infer a [Function] from a [Call]. */
-fun Namespace.inferFunction(call: Call, isStatic: Boolean = false, ctx: TranslationContext): Function? {
+fun Namespace.inferFunction(
+    call: Call,
+    isStatic: Boolean = false,
+    ctx: TranslationContext,
+): Function? {
     return startInference(ctx)
         ?.inferFunctionDeclaration(
             call.name,

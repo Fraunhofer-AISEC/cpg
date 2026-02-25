@@ -670,7 +670,10 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
             return this != null && this::class.simpleName == "CPPLanguage"
         }
 
-    private fun getOverridingCandidates(possibleSubTypes: Set<Type>, declaration: Function): Set<Function> {
+    private fun getOverridingCandidates(
+        possibleSubTypes: Set<Type>,
+        declaration: Function,
+    ): Set<Function> {
         return declaration.overriddenBy
             .filter { f ->
                 if (f is Method) {
@@ -803,9 +806,9 @@ internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>,
 
 /**
  * This function tries to resolve a set of [candidates] (e.g. coming from a [Call.callee]) into the
- * best matching [Function] (or multiple functions, if applicable) based on the supplied [arguments].
- * The result is returned in the form of a [CallResolutionResult] which holds detail information
- * about intermediate results as well as the kind of success the resolution had.
+ * best matching [Function] (or multiple functions, if applicable) based on the supplied
+ * [arguments]. The result is returned in the form of a [CallResolutionResult] which holds detail
+ * information about intermediate results as well as the kind of success the resolution had.
  *
  * The [source] expression specifies the node in the graph that triggered this resolution. This is
  * most likely a [Call], but could be other node as well. It is also the source of the scope and

@@ -993,8 +993,8 @@ data class CallResolutionResult(
     var viableFunctions: Set<Function>,
 
     /**
-     * A helper map to store the [SignatureResult] of each call to [Function.matchesSignature] for each
-     * function in [viableFunctions].
+     * A helper map to store the [SignatureResult] of each call to [Function.matchesSignature] for
+     * each function in [viableFunctions].
      */
     var signatureResults: Map<Function, SignatureResult>,
 

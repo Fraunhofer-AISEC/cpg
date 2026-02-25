@@ -1000,8 +1000,8 @@ fun Node.followNextFullDFGEdgesUntilHit(
 }
 
 /**
- * Returns a [Collection] of last nodes in the EOG of this [Function]. If there's no function body, it
- * will return a list of this function declaration. This function does not propagate assumptions
+ * Returns a [Collection] of last nodes in the EOG of this [Function]. If there's no function body,
+ * it will return a list of this function declaration. This function does not propagate assumptions
  * currently.
  */
 val Function.lastEOGNodes: Collection<Node>

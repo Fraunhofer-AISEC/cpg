@@ -79,7 +79,8 @@ open class Function :
      * [Call] nodes to this function.
      */
     @Relationship(value = "INVOKES", direction = Relationship.Direction.INCOMING)
-    val calledByEdges: Invokes<Function> = Invokes<Function>(this, Call::invokeEdges, outgoing = false)
+    val calledByEdges: Invokes<Function> =
+        Invokes<Function>(this, Call::invokeEdges, outgoing = false)
 
     /** Virtual property for accessing [calledByEdges] without property edges. */
     val calledBy: MutableList<Call> by unwrappingIncoming(Function::calledByEdges)

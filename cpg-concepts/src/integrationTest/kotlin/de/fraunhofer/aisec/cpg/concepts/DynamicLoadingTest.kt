@@ -89,7 +89,8 @@ class DynamicLoadingTest {
         val dlSym = result.calls["dlsym"]
         assertNotNull(dlSym)
 
-        val loadSymbol = dlSym.operationNodes.filterIsInstance<LoadSymbol<Function>>().singleOrNull()
+        val loadSymbol =
+            dlSym.operationNodes.filterIsInstance<LoadSymbol<Function>>().singleOrNull()
         assertNotNull(loadSymbol)
         assertIs<POSIX>(loadSymbol.os)
         assertEquals(myFunc, loadSymbol.what, "\"what\" of the LoadSymbol should be myFunc")

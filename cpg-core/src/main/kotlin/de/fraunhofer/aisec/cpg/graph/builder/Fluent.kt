@@ -189,8 +189,8 @@ fun LanguageFrontend<*, *>.import(name: CharSequence): Include {
 }
 
 /**
- * Creates a new [Function] in the Fluent Node DSL with the given [name] and optional [returnType]. The
- * [init] block can be used to create further sub-nodes as well as configuring the created node
+ * Creates a new [Function] in the Fluent Node DSL with the given [name] and optional [returnType].
+ * The [init] block can be used to create further sub-nodes as well as configuring the created node
  * itself.
  */
 context(holder: DeclarationHolder)
@@ -272,8 +272,8 @@ fun LanguageFrontend<*, *>.constructor(init: Constructor.() -> Unit): Constructo
 
 /**
  * Creates a new [Block] in the Fluent Node DSL and sets it to the [Function.body] of the nearest
- * enclosing [Function]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * enclosing [Function]. The [init] block can be used to create further sub-nodes as well as
+ * configuring the created node itself.
  */
 context(func: Function)
 fun LanguageFrontend<*, *>.body(needsScope: Boolean = true, init: Block.() -> Unit): Block {
@@ -287,8 +287,8 @@ fun LanguageFrontend<*, *>.body(needsScope: Boolean = true, init: Block.() -> Un
 
 /**
  * Creates a new [Block] in the Fluent Node DSL and sets it to the [Function.body] of the nearest
- * enclosing [Function]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * enclosing [Function]. The [init] block can be used to create further sub-nodes as well as
+ * configuring the created node itself.
  */
 context(holder: StatementHolder)
 fun LanguageFrontend<*, *>.block(needsScope: Boolean = true, init: Block.() -> Unit): Block {

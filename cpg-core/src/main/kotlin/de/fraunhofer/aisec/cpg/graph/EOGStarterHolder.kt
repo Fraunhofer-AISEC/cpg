@@ -39,8 +39,8 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver
  * such nodes in the graph.
  *
  * In some cases, the [Node] that implements this interface will add itself, for example in a
- * [Function], so that we can use all functions as an entry-point to symbol resolution. In other cases,
- * certain child nodes might be added to [eogStarters], for example to add all top-level
+ * [Function], so that we can use all functions as an entry-point to symbol resolution. In other
+ * cases, certain child nodes might be added to [eogStarters], for example to add all top-level
  * declarations in a [TranslationUnit].
  *
  * The common denominator is that all the nodes contained in [eogStarters] **start** an EOG path,

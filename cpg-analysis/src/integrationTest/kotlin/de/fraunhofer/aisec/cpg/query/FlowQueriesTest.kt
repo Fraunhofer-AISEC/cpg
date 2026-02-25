@@ -48,7 +48,8 @@ class FlowQueriesTest {
 
         // First, without context
         var q =
-            result.allExtended<Function>(sel = { it.name.localName.startsWith("endpoint") }) { func ->
+            result.allExtended<Function>(sel = { it.name.localName.startsWith("endpoint") }) { func
+                ->
                 val innerAuthorizeCalls =
                     func.followEOGEdgesUntilHit(
                         collectFailedPaths = false,
@@ -84,7 +85,8 @@ class FlowQueriesTest {
 
         // Now, with context
         q =
-            result.allExtended<Function>(sel = { it.name.localName.startsWith("endpoint") }) { func ->
+            result.allExtended<Function>(sel = { it.name.localName.startsWith("endpoint") }) { func
+                ->
                 val innerAuthorizeCalls =
                     func.followEOGEdgesUntilHit(
                         collectFailedPaths = false,
