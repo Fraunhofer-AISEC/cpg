@@ -26,7 +26,7 @@
 package example
 
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.query.and
 
@@ -116,5 +116,5 @@ fun goodArgumentSize(): QueryTree<Boolean> {
 
 context(tr: TranslationResult)
 fun veryLongFunctionName(): QueryTree<Boolean> {
-    return tr.allExtended<Function> { it.name.localName.length gt 7 }
+    return tr.allExtended<Func> { it.name.localName.length gt 7 }
 }
