@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
@@ -70,7 +70,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * For inferred functions which have function summaries encoded, we connect the arguments to
-     * modified parameter to propagate the changes to the arguments out of the [Function] again.
+     * modified parameter to propagate the changes to the arguments out of the [Func] again.
      */
     private fun connectInferredCallArguments(functionSummaries: DFGFunctionSummaries) {
         for (call in callsInferredFunctions) {
@@ -133,15 +133,15 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Statements
             is Return -> handleReturn(node)
             is ForEach -> handleForEach(node)
-            is Do -> handleDo(node)
+            is DoWhile -> handleDoWhile(node)
             is While -> handleWhile(node)
             is For -> handleFor(node)
             is Switch -> handleSwitch(node)
-            is If -> handleIf(node)
+            is IfElse -> handleIfElse(node)
             is Throw -> handleThrow(node)
             // Declarations
             is Field -> handleField(node)
-            is Function -> handleFunction(node, functionSummaries)
+            is Func -> handleFunc(node, functionSummaries)
             is Tuple -> handleTuple(node)
             is Variable -> handleVariable(node)
         }
@@ -246,10 +246,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge for a [Function]. The data flows from the return statement(s) to the
-     * function.
+     * Adds the DFG edge for a [Func]. The data flows from the return statement(s) to the function.
      */
-    protected fun handleFunction(node: Function, functionSummaries: DFGFunctionSummaries) {
+    protected fun handleFunc(node: Func, functionSummaries: DFGFunctionSummaries) {
         if (node.isInferred) {
             val summaryExists = with(functionSummaries) { addFlowsToFunctionDeclaration(node) }
 
@@ -308,7 +307,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Adds the DFG edge from [ForEach.variable] to the [ForEach] to show the dependence between
      * data and the branching node.
      */
-    protected fun handleDo(node: Do) {
+    protected fun handleDoWhile(node: DoWhile) {
         node.condition?.let { node.prevDFGEdges += it }
     }
 
@@ -326,11 +325,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge from [If.condition] or [If.conditionDeclaration] to the [If] to show the
-     * dependence between data and the branching node. Usage of one or the other in the statement is
-     * mutually exclusive.
+     * Adds the DFG edge from [IfElse.condition] or [IfElse.conditionDeclaration] to the [IfElse] to
+     * show the dependence between data and the branching node. Usage of one or the other in the
+     * statement is mutually exclusive.
      */
-    protected fun handleIf(node: If) {
+    protected fun handleIfElse(node: IfElse) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,

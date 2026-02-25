@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
-import de.fraunhofer.aisec.cpg.graph.newFunction
+import de.fraunhofer.aisec.cpg.graph.newFunc
 import de.fraunhofer.aisec.cpg.graph.newParameter
 import de.fraunhofer.aisec.cpg.graph.newReturn
 import de.fraunhofer.aisec.cpg.graph.statements.Return
@@ -53,8 +53,8 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
         return newParameter(node.name.idString(), variadic = false)
     }
 
-    private fun handleDefnNode(node: DefnNode): Function {
-        val func = newFunction(node.name.idString())
+    private fun handleDefnNode(node: DefnNode): Func {
+        val func = newFunc(node.name.idString())
 
         frontend.scopeManager.enterScope(func)
 

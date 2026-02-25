@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.declarations.Template.TemplateInitialization
 import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
@@ -45,7 +45,7 @@ import org.neo4j.ogm.annotation.Relationship
 
 /**
  * An expression, which calls another function. It has a list of arguments (list of [Expression]s)
- * and is connected via the INVOKES edge to its [Function].
+ * and is connected via the INVOKES edge to its [Func].
  */
 open class Call :
     Expression(),
@@ -54,13 +54,13 @@ open class Call :
     ArgumentHolder,
     HasSecondaryTypeEdge {
     /**
-     * Connection to its [Function]. This will be populated by the [SymbolResolver]. This will have
-     * an effect on the [type]
+     * Connection to its [Func]. This will be populated by the [SymbolResolver]. This will have an
+     * effect on the [type]
      */
     @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
-    var invokeEdges: Invokes<Function> =
-        Invokes<Function>(this, mirrorProperty = Function::calledByEdges, outgoing = true)
+    var invokeEdges: Invokes<Func> =
+        Invokes<Func>(this, mirrorProperty = Func::calledByEdges, outgoing = true)
         protected set
 
     /**

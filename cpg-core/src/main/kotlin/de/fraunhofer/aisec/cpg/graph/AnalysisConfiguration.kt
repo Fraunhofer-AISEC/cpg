@@ -29,7 +29,7 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
@@ -359,9 +359,9 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                     } else if (currentNode is Return || currentNode.nextEOG.isEmpty()) {
                         // Return from the functions/methods which have been invoked.
                         val returnedTo =
-                            (currentNode as? Function
-                                    ?: currentNode.firstParentOrNull<Function>()
-                                    ?: (currentNode as? OverlayNode)?.underlyingNode as? Function)
+                            (currentNode as? Func
+                                    ?: currentNode.firstParentOrNull<Func>()
+                                    ?: (currentNode as? OverlayNode)?.underlyingNode as? Func)
                                 ?.calledByEdges as Collection<Edge<Node>>? ?: setOf()
 
                         filterAndJump(
@@ -476,7 +476,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                                 .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
                         }
 
-                        is Function -> {
+                        is Func -> {
                             val calledBy = currentNode.calledByEdges as Collection<Edge<Node>>
 
                             filterAndJump(
@@ -545,7 +545,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
             }
 
             GraphToFollow.EOG -> {
-                edge is Invoke && currentNode is Function
+                edge is Invoke && currentNode is Func
             }
         }
     }

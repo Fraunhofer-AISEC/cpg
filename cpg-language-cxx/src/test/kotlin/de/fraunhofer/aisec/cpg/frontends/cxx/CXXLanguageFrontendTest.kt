@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration.Companion.builder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -263,7 +263,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val function = declaration.declarations<Function>(0)
+        val function = declaration.declarations<Func>(0)
         assertNotNull(function)
 
         val functionBody = function.body
@@ -288,7 +288,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val statements = declaration.declarations<Function>(0)?.statements
+        val statements = declaration.declarations<Func>(0)?.statements
         assertNotNull(statements)
         assertEquals(6, statements.size)
 
@@ -321,10 +321,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val statements = declaration.declarations<Function>(0)?.statements
+        val statements = declaration.declarations<Func>(0)?.statements
         assertNotNull(statements)
 
-        val ifStatement = statements[0] as If
+        val ifStatement = statements[0] as IfElse
         assertNotNull(ifStatement)
         assertNotNull(ifStatement.condition)
         assertEquals("bool", ifStatement.condition!!.type.typeName)
@@ -369,7 +369,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             val tu = result.components.firstOrNull()?.translationUnits?.firstOrNull()
             assertNotNull(tu)
 
-            val function = tu.declarations<Function>(0)
+            val function = tu.declarations<Func>(0)
             val statements = function?.statements
             assertNotNull(statements)
             statements.forEach(
@@ -501,7 +501,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val functionDecl = declaration.declarations<Function>(0)
+        val functionDecl = declaration.declarations<Func>(0)
         val statements = functionDecl?.statements
         assertNotNull(statements)
         assertTrue(statements[1] is BinaryOperator)
@@ -515,7 +515,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val statements = unit.declarations<Function>(0)?.statements
+        val statements = unit.declarations<Func>(0)?.statements
         assertNotNull(statements)
 
         var line = -1
@@ -917,7 +917,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertNotNull(tu)
 
             // get the main method
-            val main = tu.declarations<Function>(3)
+            val main = tu.declarations<Func>(3)
             val statement = main!!.body as Block
 
             // Integer i
@@ -961,7 +961,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         }
     }
 
-    private val Function.statements: List<Statement>?
+    private val Func.statements: List<Statement>?
         get() {
             return (this.body as? Block)?.statements
         }
@@ -974,7 +974,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val fdecl = declaration.declarations<Function>(0)
+        val fdecl = declaration.declarations<Func>(0)
         val body = fdecl!!.body as Block
         val expected: MutableMap<String?, Region> = HashMap()
         expected["cout << \"bla\";"] = Region(4, 3, 4, 17)

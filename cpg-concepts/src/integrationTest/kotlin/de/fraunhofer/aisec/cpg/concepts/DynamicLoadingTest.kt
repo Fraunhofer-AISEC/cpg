@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.POSIX
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx.CXXDynamicLoadingPass
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -89,8 +89,7 @@ class DynamicLoadingTest {
         val dlSym = result.calls["dlsym"]
         assertNotNull(dlSym)
 
-        val loadSymbol =
-            dlSym.operationNodes.filterIsInstance<LoadSymbol<Function>>().singleOrNull()
+        val loadSymbol = dlSym.operationNodes.filterIsInstance<LoadSymbol<Func>>().singleOrNull()
         assertNotNull(loadSymbol)
         assertIs<POSIX>(loadSymbol.os)
         assertEquals(myFunc, loadSymbol.what, "\"what\" of the LoadSymbol should be myFunc")

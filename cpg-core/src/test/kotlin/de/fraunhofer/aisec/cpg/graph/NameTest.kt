@@ -77,7 +77,7 @@ internal class NameTest {
             val tu = newTranslationUnit("file.extension")
             this.scopeManager.resetToGlobal(tu)
 
-            val func = newFunction("main")
+            val func = newFunc("main")
             assertLocalName("main", func)
 
             val myClass = newRecord("MyClass", "class")

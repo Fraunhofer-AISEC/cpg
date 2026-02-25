@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -76,7 +76,7 @@ internal class EOGTest : BaseTest() {
             val binopEOG = SubgraphWalker.getEOGPathEdges(binop)
             assertEquals(1, binopEOG.exits.size)
         }
-        val ifs = nodes.filterIsInstance<If>()
+        val ifs = nodes.filterIsInstance<IfElse>()
         assertEquals(2, ifs.size)
         ifs.forEach { assertNotNull(it.thenStatement) }
         assertTrue(ifs.any { it.elseStatement == null } && ifs.any { it.elseStatement != null })
@@ -491,7 +491,7 @@ internal class EOGTest : BaseTest() {
                 endNodes = listOf(prints[1]),
             )
         )
-        val dostat = nodes.filterIsInstance<Do>().firstOrNull()
+        val dostat = nodes.filterIsInstance<DoWhile>().firstOrNull()
         assertNotNull(dostat)
 
         conditionEOG = SubgraphWalker.getEOGPathEdges(dostat.condition)
@@ -554,7 +554,7 @@ internal class EOGTest : BaseTest() {
     @Throws(Exception::class)
     fun testSwitch(relPath: String, refNodeString: String) {
         val nodes = translateToNodes(relPath)
-        val functions = nodes.filterIsInstance<Function>().filter { it !is Constructor }
+        val functions = nodes.filterIsInstance<Func>().filter { it !is Constructor }
 
         // main()
         var swch = functions[0].allChildren<Switch>()[0]
@@ -772,7 +772,8 @@ internal class EOGTest : BaseTest() {
             }
 
         // Test If-Block
-        val firstIf = result.allChildren<If>().filter { l -> l.location?.region?.startLine == 6 }[0]
+        val firstIf =
+            result.allChildren<IfElse>().filter { l -> l.location?.region?.startLine == 6 }[0]
         val a =
             result.refs[
                     { l: Reference ->
@@ -794,8 +795,10 @@ internal class EOGTest : BaseTest() {
                 assertEquals(1, edge.index)
             }
         }
-        val elseIf: If =
-            result.allChildren<If>().filter { l: If -> l.location?.region?.startLine == 8 }[0]
+        val elseIf: IfElse =
+            result
+                .allChildren<IfElse>()
+                .filter { l: IfElse -> l.location?.region?.startLine == 8 }[0]
         assertEquals(elseIf, firstIf.elseStatement)
         val b2 = result.refs[{ it.location?.region?.startLine == 9 && it.name.localName == "b" }]
         assertNotNull(b2)
@@ -888,7 +891,7 @@ internal class EOGTest : BaseTest() {
                     endNodes = listOf(prints[1]),
                 )
         )
-        val dostat = nodes.filterIsInstance<Do>().firstOrNull()
+        val dostat = nodes.filterIsInstance<DoWhile>().firstOrNull()
         assertNotNull(dostat)
 
         conditionEOG = SubgraphWalker.getEOGPathEdges(dostat.condition)

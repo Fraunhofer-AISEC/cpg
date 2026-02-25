@@ -64,15 +64,15 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
         for (node in
             flatAST.sortedBy { n ->
                 when (n) {
-                    is If -> 1
+                    is IfElse -> 1
                     is Switch -> 2
                     is Try -> 4
                     else -> 3
                 }
             }) {
             when (node) {
-                is If -> {
-                    handleIfStatement(node, gotosToReplace)
+                is IfElse -> {
+                    handleIf(node, gotosToReplace)
                 }
                 is Switch -> {
                     handleSwitch(node, gotosToReplace)
@@ -124,16 +124,16 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Replace the then-statement and else-statement with the basic block it jumps to iff we found
      * that its goto statement is the only one jumping to the target
      */
-    private fun handleIfStatement(node: If, gotosToReplace: List<Goto>) {
+    private fun handleIf(node: IfElse, gotosToReplace: List<Goto>) {
 
         // Replace the then-statement
         val thenGoto = (node.thenStatement as? Goto)?.targetLabel?.subStatement
-        if (node.thenStatement in gotosToReplace && node !in thenGoto.allChildren<If>()) {
+        if (node.thenStatement in gotosToReplace && node !in thenGoto.allChildren<IfElse>()) {
             node.thenStatement = thenGoto
         }
         // Replace the else-statement
         val elseGoto = (node.elseStatement as? Goto)?.targetLabel?.subStatement
-        if (node.elseStatement in gotosToReplace && node !in elseGoto.allChildren<If>()) {
+        if (node.elseStatement in gotosToReplace && node !in elseGoto.allChildren<IfElse>()) {
             node.elseStatement = elseGoto
         }
     }

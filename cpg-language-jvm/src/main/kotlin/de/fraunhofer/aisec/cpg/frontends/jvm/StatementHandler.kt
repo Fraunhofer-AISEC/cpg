@@ -139,8 +139,8 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         return assign
     }
 
-    private fun handleIfStmt(ifStmt: JIfStmt): If {
-        val stmt = newIf(rawNode = ifStmt)
+    private fun handleIfStmt(ifStmt: JIfStmt): IfElse {
+        val stmt = newIfElse(rawNode = ifStmt)
         stmt.condition = frontend.expressionHandler.handle(ifStmt.condition)
         stmt.thenStatement = handleBranchingStmt(ifStmt)
 

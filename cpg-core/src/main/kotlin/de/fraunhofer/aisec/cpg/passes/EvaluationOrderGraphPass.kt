@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -71,7 +71,7 @@ import org.slf4j.LoggerFactory
  * constituted by its child nodes to represent branching. Nodes that manipulate the control flow of
  * a program have to be handled with more care, by adding and removing nodes from
  * [currentPredecessors] or even temporarily save and restore the valid eog exits of an ast subtree,
- * e.g. [If].
+ * e.g. [IfElse].
  *
  * The EOG is similar to a Control Flow Graph (CFG), but there are some subtle differences:
  * * For methods without explicit return statement, EOG will have an edge to a virtual return node
@@ -94,10 +94,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected var nextEdgeBranch: Boolean? = null
 
     /**
-     * This maps nodes that have to handle throws, i.e. [Try] and [Function], to the [Type]s of
-     * errors that were thrown and the EOG exits of the throwing statements. Entries to the outer
-     * map will only be created if the node was identified to handle or relay a throw. Entries to
-     * the inner throw will only be created when the mapping type was thrown.
+     * This maps nodes that have to handle throws, i.e. [Try] and [Func], to the [Type]s of errors
+     * that were thrown and the EOG exits of the throwing statements. Entries to the outer map will
+     * only be created if the node was identified to handle or relay a throw. Entries to the inner
+     * throw will only be created when the mapping type was thrown.
      */
     val nodesToInternalThrows = mutableMapOf<Node, MutableMap<Type, MutableList<Node>>>()
 
@@ -306,7 +306,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * See
      * [Specification for Function](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#functiondeclaration)
      */
-    protected open fun handleFunction(node: Function) {
+    protected open fun handleFunc(node: Func) {
         // reset EOG
         currentPredecessors.clear()
         // push the function declaration
@@ -364,7 +364,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is Namespace -> handleNamespace(node)
             is Record -> handleRecord(node)
             is Extension -> handleExtension(node)
-            is Function -> handleFunction(node)
+            is Func -> handleFunc(node)
             is Tuple -> handleTuple(node)
             is Variable -> handleVariable(node)
             is Construction -> handleConstruction(node)
@@ -379,10 +379,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is Assign -> handleAssign(node)
             is UnaryOperator -> handleUnaryOperator(node)
             is Block -> handleBlock(node)
-            is If -> handleIf(node)
+            is IfElse -> handleIfElse(node)
             is Assert -> handleAssert(node)
             is While -> handleWhile(node)
-            is Do -> handleDo(node)
+            is DoWhile -> handleDoWhile(node)
             is For -> handleFor(node)
             is ForEach -> handleForEach(node)
             is TypeExpression -> handleTypeExpression(node)
@@ -562,7 +562,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             } else if (declaration is Variable) {
                 // analyze the initializers if there is one
                 handleEOG(declaration)
-            } else if (declaration is Function) {
+            } else if (declaration is Func) {
                 // save the current EOG stack, because we can have a function declaration within an
                 // existing function and the EOG handler for handling function declarations will
                 // reset the
@@ -1060,7 +1060,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     /** See [Specification for Do](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#do) */
-    protected fun handleDo(node: Do) {
+    protected fun handleDoWhile(node: DoWhile) {
         handleEOG(node.statement)
         handleEOG(node.condition)
         // TODO(oxisto): Do we really want to set DFG edges here?
@@ -1179,7 +1179,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     /** See [Specification for If](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#if) */
-    protected fun handleIf(node: If) {
+    protected fun handleIfElse(node: IfElse) {
         val openBranchNodes = mutableListOf<Node>()
         handleEOG(node.initializerStatement)
         handleEOG(node.conditionDeclaration)
@@ -1210,9 +1210,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node) // To have semantic information after the condition evaluation
         val tmp = currentPredecessors.toMutableList()
         val compound =
-            if (node.statement is Do) {
+            if (node.statement is DoWhile) {
                 handleEOG(node.statement)
-                (node.statement as Do).statement as Block
+                (node.statement as DoWhile).statement as Block
             } else {
                 node.statement as Block
             }
@@ -1310,7 +1310,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             // Here, we identify the encapsulating ast node that can handle or relay a throw
             val handlingOrRelayingParent =
                 throwExpression.firstParentOrNull<Node> { parent ->
-                    parent is Try || parent is Function
+                    parent is Try || parent is Func
                 }
             if (handlingOrRelayingParent != null) {
                 val throwByTypeMap =
@@ -1416,7 +1416,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 is ForEach -> {
                     SubgraphWalker.getEOGPathEdges(this).entries
                 }
-                is Do -> {
+                is DoWhile -> {
                     SubgraphWalker.getEOGPathEdges(this.statement).entries
                 }
                 else -> {
@@ -1439,7 +1439,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 is While -> mutableListOf(this.condition, this.conditionDeclaration).filterNotNull()
                 is For -> mutableListOf(this.condition).filterNotNull()
                 is ForEach -> mutableListOf(this.variable).filterNotNull()
-                is Do -> mutableListOf(this.condition).filterNotNull()
+                is DoWhile -> mutableListOf(this.condition).filterNotNull()
                 is Assert -> mutableListOf(this.condition).filterNotNull()
                 else -> {
                     LOGGER.error(

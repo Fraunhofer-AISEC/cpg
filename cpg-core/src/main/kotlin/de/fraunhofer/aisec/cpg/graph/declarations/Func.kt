@@ -49,7 +49,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
-open class Function :
+open class Func :
     ValueDeclaration(),
     DeclarationHolder,
     EOGStarterHolder,
@@ -57,33 +57,32 @@ open class Function :
     HasSecondaryTypeEdge {
     @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>()
     /** The function body. Usually a [Block]. */
-    var body by unwrapping(Function::bodyEdge)
+    var body by unwrapping(Func::bodyEdge)
 
     /** The list of function parameters. */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
     var parameterEdges = astEdgesOf<Parameter>()
     /** Virtual property for accessing [parameterEdges] without property edges. */
-    var parameters by unwrapping(Function::parameterEdges)
+    var parameters by unwrapping(Func::parameterEdges)
 
     @Relationship(value = "THROWS_TYPES", direction = Relationship.Direction.OUTGOING)
     var throwsTypes = mutableListOf<Type>()
 
     @Relationship(value = "OVERRIDES", direction = Relationship.Direction.INCOMING)
-    val overriddenBy = mutableListOf<Function>()
+    val overriddenBy = mutableListOf<Func>()
 
     @Relationship(value = "OVERRIDES", direction = Relationship.Direction.OUTGOING)
-    val overrides = mutableListOf<Function>()
+    val overrides = mutableListOf<Func>()
 
     /**
      * The mirror property for [Call.invokeEdges]. This holds all incoming [Invokes] edges from
      * [Call] nodes to this function.
      */
     @Relationship(value = "INVOKES", direction = Relationship.Direction.INCOMING)
-    val calledByEdges: Invokes<Function> =
-        Invokes<Function>(this, Call::invokeEdges, outgoing = false)
+    val calledByEdges: Invokes<Func> = Invokes<Func>(this, Call::invokeEdges, outgoing = false)
 
     /** Virtual property for accessing [calledByEdges] without property edges. */
-    val calledBy: MutableList<Call> by unwrappingIncoming(Function::calledByEdges)
+    val calledBy: MutableList<Call> by unwrappingIncoming(Func::calledByEdges)
 
     /** The list of return types. The default is an empty list. */
     var returnTypes = listOf<Type>()
@@ -96,7 +95,7 @@ open class Function :
 
     /** If this is only a declaration, this provides a link to the definition of the function. */
     @Relationship(value = "DEFINES")
-    var definition: Function? = null
+    var definition: Func? = null
         get() {
             return if (isDefinition) this else field
         }
@@ -109,23 +108,23 @@ open class Function :
     val signature: String
         get() = buildSignature(this, returnTypes)
 
-    fun isOverrideCandidate(other: Function): Boolean {
+    fun isOverrideCandidate(other: Func): Boolean {
         return other.name.localName == name.localName &&
             other.type == type &&
             other.signature == signature
     }
 
-    fun addOverriddenBy(c: Collection<Function>) {
+    fun addOverriddenBy(c: Collection<Func>) {
         for (functionDeclaration in c) {
             addOverriddenBy(functionDeclaration)
         }
     }
 
-    fun addOverriddenBy(functionDeclaration: Function) {
+    fun addOverriddenBy(functionDeclaration: Func) {
         addIfNotContains(overriddenBy, functionDeclaration)
     }
 
-    fun addOverrides(functionDeclaration: Function) {
+    fun addOverrides(functionDeclaration: Func) {
         addIfNotContains(overrides, functionDeclaration)
     }
 
@@ -168,7 +167,7 @@ open class Function :
         if (this === other) {
             return true
         }
-        if (other !is Function) {
+        if (other !is Func) {
             return false
         }
         return (super.equals(other) &&
@@ -254,7 +253,7 @@ val Statement.cyclomaticComplexity: Int
                     // add one and include the children
                     i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
                 }
-                is If -> {
+                is IfElse -> {
                     // add one for each branch (and include the children)
                     stmt.thenStatement?.let { i += it.cyclomaticComplexity + 1 }
                     stmt.elseStatement?.let { i += it.cyclomaticComplexity + 1 }
@@ -267,7 +266,7 @@ val Statement.cyclomaticComplexity: Int
                     // add one for each branch (and include the children)
                     stmt.caseExpression?.let { i += it.cyclomaticComplexity }
                 }
-                is Do -> {
+                is DoWhile -> {
                     // add one for the do statement (and include the children)
                     i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
                 }

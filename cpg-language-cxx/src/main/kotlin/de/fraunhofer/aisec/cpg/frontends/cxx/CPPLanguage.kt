@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -204,7 +204,7 @@ open class CPPLanguage :
     context(_: ContextProvider)
     override fun bestViableResolution(
         result: CallResolutionResult
-    ): Pair<Set<Function>, CallResolutionResult.SuccessKind> {
+    ): Pair<Set<Func>, CallResolutionResult.SuccessKind> {
         // There is a sort of weird workaround in C++ to select a prefix vs. postfix operator for
         // increment and decrement operators. See
         // https://en.cppreference.com/w/cpp/language/operator_incdec. If it is a postfix, we need
@@ -244,7 +244,7 @@ open class CPPLanguage :
         ctx: TranslationContext,
         currentTU: TranslationUnit?,
         needsExactMatch: Boolean,
-    ): Pair<Boolean, List<Function>> {
+    ): Pair<Boolean, List<Func>> {
         val instantiationCandidates =
             ctx.scopeManager.lookupSymbolByNodeNameOfType<FunctionTemplate>(templateCall)
         for (functionTemplateDeclaration in instantiationCandidates) {

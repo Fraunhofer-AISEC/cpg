@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIE
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -102,7 +102,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * In case of a [Constructor] or[Method]: the first argument is the `receiver` (most often
      * called `self`).
      */
-    private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): Function {
+    private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): Func {
         val recordDeclaration =
             (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? Record
         val language = language
@@ -140,7 +140,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                     )
                 }
             } else {
-                newFunction(name = s.name, rawNode = s)
+                newFunc(name = s.name, rawNode = s)
             }
         frontend.scopeManager.enterScope(func)
 
@@ -187,7 +187,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     /** Adds the arguments to [func] which might be located in a [recordDeclaration]. */
     private fun handleArguments(
         args: Python.AST.arguments,
-        func: Function,
+        func: Func,
         recordDeclaration: Record?,
     ) {
         // We can merge posonlyargs and args because both are positional arguments. We do not
@@ -218,10 +218,10 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * This function creates a [newParameter] for the argument, setting any modifiers (like
      * positional-only or keyword-only) and [defaultValue] if applicable.
      *
-     * This also adds the [Parameter] to the [Function.parameters].
+     * This also adds the [Parameter] to the [Func.parameters].
      */
     internal fun handleArgument(
-        func: Function,
+        func: Func,
         node: Python.AST.arg,
         isPosOnly: Boolean = false,
         isVariadic: Boolean = false,
@@ -261,7 +261,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     private fun handleReceiverArgument(
         positionalArguments: List<Python.AST.arg>,
         args: Python.AST.arguments,
-        result: Function,
+        result: Func,
         recordDeclaration: Record,
     ) {
         // first argument is the receiver
@@ -321,7 +321,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * From the Python docs: "If there are fewer defaults, they correspond to the last n arguments."
      */
     private fun handlePositionalArguments(
-        func: Function,
+        func: Func,
         positionalArguments: List<Python.AST.arg>,
         args: Python.AST.arguments,
     ) {
@@ -351,7 +351,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * This method extracts the keyword-only arguments from [args] and maps them to the
      * corresponding function parameters.
      */
-    private fun handleKeywordOnlyArguments(func: Function, args: Python.AST.arguments) {
+    private fun handleKeywordOnlyArguments(func: Func, args: Python.AST.arguments) {
         for (idx in args.kwonlyargs.indices) {
             val arg = args.kwonlyargs[idx]
             val default = args.kw_defaults.getOrNull(idx)

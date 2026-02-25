@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 
 class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Declaration, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemDeclaration, lang) {
@@ -134,10 +134,10 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         return tu
     }
 
-    private fun handleFunction(node: TypeScriptNode): Function {
+    private fun handleFunction(node: TypeScriptNode): Func {
         val name = this.frontend.getIdentifierName(node)
 
-        val func: Function =
+        val func: Func =
             when (node.type) {
                 "MethodDeclaration" -> {
                     val record = this.frontend.scopeManager.currentRecord
@@ -149,7 +149,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
 
                     newConstructor(record?.name?.toString() ?: "", record, rawNode = node)
                 }
-                else -> newFunction(name, rawNode = node)
+                else -> newFunc(name, rawNode = node)
             }
 
         node.typeChildNode?.let { func.type = this.frontend.typeOf(it) }

@@ -39,7 +39,7 @@ class FunctionTemplate : Template() {
      * pass for each instantiation of the FunctionTemplate there will be a realization
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
-    val realizationEdges = astEdgesOf<Function>()
+    val realizationEdges = astEdgesOf<Func>()
     val realization by unwrapping(FunctionTemplate::realizationEdges)
 
     override val realizations: List<Declaration>
@@ -48,7 +48,7 @@ class FunctionTemplate : Template() {
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is TypeParameter || declaration is Parameter) {
             addIfNotContains(this.parameterEdges, declaration)
-        } else if (declaration is Function) {
+        } else if (declaration is Func) {
             addIfNotContains(realizationEdges, declaration)
         }
     }

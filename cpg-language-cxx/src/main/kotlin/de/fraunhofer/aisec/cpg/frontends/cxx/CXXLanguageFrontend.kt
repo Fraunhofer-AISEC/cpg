@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -767,9 +767,9 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
             // so far is the return value. We then add the parameters and give it a name.
             val name =
                 paramTypes.joinToString(
-                    Function.COMMA + Function.WHITESPACE,
-                    Function.BRACKET_LEFT,
-                    Function.BRACKET_RIGHT,
+                    Func.COMMA + Func.WHITESPACE,
+                    Func.BRACKET_LEFT,
+                    Func.BRACKET_RIGHT,
                 ) {
                     it.typeName
                 } + type.typeName

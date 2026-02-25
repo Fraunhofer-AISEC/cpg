@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult.SuccessKind.*
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -124,7 +124,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     private val eogPredicate: ((Declaration) -> Boolean)? =
         if (passConfig?.ignoreUnreachableDeclarations == true) {
             { declaration ->
-                if (declaration is Function) {
+                if (declaration is Func) {
                         declaration.astParent
                     } else {
                         declaration
@@ -138,7 +138,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     override fun accept(eogStarter: Node) {
         ctx.currentComponent = eogStarter.firstParentOrNull<Component>()
-        if (passConfig?.experimentalEOGWorklist == true && eogStarter is Function) {
+        if (passConfig?.experimentalEOGWorklist == true && eogStarter is Func) {
             acceptWithIterateEOG(eogStarter)
         } else {
             cacheTemplates(ctx.currentComponent)
@@ -241,7 +241,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val predicate: ((Declaration) -> Boolean)? =
             if (helperType is FunctionPointerType) {
                 { declaration ->
-                    if (declaration is Function) {
+                    if (declaration is Func) {
                         declaration.returnTypes == listOf(helperType.returnType) &&
                             declaration.matchesSignature(helperType.parameters) !=
                                 IncompatibleSignature
@@ -518,7 +518,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // Add overridden invokes
         candidates.addAll(
             candidates
-                .filterIsInstance<Function>()
+                .filterIsInstance<Func>()
                 .map { getOverridingCandidates(possibleContainingTypes, it) }
                 .flatten()
         )
@@ -670,10 +670,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
             return this != null && this::class.simpleName == "CPPLanguage"
         }
 
-    private fun getOverridingCandidates(
-        possibleSubTypes: Set<Type>,
-        declaration: Function,
-    ): Set<Function> {
+    private fun getOverridingCandidates(possibleSubTypes: Set<Type>, declaration: Func): Set<Func> {
         return declaration.overriddenBy
             .filter { f ->
                 if (f is Method) {
@@ -806,9 +803,9 @@ internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>,
 
 /**
  * This function tries to resolve a set of [candidates] (e.g. coming from a [Call.callee]) into the
- * best matching [Function] (or multiple functions, if applicable) based on the supplied
- * [arguments]. The result is returned in the form of a [CallResolutionResult] which holds detail
- * information about intermediate results as well as the kind of success the resolution had.
+ * best matching [Func] (or multiple functions, if applicable) based on the supplied [arguments].
+ * The result is returned in the form of a [CallResolutionResult] which holds detail information
+ * about intermediate results as well as the kind of success the resolution had.
  *
  * The [source] expression specifies the node in the graph that triggered this resolution. This is
  * most likely a [Call], but could be other node as well. It is also the source of the scope and
@@ -823,7 +820,7 @@ internal fun Pass<*>.resolveWithArguments(
         CallResolutionResult(
             source,
             arguments,
-            candidates.filterIsInstance<Function>().toSet(),
+            candidates.filterIsInstance<Func>().toSet(),
             setOf(),
             mapOf(),
             setOf(),

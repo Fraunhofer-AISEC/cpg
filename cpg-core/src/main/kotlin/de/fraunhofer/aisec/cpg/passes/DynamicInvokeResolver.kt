@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
@@ -142,7 +142,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
             }
 
-        val invocationCandidates = mutableListOf<Function>()
+        val invocationCandidates = mutableListOf<Func>()
         val work: Deque<Node> = ArrayDeque()
         val seen = identitySetOf<Node>()
         work.push(expr)
@@ -160,7 +160,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     curr
                 }
 
-            if (currentFunction is Function) {
+            if (currentFunction is Func) {
                 // Even if it is a function declaration, the dataflow might just come from a
                 // situation where the target of a fptr is passed through via a return value. Keep
                 // searching if return type or signature don't match

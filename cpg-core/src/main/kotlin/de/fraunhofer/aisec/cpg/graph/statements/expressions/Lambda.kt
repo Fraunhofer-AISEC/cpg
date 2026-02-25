@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -52,7 +52,7 @@ class Lambda : Expression(), HasType.TypeObserver {
 
     @Relationship("FUNCTION")
     var functionEdge =
-        astOptionalEdgeOf<Function>(onChanged = ::exchangeTypeObserverWithAccessPropagation)
+        astOptionalEdgeOf<Func>(onChanged = ::exchangeTypeObserverWithAccessPropagation)
     var function by unwrapping(Lambda::functionEdge)
 
     override fun typeChanged(newType: Type, src: HasType) {

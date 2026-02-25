@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.enhancements.templates
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.test.*
@@ -169,7 +169,7 @@ internal class FunctionTemplateTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
         val doubleFixedMultiply =
-            findByUniquePredicate(result.functions) { f: Function ->
+            findByUniquePredicate(result.functions) { f: Func ->
                 f.name.localName == "fixed_multiply" &&
                     f.returnTypes.firstOrNull()?.name?.localName == "double"
             }
@@ -207,7 +207,7 @@ internal class FunctionTemplateTest : BaseTest() {
                 t.name.localName == "fixed_multiply"
             }
         val fixedMultiply =
-            findByUniquePredicate(result.functions) { f: Function ->
+            findByUniquePredicate(result.functions) { f: Func ->
                 f.name.localName == "fixed_multiply" &&
                     f.returnTypes.firstOrNull()?.name?.localName == "T"
             }
@@ -250,7 +250,7 @@ internal class FunctionTemplateTest : BaseTest() {
                 t.name.localName == "fixed_multiply"
             }
         val fixedMultiply =
-            findByUniquePredicate(result.functions) { f: Function ->
+            findByUniquePredicate(result.functions) { f: Func ->
                 f.name.localName == "fixed_multiply" &&
                     f.returnTypes.firstOrNull()?.name?.localName == "T"
             }
@@ -344,7 +344,7 @@ internal class FunctionTemplateTest : BaseTest() {
                 t.name.localName == "fixed_multiply"
             }
         val fixedMultiply =
-            findByUniquePredicate(result.functions) { f: Function ->
+            findByUniquePredicate(result.functions) { f: Func ->
                 f.name.localName == "fixed_multiply" &&
                     f.returnTypes.firstOrNull()?.name?.localName == "T"
             }
@@ -387,7 +387,7 @@ internal class FunctionTemplateTest : BaseTest() {
                 t.name.localName == "fixed_multiply"
             }
         val fixedMultiply =
-            findByUniquePredicate(result.functions) { f: Function ->
+            findByUniquePredicate(result.functions) { f: Func ->
                 f.name.localName == "fixed_multiply" &&
                     f.returnTypes.firstOrNull()?.name?.localName == "T"
             }
@@ -443,7 +443,7 @@ internal class FunctionTemplateTest : BaseTest() {
                 t.name.localName == "f" && !t.isInferred
             }
         val f =
-            findByUniquePredicate(result.functions) { func: Function ->
+            findByUniquePredicate(result.functions) { func: Func ->
                 (func.name.localName == "f" &&
                     !templateDeclaration.realization.contains(func) &&
                     !func.isInferred)
@@ -543,7 +543,7 @@ internal class FunctionTemplateTest : BaseTest() {
                 t.code == "fixed_division<int,2>(10)"
             }
         var fixedDivision =
-            findByUniquePredicate(result.functions) { f: Function ->
+            findByUniquePredicate(result.functions) { f: Func ->
                 f.code == "fixed_division<int,2>(10)" && f.isInferred
             }
         assertEquals(1, templateDeclaration.realization.size)
@@ -566,7 +566,7 @@ internal class FunctionTemplateTest : BaseTest() {
                 t.code == "fixed_division<double,3>(10.0)"
             }
         fixedDivision =
-            findByUniquePredicate(result.functions) { f: Function ->
+            findByUniquePredicate(result.functions) { f: Func ->
                 f.code == "fixed_division<double,3>(10.0)" && f.isInferred
             }
         assertEquals(1, templateDeclaration.realization.size)

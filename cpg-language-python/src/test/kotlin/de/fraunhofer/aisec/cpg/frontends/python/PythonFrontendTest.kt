@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.*
@@ -196,10 +196,10 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(p)
 
         val foo = p.declarations.firstOrNull()
-        assertIs<Function>(foo)
+        assertIs<Func>(foo)
 
         val bar = p.declarations[1]
-        assertIs<Function>(bar)
+        assertIs<Func>(bar)
         assertEquals(2, bar.parameters.size)
 
         val fooBody = foo.body
@@ -310,7 +310,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals("True", firstAssignment.code)
 
         val `if` = body.statements[1]
-        assertIs<If>(`if`)
+        assertIs<IfElse>(`if`)
     }
 
     @Test
@@ -676,7 +676,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Block>(methCountBody)
 
         val countStmt = methCountBody.statements[0]
-        assertIs<If>(countStmt)
+        assertIs<IfElse>(countStmt)
 
         val ifCond = countStmt.condition
         assertIs<BinaryOperator>(ifCond)
@@ -927,7 +927,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Assign>(xDeclaration)
 
         val ifStatement = whlBody.statements[1]
-        assertIs<If>(ifStatement)
+        assertIs<IfElse>(ifStatement)
 
         val brk = ifStatement.elseStatement
         assertIs<Block>(brk)
@@ -1049,7 +1049,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(p)
 
         val ifStatement = p.statements[0]
-        assertIs<If>(ifStatement)
+        assertIs<IfElse>(ifStatement)
         val ifCond = ifStatement.condition
         assertIs<BinaryOperator>(ifCond)
         val ifThen = ifStatement.thenStatement
@@ -1107,7 +1107,7 @@ class PythonFrontendTest : BaseTest() {
 
         assertEquals(9, commentedNodes.size)
 
-        val functions = commentedNodes.filterIsInstance<Function>()
+        val functions = commentedNodes.filterIsInstance<Func>()
         assertEquals(1, functions.size)
         assertEquals("# a function", functions.firstOrNull()?.comment)
 

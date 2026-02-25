@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.refs
 import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.Empty
-import de.fraunhofer.aisec.cpg.graph.statements.If
+import de.fraunhofer.aisec.cpg.graph.statements.IfElse
 import de.fraunhofer.aisec.cpg.graph.statements.Try
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -151,7 +151,7 @@ class WithStatementTest : BaseTest() {
         assertEquals(1, catchBody.statements.size)
 
         val exitCallCatchIf = catchBody.statements.first()
-        assertIs<If>(exitCallCatchIf)
+        assertIs<IfElse>(exitCallCatchIf)
         val condition = exitCallCatchIf.condition
         assertIs<UnaryOperator>(condition)
         val exitCallCatch = condition.input
@@ -221,7 +221,7 @@ class WithStatementTest : BaseTest() {
         assertEquals(1, catchBody.statements.size)
 
         val exitCallCatchIf = catchBody.statements.first()
-        assertIs<If>(exitCallCatchIf)
+        assertIs<IfElse>(exitCallCatchIf)
         val condition = exitCallCatchIf.condition
         assertIs<UnaryOperator>(condition)
         val exitCallCatch = condition.input
@@ -310,7 +310,7 @@ class WithStatementTest : BaseTest() {
         assertEquals(1, catchBody.statements.size)
 
         val exitCallCatchIf = catchBody.statements.first()
-        assertIs<If>(exitCallCatchIf)
+        assertIs<IfElse>(exitCallCatchIf)
         val condition = exitCallCatchIf.condition
         assertIs<UnaryOperator>(condition)
         val exitCallCatch = condition.input
@@ -401,7 +401,7 @@ class WithStatementTest : BaseTest() {
         assertEquals(1, catchBodyA.statements.size)
 
         val exitCallCatchAIf = catchBodyA.statements.first()
-        assertIs<If>(exitCallCatchAIf)
+        assertIs<IfElse>(exitCallCatchAIf)
         val conditionA = exitCallCatchAIf.condition
         assertIs<UnaryOperator>(conditionA)
         val exitCallCatchA = conditionA.input
@@ -469,7 +469,7 @@ class WithStatementTest : BaseTest() {
         assertEquals(1, catchBodyB.statements.size)
 
         val exitCallCatchBIf = catchBodyB.statements.first()
-        assertIs<If>(exitCallCatchBIf)
+        assertIs<IfElse>(exitCallCatchBIf)
         val conditionB = exitCallCatchBIf.condition
         assertIs<UnaryOperator>(conditionB)
         val exitCallCatchB = conditionB.input
@@ -538,7 +538,7 @@ class WithStatementTest : BaseTest() {
         assertEquals(1, catchBodyC.statements.size)
 
         val exitCallCatchCIf = catchBodyC.statements.first()
-        assertIs<If>(exitCallCatchCIf)
+        assertIs<IfElse>(exitCallCatchCIf)
         val conditionC = exitCallCatchCIf.condition
         assertIs<UnaryOperator>(conditionC)
         val exitCallCatchC = conditionC.input

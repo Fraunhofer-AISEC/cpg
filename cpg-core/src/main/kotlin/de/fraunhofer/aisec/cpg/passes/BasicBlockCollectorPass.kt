@@ -29,12 +29,11 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import java.util.*
 
 /**
  * This pass collects [BasicBlock]s by iterating through the EOG of [EOGStarterHolder]s. A basic
@@ -62,7 +61,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      *
      * It returns the first basic block, which is the one starting at the [startNode].
      *
-     * @param startNode The node to start the collection from, usually a [Function].
+     * @param startNode The node to start the collection from, usually a [Func].
      * @param splitOnShortCircuitOperator If true, the basic blocks will be split on short-circuit
      *   operators (e.g., `&&` or `||`). If false, the short-circuit operators will not be
      *   considered, and the basic blocks will be collected as if they were not splitting up the

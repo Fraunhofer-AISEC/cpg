@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayConstruction
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -69,18 +69,17 @@ fun MetadataProvider.newTranslationUnit(name: CharSequence, rawNode: Any? = null
 }
 
 /**
- * Creates a new [Function]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [Func]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newFunction(
+fun MetadataProvider.newFunc(
     name: CharSequence?,
     localNameOnly: Boolean = false,
     rawNode: Any? = null,
-): Function {
-    val node = Function()
+): Func {
+    val node = Func()
     node.applyMetadata(this, name, rawNode, localNameOnly)
 
     log(node)

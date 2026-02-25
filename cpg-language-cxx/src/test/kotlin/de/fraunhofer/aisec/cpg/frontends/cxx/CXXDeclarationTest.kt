@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Func
 import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.OperatorCall
@@ -124,10 +124,10 @@ class CXXDeclarationTest {
         // should be eight function nodes
         assertEquals(8, tu.functions.size)
 
-        var method = tu.declarations<Function>(0)
+        var method = tu.declarations<Func>(0)
         assertEquals("function0(int)void", method!!.signature)
 
-        method = tu.declarations<Function>(1)
+        method = tu.declarations<Func>(1)
         assertEquals("function1(int, std::string, SomeType*, AnotherType&)int", method!!.signature)
 
         val args = method.parameters.map { it.name.localName }
@@ -143,7 +143,7 @@ class CXXDeclarationTest {
         // the declaration should be connected to the definition
         assertEquals(function0, function0DeclOnly.definition)
 
-        method = tu.declarations<Function>(2)
+        method = tu.declarations<Func>(2)
         assertEquals("function0(int)void", method!!.signature)
 
         var statements = (method.body as Block).statements
@@ -155,7 +155,7 @@ class CXXDeclarationTest {
         assertNotNull(statement)
         assertTrue(statement.isImplicit)
 
-        method = tu.declarations<Function>(3)
+        method = tu.declarations<Func>(3)
         assertEquals("function2()void*", method!!.signature)
 
         statements = (method.body as Block).statements
@@ -167,20 +167,20 @@ class CXXDeclarationTest {
         assertNotNull(statement)
         assertFalse(statement.isImplicit)
 
-        method = tu.declarations<Function>(4)
+        method = tu.declarations<Func>(4)
         assertNotNull(method)
         assertEquals("function3()UnknownType*", method.signature)
 
-        method = tu.declarations<Function>(5)
+        method = tu.declarations<Func>(5)
         assertNotNull(method)
         assertEquals("function4(int)void", method.signature)
 
-        method = tu.declarations<Function>(6)
+        method = tu.declarations<Func>(6)
         assertNotNull(method)
         assertEquals(0, method.parameters.size)
         assertEquals("function5()void", method.signature)
 
-        method = tu.declarations<Function>(7)
+        method = tu.declarations<Func>(7)
         assertNotNull(method)
         assertEquals(1, method.parameters.size)
 
