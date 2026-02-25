@@ -139,11 +139,14 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
             when {
                 // Check, whether we are referring to a "self.X", which would create a field
                 scopeManager.isInRecord && scopeManager.isInFunction && ref.refersToReceiver -> {
+                    val recordScope = scopeManager.firstScopeIsInstanceOrNull<RecordScope>()
+                    // If the field already exists in the record scope, do not create a duplicate
+                    if (recordScope?.symbols?.containsKey(ref.name.localName) == true) {
+                        return null
+                    }
                     // We need to temporarily jump into the scope of the current record to
                     // add the field. These are instance attributes
-                    scopeManager.withScope(scopeManager.firstScopeIsInstanceOrNull<RecordScope>()) {
-                        newFieldDeclaration(ref.name)
-                    }
+                    scopeManager.withScope(recordScope) { newFieldDeclaration(ref.name) }
                 }
                 scopeManager.isInRecord && scopeManager.isInFunction && ref is MemberExpression -> {
                     // If this is any other member expression, we are usually not interested in
