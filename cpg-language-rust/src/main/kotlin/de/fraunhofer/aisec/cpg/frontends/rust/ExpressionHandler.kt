@@ -239,12 +239,13 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         )
     }
 
-        fun handleRecordExpr(recordExpr: RsRecordExpr): Expression {
-            val raw = RsAst.RustExpr(RsExpr.RecordExpr(recordExpr))
+    fun handleRecordExpr(recordExpr: RsRecordExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.RecordExpr(recordExpr))
 
-            return newProblemExpression(
-                problem = "RecordExpression needs more complex initialization, which is not supported yet",
-                rawNode = raw,
-            )
-        }
+        return newProblemExpression(
+            problem =
+                "RecordExpression needs more complex initialization, which is not supported yet",
+            rawNode = raw,
+        )
+    }
 }

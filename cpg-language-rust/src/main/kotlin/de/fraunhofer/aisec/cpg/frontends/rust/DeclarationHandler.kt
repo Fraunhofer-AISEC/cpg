@@ -280,7 +280,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val type = const.ty?.let { frontend.typeOf(it) }
 
         return newVariableDeclaration(name, type ?: unknownType(), rawNode = raw).apply {
-            const.expr.first().let {
+            const.expr.firstOrNull()?.let {
                 this.initializer = frontend.expressionHandler.handle(RsAst.RustExpr(it))
             }
         }
