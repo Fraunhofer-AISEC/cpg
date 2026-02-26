@@ -52,7 +52,7 @@ interface Csharp : Library {
                 val arch =
                     System.getProperty("os.arch")
                         .replace("aarch64", "arm64")
-                        .replace("amd64", "amd64")
+                        .replace("amd64", "x64")
                 val rid = "$os-$arch"
                 val ext = if (osName.startsWith("Mac")) ".dylib" else ".so"
 
