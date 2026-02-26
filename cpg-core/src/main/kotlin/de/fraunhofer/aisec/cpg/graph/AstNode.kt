@@ -29,8 +29,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Statement
+import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import org.neo4j.ogm.annotation.Relationship
 

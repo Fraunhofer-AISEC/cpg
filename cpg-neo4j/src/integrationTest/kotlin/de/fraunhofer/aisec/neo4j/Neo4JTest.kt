@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Literal
 import de.fraunhofer.aisec.cpg.persistence.pushToNeo4j
 import de.fraunhofer.aisec.cpg_vis_neo4j.Application
 import java.math.BigInteger

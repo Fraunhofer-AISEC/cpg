@@ -28,11 +28,11 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.statements.Return
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Construction
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Reference
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 

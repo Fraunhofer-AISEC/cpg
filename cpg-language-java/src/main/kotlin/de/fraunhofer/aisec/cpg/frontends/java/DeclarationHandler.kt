@@ -47,7 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayConstruction
+import de.fraunhofer.aisec.cpg.graph.expressions.expressions.ArrayConstruction
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -238,7 +238,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 variable.initializer
                     .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
                     .orElse(null)
-                    as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    as? de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
             var type: Type
             try {
                 // Resolve type first with ParameterizedType
@@ -403,7 +403,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             val arguments =
                 enumConstDecl.arguments.mapNotNull {
                     frontend.expressionHandler.handle(it)
-                        as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                        as? de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
                 }
             // TODO: This call resolution in the frontend might fail, in particular if we haven't
             // processed the constructor yet. Should be cleaned up in the future but requires
@@ -450,7 +450,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         if (oInitializer.isPresent) {
             val initializer =
                 frontend.expressionHandler.handle(oInitializer.get())
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                    as de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression?
             if (initializer is ArrayConstruction) {
                 declaration.isArray = true
             }

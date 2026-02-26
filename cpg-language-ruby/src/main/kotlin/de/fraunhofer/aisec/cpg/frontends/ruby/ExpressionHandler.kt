@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
 import org.jruby.ast.*
 import org.jruby.ast.Node
 import org.jruby.ast.types.INameNode

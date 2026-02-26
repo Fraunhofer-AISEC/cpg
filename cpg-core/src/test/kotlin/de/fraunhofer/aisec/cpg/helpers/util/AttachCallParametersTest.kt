@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.newFunction
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newParameter
 import de.fraunhofer.aisec.cpg.graph.primitiveType
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.Util.attachCallParameters
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
