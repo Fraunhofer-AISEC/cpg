@@ -38,6 +38,9 @@ import org.neo4j.ogm.annotation.Relationship
  * compound statement.
  */
 class Case : Statement() {
+
+    override var usedAsExpression = false
+
     @Relationship(value = "CASE_EXPRESSION")
     var caseExpressionEdge = astOptionalEdgeOf<Expression>()
 

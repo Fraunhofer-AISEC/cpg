@@ -35,6 +35,9 @@ import org.neo4j.ogm.annotation.Relationship
 
 /** A [Statement] which represents a try/catch block, primarily used for exception handling. */
 class Try : Statement() {
+
+    override var usedAsExpression = false
+
     /**
      * This represents some kind of resource which is typically opened (or similar) while entering
      * the [tryBlock]. If this operation fails, we may continue with the [finallyBlock]. However,

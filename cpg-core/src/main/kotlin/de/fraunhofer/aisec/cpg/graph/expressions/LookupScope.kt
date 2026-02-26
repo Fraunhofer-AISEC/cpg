@@ -44,6 +44,8 @@ import java.util.Objects
  */
 class LookupScope : Statement() {
 
+    override var usedAsExpression = false
+
     /** The symbols this statement affects. */
     var symbols: List<Symbol> = listOf()
 

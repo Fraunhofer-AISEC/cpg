@@ -41,6 +41,9 @@ import org.neo4j.ogm.annotation.Relationship
  * [DeclarationStatement].
  */
 open class DeclarationStatement : Statement() {
+
+    override var usedAsExpression = false
+
     /**
      * The list of declarations declared or defined by this statement. It is always a list, even if
      * it only contains a single [Declaration].

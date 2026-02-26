@@ -34,6 +34,9 @@ import java.util.Objects
  * broken out of.
  */
 class Break : Statement() {
+
+    override var usedAsExpression = false
+
     /** Specifies the label of the loop in a nested structure that this statement will 'break' */
     var label: String? = null
 

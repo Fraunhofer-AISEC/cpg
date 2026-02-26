@@ -58,6 +58,14 @@ abstract class Statement : AstNode(), DeclarationHolder {
     /** Virtual property to access [localEdges] without property edges. */
     var locals by unwrapping(Statement::localEdges)
 
+    /**
+     * This property specifies that this node is used as an expression. Depending on the language, an expression can
+     * be terminated by a ";" or a newline to be a statement. Meanwhile, some languages allow using what normally is
+     * considered a statement, as an expression with a normal or an empty value and type. Depending on the node, type
+     * the default will be true or false.
+     */
+    open var usedAsExpression = true
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Statement) return false

@@ -42,6 +42,8 @@ import org.neo4j.ogm.annotation.Relationship
  */
 abstract class Loop : Statement() {
 
+    override var usedAsExpression = false
+
     @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
     /** This field contains the body of the loop, e.g. a [Block] or single [Statement]. */
     var statement by unwrapping(Loop::statementEdge)

@@ -39,6 +39,9 @@ import org.neo4j.ogm.annotation.Relationship
  * handled properly.
  */
 class Switch : Statement(), BranchingNode {
+
+    override var usedAsExpression = false
+
     @Relationship(value = "SELECTOR") var selectorEdge = astOptionalEdgeOf<Expression>()
     /** Selector that determines the case/default statement of the subsequent execution */
     var selector by unwrapping(Switch::selectorEdge)

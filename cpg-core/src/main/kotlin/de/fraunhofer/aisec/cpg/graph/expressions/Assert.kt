@@ -33,6 +33,9 @@ import org.neo4j.ogm.annotation.Relationship
 
 /** Represents an assert statement */
 class Assert : Statement() {
+
+    override var usedAsExpression = false
+
     @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /** The condition to be evaluated. */
     var condition by unwrapping(Assert::conditionEdge)

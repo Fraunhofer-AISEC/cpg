@@ -32,6 +32,9 @@ import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
 class Synchronized : Statement() {
+
+    override var usedAsExpression = false
+
     @Relationship(value = "EXPRESSION") var expressionEdge = astOptionalEdgeOf<Expression>()
     var expression by unwrapping(Synchronized::expressionEdge)
 

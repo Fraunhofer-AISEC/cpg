@@ -46,6 +46,8 @@ import org.neo4j.ogm.annotation.Relationship
 open class BinaryOperator :
     Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
 
+    override var usedAsExpression = false
+
     /** The left-hand expression. */
     @Relationship("LHS")
     var lhsEdge =

@@ -34,6 +34,9 @@ import java.util.Objects
  * condition should be reevaluated.
  */
 class Continue : Statement() {
+
+    override var usedAsExpression = false
+
     /** Specifies the loop in a nested structure that the label will 'continue' */
     var label: String? = null
 

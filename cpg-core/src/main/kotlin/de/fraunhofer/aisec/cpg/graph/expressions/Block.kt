@@ -40,6 +40,9 @@ import org.neo4j.ogm.annotation.Relationship
  * [Function].
  */
 open class Block : Expression(), StatementHolder {
+
+    override var usedAsExpression = false
+
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
     override var statementEdges = astEdgesOf<Statement>()

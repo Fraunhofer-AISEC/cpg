@@ -30,6 +30,9 @@ import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 class Goto : Statement() {
+
+    override var usedAsExpression = false
+
     var labelName: String = ""
     var targetLabel: Label? = null
 

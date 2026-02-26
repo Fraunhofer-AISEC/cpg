@@ -37,6 +37,9 @@ import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
 class CatchClause : Statement(), BranchingNode, EOGStarterHolder {
+
+    override var usedAsExpression = false
+
     @Relationship(value = "PARAMETER") var parameterEdge = astOptionalEdgeOf<Variable>()
 
     var parameter by unwrapping(CatchClause::parameterEdge)
