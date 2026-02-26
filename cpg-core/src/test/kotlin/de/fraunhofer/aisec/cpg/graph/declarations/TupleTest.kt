@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.objectType
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.test.*
@@ -63,7 +63,7 @@ class TupleTest {
                         val tuple =
                             newTuple(
                                 listOf(newVariable("a"), newVariable("b")),
-                                newCallExpression(newReference("func")),
+                                newCall(newReference("func")),
                             )
                         scopeManager.addDeclaration(tuple)
                         declare { this.singleDeclaration = tuple }
@@ -84,7 +84,7 @@ class TupleTest {
             assertIs<Tuple>(tuple)
             assertIs<TupleType>(tuple.type)
 
-            val call = tuple.initializer as? CallExpression
+            val call = tuple.initializer as? Call
             assertNotNull(call)
             assertInvokes(call, result.functions["func"])
 
@@ -117,7 +117,7 @@ class TupleTest {
 
             val callPrint = main.calls["print"]
             assertNotNull(callPrint)
-            assertIs<CallExpression>(callPrint)
+            assertIs<Call>(callPrint)
 
             val arg = callPrint.arguments<Reference>(0)
             assertNotNull(arg)
@@ -149,7 +149,7 @@ class TupleTest {
                                     val tuple =
                                         newTuple(
                                             listOf(newVariable("a"), newVariable("b")),
-                                            newCallExpression(newReference("func")),
+                                            newCall(newReference("func")),
                                         )
                                     scopeManager.addDeclaration(tuple)
                                     declarations += tuple
@@ -172,7 +172,7 @@ class TupleTest {
             assertIs<TupleType>(tuple.type)
 
             val call = tuple.initializer
-            assertIs<CallExpression>(call)
+            assertIs<Call>(call)
             assertInvokes(call, result.functions["func"])
             assertEquals(setOf<Node>(call), tuple.prevDFG)
 
@@ -200,7 +200,7 @@ class TupleTest {
 
             val callPrint = main.calls["print"]
             assertNotNull(callPrint)
-            assertIs<CallExpression>(callPrint)
+            assertIs<Call>(callPrint)
 
             val arg = callPrint.arguments<Reference>(0)
             assertNotNull(arg)

@@ -167,7 +167,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 firstCatch.body?.statements = firstStatement.statements
             }
         }
-        node.catchClauses.forEach(::fixThrowExpressionsForCatch)
+        node.catchClauses.forEach(::fixThrowsForCatch)
     }
 
     /**
@@ -175,9 +175,9 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Those expressions have been artificially added e.g. by a catchswitch and need to be filled
      * now.
      */
-    private fun fixThrowExpressionsForCatch(catch: CatchClause) {
+    private fun fixThrowsForCatch(catch: CatchClause) {
         val reachableThrowNodes =
-            getAllChildrenRecursively(catch).filterIsInstance<ThrowExpression>().filter { n ->
+            getAllChildrenRecursively(catch).filterIsInstance<Throw>().filter { n ->
                 n.exception is ProblemExpression
             }
         if (reachableThrowNodes.isNotEmpty()) {

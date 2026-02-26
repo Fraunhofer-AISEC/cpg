@@ -28,9 +28,13 @@ package de.fraunhofer.aisec.cpg.passes.concepts.logging.python
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.*
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogGet
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogLevel
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogWrite
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Logging
 import de.fraunhofer.aisec.cpg.graph.declarations.Import
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
@@ -44,8 +48,8 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /**
- * This pass collects Python's `import logging` logs and maps them to the corresponding CPG
- * [IsLogging] concept nodes.
+ * This pass collects Python's `import logging` logs and maps them to the corresponding CPG concept
+ * nodes.
  */
 @ExecuteLate
 @DependsOn(SymbolResolver::class)
@@ -57,9 +61,9 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     lateinit var walker: SubgraphWalker.ScopedWalker<Node>
 
     /**
-     * A storage connecting CPG nodes with [de.fraunhofer.aisec.cpg.graph.concepts.logging.Log]s.
-     * This is used to connect logging calls to the matching
-     * [de.fraunhofer.aisec.cpg.graph.concepts.logging.Log].
+     * A storage connecting CPG nodes with
+     * [de.fraunhofer.aisec.cpg.graph.concepts.ontology.Logging]s. This is used to connect logging
+     * calls to the matching [de.fraunhofer.aisec.cpg.graph.concepts.ontology.Logging].
      *
      * The key corresponds to the loggers name. The following all map to an empty string (matching
      * Pythons behavior):
@@ -71,7 +75,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Individual loggers can be obtained by providing an identifier:
      * - `logging.getLogger("foo")` -
      */
-    private val loggers = mutableMapOf<String, Log>()
+    private val loggers = mutableMapOf<String, Logging>()
 
     private val defaultLoggerName = ""
 
@@ -101,13 +105,13 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * This pass is interested in [Import]s and
-     * [de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression]s as these are the
-     * relevant parts of the Python code for logging.
+     * [de.fraunhofer.aisec.cpg.graph.statements.expressions.Call]s as these are the relevant parts
+     * of the Python code for logging.
      */
     private fun handleNode(node: Node) {
         when (node) {
             is Import -> handleImport(node)
-            is CallExpression -> handleCall(node)
+            is Call -> handleCall(node)
         }
     }
 
@@ -119,15 +123,16 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * import logging as foo
      * ```
      *
-     * will be translated to [Log]s.
+     * will be translated to [Logging]s.
      */
     private fun handleImport(importDeclaration: Import) {
         if (importDeclaration.import.toString() == "logging") {
-            // Add the GetLog operation to the existing Log concept or generate a new one if there
+            // Add the GetLog operation to the existing Logging concept or generate a new one if
+            // there
             // is nothing available yet.
             val logger =
                 loggers.computeIfAbsent(defaultLoggerName) {
-                    newLog(
+                    newLogging(
                         underlyingNode = importDeclaration,
                         name = defaultLoggerName,
                         connect = true,
@@ -139,21 +144,22 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * Translates a call like `logging.error(...)` to the corresponding concept nodes.
-     * - `logging.getLogger` creates a new [Log]
+     * - `logging.getLogger` creates a new [Logging]
      * - `logging.critical(...)` (and similar for `error` / `warn` / ...) is translated to a
-     *   [de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWrite]
+     *   [de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogWrite]
      *
-     * @param callExpression The
-     *   [de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression] to handle
+     * @param callExpression The [de.fraunhofer.aisec.cpg.graph.statements.expressions.Call] to
+     *   handle
      * @return n/a (The new node is created and added to the graph)
      */
-    private fun handleCall(callExpression: CallExpression) {
+    private fun handleCall(callExpression: Call) {
         val callee = callExpression.callee
 
         if (callee.name.toString() == "logging.getLogger") {
-            val loggerName = callExpression.arguments.firstOrNull()?.evaluate().toString()
             val normalizedLoggerName =
-                when (loggerName) {
+                when (
+                    val loggerName = callExpression.arguments.firstOrNull()?.evaluate().toString()
+                ) {
                     "",
                     "null" // Pythons `None` is translated to a Kotlin `null`
                     -> defaultLoggerName
@@ -161,7 +167,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
             val logger =
                 loggers.computeIfAbsent(normalizedLoggerName) {
-                    newLog(
+                    newLogging(
                         underlyingNode = callExpression,
                         name = normalizedLoggerName,
                         connect = true,
@@ -181,14 +187,14 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Finds the corresponding logger for the given [callExpression].
      *
      * This function works by walking the DFG backwards on the [callExpression]s base to find a
-     * [Log].
+     * [Logging].
      *
      * @param callExpression The call to handle.
-     * @return The [Log] if found.
+     * @return The [Logging] if found.
      */
-    private fun findLogger(callExpression: CallExpression): Log? {
+    private fun findLogger(callExpression: Call): Logging? {
         val callee = callExpression.callee
-        if (callee is MemberExpression) {
+        if (callee is MemberAccess) {
             // might be a call like `logger.error`
             val base = callee.base
             val fulfilledPaths: List<NodePath> =
@@ -210,9 +216,9 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     // the [LogGet] node
                     .flatMap { it.overlays } // move to the "overlays" world
                     .filterIsInstance<LogGet>() // discard not-relevant overlays
-                    .map {
-                        it.concept
-                    } // move from [LogGet] to the corresponding [Log] concept node
+                    .mapNotNull {
+                        it.concept as? Logging
+                    } // move from [LogGet] to the corresponding [Logging] concept node
             if (loggers.size > 1) {
                 log.error("Found multiple loggers. Selecting one at random.")
             }
@@ -227,11 +233,11 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      *
      * A warning is logged if the call cannot be handled (i.e. not implemented).
      *
-     * @param callExpression The underlying [CallExpression] to handle.
+     * @param callExpression The underlying [Call] to handle.
      * @param logger The [Log] this call expression operates on.
      * @return n/a (The new node is created and added to the graph)
      */
-    private fun logOpHelper(callExpression: CallExpression, logger: Log) {
+    private fun logOpHelper(callExpression: Call, logger: Logging) {
         val callee = callExpression.callee
         when (callee.name.localName) {
             "fatal",
@@ -259,8 +265,8 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * Maps a string "critical" / ... to the corresponding
-     * [de.fraunhofer.aisec.cpg.graph.concepts.logging.LogLevel].
-     * [de.fraunhofer.aisec.cpg.graph.concepts.logging.LogLevel.UNKNOWN] is used when the
+     * [de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogLevel].
+     * [de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogLevel.UNKNOWN] is used when the
      * translation fails and a warning is logged.
      *
      * @param loglevel The string to parse.

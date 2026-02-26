@@ -47,7 +47,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * type information.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
-@ExecuteBefore(ResolveCallExpressionAmbiguityPass::class)
+@ExecuteBefore(ResolveCallAmbiguityPass::class)
 @DependsOn(TypeResolver::class)
 @Description(
     "This Pass executes certain C++ specific conversions on initializers, that are only possible once we know all the types."
@@ -75,10 +75,9 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * In the frontend, we keep parenthesis around some expressions, so we can decide whether they
-     * are [CastExpression] nodes or just simply brackets with no syntactic value. The
-     * [CastExpression] conversion is done in [convertOperators], but in this function we are trying
-     * to get rid of those ()-unary operators that are meaningless, in order to reduce clutter to
-     * the graph.
+     * are [Cast] nodes or just simply brackets with no syntactic value. The [Cast] conversion is
+     * done in [convertOperators], but in this function we are trying to get rid of those ()-unary
+     * operators that are meaningless, in order to reduce clutter to the graph.
      */
     private fun removeBracketOperators(node: UnaryOperator) {
         val input = node.input
@@ -98,10 +97,9 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * operator where some arguments are wrapped in parentheses. This function tries to resolve
      * this.
      *
-     * Note: This is done especially for the C++ frontend.
-     * [ResolveCallExpressionAmbiguityPass.handleCall] handles the more general case (which also
-     * applies to C++), in which a cast and a call are indistinguishable and need to be resolved
-     * once all types are known.
+     * Note: This is done especially for the C++ frontend. [ResolveCallAmbiguityPass.handleCall]
+     * handles the more general case (which also applies to C++), in which a cast and a call are
+     * indistinguishable and need to be resolved once all types are known.
      */
     private fun convertOperators(binOp: BinaryOperator) {
         val fakeUnaryOp = binOp.lhs
@@ -122,7 +120,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // We need to perform the following steps:
             // * create a cast expression out of the ()-unary operator, with the type that is
             //   referred to in the op.
-            val cast = newCastExpression().codeAndLocationFrom(fakeUnaryOp)
+            val cast = newCast().codeAndLocationFrom(fakeUnaryOp)
             cast.language = language
             cast.castType = type
 
@@ -164,7 +162,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
                     val initializer =
-                        newConstructExpression(typeString)
+                        newConstruction(typeString)
                             .codeAndLocationFrom(node)
                             .implicit(code = "$typeString()")
                     initializer.language = node.language
@@ -175,8 +173,8 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         initializer,
                     )
                 } else if (
-                    currInitializer !is ConstructExpression &&
-                        currInitializer is CallExpression &&
+                    currInitializer !is Construction &&
+                        currInitializer is Call &&
                         currInitializer.name.localName == node.type.root.name.localName
                 ) {
                     // This should actually be a construct expression, not a call!
@@ -184,8 +182,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     // Note: Cannot simplify call chain due to nullable `Node::code`
                     val signature = arguments.map(Node::code).joinToString(", ")
                     val initializer =
-                        newConstructExpression(typeString)
-                            .implicit(code = "$typeString($signature)")
+                        newConstruction(typeString).implicit(code = "$typeString($signature)")
                     initializer.language = node.language
                     initializer.type = node.type
                     initializer.arguments = mutableListOf(*arguments.toTypedArray())

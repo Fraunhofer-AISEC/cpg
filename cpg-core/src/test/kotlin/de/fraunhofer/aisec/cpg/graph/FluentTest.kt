@@ -146,12 +146,12 @@ class FluentTest {
         assertNotNull(lit1)
         assertEquals(1, lit1.value)
 
-        // Fourth line is the CallExpression (containing another MemberCallExpression as argument)
-        val call = main[3] as? CallExpression
+        // Fourth line is the Call (containing another MemberCall as argument)
+        val call = main[3] as? Call
         assertNotNull(call)
         assertLocalName("do", call)
 
-        val mce = call.arguments[0] as? MemberCallExpression
+        val mce = call.arguments[0] as? MemberCall
         assertNotNull(mce)
         assertFullName("UNKNOWN.func", mce)
 
@@ -235,7 +235,7 @@ class FluentTest {
         assertLocalName("i", listComp.statement)
         assertEquals(1, listComp.comprehensionExpressions.size)
         val compExpr = listComp.comprehensionExpressions.single()
-        assertIs<ComprehensionExpression>(compExpr)
+        assertIs<Comprehension>(compExpr)
         assertIs<Reference>(compExpr.variable)
         assertLocalName("i", compExpr.variable)
         assertIs<Reference>(compExpr.iterable)
@@ -288,7 +288,7 @@ class FluentTest {
         assertLocalName("i", listComp.statement)
         assertEquals(1, listComp.comprehensionExpressions.size)
         val compExpr = listComp.comprehensionExpressions.single()
-        assertIs<ComprehensionExpression>(compExpr)
+        assertIs<Comprehension>(compExpr)
         val variableDecl = compExpr.variable
         assertIs<DeclarationStatement>(variableDecl)
         assertLocalName("i", variableDecl.singleDeclaration)
@@ -345,7 +345,7 @@ class FluentTest {
         assertLocalName("i", listComp.statement)
         assertEquals(1, listComp.comprehensionExpressions.size)
         val compExpr = listComp.comprehensionExpressions.single()
-        assertIs<ComprehensionExpression>(compExpr)
+        assertIs<Comprehension>(compExpr)
         val variableDecl = compExpr.variable
         assertIs<DeclarationStatement>(variableDecl)
         assertLocalName("i", variableDecl.declarations[0])

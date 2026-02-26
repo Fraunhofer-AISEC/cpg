@@ -244,7 +244,7 @@ fun assertNotRefersTo(expression: Expression?, b: Declaration?, message: String?
  * Asserts, that the call expression given in [call] refers to the expected function declaration
  * [func].
  */
-fun assertInvokes(call: CallExpression?, func: Function?, message: String? = null) {
+fun assertInvokes(call: Call?, func: Function?, message: String? = null) {
     assertNotNull(call)
     assertContains(call.invokes, func, message)
 }
@@ -272,9 +272,9 @@ fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
 
 /**
  * Asserts that `usingNode` uses/references the provided `usedBase` and `usedMember`. If
- * [ENFORCE_MEMBER_EXPRESSION] is true, `usingNode` must be a [MemberExpression] where
- * [MemberExpression.base] uses `usedBase` and [ ][MemberExpression.refersTo] uses `usedMember`.
- * Using is checked as preformed per [assertUsageOf]
+ * [ENFORCE_MEMBER_EXPRESSION] is true, `usingNode` must be a [MemberAccess] where
+ * [MemberAccess.base] uses `usedBase` and [ ][MemberAccess.refersTo] uses `usedMember`. Using is
+ * checked as preformed per [assertUsageOf]
  *
  * @param usingNode
  * - Node that uses some member
@@ -287,13 +287,13 @@ fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
  */
 fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: Declaration?) {
     assertNotNull(usingNode)
-    if (usingNode !is MemberExpression && !ENFORCE_MEMBER_EXPRESSION) {
+    if (usingNode !is MemberAccess && !ENFORCE_MEMBER_EXPRESSION) {
         // Assumption here is that the target of the member portion of the expression and not the
         // base is resolved
         assertUsageOf(usingNode, usedMember)
     } else {
-        assertTrue(usingNode is MemberExpression)
-        val memberExpressionExpression = usingNode as MemberExpression?
+        assertTrue(usingNode is MemberAccess)
+        val memberExpressionExpression = usingNode as MemberAccess?
         assertNotNull(memberExpressionExpression)
 
         val base = memberExpressionExpression.base
