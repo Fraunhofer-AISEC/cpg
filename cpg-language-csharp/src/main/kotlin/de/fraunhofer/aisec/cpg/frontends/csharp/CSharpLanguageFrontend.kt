@@ -50,16 +50,17 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
         internal val nativeLib: CSharpNativeParser by lazy {
             val os = System.getProperty("os.name").lowercase()
             val arch = System.getProperty("os.arch").lowercase()
-            val rid =
+            val runtimeIdentifier =
                 when {
                     os.contains("mac") && arch.contains("aarch64") -> "osx-arm64"
                     os.contains("linux") && arch.contains("aarch64") -> "linux-arm64"
+                    os.contains("linux") && arch.contains("amd64") -> "linux-x64"
                     else -> throw TranslationException("Unsupported OS/arch: $os / $arch")
                 }
             val ext = if (os.contains("mac")) "dylib" else "so"
             val libFile =
                 File(
-                    "cpg-language-csharp/src/main/csharp/NativeParser/bin/Release/net8.0/$rid/publish/NativeParser.$ext"
+                    "cpg-language-csharp/src/main/csharp/NativeParser/bin/Release/net8.0/$runtimeIdentifier/publish/NativeParser.$ext"
                 )
             if (!libFile.exists()) {
                 throw TranslationException("No library found: ${libFile.absolutePath}")
