@@ -28,8 +28,10 @@ package de.fraunhofer.aisec.cpg.enhancements.calls
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.New
 import de.fraunhofer.aisec.cpg.graph.literals
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path

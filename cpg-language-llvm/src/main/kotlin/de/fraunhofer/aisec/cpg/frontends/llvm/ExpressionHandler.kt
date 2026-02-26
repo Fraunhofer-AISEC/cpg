@@ -29,7 +29,11 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -41,7 +45,7 @@ import org.bytedeco.llvm.global.LLVM.*
 
 /**
  * This handler primarily handles operands, as returned by [LLVMGetOperand] and turns them into an
- * [Expression]. Operands are basically arguments to an instruction.
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Expression]. Operands are basically arguments to an instruction.
  */
 class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     Handler<Expression, LLVMValueRef, LLVMIRLanguageFrontend>(::ProblemExpression, lang) {
@@ -116,7 +120,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         }
     }
 
-    /** Returns a [Reference] for a function (pointer). */
+    /** Returns a [de.fraunhofer.aisec.cpg.graph.expressions.Reference] for a function (pointer). */
     private fun handleFunction(valueRef: LLVMValueRef): Expression {
         return newReference(valueRef.name, frontend.typeOf(valueRef), rawNode = valueRef)
     }
@@ -236,7 +240,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Handles a constant struct value, which belongs to the
      * [complex constants](https://llvm.org/docs/LangRef.html#complex-constants). Its type needs to
      * be a structure type (either identified or literal) and we currently map this to a
-     * [Construction], with the individual struct members being added as arguments.
+     * [de.fraunhofer.aisec.cpg.graph.expressions.Construction], with the individual struct members being added as arguments.
      */
     private fun handleConstantStructValue(value: LLVMValueRef): Expression {
         // retrieve the type
@@ -262,7 +266,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Handles a constant array value, which belongs to the
      * [complex constants](https://llvm.org/docs/LangRef.html#complex-constants). Their element
      * types and number of elements needs to match the specified array type. We parse the array
-     * contents as an [InitializerList], similar to the C syntax of `int a[] = { 1, 2 }`.
+     * contents as an [de.fraunhofer.aisec.cpg.graph.expressions.InitializerList], similar to the C syntax of `int a[] = { 1, 2 }`.
      *
      * There is a special case, in which LLVM allows to represent the array as a double-quoted
      * string, prefixed with `c`. In this case we
@@ -363,7 +367,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * [`extractvalue`](https://llvm.org/docs/LangRef.html#extractvalue-instruction) instruction
      * which works in a similar way.
      *
-     * We try to convert it either into an [Subscription] or an [MemberAccess], depending on whether
+     * We try to convert it either into an [de.fraunhofer.aisec.cpg.graph.expressions.Subscription] or an [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess], depending on whether
      * the accessed variable is a struct or an array. Furthermore, since `getelementptr` allows an
      * (infinite) chain of sub-element access within a single instruction, we need to unwrap those
      * into individual expressions.
@@ -497,7 +501,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Handles the [`select`](https://llvm.org/docs/LangRef.html#i-select) instruction, which
-     * behaves like a [Conditional].
+     * behaves like a [de.fraunhofer.aisec.cpg.graph.expressions.Conditional].
      */
     fun handleSelect(instr: LLVMValueRef): Expression {
         val cond = frontend.getOperandValueAtIndex(instr, 0)

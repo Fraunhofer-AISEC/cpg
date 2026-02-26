@@ -30,7 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.neo4j.DataflowGranularityConverter
 import java.util.Objects
@@ -55,7 +56,7 @@ data object FullDataflowGranularity : Granularity
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
- * [Dataflow.end] but only parts of it. Common examples include [MemberAccess]s, array or tuple
+ * [Dataflow.end] but only parts of it. Common examples include [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess]s, array or tuple
  * accesses. This class should allow
  */
 open class PartialDataflowGranularity<T>(
@@ -74,7 +75,7 @@ open class PartialDataflowGranularity<T>(
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
  * [Dataflow.end] but only parts of it, where the part is identified by a (known) [Field]. Common
- * examples include [MemberAccess] nodes, where we model a dataflow to the base, but only partially
+ * examples include [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess] nodes, where we model a dataflow to the base, but only partially
  * scoped to a particular field.
  */
 class FieldDataflowGranularity(partialTarget: Field) :
@@ -110,7 +111,7 @@ fun default() = full()
 
 /**
  * Creates a new [FieldDataflowGranularity]. The [target] is the [Declaration] that is affected by
- * the partial dataflow. Examples include a [Field] for a [MemberAccess].
+ * the partial dataflow. Examples include a [Field] for a [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess].
  */
 fun field(target: Field): FieldDataflowGranularity {
     return FieldDataflowGranularity(target)

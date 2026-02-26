@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.newLiteral
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import kotlin.test.Test
 import kotlin.test.assertNull
 import kotlin.test.assertSame

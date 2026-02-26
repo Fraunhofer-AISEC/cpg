@@ -27,8 +27,15 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.ExpressionList
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
+import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path

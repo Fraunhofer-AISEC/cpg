@@ -35,7 +35,12 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.fieldCache
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
@@ -395,9 +400,9 @@ object SubgraphWalker {
  *   replacement BEFORE any DFG edges are set. We are re-wiring EOG edges, but nothing else. If one
  *   tries to replace a node with existing [Node.nextDFG] or [Node.prevDFG], we fail.
  * - We also migrate [HasType.typeObservers] from the [old] to the [new] node.
- * - Lastly, if the [new] node is a [Call.callee] of a [Call] parent, and the [old] and [new]
- *   expressions are of different types (e.g., exchanging a simple [Reference] for a
- *   [MemberAccess]), we also replace the [Call] with a [MemberCall].
+ * - Lastly, if the [new] node is a [de.fraunhofer.aisec.cpg.graph.expressions.Call.callee] of a [de.fraunhofer.aisec.cpg.graph.expressions.Call] parent, and the [old] and [new]
+ *   expressions are of different types (e.g., exchanging a simple [de.fraunhofer.aisec.cpg.graph.expressions.Reference] for a
+ *   [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess]), we also replace the [de.fraunhofer.aisec.cpg.graph.expressions.Call] with a [de.fraunhofer.aisec.cpg.graph.expressions.MemberCall].
  */
 context(provider: ContextProvider)
 fun SubgraphWalker.ScopedWalker<Node>.replace(
@@ -542,7 +547,7 @@ fun Call.toMemberCall(callee: MemberAccess): MemberCall {
 }
 
 /**
- * Creates a new [Construction] with the same properties (e.g. ast children, etc.) except from DFG
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Construction] with the same properties (e.g. ast children, etc.) except from DFG
  * and EOG edges as [this]. It sets the [Construction.callee] to [callee].
  */
 fun Call.toConstruct(callee: Reference): Construction {

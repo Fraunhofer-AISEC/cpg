@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.arch.POSIX
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx.CXXDynamicLoadingPass
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertInvokes

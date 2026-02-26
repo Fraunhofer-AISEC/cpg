@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.newTuple
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 

@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.bytedeco.javacpp.Pointer
 import org.bytedeco.llvm.LLVM.LLVMTypeRef

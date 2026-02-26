@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test

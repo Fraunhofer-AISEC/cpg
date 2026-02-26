@@ -36,11 +36,11 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.MemberAccess
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.MemberCall
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.*

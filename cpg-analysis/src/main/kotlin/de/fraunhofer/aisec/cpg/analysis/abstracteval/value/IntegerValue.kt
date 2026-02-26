@@ -38,11 +38,11 @@ import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Assign
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

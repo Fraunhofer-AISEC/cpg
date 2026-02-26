@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import kotlin.reflect.KProperty
 import org.neo4j.ogm.annotation.RelationshipEntity
 

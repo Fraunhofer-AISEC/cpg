@@ -43,8 +43,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.Description

@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship

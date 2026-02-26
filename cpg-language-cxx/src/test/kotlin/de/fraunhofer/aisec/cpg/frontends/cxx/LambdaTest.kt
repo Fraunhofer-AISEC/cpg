@@ -28,7 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import java.io.File
 import kotlin.test.*

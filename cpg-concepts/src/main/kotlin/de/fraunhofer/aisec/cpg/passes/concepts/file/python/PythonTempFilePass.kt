@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.argumentValueByNameOrPosition
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass

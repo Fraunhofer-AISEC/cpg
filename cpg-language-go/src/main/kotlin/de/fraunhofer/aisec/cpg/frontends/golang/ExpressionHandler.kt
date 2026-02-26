@@ -28,8 +28,17 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Ast.BasicLit.Kind.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
+import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -362,7 +371,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
     /**
      * This function handles an ast.SliceExpr, which is an extended version of ast.IndexExpr. We are
-     * modeling this as a combination of a [Subscription] that contains a [Range] as its
+     * modeling this as a combination of a [Subscription] that contains a [de.fraunhofer.aisec.cpg.graph.expressions.Range] as its
      * subscriptExpression to share some code between this and an index expression.
      */
     private fun handleSliceExpr(sliceExpr: GoStandardLibrary.Ast.SliceExpr): Subscription {

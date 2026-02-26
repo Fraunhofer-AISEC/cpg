@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.passes.PythonUnreachableEOGPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass

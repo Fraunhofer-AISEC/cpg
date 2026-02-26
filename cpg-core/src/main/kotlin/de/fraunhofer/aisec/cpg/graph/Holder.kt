@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 
 /**
  * This interface denotes that a [Node] "holds" a list of other nodes. See also [ArgumentHolder] and

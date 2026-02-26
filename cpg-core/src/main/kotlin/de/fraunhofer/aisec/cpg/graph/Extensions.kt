@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.expressions.*
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName

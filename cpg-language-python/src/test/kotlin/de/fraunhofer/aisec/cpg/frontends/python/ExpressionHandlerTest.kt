@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
 import de.fraunhofer.aisec.cpg.test.assertLocalName

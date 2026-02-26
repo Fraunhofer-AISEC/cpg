@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 
 /**
  * Creates a new [Configuration] concept.

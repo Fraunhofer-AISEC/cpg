@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.graph.newBlock
 import de.fraunhofer.aisec.cpg.graph.newReturn
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.Statement
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import org.jruby.ast.*
 
 class StatementHandler(lang: RubyLanguageFrontend) :

@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.expressions.For
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import kotlin.test.*

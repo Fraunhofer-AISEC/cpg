@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.edges.flows
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Throw
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.test.GraphExamples.Companion.prepareThrowDFGTest
 import kotlin.collections.firstOrNull
 import kotlin.test.Test

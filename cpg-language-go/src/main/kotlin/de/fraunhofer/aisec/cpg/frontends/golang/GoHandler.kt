@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 

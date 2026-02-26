@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.expressions.*
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.ARRAY
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.POINTER

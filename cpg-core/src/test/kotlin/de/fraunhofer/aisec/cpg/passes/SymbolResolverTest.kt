@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Construction
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.MemberCall
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.ReferenceTag
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.ReferenceTag
 import de.fraunhofer.aisec.cpg.test.GraphExamples
 import de.fraunhofer.aisec.cpg.test.assertInvokes
 import de.fraunhofer.aisec.cpg.test.assertRefersTo

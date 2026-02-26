@@ -31,9 +31,9 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.edges.get
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.DFGPass

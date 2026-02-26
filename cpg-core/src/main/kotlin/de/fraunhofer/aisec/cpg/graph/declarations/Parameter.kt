@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasDefault
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 

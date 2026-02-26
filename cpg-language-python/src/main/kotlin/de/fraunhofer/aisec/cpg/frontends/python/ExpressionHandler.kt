@@ -26,7 +26,13 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.expressions.Comprehension
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
@@ -71,7 +77,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     /**
      * Translates a Python
      * [`comprehension`](https://docs.python.org/3/library/ast.html#ast.comprehension) into a
-     * [Comprehension].
+     * [de.fraunhofer.aisec.cpg.graph.expressions.Comprehension].
      *
      * Connects multiple predicates by `and`.
      */
@@ -101,7 +107,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     /**
      * Translates a Python
      * [`GeneratorExp`](https://docs.python.org/3/library/ast.html#ast.GeneratorExp) into a
-     * [CollectionComprehension].
+     * [de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension].
      */
     private fun handleGeneratorExp(node: Python.AST.GeneratorExp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).applyWithScope {
@@ -150,7 +156,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`NamedExpr`](https://docs.python.org/3/library/ast.html#ast.NamedExpr)
-     * into an [Assign].
+     * into an [de.fraunhofer.aisec.cpg.graph.expressions.Assign].
      *
      * As opposed to the Assign node, both target and value must be single nodes.
      */
@@ -284,7 +290,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Joins the [nodes] with a [BinaryOperator] with the [operatorCode]. Nests the whole thing,
+     * Joins the [nodes] with a [de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator] with the [operatorCode]. Nests the whole thing,
      * where the first element in [nodes] is the lhs of the root of the tree of binary operators.
      * The last operands are further down the tree.
      */
@@ -504,10 +510,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Handles an `ast.Call` Python node. This can be one of
-     * - [MemberCall]
-     * - [Construction]
-     * - [Cast]
-     * - [Call]
+     * - [de.fraunhofer.aisec.cpg.graph.expressions.MemberCall]
+     * - [de.fraunhofer.aisec.cpg.graph.expressions.Construction]
+     * - [de.fraunhofer.aisec.cpg.graph.expressions.Cast]
+     * - [de.fraunhofer.aisec.cpg.graph.expressions.Call]
      *
      * TODO: cast, memberexpression, magic
      */

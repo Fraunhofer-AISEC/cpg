@@ -32,10 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.expressions.CatchClause
 import de.fraunhofer.aisec.cpg.graph.expressions.For
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import java.util.concurrent.ExecutionException

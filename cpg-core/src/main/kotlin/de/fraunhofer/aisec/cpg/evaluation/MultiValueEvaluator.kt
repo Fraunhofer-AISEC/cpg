@@ -28,10 +28,18 @@ package de.fraunhofer.aisec.cpg.evaluation
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Cast
+import de.fraunhofer.aisec.cpg.graph.expressions.Conditional
 import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.expressions.For
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 

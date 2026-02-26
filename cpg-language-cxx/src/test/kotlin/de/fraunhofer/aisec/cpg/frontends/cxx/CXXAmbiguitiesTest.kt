@@ -27,8 +27,10 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Cast
 import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
@@ -80,7 +82,7 @@ class CXXAmbiguitiesTest {
 
     /**
      * In CXX there is an ambiguity with the statement: "(A)(B);" 1) If A is a function pointer,
-     * this is a [Call] 2) If A is a type, this is a [Cast]
+     * this is a [de.fraunhofer.aisec.cpg.graph.expressions.Call] 2) If A is a type, this is a [de.fraunhofer.aisec.cpg.graph.expressions.Cast]
      */
     @Test
     fun testFunctionCallOrTypeCast() {
@@ -119,7 +121,7 @@ class CXXAmbiguitiesTest {
 
     /**
      * In CXX there is an ambiguity with the statement: "(A.B)(C);" 1) If B is a method, this is a
-     * [MemberCall] 2) if B is a function pointer, this is a [Call].
+     * [de.fraunhofer.aisec.cpg.graph.expressions.MemberCall] 2) if B is a function pointer, this is a [Call].
      *
      * Function pointer as a struct member are currently not supported in the cpg. This test case
      * will just ensure that there will be no crash when parsing such a statement. When adding this

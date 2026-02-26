@@ -43,7 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
 import de.fraunhofer.aisec.cpg.graph.expressions.Label
 import de.fraunhofer.aisec.cpg.graph.expressions.LookupScope
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.NodeEntity

@@ -33,9 +33,9 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter

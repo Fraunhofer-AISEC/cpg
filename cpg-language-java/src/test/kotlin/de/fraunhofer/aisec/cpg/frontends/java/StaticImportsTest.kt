@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path

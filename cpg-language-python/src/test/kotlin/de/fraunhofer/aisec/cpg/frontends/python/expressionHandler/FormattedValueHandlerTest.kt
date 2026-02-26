@@ -28,10 +28,10 @@ package de.fraunhofer.aisec.cpg.frontends.python.expressionHandler
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Assign
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
 import de.fraunhofer.aisec.cpg.test.assertLocalName

@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Block
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 

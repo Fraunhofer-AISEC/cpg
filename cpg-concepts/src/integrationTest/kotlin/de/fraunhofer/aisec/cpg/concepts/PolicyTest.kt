@@ -38,8 +38,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.returns
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.TagOverlaysPass
 import de.fraunhofer.aisec.cpg.passes.concepts.each

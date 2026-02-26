@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.expressions.*
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.Connect

@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.testcases.GraphExamples
 import kotlin.test.BeforeTest
 import kotlin.test.Test

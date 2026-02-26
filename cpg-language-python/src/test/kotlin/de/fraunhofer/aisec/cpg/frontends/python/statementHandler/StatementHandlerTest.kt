@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Assert
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Delete
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Subscription
+import de.fraunhofer.aisec.cpg.graph.expressions.Delete
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path

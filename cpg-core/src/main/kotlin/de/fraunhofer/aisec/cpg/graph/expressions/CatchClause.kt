@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Block
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship

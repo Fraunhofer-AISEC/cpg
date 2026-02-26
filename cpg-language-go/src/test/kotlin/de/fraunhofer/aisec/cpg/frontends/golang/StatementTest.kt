@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.Test

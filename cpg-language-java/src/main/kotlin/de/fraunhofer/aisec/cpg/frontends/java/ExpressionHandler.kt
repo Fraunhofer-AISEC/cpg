@@ -36,9 +36,20 @@ import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Conditional
 import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.New
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Statement
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.function.Supplier
@@ -79,7 +90,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val castExpression = newCast(rawNode = expr)
         val expression =
             handle(castExpr.expression)
-                as? de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+                as? de.fraunhofer.aisec.cpg.graph.expressions.Expression
                 ?: newProblemExpression("could not parse expression")
         castExpression.expression = expression
         castExpression.setCastOperator(2)
@@ -97,10 +108,10 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 
     /**
-     * Creates a new [ArrayConstruction], which is usually used as an initializer of a [Variable].
+     * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction], which is usually used as an initializer of a [Variable].
      *
      * @param expr the expression
-     * @return the [ArrayConstruction]
+     * @return the [de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction]
      */
     private fun handleArrayCreationExpr(expr: Expression): Statement {
         val arrayCreationExpr = expr as ArrayCreationExpr
@@ -116,7 +127,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // dimensions are only present if you specify them explicitly, such as new int[1]
         for (lvl in arrayCreationExpr.levels) {
             lvl.dimension.ifPresent {
-                (handle(it) as? de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression?)
+                (handle(it) as? de.fraunhofer.aisec.cpg.graph.expressions.Expression?)
                     ?.let { creationExpression.addDimension(it) }
             }
         }
@@ -141,7 +152,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             arrayInitializerExpr.values
                 .map { handle(it) }
                 .map {
-                    de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression::class
+                    de.fraunhofer.aisec.cpg.graph.expressions.Expression::class
                         .java
                         .cast(it)
                 }
@@ -154,11 +165,11 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val arrayAccessExpr = expr as ArrayAccessExpr
         val arraySubsExpression = newSubscription(rawNode = expr)
         (handle(arrayAccessExpr.name)
-                as de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression?)
+                as de.fraunhofer.aisec.cpg.graph.expressions.Expression?)
             ?.let { arraySubsExpression.arrayExpression = it }
 
         (handle(arrayAccessExpr.index)
-                as de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression?)
+                as de.fraunhofer.aisec.cpg.graph.expressions.Expression?)
             ?.let { arraySubsExpression.subscriptExpression = it }
 
         return arraySubsExpression
@@ -190,14 +201,14 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             }
         val condition =
             handle(conditionalExpr.condition)
-                as de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression?
+                as de.fraunhofer.aisec.cpg.graph.expressions.Expression?
                 ?: newProblemExpression("Could not parse condition")
         val thenExpr =
             handle(conditionalExpr.thenExpr)
-                as de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression?
+                as de.fraunhofer.aisec.cpg.graph.expressions.Expression?
         val elseExpr =
             handle(conditionalExpr.elseExpr)
-                as de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression?
+                as de.fraunhofer.aisec.cpg.graph.expressions.Expression?
         return newConditional(condition, thenExpr, elseExpr, superType)
     }
 
@@ -207,13 +218,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // first, handle the target. this is the first argument of the operator call
         val lhs =
             handle(assignExpr.target)
-                as? de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+                as? de.fraunhofer.aisec.cpg.graph.expressions.Expression
                 ?: newProblemExpression("could not parse lhs")
 
         // second, handle the value. this is the second argument of the operator call
         val rhs =
             handle(assignExpr.value)
-                as? de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+                as? de.fraunhofer.aisec.cpg.graph.expressions.Expression
                 ?: newProblemExpression("could not parse lhs")
         return newAssign(
             assignExpr.operator.asString(),
@@ -239,7 +250,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     /**
      * Translates a Java
      * [field access expression](https://docs.oracle.com/javase/specs/jls/se23/html/jls-15.html#jls-15.11)
-     * into a [MemberAccess].
+     * into a [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess].
      */
     private fun handleFieldAccessExpression(fieldAccessExpr: FieldAccessExpr): MemberAccess {
         var baseType = unknownType()
@@ -259,7 +270,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
 
         var base =
             handle(fieldAccessExpr.scope)
-                as de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+                as de.fraunhofer.aisec.cpg.graph.expressions.Expression
         base.type = baseType
 
         return newMemberAccess(
@@ -366,7 +377,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
      */
     private fun handleNameExpression(
         nameExpr: NameExpr
-    ): de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression? {
+    ): de.fraunhofer.aisec.cpg.graph.expressions.Expression? {
         // Try to resolve it. We will remove this in a future where we do not rely on the
         // javaparser symbols anymore. This is mainly needed to resolve implicit "this.field" access
         // as well as access to static fields of other classes - which we could resolve once we
@@ -377,7 +388,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 val field = symbol.asField()
                 // handle it as a field expression
                 return handle(field.toFieldAccessExpr(nameExpr))
-                    as de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression?
+                    as de.fraunhofer.aisec.cpg.graph.expressions.Expression?
             }
         } catch (_: UnsolvedSymbolException) {}
 
@@ -392,12 +403,12 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // symbol
         val lhs =
             handle(binaryExpr.expression)
-                as? de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+                as? de.fraunhofer.aisec.cpg.graph.expressions.Expression
                 ?: newProblemExpression("could not parse lhs")
         val typeAsGoodAsPossible = frontend.getTypeAsGoodAsPossible(binaryExpr.type)
 
         // second, handle the value. this is the second argument of the operator call
-        val rhs: de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression =
+        val rhs: de.fraunhofer.aisec.cpg.graph.expressions.Expression =
             newLiteral(
                 typeAsGoodAsPossible.typeName,
                 this.objectType("class"),
@@ -415,7 +426,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // handle the 'inner' expression, which is affected by the unary expression
         val expression =
             handle(unaryExpr.expression)
-                as? de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+                as? de.fraunhofer.aisec.cpg.graph.expressions.Expression
                 ?: newProblemExpression("could not parse input")
         val unaryOperator =
             newUnaryOperator(
@@ -434,13 +445,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // first, handle the target. this is the first argument of the operator call
         val lhs =
             handle(binaryExpr.left)
-                as? de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+                as? de.fraunhofer.aisec.cpg.graph.expressions.Expression
                 ?: newProblemExpression("could not parse lhs")
 
         // second, handle the value. this is the second argument of the operator call
         val rhs =
             handle(binaryExpr.right)
-                as? de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+                as? de.fraunhofer.aisec.cpg.graph.expressions.Expression
                 ?: newProblemExpression("could not parse rhs")
         val binaryOperator = newBinaryOperator(binaryExpr.operator.asString(), rawNode = binaryExpr)
         binaryOperator.lhs = lhs
@@ -478,13 +489,13 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         if (frontend.getQualifiedNameFromImports(qualifiedName) != null) {
             isStatic = true
         }
-        val base: de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+        val base: de.fraunhofer.aisec.cpg.graph.expressions.Expression
         // the scope could either be a variable or also the class name (static call!)
         // thus, only because the scope is present, this is not automatically a member call
         if (o.isPresent) {
             val scope = o.get()
             base =
-                handle(scope) as de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression?
+                handle(scope) as de.fraunhofer.aisec.cpg.graph.expressions.Expression?
                     ?: newProblemExpression("Could not parse base")
 
             // If the base directly refers to a record, then this is a static call
@@ -529,7 +540,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         for (i in arguments.indices) {
             val argument =
                 handle(arguments[i])
-                    as de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression?
+                    as de.fraunhofer.aisec.cpg.graph.expressions.Expression?
             argument?.argumentIndex = i
             callExpression.addArgument(
                 argument ?: newProblemExpression("Could not parse the argument")
@@ -544,8 +555,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
      * @return the "this" reference expression
      */
     private fun createImplicitThis():
-        de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression {
-        val base: de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+        de.fraunhofer.aisec.cpg.graph.expressions.Expression {
+        val base: de.fraunhofer.aisec.cpg.graph.expressions.Expression
         val thisType = frontend.scopeManager.currentRecord?.toType() ?: unknownType()
         base = newReference("this", thisType).implicit("this")
         return base
@@ -576,7 +587,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         for (i in arguments.indices) {
             val argument =
                 handle(arguments[i])
-                    as? de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression ?: continue
+                    as? de.fraunhofer.aisec.cpg.graph.expressions.Expression ?: continue
             argument.argumentIndex = i
             ctor.addArgument(argument)
         }

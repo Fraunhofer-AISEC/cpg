@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 
 /**
  * This interfaces denotes that [Node] can accept arguments. The most famous example would be a

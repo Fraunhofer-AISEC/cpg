@@ -34,9 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.expressions.*
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.DynamicType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.buildSignature
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType

@@ -36,8 +36,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import java.util.Objects
 import kotlin.test.Test
 import kotlin.test.assertIs

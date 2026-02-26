@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 
 /**
  * Creates a new [File] node. This node represents a file on a hard-disk somewhere.

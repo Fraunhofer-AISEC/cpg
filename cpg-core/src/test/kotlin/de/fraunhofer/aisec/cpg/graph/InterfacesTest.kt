@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import kotlin.test.Test
 import kotlin.test.assertTrue
 

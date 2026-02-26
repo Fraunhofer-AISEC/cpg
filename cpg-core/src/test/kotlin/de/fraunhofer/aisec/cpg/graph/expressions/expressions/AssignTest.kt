@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.function
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import kotlin.test.*

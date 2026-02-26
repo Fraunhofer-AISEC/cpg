@@ -39,9 +39,9 @@ import de.fraunhofer.aisec.cpg.graph.followDFGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.followPrevDFG
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.implicit
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Construction
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.MemberCall
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Subscription
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver

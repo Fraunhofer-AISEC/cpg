@@ -36,11 +36,11 @@ import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.ArrayConstruction
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Assign
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.InitializerList
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.query.value
 

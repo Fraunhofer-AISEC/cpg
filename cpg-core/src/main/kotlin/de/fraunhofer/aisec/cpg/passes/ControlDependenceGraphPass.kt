@@ -38,9 +38,9 @@ import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.expressions.DoWhile
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Comprehension
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Conditional
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.ShortCircuitOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Comprehension
+import de.fraunhofer.aisec.cpg.graph.expressions.Conditional
+import de.fraunhofer.aisec.cpg.graph.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice

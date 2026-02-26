@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.expressions
 import de.fraunhofer.aisec.cpg.graph.newLookupScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Reference
 import java.util.Objects
 
 /**

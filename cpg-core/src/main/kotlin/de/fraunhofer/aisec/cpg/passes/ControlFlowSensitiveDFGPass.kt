@@ -31,11 +31,22 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Comprehension
 import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.Statement
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.contracts.ExperimentalContracts
@@ -244,7 +255,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     }
 
     /**
-     * Computes the previous write access of [currentEdge].end if it is a [Reference] or
+     * Computes the previous write access of [currentEdge].end if it is a [de.fraunhofer.aisec.cpg.graph.expressions.Reference] or
      * [ValueDeclaration] based on the given [state] (which maps all variables to its last write
      * instruction). It also updates the [state] if [currentEdge].end performs a write-operation to
      * a variable.

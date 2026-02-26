@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
 import de.fraunhofer.aisec.cpg.graph.expressions.Statement
 import de.fraunhofer.aisec.cpg.graph.expressions.Try
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :

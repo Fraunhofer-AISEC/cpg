@@ -35,8 +35,9 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.scopes.*
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.*
 import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
 import kotlin.reflect.KClass
@@ -66,7 +67,7 @@ interface HasTemplates : HasGenerics {
     /**
      * This function can be used to fine-tune the resolution of template function calls.
      *
-     * Note: The function itself should NOT set the [Call.invokes] but rather return a list of
+     * Note: The function itself should NOT set the [de.fraunhofer.aisec.cpg.graph.expressions.Call.invokes] but rather return a list of
      * possible candidates.
      *
      * @return a pair in which the first member denotes whether resolution was successful and the
@@ -240,7 +241,7 @@ sealed interface HasCallAmbiguity : LanguageTrait
 /**
  * A language trait, that specifies that the language has so-called functional style casts, meaning
  * that they look like regular call expressions. Since we can therefore not distinguish between a
- * [Call] and a [Cast], we need to employ an additional pass ([ResolveCallAmbiguityPass]) after the
+ * [Call] and a [de.fraunhofer.aisec.cpg.graph.expressions.Cast], we need to employ an additional pass ([ResolveCallAmbiguityPass]) after the
  * initial language frontends are done.
  */
 interface HasFunctionStyleCasts : HasCallAmbiguity
@@ -250,7 +251,7 @@ interface HasFunctionStyleCasts : HasCallAmbiguity
  * meaning that constructor calls look like regular call expressions (usually meaning that the
  * language has no dedicated `new` keyword).
  *
- * Since we can therefore not distinguish between a [Call] and a [Construction] in the frontend, we
+ * Since we can therefore not distinguish between a [Call] and a [de.fraunhofer.aisec.cpg.graph.expressions.Construction] in the frontend, we
  * need to employ an additional pass ([ResolveCallAmbiguityPass]) after the initial language
  * frontends are done.
  */

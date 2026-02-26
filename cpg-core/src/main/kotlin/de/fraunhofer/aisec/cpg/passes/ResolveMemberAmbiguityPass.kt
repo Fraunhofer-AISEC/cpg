@@ -38,9 +38,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.newReference
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.MemberAccess
-import de.fraunhofer.aisec.cpg.graph.expressions.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
