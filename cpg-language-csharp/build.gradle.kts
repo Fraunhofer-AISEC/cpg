@@ -4,17 +4,22 @@ dependencies { implementation("net.java.dev.jna:jna:5.18.1") }
 
 val publishNativeParser by
     tasks.registering(Exec::class) {
-        val os = System.getProperty("os.name").lowercase()
-        val arch = System.getProperty("os.arch").lowercase()
-        val runtimeIdentifier =
-            when {
-                os.contains("mac") && arch.contains("aarch64") -> "osx-arm64"
-                os.contains("linux") && arch.contains("aarch64") -> "linux-arm64"
-                os.contains("linux") && arch.contains("amd64") -> "linux-x64"
-                else -> error("Unsupported OS/arch: $os / $arch")
-            }
+        val osName = System.getProperty("os.name")
+        val os = if (osName.startsWith("Mac")) "osx" else "linux"
+        val arch =
+            System.getProperty("os.arch").replace("aarch64", "arm64").replace("x86_64", "x64")
+        val rid = "$os-$arch"
         workingDir = file("src/main/csharp/NativeParser")
-        commandLine("dotnet", "publish", "-c", "Release", "-r", runtimeIdentifier)
+        val dotnet =
+            listOf(
+                    "/opt/homebrew/opt/dotnet@8/bin/dotnet",
+                    "/usr/local/bin/dotnet",
+                    "/usr/bin/dotnet",
+                )
+                .map { file(it) }
+                .firstOrNull { it.exists() }
+                ?.absolutePath ?: "dotnet"
+        commandLine(dotnet, "publish", "-c", "Release", "-r", rid)
     }
 
 tasks.named("compileKotlin") { dependsOn(publishNativeParser) }

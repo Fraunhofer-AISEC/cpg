@@ -1,4 +1,4 @@
 namespace HelloWorld
 {
-    class Foo { }
+    class Foo {}
 }
