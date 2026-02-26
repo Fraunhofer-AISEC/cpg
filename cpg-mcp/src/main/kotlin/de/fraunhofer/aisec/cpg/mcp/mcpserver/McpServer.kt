@@ -58,7 +58,7 @@ fun configureServer(
         this.addLLMConceptAndOperations()
 
         // PROMPTS
-        this.addSuggestConceptsPrompt()
+        // this.addSuggestConceptsPrompt()
         this
     }
 ): Server {

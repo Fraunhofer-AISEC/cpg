@@ -30,12 +30,10 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
-import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
-import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation
-import de.fraunhofer.aisec.cpg.graph.concepts.GenericProperties
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.*
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.*
 import de.fraunhofer.aisec.cpg.persistence.pushToNeo4j
@@ -43,8 +41,45 @@ import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import java.io.File
+import org.slf4j.LoggerFactory
 
 private const val fileName = "concepts.yaml"
+
+private val logger = LoggerFactory.getLogger("CpgGenericConceptsTool")
+
+/** TODO */
+private fun MetadataProvider.newLLMConcept(
+    underlyingNode: Node,
+    conceptName: String,
+    properties: GenericProperties,
+    connect: Boolean,
+) =
+    newConcept(
+        { GenericLLMConcept(conceptName = conceptName, properties = properties) },
+        underlyingNode = underlyingNode,
+        connect = connect,
+    )
+
+/** TODO */
+private fun MetadataProvider.newLLMOperation(
+    underlyingNode: Node,
+    genericLLMConcept: GenericLLMConcept,
+    operationName: String,
+    properties: GenericProperties,
+    connect: Boolean,
+) =
+    newOperation(
+        {
+            GenericLLMOperation(
+                operationName = operationName,
+                genericLLMConcept = genericLLMConcept,
+                properties = properties,
+            )
+        },
+        underlyingNode = underlyingNode,
+        concept = genericLLMConcept,
+        connect = connect,
+    )
 
 // TODO move to other file.
 /** TODO */
@@ -58,8 +93,9 @@ fun Server.persistGraphToNeo4jTool() {
         - "Store the enriched graph in Neo4j for later analysis"
         """
             .trimIndent()
-
-    this.addTool(name = "cpg_persist_to_neo4j", description = toolDescription) { request ->
+    val toolName = "cpg_persist_to_neo4j"
+    this.addTool(name = toolName, description = toolDescription) { request ->
+        logger.info("Tool \"$toolName\" invoked.")
         request.runOnCpg { result: TranslationResult, _ ->
             result.pushToNeo4j()
             CallToolResult(
@@ -98,7 +134,9 @@ fun Server.getPersistedConceptsOperations() {
         - "List all known concepts and operations"
         """
             .trimIndent()
-    this.addTool(name = "cpg_list_llm_concepts_operations", description = toolDescription) { _ ->
+    val toolName = "cpg_list_llm_concepts_operations"
+    this.addTool(name = toolName, description = toolDescription) { _ ->
+        logger.info("Tool \"$toolName\" invoked.")
         CallToolResult(
             content = loadPersistedConceptsAndOperations().map { TextContent(it.toJson()) }
         )
@@ -110,6 +148,12 @@ fun Server.getPersistedConceptsOperations() {
  * add new concepts or update existing ones based on the insights gained from analyzing the CPG
  * graph. Matching a concept is done by its name. If a concept with the same name already exists, it
  * will be overwritten with the new information. Otherwise, a new concept will be added.
+ *
+ * `Concept`s and `Operation`s should be added scarcely. They should be semantic nodes, explaining
+ * *what* is happening in the graph, not *how* it is happening. For example, a concept
+ * "Authentication" could be added to a node if it is identified as an authentication mechanism, but
+ * the exact way how authentication is performed (e.g. which protocol, which library) should be
+ * described by properties of the concept, not by adding new detailed concepts.
  */
 fun Server.addOrUpdateConcept() {
     val toolDescription =
@@ -123,12 +167,14 @@ fun Server.addOrUpdateConcept() {
         """
             .trimIndent()
 
+    val toolName = "cpg_add_or_update_llm_concept"
     this.addTool( // TODO: cannot use addTool<LLMConceptDescription> here, because it internally
         // uses runOnCpg
-        name = "cpg_add_or_update_llm_concept",
+        name = toolName,
         description = toolDescription,
         inputSchema = LLMConceptDescription::class.toSchema(),
     ) { request ->
+        logger.info("Tool \"$toolName\" invoked.")
         val payload =
             request.arguments?.toObject<LLMConceptDescription>()
                 ?: return@addTool CallToolResult(
@@ -167,6 +213,7 @@ fun Server.addLLMConceptAndOperations() {
         Description of the concepts and their corresponding operations can be obtained from the "cpg_list_llm_concepts_operations" tool.
         """
             .trimIndent()
+
     this.addTool<LLMConcept>(
         name = "cpg_add_llm_concept_and_operations",
         description = toolDescription,
@@ -188,20 +235,20 @@ fun Server.addLLMConceptAndOperations() {
 
         // TODO: check concept/operation and properties actually exist
         val conceptNode =
-            GenericLLMConcept(
+            cpgConceptNode
+                .newLLMConcept(
                     underlyingNode = cpgConceptNode,
                     conceptName = payload.name,
                     properties =
                         GenericProperties(payload.properties.associate { it.name to it.value }),
+                    connect = true, // TODO
                 )
                 .apply {
-                    this.codeAndLocationFrom(cpgConceptNode)
                     this.name =
                         Name(
                             "${GenericLLMConcept::class.simpleName}[$conceptName]",
                             cpgConceptNode.name,
                         )
-                    NodeBuilder.log(this)
                     applied.add("Concept node \"${payload.name}\" added to the graph.")
                 }
 
@@ -213,21 +260,21 @@ fun Server.addLLMConceptAndOperations() {
                 )
                 return@forEach
             }
-            GenericLLMOperation(
+            cpgOperationNode
+                .newLLMOperation(
                     underlyingNode = cpgOperationNode,
                     operationName = operation.name,
                     genericLLMConcept = conceptNode,
                     properties =
                         GenericProperties(operation.properties.associate { it.name to it.value }),
+                    connect = true, // TODO
                 )
                 .apply {
-                    this.codeAndLocationFrom(cpgOperationNode)
                     this.name =
                         Name(
                             "${GenericLLMOperation::class.simpleName}[$operationName]",
                             cpgOperationNode.name,
                         )
-                    NodeBuilder.log(this)
                     applied.add("Operation node \"${operation.name}\" added to the graph.")
                 }
         }
