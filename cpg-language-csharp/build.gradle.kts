@@ -7,7 +7,7 @@ val publishNativeParser by
         val osName = System.getProperty("os.name")
         val os = if (osName.startsWith("Mac")) "osx" else "linux"
         val arch =
-            System.getProperty("os.arch").replace("aarch64", "arm64").replace("x86_64", "x64")
+            System.getProperty("os.arch").replace("aarch64", "arm64").replace("amd64", "amd64")
         val rid = "$os-$arch"
         workingDir = file("src/main/csharp/NativeParser")
         val dotnet =
