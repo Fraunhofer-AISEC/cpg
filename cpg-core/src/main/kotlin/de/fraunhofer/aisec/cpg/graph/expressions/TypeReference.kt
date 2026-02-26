@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,32 +23,28 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.expressions.expressions
+package de.fraunhofer.aisec.cpg.graph.expressions
 
-import de.fraunhofer.aisec.cpg.graph.ProblemNode
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.Objects
-import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
- * A node where the statement could not be translated by the graph. We use `ProblemExpression`s
- * whenever the CPG library requires an [Expression].
+ * Models C++ operations that inspect types. These are `typeof`, `sizeof`, `typeid`, `alignof`and
+ * are stored as string in their operator code.
+ *
+ * TODO: Is such a class really necessary??
  */
-class ProblemExpression(
-    override var problem: String = "",
-    override var problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION,
-) : Expression(), ProblemNode {
-    override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("problem", problem)
-            .toString()
-    }
+class TypeReference : Expression() {
+    var referencedType: Type? = null
+    var operatorCode: String? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ProblemExpression) return false
-        return super.equals(other) && problem == other.problem
+        if (other !is TypeReference) return false
+        return super.equals(other) &&
+            operatorCode == other.operatorCode &&
+            referencedType == other.referencedType
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), problem)
+    override fun hashCode() = Objects.hash(super.hashCode(), operatorCode, referencedType)
 }

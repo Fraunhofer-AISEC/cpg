@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,18 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.expressions.expressions
+package de.fraunhofer.aisec.cpg.graph.expressions
+
+import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
+import de.fraunhofer.aisec.cpg.graph.BranchingNode
 
 /**
- * Represents a Type used as an expression for instance when instantiating templates
- *
- * Note: This Expression is required since we cannot have ASTChilds directly connected to a Type
- * since they are merged.
+ * A [BinaryOperator] which only evaluates [BinaryOperator.rhs] if [BinaryOperator.lhs] fulfils some
+ * condition. For the operators in [HasShortCircuitOperators.conjunctiveOperators], the rhs has to
+ * evaluate to "true" or so to continue on the lhs, whereas for the operators in
+ * [HasShortCircuitOperators.disjunctiveOperators], the lhs has to evaluate to "false" (or similar).
  */
-class TypeExpression : Expression()
+class ShortCircuitOperator : BinaryOperator(), BranchingNode {
+    override val branchedBy
+        get() = lhs
+}

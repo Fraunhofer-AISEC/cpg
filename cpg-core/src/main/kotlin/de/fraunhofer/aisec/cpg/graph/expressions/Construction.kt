@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.expressions.expressions
+package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
@@ -47,7 +47,7 @@ import org.neo4j.ogm.annotation.Relationship
 class Construction : Call() {
     /**
      * The link to the [Constructor]. This is populated by the
-     * [de.fraunhofer.aisec.cpg.passes.SymbolResolver] later.
+     * [SymbolResolver] later.
      */
     @PopulatedByPass(SymbolResolver::class)
     var constructor: Constructor? = null

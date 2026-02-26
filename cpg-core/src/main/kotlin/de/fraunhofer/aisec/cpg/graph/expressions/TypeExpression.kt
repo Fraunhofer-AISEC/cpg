@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,28 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.expressions.expressions
-
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import java.util.Objects
+package de.fraunhofer.aisec.cpg.graph.expressions
 
 /**
- * Models C++ operations that inspect types. These are `typeof`, `sizeof`, `typeid`, `alignof`and
- * are stored as string in their operator code.
+ * Represents a Type used as an expression for instance when instantiating templates
  *
- * TODO: Is such a class really necessary??
+ * Note: This Expression is required since we cannot have ASTChilds directly connected to a Type
+ * since they are merged.
  */
-class TypeReference : Expression() {
-    var referencedType: Type? = null
-    var operatorCode: String? = null
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is TypeReference) return false
-        return super.equals(other) &&
-            operatorCode == other.operatorCode &&
-            referencedType == other.referencedType
-    }
-
-    override fun hashCode() = Objects.hash(super.hashCode(), operatorCode, referencedType)
-}
+class TypeExpression : Expression()
