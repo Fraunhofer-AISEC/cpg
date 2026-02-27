@@ -26,9 +26,11 @@
 package de.fraunhofer.aisec.cpg.passes.scopes
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
@@ -222,6 +224,122 @@ internal class ScopeManagerTest : BaseTest() {
                 method.matchesSignature(matchingSignature2, arguments2, useDefaultArguments = true)
 
             assertIs<SignatureMatches>(result2, "Function should match with multiple kwargs")
+        }
+    }
+
+    /**
+     * Tests that [ScopeManager.extractScope] returns `null` consistently for a scope name that does
+     * not exist, i.e., the cache correctly records the failed lookup and returns `null` on
+     * subsequent calls without re-running [ScopeManager.lookupScopeByName].
+     */
+    @Test
+    fun testExtractScopeCachesMiss() {
+        val ctx = TranslationContext(config)
+        val s = ctx.scopeManager
+        val language = TestLanguage()
+        val frontend = TestLanguageFrontend(ctx, language)
+        with(frontend) {
+            val tu = newTranslationUnitDeclaration("file.java", null)
+            s.resetToGlobal(tu)
+
+            val name = parseName("java.lang.String")
+
+            // First call: scope "java.lang" does not exist yet, must return null
+            val result1 = s.extractScope(name, language, scope = s.globalScope)
+            assertNull(result1)
+
+            // Second call with identical arguments: must also return null (served from cache)
+            val result2 = s.extractScope(name, language, scope = s.globalScope)
+            assertNull(result2)
+        }
+    }
+
+    /**
+     * Tests that [ScopeManager.extractScope] caches results independently per `scope` parameter,
+     * i.e., a failed lookup from one scope manager does not affect lookups in a separate scope
+     * manager that does have the scope.
+     */
+    @Test
+    fun testExtractScopeCacheKeyIncludesStartScope() {
+        val ctx = TranslationContext(config)
+        val s = ctx.scopeManager
+        val language = TestLanguage()
+        val frontend = TestLanguageFrontend(ctx, language)
+        with(frontend) {
+            val tu = newTranslationUnitDeclaration("file.java", null)
+            s.resetToGlobal(tu)
+
+            // Register "java" and "java.lang" namespaces
+            val javaNs = newNamespaceDeclaration("java")
+            s.enterScope(javaNs)
+            val langNs = newNamespaceDeclaration("java.lang")
+            s.enterScope(langNs)
+            s.leaveScope(langNs)
+            s.addDeclaration(langNs)
+            javaNs.declarations += langNs
+            s.leaveScope(javaNs)
+            s.addDeclaration(javaNs)
+            tu.declarations += javaNs
+
+            // Lookup from globalScope should succeed because "java.lang" is registered
+            val name = parseName("java.lang.String")
+            val result = s.extractScope(name, language, scope = s.globalScope)
+            assertNotNull(result)
+            assertNotNull(result.scope)
+
+            // A separate scope manager with no namespaces must still return null for the same name
+            val ctx2 = TranslationContext(config)
+            val s2 = ctx2.scopeManager
+            val frontend2 = TestLanguageFrontend(ctx2, language)
+            with(frontend2) {
+                val tu2 = newTranslationUnitDeclaration("other.java", null)
+                s2.resetToGlobal(tu2)
+                val result2 = s2.extractScope(name, language, scope = s2.globalScope)
+                assertNull(result2)
+            }
+        }
+    }
+
+    /**
+     * Tests that the [ScopeManager.extractScope] cache is properly invalidated when a new
+     * [NamespaceDeclaration] is pushed via [ScopeManager.enterScope]. A lookup that previously
+     * failed (and was cached as a miss) must succeed after the scope has been created.
+     */
+    @Test
+    fun testExtractScopeCacheInvalidatedOnPush() {
+        val ctx = TranslationContext(config)
+        val s = ctx.scopeManager
+        val language = TestLanguage()
+        val frontend = TestLanguageFrontend(ctx, language)
+        with(frontend) {
+            val tu = newTranslationUnitDeclaration("file.java", null)
+            s.resetToGlobal(tu)
+
+            val name = parseName("java.lang.String")
+
+            // Before "java.lang" exists: must return null and populate the failure cache
+            val before = s.extractScope(name, language, scope = s.globalScope)
+            assertNull(before)
+
+            // Register the "java" and "java.lang" namespaces — this must invalidate the cache
+            val javaNs = newNamespaceDeclaration("java")
+            s.enterScope(javaNs)
+            val langNs = newNamespaceDeclaration("java.lang")
+            s.enterScope(langNs)
+            s.leaveScope(langNs)
+            s.addDeclaration(langNs)
+            javaNs.declarations += langNs
+            s.leaveScope(javaNs)
+            s.addDeclaration(javaNs)
+            tu.declarations += javaNs
+
+            // After the scopes exist the stale cache entry must be gone and the lookup must succeed
+            val after = s.extractScope(name, language, scope = s.globalScope)
+            assertNotNull(after)
+            val scope = after.scope
+            assertNotNull(scope)
+            assertIs<NameScope>(scope)
+            assertEquals("java.lang", scope.name.toString())
         }
     }
 }
