@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import kotlin.test.Test
@@ -65,7 +65,7 @@ class UnresolvedDFGPassTest {
         // implementation
         val knownCall = result.calls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
-        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
+        assertTrue(knownCall.prevDFG.firstOrNull() is Method)
     }
 
     @Test
@@ -85,7 +85,7 @@ class UnresolvedDFGPassTest {
         // implementation
         val knownCall = result.calls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
-        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
+        assertTrue(knownCall.prevDFG.firstOrNull() is Method)
     }
 
     @Test
@@ -130,7 +130,7 @@ class UnresolvedDFGPassTest {
         // implementation
         val knownCall = result.calls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
-        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
+        assertTrue(knownCall.prevDFG.firstOrNull() is Method)
     }
 
     companion object {
@@ -156,7 +156,7 @@ class UnresolvedDFGPassTest {
                         record("DfgUnresolvedCalls") {
                             field("i", t("int")) { modifiers = setOf("private") }
                             constructor {
-                                receiver = newVariableDeclaration("this", t("DfgUnresolvedCalls"))
+                                receiver = newVariable("this", t("DfgUnresolvedCalls"))
                                 param("i", t("int"))
                                 body {
                                     member("i", ref("this")) assign { ref("i") }
@@ -164,7 +164,7 @@ class UnresolvedDFGPassTest {
                                 }
                             }
                             method("knownFunction", t("int")) {
-                                receiver = newVariableDeclaration("this", t("DfgUnresolvedCalls"))
+                                receiver = newVariable("this", t("DfgUnresolvedCalls"))
                                 param("arg", t("int"))
                                 body { returnStmt { member("i", ref("this")) + ref("arg") } }
                             }

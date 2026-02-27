@@ -35,13 +35,13 @@ import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.neo4j.ogm.annotation.NodeEntity
 
 /**
- * Represents a single declaration or definition, i.e. of a variable ([VariableDeclaration]) or
- * function ([FunctionDeclaration]).
+ * Represents a single declaration or definition, i.e. of a variable ([Variable]) or function
+ * ([Function]).
  *
  * Note: We do NOT (currently) distinguish between the definition and the declaration of a function.
  * This means, that if a function is first declared and later defined with a function body, we will
- * currently have two [FunctionDeclaration] nodes. This is very similar to the behaviour of clang,
- * however clang does establish a connection between those nodes, we currently do not.
+ * currently have two [Function] nodes. This is very similar to the behaviour of clang, however
+ * clang does establish a connection between those nodes, we currently do not.
  */
 @NodeEntity
 abstract class Declaration : AstNode(), HasModifiers {
@@ -53,7 +53,7 @@ abstract class Declaration : AstNode(), HasModifiers {
 
     /**
      * Returns the [Scope] that this [Declaration] declares (if it does). For example, for a
-     * [RecordDeclaration], this will return the [RecordScope] of the particular record or class.
+     * [Record], this will return the [RecordScope] of the particular record or class.
      */
     var declaringScope: Scope? = null
 

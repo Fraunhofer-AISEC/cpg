@@ -55,7 +55,7 @@ data object FullDataflowGranularity : Granularity
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
- * [Dataflow.end] but only parts of it. Common examples include [MemberExpression]s, array or tuple
+ * [Dataflow.end] but only parts of it. Common examples include [MemberAccess]s, array or tuple
  * accesses. This class should allow
  */
 open class PartialDataflowGranularity<T>(
@@ -73,12 +73,12 @@ open class PartialDataflowGranularity<T>(
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
- * [Dataflow.end] but only parts of it, where the part is identified by a (known)
- * [FieldDeclaration]. Common examples include [MemberExpression] nodes, where we model a dataflow
- * to the base, but only partially scoped to a particular field.
+ * [Dataflow.end] but only parts of it, where the part is identified by a (known) [Field]. Common
+ * examples include [MemberAccess] nodes, where we model a dataflow to the base, but only partially
+ * scoped to a particular field.
  */
-class FieldDataflowGranularity(partialTarget: FieldDeclaration) :
-    PartialDataflowGranularity<FieldDeclaration>(partialTarget)
+class FieldDataflowGranularity(partialTarget: Field) :
+    PartialDataflowGranularity<Field>(partialTarget)
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
@@ -110,9 +110,9 @@ fun default() = full()
 
 /**
  * Creates a new [FieldDataflowGranularity]. The [target] is the [Declaration] that is affected by
- * the partial dataflow. Examples include a [FieldDeclaration] for a [MemberExpression].
+ * the partial dataflow. Examples include a [Field] for a [MemberAccess].
  */
-fun field(target: FieldDeclaration): FieldDataflowGranularity {
+fun field(target: Field): FieldDataflowGranularity {
     return FieldDataflowGranularity(target)
 }
 
@@ -126,8 +126,7 @@ fun <T> partial(identifier: T): PartialDataflowGranularity<T> {
 
 /**
  * Creates a new [IndexedDataflowGranularity]. The [idx] is the index that is used for the partial
- * dataflow. An example is the access to an array or tuple element, or a [VariableDeclaration] for a
- * [TupleDeclaration].
+ * dataflow. An example is the access to an array or tuple element, or a [Variable] for a [Tuple].
  */
 fun indexed(idx: Number): IndexedDataflowGranularity {
     return IndexedDataflowGranularity(idx)
@@ -171,14 +170,14 @@ open class Dataflow(
 
 sealed interface CallingContext {
     /** The call expression that affects this dataflow edge. */
-    val call: CallExpression
+    val call: Call
 }
 
-class CallingContextIn(override val call: CallExpression) : CallingContext
+class CallingContextIn(override val call: Call) : CallingContext
 
 class CallingContextOut(
     /** The call expression that affects this dataflow edge. */
-    override val call: CallExpression
+    override val call: Call
 ) : CallingContext
 
 /**

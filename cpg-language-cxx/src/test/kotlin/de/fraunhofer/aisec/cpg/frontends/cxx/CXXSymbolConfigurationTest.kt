@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.*
@@ -65,7 +65,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
 
         // without additional symbols, the second line will look like a function call (to something
         // we do not know)
-        val call = binaryOperator.rhs<CallExpression>()
+        val call = binaryOperator.rhs<Call>()
         assertNotNull(call)
         assertLocalName("INCREASE", call)
     }

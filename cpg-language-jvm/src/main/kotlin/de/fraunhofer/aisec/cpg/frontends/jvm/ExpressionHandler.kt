@@ -42,71 +42,79 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
     Handler<Expression, Value, JVMLanguageFrontend>(::ProblemExpression, frontend) {
 
     override fun handle(ctx: Value): Expression {
-        return when (ctx) {
-            is JCaughtExceptionRef -> handleExceptionRef(ctx)
-            is Local -> handleLocal(ctx)
-            is JThisRef -> handleThisRef(ctx)
-            is JParameterRef -> handleParameterRef(ctx)
-            is JInstanceFieldRef -> handleInstanceFieldRef(ctx)
-            is JStaticFieldRef -> handleStaticFieldRef(ctx)
-            is JArrayRef -> handleArrayRef(ctx)
-            is JInterfaceInvokeExpr -> handleInterfaceInvokeExpr(ctx)
-            is JVirtualInvokeExpr -> handleVirtualInvokeExpr(ctx)
-            is JDynamicInvokeExpr -> handleDynamicInvokeExpr(ctx)
-            is JSpecialInvokeExpr -> handleSpecialInvoke(ctx)
-            is JStaticInvokeExpr -> handleStaticInvoke(ctx)
-            is JNewExpr -> handleNewExpr(ctx)
-            is JNewArrayExpr -> handleNewArrayExpr(ctx)
-            is JNewMultiArrayExpr -> handleNewMultiArrayExpr(ctx)
-            is JCastExpr -> handleCastExpr(ctx)
-            // Binary operators
-            // - Equality checks
-            is JEqExpr,
-            is JNeExpr,
-            is JGeExpr,
-            is JGtExpr,
-            is JLeExpr,
-            is JLtExpr,
-            // - Numeric comparisons
-            is JCmpExpr,
-            is JCmplExpr,
-            is JCmpgExpr,
-            // - Simple arithmetics
-            is JAddExpr,
-            is JDivExpr,
-            is JMulExpr,
-            is JRemExpr,
-            is JSubExpr,
-            // - Binary arithmetics
-            is JAndExpr,
-            is JOrExpr,
-            is JShlExpr,
-            is JShrExpr,
-            is JUshrExpr,
-            is JXorExpr,
-            // Fallback, just to be sure
-            is AbstractBinopExpr -> handleAbstractBinopExpr(ctx)
-            // Unary operators
-            is JNegExpr -> handleNegExpr(ctx)
-            // Special operators, which we need to model as binary/unary operators
-            is JInstanceOfExpr -> handleInstanceOfExpr(ctx)
-            is JLengthExpr -> handleLengthExpr(ctx)
-            // Constants
-            is BooleanConstant -> handleBooleanConstant(ctx)
-            is FloatConstant -> handleFloatConstant(ctx)
-            is DoubleConstant -> handleDoubleConstant(ctx)
-            is IntConstant -> handleIntConstant(ctx)
-            is LongConstant -> handleLongConstant(ctx)
-            is StringConstant -> handleStringConstant(ctx)
-            is NullConstant -> handleNullConstant(ctx)
-            is ClassConstant -> handleClassConstant(ctx)
-            else -> {
-                log.warn("Unhandled expression type: ${ctx.javaClass.simpleName}")
-                newProblemExpression(
-                    "Unhandled expression type: ${ctx.javaClass.simpleName}",
-                    rawNode = ctx,
-                )
+        try {
+            return when (ctx) {
+                is JCaughtExceptionRef -> handleExceptionRef(ctx)
+                is Local -> handleLocal(ctx)
+                is JThisRef -> handleThisRef(ctx)
+                is JParameterRef -> handleParameterRef(ctx)
+                is JInstanceFieldRef -> handleInstanceFieldRef(ctx)
+                is JStaticFieldRef -> handleStaticFieldRef(ctx)
+                is JArrayRef -> handleArrayRef(ctx)
+                is JInterfaceInvokeExpr -> handleInterfaceInvokeExpr(ctx)
+                is JVirtualInvokeExpr -> handleVirtualInvokeExpr(ctx)
+                is JDynamicInvokeExpr -> handleDynamicInvokeExpr(ctx)
+                is JSpecialInvokeExpr -> handleSpecialInvoke(ctx)
+                is JStaticInvokeExpr -> handleStaticInvoke(ctx)
+                is JNewExpr -> handleNewExpr(ctx)
+                is JNewArrayExpr -> handleNewArrayExpr(ctx)
+                is JNewMultiArrayExpr -> handleNewMultiArrayExpr(ctx)
+                is JCastExpr -> handleCastExpr(ctx)
+                // Binary operators
+                // - Equality checks
+                is JEqExpr,
+                is JNeExpr,
+                is JGeExpr,
+                is JGtExpr,
+                is JLeExpr,
+                is JLtExpr,
+                // - Numeric comparisons
+                is JCmpExpr,
+                is JCmplExpr,
+                is JCmpgExpr,
+                // - Simple arithmetics
+                is JAddExpr,
+                is JDivExpr,
+                is JMulExpr,
+                is JRemExpr,
+                is JSubExpr,
+                // - Binary arithmetics
+                is JAndExpr,
+                is JOrExpr,
+                is JShlExpr,
+                is JShrExpr,
+                is JUshrExpr,
+                is JXorExpr,
+                // Fallback, just to be sure
+                is AbstractBinopExpr -> handleAbstractBinopExpr(ctx)
+                // Unary operators
+                is JNegExpr -> handleNegExpr(ctx)
+                // Special operators, which we need to model as binary/unary operators
+                is JInstanceOfExpr -> handleInstanceOfExpr(ctx)
+                is JLengthExpr -> handleLengthExpr(ctx)
+                // Constants
+                is BooleanConstant -> handleBooleanConstant(ctx)
+                is FloatConstant -> handleFloatConstant(ctx)
+                is DoubleConstant -> handleDoubleConstant(ctx)
+                is IntConstant -> handleIntConstant(ctx)
+                is LongConstant -> handleLongConstant(ctx)
+                is StringConstant -> handleStringConstant(ctx)
+                is NullConstant -> handleNullConstant(ctx)
+                is ClassConstant -> handleClassConstant(ctx)
+                else -> {
+                    log.warn("Unhandled expression type: ${ctx.javaClass.simpleName}")
+                    newProblemExpression(
+                        "Unhandled expression type: ${ctx.javaClass.simpleName}",
+                        rawNode = ctx,
+                    )
+                }
             }
+        } catch (e: Exception) {
+            log.error("Error while handling an expression", e)
+            return newProblemExpression(
+                "Error handling expression ${ctx}: ${e.message}",
+                rawNode = ctx,
+            )
         }
     }
 
@@ -151,7 +159,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         val base = handle(instanceFieldRef.base)
 
         val ref =
-            newMemberExpression(
+            newMemberAccess(
                 instanceFieldRef.fieldSignature.name,
                 base,
                 frontend.typeOf(instanceFieldRef.fieldSignature.type),
@@ -164,8 +172,8 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
     private fun handleStaticFieldRef(staticFieldRef: JStaticFieldRef) =
         staticFieldRef.fieldSignature.toStaticRef()
 
-    private fun handleArrayRef(arrayRef: JArrayRef): SubscriptExpression {
-        val sub = newSubscriptExpression(rawNode = arrayRef)
+    private fun handleArrayRef(arrayRef: JArrayRef): Subscription {
+        val sub = newSubscription(rawNode = arrayRef)
         sub.arrayExpression = handle(arrayRef.base)
         sub.subscriptExpression = handle(arrayRef.index)
 
@@ -174,24 +182,24 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleAbstractInstanceInvokeExpr(
         invokeExpr: AbstractInstanceInvokeExpr
-    ): MemberCallExpression {
+    ): MemberCall {
         val base = handle(invokeExpr.base)
         // Not really necessary, but since we already have the type information, we can use it
         base.type = frontend.typeOf(invokeExpr.methodSignature.declClassType)
 
-        val callee = newMemberExpression(invokeExpr.methodSignature.name, base)
+        val callee = newMemberAccess(invokeExpr.methodSignature.name, base)
 
-        val call = newMemberCallExpression(callee, rawNode = invokeExpr)
+        val call = newMemberCall(callee, rawNode = invokeExpr)
         call.arguments = invokeExpr.args.mapNotNull { handle(it) }.toMutableList()
 
         return call
     }
 
-    private fun handleVirtualInvokeExpr(invokeExpr: JVirtualInvokeExpr): MemberCallExpression {
+    private fun handleVirtualInvokeExpr(invokeExpr: JVirtualInvokeExpr): MemberCall {
         return handleAbstractInstanceInvokeExpr(invokeExpr)
     }
 
-    private fun handleInterfaceInvokeExpr(invokeExpr: JInterfaceInvokeExpr): MemberCallExpression {
+    private fun handleInterfaceInvokeExpr(invokeExpr: JInterfaceInvokeExpr): MemberCall {
         return handleAbstractInstanceInvokeExpr(invokeExpr)
     }
 
@@ -208,7 +216,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         // This is probably a constructor call
         return if (invokeExpr.methodSignature.name == "<init>") {
             val type = frontend.typeOf(invokeExpr.methodSignature.declClassType)
-            val construct = newConstructExpression(rawNode = invokeExpr)
+            val construct = newConstruction(rawNode = invokeExpr)
             construct.callee = newReference(Name("<init>", type.name))
             construct.type = type
 
@@ -221,23 +229,23 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         }
     }
 
-    private fun handleDynamicInvokeExpr(dynamicInvokeExpr: AbstractInvokeExpr): CallExpression {
+    private fun handleDynamicInvokeExpr(dynamicInvokeExpr: AbstractInvokeExpr): Call {
         // Model this as a static call to the method. Not sure if this is really that good or if we
         // want to somehow "call" the underlying bootstrap method.
-        // TODO(oxisto): This is actually somewhat related to a LambdaExpression, but not really
+        // TODO(oxisto): This is actually somewhat related to a Lambda, but not really
         // sure ow to model this
         val callee = dynamicInvokeExpr.methodSignature.toStaticRef()
-        val call = newCallExpression(callee, rawNode = dynamicInvokeExpr)
+        val call = newCall(callee, rawNode = dynamicInvokeExpr)
         call.arguments = dynamicInvokeExpr.args.mapNotNull { handle(it) }.toMutableList()
         call.type = frontend.typeOf(dynamicInvokeExpr.methodSignature.type)
 
         return call
     }
 
-    private fun handleStaticInvoke(staticInvokeExpr: JStaticInvokeExpr): CallExpression {
+    private fun handleStaticInvoke(staticInvokeExpr: JStaticInvokeExpr): Call {
         val ref = staticInvokeExpr.methodSignature.toStaticRef()
 
-        val call = newCallExpression(ref, rawNode = staticInvokeExpr)
+        val call = newCall(ref, rawNode = staticInvokeExpr)
         call.arguments = staticInvokeExpr.args.mapNotNull { handle(it) }.toMutableList()
         call.type = frontend.typeOf(staticInvokeExpr.type)
 
@@ -250,26 +258,26 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
      * constructor call.
      */
     private fun handleNewExpr(newExpr: JNewExpr) =
-        newNewExpression(frontend.typeOf(newExpr.type), rawNode = newExpr)
+        newNew(frontend.typeOf(newExpr.type), rawNode = newExpr)
 
-    private fun handleNewArrayExpr(newArrayExpr: JNewArrayExpr): NewArrayExpression {
-        val new = newNewArrayExpression(rawNode = newArrayExpr)
+    private fun handleNewArrayExpr(newArrayExpr: JNewArrayExpr): ArrayConstruction {
+        val new = newArrayConstruction(rawNode = newArrayExpr)
         new.type = frontend.typeOf(newArrayExpr.type)
         new.dimensions = listOfNotNull(handle(newArrayExpr.size)).toMutableList()
 
         return new
     }
 
-    private fun handleNewMultiArrayExpr(newMultiArrayExpr: JNewMultiArrayExpr): NewArrayExpression {
-        val new = newNewArrayExpression(rawNode = newMultiArrayExpr)
+    private fun handleNewMultiArrayExpr(newMultiArrayExpr: JNewMultiArrayExpr): ArrayConstruction {
+        val new = newArrayConstruction(rawNode = newMultiArrayExpr)
         new.type = frontend.typeOf(newMultiArrayExpr.type)
         new.dimensions = newMultiArrayExpr.sizes.mapNotNull { handle(it) }.toMutableList()
 
         return new
     }
 
-    private fun handleCastExpr(castExpr: JCastExpr): CastExpression {
-        val cast = newCastExpression(rawNode = castExpr)
+    private fun handleCastExpr(castExpr: JCastExpr): Cast {
+        val cast = newCast(rawNode = castExpr)
         cast.expression = handle(castExpr.op)
         cast.castType = frontend.typeOf(castExpr.type)
 
@@ -364,7 +372,19 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun SootClassMemberSignature<*>.toStaticRef(): Reference {
         // First, construct the name using <parent-type>.<fun>
-        val ref = newReference("${this.declClassType.fullyQualifiedName}.${this.name}")
+        val parentTypeName = "${this.declClassType.fullyQualifiedName}"
+        val ref = newReference("$parentTypeName.${this.name}")
+        val currentComponent =
+            this@ExpressionHandler.frontend.currentTU?.firstParentOrNull<Component>()
+
+        // We want to ensure that the parent type is available to the type manager when it handles
+        // the current component. This helps to infer the respective record declarations correctly
+        // and helps to speed up the overall analysis.
+        currentComponent?.additionalTypes?.computeIfAbsent(parentTypeName) {
+            objectType(parentTypeName)
+        }
+
+        ref.type = frontend.typeOf(this.type)
 
         // Make it static
         ref.isStaticAccess = true

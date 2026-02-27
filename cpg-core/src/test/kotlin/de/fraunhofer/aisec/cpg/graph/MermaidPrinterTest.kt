@@ -58,7 +58,7 @@ class MermaidPrinterTest {
     fun testPrintAST() {
         with(TestLanguageFrontend()) {
             val ref = newReference("foo")
-            val call = newCallExpression(ref)
+            val call = newCall(ref)
             val lit = newLiteral(1337).also { it.name = Name("1337") }
             call.arguments += lit
             assertNotNull(ref.astParent)
@@ -68,7 +68,7 @@ class MermaidPrinterTest {
             val ast = ref.printAST()
             println(ast)
             assertContains(ast, "foo")
-            assertContains(ast, "CallExpression")
+            assertContains(ast, "Call")
             assertContains(ast, "Literal")
             assertContains(ast, "1337")
         }

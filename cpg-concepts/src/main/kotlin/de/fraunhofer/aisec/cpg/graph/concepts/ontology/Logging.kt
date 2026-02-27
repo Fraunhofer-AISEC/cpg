@@ -27,21 +27,31 @@ package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import java.time.Duration
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
+import kotlin.time.Duration
 
-public open class Logging(
-    public val enabled: Boolean?,
-    public val monitoringEnabled: Boolean?,
+open class LoggingField
+
+object CurrentTimeField : LoggingField()
+
+object LoggerNameField : LoggingField()
+
+object LogMessage : LoggingField()
+
+open class Logging(
+    var logLevelThreshold: LogLevel?,
+    var enabled: Boolean?,
+    var monitoringEnabled: Boolean?,
     name: String?,
-    public val retentionPeriod: Duration?,
-    public val securityAlertsEnabled: Boolean?,
-    public val loggingService: LoggingService?,
+    var retentionPeriod: Duration?,
+    var securityAlertsEnabled: Boolean?,
+    var loggingService: LoggingService?,
     underlyingNode: Node? = null,
+    var logFields: MutableList<LoggingField> = mutableListOf(),
 ) : Auditing(underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }
@@ -55,7 +65,8 @@ public open class Logging(
             other.name == this.name &&
             other.retentionPeriod == this.retentionPeriod &&
             other.securityAlertsEnabled == this.securityAlertsEnabled &&
-            other.loggingService == this.loggingService
+            other.loggingService == this.loggingService &&
+            other.logLevelThreshold == this.logLevelThreshold
 
     override fun hashCode(): Int =
         Objects.hash(
@@ -66,5 +77,6 @@ public open class Logging(
             retentionPeriod,
             securityAlertsEnabled,
             loggingService,
+            logLevelThreshold,
         )
 }

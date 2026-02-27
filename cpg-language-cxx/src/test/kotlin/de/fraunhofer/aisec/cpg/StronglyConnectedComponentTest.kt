@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.For
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.test.BaseTest
@@ -52,10 +52,10 @@ class StronglyConnectedComponentTest : BaseTest() {
         assertNotNull(nestedFD)
 
         for (level in 0..2) {
-            val forStmt = nestedFD.allChildren<ForStatement>()[level]
+            val forStmt = nestedFD.allChildren<For>()[level]
             assertNotNull(forStmt)
             ///////// First, check on node-level
-            // All 3 ForStatements should have one edge with an SCC of priority respective to their
+            // All 3 Fors should have one edge with an SCC of priority respective to their
             // level ( +1 b/c we start counting at 1), and one without or with different SCC
             // (exiting the loop)
             assertEquals(1, forStmt.nextEOGEdges.filter { it.scc == (level + 1) }.size)
