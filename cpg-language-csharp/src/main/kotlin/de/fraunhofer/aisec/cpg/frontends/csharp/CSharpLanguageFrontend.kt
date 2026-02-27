@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.newTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -39,10 +39,10 @@ import java.io.File
 class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpLanguageFrontend>) :
     LanguageFrontend<Csharp.Ast.Node, Csharp.Ast.Node>(ctx, language) {
 
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         val source = file.readText()
         val root = Csharp.CSharpSyntaxTree.parseText(source)
-        val tu = newTranslationUnitDeclaration(file.name, rawNode = root)
+        val tu = newTranslationUnit(file.name, rawNode = root)
         return tu
     }
 
