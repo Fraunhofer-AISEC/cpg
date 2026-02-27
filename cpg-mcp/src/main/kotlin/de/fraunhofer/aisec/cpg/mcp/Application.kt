@@ -61,13 +61,27 @@ class Application : Runnable {
         var httpPort: Int? = null
     }
 
+    @CommandLine.Option(
+        names = ["--host"],
+        description =
+            [
+                "Configure for which hosts the MCP server should be accessible. We expect a valid IP address. Default is 0.0.0.0"
+            ],
+    )
+    var host: String? = null
+
     override fun run() {
+        val host = host ?: "0.0.0.0"
         val httpPort = transport?.httpPort
         val ssePort = transport?.ssePort
         if (httpPort != null) {
-            runHttpMcpServerUsingKtorPlugin(httpPort, configureServer())
+            runHttpMcpServerUsingKtorPlugin(
+                port = httpPort,
+                host = host,
+                server = configureServer(),
+            )
         } else if (ssePort != null) {
-            runSseMcpServerUsingKtorPlugin(ssePort, configureServer())
+            runSseMcpServerUsingKtorPlugin(port = ssePort, host = host, server = configureServer())
         } else if (transport?.stdio == true) {
             runMcpServerUsingStdio()
         } else {
@@ -100,16 +114,25 @@ fun runMcpServerUsingStdio() {
  * The url can be accessed in the MCP inspector at [http://localhost:$port]
  *
  * @param port The port number on which the SSE MCP server will listen for client connections.
+ * @param host The host/IP address on which the server will bind.
+ * @param server The MCP server instance that will handle incoming requests and provide responses to
+ *   clients.
  */
-fun runSseMcpServerUsingKtorPlugin(port: Int, server: Server) = runBlocking {
-    embeddedServer(CIO, host = "0.0.0.0", port = port) { mcp { server } }.start(wait = true)
+fun runSseMcpServerUsingKtorPlugin(port: Int, host: String, server: Server) = runBlocking {
+    embeddedServer(CIO, host = host, port = port) { mcp { server } }.start(wait = true)
 }
 
-fun runHttpMcpServerUsingKtorPlugin(port: Int, server: Server) {
+/**
+ * Starts a streamable HTTP MCP server using the Ktor framework and the specified port.
+ *
+ * @param port The port number on which the SSE MCP server will listen for client connections.
+ * @param host The host/IP address on which the server will bind.
+ * @param server The MCP server instance that will handle incoming requests and provide responses to
+ *   clients.
+ */
+fun runHttpMcpServerUsingKtorPlugin(port: Int, host: String, server: Server) {
     runBlocking {
-        embeddedServer(factory = CIO, host = "0.0.0.0", port = port) {
-                mcpStreamableHttp { server }
-            }
+        embeddedServer(factory = CIO, host = host, port = port) { mcpStreamableHttp { server } }
             .start(wait = true)
     }
 }
