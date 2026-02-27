@@ -37,26 +37,20 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 
 class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpLanguageFrontend>) :
-    LanguageFrontend<String, String>(ctx, language) {
+    LanguageFrontend<Csharp.Ast.Node, Csharp.Ast.Node>(ctx, language) {
 
     override fun parse(file: File): TranslationUnitDeclaration {
         val source = file.readText()
-        val ptr = Csharp.INSTANCE.parseCsharp(source)
-        val rootKind = ptr.getString(0, "UTF-8")
-        if (rootKind == "CompilationUnit") {
-            newTranslationUnitDeclaration(file.name)
-        }
-        log.info("C# root node kind: $rootKind")
-
-        val tu = newTranslationUnitDeclaration(file.name)
+        val root = Csharp.CSharpSyntaxTree.parseText(source)
+        val tu = newTranslationUnitDeclaration(file.name, rawNode = root)
         return tu
     }
 
-    override fun typeOf(type: String): Type = unknownType()
+    override fun typeOf(type: Csharp.Ast.Node): Type = unknownType()
 
-    override fun codeOf(astNode: String): String = astNode
+    override fun codeOf(astNode: Csharp.Ast.Node): String? = null
 
-    override fun locationOf(astNode: String): PhysicalLocation? = null
+    override fun locationOf(astNode: Csharp.Ast.Node): PhysicalLocation? = null
 
-    override fun setComment(node: Node, astNode: String) {}
+    override fun setComment(node: Node, astNode: Csharp.Ast.Node) {}
 }

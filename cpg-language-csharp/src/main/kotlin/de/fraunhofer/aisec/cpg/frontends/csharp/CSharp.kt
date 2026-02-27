@@ -32,17 +32,77 @@ import com.sun.jna.PointerType
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 
+/** This interface encapsulates C# <-> Kotlin translation objects. */
 interface Csharp : Library {
+    /** Base class for all JNA pointer wrappers in this interface. */
     open class CsharpObject(p: Pointer? = Pointer.NULL) : PointerType(p) {
         val csharpType: String
             get() {
-                return "INSTANCE.GetType(this.pointer)"
+                return INSTANCE.GetKind(this.pointer)
             }
     }
 
-    fun parseCsharp(source: String): Pointer
+    /**
+     * This interface represents the `Microsoft.CodeAnalysis.CSharp.Syntax` namespace in Roslyn. It
+     * contains classes representing the syntax nodes of the C# AST as returned by Roslyn's parser.
+     */
+    interface Ast {
+        /**
+         * Base class for all C# syntax nodes. Represents Roslyn's
+         * `Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode`.
+         *
+         * See
+         * [CSharpSyntaxNode](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.csharpsyntaxnode?view=roslyn-dotnet-5.0.0)
+         */
+        open class Node(p: Pointer? = Pointer.NULL) : CsharpObject(p)
 
-    fun freeString(ptr: Pointer)
+        /**
+         * Represents the Roslyn `CompilationUnitSyntax` class.
+         *
+         * See
+         * [CompilationUnitSyntax](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.compilationunitsyntax?view=roslyn-dotnet-5.0.0)
+         */
+        class CompilationUnitSyntax(p: Pointer? = Pointer.NULL) : Node(p)
+
+        /**
+         * Represents the Roslyn `NamespaceDeclarationSyntax` class.
+         *
+         * See
+         * [NamespaceDeclarationSyntax](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.namespacedeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         */
+        class NamespaceDeclarationSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val name: String by lazy { INSTANCE.GetNamespaceDeclarationName(this) }
+        }
+
+        /**
+         * Represents the Roslyn `ClassDeclarationSyntax` class.
+         *
+         * See
+         * [ClassDeclarationSyntax](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.classdeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         */
+        class ClassDeclarationSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val identifier: String by lazy { INSTANCE.GetClassDeclarationIdentifier(this) }
+        }
+    }
+
+    /**
+     * Represents the Roslyn `CSharpSyntaxTree` class.
+     *
+     * See: TODO(link)
+     */
+    object CSharpSyntaxTree {
+        fun parseText(source: String): Ast.CompilationUnitSyntax {
+            return Ast.CompilationUnitSyntax(INSTANCE.CSharpRoslynSyntaxTreeParseText(source))
+        }
+    }
+
+    fun CSharpRoslynSyntaxTreeParseText(source: String): Pointer
+
+    fun GetKind(handle: Pointer): String
+
+    fun GetNamespaceDeclarationName(handle: Ast.NamespaceDeclarationSyntax): String
+
+    fun GetClassDeclarationIdentifier(handle: Ast.ClassDeclarationSyntax): String
 
     companion object {
         val INSTANCE: Csharp by lazy {
