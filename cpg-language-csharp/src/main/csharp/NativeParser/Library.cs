@@ -24,7 +24,7 @@ public static class Library
         // Marshal gets the pointer and converts it to an .NET string
         var source = Marshal.PtrToStringUTF8(sourcePtr);
         // Roslyn parses the source code -> AST
-        var root = CSharpSyntaxTree.ParseText(source).GetRoot();
+        var root = (CSharpSyntaxNode)CSharpSyntaxTree.ParseText(source).GetRoot();
         return Register(root);
     }
 
