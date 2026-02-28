@@ -37,20 +37,34 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 
 class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpLanguageFrontend>) :
-    LanguageFrontend<Csharp.Ast.Node, Csharp.Ast.Node>(ctx, language) {
+    LanguageFrontend<Csharp.AST.Node, Csharp.AST.Node>(ctx, language) {
+
+    val declarationHandler = DeclarationHandler(this)
 
     override fun parse(file: File): TranslationUnit {
         val source = file.readText()
         val root = Csharp.CSharpSyntaxTree.parseText(source)
         val tu = newTranslationUnit(file.name, rawNode = root)
+
+        scopeManager.resetToGlobal(tu)
+        currentTU = tu
+        scopeManager.enterScope(tu)
+
+        for (member in root.members) {
+            val decl = declarationHandler.handle(member)
+            scopeManager.addDeclaration(decl)
+            tu.addDeclaration(decl)
+        }
+
+        scopeManager.leaveScope(tu)
         return tu
     }
 
-    override fun typeOf(type: Csharp.Ast.Node): Type = unknownType()
+    override fun typeOf(type: Csharp.AST.Node): Type = unknownType()
 
-    override fun codeOf(astNode: Csharp.Ast.Node): String? = null
+    override fun codeOf(astNode: Csharp.AST.Node): String? = null
 
-    override fun locationOf(astNode: Csharp.Ast.Node): PhysicalLocation? = null
+    override fun locationOf(astNode: Csharp.AST.Node): PhysicalLocation? = null
 
-    override fun setComment(node: Node, astNode: Csharp.Ast.Node) {}
+    override fun setComment(node: Node, astNode: Csharp.AST.Node) {}
 }

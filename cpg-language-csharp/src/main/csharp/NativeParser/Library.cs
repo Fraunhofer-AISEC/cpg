@@ -34,4 +34,44 @@ public static class Library
         var kind = Nodes[handlePtr].Kind().ToString();
         return Marshal.StringToCoTaskMemUTF8(kind);
     }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetCompilationUnitMembersCount")]
+    public static int GetCompilationUnitMembersCount(IntPtr handlePtr)
+    {
+        return ((CompilationUnitSyntax)Nodes[handlePtr]).Members.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetCompilationUnitMember")]
+    public static IntPtr GetCompilationUnitMember(IntPtr handlePtr, int index)
+    {
+        return Register(((CompilationUnitSyntax)Nodes[handlePtr]).Members[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetNamespaceDeclarationName")]
+    public static IntPtr GetNamespaceDeclarationName(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((NamespaceDeclarationSyntax)Nodes[handlePtr]).Name.ToString()
+        );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetNamespaceDeclarationMembersCount")]
+    public static int GetNamespaceDeclarationMembersCount(IntPtr handlePtr)
+    {
+        return ((NamespaceDeclarationSyntax)Nodes[handlePtr]).Members.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetNamespaceDeclarationMember")]
+    public static IntPtr GetNamespaceDeclarationMember(IntPtr handlePtr, int index)
+    {
+        return Register(((NamespaceDeclarationSyntax)Nodes[handlePtr]).Members[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetClassDeclarationIdentifier")]
+    public static IntPtr GetClassDeclarationIdentifier(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((ClassDeclarationSyntax)Nodes[handlePtr]).Identifier.ToString()
+        );
+    }
 }

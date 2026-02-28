@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
+import com.sun.jna.FromNativeContext
 import com.sun.jna.Library
 import com.sun.jna.Native
 import com.sun.jna.Pointer
@@ -46,41 +47,62 @@ interface Csharp : Library {
      * This interface represents the `Microsoft.CodeAnalysis.CSharp.Syntax` namespace in Roslyn. It
      * contains classes representing the syntax nodes of the C# AST as returned by Roslyn's parser.
      */
-    interface Ast {
+    interface AST {
         /**
          * Base class for all C# syntax nodes. Represents Roslyn's
-         * `Microsoft.CodeAnalysis.CSharp.CSharpSyntaxNode`.
-         *
-         * See
-         * [CSharpSyntaxNode](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.csharpsyntaxnode?view=roslyn-dotnet-5.0.0)
+         * [`CSharpSyntaxNode`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.csharpsyntaxnode?view=roslyn-dotnet-5.0.0)
          */
         open class Node(p: Pointer? = Pointer.NULL) : CsharpObject(p)
 
         /**
-         * Represents the Roslyn `CompilationUnitSyntax` class.
-         *
-         * See
-         * [CompilationUnitSyntax](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.compilationunitsyntax?view=roslyn-dotnet-5.0.0)
+         * Represents the Roslyn
+         * [`CompilationUnitSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.compilationunitsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
          */
-        class CompilationUnitSyntax(p: Pointer? = Pointer.NULL) : Node(p)
-
-        /**
-         * Represents the Roslyn `NamespaceDeclarationSyntax` class.
-         *
-         * See
-         * [NamespaceDeclarationSyntax](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.namespacedeclarationsyntax?view=roslyn-dotnet-5.0.0)
-         */
-        class NamespaceDeclarationSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
-            val name: String by lazy { INSTANCE.GetNamespaceDeclarationName(this) }
+        class CompilationUnitSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val members: List<MemberDeclarationSyntax> by lazy {
+                val count = INSTANCE.GetCompilationUnitMembersCount(this)
+                (0 until count).map { i -> INSTANCE.GetCompilationUnitMember(this, i) }
+            }
         }
 
         /**
-         * Represents the Roslyn `ClassDeclarationSyntax` class.
-         *
-         * See
-         * [ClassDeclarationSyntax](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.classdeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * Represents the Roslyn
+         * [MemberDeclarationSyntax](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.memberdeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
          */
-        class ClassDeclarationSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+        open class MemberDeclarationSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any {
+                if (nativeValue !is Pointer) {
+                    return super.fromNative(nativeValue, context)
+                }
+                return when (INSTANCE.GetKind(nativeValue)) {
+                    "NamespaceDeclaration" -> NamespaceDeclarationSyntax(nativeValue)
+                    "ClassDeclaration" -> ClassDeclarationSyntax(nativeValue)
+                    else -> super.fromNative(nativeValue, context)
+                }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`NamespaceDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.namespacedeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
+        class NamespaceDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
+            val name: String by lazy { INSTANCE.GetNamespaceDeclarationName(this) }
+            val members: List<MemberDeclarationSyntax> by lazy {
+                val count = INSTANCE.GetNamespaceDeclarationMembersCount(this)
+                (0 until count).map { i -> INSTANCE.GetNamespaceDeclarationMember(this, i) }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ClassDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.classdeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
+        class ClassDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
             val identifier: String by lazy { INSTANCE.GetClassDeclarationIdentifier(this) }
         }
     }
@@ -91,8 +113,8 @@ interface Csharp : Library {
      * See: TODO(link)
      */
     object CSharpSyntaxTree {
-        fun parseText(source: String): Ast.CompilationUnitSyntax {
-            return Ast.CompilationUnitSyntax(INSTANCE.CSharpRoslynSyntaxTreeParseText(source))
+        fun parseText(source: String): AST.CompilationUnitSyntax {
+            return AST.CompilationUnitSyntax(INSTANCE.CSharpRoslynSyntaxTreeParseText(source))
         }
     }
 
@@ -100,9 +122,23 @@ interface Csharp : Library {
 
     fun GetKind(handle: Pointer): String
 
-    fun GetNamespaceDeclarationName(handle: Ast.NamespaceDeclarationSyntax): String
+    fun GetCompilationUnitMembersCount(handle: AST.CompilationUnitSyntax): Int
 
-    fun GetClassDeclarationIdentifier(handle: Ast.ClassDeclarationSyntax): String
+    fun GetCompilationUnitMember(
+        handle: AST.CompilationUnitSyntax,
+        index: Int,
+    ): AST.MemberDeclarationSyntax
+
+    fun GetNamespaceDeclarationName(handle: AST.NamespaceDeclarationSyntax): String
+
+    fun GetNamespaceDeclarationMembersCount(handle: AST.NamespaceDeclarationSyntax): Int
+
+    fun GetNamespaceDeclarationMember(
+        handle: AST.NamespaceDeclarationSyntax,
+        index: Int,
+    ): AST.MemberDeclarationSyntax
+
+    fun GetClassDeclarationIdentifier(handle: AST.ClassDeclarationSyntax): String
 
     companion object {
         val INSTANCE: Csharp by lazy {

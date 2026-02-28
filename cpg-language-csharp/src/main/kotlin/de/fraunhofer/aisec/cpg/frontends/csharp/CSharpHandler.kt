@@ -25,31 +25,25 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
-import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.test.*
-import java.nio.file.Path
-import kotlin.test.Test
-import kotlin.test.assertNotNull
+import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.graph.Node
+import java.util.function.Supplier
 
-class CSharpLanguageFrontendTest : BaseTest() {
+/** Base class for all C# handlers. */
+abstract class CSharpHandler<ResultNode : Node>(
+    configConstructor: Supplier<ResultNode>,
+    frontend: CSharpLanguageFrontend,
+) : Handler<ResultNode, Csharp.AST.Node, CSharpLanguageFrontend>(configConstructor, frontend) {
 
-    @Test
-    fun testHelloWorld() {
-        val topLevel = Path.of("src", "test", "resources", "csharp")
-        val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("helloworld.cs").toFile()),
-                topLevel,
-                true,
-            ) {
-                it.registerLanguage<CSharpLanguage>()
-            }
-        assertNotNull(tu)
+    override fun handle(ctx: Csharp.AST.Node): ResultNode {
+        val node = handleNode(ctx)
 
-        val ns = tu.namespaces["HelloWorld"]
-        assertNotNull(ns)
+        frontend.setComment(node, ctx)
+        frontend.process(ctx, node)
 
-        val foo = ns.records["Foo"]
-        assertNotNull(foo)
+        lastNode = node
+        return node
     }
+
+    abstract fun handleNode(node: Csharp.AST.Node): ResultNode
 }

@@ -4,6 +4,7 @@ dependencies { implementation("net.java.dev.jna:jna:5.18.1") }
 
 val publishNativeParser by
     tasks.registering(Exec::class) {
+        // TODO: Check again https://learn.microsoft.com/en-us/dotnet/core/rid-catalog
         val osName = System.getProperty("os.name")
         val os = if (osName.startsWith("Mac")) "osx" else "linux"
         val arch = System.getProperty("os.arch").replace("aarch64", "arm64").replace("amd64", "x64")
