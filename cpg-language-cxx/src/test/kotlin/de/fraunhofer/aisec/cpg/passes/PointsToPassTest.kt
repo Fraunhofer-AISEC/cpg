@@ -28,11 +28,11 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
@@ -60,14 +60,10 @@ class PointsToPassTest {
         assertNotNull(tu)
 
         // Declarations
-        val iDecl =
-            tu.allChildren<VariableDeclaration> { it.location?.region?.startLine == 4 }.first()
-        val jDecl =
-            tu.allChildren<VariableDeclaration> { it.location?.region?.startLine == 5 }.first()
-        val aDecl =
-            tu.allChildren<VariableDeclaration> { it.location?.region?.startLine == 6 }.first()
-        val bDecl =
-            tu.allChildren<VariableDeclaration> { it.location?.region?.startLine == 7 }.first()
+        val iDecl = tu.allChildren<Variable> { it.location?.region?.startLine == 4 }.first()
+        val jDecl = tu.allChildren<Variable> { it.location?.region?.startLine == 5 }.first()
+        val aDecl = tu.allChildren<Variable> { it.location?.region?.startLine == 6 }.first()
+        val bDecl = tu.allChildren<Variable> { it.location?.region?.startLine == 7 }.first()
 
         // Literals
         val literal0 = tu.allChildren<Literal<*>> { it.location?.region?.startLine == 4 }.first()
@@ -431,41 +427,37 @@ class PointsToPassTest {
         assertNotNull(tu)
 
         // References
-        val saLine51 =
-            tu.allChildren<MemberExpression> { it.location?.region?.startLine == 51 }.first()
-        val sbLine52 =
-            tu.allChildren<MemberExpression> { it.location?.region?.startLine == 52 }.first()
+        val saLine51 = tu.allChildren<MemberAccess> { it.location?.region?.startLine == 51 }.first()
+        val sbLine52 = tu.allChildren<MemberAccess> { it.location?.region?.startLine == 52 }.first()
         val saLine53 =
-            tu.allChildren<MemberExpression> {
+            tu.allChildren<MemberAccess> {
                     it.location?.region?.startLine == 53 && it.name.localName == "a"
                 }
                 .first()
         val sbLine53 =
-            tu.allChildren<MemberExpression> {
+            tu.allChildren<MemberAccess> {
                     it.location?.region?.startLine == 53 && it.name.localName == "b"
                 }
                 .first()
         val paLine55 =
-            tu.allChildren<MemberExpression> {
+            tu.allChildren<MemberAccess> {
                     it.location?.region?.startLine == 55 && it.name.localName == "a"
                 }
                 .first()
         val pbLine55 =
-            tu.allChildren<MemberExpression> {
+            tu.allChildren<MemberAccess> {
                     it.location?.region?.startLine == 55 && it.name.localName == "b"
                 }
                 .first()
-        val paLine56 =
-            tu.allChildren<MemberExpression> { it.location?.region?.startLine == 56 }.first()
-        val pbLine57 =
-            tu.allChildren<MemberExpression> { it.location?.region?.startLine == 57 }.first()
+        val paLine56 = tu.allChildren<MemberAccess> { it.location?.region?.startLine == 56 }.first()
+        val pbLine57 = tu.allChildren<MemberAccess> { it.location?.region?.startLine == 57 }.first()
         val paLine59 =
-            tu.allChildren<MemberExpression> {
+            tu.allChildren<MemberAccess> {
                     it.location?.region?.startLine == 59 && it.name.localName == "a"
                 }
                 .first()
         val pbLine59 =
-            tu.allChildren<MemberExpression> {
+            tu.allChildren<MemberAccess> {
                     it.location?.region?.startLine == 59 && it.name.localName == "b"
                 }
                 .first()
@@ -575,16 +567,11 @@ class PointsToPassTest {
         assertNotNull(tu)
 
         // References
-        val n0Line66 =
-            tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 66 }.first()
-        val n0Line67 =
-            tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 67 }.first()
-        val n0Line68 =
-            tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 68 }.first()
-        val niLine71 =
-            tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 71 }.first()
-        val njLine75 =
-            tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 75 }.first()
+        val n0Line66 = tu.allChildren<Subscription> { it.location?.region?.startLine == 66 }.first()
+        val n0Line67 = tu.allChildren<Subscription> { it.location?.region?.startLine == 67 }.first()
+        val n0Line68 = tu.allChildren<Subscription> { it.location?.region?.startLine == 68 }.first()
+        val niLine71 = tu.allChildren<Subscription> { it.location?.region?.startLine == 71 }.first()
+        val njLine75 = tu.allChildren<Subscription> { it.location?.region?.startLine == 75 }.first()
 
         // Literals
         val literal1 =
@@ -864,7 +851,7 @@ class PointsToPassTest {
                 .firstOrNull()
         assertNotNull(pfPointerDeref)
 
-        // callexpressions
+        // Calls
         val ceLine112 =
             tu.functions["testmemcpy"]
                 .calls { it.name.localName == "memcpy" && it.location?.region?.startLine == 112 }
@@ -895,7 +882,7 @@ class PointsToPassTest {
                 .first()
         assertNotNull(ceLine125)
 
-        // FunctionDeclarations
+        // Functions
         val memcpyFD = ceLine112.invokes.singleOrNull()
         assertNotNull(memcpyFD)
 
@@ -921,7 +908,7 @@ class PointsToPassTest {
         assertNotNull(memcpyDstDeref)
 
         // DFGs for the memcpys
-        // We need incoming DFGs from the arguments to the parameterDeclarations
+        // We need incoming DFGs from the arguments to the Parameters
         for (i in 0..2) {
             assertEquals(memcpyFD.parameters[i], ceLine112.arguments[i].nextDFG.singleOrNull())
         }
@@ -1359,15 +1346,13 @@ class PointsToPassTest {
             }
         assertNotNull(tu)
 
-        // ParameterDeclaration
+        // Parameter
         val param1Line145 =
-            tu.allChildren<ParameterDeclaration> { it.location?.region?.startLine == 145 }
-                .singleOrNull()
+            tu.allChildren<Parameter> { it.location?.region?.startLine == 145 }.singleOrNull()
         assertNotNull(param1Line145)
 
         val param1Line193 =
-            tu.allChildren<ParameterDeclaration> { it.location?.region?.startLine == 193 }
-                .singleOrNull()
+            tu.allChildren<Parameter> { it.location?.region?.startLine == 193 }.singleOrNull()
         assertNotNull(param1Line193)
 
         // References
@@ -1509,7 +1494,7 @@ class PointsToPassTest {
         assertNotNull(param1DerefLine201)
 
         val param1SSELine202 =
-            tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 202 }.first()
+            tu.allChildren<Subscription> { it.location?.region?.startLine == 202 }.first()
         assertNotNull(param1SSELine202)
 
         // Literals
@@ -1525,51 +1510,46 @@ class PointsToPassTest {
             tu.allChildren<Literal<*>> { it.location?.region?.startLine == 177 }.first()
         assertNotNull(literal0Line177)
 
-        // MemberExpressions
+        // MemberAccesss
         val meLine201 =
-            tu.allChildren<MemberExpression> { it.location?.region?.startLine == 201 }.first()
+            tu.allChildren<MemberAccess> { it.location?.region?.startLine == 201 }.first()
         assertNotNull(meLine201)
 
-        // CallExpressions
-        val ceLine172 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 172 }.first()
+        // Calls
+        val ceLine172 = tu.allChildren<Call> { it.location?.region?.startLine == 172 }.first()
         assertNotNull(ceLine172)
 
-        val ceLine177 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 177 }.first()
+        val ceLine177 = tu.allChildren<Call> { it.location?.region?.startLine == 177 }.first()
         assertNotNull(ceLine177)
 
-        val ceLine180 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 180 }.first()
+        val ceLine180 = tu.allChildren<Call> { it.location?.region?.startLine == 180 }.first()
         assertNotNull(ceLine180)
 
-        val ceLine183 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 183 }.first()
+        val ceLine183 = tu.allChildren<Call> { it.location?.region?.startLine == 183 }.first()
         assertNotNull(ceLine183)
 
-        val ceLine201 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 201 }.first()
+        val ceLine201 = tu.allChildren<Call> { it.location?.region?.startLine == 201 }.first()
         assertNotNull(ceLine201)
 
-        // FunctionDeclarations
+        // Functions
         val memsetFD = ceLine177.invokes.singleOrNull()
         assertNotNull(memsetFD)
 
-        // SubscriptExpressions
+        // Subscriptions
         val sseLine181 =
-            tu.allChildren<SubscriptExpression> { it.location?.region?.startLine == 181 }.first()
+            tu.allChildren<Subscription> { it.location?.region?.startLine == 181 }.first()
         assertNotNull(sseLine181)
 
         // FunctionSummaries
         val fdecallkeytoout =
-            tu.allChildren<FunctionDeclaration> { it.name.localName == "ecall_key_to_out" }.first()
+            tu.allChildren<Function> { it.name.localName == "ecall_key_to_out" }.first()
         assertNotNull(fdecallkeytoout)
 
         val fsecallkeytoout = fdecallkeytoout.functionSummary
         assertNotNull(fsecallkeytoout)
 
         val fssgxecallkeytoout =
-            tu.allChildren<FunctionDeclaration> { it.name.localName == "sgx_ecall_key_to_out" }
+            tu.allChildren<Function> { it.name.localName == "sgx_ecall_key_to_out" }
                 .first()
                 .functionSummary
         assertNotNull(fssgxecallkeytoout)
@@ -1797,7 +1777,7 @@ class PointsToPassTest {
                 }
                 ?.start,
         )
-        // One Summary edge to the CallExpression
+        // One Summary edge to the Call
         assertEquals(
             ceLine180,
             sseLine181.prevDFGEdges
@@ -1945,7 +1925,7 @@ class PointsToPassTest {
 
         // FunctionSummary of ecall_key_to_out
         assertEquals(1, fsecallkeytoout.size)
-        assertTrue(fsecallkeytoout.entries.firstOrNull()?.key is ParameterDeclaration)
+        assertTrue(fsecallkeytoout.entries.firstOrNull()?.key is Parameter)
         assertLocalName("param_1", fsecallkeytoout.entries.firstOrNull()?.key)
         assertEquals(
             2,
@@ -1983,29 +1963,23 @@ class PointsToPassTest {
             ?.let { assertTrue(it) }
 
         // FunctionSummary of sgx_ecall_key_to_out
-        assertEquals(1, fssgxecallkeytoout.filter { it.key !is ReturnStatement }.size)
+        assertEquals(1, fssgxecallkeytoout.filter { it.key !is Return }.size)
         assertTrue(
-            fssgxecallkeytoout.filter { it.key !is ReturnStatement }.entries.firstOrNull()?.key
-                is ParameterDeclaration
+            fssgxecallkeytoout.filter { it.key !is Return }.entries.firstOrNull()?.key is Parameter
         )
         assertLocalName(
             "param_1",
-            fssgxecallkeytoout.filter { it.key !is ReturnStatement }.entries.firstOrNull()?.key,
+            fssgxecallkeytoout.filter { it.key !is Return }.entries.firstOrNull()?.key,
         )
         assertEquals(
             3,
-            fssgxecallkeytoout
-                .filter { it.key !is ReturnStatement }
-                .entries
-                .firstOrNull()
-                ?.value
-                ?.size,
+            fssgxecallkeytoout.filter { it.key !is Return }.entries.firstOrNull()?.value?.size,
         )
         // TODO: Should this really be 3?
         assertEquals(
             2,
             fssgxecallkeytoout
-                .filter { it.key !is ReturnStatement }
+                .filter { it.key !is Return }
                 .entries
                 .firstOrNull()
                 ?.value
@@ -2015,7 +1989,7 @@ class PointsToPassTest {
         assertEquals(
             1,
             fssgxecallkeytoout
-                .filter { it.key !is ReturnStatement }
+                .filter { it.key !is Return }
                 .entries
                 .firstOrNull()
                 ?.value
@@ -2025,7 +1999,7 @@ class PointsToPassTest {
         assertEquals(
             1,
             fssgxecallkeytoout
-                .filter { it.key !is ReturnStatement }
+                .filter { it.key !is Return }
                 .entries
                 .firstOrNull()
                 ?.value
@@ -2035,7 +2009,7 @@ class PointsToPassTest {
         assertEquals(
             1,
             fssgxecallkeytoout
-                .filter { it.key !is ReturnStatement }
+                .filter { it.key !is Return }
                 .entries
                 .firstOrNull()
                 ?.value
@@ -2057,14 +2031,14 @@ class PointsToPassTest {
 
         // Declarations
         val iDecl =
-            tu.allChildren<VariableDeclaration> {
+            tu.allChildren<Variable> {
                     it.location?.region?.startLine == 224 && it.name.localName == "i"
                 }
                 .firstOrNull()
         assertNotNull(iDecl)
 
         val jDecl =
-            tu.allChildren<VariableDeclaration> {
+            tu.allChildren<Variable> {
                     it.location?.region?.startLine == 225 && it.name.localName == "j"
                 }
                 .firstOrNull()
@@ -2187,28 +2161,23 @@ class PointsToPassTest {
             tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 212 }.firstOrNull()
         assertNotNull(binOpLine212)
 
-        // CallExpressions
-        val ceLine230 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 230 }.firstOrNull()
+        // Calls
+        val ceLine230 = tu.allChildren<Call> { it.location?.region?.startLine == 230 }.firstOrNull()
         assertNotNull(ceLine230)
 
-        val ceLine233 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 233 }.firstOrNull()
+        val ceLine233 = tu.allChildren<Call> { it.location?.region?.startLine == 233 }.firstOrNull()
         assertNotNull(ceLine233)
 
-        val ceLine236 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 236 }.firstOrNull()
+        val ceLine236 = tu.allChildren<Call> { it.location?.region?.startLine == 236 }.firstOrNull()
         assertNotNull(ceLine236)
 
-        val ceLine239 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 239 }.firstOrNull()
+        val ceLine239 = tu.allChildren<Call> { it.location?.region?.startLine == 239 }.firstOrNull()
         assertNotNull(ceLine239)
 
-        val ceLine242 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 242 }.firstOrNull()
+        val ceLine242 = tu.allChildren<Call> { it.location?.region?.startLine == 242 }.firstOrNull()
         assertNotNull(ceLine242)
 
-        // FunctionDeclarations
+        // Functions
         val unknownFuncFD = tu.functions["unknownFunc"]
         assertNotNull(unknownFuncFD)
 
@@ -2216,7 +2185,7 @@ class PointsToPassTest {
         assertEquals(ceLine230, iRefLine230Left.prevFullDFG.singleOrNull())
         assertEquals(binOpLine207, iRefLine230Left.fullMemoryValues.singleOrNull())
         assertEquals(1, iRefLine230Right.nextDFG.size)
-        assertLocalName("i", iRefLine230Right.nextDFG.singleOrNull { it is ParameterDeclaration })
+        assertLocalName("i", iRefLine230Right.nextDFG.singleOrNull { it is Parameter })
 
         // Line 231
         assertEquals(binOpLine207, iRefLine231.fullMemoryValues.singleOrNull())
@@ -2303,8 +2272,8 @@ class PointsToPassTest {
         assertEquals(1, ceLine242.arguments[0].prevFullDFG.size)
         assertEquals(1, ceLine242.arguments[1].prevFullDFG.size)
 
-        // Both arguments have a nextDFG to the ParameterDeclaration and from there to the
-        // functionDeclaration
+        // Both arguments have a nextDFG to the Parameter and from there to the
+        // Function
         assertEquals(
             unknownFuncFD,
             ceLine242.arguments[0].nextFullDFG.singleOrNull()?.nextDFG?.singleOrNull(),
@@ -2314,7 +2283,7 @@ class PointsToPassTest {
             ceLine242.arguments[1].nextFullDFG.singleOrNull()?.nextDFG?.singleOrNull(),
         )
 
-        // And from the callExpression to the functionDeclaration
+        // And from the Call to the Function
         assertEquals(unknownFuncFD, ceLine242.prevFullDFG.singleOrNull())
         assertEquals(2, ceLine242.prevFunctionSummaryDFG.size)
         assertEquals(
@@ -2337,21 +2306,19 @@ class PointsToPassTest {
 
         // FunctionSummaries
         val FSread =
-            tu.allChildren<FunctionDeclaration> { it.name.localName == "mbedtls_ssl_read" }
+            tu.allChildren<Function> { it.name.localName == "mbedtls_ssl_read" }
                 .first()
                 .functionSummary
         assertNotNull(FSread)
 
         val FSinnerrenegotiate =
-            tu.allChildren<FunctionDeclaration> { it.name.localName == "inner_renegotiate" }
+            tu.allChildren<Function> { it.name.localName == "inner_renegotiate" }
                 .first()
                 .functionSummary
         assertNotNull(FSinnerrenegotiate)
 
         val FSrenegotiate =
-            tu.allChildren<FunctionDeclaration> { it.name.localName == "renegotiate" }
-                .first()
-                .functionSummary
+            tu.allChildren<Function> { it.name.localName == "renegotiate" }.first().functionSummary
         assertNotNull(FSrenegotiate)
 
         // Literals
@@ -2706,21 +2673,21 @@ class PointsToPassTest {
         // Declarations
         val jDecl = tu.functions["testCallingContexts"].variables["j"]
 
-        // CallExpressions
+        // Calls
         val ceLine380 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 380 }.singleOrNull()
+            tu.allChildren<Call> { it.location?.region?.startLine == 380 }.singleOrNull()
         assertNotNull(ceLine380)
 
         val ceLine384 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 384 }.singleOrNull()
+            tu.allChildren<Call> { it.location?.region?.startLine == 384 }.singleOrNull()
         assertNotNull(ceLine384)
 
         val ceLine386 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 386 }.singleOrNull()
+            tu.allChildren<Call> { it.location?.region?.startLine == 386 }.singleOrNull()
         assertNotNull(ceLine386)
 
         val ceLine390 =
-            tu.allChildren<CallExpression> { it.location?.region?.startLine == 390 }.singleOrNull()
+            tu.allChildren<Call> { it.location?.region?.startLine == 390 }.singleOrNull()
         assertNotNull(ceLine390)
 
         // arguments
@@ -2813,7 +2780,7 @@ class PointsToPassTest {
                 .singleOrNull()
         assertNotNull(pDerefLine394)
 
-        // FunctionDeclarations
+        // Functions
         val incpFD = tu.functions.firstOrNull { it.name.localName == "incp" }
         assertNotNull(incpFD)
 
@@ -2844,7 +2811,7 @@ class PointsToPassTest {
             tu.allChildren<Literal<*>> { it.location?.region?.startLine == 392 }.singleOrNull()
         assertNotNull(literal2)
 
-        // CallExpression in Line 380
+        // Call in Line 380
         assertEquals(1, iArgLine380.nextDFGEdges.size)
         // Argument's nextDFG should point to the ParameterMemoryValue of the Function
         assertEquals(incFD.parameters.first(), iArgLine380.nextDFGEdges.first().end)
@@ -2855,7 +2822,7 @@ class PointsToPassTest {
                 .calls,
         )
 
-        // The value of the return statement flows first to the FD and then to the callExpression
+        // The value of the return statement flows first to the FD and then to the Call
         assertEquals(1, ceLine380.prevDFGEdges.size)
         assertEquals(incFD, ceLine380.prevDFGEdges.singleOrNull()?.start)
         assertEquals(
@@ -2866,11 +2833,11 @@ class PointsToPassTest {
         )
 
         assertEquals(binOpLine207, iRefLeftLine380.fullMemoryValues.singleOrNull())
-        // The callexpression flows to the lhs
+        // The Call flows to the lhs
         assertEquals(1, ceLine380.nextDFG.size)
         assertEquals(iRefLeftLine380, ceLine380.nextDFG.singleOrNull())
 
-        // CallExpression in Line 384
+        // Call in Line 384
         // Argument's nextDFG should point to the ParameterMemoryValue of the Function
         assertEquals(incFD.parameters.first(), iArgLine384.nextDFGEdges.first().end)
         assertEquals(
@@ -2880,7 +2847,7 @@ class PointsToPassTest {
                 .calls,
         )
 
-        // The value of the return statement in the FD flows to the callExpression
+        // The value of the return statement in the FD flows to the Call
         assertEquals(1, ceLine384.prevDFGEdges.size)
         assertEquals(incFD, ceLine384.prevDFGEdges.singleOrNull()?.start)
         assertEquals(
@@ -2891,11 +2858,11 @@ class PointsToPassTest {
         )
 
         assertEquals(binOpLine207, iRefLeftLine384.fullMemoryValues.singleOrNull())
-        // The callexpression flows to the lhs
+        // The Call flows to the lhs
         assertEquals(1, ceLine384.nextDFG.size)
         assertEquals(iRefLeftLine384, ceLine384.nextDFG.singleOrNull())
 
-        // CallExpression in Line 386
+        // Call in Line 386
         // Argument's nextDFG should point to the ParameterMemoryValue of the Function
         assertEquals(1, pArgLine386.nextDFGEdges.filter { !it.functionSummary }.size)
         assertEquals(
@@ -3095,7 +3062,7 @@ class PointsToPassTest {
             tu.allChildren<BinaryOperator> { it.location?.region?.startLine == 413 }.singleOrNull()
         assertNotNull(binOP)
 
-        // CallExpressions
+        // Calls
         val addCE1 = func.calls("add")[0]
         assertNotNull(addCE1)
 
@@ -3179,7 +3146,7 @@ class PointsToPassTest {
             }
         assertNotNull(tu)
 
-        // FunctionDeclarations
+        // Functions
         val strncpytoderefFD = tu.functions["strncpytoderef"]
         assertNotNull(strncpytoderefFD)
 
@@ -3208,7 +3175,7 @@ class PointsToPassTest {
             }
         assertNotNull(tu)
 
-        // FunctionDeclarations
+        // Functions
         val veryInnerFuncFD = tu.functions["very_inner_func"]
         assertNotNull(veryInnerFuncFD)
 
@@ -3244,7 +3211,7 @@ class PointsToPassTest {
         val iDecl = mainFD.variables["i"]
         assertNotNull(iDecl)
 
-        // CallExpressions
+        // Calls
         val veryInnerFuncCE = innerFuncFD.calls["very_inner_func"]
         assertNotNull(veryInnerFuncCE)
 
@@ -3363,20 +3330,20 @@ class PointsToPassTest {
 
         // FunctionSummaries
         val fdecallkeytoout2 =
-            tu.allChildren<FunctionDeclaration> { it.name.localName == "ecall_key_to_out2" }.first()
+            tu.allChildren<Function> { it.name.localName == "ecall_key_to_out2" }.first()
         assertNotNull(fdecallkeytoout2)
 
         val fsecallkeytoout2 = fdecallkeytoout2.functionSummary
         assertNotNull(fsecallkeytoout2)
 
         val fssgxecallkeytoout2 =
-            tu.allChildren<FunctionDeclaration> { it.name.localName == "sgx_ecall_key_to_out2" }
+            tu.allChildren<Function> { it.name.localName == "sgx_ecall_key_to_out2" }
                 .first()
                 .functionSummary
         assertNotNull(fssgxecallkeytoout2)
 
         assertEquals(1, fsecallkeytoout2.size)
-        assertTrue(fsecallkeytoout2.entries.firstOrNull()?.key is ParameterDeclaration)
+        assertTrue(fsecallkeytoout2.entries.firstOrNull()?.key is Parameter)
         assertLocalName("outptr", fsecallkeytoout2.entries.firstOrNull()?.key)
         assertEquals(
             2,
@@ -3414,29 +3381,23 @@ class PointsToPassTest {
             ?.let { assertTrue(it) }
 
         // FunctionSummary of sgx_ecall_key_to_out
-        assertEquals(1, fssgxecallkeytoout2.filter { it.key !is ReturnStatement }.size)
+        assertEquals(1, fssgxecallkeytoout2.filter { it.key !is Return }.size)
         assertTrue(
-            fssgxecallkeytoout2.filter { it.key !is ReturnStatement }.entries.firstOrNull()?.key
-                is ParameterDeclaration
+            fssgxecallkeytoout2.filter { it.key !is Return }.entries.firstOrNull()?.key is Parameter
         )
         assertLocalName(
             "pms",
-            fssgxecallkeytoout2.filter { it.key !is ReturnStatement }.entries.firstOrNull()?.key,
+            fssgxecallkeytoout2.filter { it.key !is Return }.entries.firstOrNull()?.key,
         )
         // 5: 3 from the in_outptr, and 2 from the in_ucptr
         assertEquals(
             5,
-            fssgxecallkeytoout2
-                .filter { it.key !is ReturnStatement }
-                .entries
-                .firstOrNull()
-                ?.value
-                ?.size,
+            fssgxecallkeytoout2.filter { it.key !is Return }.entries.firstOrNull()?.value?.size,
         )
         assertEquals(
             4,
             fssgxecallkeytoout2
-                .filter { it.key !is ReturnStatement }
+                .filter { it.key !is Return }
                 .entries
                 .firstOrNull()
                 ?.value
@@ -3446,7 +3407,7 @@ class PointsToPassTest {
         assertEquals(
             1,
             fssgxecallkeytoout2
-                .filter { it.key !is ReturnStatement }
+                .filter { it.key !is Return }
                 .entries
                 .firstOrNull()
                 ?.value
@@ -3457,7 +3418,7 @@ class PointsToPassTest {
         assertEquals(
             1,
             fssgxecallkeytoout2
-                .filter { it.key !is ReturnStatement }
+                .filter { it.key !is Return }
                 .entries
                 .firstOrNull()
                 ?.value
@@ -3468,7 +3429,7 @@ class PointsToPassTest {
         assertEquals(
             1,
             fssgxecallkeytoout2
-                .filter { it.key !is ReturnStatement }
+                .filter { it.key !is Return }
                 .entries
                 .firstOrNull()
                 ?.value
@@ -3487,7 +3448,7 @@ class PointsToPassTest {
         assertEquals(
             memsetParam1,
             fssgxecallkeytoout2
-                .filter { it.key !is ReturnStatement }
+                .filter { it.key !is Return }
                 .entries
                 .firstOrNull()
                 ?.value
@@ -3500,7 +3461,7 @@ class PointsToPassTest {
         assertEquals(
             1,
             fssgxecallkeytoout2
-                .filter { it.key !is ReturnStatement }
+                .filter { it.key !is Return }
                 .entries
                 .firstOrNull()
                 ?.value
@@ -3654,7 +3615,7 @@ class PointsToPassTest {
         val fd = tu.functions("test_array_initializer").singleOrNull { it.body != null }
         assertNotNull(fd)
 
-        val numbers0 = fd.allChildren<SubscriptExpression>().singleOrNull()
+        val numbers0 = fd.allChildren<Subscription>().singleOrNull()
         assertNotNull(numbers0)
 
         val literal0 = fd.literals[0]
