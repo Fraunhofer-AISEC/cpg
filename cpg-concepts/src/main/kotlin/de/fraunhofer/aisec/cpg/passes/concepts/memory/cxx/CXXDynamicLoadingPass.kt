@@ -38,12 +38,12 @@ import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadSymbol
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
@@ -67,14 +67,14 @@ import kotlin.io.path.nameWithoutExtension
 )
 class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
-    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+    override fun handleNode(node: Node, tu: TranslationUnit) {
         when (node) {
-            is CallExpression -> handleCallExpression(node, tu)
+            is Call -> handleCall(node, tu)
         }
     }
 
-    /** Handles a [CallExpression] node and checks if it is a dynamic loading operation. */
-    private fun handleCallExpression(call: CallExpression, tu: TranslationUnitDeclaration) {
+    /** Handles a [Call] node and checks if it is a dynamic loading operation. */
+    private fun handleCall(call: Call, tu: TranslationUnit) {
         val concept = tu.getConceptOrCreate<DynamicLoading>()
 
         val ops =
@@ -92,18 +92,17 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
     /**
      * This function handles the loading of a function. It creates a [LoadSymbol] concept and adds
-     * it to the [DynamicLoading] concept. The tricky part is to find the [FunctionDeclaration] that
-     * is loaded.
+     * it to the [DynamicLoading] concept. The tricky part is to find the [Function] that is loaded.
      */
     private fun handleLoadFunction(
-        call: CallExpression,
+        call: Call,
         concept: DynamicLoading,
     ): List<LoadSymbol<out ValueDeclaration>> {
         // The first argument is the handle to the library. We can follow the DFG back to find the
         // call to dlopen.
         val path =
             call.arguments.getOrNull(0)?.followPrevDFG {
-                it is CallExpression && it.operationNodes.any { it is LoadLibrary }
+                it is Call && it.operationNodes.any { it is LoadLibrary }
             }
 
         val loadLibrary =
@@ -121,7 +120,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
         // helps us to determine the type of the operation.
         call.nextFullDFG.filterIsInstance<Expression>().forEach { assignee ->
             if (assignee.type is FunctionPointerType) {
-                candidates = candidates?.filterIsInstance<FunctionDeclaration>()
+                candidates = candidates?.filterIsInstance<Function>()
                 newLoadSymbol(
                         underlyingNode = call,
                         concept = concept,
@@ -132,7 +131,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
                     )
                     .apply { path?.let { addAssumptionDependence(path) } }
             } else {
-                candidates = candidates?.filterIsInstance<VariableDeclaration>()
+                candidates = candidates?.filterIsInstance<Variable>()
                 newLoadSymbol(
                         underlyingNode = call,
                         concept = concept,
@@ -162,7 +161,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
      * represents the [LoadLibrary.what].
      */
     private fun handleLibraryLoad(
-        call: CallExpression,
+        call: Call,
         concept: DynamicLoading,
         os: OperatingSystemArchitecture,
     ): List<LoadLibrary> {

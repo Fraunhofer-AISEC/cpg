@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.POSIX
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx.CXXDynamicLoadingPass
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertInvokes
@@ -70,8 +70,7 @@ class DynamicLoadingTest {
         val lib = result.variables["lib"]
         assertNotNull(lib)
 
-        val path =
-            lib.followPrevDFG { it is CallExpression && it.overlays.any { it is LoadLibrary } }
+        val path = lib.followPrevDFG { it is Call && it.overlays.any { it is LoadLibrary } }
         assertNotNull(path)
 
         val loadLibrary =
@@ -92,7 +91,7 @@ class DynamicLoadingTest {
         assertNotNull(dlSym)
 
         val loadSymbol =
-            dlSym.operationNodes.filterIsInstance<LoadSymbol<FunctionDeclaration>>().singleOrNull()
+            dlSym.operationNodes.filterIsInstance<LoadSymbol<Function>>().singleOrNull()
         assertNotNull(loadSymbol)
         assertIs<POSIX>(loadSymbol.os)
         assertEquals(myFunc, loadSymbol.what, "\"what\" of the LoadSymbol should be myFunc")

@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.callees
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import java.util.IdentityHashMap
 import kotlin.collections.component1
@@ -42,7 +42,7 @@ import kotlin.collections.iterator
  */
 fun addFunctionsWithoutDependency(
     orderedList: MutableList<Node>,
-    dependencies: IdentityHashMap<FunctionDeclaration, IdentitySet<FunctionDeclaration>>,
+    dependencies: IdentityHashMap<Function, IdentitySet<Function>>,
 ) {
     // All functions which do not have a dependency will never get one.
     // We already remove them to save a bit of time in the subsequent really slow part...
@@ -71,12 +71,11 @@ fun addFunctionsWithoutDependency(
  * value of other functions' dependencies because we will definitely analyze it before).
  */
 fun prepareCallGraph(
-    functions: Iterable<FunctionDeclaration>
-): IdentityHashMap<FunctionDeclaration, IdentitySet<FunctionDeclaration>> {
+    functions: Iterable<Function>
+): IdentityHashMap<Function, IdentitySet<Function>> {
     val functionCalleesMap = IdentityHashMap(functions.associateWith { it.callees.toIdentitySet() })
 
-    var functionCallersMap =
-        IdentityHashMap<FunctionDeclaration, IdentitySet<FunctionDeclaration>>()
+    var functionCallersMap = IdentityHashMap<Function, IdentitySet<Function>>()
 
     for ((k, v) in functionCalleesMap) {
         v.forEach { callee ->
@@ -98,7 +97,7 @@ fun prepareCallGraph(
  * exist if f1 calls f2. This might be unsuitable for other analyses.
  */
 fun orderEOGStartersBasedOnDependencies(eogStarters: Iterable<Node>): List<Node> {
-    val functions = eogStarters.filterIsInstance<FunctionDeclaration>()
+    val functions = eogStarters.filterIsInstance<Function>()
     val noFunction = eogStarters.subtract(functions)
 
     // Maps a function to its callees which won't have been analyzed yet and thus represents an

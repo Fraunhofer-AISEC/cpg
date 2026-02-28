@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
@@ -290,7 +290,7 @@ fun TypeOperations.apply(root: Type): Type {
 }
 
 /** A shortcut to return [ObjectType.recordDeclaration], if this is a [ObjectType]. */
-var Type.recordDeclaration: RecordDeclaration?
+var Type.recordDeclaration: Record?
     get() {
         return (this as? ObjectType)?.recordDeclaration
     }

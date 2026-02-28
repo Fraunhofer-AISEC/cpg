@@ -30,13 +30,15 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.multiLanguage
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.io.File
+import java.util.IdentityHashMap
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
@@ -49,23 +51,28 @@ import org.neo4j.ogm.annotation.Transient
  */
 @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 open class Component : AstNode() {
-    @Relationship("TRANSLATION_UNITS")
-    val translationUnitEdges = astEdgesOf<TranslationUnitDeclaration>()
+    @Relationship("TRANSLATION_UNITS") val translationUnitEdges = astEdgesOf<TranslationUnit>()
     /** All translation units belonging to this application. */
     val translationUnits by unwrapping(Component::translationUnitEdges)
 
     /**
-     * The import dependencies of [TranslationUnitDeclaration] nodes of this component. The
-     * preferred way to access this is via [Strategy.TRANSLATION_UNITS_LEAST_IMPORTS].
+     * The import dependencies of [TranslationUnit] nodes of this component. The preferred way to
+     * access this is via [Strategy.TRANSLATION_UNITS_LEAST_IMPORTS].
      */
     @Transient
     @PopulatedByPass(ImportResolver::class)
-    var translationUnitDependencies: ImportDependencies<TranslationUnitDeclaration>? = null
+    var translationUnitDependencies: ImportDependencies<TranslationUnit>? = null
 
     @Synchronized
-    fun addTranslationUnit(tu: TranslationUnitDeclaration) {
+    fun addTranslationUnit(tu: TranslationUnit) {
         translationUnits.add(tu)
     }
+
+    /**
+     * Stores types that are not directly connected to a node, but are still relevant for the type
+     * resolution of this component.
+     */
+    val additionalTypes = IdentityHashMap<String, Type>()
 
     /**
      * In contrast to other Nodes we do not add the assumptions collected over the component because

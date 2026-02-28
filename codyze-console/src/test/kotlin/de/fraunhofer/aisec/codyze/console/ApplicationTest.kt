@@ -35,10 +35,10 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.Agnostic
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.Main
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import io.github.detekt.sarif4k.*
 import io.ktor.client.call.*
@@ -56,23 +56,21 @@ val mockConfig =
 
 /** A mock translation unit. */
 val mockTu =
-    TranslationUnitDeclaration().apply {
+    TranslationUnit().apply {
         name = Name("tu1")
         var func =
-            FunctionDeclaration().apply {
+            Function().apply {
                 name = Name("main")
                 Main(this, os = Agnostic(this))
                 body =
                     Block().apply {
                         statements +=
-                            CallExpression().apply {
-                                callee = Reference().apply { name = Name("open") }
-                            }
+                            Call().apply { callee = Reference().apply { name = Name("open") } }
                     }
             }
         declarations += func
         statements +=
-            CallExpression().apply {
+            Call().apply {
                 name = Name("main")
                 prevDFG += func
             }

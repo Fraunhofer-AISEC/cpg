@@ -31,15 +31,15 @@ import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
-import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
+import de.fraunhofer.aisec.cpg.graph.statements.DoWhile
+import de.fraunhofer.aisec.cpg.graph.statements.IfElse
+import de.fraunhofer.aisec.cpg.graph.statements.Return
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Comprehension
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Conditional
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
@@ -62,8 +62,8 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
     class Configuration(
         /**
          * This specifies the maximum complexity (as calculated per
-         * [de.fraunhofer.aisec.cpg.graph.statements.Statement.cyclomaticComplexity]) a
-         * [FunctionDeclaration] must have in order to be considered.
+         * [de.fraunhofer.aisec.cpg.graph.statements.Statement.cyclomaticComplexity]) a [Function]
+         * must have in order to be considered.
          */
         var maxComplexity: Int? = null,
         /**
@@ -97,7 +97,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
     override fun accept(startNode: Node) {
         // For now, we only execute this for function declarations, we will support all EOG starters
         // in the future.
-        if (startNode !is FunctionDeclaration) {
+        if (startNode !is Function) {
             return
         }
 
@@ -247,7 +247,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                                             branchesSet
                                         }
 
-                                        finalDominator is IfStatement &&
+                                        finalDominator is IfElse &&
                                             (branchingNodeConditionals[finalDominator]?.size ?: 0) >
                                                 1 -> { // Note: branchesSet must be empty here
                                             // The if
@@ -279,7 +279,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
      * This method collects the merging points. It also includes the function declaration itself.
      */
     private fun getBranchingNodeConditions(
-        functionDeclaration: FunctionDeclaration,
+        functionDeclaration: Function,
         allBasicBlocks: Collection<BasicBlock>,
         nodeToBBMap: Map<Node, BasicBlock>,
     ) =
@@ -329,6 +329,7 @@ suspend fun transfer(
 ): PrevEOGStateElement {
     val lattice = lattice as? PrevEOGState ?: return currentState
     var newState = currentState
+
     val currentStart =
         currentEdge.start as? BasicBlock
             ?: throw IllegalArgumentException(
@@ -387,12 +388,12 @@ private fun EvaluationOrder.isConditionalBranch(): Boolean {
     return if (branch == true) {
         true
     } else
-        (startNode is IfStatement ||
-            startNode is DoStatement ||
-            startNode is ComprehensionExpression ||
-            (startNode.astParent is ComprehensionExpression &&
-                startNode == (startNode.astParent as ComprehensionExpression).iterable) ||
-            startNode is ConditionalExpression) && branch == false ||
+        (startNode is IfElse ||
+            startNode is DoWhile ||
+            startNode is Comprehension ||
+            (startNode.astParent is Comprehension &&
+                startNode == (startNode.astParent as Comprehension).iterable) ||
+            startNode is Conditional) && branch == false ||
             /*
              * Code like `foo() && bar()` requires us to look-ahead for a [ShortCircuitOperator].
              * The execution of the rhs of the [ShortCircuitOperator] always depends on the lhs:
@@ -400,15 +401,15 @@ private fun EvaluationOrder.isConditionalBranch(): Boolean {
              * `foo() || bar()` -> `bar()` will only be called if `foo() evaluates to `false`
              */
             startNode.nextEOG.filterIsInstance<ShortCircuitOperator>().isNotEmpty() ||
-            (startNode is IfStatement &&
+            (startNode is IfElse &&
                 !startNode.allBranchesFromMyThenBranchGoThrough(startNode.nextUnconditionalNode))
 }
 
-private val IfStatement.nextUnconditionalNode: Node?
+private val IfElse.nextUnconditionalNode: Node?
     get() = this.nextEOGEdges.firstOrNull { it.branch == null }?.end
 
-private fun IfStatement.allBranchesFromMyThenBranchGoThrough(node: Node?): Boolean {
-    if (this.thenStatement.allChildren<ReturnStatement>().isNotEmpty()) return false
+private fun IfElse.allBranchesFromMyThenBranchGoThrough(node: Node?): Boolean {
+    if (this.thenStatement.allChildren<Return>().isNotEmpty()) return false
 
     if (node == null) return true
 

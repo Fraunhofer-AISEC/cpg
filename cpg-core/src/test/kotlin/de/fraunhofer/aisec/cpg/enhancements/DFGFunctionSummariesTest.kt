@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ParameterMemoryValue
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
@@ -253,7 +253,7 @@ class DFGFunctionSummariesTest {
         assertNotNull(argA)
         /*
         The flows should be as follows:
-        VariableDeclaration["a"] -> Reference["a" (argument of call)] -CallingContextIn-> ParameterDeclaration -CallingContextOut-> Reference["a" (return)]
+        Variable["a"] -> Reference["a" (argument of call)] -CallingContextIn-> Parameter -CallingContextOut-> Reference["a" (return)]
          */
 
         assertEquals(1, argA.nextDFG.size)
@@ -282,13 +282,19 @@ class DFGFunctionSummariesTest {
         assertNotNull(prevDfgOfParam0)
         assertEquals(param1, prevDfgOfParam0.start)
 
-        val returnA = main.allChildren<ReturnStatement>().singleOrNull()?.returnValue as? Reference
+        val returnA = main.allChildren<Return>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)
 
         val literal5 = main.literals.first { it.value?.equals(5) == true }
         assertNotNull(literal5)
 
-        assertEquals(mutableSetOf<Node>(literal5), returnA.memoryValues)
+        // Check that also the CallingContext property is set correctly
+        val nextDfgOfParam0 =
+            param0.nextDFGEdges.singleOrNull {
+                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.calls ==
+                    listOf(call)
+            }
+        assertEquals(returnA, nextDfgOfParam0?.end)
     }
 
     // TODO for merge
@@ -325,8 +331,8 @@ class DFGFunctionSummariesTest {
         assertNotNull(argA)
         /*
         The flows should be as follows:
-        VariableDeclaration["a"] -> { Reference["a" (argument of call)], Reference["a" (return)] }
-        Reference["a" (argument of call)] -CallingContextIn-> ParameterDeclaration -CallingContextOut-> Reference["a" (argument of call)] -> VariableDeclaration["a"]
+        Variable["a"] -> { Reference["a" (argument of call)], Reference["a" (return)] }
+        Reference["a" (argument of call)] -CallingContextIn-> Parameter -CallingContextOut-> Reference["a" (argument of call)] -> Variable["a"]
          */
 
         assertEquals(2, argA.nextDFG.size)
@@ -348,7 +354,7 @@ class DFGFunctionSummariesTest {
         assertNotNull(prevDfgOfParam0)
         assertEquals(param1, prevDfgOfParam0.start)
 
-        val returnA = main.allChildren<ReturnStatement>().singleOrNull()?.returnValue as? Reference
+        val returnA = main.allChildren<Return>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)
 
         assertEquals(mutableSetOf<Node>(argA), param0.nextDFG)

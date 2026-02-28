@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.codyze.dsl
 
 import de.fraunhofer.aisec.codyze.CodyzeScript
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.query.*
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.allExtended
@@ -38,12 +38,12 @@ import kotlin.test.assertIs
 class DslTest {
     context(result: TranslationResult)
     fun query1(): QueryTree<Boolean> {
-        return result.allExtended<CallExpression> { it.name eq "encrypt" }
+        return result.allExtended<Call> { it.name eq "encrypt" }
     }
 
     context(result: TranslationResult)
     fun query2(): QueryTree<Boolean> {
-        return result.allExtended<CallExpression> { it.arguments.size eq 2 }
+        return result.allExtended<Call> { it.arguments.size eq 2 }
     }
 
     object Mock : CodyzeScript(projectBuilder = ProjectBuilder(projectDir = Path(".")))

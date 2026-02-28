@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
 import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
 import de.fraunhofer.aisec.cpg.sarif.toLocation
 import java.io.File
@@ -98,17 +97,7 @@ private constructor(
             ctx.executedFrontends.addAll(executedFrontends)
             bench.addMeasurement()
 
-            if (config.useParallelPasses) {
-                // Execute list of parallel passes together in parallel
-                for (list in config.registeredPasses) {
-                    executePassesInParallel(list, ctx, result, executedFrontends)
-                    if (result.isCancelled) {
-                        log.warn("Analysis interrupted, stopping Pass evaluation")
-                    }
-                }
-            } else {
-                executePassesSequentially(ctx, result, executedFrontends)
-            }
+            executePassesSequentially(ctx, result, executedFrontends)
         } catch (ex: TranslationException) {
             throw CompletionException(ex)
         } finally {

@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.HasMemoryValue
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.*
 import de.fraunhofer.aisec.cpg.graph.edges.astEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
@@ -78,7 +78,7 @@ object Strategy {
             }
     }
 
-    fun TRANSLATION_UNITS_LEAST_IMPORTS(x: Component): Iterator<TranslationUnitDeclaration> {
+    fun TRANSLATION_UNITS_LEAST_IMPORTS(x: Component): Iterator<TranslationUnit> {
         return x.translationUnitDependencies?.sorted?.iterator()
             ?: x.translationUnits.iterator().also {
                 log.warn(

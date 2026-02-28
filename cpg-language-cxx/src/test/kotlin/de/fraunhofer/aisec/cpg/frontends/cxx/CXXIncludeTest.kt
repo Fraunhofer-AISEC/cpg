@@ -59,7 +59,7 @@ internal class CXXIncludeTest : BaseTest() {
         assertNotNull(someClassConstructor)
         assertEquals(someClass, someClassConstructor.recordDeclaration)
 
-        val doSomething = tu.methods["SomeClass::DoSomething"]?.definition as? MethodDeclaration
+        val doSomething = tu.methods["SomeClass::DoSomething"]?.definition as? Method
         assertNotNull(doSomething)
         assertEquals(someClass, doSomething.recordDeclaration)
 
@@ -115,7 +115,7 @@ internal class CXXIncludeTest : BaseTest() {
         // another-include.h should be there - include.h should not be there
         assertEquals(1, next.includes.size)
         assertTrue(
-            next.includes.stream().anyMatch { d: IncludeDeclaration ->
+            next.includes.stream().anyMatch { d: Include ->
                 (d.filename == File("src/test/resources/another-include.h").absolutePath)
             }
         )
@@ -142,7 +142,7 @@ internal class CXXIncludeTest : BaseTest() {
         // another-include.h should be there - include.h should not be there
         assertEquals(1, next.includes.size)
         assertTrue(
-            next.includes.stream().anyMatch { d: IncludeDeclaration ->
+            next.includes.stream().anyMatch { d: Include ->
                 (d.filename == File("src/test/resources/another-include.h").absolutePath)
             }
         )
@@ -169,7 +169,7 @@ internal class CXXIncludeTest : BaseTest() {
         // include.h should be there - another-include.h should not be there
         assertEquals(1, next.includes.size)
         assertTrue(
-            next.includes.stream().anyMatch { d: IncludeDeclaration ->
+            next.includes.stream().anyMatch { d: Include ->
                 (d.filename == File("src/test/resources/include.h").absolutePath)
             }
         )
@@ -196,7 +196,7 @@ internal class CXXIncludeTest : BaseTest() {
         // include.h should be there - another-include.h should not be there
         assertEquals(1, next.includes.size)
         assertTrue(
-            next.includes.stream().anyMatch { d: IncludeDeclaration ->
+            next.includes.stream().anyMatch { d: Include ->
                 (d.filename == File("src/test/resources/include.h").absolutePath)
             }
         )
@@ -227,7 +227,7 @@ internal class CXXIncludeTest : BaseTest() {
         assertEquals(1, next.includes.size)
         // another-include.h will stay in the include list
         assertTrue(
-            next.includes.stream().anyMatch { d: IncludeDeclaration ->
+            next.includes.stream().anyMatch { d: Include ->
                 (d.filename == File("src/test/resources/another-include.h").absolutePath)
             }
         )
@@ -258,7 +258,7 @@ internal class CXXIncludeTest : BaseTest() {
 
         // however, we should still have two methods (one of which is a constructor declaration)
         assertEquals(2, tu.methods.size)
-        assertEquals(1, tu.methods.filterIsInstance<ConstructorDeclaration>().size)
+        assertEquals(1, tu.methods.filterIsInstance<Constructor>().size)
     }
 
     @Test

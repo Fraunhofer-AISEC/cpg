@@ -1,0 +1,332 @@
+/*
+ * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.graph.declarations
+
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Invokes
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
+import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.types.DynamicType
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.buildSignature
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
+import de.fraunhofer.aisec.cpg.helpers.functional.EqualLinkedHashSet
+import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
+import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
+
+/** Represents the declaration or definition of a function. */
+open class Function :
+    ValueDeclaration(),
+    DeclarationHolder,
+    EOGStarterHolder,
+    HasType.TypeObserver,
+    HasSecondaryTypeEdge {
+    @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>()
+    /** The function body. Usually a [Block]. */
+    var body by unwrapping(Function::bodyEdge)
+
+    /** The list of function parameters. */
+    @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
+    var parameterEdges = astEdgesOf<Parameter>()
+    /** Virtual property for accessing [parameterEdges] without property edges. */
+    var parameters by unwrapping(Function::parameterEdges)
+
+    @Relationship(value = "THROWS_TYPES", direction = Relationship.Direction.OUTGOING)
+    var throwsTypes = mutableListOf<Type>()
+
+    @Relationship(value = "OVERRIDES", direction = Relationship.Direction.INCOMING)
+    val overriddenBy = mutableListOf<Function>()
+
+    @Relationship(value = "OVERRIDES", direction = Relationship.Direction.OUTGOING)
+    val overrides = mutableListOf<Function>()
+
+    /**
+     * The mirror property for [Call.invokeEdges]. This holds all incoming [Invokes] edges from
+     * [Call] nodes to this function.
+     */
+    @Relationship(value = "INVOKES", direction = Relationship.Direction.INCOMING)
+    val calledByEdges: Invokes<Function> =
+        Invokes<Function>(this, Call::invokeEdges, outgoing = false)
+
+    /** Virtual property for accessing [calledByEdges] without property edges. */
+    val calledBy: MutableList<Call> by unwrappingIncoming(Function::calledByEdges)
+
+    /** The list of return types. The default is an empty list. */
+    var returnTypes = listOf<Type>()
+
+    /**
+     * Specifies, whether this function declaration is also a definition, i.e. has a function body
+     * definition.
+     */
+    var isDefinition = false
+
+    /** If this is only a declaration, this provides a link to the definition of the function. */
+    @Relationship(value = "DEFINES")
+    var definition: Function? = null
+        get() {
+            return if (isDefinition) this else field
+        }
+
+    /**
+     * Saves the information on which parameter(s) of the function are modified by the function.
+     * This is interesting since we need to add DFG edges between the modified parameter and the
+     * respective argument(s). For each [ParameterDeclaration] as well as the
+     * [MethodDeclaration.receiver] that has some incoming DFG-edge within this
+     * [FunctionDeclaration], we store all previous DFG nodes. The map stores a List of FSEntries
+     * for each modified parameter. `derefDst` indicates if we write to the parameter's value or
+     * it's dereferenced value, `srcNode` indicates the new source value and `derefSource` if it
+     * should be dereferenced Additionally, `subAccessName` indicates sub-accesses, i.e. to parts of
+     * a struct or to array-expressions
+     */
+    data class FSEntry(
+        val destValueDepth: Int =
+            1, // 0: Address, 1: Value, 2: DerefValue, 3: DerefderefValue, ....
+        val srcNode: Any?,
+        val srcValueDepth: Int = 1, // 0: Address, 1: Value, 2: DerefValue, 3:
+        val subAccessName: String,
+        // Node which a set of possible properties, such as a callingcontext
+        val lastWrites: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet(),
+        // Additional properties such the granularity or the shortFS
+        // We use shortFunctionSummaries to draw "short" DFG-Edges that allow us to follow DFG Paths
+        // without going into functions. Not as detailed, but faster
+        val properties: EqualLinkedHashSet<Any> = equalLinkedHashSetOf(),
+        // Sometimes, we need a dummy of a functionSummary, for example to avoid recursion. We
+        // indicate here if this is one
+        val isDummy: Boolean = false,
+    ) {
+        override fun equals(other: Any?): Boolean =
+            other is FSEntry &&
+                destValueDepth == other.destValueDepth &&
+                srcNode == other.srcNode &&
+                srcValueDepth == other.srcValueDepth &&
+                subAccessName == other.subAccessName &&
+                lastWrites == other.lastWrites &&
+                properties == other.properties &&
+                isDummy == other.isDummy
+    }
+
+    var functionSummary = ConcurrentIdentityHashMap<Node, MutableSet<FSEntry>>()
+
+    /** Returns true, if this function has a [body] statement. */
+    fun hasBody(): Boolean {
+        return body != null
+    }
+
+    val signature: String
+        get() = buildSignature(this, returnTypes)
+
+    fun isOverrideCandidate(other: Function): Boolean {
+        return other.name.localName == name.localName &&
+            other.type == type &&
+            other.signature == signature
+    }
+
+    fun addOverriddenBy(c: Collection<Function>) {
+        for (functionDeclaration in c) {
+            addOverriddenBy(functionDeclaration)
+        }
+    }
+
+    fun addOverriddenBy(functionDeclaration: Function) {
+        addIfNotContains(overriddenBy, functionDeclaration)
+    }
+
+    fun addOverrides(functionDeclaration: Function) {
+        addIfNotContains(overrides, functionDeclaration)
+    }
+
+    fun addThrowTypes(type: Type) {
+        throwsTypes.add(type)
+    }
+
+    fun addThrowTypes(collection: Collection<Type>) {
+        for (type in collection) {
+            addThrowTypes(type)
+        }
+    }
+
+    /**
+     * A list of default expressions for each item in [parameters]. If a [Parameter] has no default,
+     * the list will be null at this index. This list must have the same size as [parameters].
+     */
+    val defaultParameters: List<Expression?>
+        get() {
+            return parameters.map { it.default }
+        }
+
+    val signatureTypes: List<Type>
+        get() = parameters.map { it.type }
+
+    override fun toString(): String {
+        return ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("parameters", parameters)
+            .toString()
+    }
+
+    @DoNotPersist
+    override val eogStarters: List<Node>
+        get() = listOfNotNull(this)
+
+    override var firstBasicBlock: BasicBlock? = null
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
+        if (other !is Function) {
+            return false
+        }
+        return (super.equals(other) &&
+            body == other.body &&
+            parameters == other.parameters &&
+            propertyEqualsList(parameterEdges, other.parameterEdges) &&
+            throwsTypes == other.throwsTypes)
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), body, parameters, throwsTypes)
+
+    override fun addDeclaration(declaration: Declaration) {
+        if (declaration is Parameter) {
+            addIfNotContains(parameterEdges, declaration)
+        }
+    }
+
+    @DoNotPersist
+    override val declarations: List<Declaration>
+        get() {
+            val list = ArrayList<Declaration>()
+            list.addAll(parameters)
+            return list
+        }
+
+    /** This returns a simple heuristic for the complexity of a function declaration. */
+    val complexity: Long
+        get() {
+            return this.body?.cyclomaticComplexity(0) ?: 0L
+        }
+
+    override val secondaryTypes: List<Type>
+        get() = returnTypes + throwsTypes + signatureTypes
+
+    override fun typeChanged(newType: Type, src: HasType) {
+        // We cannot really change the "type" of a function declaration, we want to stick to the
+        // assigned type
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // We want to propagate the assigned types to the return type of the function and adjust the
+        // function's type accordingly, but we only do this for dynamic types. And we only support
+        // one return type for now.
+        if (returnTypes.singleOrNull() !is DynamicType) {
+            return
+        }
+
+        // Build new function types out of our function declaration and the assigned types
+        var returnFuncTypes =
+            assignedTypes.map { computeType(this, returnTypes = listOf(it)) }.toSet()
+
+        // And assign it us
+        addAssignedTypes(returnFuncTypes)
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return setOf()
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return setOf()
+    }
+
+    companion object {
+        const val WHITESPACE = " "
+        const val BRACKET_LEFT = "("
+        const val COMMA = ","
+        const val BRACKET_RIGHT = ")"
+    }
+}
+
+/** This is a very basic implementation of Cyclomatic Complexity. */
+fun Statement.cyclomaticComplexity(depth: Int = 1): Long {
+    var i: Long = 0
+    for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {
+        when (stmt) {
+            is ForEach,
+            is For -> {
+                // add the depth and include the children
+                i += depth * ((stmt.statement?.cyclomaticComplexity(depth + 1) ?: 0) + 1)
+            }
+            is IfElse -> {
+                // add the depth for each branch (and include the children)
+                stmt.thenStatement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
+                stmt.elseStatement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
+            }
+            is Switch -> {
+                // forward it to the block containing the case statements
+                stmt.statement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
+            }
+            is Case -> {
+                // add the depth for each branch (and include the children)
+                stmt.caseExpression?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
+            }
+            is DoWhile,
+            is While -> {
+                // add one for the do statement (and include the children)
+                i += depth + ((stmt.statement?.cyclomaticComplexity(depth + 1) ?: 0))
+            }
+            is Goto -> {
+                // Analyze where the goto jumps to. Then go through the target block and fetch its
+                // complexity
+                /*                stmt.nextEOG.forEach { next ->
+                    i += next.firstParentOrNull<Block>()?.cyclomaticComplexity(depth + 1) ?: 0
+                }*/
+                // add the depth
+                i += depth
+            }
+            is StatementHolder -> {
+                i += depth + stmt.cyclomaticComplexity(depth + 1)
+            }
+        }
+    }
+
+    return i
+}

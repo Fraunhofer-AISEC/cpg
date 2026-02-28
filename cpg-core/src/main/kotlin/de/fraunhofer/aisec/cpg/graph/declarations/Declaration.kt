@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.HasMemoryAddress
 import de.fraunhofer.aisec.cpg.graph.HasMemoryValue
+import de.fraunhofer.aisec.cpg.graph.HasModifiers
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
@@ -42,16 +43,16 @@ import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 
 /**
- * Represents a single declaration or definition, i.e. of a variable ([VariableDeclaration]) or
- * function ([FunctionDeclaration]).
+ * Represents a single declaration or definition, i.e. of a variable ([Variable]) or function
+ * ([Function]).
  *
  * Note: We do NOT (currently) distinguish between the definition and the declaration of a function.
  * This means, that if a function is first declared and later defined with a function body, we will
- * currently have two [FunctionDeclaration] nodes. This is very similar to the behaviour of clang,
- * however clang does establish a connection between those nodes, we currently do not.
+ * currently have two [Function] nodes. This is very similar to the behaviour of clang, however
+ * clang does establish a connection between those nodes, we currently do not.
  */
 @NodeEntity
-abstract class Declaration : AstNode(), HasMemoryAddress, HasMemoryValue {
+abstract class Declaration : AstNode(), HasModifiers, HasMemoryAddress, HasMemoryValue {
     @DoNotPersist
     val symbol: Symbol
         get() {
@@ -95,9 +96,11 @@ abstract class Declaration : AstNode(), HasMemoryAddress, HasMemoryValue {
 
     /**
      * Returns the [Scope] that this [Declaration] declares (if it does). For example, for a
-     * [RecordDeclaration], this will return the [RecordScope] of the particular record or class.
+     * [Record], this will return the [RecordScope] of the particular record or class.
      */
     var declaringScope: Scope? = null
+
+    override var modifiers: Set<String> = setOf()
 
     override fun getExitNextEOG(): Collection<Node> {
         return setOf()

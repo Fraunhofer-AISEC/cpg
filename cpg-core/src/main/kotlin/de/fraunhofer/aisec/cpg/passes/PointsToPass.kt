@@ -29,9 +29,10 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.FSEntry
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Function.FSEntry
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnknownMemoryValue
@@ -64,8 +65,8 @@ import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
 val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
-var totalFunctionDeclarationCount = 0
-var analyzedFunctionDeclarationCount = 0
+var totalFunctionCount = 0
+var analyzedFunctionCount = 0
 val nodeVisitedCounterMap = ConcurrentIdentityHashMap<Node, Int>()
 
 typealias GeneralStateEntry =
@@ -274,18 +275,18 @@ fun clearFSDummies(functionSummary: ConcurrentIdentityHashMap<Node, MutableSet<F
         .forEach { functionSummary.remove(it) }
 }
 
-private val callExpressionToMemAddrMap =
-    ConcurrentIdentityHashMap<CallExpression, ConcurrentIdentityHashMap<Name, MemoryAddress>>()
+private val CallToMemAddrMap =
+    ConcurrentIdentityHashMap<Call, ConcurrentIdentityHashMap<Name, MemoryAddress>>()
 
 /**
- * Resolve a MemberExpression as long as it's base no longer is a MemberExpression itself. Returns
- * the base a Name that identifies the access
+ * Resolve a MemberAccess as long as it's base no longer is a MemberAccess itself. Returns the base
+ * a Name that identifies the access
  */
-fun resolveMemberExpression(node: MemberExpression): Pair<Node, Name> {
-    // As long as the base in itself is a MemberExpression, resolve that one
+fun resolveMemberAccess(node: MemberAccess): Pair<Node, Name> {
+    // As long as the base in itself is a MemberAccess, resolve that one
     var base: Node = node
     var newLocalname = ""
-    while (base is MemberExpression) {
+    while (base is MemberAccess) {
         val b = base.name.split("::")
         val tmp = if (b.size > 1) b[1] else ""
         newLocalname = if (newLocalname.isEmpty()) tmp else "$tmp.$newLocalname"
@@ -302,13 +303,11 @@ fun calculateInnerConcurrencyCounter(outerConcurrencyCounter: Int): Int {
 
 private fun isGlobal(node: Node): Boolean {
     return when (node) {
-        is VariableDeclaration -> node.isGlobal
-        is MemberExpression -> isGlobal(node.base)
-        is Reference ->
-            node.refersTo is FunctionDeclaration ||
-                (node.refersTo as? VariableDeclaration)?.isGlobal == true
+        is Variable -> node.isGlobal
+        is MemberAccess -> isGlobal(node.base)
+        is Reference -> node.refersTo is Function || (node.refersTo as? Variable)?.isGlobal == true
         is MemoryAddress -> node.isGlobal
-        is FunctionDeclaration -> true
+        is Function -> true
         else -> false
     }
 }
@@ -324,8 +323,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     class Configuration(
         /**
          * This specifies the maximum complexity (as calculated per
-         * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
-         * considered.
+         * [Statement.cyclomaticComplexity]) a [Function] must have in order to be considered.
          */
         var maxComplexity: Int? = null,
 
@@ -348,8 +346,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ) : PassConfiguration()
 
     // For recursive creation of FunctionSummaries, we have to make sure that we don't run in
-    // circles. Therefore, we store the chain of FunctionDeclarations we currently analyse
-    private val functionSummaryAnalysisChain = mutableListOf<FunctionDeclaration>()
+    // circles. Therefore, we store the chain of Functions we currently analyse
+    private val functionSummaryAnalysisChain = mutableListOf<Function>()
 
     override fun cleanup() {
         // Nothing to do
@@ -369,13 +367,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             log.warn("Found multiple eogStarters for $node, only taking the first one")
         }
         val startNode = node.eogStarters.first()
-        if (startNode is FunctionDeclaration) {
+        if (startNode is Function) {
             // If we haven't done so yet, set the total number of functions
-            if (totalFunctionDeclarationCount == 0)
-                totalFunctionDeclarationCount =
+            if (totalFunctionCount == 0)
+                totalFunctionCount =
                     startNode.firstParentOrNull<TranslationResult>()?.functions?.size ?: 0
 
-            analyzedFunctionDeclarationCount++
+            analyzedFunctionCount++
 
             // If the node has a body and a function summary, we have visited it before and can
             // return here.
@@ -386,7 +384,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     }
             ) {
                 log.info(
-                    "Skipping function ${startNode.name} because we already have a function Summary. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
+                    "Skipping function ${startNode.name} because we already have a function Summary. (Function $analyzedFunctionCount / $totalFunctionCount)"
                 )
                 return
             }
@@ -402,7 +400,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         }) is greater than the configured maximum (${max})"
                 )
                 // Add an empty function Summary so that we don't try again
-                startNode.functionSummary.computeIfAbsent(ReturnStatement()) {
+                startNode.functionSummary.computeIfAbsent(Return()) {
                     ConcurrentHashMap.newKeySet<FSEntry>()
                 }
                 return
@@ -411,7 +409,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             log.info(
                 "Analyzing function ${startNode.name}. Complexity: ${
                         NumberFormat.getNumberInstance(Locale.US).format(c)
-                    }. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
+                    }. (Function $analyzedFunctionCount / $totalFunctionCount)"
             )
         } else {
             log.info("Analyzing EOGStarterHolder ${startNode.name}. Complexity unknown")
@@ -443,8 +441,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         startState = transferInternal(lattice, startNode, startState)
 
         val finalState =
-            if (startNode is FunctionDeclaration && startNode.body == null) {
-                handleEmptyFunctionDeclaration(lattice, startState, startNode)
+            if (startNode is Function && startNode.body == null) {
+                handleEmptyFunction(lattice, startState, startNode)
             } else {
                 var (result, timeout) =
                     lattice.iterateEOG(
@@ -453,16 +451,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         ::transfer,
                         timeout = passConfig<Configuration>()?.timeout,
                     )
-                // If we had a timeout, treat it as an empty FunctionDeclaration but still
+                // If we had a timeout, treat it as an empty Function but still
                 // include the results we got
-                if (timeout && startNode is FunctionDeclaration) {
+                if (timeout && startNode is Function) {
                     analysisTimeout = true
                     result =
-                        handleEmptyFunctionDeclaration(
-                            lattice,
-                            result as PointsToState.Element,
-                            startNode,
-                        )
+                        handleEmptyFunction(lattice, result as PointsToState.Element, startNode)
                 }
                 result as PointsToState.Element
             }
@@ -533,8 +527,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         log.info("Finished drawing DFG Edges")
 
-        if (startNode is FunctionDeclaration) {
-            /* Store function summary for this FunctionDeclaration. */
+        if (startNode is Function) {
+            /* Store function summary for this Function. */
             if (startNode.body != null && !analysisTimeout)
                 storeFunctionSummary(startNode, finalState)
             if (functionSummaryAnalysisChain.last() == startNode)
@@ -548,29 +542,29 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     /**
-     * This function draws the basic DFG-Edges based on the functionDeclaration, such as edges
-     * between ParameterDeclaration/ParameterMemoryValues
+     * This function draws the basic DFG-Edges based on the Function, such as edges between
+     * Parameter/ParameterMemoryValues
      */
-    private suspend fun handleEmptyFunctionDeclaration(
+    private suspend fun handleEmptyFunction(
         lattice: PointsToState,
         startState: PointsToState.Element,
-        functionDeclaration: FunctionDeclaration,
+        Function: Function,
     ): PointsToState.Element {
         var doubleState = startState
 
-        if (functionDeclaration.functionSummary.isEmpty()) {
+        if (Function.functionSummary.isEmpty()) {
             // Add a dummy function summary so that we don't try this every time
             // In this dummy, all parameters point to the return
             // TODO: Also add possible dereference values to the input?
             val prevDFGs = PowersetLattice.Element<NodeWithPropertiesKey>()
             val newEntries =
                 ConcurrentHashMap.newKeySet<FSEntry>().apply {
-                    add(FSEntry(0, functionDeclaration, 1, "", isDummy = true))
+                    add(FSEntry(0, Function, 1, "", isDummy = true))
                 }
-            functionDeclaration.parameters.forEach { param ->
+            Function.parameters.forEach { param ->
                 // The short FS
                 newEntries.add(
-                    FunctionDeclaration.FSEntry(
+                    FSEntry(
                         0,
                         null,
                         1,
@@ -585,20 +579,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // Since we can't determine the DFs, we draw a DFG-Edge from every parameter
                 prevDFGs.add(NodeWithPropertiesKey(param, equalLinkedHashSetOf<Any>()))
             }
-            // For MethodDeclarations, we also add an edge to the receiver
-            if (functionDeclaration is MethodDeclaration)
-                functionDeclaration.receiver?.let {
+            // For Methods, we also add an edge to the receiver
+            if (Function is Method)
+                Function.receiver?.let {
                     prevDFGs.add(NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>()))
                 }
             val rets = identitySetOf<Node>()
-            if (functionDeclaration.returns.isNotEmpty()) rets.addAll(functionDeclaration.returns)
-            else rets.add(functionDeclaration)
-            rets.forEach { ret -> functionDeclaration.functionSummary.put(ret, newEntries) }
-            // draw a DFG-Edge from all parameters to the FunctionDeclaration
+            if (Function.returns.isNotEmpty()) rets.addAll(Function.returns) else rets.add(Function)
+            rets.forEach { ret -> Function.functionSummary.put(ret, newEntries) }
+            // draw a DFG-Edge from all parameters to the Function
             doubleState =
                 lattice.push(
                     doubleState,
-                    functionDeclaration,
+                    Function,
                     GeneralStateEntryElement(
                         PowersetLattice.Element(),
                         PowersetLattice.Element(),
@@ -608,9 +601,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             return doubleState
         }
 
-        for ((param, fsEntries) in functionDeclaration.functionSummary) {
+        for ((param, fsEntries) in Function.functionSummary) {
             fsEntries.forEach { entry ->
-                if (param is ParameterDeclaration && entry.srcNode is ParameterDeclaration) {
+                if (param is Parameter && entry.srcNode is Parameter) {
                     val dst =
                         doubleState
                             .getNestedValues(param, entry.destValueDepth, false, true, true)
@@ -627,20 +620,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // has to be hardcoded b/c we don't have a body), so we replace that
                         // now
                         entry.lastWrites.forEach {
-                            functionDeclaration.functionSummary[param]
-                                ?.singleOrNull { it == entry }
+                            Function.functionSummary[param]?.singleOrNull { it == entry }
                                 ?.lastWrites
                                 ?.remove(it)
                         }
-                        functionDeclaration.functionSummary[param]
-                            ?.singleOrNull { it == entry }
+                        Function.functionSummary[param]?.singleOrNull { it == entry }
                             ?.lastWrites
                             ?.add(NodeWithPropertiesKey(dst, equalLinkedHashSetOf()))
                         val propertySet = equalLinkedHashSetOf<Any>()
                         if (entry.subAccessName != "")
-                            propertySet.add(
-                                FieldDeclaration().apply { name = Name(entry.subAccessName) }
-                            )
+                            propertySet.add(Field().apply { name = Name(entry.subAccessName) })
                         val shortFsEntry = entry.properties.singleOrNull { it is Boolean }
                         if (shortFsEntry != null) propertySet.add(shortFsEntry)
                         doubleState =
@@ -667,10 +656,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             other is IndexKey && node == other.node && index == other.index
     }
 
-    private suspend fun storeFunctionSummary(
-        node: FunctionDeclaration,
-        doubleState: PointsToState.Element,
-    ) {
+    private suspend fun storeFunctionSummary(node: Function, doubleState: PointsToState.Element) {
         clearFSDummies(node.functionSummary)
         var dfgSearchTime: Long = 0
         // We try to run this in outer coroutines for each param and inner coroutines per
@@ -765,7 +751,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         // If the value is a newly created MemoryAddress, we only
                                         // set the
                                         // name so that we know later that we have to create a new
-                                        // MemoryAddress for each CallExpression
+                                        // MemoryAddress for each Call
                                         val addressName = (value as? MemoryAddress)?.name?.localName
                                         val v =
                                             if (addressName?.startsWith("NewMemoryAddress") == true)
@@ -805,9 +791,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         val propertySet = concurrentIdentitySetOf<Any>(true)
                                         if (subAccessName != "")
                                             propertySet.add(
-                                                FieldDeclaration().apply {
-                                                    name = Name(subAccessName)
-                                                }
+                                                Field().apply { name = Name(subAccessName) }
                                             )
 
                                         // Create the detailed shortFS. Like, which parameter
@@ -846,7 +830,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                             it is ParameterMemoryValue &&
                                                                 /* If it's a ParameterMemoryValue from the node's
                                                                 parameters, it has to have a DFG Node to one
-                                                                of the node's parameters. Either partial to a derefvalue or full to the parameterdeclaration */
+                                                                of the node's parameters. Either partial to a derefvalue or full to the Parameter */
                                                                 it.memoryValueUsageEdges
                                                                     .filter {
                                                                         ((it.granularity is
@@ -866,7 +850,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                                             (it.granularity is
                                                                                 FullDataflowGranularity &&
                                                                                 it.end is
-                                                                                    ParameterDeclaration)) &&
+                                                                                    Parameter)) &&
                                                                             it.end in
                                                                                 node.parameters
                                                                     }
@@ -890,9 +874,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                                         sourceParamValue.name.parent
                                                                             ?.localName
                                                                 }
-                                                            else
-                                                                sourceParamValue
-                                                                    as? ParameterDeclaration
+                                                            else sourceParamValue as? Parameter
                                                         if (matchingDeclarations != null) {
                                                             node.functionSummary
                                                                 .computeIfAbsent(param) {
@@ -997,43 +979,43 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             )
         doubleState =
             when (currentNode) {
-                is FunctionDeclaration -> initializeParameters(lattice, currentNode, doubleState)
+                is Function -> initializeParameters(lattice, currentNode, doubleState)
                 is Literal<*> -> {
                     // Literals don't have any prevDFG edges, so we skip those
                     doubleState
                 }
 
-                is DeleteExpression -> handleDeleteExpression(lattice, currentNode, doubleState)
+                is Delete -> handleDelete(lattice, currentNode, doubleState)
                 is Declaration,
                 is MemoryAddress -> {
                     handleDeclaration(lattice, currentNode, doubleState)
                 }
 
-                is AssignExpression -> {
-                    handleAssignExpression(lattice, currentNode, doubleState)
+                is Assign -> {
+                    handleAssign(lattice, currentNode, doubleState)
                 }
 
                 is UnaryOperator -> {
                     handleUnaryOperator(lattice, currentNode, doubleState)
                 }
 
-                is CallExpression -> {
-                    handleCallExpression(lattice, currentNode, doubleState)
+                is Call -> {
+                    handleCall(lattice, currentNode, doubleState)
                 }
 
                 is Expression -> {
                     handleExpression(lattice, currentNode, doubleState)
                 }
 
-                is ReturnStatement -> handleReturnStatement(lattice, currentNode, doubleState)
+                is Return -> handleReturn(lattice, currentNode, doubleState)
                 else -> doubleState
             }
         return doubleState
     }
 
-    protected suspend fun handleDeleteExpression(
+    protected suspend fun handleDelete(
         lattice: PointsToState,
-        currentNode: DeleteExpression,
+        currentNode: Delete,
         doubleState: PointsToState.Element,
     ): PointsToState.Element {
         var doubleState = doubleState
@@ -1059,9 +1041,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return doubleState
     }
 
-    private suspend fun handleReturnStatement(
+    private suspend fun handleReturn(
         lattice: PointsToState,
-        currentNode: ReturnStatement,
+        currentNode: Return,
         doubleState: PointsToState.Element,
     ): PointsToState.Element {
         /* For Return Statements, all we really want to do is to collect their return values
@@ -1069,7 +1051,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         Additionally, we need a DFG-Edge to the functionSummary as required by the spec */
         var doubleState = doubleState
         if (currentNode.returnValues.isNotEmpty()) {
-            val parentFD = currentNode.firstParentOrNull<FunctionDeclaration>()
+            val parentFD = currentNode.firstParentOrNull<Function>()
             if (parentFD != null) {
                 currentNode.returnValues.forEach { retval ->
                     parentFD.functionSummary
@@ -1078,7 +1060,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             doubleState.getValues(retval, retval).map {
                                 // If the value is a newly created MemoryAddress, we only set the
                                 // name so that we know later that we have to create a new
-                                // MemoryAddress for each CallExpression
+                                // MemoryAddress for each Call
                                 val addressName = (it.first as? MemoryAddress)?.name?.localName
                                 val v =
                                     if (addressName?.startsWith("NewMemoryAddress") == true)
@@ -1101,7 +1083,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         // Get the FD we are returning to
-        currentNode.firstParentOrNull<FunctionDeclaration>()?.let { fd ->
+        currentNode.firstParentOrNull<Function>()?.let { fd ->
             doubleState =
                 lattice.push(
                     doubleState,
@@ -1119,26 +1101,25 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     /**
-     * Add the data flows from the CallExpression's arguments to the FunctionDeclaration's
-     * ParameterMemoryValues to the doubleState
+     * Add the data flows from the Call's arguments to the Function's ParameterMemoryValues to the
+     * doubleState
      */
     private suspend fun calculateIncomingCallingContexts(
         lattice: PointsToState,
-        functionDeclaration: FunctionDeclaration,
-        callExpression: CallExpression,
+        Function: Function,
+        Call: Call,
         doubleState: PointsToState.Element,
     ): PointsToState.Element = coroutineScope {
         var doubleState = doubleState
         val callingContext =
             CallingContextIn(
-                mutableListOf(callExpression)
+                mutableListOf(Call)
             ) // TODO: Indicate somehow if this has already been done?
-        val innerConcurrencyCounter =
-            calculateInnerConcurrencyCounter(callExpression.arguments.size)
+        val innerConcurrencyCounter = calculateInnerConcurrencyCounter(Call.arguments.size)
 
-        if (callExpression is MemberCallExpression && functionDeclaration is MethodDeclaration) {
-            val base = callExpression.base
-            val receiver = functionDeclaration.receiver
+        if (Call is MemberCall && Function is Method) {
+            val base = Call.base
+            val receiver = Function.receiver
             if (base != null && receiver != null) {
                 doubleState =
                     lattice.push(
@@ -1162,9 +1143,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val getLastWritesCache =
             ConcurrentIdentityHashMap<Node, PowersetLattice.Element<NodeWithPropertiesKey>>()
 
-        callExpression.arguments.forEach { arg ->
+        Call.arguments.forEach { arg ->
             launch(Dispatchers.Default) {
-                if (arg.argumentIndex < functionDeclaration.parameters.size) {
+                if (arg.argumentIndex < Function.parameters.size) {
                     // In C(++), the reference to an array is a
                     // pointer, leading to the
                     // situation that handing "arg" or "&arg" as
@@ -1180,9 +1161,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             PowersetLattice.Element(Pair(arg, true))
                         else doubleState.getCachedNestedValues(getNestedValuesCache, arg, 1, false)
                     }
-                    // Create a DFG-Edge from the argument to the ParameterDeclaration or its
+                    // Create a DFG-Edge from the argument to the Parameter or its
                     // ParameterMemoryValue
-                    val p = functionDeclaration.parameters[arg.argumentIndex]
+                    val p = Function.parameters[arg.argumentIndex]
                     val derefPMVs = async {
                         p.memoryValueEdges
                             .filter {
@@ -1360,9 +1341,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
     }
 
-    private suspend fun handleCallExpression(
+    private suspend fun handleCall(
         lattice: PointsToState,
-        currentNode: CallExpression,
+        currentNode: Call,
         doubleState: PointsToState.Element,
     ): PointsToState.Element {
         var doubleState = doubleState
@@ -1376,7 +1357,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             invokes.mapNotNullTo(ConcurrentIdentitySet()) { inv ->
                 if (
                     inv.body == null &&
-                        // If the body is empty, check if we have the "real" functionDeclaration
+                        // If the body is empty, check if we have the "real" Function
                         // somewhere in our list
                         invokes.any { it != inv && it.name == inv.name && it.type == inv.type }
                 )
@@ -1404,15 +1385,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             launch(Dispatchers.Default) {
                                 val argument =
                                     when (param) {
-                                        is ParameterDeclaration -> {
+                                        is Parameter -> {
                                             // Dereference the parameter
                                             if (param.argumentIndex < currentNode.arguments.size) {
                                                 currentNode.arguments[param.argumentIndex]
                                             } else null
                                         }
 
-                                        is ReturnStatement,
-                                        is FunctionDeclaration -> {
+                                        is Return,
+                                        is Function -> {
                                             currentNode
                                         }
 
@@ -1474,15 +1455,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         argument: Expression,
         properties: EqualLinkedHashSet<Any>,
         lastWrites: MutableSet<NodeWithPropertiesKey>,
-        currentNode: CallExpression,
-        inv: FunctionDeclaration,
+        currentNode: Call,
+        inv: Function,
         srcNode: Any?,
         srcValueDepth: Int,
         param: Node,
     ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
         val shortFS = properties.any { it == true }
         val (destinationAddresses, destinations) =
-            calculateCallExpressionDestinations(
+            calculateCallDestinations(
                 doubleState,
                 mapDstToSrc,
                 dstValueDepth,
@@ -1496,22 +1477,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         propertySet.addAll(properties)
         if (subAccessName.isNotEmpty()) {
             propertySet.add(
-                PartialDataflowGranularity(FieldDeclaration().apply { name = Name(subAccessName) })
+                PartialDataflowGranularity(Field().apply { name = Name(subAccessName) })
             )
         }
 
         // If the srcNode is a MemoryAddress, we look it up in a map to ensure that we have a
-        // different MemoryAddress for each CallExpression, but the same if the CalLExpression is
+        // different MemoryAddress for each Call, but the same if the Call is
         // the same
         val srcNode =
-            if (srcNode is FunctionDeclaration)
-            // To ensure that we have a unique Node, we take the callExpression if the
-            // FS said the srcNode is the FunctionDeclaration
+            if (srcNode is Function)
+            // To ensure that we have a unique Node, we take the Call if the
+            // FS said the srcNode is the Function
             currentNode
             else if (srcNode is Name) {
                 val memoryAddress =
-                    callExpressionToMemAddrMap
-                        .computeIfAbsent(currentNode) { ConcurrentIdentityHashMap() }
+                    CallToMemAddrMap.computeIfAbsent(currentNode) { ConcurrentIdentityHashMap() }
                         .computeIfAbsent(srcNode) { MemoryAddress(srcNode) }
                 // We didn't previously add the DFG Edge for the memoryAddress, so we do that now
                 memoryAddress.nextDFGEdges += Dataflow(memoryAddress, inv)
@@ -1541,23 +1521,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private fun calculatePrevDFGs(
         lastWrites: MutableSet<NodeWithPropertiesKey>,
         shortFS: Boolean,
-        currentNode: CallExpression,
-        invoke: FunctionDeclaration,
+        currentNode: Call,
+        invoke: Function,
     ): MutableSet<NodeWithPropertiesKey> {
         val ret: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet()
-        // If we have nothing, the last write is probably the functionDeclaration
+        // If we have nothing, the last write is probably the Function
         if (lastWrites.isEmpty()) ret.add(NodeWithPropertiesKey(invoke, equalLinkedHashSetOf()))
         lastWrites.forEach { (lw, properties) ->
             val filteredProperties = equalLinkedHashSetOf<Any>().apply { addAll(properties) }
             if (shortFS) {
                 when (lw) {
-                    is FunctionDeclaration ->
-                        ret.add(NodeWithPropertiesKey(currentNode, filteredProperties))
-                    is ParameterDeclaration -> {
+                    is Function -> ret.add(NodeWithPropertiesKey(currentNode, filteredProperties))
+                    is Parameter -> {
                         // For dummy functionSummary entries, we have an Integer indicating the
-                        // parameter's index for which we should use the CalLExpression's argument
+                        // parameter's index for which we should use the Call's argument
                         // here
-                        // Otherwise, the lastWrite was the ParameterDeclaration itself, so we leave
+                        // Otherwise, the lastWrite was the Parameter itself, so we leave
                         // it as is
                         val index = properties.filterIsInstance<Int>().singleOrNull()
                         if (index != null && index < currentNode.arguments.size)
@@ -1576,9 +1555,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return ret
     }
 
-    private suspend fun calculateFunctionSummaries(
-        invoke: FunctionDeclaration
-    ): FunctionDeclaration? {
+    private suspend fun calculateFunctionSummaries(invoke: Function): Function? {
         if (invoke.functionSummary.isEmpty()) {
             if (invoke.hasBody()) {
                 log.debug(
@@ -1626,7 +1603,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             } else {
                 // Add a dummy function summary so that we don't try this every time
                 // In this dummy, all parameters point either to returns if we have any, or the
-                // FunctionDeclaration itself
+                // Function itself
                 log.info("Creating dummy function summary")
                 val newValues = ConcurrentHashMap.newKeySet<FSEntry>()
                 invoke.parameters.map { newValues.add(FSEntry(0, it, 1, "")) }
@@ -1743,10 +1720,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      * Adds entries to the map that tracks the source nodes for each destination node.
      *
      * This method updates the `mapDstToSrc` map with the source nodes and their properties for each
-     * destination node. It handles different types of source nodes, including
-     * `ParameterDeclaration`, `ParameterMemoryValue`, `MemoryAddress`, and other nodes. Depending
-     * on the type of source node, it may also update the general state to draw additional Data Flow
-     * Graph (DFG) edges.
+     * destination node. It handles different types of source nodes, including `Parameter`,
+     * `ParameterMemoryValue`, `MemoryAddress`, and other nodes. Depending on the type of source
+     * node, it may also update the general state to draw additional Data Flow Graph (DFG) edges.
      *
      * @param lattice The lattice representing the points-to state.
      * @param doubleState The current state of the points-to analysis.
@@ -1771,14 +1747,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         srcValueDepth: Int,
         param: Node,
         propertySet: EqualLinkedHashSet<Any>,
-        currentNode: CallExpression,
+        currentNode: Call,
         lastWrites: MutableSet<NodeWithPropertiesKey>,
     ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
         var doubleState = doubleState
         when (srcNode) {
-            is ParameterDeclaration -> {
+            is Parameter -> {
                 // Add the (dereferenced) value of the respective argument
-                // in the CallExpression
+                // in the Call
                 if (srcNode.argumentIndex < currentNode.arguments.size) {
                     // If this is a short FunctionSummary, we also
                     // update the generalState to draw the additional DFG Edges
@@ -1951,7 +1927,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     /** Returns a Pair of destination (for the general State) and destinationAddresses */
-    private fun calculateCallExpressionDestinations(
+    private fun calculateCallDestinations(
         doubleState: PointsToState.Element,
         mapDstToSrc: ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>,
         dstValueDepth: Int,
@@ -1959,10 +1935,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         argument: Node,
         properties: EqualLinkedHashSet<Any>,
     ): Pair<ConcurrentIdentitySet<Node?>, ConcurrentIdentitySet<Node>> {
-        // If the dstAddr is a CallExpression, the dst is the same. Otherwise, we don't really know,
+        // If the dstAddr is a Call, the dst is the same. Otherwise, we don't really know,
         // so we leave it empty
         val destination: ConcurrentIdentitySet<Node> =
-            if (argument is CallExpression) concurrentIdentitySetOf(argument)
+            if (argument is Call) concurrentIdentitySetOf(argument)
             // if the argument is PointerReference for a global variable, the destination is it's
             // refersTo
             // It might also be the case that argument is a Reference to an array, so then we treat
@@ -2093,13 +2069,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return doubleState
     }
 
-    private suspend fun handleAssignExpression(
+    private suspend fun handleAssign(
         lattice: PointsToState,
-        currentNode: AssignExpression,
+        currentNode: Assign,
         doubleState: PointsToState.Element,
     ): PointsToState.Element {
         var doubleState = doubleState
-        /* For AssignExpressions, we update the value of the lhs with the rhs */
+        /* For Assigns, we update the value of the lhs with the rhs */
         val sources =
             currentNode.rhs.flatMapTo(PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>()) {
                 doubleState.getValues(it, it).map { Triple(it.first, it.second, false) }
@@ -2131,12 +2107,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (currentNode.isCompoundAssignment)
                 currentNode.lhs.map { Pair(it, doubleState.getLastWrites(it)) }
             else null
-        /* If the lhs is a MemberExpression or a SubscriptExpression, we additionally set the last write to the base/arrayExpression here */
+        /* If the lhs is a MemberAccess or a Subscription, we additionally set the last write to the base/arrayExpression here */
         destinations
             .mapNotNullTo(ConcurrentIdentitySet()) {
                 when (it) {
-                    is MemberExpression -> it.base
-                    is SubscriptExpression -> it.arrayExpression
+                    is MemberAccess -> it.base
+                    is Subscription -> it.arrayExpression
                     else -> null
                 }
             }
@@ -2177,7 +2153,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     ),
                 )
         }
-        /* If the assignment is within a BinaryOperator, some languages treat this as DF from the rhs to the BinaryOperator, so we draw a DFG-Edge to the assignExpression to link the path */
+        /* If the assignment is within a BinaryOperator, some languages treat this as DF from the rhs to the BinaryOperator, so we draw a DFG-Edge to the Assign to link the path */
         val astParent = (currentNode.astParent as? BinaryOperator)
         if (astParent != null) {
             currentNode.rhs.forEach { rhs ->
@@ -2206,7 +2182,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /* If we have an Expression that is written to, we handle its values later and ignore it now */
         val access =
             if (currentNode is Reference || currentNode is BinaryOperator) currentNode.access
-            else if (currentNode is SubscriptExpression && currentNode.arrayExpression is Reference)
+            else if (currentNode is Subscription && currentNode.arrayExpression is Reference)
                 (currentNode.arrayExpression as Reference).access
             else null
         if (access in setOf(AccessValues.READ, AccessValues.READWRITE)) {
@@ -2333,7 +2309,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val declEntriesMap = ConcurrentIdentityHashMap<Node, DeclarationStateEntryElement>()
         /* No need to set the address, this already happens in the constructor */
         val addresses =
-            if (currentNode is TupleDeclaration) {
+            if (currentNode is Tuple) {
                 currentNode.elements.flatMapTo(ConcurrentIdentitySet<Node>()) {
                     doubleState.getAddresses(it, it)
                 }
@@ -2344,7 +2320,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val values = PowersetLattice.Element<NodeWithPropertiesKey>()
 
         val lastWrites =
-            if (currentNode is TupleDeclaration) {
+            if (currentNode is Tuple) {
                 currentNode.elements.mapTo(PowersetLattice.Element()) {
                     NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>(false))
                 }
@@ -2387,14 +2363,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // Declaration before we handled the initializer. So we explicitly handle the
                 // initializer before continuing
                 var ini = initializer
-                while (ini is CastExpression) ini = ini.expression
+                while (ini is Cast) ini = ini.expression
                 doubleState =
                     when (ini) {
                         is PointerReference -> handleExpression(lattice, ini.input, doubleState)
                         is PointerDereference -> handleExpression(lattice, ini.input, doubleState)
                         else -> handleExpression(lattice, ini, doubleState)
                     }
-                if (ini is InitializerListExpression) {
+                if (ini is InitializerList) {
                     // Create a field for every initializer, i.e. at offset 0 we store the first
                     // element, at offset 1 the second, etc...
                     val fieldAddresses = identitySetOf<Node>()
@@ -2465,7 +2441,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     /** Create ParameterMemoryValues up to depth `depth` */
     private suspend fun initializeParameters(
         lattice: PointsToState,
-        function: FunctionDeclaration,
+        function: Function,
         doubleState: PointsToState.Element,
         // Until which depth do we create ParameterMemoryValues
         depth: Int = 2,
@@ -2474,8 +2450,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         function.parameters
             .filter { it.memoryValues.filterIsInstance<ParameterMemoryValue>().isEmpty() }
             .forEach { param ->
-                // In the first step, we have a triangle of ParameterDeclaration, the
-                // ParameterDeclaration's Memory Address and the ParameterMemoryValue
+                // In the first step, we have a triangle of Parameter, the
+                // Parameter's Memory Address and the ParameterMemoryValue
                 // Therefore, the src and the addresses are different. For all other depths,
                 // we set
                 // both to the ParameterMemoryValue we create in the first step
@@ -2506,9 +2482,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         )
                     (src as? MemoryAddress)?.let { pmv.memoryAddresses = mutableSetOf(it) }
 
-                    // In the first step, we link the ParameterDeclaration to the PMV to be
+                    // In the first step, we link the Parameter to the PMV to be
                     // able to also access it outside the function
-                    if (src is ParameterDeclaration) {
+                    if (src is Parameter) {
                         doubleState =
                             lattice.push(
                                 doubleState,
@@ -2566,7 +2542,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
                     // Update the states
                     val declStateElement =
-                        if (src is ParameterDeclaration)
+                        if (src is Parameter)
                             DeclarationStateEntryElement(
                                 PowersetLattice.Element(prevAddresses),
                                 PowersetLattice.Element(Pair(pmv, false)),
@@ -2715,8 +2691,8 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
 
     // For global nodes, we check the globalDerefs map
     if (isGlobal(node)) {
-        // The value of a FunctionDeclaration is the FunctionDeclaration itself
-        if (node is FunctionDeclaration) {
+        // The value of a Function is the Function itself
+        if (node is Function) {
             ret.add(
                 FetchElementFromDeclarationStateEntry(node, false, "", PowersetLattice.Element())
             )
@@ -2860,9 +2836,9 @@ fun PointsToState.Element.getLastWrites(
 ): PowersetLattice.Element<NodeWithPropertiesKey> {
     // For pointerReferences, we take the memoryAddress of the refersTo, no matter if global or not
     if (node is PointerReference) {
-        // TODO: Handle other input types (e.g. SubscriptExpression, MemberExpression)
+        // TODO: Handle other input types (e.g. Subscription, MemberAccess)
         val refersTo = (node.input as? Reference)?.refersTo
-        return if (refersTo is FunctionDeclaration)
+        return if (refersTo is Function)
             PowersetLattice.Element(NodeWithPropertiesKey(refersTo, equalLinkedHashSetOf()))
         else
             refersTo?.memoryAddresses?.mapTo(PowersetLattice.Element()) {
@@ -2871,10 +2847,10 @@ fun PointsToState.Element.getLastWrites(
     }
     if (isGlobal(node)) {
         return when (node) {
-            is MemberExpression -> {
-                // We overapproximate here: For memberExpressions, we ignore the field and only
+            is MemberAccess -> {
+                // We overapproximate here: For MemberAccesss, we ignore the field and only
                 // consider the base
-                val (base, _) = resolveMemberExpression(node)
+                val (base, _) = resolveMemberAccess(node)
                 PowersetLattice.Element(
                     NodeWithPropertiesKey(
                         (base as? Reference)?.refersTo ?: base,
@@ -2894,7 +2870,7 @@ fun PointsToState.Element.getLastWrites(
             val ret = PowersetLattice.Element<NodeWithPropertiesKey>()
             this.getAddresses(node, node).forEach { addr ->
                 if (isGlobal(addr)) {
-                    // for globals, the last Write is the Declaration. For FunctionDeclarations, we
+                    // for globals, the last Write is the Declaration. For Functions, we
                     // find that in the globalDerefs map
                     globalDerefs[addr]?.forEach { entry ->
                         ret.add(
@@ -2928,8 +2904,8 @@ fun PointsToState.Element.getLastWrites(
             }
             return ret
         }
-        is SubscriptExpression -> {
-            // For SubScriptExpressions, we additionally check if the partial write matches
+        is Subscription -> {
+            // For Subscriptions, we additionally check if the partial write matches
             val partial = getNodeName(node.subscriptExpression)
             this.getAddresses(node, node)
                 .filterTo(PowersetLattice.Element()) {
@@ -2941,15 +2917,15 @@ fun PointsToState.Element.getLastWrites(
                             it.node,
                             it.properties.filterTo(EqualLinkedHashSet()) {
                                 !(it is PartialDataflowGranularity<*> &&
-                                    it.partialTarget is FieldDeclaration &&
+                                    it.partialTarget is Field &&
                                     it.partialTarget.name.localName == partial.localName)
                             },
                         )
                     } ?: PowersetLattice.Element()
                 }
         }
-        is MemberExpression -> {
-            // For MemberExpression, the lastWrite is the FieldDeclaration if we don't have anything
+        is MemberAccess -> {
+            // For MemberAccess, the lastWrite is the Field if we don't have anything
             // else
             val lastWrites =
                 this.getAddresses(node, node).flatMapTo(PowersetLattice.Element()) {
@@ -3063,13 +3039,13 @@ fun PointsToState.Element.getValues(
                 .mapTo(PowersetLattice.Element()) { Pair(it, false) }
         }
         is MemoryAddress,
-        is CallExpression -> {
+        is Call -> {
             fetchValueFromDeclarationState(node).mapTo(PowersetLattice.Element()) {
                 Pair(it.value, it.shortFS)
             }
         }
-        is MemberExpression -> {
-            val (base, fieldName) = resolveMemberExpression(node)
+        is MemberAccess -> {
+            val (base, fieldName) = resolveMemberAccess(node)
             val baseAddresses = getAddresses(base, startNode)
             val fieldAddresses = fetchFieldAddresses(baseAddresses, fieldName)
             if (fieldAddresses.isNotEmpty()) {
@@ -3121,24 +3097,22 @@ fun PointsToState.Element.getValues(
                     this.getValues(addr, startNode).forEach { v ->
                         // We want to skip values that contain the node itself and therefore could
                         // cause a loop
-                        // So we fetch parent AssignExpression of the value in the AST, and if the
+                        // So we fetch parent Assign of the value in the AST, and if the
                         // node is any of its children, we skip that value
-                        var valueParentAssignExpression: Node? = v.first
+                        var valueParentAssign: Node? = v.first
                         while (
-                            valueParentAssignExpression !is AssignExpression &&
-                                valueParentAssignExpression != null
-                        ) valueParentAssignExpression = valueParentAssignExpression.astParent
-                        if (node !in SubgraphWalker.flattenAST(valueParentAssignExpression))
-                            retVals.add(v)
+                            valueParentAssign !is Assign && valueParentAssign != null
+                        ) valueParentAssign = valueParentAssign.astParent
+                        if (node !in SubgraphWalker.flattenAST(valueParentAssign)) retVals.add(v)
                     }
                 }
             }
             return retVals
         }
-        is CastExpression -> {
+        is Cast -> {
             this.getValues(node.expression, startNode)
         }
-        is SubscriptExpression -> {
+        is Subscription -> {
             this.getAddresses(node, startNode).flatMapTo(PowersetLattice.Element()) {
                 this.getValues(it, it)
             }
@@ -3190,21 +3164,21 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
                 else this.getValues(node.input, startNode).map { it.first }
             inputVals.forEach { value ->
                 // In case the value is a BinaryOperator (like `*(ptr + 8)`), we treat this as a
-                // SubscriptExpression for now
+                // Subscription for now
                 // We assume that the rhs of the BinaryOperator is the pointer, and the rhs is a
                 // literal that describes the offset
                 if (
                     value is BinaryOperator &&
                         value.operatorCode == "+" &&
-                        (value.lhs is Reference || value.lhs is CastExpression) &&
+                        (value.lhs is Reference || value.lhs is Cast) &&
                         value.rhs is Literal<*>
                 ) {
                     var lhs = value.lhs
                     // Remove possible casts
-                    while (lhs is CastExpression) {
+                    while (lhs is Cast) {
                         lhs = lhs.expression
                     }
-                    val sub = SubscriptExpression()
+                    val sub = Subscription()
                     sub.arrayExpression = lhs
                     sub.subscriptExpression = value.rhs
                     ret.addAll(getAddresses(sub, startNode))
@@ -3212,11 +3186,11 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
             }
             return ret
         }
-        is MemberExpression -> {
+        is MemberAccess -> {
             /*
-             * For MemberExpressions, the fieldAddresses in the MemoryAddress node of the base hold the information we are looking for
+             * For MemberAccesss, the fieldAddresses in the MemoryAddress node of the base hold the information we are looking for
              */
-            val (base, newName) = resolveMemberExpression(node)
+            val (base, newName) = resolveMemberAccess(node)
             fetchFieldAddresses(this.getAddresses(base, startNode), newName)
         }
         is Reference -> {
@@ -3224,12 +3198,12 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
              * For references, the address is the same as for the declaration, AKA the refersTo
              */
             node.refersTo?.let { refersTo ->
-                /* If the refersTo is a FunctionDeclaration, its address is the FunctionDeclaration itself */
-                if (refersTo is FunctionDeclaration) {
+                /* If the refersTo is a Function, its address is the Function itself */
+                if (refersTo is Function) {
                     globalDerefs.put(refersTo, PowersetLattice.Element(Pair(refersTo, false)))
                     concurrentIdentitySetOf(refersTo)
                 } else {
-                    /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's do this here */
+                    /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a Function. So let's do this here */
                     if (refersTo.memoryAddresses.isEmpty()) {
                         val newAddress = MemoryAddress(node.name, isGlobal(node))
                         refersTo.memoryAddresses += newAddress
@@ -3239,13 +3213,13 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
                 }
             } ?: concurrentIdentitySetOf()
         }
-        is CastExpression -> {
+        is Cast -> {
             /*
-             * For CastExpressions we take the expression as the cast itself does not have any impact on the address
+             * For Casts we take the expression as the cast itself does not have any impact on the address
              */
             this.getAddresses(node.expression, startNode)
         }
-        is SubscriptExpression -> {
+        is Subscription -> {
             val localName = getNodeName(node.subscriptExpression)
             // When startNode is different from the current node, we should already have an entry,
             // so we fetch that from the general state
@@ -3461,7 +3435,7 @@ suspend fun PointsToState.Element.updateValues(
             /* Also update the generalState for dst (if we have any destinations) */
             // If the lastWrites are in the sources or destinations, we don't have to set the
             // prevDFG edges
-            // Except for callExpressions w/o invokes body for which we have to do this to create
+            // Except for Calls w/o invokes body for which we have to do this to create
             // the short FS paths
             val newLastWrites: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet()
             newLastWrites.addAll(lastWrites)
@@ -3473,7 +3447,7 @@ suspend fun PointsToState.Element.updateValues(
                         for (lw in chunk) {
                             if (
                                 destinations.none {
-                                    it is CallExpression && it.invokes.singleOrNull()?.body == null
+                                    it is Call && it.invokes.singleOrNull()?.body == null
                                 } &&
                                     (sources.any { src ->
                                         src.first === lw.node && src.second in lw.properties

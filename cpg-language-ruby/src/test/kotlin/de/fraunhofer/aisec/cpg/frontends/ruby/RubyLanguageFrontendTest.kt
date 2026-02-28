@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.LambdaExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Lambda
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.Test
@@ -77,7 +77,7 @@ class RubyLanguageFrontendTest {
         assertNotNull(each)
 
         val arg0 = each.arguments[0]
-        assertIs<LambdaExpression>(arg0)
+        assertIs<Lambda>(arg0)
 
         val i = arg0.function.parameters[0]
         assertLocalName("i", i)
