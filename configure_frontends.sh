@@ -62,5 +62,7 @@ answerJVM=$(ask "Do you want to enable the JVM frontend? (currently $(getPropert
 setProperty "enableJVMFrontend" $answerJVM
 answerINI=$(ask "Do you want to enable the INI frontend? (currently $(getProperty "enableINIFrontend"))")
 setProperty "enableINIFrontend" $answerINI
+answerRust=$(ask "Do you want to enable the Rust frontend? (currently $(getProperty "enableRustFrontend"))")
+setProperty "enableRustFrontend" $answerRust
 answerMCP=$(ask "Do you want to enable the MCP module? (currently $(getProperty "enableMCPModule"))")
 setProperty "enableMCPModule" $answerMCP

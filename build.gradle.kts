@@ -129,6 +129,12 @@ val enableINIFrontend: Boolean by extra {
 }
 project.logger.lifecycle("INI frontend is ${if (enableINIFrontend) "enabled" else "disabled"}")
 
+val enableRustFrontend: Boolean by extra {
+    val enableRustFrontend: String? by project
+    enableRustFrontend.toBoolean()
+}
+project.logger.lifecycle("Rust frontend is ${if (enableRustFrontend) "enabled" else "disabled"}")
+
 val enableMCPModule: Boolean by extra {
     val enableMCPModule: String? by project
     enableMCPModule.toBoolean()

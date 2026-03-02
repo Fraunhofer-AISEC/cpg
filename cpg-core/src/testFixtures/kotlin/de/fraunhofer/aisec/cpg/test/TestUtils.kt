@@ -48,6 +48,7 @@ import java.util.function.Predicate
 import java.util.stream.Collectors
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
+import kotlin.reflect.KClass
 import kotlin.test.*
 
 object TestUtils {
@@ -310,6 +311,11 @@ fun assertFullName(fqn: String, node: Node?, message: String? = null) {
 fun assertLocalName(localName: String, node: Node?, message: String? = null) {
     assertNotNull(node)
     assertEquals(localName, node.name.localName, message)
+}
+
+/** Asserts that the (full) names and classes of [types] correspond to the entries in [expected]. */
+fun assertTypes(expected: Set<Pair<String, KClass<out Type>>>, types: List<Type>) {
+    assertEquals(expected, types.map { Pair(it.name.toString(), it::class) }.toSet())
 }
 
 /**
