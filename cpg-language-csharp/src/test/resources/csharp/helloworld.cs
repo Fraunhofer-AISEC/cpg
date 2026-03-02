@@ -1,4 +1,7 @@
 namespace HelloWorld
 {
-    class Foo {}
+    class Foo
+    {
+        void Bar() {}
+    }
 }

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.newMethod
 import de.fraunhofer.aisec.cpg.graph.newNamespace
 import de.fraunhofer.aisec.cpg.graph.newRecord
 
@@ -37,6 +38,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         return when (node) {
             is Csharp.AST.NamespaceDeclarationSyntax -> handleNamespaceDeclaration(node)
             is Csharp.AST.ClassDeclarationSyntax -> handleClassDeclaration(node)
+            is Csharp.AST.MethodDeclarationSyntax -> handleMethodDeclaration(node)
             else -> ProblemDeclaration("Not supported: ${node.csharpType}")
         }
     }
@@ -58,6 +60,20 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     }
 
     private fun handleClassDeclaration(node: Csharp.AST.ClassDeclarationSyntax): Declaration {
-        return newRecord(node.identifier, "class", rawNode = node)
+        val record = newRecord(node.identifier, "class", rawNode = node)
+        frontend.scopeManager.enterScope(record)
+
+        for (member in node.members) {
+            val decl = handle(member)
+            frontend.scopeManager.addDeclaration(decl)
+            record.addDeclaration(decl)
+        }
+
+        frontend.scopeManager.leaveScope(record)
+        return record
+    }
+
+    private fun handleMethodDeclaration(node: Csharp.AST.MethodDeclarationSyntax): Declaration {
+        return newMethod(node.identifier, rawNode = node)
     }
 }

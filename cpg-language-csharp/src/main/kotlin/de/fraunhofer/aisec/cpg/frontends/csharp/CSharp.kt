@@ -72,6 +72,12 @@ interface Csharp : Library {
          * class.
          */
         open class MemberDeclarationSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            /**
+             * JNA calls this method automatically when converting a native pointer which is
+             * returned by a JNA function into a [MemberDeclarationSyntax] object. We override it to
+             * return the concrete subtype (e.g. [NamespaceDeclarationSyntax]) based on the Roslyn
+             * kind string.
+             */
             override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any {
                 if (nativeValue !is Pointer) {
                     return super.fromNative(nativeValue, context)
@@ -104,6 +110,37 @@ interface Csharp : Library {
          */
         class ClassDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
             val identifier: String by lazy { INSTANCE.GetClassDeclarationIdentifier(this) }
+            val members: List<BaseMethodDeclarationSyntax> by lazy {
+                val count = INSTANCE.GetClassDeclarationMembersCount(this)
+                (0 until count).map { i -> INSTANCE.GetClassDeclarationMember(this, i) }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`BaseMethodDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.basemethoddeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
+        open class BaseMethodDeclarationSyntax(p: Pointer? = Pointer.NULL) :
+            MemberDeclarationSyntax(p) {
+            override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any {
+                if (nativeValue !is Pointer) {
+                    return super.fromNative(nativeValue, context)
+                }
+                return when (INSTANCE.GetKind(nativeValue)) {
+                    "MethodDeclaration" -> MethodDeclarationSyntax(nativeValue)
+                    else -> super.fromNative(nativeValue, context)
+                }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`MethodDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.methoddeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
+        class MethodDeclarationSyntax(p: Pointer? = Pointer.NULL) : BaseMethodDeclarationSyntax(p) {
+            val identifier: String by lazy { INSTANCE.GetMethodDeclarationIdentifier(this) }
         }
     }
 
@@ -139,6 +176,15 @@ interface Csharp : Library {
     ): AST.MemberDeclarationSyntax
 
     fun GetClassDeclarationIdentifier(handle: AST.ClassDeclarationSyntax): String
+
+    fun GetClassDeclarationMembersCount(handle: AST.ClassDeclarationSyntax): Int
+
+    fun GetClassDeclarationMember(
+        handle: AST.ClassDeclarationSyntax,
+        index: Int,
+    ): AST.BaseMethodDeclarationSyntax
+
+    fun GetMethodDeclarationIdentifier(handle: AST.MethodDeclarationSyntax): String
 
     companion object {
         val INSTANCE: Csharp by lazy {

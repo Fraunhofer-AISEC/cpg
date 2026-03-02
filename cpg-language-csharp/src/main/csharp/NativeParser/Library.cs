@@ -74,4 +74,24 @@ public static class Library
             ((ClassDeclarationSyntax)Nodes[handlePtr]).Identifier.ToString()
         );
     }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetClassDeclarationMembersCount")]
+    public static int GetClassDeclarationMembersCount(IntPtr handlePtr)
+    {
+        return ((ClassDeclarationSyntax)Nodes[handlePtr]).Members.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetClassDeclarationMember")]
+    public static IntPtr GetClassDeclarationMember(IntPtr handlePtr, int index)
+    {
+        return Register(((ClassDeclarationSyntax)Nodes[handlePtr]).Members[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetMethodDeclarationIdentifier")]
+    public static IntPtr GetMethodDeclarationIdentifier(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((MethodDeclarationSyntax)Nodes[handlePtr]).Identifier.ToString()
+        );
+    }
 }

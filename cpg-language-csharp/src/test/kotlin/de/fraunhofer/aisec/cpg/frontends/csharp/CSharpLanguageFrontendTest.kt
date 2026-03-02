@@ -51,5 +51,8 @@ class CSharpLanguageFrontendTest : BaseTest() {
 
         val foo = ns.records["Foo"]
         assertNotNull(foo)
+
+        val bar = foo.methods["Bar"]
+        assertNotNull(bar)
     }
 }
