@@ -870,7 +870,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Translates a Rust `if_expression` into either a [Conditional] or delegates to the
-     * [StatementHandler] to produce an [de.fraunhofer.aisec.cpg.graph.statements.If].
+     * [StatementHandler] to produce an [de.fraunhofer.aisec.cpg.graph.statements.IfElse].
      *
      * In Rust, `if` is an expression that returns a value. When an `if` has an `else` clause, it
      * can be used in value position (e.g., `let x = if cond { a } else { b }`). In that case, we
@@ -878,7 +878,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
      *
      * When the `if` does **not** have an `else` clause, it cannot produce a value and is purely a
      * control-flow statement, so we delegate to [StatementHandler.handleNode] which produces an
-     * [de.fraunhofer.aisec.cpg.graph.statements.If].
+     * [de.fraunhofer.aisec.cpg.graph.statements.IfElse].
      *
      * For `else if` chains, the `alternative` field contains an `else_clause` whose child is
      * another `if_expression`. This is handled recursively, producing nested

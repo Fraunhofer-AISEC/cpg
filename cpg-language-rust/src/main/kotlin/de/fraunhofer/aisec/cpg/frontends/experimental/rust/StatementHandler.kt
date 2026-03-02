@@ -264,15 +264,15 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `if_expression` into an [If]. Supports `if let` bindings (which
+     * Translates a Rust `if_expression` into an [IfElse]. Supports `if let` bindings (which
      * inject variable declarations into the then-branch) and `else if` chains.
      *
      * This method is used for `if` expressions that do **not** have an `else` clause and therefore
      * cannot be used in value position. When an `else` clause is present, the [ExpressionHandler]
-     * produces a [If] instead.
+     * produces a [de.fraunhofer.aisec.cpg.graph.statements.expressions.Conditional] instead.
      */
-    internal fun handleIfExpression(node: TSNode): If {
-        val ifStmt = newIf(rawNode = node)
+    internal fun handleIfExpression(node: TSNode): IfElse {
+        val ifStmt = newIfElse(rawNode = node)
 
         var condition = node["condition"]
         if (condition != null && condition.isNull) condition = null
