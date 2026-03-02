@@ -17,6 +17,13 @@ public static class Library
         return ptr;
     }
 
+    private static void PrintASTDump(SyntaxNode node, int indent = 0)
+          {
+              Console.Error.WriteLine(new string(' ', indent * 2) + node.GetType().Name + ": " + node.ToString().Split('\n')[0].Trim());
+              foreach (var child in node.ChildNodes())
+              PrintASTDump(child, indent + 1);
+          }
+
     [UnmanagedCallersOnly(EntryPoint = "CSharpRoslynSyntaxTreeParseText")]
     public static IntPtr CSharpRoslynSyntaxTreeParseText(IntPtr sourcePtr)
     {
@@ -25,6 +32,7 @@ public static class Library
         var source = Marshal.PtrToStringUTF8(sourcePtr);
         // Roslyn parses the source code -> AST
         var root = (CSharpSyntaxNode)CSharpSyntaxTree.ParseText(source).GetRoot();
+        PrintASTDump(root);
         return Register(root);
     }
 
