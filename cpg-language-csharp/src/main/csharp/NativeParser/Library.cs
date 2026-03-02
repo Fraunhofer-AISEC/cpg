@@ -102,4 +102,28 @@ public static class Library
             ((MethodDeclarationSyntax)Nodes[handlePtr]).Identifier.ToString()
         );
     }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetNodeStartLine")]
+    public static int GetNodeStartLine(IntPtr handlePtr)
+    {
+        return Nodes[handlePtr].GetLocation().GetLineSpan().StartLinePosition.Line + 1;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetNodeStartColumn")]
+    public static int GetNodeStartColumn(IntPtr handlePtr)
+    {
+        return Nodes[handlePtr].GetLocation().GetLineSpan().StartLinePosition.Character + 1;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetNodeEndLine")]
+    public static int GetNodeEndLine(IntPtr handlePtr)
+    {
+        return Nodes[handlePtr].GetLocation().GetLineSpan().EndLinePosition.Line + 1;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetNodeEndColumn")]
+    public static int GetNodeEndColumn(IntPtr handlePtr)
+    {
+        return Nodes[handlePtr].GetLocation().GetLineSpan().EndLinePosition.Character + 1;
+    }
 }

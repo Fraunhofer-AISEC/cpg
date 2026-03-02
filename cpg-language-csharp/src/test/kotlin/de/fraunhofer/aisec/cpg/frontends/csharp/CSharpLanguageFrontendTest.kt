@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class CSharpLanguageFrontendTest : BaseTest() {
@@ -48,11 +49,14 @@ class CSharpLanguageFrontendTest : BaseTest() {
 
         val ns = tu.namespaces["HelloWorld"]
         assertNotNull(ns)
+        assertEquals(1, ns.location?.region?.startLine)
 
         val foo = ns.records["Foo"]
         assertNotNull(foo)
+        assertEquals(3, foo.location?.region?.startLine)
 
         val bar = foo.methods["Bar"]
         assertNotNull(bar)
+        assertEquals(5, bar.location?.region?.startLine)
     }
 }

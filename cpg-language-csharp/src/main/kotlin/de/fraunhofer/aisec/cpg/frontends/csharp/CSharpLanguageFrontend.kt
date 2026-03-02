@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.newTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 
 class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpLanguageFrontend>) :
@@ -41,7 +42,10 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
 
     val declarationHandler = DeclarationHandler(this)
 
+    private var currentFile: File? = null
+
     override fun parse(file: File): TranslationUnit {
+        currentFile = file
         val source = file.readText()
         val root = Csharp.CSharpSyntaxTree.parseText(source)
         val tu = newTranslationUnit(file.name, rawNode = root)
@@ -64,7 +68,18 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
 
     override fun codeOf(astNode: Csharp.AST.Node): String? = null
 
-    override fun locationOf(astNode: Csharp.AST.Node): PhysicalLocation? = null
+    override fun locationOf(astNode: Csharp.AST.Node): PhysicalLocation? {
+        val file = currentFile ?: return null
+        return PhysicalLocation(
+            file.toURI(),
+            Region(
+                startLine = astNode.startLine,
+                startColumn = astNode.startColumn,
+                endLine = astNode.endLine,
+                endColumn = astNode.endColumn,
+            ),
+        )
+    }
 
     override fun setComment(node: Node, astNode: Csharp.AST.Node) {}
 }

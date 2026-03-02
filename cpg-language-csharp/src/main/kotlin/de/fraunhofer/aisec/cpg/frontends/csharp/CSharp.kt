@@ -52,7 +52,12 @@ interface Csharp : Library {
          * Base class for all C# syntax nodes. Represents Roslyn's
          * [`CSharpSyntaxNode`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.csharpsyntaxnode?view=roslyn-dotnet-5.0.0)
          */
-        open class Node(p: Pointer? = Pointer.NULL) : CsharpObject(p)
+        open class Node(p: Pointer? = Pointer.NULL) : CsharpObject(p) {
+            val startLine: Int by lazy { INSTANCE.GetNodeStartLine(this) }
+            val startColumn: Int by lazy { INSTANCE.GetNodeStartColumn(this) }
+            val endLine: Int by lazy { INSTANCE.GetNodeEndLine(this) }
+            val endColumn: Int by lazy { INSTANCE.GetNodeEndColumn(this) }
+        }
 
         /**
          * Represents the Roslyn
@@ -185,6 +190,14 @@ interface Csharp : Library {
     ): AST.BaseMethodDeclarationSyntax
 
     fun GetMethodDeclarationIdentifier(handle: AST.MethodDeclarationSyntax): String
+
+    fun GetNodeStartLine(handle: AST.Node): Int
+
+    fun GetNodeStartColumn(handle: AST.Node): Int
+
+    fun GetNodeEndLine(handle: AST.Node): Int
+
+    fun GetNodeEndColumn(handle: AST.Node): Int
 
     companion object {
         val INSTANCE: Csharp by lazy {
