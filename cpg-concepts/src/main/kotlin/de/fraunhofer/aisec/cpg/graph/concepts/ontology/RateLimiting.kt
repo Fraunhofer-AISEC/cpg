@@ -1,28 +1,3 @@
-/*
- * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- *                    $$$$$$\  $$$$$$$\   $$$$$$\
- *                   $$  __$$\ $$  __$$\ $$  __$$\
- *                   $$ /  \__|$$ |  $$ |$$ /  \__|
- *                   $$ |      $$$$$$$  |$$ |$$$$\
- *                   $$ |      $$  ____/ $$ |\_$$ |
- *                   $$ |  $$\ $$ |      $$ |  $$ |
- *                   \$$$$$   |$$ |      \$$$$$   |
- *                    \______/ \__|       \______/
- *
- */
 package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -35,18 +10,21 @@ import kotlin.Int
  * Rate limiting is used to control the frequency of incoming requests to prevent system overload
  */
 public open class RateLimiting(
-    public val enabled: Boolean?,
-    public val maxRequests: Int?,
-    public val timeWindowSeconds: Int?,
-    underlyingNode: Node? = null,
+  public val enabled: Boolean?,
+  public val maxRequests: Int?,
+  public val timeWindowSeconds: Int?,
+  underlyingNode: Node? = null,
 ) : AccessRestriction(underlyingNode) {
-    override fun equals(other: Any?): Boolean =
-        other is RateLimiting &&
-            super.equals(other) &&
-            other.enabled == this.enabled &&
-            other.maxRequests == this.maxRequests &&
-            other.timeWindowSeconds == this.timeWindowSeconds
+  override fun equals(other: Any?): Boolean = other is RateLimiting &&
+              super.equals(other) &&
+              other.enabled == this.enabled &&
+              other.maxRequests == this.maxRequests &&
+              other.timeWindowSeconds == this.timeWindowSeconds
 
-    override fun hashCode(): Int =
-        Objects.hash(super.hashCode(), enabled, maxRequests, timeWindowSeconds)
+  override fun hashCode(): Int = Objects.hash(
+              super.hashCode(),
+              enabled,
+              maxRequests,
+              timeWindowSeconds,
+          )
 }
