@@ -26,37 +26,26 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
-import org.neo4j.ogm.annotation.Relationship
 
 /**
- * Case statement of the form `case expression :` that serves as entry point for switch statements,
- * the only allowed substatements are side effekt free primitive expression for the selector to
- * choose from. THe statements executed after the entry are on the same AST hierarchy in the parent
- * compound statement.
+ * Statement used to interrupt further execution of a loop body and jump to the evaluation of the
+ * loop condition. Can have a loop label, e.g. in Java, to specify which of the nested loops
+ * condition should be reevaluated.
  */
-class CaseStatement : Statement() {
-    @Relationship(value = "CASE_EXPRESSION")
-    var caseExpressionEdge = astOptionalEdgeOf<Expression>()
-
-    /**
-     * Primitive side effect free statement that has to match with the evaluated selector in
-     * SwitchStatement
-     */
-    var caseExpression by unwrapping(CaseStatement::caseExpressionEdge)
+class Continue : Statement() {
+    /** Specifies the loop in a nested structure that the label will 'continue' */
+    var label: String? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is CaseStatement) return false
-        return super.equals(other) && caseExpression == other.caseExpression
+        if (other !is Continue) return false
+        return super.equals(other) && label == other.label
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), caseExpression)
+    override fun hashCode() = Objects.hash(super.hashCode(), label)
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        return this.caseExpression?.getStartingPrevEOG() ?: this.prevEOG
+        return this.prevEOG
     }
 }

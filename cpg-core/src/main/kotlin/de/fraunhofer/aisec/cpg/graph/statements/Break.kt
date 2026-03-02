@@ -29,17 +29,17 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.util.Objects
 
 /**
- * Statement used to interrupt further execution of a loop body and jump to the evaluation of the
- * loop condition. Can have a loop label, e.g. in Java, to specify which of the nested loops
- * condition should be reevaluated.
+ * Statement used to interrupt further execution of a loop body and exit the respective loop
+ * context. Can have a loop label, e.g. in Java, to specify which of the nested loops should be
+ * broken out of.
  */
-class ContinueStatement : Statement() {
-    /** Specifies the loop in a nested structure that the label will 'continue' */
+class Break : Statement() {
+    /** Specifies the label of the loop in a nested structure that this statement will 'break' */
     var label: String? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ContinueStatement) return false
+        if (other !is Break) return false
         return super.equals(other) && label == other.label
     }
 

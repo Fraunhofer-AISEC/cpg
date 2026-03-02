@@ -32,26 +32,30 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
-/** Represents an assert statement */
-class AssertStatement : Statement() {
-    @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
-    /** The condition to be evaluated. */
-    var condition by unwrapping(AssertStatement::conditionEdge)
+/**
+ * Case statement of the form `case expression :` that serves as entry point for switch statements,
+ * the only allowed substatements are side effekt free primitive expression for the selector to
+ * choose from. THe statements executed after the entry are on the same AST hierarchy in the parent
+ * compound statement.
+ */
+class Case : Statement() {
+    @Relationship(value = "CASE_EXPRESSION")
+    var caseExpressionEdge = astOptionalEdgeOf<Expression>()
 
-    @Relationship(value = "MESSAGE") var messageEdge = astOptionalEdgeOf<Statement>()
-    /** The *optional* message that is shown, if the assert is evaluated as true */
-    var message by unwrapping(AssertStatement::messageEdge)
+    /**
+     * Primitive side effect free statement that has to match with the evaluated selector in Switch
+     */
+    var caseExpression by unwrapping(Case::caseExpressionEdge)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is AssertStatement) return false
-        return super.equals(other) && condition == other.condition && message == other.message
+        if (other !is Case) return false
+        return super.equals(other) && caseExpression == other.caseExpression
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), condition, message)
+    override fun hashCode() = Objects.hash(super.hashCode(), caseExpression)
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        return this.condition?.getStartingPrevEOG()
-            ?: (this.prevEOG + (this.message?.getStartingPrevEOG() ?: setOf()))
+        return this.caseExpression?.getStartingPrevEOG() ?: this.prevEOG
     }
 }
