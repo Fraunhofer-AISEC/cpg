@@ -60,7 +60,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             "loop_expression" -> handleLoopExpression(node)
             "for_expression" -> handleForExpression(node)
             "expression_statement" -> handleExpressionStatement(node)
-            "empty_statement" -> newEmptyStatement(rawNode = node)
+            "empty_statement" -> newEmpty(rawNode = node)
             "function_item" -> {
                 // Nested function inside a block -- delegate to declaration handler
                 val decl = frontend.declarationHandler.handle(node)
@@ -94,7 +94,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Checks whether [node] has a `label` child and, if so, wraps [stmt] in a [LabelStatement].
+     * Checks whether [node] has a `label` child and, if so, wraps [stmt] in a [Label].
      * Otherwise, returns [stmt] unchanged. This is used for labeled blocks (`'label: { ... }`).
      */
     internal fun wrapWithLabel(node: TSNode, stmt: Statement): Statement {
@@ -106,7 +106,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             }
         }
         return if (labelNode != null) {
-            val labelStmt = newLabelStatement(rawNode = node)
+            val labelStmt = newLabel(rawNode = node)
             val code = labelNode.text()
             // Labels look like 'outer: — strip the leading quote and trailing colon
             labelStmt.label = code.removePrefix("'").removeSuffix(":")
@@ -249,10 +249,10 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `return_expression` into a [ReturnStatement] with an optional return value.
+     * Translates a Rust `return_expression` into a [Return] with an optional return value.
      */
-    private fun handleReturnExpression(node: TSNode): ReturnStatement {
-        val ret = newReturnStatement(rawNode = node)
+    private fun handleReturnExpression(node: TSNode): Return {
+        val ret = newReturn(rawNode = node)
         // In Rust return_expression, the value is often a child
         for (child in node.children) {
             if (child.isNamed && child.type != "return") {
@@ -264,16 +264,15 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `if_expression` into an [IfStatement]. Supports `if let` bindings (which
+     * Translates a Rust `if_expression` into an [If]. Supports `if let` bindings (which
      * inject variable declarations into the then-branch) and `else if` chains.
      *
      * This method is used for `if` expressions that do **not** have an `else` clause and therefore
      * cannot be used in value position. When an `else` clause is present, the [ExpressionHandler]
-     * produces a [de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression]
-     * instead.
+     * produces a [If] instead.
      */
-    internal fun handleIfExpression(node: TSNode): IfStatement {
-        val ifStmt = newIfStatement(rawNode = node)
+    internal fun handleIfExpression(node: TSNode): If {
+        val ifStmt = newIf(rawNode = node)
 
         var condition = node["condition"]
         if (condition != null && condition.isNull) condition = null
@@ -327,11 +326,11 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `while_expression` (including `while let`) into a [WhileStatement]. If a
-     * loop label is present, wraps the result in a [LabelStatement].
+     * Translates a Rust `while_expression` (including `while let`) into a [While]. If a
+     * loop label is present, wraps the result in a [Label].
      */
     private fun handleWhileExpression(node: TSNode): Statement {
-        val whileStmt = newWhileStatement(rawNode = node)
+        val whileStmt = newWhile(rawNode = node)
 
         var condition = node["condition"]
         if (condition != null && condition.isNull) condition = null
@@ -361,7 +360,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         val label = findLoopLabel(node)
 
         return if (label != null) {
-            val labelStmt = newLabelStatement(rawNode = node)
+            val labelStmt = newLabel(rawNode = node)
             val code = label.text()
             labelStmt.label = code.removePrefix("'")
             labelStmt.subStatement = whileStmt
@@ -372,11 +371,11 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `loop_expression` (infinite loop) into a [WhileStatement] with a `true`
-     * condition. If a loop label is present, wraps the result in a [LabelStatement].
+     * Translates a Rust `loop_expression` (infinite loop) into a [While] with a `true`
+     * condition. If a loop label is present, wraps the result in a [Label].
      */
     private fun handleLoopExpression(node: TSNode): Statement {
-        val loop = newWhileStatement(rawNode = node)
+        val loop = newWhile(rawNode = node)
         // Infinite loop: while(true)
         loop.condition = newLiteral(true, primitiveType("bool"), rawNode = node).implicit()
 
@@ -388,7 +387,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         val label = findLoopLabel(node)
 
         return if (label != null) {
-            val labelStmt = newLabelStatement(rawNode = node)
+            val labelStmt = newLabel(rawNode = node)
             val code = label.text()
             labelStmt.label = code.removePrefix("'")
             labelStmt.subStatement = loop
@@ -400,10 +399,10 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Translates a Rust `for_expression` (e.g., `for x in items { ... }`) into a
-     * [ForEachStatement]. The loop variable is declared in the for-each scope.
+     * [ForEach]. The loop variable is declared in the for-each scope.
      */
     private fun handleForExpression(node: TSNode): Statement {
-        val forEach = newForEachStatement(rawNode = node)
+        val forEach = newForEach(rawNode = node)
         frontend.scopeManager.enterScope(forEach)
 
         // Pattern is the loop variable (e.g., "x" in "for x in items")
@@ -435,7 +434,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         val label = findLoopLabel(node)
 
         return if (label != null) {
-            val labelStmt = newLabelStatement(rawNode = node)
+            val labelStmt = newLabel(rawNode = node)
             val code = label.text()
             labelStmt.label = code.removePrefix("'")
             labelStmt.subStatement = forEach
@@ -603,7 +602,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
      * return, loops) to the statement handler and all others to the expression handler.
      */
     private fun handleExpressionStatement(node: TSNode): Statement {
-        val child = node.getNamedChild(0) ?: return newEmptyStatement(rawNode = node)
+        val child = node.getNamedChild(0) ?: return newEmpty(rawNode = node)
         return if (
             child.type == "if_expression" ||
                 child.type == "block" ||

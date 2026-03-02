@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.experimental.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import org.treesitter.TSNode
 
@@ -113,11 +113,11 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "parenthesized_expression" -> {
                 val child = node.getNamedChild(0)
                 if (child != null) handle(child)
-                else newProblemExpression("Empty parenthesized expression", rawNode = node)
+                else newProblemExpression("Empty parenthesized ", rawNode = node)
             }
 
             else -> {
-                newProblemExpression("Unknown expression type: ${node.type}", rawNode = node)
+                newProblemExpression("Unknown  type: ${node.type}", rawNode = node)
             }
         }
     }
@@ -237,11 +237,11 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val op = newUnaryOperator(opCode, postfix = false, prefix = true, rawNode = node)
         if (operand != null)
             op.input =
-                handle(operand) as? Expression ?: newProblemExpression("Operand not an expression")
+                handle(operand) as? Expression ?: newProblemExpression("Operand not an ")
         return op
     }
 
-    /** Translates a Rust `assignment_expression` (e.g., `x = 5`) into an [AssignExpression]. */
+    /** Translates a Rust `assignment_expression` (e.g., `x = 5`) into an [Assign]. */
     private fun handleAssignmentExpression(node: TSNode): Statement {
         val left = node["left"]
         val right = node["right"]
@@ -251,7 +251,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val rhs =
             handle(right ?: return newProblemExpression("Missing RHS in assignment")) as Expression
 
-        return newAssignExpression(
+        return newAssign(
             operatorCode = "=",
             lhs = listOf(lhs),
             rhs = listOf(rhs),
@@ -261,7 +261,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Translates a Rust `compound_assignment_expr` (e.g., `x += 1`, `y *= 2`) into an
-     * [AssignExpression] with the corresponding compound operator.
+     * [Assign] with the corresponding compound operator.
      */
     private fun handleCompoundAssignmentExpression(node: TSNode): Statement {
         val left = node["left"]
@@ -274,7 +274,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             handle(right ?: return newProblemExpression("Missing RHS in assignment")) as Expression
         val opCode = operator.text()
 
-        return newAssignExpression(
+        return newAssign(
             operatorCode = opCode,
             lhs = listOf(lhs),
             rhs = listOf(rhs),
@@ -284,10 +284,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Translates a Rust `tuple_expression` (e.g., `(1, "hello")`) into an
-     * [InitializerListExpression].
+     * [InitializerList].
      */
-    private fun handleTupleExpression(node: TSNode): InitializerListExpression {
-        val ile = newInitializerListExpression(rawNode = node)
+    private fun handleTupleExpression(node: TSNode): InitializerList {
+        val ile = newInitializerList(rawNode = node)
         ile.type = objectType("tuple")
         ile.initializers =
             node.children
@@ -298,10 +298,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `array_expression` (e.g., `[1, 2, 3]`) into an [InitializerListExpression].
+     * Translates a Rust `array_expression` (e.g., `[1, 2, 3]`) into an [InitializerList].
      */
-    private fun handleArrayExpression(node: TSNode): InitializerListExpression {
-        val ile = newInitializerListExpression(rawNode = node)
+    private fun handleArrayExpression(node: TSNode): InitializerList {
+        val ile = newInitializerList(rawNode = node)
         ile.type = objectType("array")
         val list = mutableListOf<Expression>()
         for (child in node.children) {
@@ -315,7 +315,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `call_expression` into a [CallExpression] or [MemberCallExpression]. If the
+     * Translates a Rust `call_expression` into a [Call] or [MemberCall]. If the
      * callee is a `generic_function` (turbofish syntax like `foo::<T>()`), delegates to
      * [handleGenericCallExpression].
      */
@@ -336,10 +336,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 ?: newProblemExpression("Missing function in call", rawNode = node)
 
         val call =
-            if (callee is MemberExpression) {
-                newMemberCallExpression(callee, rawNode = node)
+            if (callee is MemberAccess) {
+                newMemberCall(callee, rawNode = node)
             } else {
-                newCallExpression(callee, rawNode = node)
+                newCall(callee, rawNode = node)
             }
 
         if (arguments != null) {
@@ -356,7 +356,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Translates a turbofish-style generic function call (e.g., `identity::<i32>(42)`) into a
-     * template [CallExpression] with [TypeExpression] template parameters.
+     * template [Call] with [TypeExpression] template parameters.
      */
     private fun handleGenericCallExpression(
         node: TSNode,
@@ -371,7 +371,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             handle(innerFunction) as? Expression
                 ?: newProblemExpression("Invalid generic function", rawNode = genericFunction)
 
-        val call = newCallExpression(callee, template = true, rawNode = node)
+        val call = newCall(callee, template = true, rawNode = node)
 
         // Add type arguments as template parameters
         for (typeArg in typeArguments.children) {
@@ -396,7 +396,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return call
     }
 
-    /** Translates a Rust `field_expression` (e.g., `point.x`) into a [MemberExpression]. */
+    /** Translates a Rust `field_expression` (e.g., `point.x`) into a [MemberAccess]. */
     private fun handleFieldExpression(node: TSNode): Statement {
         val value = node["value"]
         val field = node["field"]
@@ -412,19 +412,19 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 as Expression
         val name = field.text()
 
-        return newMemberExpression(name, base, rawNode = node)
+        return newMemberAccess(name, base, rawNode = node)
     }
 
     /**
-     * Translates a Rust `match_expression` into a [SwitchStatement]. Each match arm becomes a
-     * [CaseStatement] with its pattern as the case expression. Match guards are modeled as binary
+     * Translates a Rust `match_expression` into a [Switch]. Each match arm becomes a
+     * [Case] with its pattern as the case expression. Match guards are modeled as binary
      * `"if"` operators combining the pattern and guard condition.
      */
     private fun handleMatchExpression(node: TSNode): Statement {
         val value = node["value"]
         val body = node["body"]
 
-        val switch = newSwitchStatement(rawNode = node)
+        val switch = newSwitch(rawNode = node)
         if (value != null) switch.selector = handle(value) as? Expression
 
         val block = newBlock().implicit()
@@ -468,7 +468,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                     frontend.scopeManager.enterScope(armScope)
                     bindings.forEach { frontend.scopeManager.addDeclaration(it) }
 
-                    val case = newCaseStatement(rawNode = arm)
+                    val case = newCase(rawNode = arm)
                     var caseExpr = if (pattern != null) handle(pattern) as? Expression else null
                     if (guardNode != null) {
                         val condition = guardNode.getNamedChild(0)
@@ -501,12 +501,12 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                             // This ensures they are part of the AST
                             frontend.statementHandler.handleBlockWithBindings(armValue, bindings)
                         } else {
-                            newEmptyStatement().implicit()
+                            newEmpty().implicit()
                         }
                     block.statements += stmt
 
                     // Add implicit break
-                    block.statements += newBreakStatement().implicit()
+                    block.statements += newBreak().implicit()
 
                     frontend.scopeManager.leaveScope(armScope)
                 }
@@ -518,7 +518,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `macro_invocation` (e.g., `println!("hello")`) into a [CallExpression].
+     * Translates a Rust `macro_invocation` (e.g., `println!("hello")`) into a [Call].
      * Macro arguments from the `token_tree` are extracted as best-effort expression arguments.
      */
     private fun handleMacroInvocation(node: TSNode): Expression {
@@ -526,7 +526,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val name = macroNode.text()
 
         val call =
-            newCallExpression(newReference(name, rawNode = macroNode), fqn = name, rawNode = node)
+            newCall(newReference(name, rawNode = macroNode), fqn = name, rawNode = node)
 
         // Extract arguments from the token_tree (tree-sitter doesn't parse macro bodies,
         // but we can extract top-level named children as arguments)
@@ -563,9 +563,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return op
     }
 
-    /** Translates a Rust `break_expression` into a [BreakStatement], preserving any loop label. */
+    /** Translates a Rust `break_expression` into a [de.fraunhofer.aisec.cpg.graph.statements.Break], preserving any loop label. */
     private fun handleBreakExpression(node: TSNode): Statement {
-        val breakStmt = newBreakStatement(rawNode = node)
+        val breakStmt = newBreak(rawNode = node)
         val label = findLabel(node)
 
         if (label != null) {
@@ -576,11 +576,11 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `continue_expression` into a [ContinueStatement], preserving any loop
+     * Translates a Rust `continue_expression` into a [Continue], preserving any loop
      * label.
      */
     private fun handleContinueExpression(node: TSNode): Statement {
-        val continueStmt = newContinueStatement(rawNode = node)
+        val continueStmt = newContinue(rawNode = node)
         val label = findLabel(node)
 
         if (label != null) {
@@ -605,14 +605,14 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Translates a Rust `struct_expression` (e.g., `Point { x: 1, y: 2 }`) into a
-     * [ConstructExpression]. Supports field initializers, shorthand initializers (`{ x }`), and
+     * [Construction]. Supports field initializers, shorthand initializers (`{ x }`), and
      * base field initializers (`..other`).
      */
     private fun handleStructExpression(node: TSNode): Expression {
         val nameNode = node["name"]
         val name = nameNode.text()
 
-        val construct = newConstructExpression(name, rawNode = node)
+        val construct = newConstruction(name, rawNode = node)
         construct.type = objectType(name)
 
         // struct_expression always has "body" (field_initializer_list) per grammar
@@ -651,10 +651,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return construct
     }
 
-    /** Translates a Rust `index_expression` (e.g., `arr[0]`) into a [SubscriptExpression]. */
+    /** Translates a Rust `index_expression` (e.g., `arr[0]`) into a [Subscription]. */
     private fun handleIndexExpression(node: TSNode): Expression {
         // index_expression always has exactly 2 named children: base and index
-        val ase = newSubscriptExpression(rawNode = node)
+        val ase = newSubscription(rawNode = node)
         val base = node.getNamedChild(0)
         val index = node.getNamedChild(1)
         ase.arrayExpression =
@@ -667,7 +667,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Translates a Rust `range_expression` (e.g., `0..10`, `..end`, `start..=end`) into a
-     * [RangeExpression] with optional floor and ceiling bounds.
+     * [Range] with optional floor and ceiling bounds.
      */
     private fun handleRangeExpression(node: TSNode): Expression {
         // Range can have 0, 1, or 2 named children depending on form (..end, start.., start..end)
@@ -696,7 +696,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        return newRangeExpression(floor, ceiling, rawNode = node)
+        return newRange(floor, ceiling, rawNode = node)
     }
 
     /** Translates a Rust `try_expression` (e.g., `result?`) into a postfix `?` [UnaryOperator]. */
@@ -710,10 +710,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return op
     }
 
-    /** Translates a Rust `type_cast_expression` (e.g., `x as i64`) into a [CastExpression]. */
+    /** Translates a Rust `type_cast_expression` (e.g., `x as i64`) into a [Cast]. */
     private fun handleTypeCastExpression(node: TSNode): Expression {
         // type_cast_expression always has "value" and "type" fields per grammar
-        val cast = newCastExpression(rawNode = node)
+        val cast = newCast(rawNode = node)
         val value = node["value"]!!
         val type = node["type"]!!
         cast.expression =
@@ -725,10 +725,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Translates a Rust `closure_expression` (e.g., `|x| x + 1` or `move |x: i32| -> i32 { x }`)
-     * into a [LambdaExpression] wrapping an anonymous [FunctionDeclaration].
+     * into a [Lambda] wrapping an anonymous [de.fraunhofer.aisec.cpg.graph.declarations.Function].
      */
     private fun handleClosureExpression(node: TSNode): Expression {
-        val lambda = newLambdaExpression(rawNode = node)
+        val lambda = newLambda(rawNode = node)
 
         // Create an anonymous function for the closure body
         val func = newFunction("", rawNode = node)
@@ -869,21 +869,20 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `if_expression` into either a [ConditionalExpression] or delegates to the
-     * [StatementHandler] to produce an [de.fraunhofer.aisec.cpg.graph.statements.IfStatement].
+     * Translates a Rust `if_expression` into either a [Conditional] or delegates to the
+     * [StatementHandler] to produce an [de.fraunhofer.aisec.cpg.graph.statements.If].
      *
      * In Rust, `if` is an expression that returns a value. When an `if` has an `else` clause, it
      * can be used in value position (e.g., `let x = if cond { a } else { b }`). In that case, we
-     * model it as a [ConditionalExpression] with `condition`, `thenExpression`, and
-     * `elseExpression`.
+     * model it as a [Conditional] with `condition`, `thenExpression`, and `elseExpression`.
      *
      * When the `if` does **not** have an `else` clause, it cannot produce a value and is purely a
      * control-flow statement, so we delegate to [StatementHandler.handleNode] which produces an
-     * [de.fraunhofer.aisec.cpg.graph.statements.IfStatement].
+     * [de.fraunhofer.aisec.cpg.graph.statements.If].
      *
      * For `else if` chains, the `alternative` field contains an `else_clause` whose child is
      * another `if_expression`. This is handled recursively, producing nested
-     * [ConditionalExpression] nodes.
+     * [Conditional] nodes.
      */
     private fun handleIfExpression(node: TSNode): Statement {
         val alternative = node["alternative"]
@@ -950,7 +949,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 handle(alternative) as? Expression
             }
 
-        return newConditionalExpression(condition, thenExpr, elseExpr, rawNode = node)
+        return newConditional(condition, thenExpr, elseExpr, rawNode = node)
     }
 
     /**
