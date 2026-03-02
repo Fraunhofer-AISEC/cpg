@@ -52,7 +52,7 @@ class RustForLoopTest : BaseTest() {
         val body = basicFor.body as? Block
         assertNotNull(body)
 
-        val forEachStmt = body.allChildren<ForEachStatement>()
+        val forEachStmt = body.allChildren<ForEach>()
         assertTrue(forEachStmt.isNotEmpty(), "Should have a for-each statement")
 
         val forEach = forEachStmt.first()
@@ -86,7 +86,7 @@ class RustForLoopTest : BaseTest() {
         val body = labeledFor.body as? Block
         assertNotNull(body)
 
-        val labelStmts = body.allChildren<LabelStatement>()
+        val labelStmts = body.allChildren<Label>()
         assertTrue(labelStmts.any { it.label == "outer" }, "Should have 'outer' label")
     }
 }

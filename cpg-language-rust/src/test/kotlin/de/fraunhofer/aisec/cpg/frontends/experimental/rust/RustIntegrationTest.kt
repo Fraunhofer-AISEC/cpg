@@ -114,13 +114,13 @@ class RustIntegrationTest : BaseTest() {
         assertNotNull(body)
 
         // Should contain if statement, loop, and match
-        val ifStmt = body.allChildren<IfStatement>()
+        val ifStmt = body.allChildren<IfElse>()
         assertTrue(ifStmt.isNotEmpty(), "Should have if statements")
 
-        val matchStmt = body.allChildren<SwitchStatement>()
+        val matchStmt = body.allChildren<Switch>()
         assertTrue(matchStmt.isNotEmpty(), "Should have match/switch statements")
 
-        val labelStmt = body.allChildren<LabelStatement>()
+        val labelStmt = body.allChildren<Label>()
         assertTrue(labelStmt.isNotEmpty(), "Should have labeled loops")
         assertTrue(labelStmt.any { it.label == "outer" })
 
@@ -139,7 +139,7 @@ class RustIntegrationTest : BaseTest() {
         // === Macros ===
         val useMacros = tu.functions["use_macros"]
         assertNotNull(useMacros)
-        val macroCalls = useMacros.allChildren<CallExpression>()
+        val macroCalls = useMacros.allChildren<Call>()
         assertTrue(macroCalls.any { it.name.localName == "println" })
 
         // === Type alias ===
@@ -158,7 +158,7 @@ class RustIntegrationTest : BaseTest() {
         assertNotNull(forLoopDemo)
         val forBody = forLoopDemo.body as? Block
         assertNotNull(forBody)
-        val forEachStmts = forBody.allChildren<ForEachStatement>()
+        val forEachStmts = forBody.allChildren<ForEach>()
         assertTrue(forEachStmts.isNotEmpty(), "Should have for-each statements")
 
         // === References and closures ===
@@ -168,7 +168,7 @@ class RustIntegrationTest : BaseTest() {
         assertNotNull(closureBody)
         val refOps = closureBody.allChildren<UnaryOperator>().filter { it.operatorCode == "&" }
         assertTrue(refOps.isNotEmpty(), "Should have & reference operators")
-        val lambdas = closureBody.allChildren<LambdaExpression>()
+        val lambdas = closureBody.allChildren<Lambda>()
         assertTrue(lambdas.isNotEmpty(), "Should have closures")
 
         // === Struct expressions ===
@@ -176,7 +176,7 @@ class RustIntegrationTest : BaseTest() {
         assertNotNull(structDemo)
         val structBody = structDemo.body as? Block
         assertNotNull(structBody)
-        val constructs = structBody.allChildren<ConstructExpression>()
+        val constructs = structBody.allChildren<Construction>()
         assertTrue(constructs.isNotEmpty(), "Should have struct construction")
 
         // === Constants and statics ===
@@ -193,9 +193,9 @@ class RustIntegrationTest : BaseTest() {
         assertNotNull(indexAndCast)
         val indexBody = indexAndCast.body as? Block
         assertNotNull(indexBody)
-        val subscripts = indexBody.allChildren<SubscriptExpression>()
+        val subscripts = indexBody.allChildren<Subscription>()
         assertTrue(subscripts.isNotEmpty(), "Should have subscript expressions")
-        val casts = indexBody.allChildren<CastExpression>()
+        val casts = indexBody.allChildren<Cast>()
         assertTrue(casts.isNotEmpty(), "Should have cast expressions")
     }
 }

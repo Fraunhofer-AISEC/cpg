@@ -96,7 +96,7 @@ class RustPatternsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val switches = body.allChildren<SwitchStatement>()
+        val switches = body.allChildren<Switch>()
         assertTrue(switches.isNotEmpty(), "Should have match/switch with ref pattern")
     }
 
@@ -118,7 +118,7 @@ class RustPatternsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val switches = body.allChildren<SwitchStatement>()
+        val switches = body.allChildren<Switch>()
         assertTrue(switches.isNotEmpty(), "Should have match/switch with mut pattern")
     }
 
@@ -138,7 +138,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 3, "Should have 3 match arms")
     }
 
@@ -158,7 +158,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 3, "Should have 3 match arms")
     }
 
@@ -178,7 +178,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 3, "Should have 3 match arms")
     }
 
@@ -198,7 +198,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 3, "Should have 3+ match arms for enum")
     }
 
@@ -218,7 +218,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 4, "Should have 4 match arms")
     }
 
@@ -238,7 +238,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 2, "Should have match arms")
     }
 
@@ -258,7 +258,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 3, "Should have 3 struct pattern match arms")
     }
 
@@ -278,7 +278,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 3, "Should have 3 slice pattern match arms")
     }
 
@@ -298,7 +298,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.isNotEmpty(), "Should have field pattern match arm")
     }
 
@@ -318,7 +318,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 3, "Should have 3 match arms")
     }
 
@@ -338,7 +338,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 3, "Should have 3+ match arms")
     }
 
@@ -358,7 +358,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val switches = body.allChildren<SwitchStatement>()
+        val switches = body.allChildren<Switch>()
         assertTrue(switches.size >= 2, "Should have nested match")
     }
 
@@ -378,7 +378,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val switches = body.allChildren<SwitchStatement>()
+        val switches = body.allChildren<Switch>()
         assertTrue(switches.isNotEmpty(), "Should have switch from match")
     }
 
@@ -398,7 +398,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val switches = body.allChildren<SwitchStatement>()
+        val switches = body.allChildren<Switch>()
         assertTrue(switches.isNotEmpty(), "Should have switch from match with renamed fields")
     }
 
@@ -418,7 +418,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 3, "Should have 3 match arms")
     }
 
@@ -458,7 +458,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val switches = body.allChildren<SwitchStatement>()
+        val switches = body.allChildren<Switch>()
         assertTrue(switches.isNotEmpty(), "Should have match/switch")
     }
 
@@ -478,7 +478,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 4, "Should have 4 match arms")
     }
 
@@ -498,7 +498,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 3, "Should have 3 match arms")
     }
 
@@ -518,7 +518,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val switches = body.allChildren<SwitchStatement>()
+        val switches = body.allChildren<Switch>()
         assertTrue(switches.isNotEmpty(), "Should have switch from slice match")
     }
 
@@ -538,7 +538,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 4, "Should have 4 match arms")
     }
 
@@ -554,7 +554,7 @@ class RustPatternsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 4, "Should have 4 match arms for Message")
     }
 }

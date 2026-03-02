@@ -53,8 +53,8 @@ class RustControlFlowTest : BaseTest() {
         val body = ifLetFunc.body as? Block
         assertNotNull(body)
 
-        val ifStmt = body.statements.getOrNull(1) as? IfStatement
-        assertNotNull(ifStmt, "Expected second statement to be IfStatement")
+        val ifStmt = body.statements.getOrNull(1) as? IfElse
+        assertNotNull(ifStmt, "Expected second statement to be IfElse")
 
         assertNotNull(ifStmt.condition)
         assertNotNull(ifStmt.thenStatement)
@@ -89,8 +89,8 @@ class RustControlFlowTest : BaseTest() {
         val body = whileLetFunc.body as? Block
         assertNotNull(body)
 
-        val whileStmt = body.statements.getOrNull(1) as? WhileStatement
-        assertNotNull(whileStmt, "Expected second statement to be WhileStatement")
+        val whileStmt = body.statements.getOrNull(1) as? While
+        assertNotNull(whileStmt, "Expected second statement to be While")
 
         assertNotNull(whileStmt.condition)
         assertNotNull(whileStmt.statement)
@@ -126,29 +126,29 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(body)
 
         // Outer loop (loop { ... })
-        // Mapped to LabelStatement -> WhileStatement
-        val outerLabel = body.statements.getOrNull(0) as? LabelStatement
-        assertNotNull(outerLabel, "Expected outer to be LabelStatement")
+        // Mapped to Label -> While
+        val outerLabel = body.statements.getOrNull(0) as? Label
+        assertNotNull(outerLabel, "Expected outer to be Label")
         assertEquals("outer", outerLabel.label)
 
-        val outerLoop = outerLabel.subStatement as? WhileStatement
-        assertNotNull(outerLoop, "Expected outer loop to be WhileStatement")
+        val outerLoop = outerLabel.subStatement as? While
+        assertNotNull(outerLoop, "Expected outer loop to be While")
 
         val innerBlock = outerLoop.statement as? Block
         assertNotNull(innerBlock)
 
         // Inner loop (while true { ... })
-        val innerLabel = innerBlock.statements.getOrNull(0) as? LabelStatement
-        assertNotNull(innerLabel, "Expected inner to be LabelStatement")
+        val innerLabel = innerBlock.statements.getOrNull(0) as? Label
+        assertNotNull(innerLabel, "Expected inner to be Label")
         assertEquals("inner", innerLabel.label)
 
-        val innerLoop = innerLabel.subStatement as? WhileStatement
-        assertNotNull(innerLoop, "Expected inner loop to be WhileStatement")
+        val innerLoop = innerLabel.subStatement as? While
+        assertNotNull(innerLoop, "Expected inner loop to be While")
 
         val innerBody = innerLoop.statement as? Block
         assertNotNull(innerBody, "Expected inner body to be Block")
 
-        val breakStmt = innerBody.statements.getOrNull(0) as? BreakStatement
+        val breakStmt = innerBody.statements.getOrNull(0) as? Break
         assertNotNull(breakStmt, "Expected break statement")
         assertEquals("outer", breakStmt.label)
     }
@@ -175,7 +175,7 @@ class RustControlFlowTest : BaseTest() {
         assertEquals("await", awaitExpr.operatorCode)
         assertTrue(awaitExpr.isPostfix)
 
-        val call = awaitExpr.input as? CallExpression
+        val call = awaitExpr.input as? Call
         assertNotNull(call)
         assertEquals("async_fn", call.name.localName)
     }
@@ -189,7 +189,7 @@ class RustControlFlowTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val continueStmts = body.allChildren<ContinueStatement>()
+        val continueStmts = body.allChildren<Continue>()
         assertTrue(continueStmts.isNotEmpty(), "Should have continue statement")
         assertEquals("outer", continueStmts.first().label, "Continue should have label 'outer'")
     }
@@ -203,7 +203,7 @@ class RustControlFlowTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val continueStmts = body.allChildren<ContinueStatement>()
+        val continueStmts = body.allChildren<Continue>()
         assertTrue(continueStmts.isNotEmpty(), "Should have continue statement")
     }
 
@@ -233,8 +233,8 @@ class RustControlFlowTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        // if-else chains are modeled as nested ConditionalExpressions
-        val condExprs = body.allChildren<ConditionalExpression>()
+        // if-else chains are modeled as nested Conditionals
+        val condExprs = body.allChildren<Conditional>()
         assertTrue(condExprs.isNotEmpty(), "Should have conditional expressions")
         // The outer conditional should have an else branch
         val outerCond = condExprs.first()
@@ -250,7 +250,7 @@ class RustControlFlowTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val whileStmts = body.allChildren<WhileStatement>()
+        val whileStmts = body.allChildren<While>()
         assertTrue(whileStmts.isNotEmpty(), "Should have while-let loop")
     }
 
@@ -262,7 +262,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func, "Should have test_while_let function")
         val body = func.body as? Block
         assertNotNull(body)
-        val whiles = body.allChildren<WhileStatement>()
+        val whiles = body.allChildren<While>()
         assertTrue(whiles.isNotEmpty(), "Should have while let loop")
     }
 
@@ -274,7 +274,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func, "Should have test_while_let_option function")
         val body = func.body as? Block
         assertNotNull(body)
-        val whiles = body.allChildren<WhileStatement>()
+        val whiles = body.allChildren<While>()
         assertTrue(whiles.isNotEmpty(), "Should have while-let loop")
     }
 
@@ -286,7 +286,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val condExprs = body.allChildren<ConditionalExpression>()
+        val condExprs = body.allChildren<Conditional>()
         assertTrue(condExprs.size >= 3, "Should have nested conditional chain: ${condExprs.size}")
     }
 
@@ -298,9 +298,9 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val labels = body.allChildren<LabelStatement>()
+        val labels = body.allChildren<Label>()
         assertTrue(labels.isNotEmpty(), "Should have labeled while loop")
-        val breaks = body.allChildren<BreakStatement>()
+        val breaks = body.allChildren<Break>()
         assertTrue(breaks.any { it.label == "outer" }, "Should have break 'outer")
     }
 
@@ -312,7 +312,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val labels = body.allChildren<LabelStatement>()
+        val labels = body.allChildren<Label>()
         assertTrue(labels.isNotEmpty(), "Should have labeled for loop")
     }
 
@@ -348,7 +348,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val condExprs = body.allChildren<ConditionalExpression>()
+        val condExprs = body.allChildren<Conditional>()
         assertTrue(condExprs.isNotEmpty(), "Should have if-let conditional expression")
     }
 
@@ -360,7 +360,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val condExprs = body.allChildren<ConditionalExpression>()
+        val condExprs = body.allChildren<Conditional>()
         assertTrue(condExprs.size >= 2, "Should have nested if-let conditionals: ${condExprs.size}")
     }
 
@@ -372,7 +372,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val continues = body.allChildren<ContinueStatement>()
+        val continues = body.allChildren<Continue>()
         assertTrue(continues.any { it.label == "outer" }, "Should have continue 'outer")
     }
 
@@ -428,7 +428,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val assigns = body.allChildren<AssignExpression>()
+        val assigns = body.allChildren<Assign>()
         assertTrue(assigns.size >= 2, "Should have assignment statements")
     }
 
@@ -440,7 +440,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val returns = body.allChildren<ReturnStatement>()
+        val returns = body.allChildren<Return>()
         assertTrue(returns.size >= 2, "Should have 2+ return statements")
     }
 
@@ -482,7 +482,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val ifStmts = body.allChildren<IfStatement>()
+        val ifStmts = body.allChildren<IfElse>()
         assertTrue(ifStmts.isNotEmpty(), "Should have if-let statement")
     }
 
@@ -494,7 +494,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val condExprs = body.allChildren<ConditionalExpression>()
+        val condExprs = body.allChildren<Conditional>()
         assertTrue(condExprs.size >= 2, "Should have nested if-else-if chain")
     }
 
@@ -506,7 +506,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val condExprs = body.allChildren<ConditionalExpression>()
+        val condExprs = body.allChildren<Conditional>()
         assertTrue(condExprs.isNotEmpty(), "Should have conditional expression")
     }
 
@@ -518,8 +518,8 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val breaks = body.allChildren<BreakStatement>()
-        val continues = body.allChildren<ContinueStatement>()
+        val breaks = body.allChildren<Break>()
+        val continues = body.allChildren<Continue>()
         assertTrue(breaks.isNotEmpty(), "Should have break statement")
         assertTrue(continues.isNotEmpty(), "Should have continue statement")
     }
@@ -532,8 +532,8 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val whiles = body.allChildren<WhileStatement>()
-        assertTrue(whiles.isNotEmpty(), "Loop should produce WhileStatement")
+        val whiles = body.allChildren<While>()
+        assertTrue(whiles.isNotEmpty(), "Loop should produce While")
     }
 
     @Test
@@ -544,7 +544,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val whiles = body.allChildren<WhileStatement>()
+        val whiles = body.allChildren<While>()
         assertTrue(whiles.isNotEmpty(), "Should have while loop")
         assertNotNull(whiles.first().condition, "While should have condition")
     }
@@ -610,7 +610,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val lambdas = body.allChildren<LambdaExpression>()
+        val lambdas = body.allChildren<Lambda>()
         assertTrue(lambdas.isNotEmpty(), "Should have lambda expressions")
     }
 }

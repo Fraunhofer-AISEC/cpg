@@ -203,7 +203,7 @@ class RustDeclarationsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val emptyStmts = body.allChildren<EmptyStatement>()
+        val emptyStmts = body.allChildren<Empty>()
         assertTrue(emptyStmts.isNotEmpty(), "Should have empty statement for ';'")
     }
 
@@ -357,7 +357,7 @@ class RustDeclarationsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val assigns = body.allChildren<AssignExpression>()
+        val assigns = body.allChildren<Assign>()
         assertTrue(assigns.any { it.operatorCode == "+=" }, "Should have compound assignment")
     }
 

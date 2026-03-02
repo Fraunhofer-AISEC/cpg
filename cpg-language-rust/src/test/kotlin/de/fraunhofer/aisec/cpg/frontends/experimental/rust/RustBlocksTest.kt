@@ -132,7 +132,7 @@ class RustBlocksTest : BaseTest() {
         )
 
         // A LabelStatement should exist with label "block" (without the leading ')
-        val labelStmts = stmtBody.allChildren<LabelStatement>()
+        val labelStmts = stmtBody.allChildren<Label>()
         assertTrue(labelStmts.isNotEmpty(), "Should have a LabelStatement for the labeled block")
         val labelStmt = labelStmts.first()
         assertEquals("block", labelStmt.label, "Label should be 'block' without the leading quote")
@@ -155,7 +155,7 @@ class RustBlocksTest : BaseTest() {
         )
 
         // A LabelStatement should exist with label "outer"
-        val exprLabelStmts = exprBody.allChildren<LabelStatement>()
+        val exprLabelStmts = exprBody.allChildren<Label>()
         assertTrue(
             exprLabelStmts.isNotEmpty(),
             "Should have a LabelStatement for the labeled block expression",

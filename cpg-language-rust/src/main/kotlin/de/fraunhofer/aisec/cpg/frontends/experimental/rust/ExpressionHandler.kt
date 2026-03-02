@@ -236,8 +236,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val opCode = operator.text()
         val op = newUnaryOperator(opCode, postfix = false, prefix = true, rawNode = node)
         if (operand != null)
-            op.input =
-                handle(operand) as? Expression ?: newProblemExpression("Operand not an ")
+            op.input = handle(operand) as? Expression ?: newProblemExpression("Operand not an ")
         return op
     }
 
@@ -251,17 +250,12 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val rhs =
             handle(right ?: return newProblemExpression("Missing RHS in assignment")) as Expression
 
-        return newAssign(
-            operatorCode = "=",
-            lhs = listOf(lhs),
-            rhs = listOf(rhs),
-            rawNode = node,
-        )
+        return newAssign(operatorCode = "=", lhs = listOf(lhs), rhs = listOf(rhs), rawNode = node)
     }
 
     /**
-     * Translates a Rust `compound_assignment_expr` (e.g., `x += 1`, `y *= 2`) into an
-     * [Assign] with the corresponding compound operator.
+     * Translates a Rust `compound_assignment_expr` (e.g., `x += 1`, `y *= 2`) into an [Assign] with
+     * the corresponding compound operator.
      */
     private fun handleCompoundAssignmentExpression(node: TSNode): Statement {
         val left = node["left"]
@@ -282,10 +276,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         )
     }
 
-    /**
-     * Translates a Rust `tuple_expression` (e.g., `(1, "hello")`) into an
-     * [InitializerList].
-     */
+    /** Translates a Rust `tuple_expression` (e.g., `(1, "hello")`) into an [InitializerList]. */
     private fun handleTupleExpression(node: TSNode): InitializerList {
         val ile = newInitializerList(rawNode = node)
         ile.type = objectType("tuple")
@@ -297,9 +288,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return ile
     }
 
-    /**
-     * Translates a Rust `array_expression` (e.g., `[1, 2, 3]`) into an [InitializerList].
-     */
+    /** Translates a Rust `array_expression` (e.g., `[1, 2, 3]`) into an [InitializerList]. */
     private fun handleArrayExpression(node: TSNode): InitializerList {
         val ile = newInitializerList(rawNode = node)
         ile.type = objectType("array")
@@ -315,8 +304,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `call_expression` into a [Call] or [MemberCall]. If the
-     * callee is a `generic_function` (turbofish syntax like `foo::<T>()`), delegates to
+     * Translates a Rust `call_expression` into a [Call] or [MemberCall]. If the callee is a
+     * `generic_function` (turbofish syntax like `foo::<T>()`), delegates to
      * [handleGenericCallExpression].
      */
     private fun handleCallExpression(node: TSNode): Expression {
@@ -416,9 +405,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `match_expression` into a [Switch]. Each match arm becomes a
-     * [Case] with its pattern as the case expression. Match guards are modeled as binary
-     * `"if"` operators combining the pattern and guard condition.
+     * Translates a Rust `match_expression` into a [Switch]. Each match arm becomes a [Case] with
+     * its pattern as the case expression. Match guards are modeled as binary `"if"` operators
+     * combining the pattern and guard condition.
      */
     private fun handleMatchExpression(node: TSNode): Statement {
         val value = node["value"]
@@ -518,15 +507,14 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `macro_invocation` (e.g., `println!("hello")`) into a [Call].
-     * Macro arguments from the `token_tree` are extracted as best-effort expression arguments.
+     * Translates a Rust `macro_invocation` (e.g., `println!("hello")`) into a [Call]. Macro
+     * arguments from the `token_tree` are extracted as best-effort expression arguments.
      */
     private fun handleMacroInvocation(node: TSNode): Expression {
         val macroNode = node["macro"]
         val name = macroNode.text()
 
-        val call =
-            newCall(newReference(name, rawNode = macroNode), fqn = name, rawNode = node)
+        val call = newCall(newReference(name, rawNode = macroNode), fqn = name, rawNode = node)
 
         // Extract arguments from the token_tree (tree-sitter doesn't parse macro bodies,
         // but we can extract top-level named children as arguments)
@@ -563,7 +551,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return op
     }
 
-    /** Translates a Rust `break_expression` into a [de.fraunhofer.aisec.cpg.graph.statements.Break], preserving any loop label. */
+    /**
+     * Translates a Rust `break_expression` into a [de.fraunhofer.aisec.cpg.graph.statements.Break],
+     * preserving any loop label.
+     */
     private fun handleBreakExpression(node: TSNode): Statement {
         val breakStmt = newBreak(rawNode = node)
         val label = findLabel(node)
@@ -575,10 +566,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return breakStmt
     }
 
-    /**
-     * Translates a Rust `continue_expression` into a [Continue], preserving any loop
-     * label.
-     */
+    /** Translates a Rust `continue_expression` into a [Continue], preserving any loop label. */
     private fun handleContinueExpression(node: TSNode): Statement {
         val continueStmt = newContinue(rawNode = node)
         val label = findLabel(node)
@@ -604,9 +592,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `struct_expression` (e.g., `Point { x: 1, y: 2 }`) into a
-     * [Construction]. Supports field initializers, shorthand initializers (`{ x }`), and
-     * base field initializers (`..other`).
+     * Translates a Rust `struct_expression` (e.g., `Point { x: 1, y: 2 }`) into a [Construction].
+     * Supports field initializers, shorthand initializers (`{ x }`), and base field initializers
+     * (`..other`).
      */
     private fun handleStructExpression(node: TSNode): Expression {
         val nameNode = node["name"]
@@ -666,8 +654,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `range_expression` (e.g., `0..10`, `..end`, `start..=end`) into a
-     * [Range] with optional floor and ceiling bounds.
+     * Translates a Rust `range_expression` (e.g., `0..10`, `..end`, `start..=end`) into a [Range]
+     * with optional floor and ceiling bounds.
      */
     private fun handleRangeExpression(node: TSNode): Expression {
         // Range can have 0, 1, or 2 named children depending on form (..end, start.., start..end)
@@ -881,8 +869,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
      * [de.fraunhofer.aisec.cpg.graph.statements.IfElse].
      *
      * For `else if` chains, the `alternative` field contains an `else_clause` whose child is
-     * another `if_expression`. This is handled recursively, producing nested
-     * [Conditional] nodes.
+     * another `if_expression`. This is handled recursively, producing nested [Conditional] nodes.
      */
     private fun handleIfExpression(node: TSNode): Statement {
         val alternative = node["alternative"]

@@ -150,7 +150,7 @@ class RustComprehensiveTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val assigns = body.allChildren<AssignExpression>()
+        val assigns = body.allChildren<Assign>()
         val opCodes = assigns.map { it.operatorCode }.toSet()
         assertTrue("+=" in opCodes, "Should have +=")
         assertTrue("-=" in opCodes, "Should have -=")
@@ -302,7 +302,7 @@ class RustComprehensiveTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val constructs = body.allChildren<ConstructExpression>()
+        val constructs = body.allChildren<Construction>()
         assertTrue(constructs.size >= 2, "Should have at least 2 struct expressions")
     }
 
@@ -315,10 +315,10 @@ class RustComprehensiveTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val switches = body.allChildren<SwitchStatement>()
+        val switches = body.allChildren<Switch>()
         assertTrue(switches.isNotEmpty(), "Should have match/switch expression")
 
-        val cases = body.allChildren<CaseStatement>()
+        val cases = body.allChildren<Case>()
         assertTrue(cases.size >= 3, "Should have at least 3 match arms")
     }
 
@@ -391,7 +391,7 @@ class RustComprehensiveTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val ranges = body.allChildren<RangeExpression>()
+        val ranges = body.allChildren<Range>()
         assertTrue(ranges.size >= 2, "Should have at least 2 range expressions")
     }
 
@@ -406,7 +406,7 @@ class RustComprehensiveTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val forStmts = body.allChildren<ForEachStatement>()
+        val forStmts = body.allChildren<ForEach>()
         assertTrue(forStmts.isNotEmpty(), "Should have for loop")
     }
 
@@ -419,7 +419,7 @@ class RustComprehensiveTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val whileStmts = body.allChildren<WhileStatement>()
+        val whileStmts = body.allChildren<While>()
         assertTrue(whileStmts.isNotEmpty(), "Should have while loop")
     }
 
@@ -432,7 +432,7 @@ class RustComprehensiveTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val ifStmts = body.allChildren<IfStatement>()
+        val ifStmts = body.allChildren<IfElse>()
         assertTrue(ifStmts.isNotEmpty(), "Should have if-let statement")
     }
 
@@ -445,7 +445,7 @@ class RustComprehensiveTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val lambdas = body.allChildren<LambdaExpression>()
+        val lambdas = body.allChildren<Lambda>()
         assertTrue(lambdas.isNotEmpty(), "Should have closures")
         val typedClosure = lambdas.first()
         assertNotNull(typedClosure.function, "Closure should have inner function")

@@ -54,8 +54,8 @@ class RustStructExprTest : BaseTest() {
         val statements = body.statements
         assertNotNull(statements.getOrNull(0), "Should have first statement")
 
-        // Point { x: 1, y: 2 } should be a ConstructExpression
-        val constructs = body.allChildren<ConstructExpression>()
+        // Point { x: 1, y: 2 } should be a Construction
+        val constructs = body.allChildren<Construction>()
         assertTrue(constructs.isNotEmpty(), "Should have struct construction")
     }
 
@@ -73,7 +73,7 @@ class RustStructExprTest : BaseTest() {
         assertNotNull(statements.getOrNull(1), "Should have second statement")
 
         // p.sum() should be a MemberCallExpression
-        val memberCalls = body.allChildren<MemberCallExpression>()
+        val memberCalls = body.allChildren<MemberCall>()
         assertTrue(memberCalls.isNotEmpty(), "Should have method calls")
     }
 
@@ -86,7 +86,7 @@ class RustStructExprTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val constructs = body.allChildren<ConstructExpression>()
+        val constructs = body.allChildren<Construction>()
         assertTrue(constructs.isNotEmpty(), "Should have struct construction")
         val config = constructs.first()
         assertTrue(config.arguments.isNotEmpty(), "Should have shorthand field arguments")
@@ -100,7 +100,7 @@ class RustStructExprTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val constructs = body.allChildren<ConstructExpression>()
+        val constructs = body.allChildren<Construction>()
         assertTrue(constructs.size >= 3, "Should have 3+ struct constructions")
     }
 
@@ -112,7 +112,7 @@ class RustStructExprTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val constructs = body.allChildren<ConstructExpression>()
+        val constructs = body.allChildren<Construction>()
         assertTrue(constructs.isNotEmpty(), "Should have struct construction")
     }
 
@@ -124,7 +124,7 @@ class RustStructExprTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val constructs = body.allChildren<ConstructExpression>()
+        val constructs = body.allChildren<Construction>()
         assertTrue(constructs.isNotEmpty(), "Should have shorthand struct construction")
     }
 
@@ -136,7 +136,7 @@ class RustStructExprTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val constructs = body.allChildren<ConstructExpression>()
+        val constructs = body.allChildren<Construction>()
         assertTrue(
             constructs.any { c ->
                 c.arguments.any { arg -> arg is Reference && arg.name.localName == "p1" }

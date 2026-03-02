@@ -79,8 +79,8 @@ class RustFrontendTest : BaseTest() {
         assertNotNull(body)
 
         // In Rust, `if` with an `else` clause is an expression that returns a value,
-        // so it is modeled as a ConditionalExpression rather than an IfStatement.
-        val condExpr = body.statements.getOrNull(0) as? ConditionalExpression
+        // so it is modeled as a Conditional rather than an IfStatement.
+        val condExpr = body.statements.getOrNull(0) as? Conditional
         assertNotNull(condExpr)
         assertNotNull(condExpr.condition)
         assertNotNull(condExpr.thenExpression)
@@ -127,7 +127,7 @@ class RustFrontendTest : BaseTest() {
         assertFalse(letC.declarations.isEmpty(), "Declarations in letC should not be empty")
         val c = letC.declarations.getOrNull(0) as? Variable
         assertNotNull(c)
-        assertIs<InitializerListExpression>(c.initializer)
+        assertIs<InitializerList>(c.initializer)
 
         // d = [1, 2, 3]
         val letD = body.statements.getOrNull(3) as? DeclarationStatement
@@ -135,15 +135,15 @@ class RustFrontendTest : BaseTest() {
         assertFalse(letD.declarations.isEmpty(), "Declarations in letD should not be empty")
         val d = letD.declarations.getOrNull(0) as? Variable
         assertNotNull(d)
-        assertIs<InitializerListExpression>(d.initializer)
+        assertIs<InitializerList>(d.initializer)
 
         // x = 2
-        val assignX = body.statements.getOrNull(5) as? AssignExpression
+        val assignX = body.statements.getOrNull(5) as? Assign
         assertNotNull(assignX)
         assertEquals("=", assignX.operatorCode)
 
         // x += 1
-        val compoundX = body.statements.getOrNull(6) as? AssignExpression
+        val compoundX = body.statements.getOrNull(6) as? Assign
         assertNotNull(compoundX)
         assertEquals("+=", compoundX.operatorCode)
     }
@@ -179,7 +179,7 @@ class RustFrontendTest : BaseTest() {
         val body = foo.body as? Block
         assertNotNull(body)
 
-        val match = body.statements.getOrNull(0) as? SwitchStatement
+        val match = body.statements.getOrNull(0) as? Switch
         assertNotNull(match)
         assertEquals("x", match.selector?.name?.localName)
 
@@ -203,7 +203,7 @@ class RustFrontendTest : BaseTest() {
 
         val innerFunc = myMod.functions["inner_func"]
         assertNotNull(innerFunc)
-        val returnStmt = (innerFunc.body as? Block)?.statements?.getOrNull(0) as? ReturnStatement
+        val returnStmt = (innerFunc.body as? Block)?.statements?.getOrNull(0) as? Return
         assertNotNull(returnStmt)
         assertNotNull(returnStmt.returnValue)
     }

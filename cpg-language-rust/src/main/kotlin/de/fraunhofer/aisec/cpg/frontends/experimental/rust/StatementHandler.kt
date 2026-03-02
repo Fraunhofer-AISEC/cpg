@@ -94,8 +94,8 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Checks whether [node] has a `label` child and, if so, wraps [stmt] in a [Label].
-     * Otherwise, returns [stmt] unchanged. This is used for labeled blocks (`'label: { ... }`).
+     * Checks whether [node] has a `label` child and, if so, wraps [stmt] in a [Label]. Otherwise,
+     * returns [stmt] unchanged. This is used for labeled blocks (`'label: { ... }`).
      */
     internal fun wrapWithLabel(node: TSNode, stmt: Statement): Statement {
         var labelNode: TSNode? = null
@@ -248,9 +248,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         return declStmt
     }
 
-    /**
-     * Translates a Rust `return_expression` into a [Return] with an optional return value.
-     */
+    /** Translates a Rust `return_expression` into a [Return] with an optional return value. */
     private fun handleReturnExpression(node: TSNode): Return {
         val ret = newReturn(rawNode = node)
         // In Rust return_expression, the value is often a child
@@ -264,8 +262,8 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `if_expression` into an [IfElse]. Supports `if let` bindings (which
-     * inject variable declarations into the then-branch) and `else if` chains.
+     * Translates a Rust `if_expression` into an [IfElse]. Supports `if let` bindings (which inject
+     * variable declarations into the then-branch) and `else if` chains.
      *
      * This method is used for `if` expressions that do **not** have an `else` clause and therefore
      * cannot be used in value position. When an `else` clause is present, the [ExpressionHandler]
@@ -326,8 +324,8 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `while_expression` (including `while let`) into a [While]. If a
-     * loop label is present, wraps the result in a [Label].
+     * Translates a Rust `while_expression` (including `while let`) into a [While]. If a loop label
+     * is present, wraps the result in a [Label].
      */
     private fun handleWhileExpression(node: TSNode): Statement {
         val whileStmt = newWhile(rawNode = node)
@@ -371,8 +369,8 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `loop_expression` (infinite loop) into a [While] with a `true`
-     * condition. If a loop label is present, wraps the result in a [Label].
+     * Translates a Rust `loop_expression` (infinite loop) into a [While] with a `true` condition.
+     * If a loop label is present, wraps the result in a [Label].
      */
     private fun handleLoopExpression(node: TSNode): Statement {
         val loop = newWhile(rawNode = node)
@@ -398,8 +396,8 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `for_expression` (e.g., `for x in items { ... }`) into a
-     * [ForEach]. The loop variable is declared in the for-each scope.
+     * Translates a Rust `for_expression` (e.g., `for x in items { ... }`) into a [ForEach]. The
+     * loop variable is declared in the for-each scope.
      */
     private fun handleForExpression(node: TSNode): Statement {
         val forEach = newForEach(rawNode = node)

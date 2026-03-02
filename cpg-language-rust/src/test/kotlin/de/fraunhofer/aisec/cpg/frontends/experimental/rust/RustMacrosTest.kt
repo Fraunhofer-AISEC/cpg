@@ -70,8 +70,8 @@ class RustMacrosTest : BaseTest() {
         val func = tu.functions["use_macros"]
         assertNotNull(func)
 
-        // Macro invocations should be modeled as CallExpressions
-        val calls = func.allChildren<CallExpression>()
+        // Macro invocations should be modeled as Calls
+        val calls = func.allChildren<Call>()
         assertTrue(calls.any { it.name.localName == "my_macro" })
         assertTrue(calls.any { it.name.localName == "println" })
     }
@@ -91,7 +91,7 @@ class RustMacrosTest : BaseTest() {
         assertNotNull(body)
 
         // println! should have arguments extracted from token_tree
-        val calls = body.allChildren<CallExpression>()
+        val calls = body.allChildren<Call>()
         val printlnCall = calls.firstOrNull { it.name.localName == "println" }
         assertNotNull(printlnCall, "Should find println macro call")
         assertTrue(
@@ -120,7 +120,7 @@ class RustMacrosTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val calls = body.allChildren<CallExpression>()
+        val calls = body.allChildren<Call>()
         assertTrue(calls.any { it.name.localName == "println" }, "Should have println macro call")
     }
 

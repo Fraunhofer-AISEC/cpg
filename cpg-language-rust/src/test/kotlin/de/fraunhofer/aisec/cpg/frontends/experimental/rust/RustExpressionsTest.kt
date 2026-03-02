@@ -52,7 +52,7 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val subscripts = body.allChildren<SubscriptExpression>()
+        val subscripts = body.allChildren<Subscription>()
         assertTrue(subscripts.isNotEmpty(), "Should have subscript expressions")
 
         val first = subscripts.first()
@@ -61,7 +61,7 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
-    fun testRangeExpression() {
+    fun testRange() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
@@ -78,7 +78,7 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val ranges = body.allChildren<RangeExpression>()
+        val ranges = body.allChildren<Range>()
         assertTrue(ranges.isNotEmpty(), "Should have range expressions")
     }
 
@@ -100,7 +100,7 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val casts = body.allChildren<CastExpression>()
+        val casts = body.allChildren<Cast>()
         assertTrue(casts.isNotEmpty(), "Should have cast expressions")
         assertEquals("i64", casts.first().castType.name.localName)
     }
@@ -119,7 +119,7 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val lambdas = body.allChildren<LambdaExpression>()
+        val lambdas = body.allChildren<Lambda>()
         assertTrue(lambdas.isNotEmpty(), "Should have lambda/closure expressions")
 
         val lambda = lambdas.first()
@@ -167,7 +167,7 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val memberExprs = body.allChildren<MemberExpression>()
+        val memberExprs = body.allChildren<MemberAccess>()
         assertTrue(memberExprs.any { it.name.localName == "0" }, "Should have tuple.0 access")
     }
 
@@ -217,15 +217,15 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        // The return inside a match arm should produce a ReturnStatement, not a ProblemExpression
+        // The return inside a match arm should produce a Return, not a ProblemExpression
         val problems = body.allChildren<ProblemExpression>()
         assertTrue(
             problems.none { it.problem.contains("return_expression") },
             "return_expression should not produce a ProblemExpression",
         )
 
-        val returns = body.allChildren<ReturnStatement>()
-        assertTrue(returns.isNotEmpty(), "Should have a ReturnStatement from match arm")
+        val returns = body.allChildren<Return>()
+        assertTrue(returns.isNotEmpty(), "Should have a Return from match arm")
     }
 
     @Test
@@ -297,7 +297,7 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val calls = body.allChildren<CallExpression>()
+        val calls = body.allChildren<Call>()
         val turbofishCall = calls.firstOrNull { it.template }
         assertNotNull(turbofishCall, "Should have a template call (turbofish)")
         assertEquals(1, turbofishCall.templateArguments.size, "Should have one type argument")
@@ -360,8 +360,8 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        // t.0 and t.1 should produce MemberExpressions
-        val memberExprs = body.allChildren<MemberExpression>()
+        // t.0 and t.1 should produce MemberAccesss
+        val memberExprs = body.allChildren<MemberAccess>()
         assertTrue(memberExprs.any { it.name.localName == "0" }, "Should have t.0 access")
         assertTrue(memberExprs.any { it.name.localName == "1" }, "Should have t.1 access")
     }
@@ -408,7 +408,7 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val memberCalls = body.allChildren<MemberCallExpression>()
+        val memberCalls = body.allChildren<MemberCall>()
         assertTrue(
             memberCalls.any { it.name.localName == "len" },
             "Should have len() call: ${memberCalls.map { it.name }}",
@@ -432,7 +432,7 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val memberCalls = body.allChildren<MemberCallExpression>()
+        val memberCalls = body.allChildren<MemberCall>()
         assertTrue(memberCalls.size >= 2, "Should have chained method calls")
     }
 
@@ -453,7 +453,7 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val lambdas = body.allChildren<LambdaExpression>()
+        val lambdas = body.allChildren<Lambda>()
         assertTrue(lambdas.size >= 3, "Should have 3 closures: ${lambdas.size}")
 
         // Closure with params
@@ -527,7 +527,7 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val subscripts = body.allChildren<SubscriptExpression>()
+        val subscripts = body.allChildren<Subscription>()
         assertTrue(subscripts.size >= 2, "Should have array subscript expressions")
     }
 
@@ -572,9 +572,9 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val lambdas = body.allChildren<LambdaExpression>()
+        val lambdas = body.allChildren<Lambda>()
         assertTrue(lambdas.isNotEmpty(), "Should have closure with return")
-        val returns = lambdas.flatMap { it.allChildren<ReturnStatement>() }
+        val returns = lambdas.flatMap { it.allChildren<Return>() }
         assertTrue(returns.isNotEmpty(), "Closure should contain return statement")
     }
 
@@ -594,7 +594,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val whiles = body.allChildren<WhileStatement>()
+        val whiles = body.allChildren<While>()
         assertTrue(whiles.isNotEmpty(), "Should have while loop in block expression")
     }
 
@@ -614,7 +614,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val forEachs = body.allChildren<ForEachStatement>()
+        val forEachs = body.allChildren<ForEach>()
         assertTrue(forEachs.isNotEmpty(), "Should have for loop in block expression")
     }
 
@@ -634,7 +634,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val members = body.allChildren<MemberExpression>()
+        val members = body.allChildren<MemberAccess>()
         assertTrue(members.any { it.name.localName == "0" }, "Should have .0 tuple access")
         assertTrue(members.any { it.name.localName == "1" }, "Should have .1 tuple access")
         assertTrue(members.any { it.name.localName == "2" }, "Should have .2 tuple access")
@@ -656,7 +656,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val members = body.allChildren<MemberExpression>()
+        val members = body.allChildren<MemberAccess>()
         assertTrue(members.size >= 2, "Should have multiple tuple index accesses")
     }
 
@@ -886,7 +886,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val subscripts = body.allChildren<SubscriptExpression>()
+        val subscripts = body.allChildren<Subscription>()
         assertTrue(subscripts.size >= 2, "Should have 2+ subscript expressions")
     }
 
@@ -906,7 +906,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val ranges = body.allChildren<RangeExpression>()
+        val ranges = body.allChildren<Range>()
         assertTrue(ranges.size >= 4, "Should have 4+ range expressions: ${ranges.size}")
     }
 
@@ -926,7 +926,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val casts = body.allChildren<CastExpression>()
+        val casts = body.allChildren<Cast>()
         assertTrue(casts.size >= 2, "Should have 2+ cast expressions: ${casts.size}")
     }
 
@@ -946,7 +946,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val lambdas = body.allChildren<LambdaExpression>()
+        val lambdas = body.allChildren<Lambda>()
         assertTrue(lambdas.isNotEmpty(), "Should have closure with typed params")
     }
 
@@ -966,7 +966,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val lambdas = body.allChildren<LambdaExpression>()
+        val lambdas = body.allChildren<Lambda>()
         assertTrue(lambdas.isNotEmpty(), "Should have closure with return type")
     }
 
@@ -1066,7 +1066,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val lambdas = body.allChildren<LambdaExpression>()
+        val lambdas = body.allChildren<Lambda>()
         assertTrue(lambdas.isNotEmpty(), "Should have lambda expressions")
     }
 
@@ -1086,7 +1086,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val assigns = body.allChildren<AssignExpression>()
+        val assigns = body.allChildren<Assign>()
         assertTrue(assigns.any { it.operatorCode == "=" }, "Should have direct assignment")
     }
 
@@ -1106,7 +1106,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val assigns = body.allChildren<AssignExpression>()
+        val assigns = body.allChildren<Assign>()
         val opCodes = assigns.map { it.operatorCode }.toSet()
         val expected = setOf("+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=")
         for (op in expected) {
@@ -1126,7 +1126,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val lambdas = body.allChildren<LambdaExpression>()
+        val lambdas = body.allChildren<Lambda>()
         assertTrue(lambdas.size >= 2, "Should have 2+ closures")
     }
 
@@ -1142,7 +1142,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val lambdas = body.allChildren<LambdaExpression>()
+        val lambdas = body.allChildren<Lambda>()
         assertTrue(lambdas.isNotEmpty(), "Should have move closure")
     }
 
@@ -1162,7 +1162,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val members = body.allChildren<MemberExpression>()
+        val members = body.allChildren<MemberAccess>()
         assertTrue(members.any { it.name.localName == "0" }, "Should have .0 access")
         assertTrue(members.any { it.name.localName == "2" }, "Should have .2 access")
     }
@@ -1183,7 +1183,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val members = body.allChildren<MemberExpression>()
+        val members = body.allChildren<MemberAccess>()
         assertTrue(members.size >= 2, "Should have multiple tuple index accesses")
     }
 
@@ -1203,7 +1203,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val members = body.allChildren<MemberExpression>()
+        val members = body.allChildren<MemberAccess>()
         assertTrue(members.any { it.name.localName == "x" }, "Should have .x field access")
         assertTrue(members.any { it.name.localName == "y" }, "Should have .y field access")
     }
@@ -1224,7 +1224,7 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val ranges = body.allChildren<RangeExpression>()
+        val ranges = body.allChildren<Range>()
         assertTrue(ranges.size >= 2, "Should have multiple range expressions")
     }
 
