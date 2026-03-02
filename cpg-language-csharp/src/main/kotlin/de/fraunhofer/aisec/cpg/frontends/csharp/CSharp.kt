@@ -191,6 +191,8 @@ interface Csharp : Library {
 
     fun GetMethodDeclarationIdentifier(handle: AST.MethodDeclarationSyntax): String
 
+    fun GetCode(handle: AST.Node): String
+
     fun GetNodeStartLine(handle: AST.Node): Int
 
     fun GetNodeStartColumn(handle: AST.Node): Int

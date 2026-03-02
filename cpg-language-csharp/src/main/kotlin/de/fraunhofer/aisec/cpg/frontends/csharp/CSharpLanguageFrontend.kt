@@ -66,7 +66,7 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
 
     override fun typeOf(type: Csharp.AST.Node): Type = unknownType()
 
-    override fun codeOf(astNode: Csharp.AST.Node): String? = null
+    override fun codeOf(astNode: Csharp.AST.Node): String = Csharp.INSTANCE.GetCode(astNode)
 
     override fun locationOf(astNode: Csharp.AST.Node): PhysicalLocation? {
         val file = currentFile ?: return null

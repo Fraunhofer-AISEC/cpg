@@ -103,6 +103,12 @@ public static class Library
         );
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetCode")]
+    public static IntPtr GetCode(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(Nodes[handlePtr].ToString());
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetNodeStartLine")]
     public static int GetNodeStartLine(IntPtr handlePtr)
     {
