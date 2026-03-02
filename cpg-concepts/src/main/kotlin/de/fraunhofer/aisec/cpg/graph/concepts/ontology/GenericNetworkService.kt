@@ -5,11 +5,11 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import java.util.Objects
 import kotlin.Any
-import kotlin.Array
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.Short
 import kotlin.String
+import kotlin.collections.List
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
@@ -17,8 +17,8 @@ import kotlin.collections.MutableMap
  * A generic network service.
  */
 public open class GenericNetworkService(
-  ips: Array<String>?,
-  ports: Array<Short>?,
+  ips: List<String>?,
+  ports: List<Short>?,
   authenticity: Boolean?,
   computes: MutableList<Compute?>,
   serviceMetadataDocument: ServiceMetadataDocument?,

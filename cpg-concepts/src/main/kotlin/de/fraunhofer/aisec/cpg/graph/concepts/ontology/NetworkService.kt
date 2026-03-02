@@ -5,11 +5,11 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import java.util.Objects
 import kotlin.Any
-import kotlin.Array
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.Short
 import kotlin.String
+import kotlin.collections.List
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
@@ -17,8 +17,8 @@ import kotlin.collections.MutableMap
  * A NetworkService is an application (on the network layer) running on a Compute resource. It provides access to a resource
  */
 public open class NetworkService(
-  public val ips: Array<String>?,
-  public val ports: Array<Short>?,
+  public val ips: List<String>?,
+  public val ports: List<Short>?,
   public val authenticity: Boolean?,
   public val computes: MutableList<Compute?>,
   public val serviceMetadataDocument: ServiceMetadataDocument?,

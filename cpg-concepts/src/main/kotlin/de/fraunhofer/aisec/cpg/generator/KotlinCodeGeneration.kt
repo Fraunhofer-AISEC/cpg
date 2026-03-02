@@ -552,8 +552,14 @@ private val dataPropertyTypeMap: Map<String, TypeName> =
                 ),
         )
         put("java.util.Map<String, String>", MUTABLE_MAP.parameterizedBy(STRING, STRING))
-        put("java.util.ArrayList<String>", ClassName("kotlin.collections", "List").parameterizedBy(STRING))
-        put("java.util.ArrayList<Short>", ClassName("kotlin.collections", "List").parameterizedBy(SHORT))
+        put(
+            "java.util.ArrayList<String>",
+            ClassName("kotlin.collections", "List").parameterizedBy(STRING),
+        )
+        put(
+            "java.util.ArrayList<Short>",
+            ClassName("kotlin.collections", "List").parameterizedBy(SHORT),
+        )
         put("dateTime", ClassName("java.time", "ZonedDateTime"))
         put("listString", ClassName("kotlin.collections", "List").parameterizedBy(STRING))
     }
