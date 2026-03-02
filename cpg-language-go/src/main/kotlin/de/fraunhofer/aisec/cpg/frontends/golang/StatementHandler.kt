@@ -288,8 +288,8 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return op
     }
 
-    private fun handleIfStmt(ifStmt: GoStandardLibrary.Ast.IfStmt): If {
-        val stmt = newIf(rawNode = ifStmt)
+    private fun handleIfStmt(ifStmt: GoStandardLibrary.Ast.IfStmt): IfElse {
+        val stmt = newIfElse(rawNode = ifStmt)
 
         frontend.scopeManager.enterScope(stmt)
 

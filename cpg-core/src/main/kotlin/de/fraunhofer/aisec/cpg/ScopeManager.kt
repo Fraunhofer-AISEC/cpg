@@ -232,13 +232,13 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             val newScope =
                 when (nodeToScope) {
                     is While,
-                    is Do,
+                    is DoWhile,
                     is Assert,
                     is For,
                     is ForEach,
                     is Switch,
                     is Try,
-                    is If,
+                    is IfElse,
                     is CatchClause,
                     is CollectionComprehension,
                     is Block -> LocalScope(nodeToScope)

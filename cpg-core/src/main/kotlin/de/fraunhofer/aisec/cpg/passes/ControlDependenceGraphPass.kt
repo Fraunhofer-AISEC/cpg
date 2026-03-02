@@ -35,8 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
-import de.fraunhofer.aisec.cpg.graph.statements.Do
-import de.fraunhofer.aisec.cpg.graph.statements.If
+import de.fraunhofer.aisec.cpg.graph.statements.DoWhile
+import de.fraunhofer.aisec.cpg.graph.statements.IfElse
 import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Comprehension
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Conditional
@@ -215,7 +215,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                                         branchesSet
                                     }
 
-                                    finalDominator is If &&
+                                    finalDominator is IfElse &&
                                         (branchingNodeConditionals[finalDominator]?.size ?: 0) >
                                             1 -> { // Note: branchesSet must be empty here The if
                                         // statement has only a then branch but there's a way
@@ -352,8 +352,8 @@ private fun EvaluationOrder.isConditionalBranch(): Boolean {
     return if (branch == true) {
         true
     } else
-        (startNode is If ||
-            startNode is Do ||
+        (startNode is IfElse ||
+            startNode is DoWhile ||
             startNode is Comprehension ||
             (startNode.astParent is Comprehension &&
                 startNode == (startNode.astParent as Comprehension).iterable) ||
@@ -365,14 +365,14 @@ private fun EvaluationOrder.isConditionalBranch(): Boolean {
              * `foo() || bar()` -> `bar()` will only be called if `foo() evaluates to `false`
              */
             startNode.nextEOG.filterIsInstance<ShortCircuitOperator>().isNotEmpty() ||
-            (startNode is If &&
+            (startNode is IfElse &&
                 !startNode.allBranchesFromMyThenBranchGoThrough(startNode.nextUnconditionalNode))
 }
 
-private val If.nextUnconditionalNode: Node?
+private val IfElse.nextUnconditionalNode: Node?
     get() = this.nextEOGEdges.firstOrNull { it.branch == null }?.end
 
-private fun If.allBranchesFromMyThenBranchGoThrough(node: Node?): Boolean {
+private fun IfElse.allBranchesFromMyThenBranchGoThrough(node: Node?): Boolean {
     if (this.thenStatement.allChildren<Return>().isNotEmpty()) return false
 
     if (node == null) return true

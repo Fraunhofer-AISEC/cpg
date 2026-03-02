@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
 import de.fraunhofer.aisec.cpg.graph.statements.For
-import de.fraunhofer.aisec.cpg.graph.statements.If
+import de.fraunhofer.aisec.cpg.graph.statements.IfElse
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -163,7 +163,7 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testVarNameDeclaredInIfClause() {
-        val declaration = outerFunction2.allChildren<If>()[Node.EMPTY_NAME].variables["varName"]
+        val declaration = outerFunction2.allChildren<IfElse>()[Node.EMPTY_NAME].variables["varName"]
         assertUsageOf(callParamMap["func2_if_varName"], declaration)
     }
 

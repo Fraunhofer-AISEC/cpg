@@ -324,7 +324,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val statements = declaration.declarations<Function>(0)?.statements
         assertNotNull(statements)
 
-        val ifStatement = statements[0] as If
+        val ifStatement = statements[0] as IfElse
         assertNotNull(ifStatement)
         assertNotNull(ifStatement.condition)
         assertEquals("bool", ifStatement.condition!!.type.typeName)

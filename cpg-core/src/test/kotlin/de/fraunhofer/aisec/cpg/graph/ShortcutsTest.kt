@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.If
+import de.fraunhofer.aisec.cpg.graph.statements.IfElse
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
@@ -207,14 +207,14 @@ class ShortcutsTest {
         val magicBody = magic.body
         assertIs<Block>(magicBody)
         val ifStatement = magicBody.statements[0]
-        assertIs<If>(ifStatement)
+        assertIs<IfElse>(ifStatement)
 
         val actual = ifStatement.controls()
         val thenStmt = ifStatement.thenStatement
         assertIs<Block>(thenStmt)
         expected.add(thenStmt)
         val innerIfStmt = thenStmt.statements[0]
-        assertIs<If>(innerIfStmt)
+        assertIs<IfElse>(innerIfStmt)
         expected.add(innerIfStmt)
         val condition = innerIfStmt.condition
         assertIs<BinaryOperator>(condition)
@@ -291,11 +291,11 @@ class ShortcutsTest {
         val magicBody = magic.body
         assertIs<Block>(magicBody)
         val ifStatement = magicBody.statements[0]
-        assertIs<If>(ifStatement)
+        assertIs<IfElse>(ifStatement)
         val thenStmt = ifStatement.thenStatement
         assertIs<Block>(thenStmt)
         val thenStatement0 = thenStmt.statements[0]
-        assertIs<If>(thenStatement0)
+        assertIs<IfElse>(thenStatement0)
         val nestedThen = thenStatement0.thenStatement
         assertIs<Block>(nestedThen)
         val interestingNode = nestedThen.statements[0]
@@ -319,7 +319,7 @@ class ShortcutsTest {
         val magic2Body = magic2.body
         assertIs<Block>(magic2Body)
         val ifStatement2 = magic2Body.statements[1]
-        assertIs<If>(ifStatement2)
+        assertIs<IfElse>(ifStatement2)
         val elseStmt2 = ifStatement2.elseStatement
         assertIs<Block>(elseStmt2)
         val assignExpr2 = elseStmt2.statements[0]
@@ -340,7 +340,7 @@ class ShortcutsTest {
         val magicBody = magic.body
         assertIs<Block>(magicBody)
         val ifStatement = magicBody.statements[0]
-        assertIs<If>(ifStatement)
+        assertIs<IfElse>(ifStatement)
         val elseStmt = ifStatement.elseStatement
         assertIs<Block>(elseStmt)
         val assignExpr = elseStmt.statements[0]
@@ -367,7 +367,7 @@ class ShortcutsTest {
         val magicBody = magic.body
         assertIs<Block>(magicBody)
         val ifStatement = magicBody.statements[0]
-        assertIs<If>(ifStatement)
+        assertIs<IfElse>(ifStatement)
         val elseStmt = ifStatement.elseStatement
         assertIs<Block>(elseStmt)
         val assignExpr = elseStmt.statements[0]
@@ -397,7 +397,7 @@ class ShortcutsTest {
         val magicBody = magic.body
         assertIs<Block>(magicBody)
         val ifStatement = magicBody.statements[0]
-        assertIs<If>(ifStatement)
+        assertIs<IfElse>(ifStatement)
         val ifCondition = ifStatement.condition
         assertIs<BinaryOperator>(ifCondition)
 
@@ -447,7 +447,7 @@ class ShortcutsTest {
         val magicBody = magic.body
         assertIs<Block>(magicBody)
         val ifStmt0 = magicBody.statements[0]
-        assertIs<If>(ifStmt0)
+        assertIs<IfElse>(ifStmt0)
         val elseStmt = ifStmt0.elseStatement
         assertIs<Block>(elseStmt)
         val assignExpr = elseStmt.statements[0]

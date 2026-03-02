@@ -133,11 +133,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Statements
             is Return -> handleReturn(node)
             is ForEach -> handleForEach(node)
-            is Do -> handleDo(node)
+            is DoWhile -> handleDoWhile(node)
             is While -> handleWhile(node)
             is For -> handleFor(node)
             is Switch -> handleSwitch(node)
-            is If -> handleIf(node)
+            is IfElse -> handleIfElse(node)
             is Throw -> handleThrow(node)
             // Declarations
             is Field -> handleField(node)
@@ -308,7 +308,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Adds the DFG edge from [ForEach.variable] to the [ForEach] to show the dependence between
      * data and the branching node.
      */
-    protected fun handleDo(node: Do) {
+    protected fun handleDoWhile(node: DoWhile) {
         node.condition?.let { node.prevDFGEdges += it }
     }
 
@@ -326,11 +326,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge from [If.condition] or [If.conditionDeclaration] to the [If] to show the
-     * dependence between data and the branching node. Usage of one or the other in the statement is
-     * mutually exclusive.
+     * Adds the DFG edge from [IfElse.condition] or [IfElse.conditionDeclaration] to the [IfElse] to
+     * show the dependence between data and the branching node. Usage of one or the other in the
+     * statement is mutually exclusive.
      */
-    protected fun handleIf(node: If) {
+    protected fun handleIfElse(node: IfElse) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
             node,
             node.condition,

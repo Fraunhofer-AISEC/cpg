@@ -326,7 +326,7 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(declRefExpr.refersTo)
 
         val ifBranchSecondStatement = thenBranch.statements[1]
-        assertIs<If>(ifBranchSecondStatement)
+        assertIs<IfElse>(ifBranchSecondStatement)
         val ifRet = ifBranchSecondStatement.thenStatement
         assertIs<Block>(ifRet)
         assertEquals(1, ifRet.statements.size)
@@ -378,7 +378,7 @@ class LLVMIRLanguageFrontendTest {
         assertLiteralValue(5L, value2.rhs)
 
         val ifStatement = cmpxchgStatement.statements[1]
-        assertIs<If>(ifStatement)
+        assertIs<IfElse>(ifStatement)
         // The condition is the same as the second value above
         val ifExpr = ifStatement.condition
         assertIs<BinaryOperator>(ifExpr)
@@ -672,7 +672,7 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(5, tryStatement.catchClauses[0].body?.statements?.size)
         assertLocalName("_ZTIi | ...", tryStatement.catchClauses[0])
         val ifStatement = tryStatement.catchClauses[0].body?.statements?.get(4)
-        assertIs<If>(ifStatement)
+        assertIs<IfElse>(ifStatement)
         val thenStatement = ifStatement.thenStatement
         assertIs<Block>(thenStatement)
         assertEquals(4, thenStatement.statements.size)
@@ -710,7 +710,7 @@ class LLVMIRLanguageFrontendTest {
         assertIs<Variable>(yDecl)
 
         val ifStatement = mainBody.statements[3]
-        assertIs<If>(ifStatement)
+        assertIs<IfElse>(ifStatement)
 
         val thenStmt = ifStatement.thenStatement
         assertIs<Block>(thenStmt)
@@ -906,7 +906,7 @@ class LLVMIRLanguageFrontendTest {
         assertIs<Call>(catchswitchCall)
         assertFullName("llvm.catchswitch", catchswitchCall)
         val ifExceptionMatches = tryStatement.catchClauses[0].body?.statements?.get(1)
-        assertIs<If>(ifExceptionMatches)
+        assertIs<IfElse>(ifExceptionMatches)
         val matchesExceptionCall = ifExceptionMatches.condition
         assertIs<Call>(matchesExceptionCall)
         assertFullName("llvm.matchesCatchpad", matchesExceptionCall)
@@ -937,7 +937,7 @@ class LLVMIRLanguageFrontendTest {
         val innerCatchBody = innerTry.catchClauses[0].body
         assertNotNull(innerCatchBody)
         val innerCatchIf = innerCatchBody.statements[1]
-        assertIs<If>(innerCatchIf)
+        assertIs<IfElse>(innerCatchIf)
         val innerCatchClause = innerCatchIf.thenStatement
         assertIs<Block>(innerCatchClause)
         val innerCatchpadDeclarationStatement = innerCatchClause.statements[0]
