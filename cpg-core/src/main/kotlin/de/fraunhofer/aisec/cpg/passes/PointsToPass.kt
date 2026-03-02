@@ -3239,6 +3239,16 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
                 )
             }
         }
+        // TODO: This should work for all HasMemoryAddresses
+        //        is HasMemoryAddress -> {
+        is BinaryOperator -> {
+            //            synchronized(node.memoryAddresses) {
+            if (node.memoryAddresses.isEmpty()) {
+                node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
+            }
+            node.memoryAddresses.toConcurrentIdentitySet()
+            //            }
+        }
         else -> concurrentIdentitySetOf(node)
     }
 }
