@@ -40,10 +40,10 @@ open class HttpEndpoint(
     var rateLimiting: RateLimiting?,
     var maxInputSize: Int?,
     var userInput: MutableList<Node>,
+    var arguments: List<Node>,
     var handler: String?,
     var method: HttpMethod,
     var path: String?,
-    var url: String?,
     var authenticity: Authenticity?,
     var authorization: Authorization?,
     var httpRequestContext: HttpRequestContext?,
@@ -57,7 +57,6 @@ open class HttpEndpoint(
             other.handler == this.handler &&
             other.method == this.method &&
             other.path == this.path &&
-            other.url == this.url &&
             other.authenticity == this.authenticity &&
             other.authorization == this.authorization &&
             other.httpRequestContext == this.httpRequestContext &&
@@ -65,7 +64,8 @@ open class HttpEndpoint(
             other.transportEncryption == this.transportEncryption &&
             other.rateLimiting == this.rateLimiting &&
             other.maxInputSize == this.maxInputSize &&
-            other.userInput == this.userInput
+            other.userInput == this.userInput &&
+            other.arguments == this.arguments
 
     override fun hashCode(): Int =
         Objects.hash(
@@ -73,7 +73,6 @@ open class HttpEndpoint(
             handler,
             method,
             path,
-            url,
             authenticity,
             authorization,
             httpRequestContext,
@@ -82,6 +81,7 @@ open class HttpEndpoint(
             rateLimiting,
             maxInputSize,
             userInput,
+            arguments,
         )
 }
 

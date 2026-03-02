@@ -141,7 +141,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is Throw -> handleThrow(node)
             // Declarations
             is Field -> handleField(node)
-            is Function -> handleFunction(node, functionSummaries)
+            is Function -> handleFunction(node, functionSummaries, inferDfgForUnresolvedSymbols)
             is Tuple -> handleTuple(node)
             is Variable -> handleVariable(node)
         }
@@ -249,7 +249,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Adds the DFG edge for a [Function]. The data flows from the return statement(s) to the
      * function.
      */
-    protected fun handleFunction(node: Function, functionSummaries: DFGFunctionSummaries) {
+    protected fun handleFunction(
+        node: Function,
+        functionSummaries: DFGFunctionSummaries,
+        inferDfgForUnresolvedSymbols: Boolean,
+    ) {
         if (node.isInferred) {
             val summaryExists = with(functionSummaries) { addFlowsToFunctionDeclaration(node) }
 
@@ -261,6 +265,32 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 // If it's a method with a receiver, we connect that one too.
                 if (node is Method) {
                     node.receiver?.let { node.prevDFGEdges += it }
+                }
+
+                // For inferred constructors, we also try to connect parameters to fields of the
+                // record.
+                if (inferDfgForUnresolvedSymbols && node is Constructor) {
+                    val record = node.recordDeclaration ?: return
+                    val fields = record.fields
+
+                    for (param in node.parameters) {
+                        val matchingField =
+                            fields.firstOrNull { it.name.localName == param.name.localName }
+                        // Only add this edge if the field has no read usages. If it does,
+                        // handleMemberExpression will create
+                        // DFG edges for those reads, and our 'extra' edge leads to an infinite
+                        // loop.
+                        val hasReadUsages =
+                            matchingField?.usages?.any {
+                                it is MemberAccess && it.access == AccessValues.READ
+                            } ?: false
+                        if (matchingField != null && !hasReadUsages) {
+                            param.nextDFGEdges += matchingField
+                        }
+                    }
+                    fields.forEach { field ->
+                        field.nextDFGEdges.add(node) { granularity = partial(field.name.localName) }
+                    }
                 }
             }
         } else {
