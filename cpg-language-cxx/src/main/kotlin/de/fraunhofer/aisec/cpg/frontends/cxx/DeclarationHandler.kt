@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -165,7 +165,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private fun handleFunctionDefinition(ctx: IASTFunctionDefinition): Declaration {
         // TODO: A problem with cpp functions is that we cannot know if they may throw an exception
-        //  as throw(...) is not compiler enforced (Problem for TryStatement)
+        //  as throw(...) is not compiler enforced (Problem for Try)
         val declaration = frontend.declaratorHandler.handle(ctx.declarator)
 
         if (declaration !is Function) {
@@ -214,8 +214,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 }
 
                 // add an implicit return statement, if there is none
-                if (lastStatement !is ReturnStatement) {
-                    val returnStatement = newReturnStatement()
+                if (lastStatement !is Return) {
+                    val returnStatement = newReturn()
                     returnStatement.isImplicit = true
                     bodyStatement.statements += returnStatement
                 }

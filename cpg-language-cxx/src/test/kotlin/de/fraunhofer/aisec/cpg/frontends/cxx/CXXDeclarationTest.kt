@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.OperatorCall
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
@@ -151,7 +151,7 @@ class CXXDeclarationTest {
         assertEquals(2, statements.size)
 
         // last statement should be an implicit return
-        var statement = method.bodyOrNull<ReturnStatement>(-1)
+        var statement = method.bodyOrNull<Return>(-1)
         assertNotNull(statement)
         assertTrue(statement.isImplicit)
 

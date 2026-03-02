@@ -40,12 +40,12 @@ import org.neo4j.ogm.annotation.Relationship
  * Represents a conditional loop statement of the form: `do{...}while(...)`. Where the body, usually
  * a [Block], is executed and re-executed if the [condition] evaluates to true.
  */
-class DoStatement : LoopStatement(), ArgumentHolder {
+class DoWhile : Loop(), ArgumentHolder {
     @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /**
      * The loop condition that is evaluated after the loop statement and may trigger reevaluation.
      */
-    var condition by unwrapping(DoStatement::conditionEdge)
+    var condition by unwrapping(DoWhile::conditionEdge)
 
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)
@@ -71,7 +71,7 @@ class DoStatement : LoopStatement(), ArgumentHolder {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is DoStatement) return false
+        if (other !is DoWhile) return false
         return super.equals(other) && condition == other.condition
     }
 

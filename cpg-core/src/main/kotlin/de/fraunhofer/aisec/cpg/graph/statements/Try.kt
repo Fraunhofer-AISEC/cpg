@@ -35,7 +35,7 @@ import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** A [Statement] which represents a try/catch block, primarily used for exception handling. */
-class TryStatement : Statement() {
+class Try : Statement() {
     /**
      * This represents some kind of resource which is typically opened (or similar) while entering
      * the [tryBlock]. If this operation fails, we may continue with the [finallyBlock]. However,
@@ -44,14 +44,14 @@ class TryStatement : Statement() {
      */
     @Relationship(value = "RESOURCES", direction = Relationship.Direction.OUTGOING)
     var resourceEdges = astEdgesOf<Statement>()
-    var resources by unwrapping(TryStatement::resourceEdges)
+    var resources by unwrapping(Try::resourceEdges)
 
     /**
      * This represents a block whose statements can throw exceptions which are handled by the
      * [catchClauses].
      */
     @Relationship(value = "TRY_BLOCK") var tryBlockEdge = astOptionalEdgeOf<Block>()
-    var tryBlock by unwrapping(TryStatement::tryBlockEdge)
+    var tryBlock by unwrapping(Try::tryBlockEdge)
 
     /**
      * This represents a block whose statements are only executed if the [tryBlock] finished without
@@ -59,7 +59,7 @@ class TryStatement : Statement() {
      * [catchClauses].
      */
     @Relationship(value = "ELSE_BLOCK") var elseBlockEdge = astOptionalEdgeOf<Block>()
-    var elseBlock by unwrapping(TryStatement::elseBlockEdge)
+    var elseBlock by unwrapping(Try::elseBlockEdge)
 
     /**
      * This represents a block of statements which is always executed after finishing the [tryBlock]
@@ -67,7 +67,7 @@ class TryStatement : Statement() {
      * caught by the [catchClauses].
      */
     @Relationship(value = "FINALLY_BLOCK") var finallyBlockEdge = astOptionalEdgeOf<Block>()
-    var finallyBlock by unwrapping(TryStatement::finallyBlockEdge)
+    var finallyBlock by unwrapping(Try::finallyBlockEdge)
 
     /**
      * This represents a set of blocks whose statements handle the exceptions which are thrown in
@@ -76,11 +76,11 @@ class TryStatement : Statement() {
      */
     @Relationship(value = "CATCH_CLAUSES", direction = Relationship.Direction.OUTGOING)
     var catchClauseEdges = astEdgesOf<CatchClause>()
-    var catchClauses by unwrapping(TryStatement::catchClauseEdges)
+    var catchClauses by unwrapping(Try::catchClauseEdges)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is TryStatement) return false
+        if (other !is Try) return false
         return (super.equals(other) &&
             resources == other.resources &&
             propertyEqualsList(resourceEdges, other.resourceEdges) &&

@@ -36,16 +36,16 @@ import org.neo4j.ogm.annotation.Relationship
  * This [Node] is a generalization of all looping statements and serves duplication reduction. All
  * Looping statements can be identified by if they inherit from this class. Loops deviate from other
  * nods in the way they change a programs control flow, and do so in combination with other nodes,
- * e.g. [BreakStatement].
+ * e.g. [Break].
  *
  * The looping criterion can be a condition or the iteration over all elements in a list and is
  * defined by the subclass.
  */
-abstract class LoopStatement : Statement() {
+abstract class Loop : Statement() {
 
     @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
     /** This field contains the body of the loop, e.g. a [Block] or single [Statement]. */
-    var statement by unwrapping(LoopStatement::statementEdge)
+    var statement by unwrapping(Loop::statementEdge)
 
     /**
      * This represents a single or block of statements that are executed when the loop terminates
@@ -55,7 +55,7 @@ abstract class LoopStatement : Statement() {
      * was not left through a break.
      */
     @Relationship(value = "ELSE_STATEMENT") var elseStatementEdge = astOptionalEdgeOf<Statement>()
-    var elseStatement by unwrapping(LoopStatement::elseStatementEdge)
+    var elseStatement by unwrapping(Loop::elseStatementEdge)
 
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)
@@ -68,7 +68,7 @@ abstract class LoopStatement : Statement() {
         if (this === other) {
             return true
         }
-        if (other !is LoopStatement) {
+        if (other !is Loop) {
             return false
         }
 

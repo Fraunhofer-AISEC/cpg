@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.enhancements.variable_resolution
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.For
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.*
@@ -43,13 +43,13 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testVarNameDeclaredInLoop() {
-        val firstLoopLocal = forStatements?.get(0).variables["varName"]
+        val firstLoopLocal = fors?.get(0).variables["varName"]
         assertUsageOf(callParamMap["func1_first_loop_varName"], firstLoopLocal)
     }
 
     @Test
     fun testVarNameInSecondLoop() {
-        val secondLoopLocal = forStatements?.get(1).variables["varName"]
+        val secondLoopLocal = fors?.get(1).variables["varName"]
         assertUsageOf(callParamMap["func1_second_loop_varName"], secondLoopLocal)
     }
 
@@ -165,7 +165,7 @@ internal class VariableResolverJavaTest : BaseTest() {
         private var innerImpOuter: Field? = null
         private var main: Method? = null
         private var outerFunction1: Method? = null
-        private var forStatements: List<ForStatement>? = null
+        private var fors: List<For>? = null
         private var outerFunction2: Method? = null
         private var outerFunction3: Method? = null
         private var outerFunction4: Method? = null
@@ -208,7 +208,7 @@ internal class VariableResolverJavaTest : BaseTest() {
             innerImpOuter = innerClass.fields["this\$ScopeVariables"]
             main = outerClass.methods["main"]
             outerFunction1 = outerClass.methods["function1"]
-            forStatements = outerFunction1.allChildren()
+            fors = outerFunction1.allChildren()
 
             // Functions in the outer and inner object
             outerFunction2 = outerClass.methods["function2"]

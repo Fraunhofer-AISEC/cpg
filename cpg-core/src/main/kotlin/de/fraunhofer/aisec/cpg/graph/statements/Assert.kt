@@ -28,31 +28,30 @@ package de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
-class SynchronizedStatement : Statement() {
-    @Relationship(value = "EXPRESSION") var expressionEdge = astOptionalEdgeOf<Expression>()
-    var expression by unwrapping(SynchronizedStatement::expressionEdge)
+/** Represents an assert statement */
+class Assert : Statement() {
+    @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
+    /** The condition to be evaluated. */
+    var condition by unwrapping(Assert::conditionEdge)
 
-    @Relationship(value = "BLOCK") var blockEdge = astOptionalEdgeOf<Block>()
-    var block by unwrapping(SynchronizedStatement::blockEdge)
+    @Relationship(value = "MESSAGE") var messageEdge = astOptionalEdgeOf<Statement>()
+    /** The *optional* message that is shown, if the assert is evaluated as true */
+    var message by unwrapping(Assert::messageEdge)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is SynchronizedStatement) return false
-        return super.equals(other) && expression == other.expression && block == other.block
+        if (other !is Assert) return false
+        return super.equals(other) && condition == other.condition && message == other.message
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), expression, block)
+    override fun hashCode() = Objects.hash(super.hashCode(), condition, message)
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        return expression?.getStartingPrevEOG() ?: this.prevEOG
-    }
-
-    override fun getExitNextEOG(): Collection<Node> {
-        return this.block?.getExitNextEOG() ?: this.nextEOG
+        return this.condition?.getStartingPrevEOG()
+            ?: (this.prevEOG + (this.message?.getStartingPrevEOG() ?: setOf()))
     }
 }

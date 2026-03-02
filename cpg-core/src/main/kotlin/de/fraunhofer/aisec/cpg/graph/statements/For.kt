@@ -26,46 +26,46 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import java.util.Objects
+import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
- * Represent a for statement of the form `for(variable ... iterable){...}` that executes the loop
- * body for each instance of an element in `iterable` that is temporarily stored in `variable`.
+ * Represents an iterating loop statement of the form `for(initializer; condition; iteration){...}`
+ * that declares variables, can change them in an iteration statement and is executed until the
+ * condition evaluates to false.
  */
-class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
+class For : Loop(), BranchingNode, StatementHolder {
 
-    @Relationship("VARIABLE")
-    var variableEdge =
-        astOptionalEdgeOf<Statement>(
-            onChanged = { _, new -> (new?.end as? Expression)?.access = AccessValues.WRITE }
-        )
+    @Relationship("INITIALIZER_STATEMENT")
+    var initializerStatementEdge = astOptionalEdgeOf<Statement>()
+    var initializerStatement by unwrapping(For::initializerStatementEdge)
 
-    /**
-     * This field contains the iteration variable of the loop. It can be either a new variable
-     * declaration or a reference to an existing variable.
-     */
-    var variable by unwrapping(ForEachStatement::variableEdge)
+    @Relationship("CONDITION_DECLARATION")
+    var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
+    var conditionDeclaration by unwrapping(For::conditionDeclarationEdge)
 
-    @Relationship("ITERABLE") var iterableEdge = astOptionalEdgeOf<Statement>()
-    /** This field contains the iteration subject of the loop. */
-    var iterable by unwrapping(ForEachStatement::iterableEdge)
+    @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
+    var condition by unwrapping(For::conditionEdge)
+
+    @Relationship("ITERATION_STATEMENT") var iterationStatementEdge = astOptionalEdgeOf<Statement>()
+    var iterationStatement by unwrapping(For::iterationStatementEdge)
 
     override val branchedBy
-        get() = iterable
+        get() = condition ?: conditionDeclaration
 
     override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
         get() {
             val statements = astEdgesOf<Statement>()
-            statements += variableEdge
-            statements += iterableEdge
+            statements += initializerStatementEdge
+            statements += iterationStatementEdge
             statements += statementEdge
             statements += elseStatementEdge
             return statements
@@ -75,28 +75,47 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
         }
 
     override var statements: MutableList<Statement>
-        get() = unwrapping(ForEachStatement::statementEdges)
+        get() = unwrapping(For::statementEdges)
         set(value) {}
 
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
-            .append("variable", variable)
-            .append("iterable", iterable)
+            .append("initializer", initializerStatement)
+            .append("condition", condition)
+            .append("conditionDeclaration", conditionDeclaration)
+            .append("iteration", iterationStatement)
             .toString()
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is ForEachStatement) return false
-        return super.equals(other) && variable == other.variable && iterable == other.iterable
+        if (this === other) {
+            return true
+        }
+        if (other !is For) {
+            return false
+        }
+
+        return super.equals(other) &&
+            initializerStatement == other.initializerStatement &&
+            conditionDeclaration == other.conditionDeclaration &&
+            condition == other.condition &&
+            iterationStatement == other.iterationStatement
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable)
+    override fun hashCode(): Int {
+        return Objects.hash(
+            this.condition,
+            this.initializerStatement,
+            this.conditionDeclaration,
+            this.iterationStatement,
+        )
+    }
 
     override fun getStartingPrevEOG(): Collection<Node> {
         val astChildren = this.allChildren<Node> { true }
-        return iterable?.getStartingPrevEOG()?.filter { it !in astChildren }
-            ?: variable?.getStartingPrevEOG()
+        return initializerStatement?.getStartingPrevEOG()
+            ?: this.condition?.getStartingPrevEOG()?.filter { it !in astChildren }
+            ?: this.conditionDeclaration?.getStartingPrevEOG()?.filter { it !in astChildren }
             ?: this.prevEOG
     }
 

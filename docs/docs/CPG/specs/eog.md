@@ -242,7 +242,7 @@ flowchart LR
   child --EOG--> parent
 
 ```
-## ReturnStatement
+## Return
 This forms the end of an EOG as this is the last statement to be executed in the function.
 
 Scheme:
@@ -250,7 +250,7 @@ Scheme:
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child
-  child["returnValue"] --EOG--> parent(["ReturnStatement"])
+  child["returnValue"] --EOG--> parent(["Return"])
   parent -.-> child
 ```
 
@@ -380,13 +380,13 @@ flowchart LR
 ```
 
 
-## AssertStatement
+## Assert
 Statement that evaluates a condition and if the condition is false, evaluates a message, this message is generalized to a `Statement` to hold everything 
 from a single String, to an Exception construction.
 
 Interesting fields:
 
-* `condition: Expression` Its evaluation leads to evaluation of message and EOG termination or to the regular evaluation of the parent `AssertStatement`.
+* `condition: Expression` Its evaluation leads to evaluation of message and EOG termination or to the regular evaluation of the parent `Assert`.
 * `message: Statement`: A String message or Exception evaluated only if the assertion fails. 
 
 Scheme:
@@ -396,13 +396,13 @@ flowchart LR
   prev:::outer --EOG--> child1["condition"]
   child1 --"EOG:false"-->child2["message"]
   child1 --"EOG:true"-->parent
-  parent([AssertStatement]) --EOG--> next:::outer
+  parent([Assert]) --EOG--> next:::outer
   parent -.-> child1
   parent -.-> child2
 
 ```
 
-## TryStatement
+## Try
 
 After the execution of the statement the control flow only proceeds with the next statement if all exceptions were handled. If not, execution is relayed to the next outer exception handling context.
 
@@ -425,7 +425,7 @@ flowchart LR
   try -.- parent
   throws:::outer -- EOG --> catch["catchBlock(i)"]
   try -- EOG --> finally["finallyBlock"]
-  parent([TryStatement]) --EOG--> next:::outer
+  parent([Try]) --EOG--> next:::outer
   parent --EOG--> catchingContext:::outer
   catch -- EOG --> finally
   finally -- EOG --> parent
@@ -433,26 +433,26 @@ flowchart LR
   catch -.- parent
 ```
 
-## ContinueStatement
-The execution continues at the `condition` of a node associated to a `Continuable` scope, e.g. `WhileStatement`. This is not necessarily the closest enclosing node of this type, the `ContinueStatement` may contain a label specifying the exact outer node.
+## Continue
+The execution continues at the `condition` of a node associated to a `Continuable` scope, e.g. `While`. This is not necessarily the closest enclosing node of this type, the `Continue` may contain a label specifying the exact outer node.
 
 Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> parent
-  parent(["ContinueStatement"]) --EOG--> conditionInContinuableContext:::outer
+  parent(["Continue"]) --EOG--> conditionInContinuableContext:::outer
 
 ```
-## BreakStatement
-The execution continues after a node associated to a `Breakable` scope, e.g. `WhileStatement`or `SwitchStatement`. This is not necessarily the closest enclosing node of this type, the `BreakStatement` may contain a label specifying the exact outer node.
+## Break
+The execution continues after a node associated to a `Breakable` scope, e.g. `While`or `Switch`. This is not necessarily the closest enclosing node of this type, the `Break` may contain a label specifying the exact outer node.
 
 Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> parent
-  parent(["BreakStatement"]) --EOG--> nextAfterBreakableContext:::outer
+  parent(["Break"]) --EOG--> nextAfterBreakableContext:::outer
 ```
 
 ## Delete
@@ -472,8 +472,8 @@ flowchart LR
   parent -.-> child
 ```
 
-## LabelStatement
-The `LabelStatement` itself is not added to the EOG. EOG construction is directly forwarded to the labeled statement in the `subStatement`.
+## Label
+The `Label` itself is not added to the EOG. EOG construction is directly forwarded to the labeled statement in the `subStatement`.
 
 Scheme:
 ```mermaid
@@ -481,17 +481,17 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child["subStatement"]
   child --EOG--> next:::outer
-  parent(["LabelStatement"]) -.-> child
+  parent(["Label"]) -.-> child
 ```
 
-## GotoStatement
-Models a `goto`statement and an EOG-Edge is created to the appropriate `LabelStatement`.
+## Goto
+Models a `goto`statement and an EOG-Edge is created to the appropriate `Label`.
 
 Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> child(["GotoStatement"])
+  prev:::outer --EOG--> child(["Goto"])
   child --EOG--> labeledStatement:::outer
 ```
 
@@ -580,7 +580,7 @@ flowchart LR
   parent -."arguments(n)".-> child2
 ```
 
-## SynchronizedStatement
+## Synchronized
 The placement of the root node between expression and executed block is such that algorithms can be evaluated the expression and then encountering the information that this expression is used for synchronization.
 
 Interesting fields:
@@ -593,7 +593,7 @@ Scheme:
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["expression"]
-  child1 --EOG--> parent(["SynchronizedStatement"])
+  child1 --EOG--> parent(["Synchronized"])
   parent --EOG--> child2["block"]
   child2 --EOG--> next:::outer
   parent -.-> child1
@@ -601,7 +601,7 @@ flowchart LR
 ```
 
 ## Conditional
-A conditional evaluation of two expression, realizing the branching pattern of an `IfStatement` on the expression level.
+A conditional evaluation of two expression, realizing the branching pattern of an `If` on the expression level.
 
 Interesting fields:
 
@@ -673,7 +673,7 @@ flowchart LR
   parent -.-> child1
 ```
 
-## WhileStatement
+## While
 This is a classic while loop where the condition is evaluated before every loop iteration.
 
 Note: The condition may be enclosed in a declaration, in that case the EOG will not contain a `condition` but rather a declaration of a variable where the `initializer` serves as loop condition. Uses of one or the other are currently mutually exclusive.
@@ -691,13 +691,13 @@ flowchart LR
   prev:::outer --EOG--> child1["condition|conditionDeclaration"]
   child1 --EOG--> parent
   parent --EOG:false--> next:::outer
-  parent(["WhileStatement"]) --EOG:true--> child3["statement"]
+  parent(["While"]) --EOG:true--> child3["statement"]
   child3 --EOG--> child1
   parent -.-> child1
   parent -.-> child3
 ```
 
-## DoStatement
+## Do
 This is a classic do while loop where the condition is evaluated after every loop iteration.
 
 Interesting fields:
@@ -711,14 +711,14 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["statement"];
   child1 --EOG--> child2["condition"];
-  child2 --EOG--> parent(["DoStatement"]);
+  child2 --EOG--> parent(["Do"]);
   parent --EOG:false--> next:::outer
   parent --EOG:true--> child1
   parent -.-> child1
   parent -.-> child2
 ```
 
-## ForEachStatement
+## ForEach
 This is a loop that iterates over all elements in a multi-element `iterable` with the single elements bound to the declaration of `variable` while evaluating `statement`.
 
 Interesting fields:
@@ -735,14 +735,14 @@ flowchart LR
   child1 --EOG--> child2["variable"]
   child2 --EOG--> parent
   parent --EOG:false--> next:::outer
-  parent(["ForEachStatement"]) --EOG:true--> child3["statement"]
+  parent(["ForEach"]) --EOG:true--> child3["statement"]
   child3 --EOG--> child1
   parent -.-> child2
   parent -.-> child1
   parent -.-> child3
 ```
 
-## ForStatement
+## For
 This is a classic for-loop where a statement is executed before the loop run, a condition is evaluated before every loop iteration, and a post iteration statement can be declared.
 
 Note: The condition may be enclosed in a declaration. In this case, the EOG will not contain a `condition` but rather a declaration of a variable where the `initializer` serves as loop condition. Uses of one or the other are currently mutually exclusive.
@@ -765,10 +765,10 @@ flowchart LR
   parent --EOG:false--> next:::outer
   initializer --EOG--> condition["condition|conditionDeclaration"]
   condition --EOG--> parent
-  parent(["ForStatement"]) --EOG:true--> statement["statement"]
+  parent(["For"]) --EOG:true--> statement["statement"]
 ```
 
-## IfStatement
+## If
 This is a branching statement where the evaluation of a `condition` leads to the execution of one optional, or two mutually exclusive blocks of code.
 
 Note: The condition may be enclosed in a declaration, in that case the EOG will not contain a `condition` but rather a declaration of a variable where the `initializer` serves as branching condition. Uses of one or the other are currently mutually exclusive.
@@ -787,25 +787,25 @@ flowchart LR
   prev:::outer --EOG--> child1["initializerStatement"]
   child1 --EOG--> child2["condition|conditionDeclaration"]
   child2 --EOG--> parent
-  parent(["IfStatement"]) --EOG:true--> child4["thenStatement"]
+  parent(["If"]) --EOG:true--> child4["thenStatement"]
   parent --EOG:false--> child5["elseStatement"]
   parent --EOG--> next:::outer
   child4 --EOG--> next:::outer
   child5 --EOG--> next:::outer
 ```
 
-## SwitchStatement
-This is a switch statement where the evaluation of a `selector` decides the entry point in a large block of code. `CaseStatements` serve as entry points and `BreakStatements` are needed to prevent all cases after the entry to be evaluated.
+## Switch
+This is a switch statement where the evaluation of a `selector` decides the entry point in a large block of code. `Cases` serve as entry points and `Breaks` are needed to prevent all cases after the entry to be evaluated.
 
 Note: The `selector` may be enclosed in a declaration. In this case, the EOG will not contain a selector but rather a declaration of a variable where the `initializer` serves as switch selector. Uses of one or the other are currently mutually exclusive.
 
 Interesting fields:
 
-* `selector: Expression`: The evaluated selector which needs to match the expression evaluation of the expression in a `caseStatement` or the entry will be the `defaultStatement`.
+* `selector: Expression`: The evaluated selector which needs to match the expression evaluation of the expression in a `case` or the entry will be the statement in `default`.
 * `selectorDeclaration: Declaration`: The declarations `initializer` serves as `selector`.
 * `statement: Statement`: The body containing all entry points and statements to be executed.
-* `caseStatement: Statement`: The entry point into the evaluation of the switch body if the `selector` matches its `caseExpression`.
-* `defaultStatement: Statement`: The default entry point if no `caseExpression` matched the selector.
+* `case: Statement`: The entry point into the evaluation of the switch body if the `selector` matches its `caseExpression`.
+* `default: Statement`: The default entry point if no `caseExpression` matched the selector.
 
 Scheme:
 ```mermaid
@@ -814,8 +814,8 @@ flowchart LR
   prev:::outer --EOG--> child1["initializerStatement"]
   child1 --EOG--> child2["selector|selectorDeclaration"]
   child2 --EOG--> parent
-  parent(["SwitchStatement"]) --EOG--> child4["caseStatement"]
-  parent --EOG--> child5["defaultStatement"]
+  parent(["Switch"]) --EOG--> child4["case"]
+  parent --EOG--> child5["default"]
   child7["statement(n-1)"] --EOG--> child6["statement"]
   parent -.->child6
   child6 -."statements(n)".-> child4
@@ -824,13 +824,13 @@ flowchart LR
   child6 --EOG--> next:::outer
 ```
 
-## CaseStatement
+## Case
 
-Serves as an entry point inside a `SwitchStatement`, the statements executed after entry are not children of this structure but can be found on the same AST hierarchy level. 
+Serves as an entry point inside a `Switch`, the statements executed after entry are not children of this structure but can be found on the same AST hierarchy level. 
 
 Interesting fields:
 
-* `caseExpression: Expression`: serves as an entry point if its evaluation matches the `selector` evaluation in `SwitchStatement`
+* `caseExpression: Expression`: serves as an entry point if its evaluation matches the `selector` evaluation in `Switch`
 
 Scheme:
 ```mermaid
@@ -838,7 +838,7 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child["caseExpression"]
   child --EOG--> parent
-  parent(["CaseStatement"]) --EOG--> next:::outer
+  parent(["Case"]) --EOG--> next:::outer
   parent -.-> child
 
 ```
@@ -873,7 +873,7 @@ flowchart LR
   parent --EOG--> next:::outer
 ```
 
-## LookupScopeStatement
+## LookupScope
 The statement itself is connected to the outer EOG.
 
 Interesting fields: /
@@ -882,11 +882,11 @@ Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> parent["LookupScopeStatement"]
+  prev:::outer --EOG--> parent["LookupScope"]
   parent --EOG--> next:::outer
 ```
 
-## EmptyStatement
+## Empty
 The statement itself is connected to the outer EOG.
 
 Interesting fields: /
@@ -895,7 +895,7 @@ Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> parent["EmptyStatement"]
+  prev:::outer --EOG--> parent["Empty"]
   parent --EOG--> next:::outer
 ```
 
@@ -912,7 +912,7 @@ flowchart LR
   parent --EOG--> next:::outer
 ```
 
-## DefaultStatement
+## Default
 The statement itself is connected to the outer EOG.
 
 Interesting fields: /
@@ -921,7 +921,7 @@ Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> parent["DefaultStatement"]
+  prev:::outer --EOG--> parent["Default"]
   parent --EOG--> next:::outer
 ```
 

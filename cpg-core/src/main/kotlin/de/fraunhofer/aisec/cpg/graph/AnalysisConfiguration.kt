@@ -40,7 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Invoke
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerList
 import kotlin.collections.mapNotNull
@@ -356,7 +356,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                                 sensitivities = sensitivities,
                             )
                             .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
-                    } else if (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty()) {
+                    } else if (currentNode is Return || currentNode.nextEOG.isEmpty()) {
                         // Return from the functions/methods which have been invoked.
                         val returnedTo =
                             (currentNode as? Function
@@ -426,7 +426,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
             }
 
             GraphToFollow.EOG -> {
-                edge is Invoke && (currentNode is ReturnStatement || currentNode.nextEOG.isEmpty())
+                edge is Invoke && (currentNode is Return || currentNode.nextEOG.isEmpty())
             }
         }
     }

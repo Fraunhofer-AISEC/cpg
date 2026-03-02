@@ -26,34 +26,33 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import java.util.*
-import org.apache.commons.lang3.builder.ToStringBuilder
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import java.util.Objects
+import org.neo4j.ogm.annotation.Relationship
 
-class GotoStatement : Statement() {
-    var labelName: String = ""
-    var targetLabel: LabelStatement? = null
+class Synchronized : Statement() {
+    @Relationship(value = "EXPRESSION") var expressionEdge = astOptionalEdgeOf<Expression>()
+    var expression by unwrapping(Synchronized::expressionEdge)
+
+    @Relationship(value = "BLOCK") var blockEdge = astOptionalEdgeOf<Block>()
+    var block by unwrapping(Synchronized::blockEdge)
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
-        }
-        if (other !is GotoStatement) {
-            return false
-        }
-        return super.equals(other) && labelName == other.labelName
+        if (this === other) return true
+        if (other !is Synchronized) return false
+        return super.equals(other) && expression == other.expression && block == other.block
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), labelName, targetLabel)
-
-    override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .append("labelName", labelName)
-            .append("targetName", targetLabel)
-            .append("location", location)
-            .toString()
-    }
+    override fun hashCode() = Objects.hash(super.hashCode(), expression, block)
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        return this.prevEOG
+        return expression?.getStartingPrevEOG() ?: this.prevEOG
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.block?.getExitNextEOG() ?: this.nextEOG
     }
 }

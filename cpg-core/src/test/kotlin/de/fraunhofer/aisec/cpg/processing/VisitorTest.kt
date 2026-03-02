@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.test.*
@@ -117,21 +117,21 @@ class VisitorTest : BaseTest() {
         assertEquals(37, nodeList.size)
     }
 
-    /** Visits only ReturnStatement nodes. */
+    /** Visits only Return nodes. */
     @Test
     fun testReturnStmtVisitor() {
-        val returnStatements: MutableList<ReturnStatement> = ArrayList()
+        val returns: MutableList<Return> = ArrayList()
         assertNotNull(recordDeclaration)
 
         recordDeclaration!!.accept(
             Strategy::AST_FORWARD,
             object : IVisitor<AstNode>() {
-                fun visit(r: ReturnStatement) {
-                    returnStatements.add(r)
+                fun visit(r: Return) {
+                    returns.add(r)
                 }
             },
         )
-        assertEquals(2, returnStatements.size)
+        assertEquals(2, returns.size)
     }
 
     @Test

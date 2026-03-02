@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
-import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DefaultStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Break
+import de.fraunhofer.aisec.cpg.graph.statements.Case
+import de.fraunhofer.aisec.cpg.graph.statements.Default
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
@@ -85,7 +85,7 @@ class MatchTest {
         assertIs<Block>(statementBlock)
         assertEquals(3, statementBlock.statements.size)
         val caseSingleton = statementBlock[0]
-        assertIs<CaseStatement>(caseSingleton)
+        assertIs<Case>(caseSingleton)
         val singletonCheck = caseSingleton.caseExpression
         assertIs<BinaryOperator>(singletonCheck)
         assertEquals("===", singletonCheck.operatorCode)
@@ -93,7 +93,7 @@ class MatchTest {
         val singletonRhs = singletonCheck.rhs
         assertIs<Literal<*>>(singletonRhs)
         assertNull(singletonRhs.value)
-        assertIs<BreakStatement>(statementBlock[2])
+        assertIs<Break>(statementBlock[2])
     }
 
     @Test
@@ -114,13 +114,13 @@ class MatchTest {
         assertIs<Block>(statementBlock)
         assertEquals(3, statementBlock.statements.size)
         val caseValue = statementBlock[0]
-        assertIs<CaseStatement>(caseValue)
+        assertIs<Case>(caseValue)
         val valueCheck = caseValue.caseExpression
         assertIs<BinaryOperator>(valueCheck)
         assertEquals("==", valueCheck.operatorCode)
         assertRefersTo(valueCheck.lhs, paramX)
         assertLiteralValue("value", valueCheck.rhs)
-        assertIs<BreakStatement>(statementBlock[2])
+        assertIs<Break>(statementBlock[2])
     }
 
     @Test
@@ -141,13 +141,13 @@ class MatchTest {
         assertIs<Block>(statementBlock)
         assertEquals(3, statementBlock.statements.size)
         val caseOr = statementBlock[0]
-        assertIs<CaseStatement>(caseOr)
+        assertIs<Case>(caseOr)
         val orExpr = caseOr.caseExpression
         assertIs<BinaryOperator>(orExpr)
         assertEquals("or", orExpr.operatorCode)
         assertIs<BinaryOperator>(orExpr.lhs)
         assertIs<BinaryOperator>(orExpr.rhs)
-        assertIs<BreakStatement>(statementBlock[2])
+        assertIs<Break>(statementBlock[2])
     }
 
     @Test
@@ -168,8 +168,8 @@ class MatchTest {
         assertIs<Block>(statementBlock)
         assertEquals(3, statementBlock.statements.size)
         val caseDefault = statementBlock[0]
-        assertIs<DefaultStatement>(caseDefault)
-        assertIs<BreakStatement>(statementBlock[2])
+        assertIs<Default>(caseDefault)
+        assertIs<Break>(statementBlock[2])
     }
 
     @Test
@@ -189,7 +189,7 @@ class MatchTest {
         val statementBlock = switchStatement.statement
         assertIs<Block>(statementBlock)
         val caseAnd = statementBlock[0]
-        assertIs<CaseStatement>(caseAnd)
+        assertIs<Case>(caseAnd)
         val andExpr = caseAnd.caseExpression
         assertIs<BinaryOperator>(andExpr)
         assertEquals("and", andExpr.operatorCode)
@@ -198,7 +198,7 @@ class MatchTest {
         assertEquals(">", andRhs.operatorCode)
         assertRefersTo(andRhs.lhs, paramX)
         assertLiteralValue(0L, andRhs.rhs)
-        assertIs<BreakStatement>(statementBlock[2])
+        assertIs<Break>(statementBlock[2])
     }
 
     @Test
@@ -218,7 +218,7 @@ class MatchTest {
         val statementBlock = switchStatement.statement
         assertIs<Block>(statementBlock)
         val caseSingleton = statementBlock[0]
-        assertIs<CaseStatement>(caseSingleton)
+        assertIs<Case>(caseSingleton)
         val singletonCheck = caseSingleton.caseExpression
         assertIs<BinaryOperator>(singletonCheck)
         assertEquals("===", singletonCheck.operatorCode)
@@ -226,19 +226,19 @@ class MatchTest {
         val singletonRhs = singletonCheck.rhs
         assertIs<Literal<*>>(singletonRhs)
         assertNull(singletonRhs.value)
-        assertIs<BreakStatement>(statementBlock[2])
+        assertIs<Break>(statementBlock[2])
 
         val caseValue = statementBlock[3]
-        assertIs<CaseStatement>(caseValue)
+        assertIs<Case>(caseValue)
         val valueCheck = caseValue.caseExpression
         assertIs<BinaryOperator>(valueCheck)
         assertEquals("==", valueCheck.operatorCode)
         assertRefersTo(valueCheck.lhs, paramX)
         assertLiteralValue("value", valueCheck.rhs)
-        assertIs<BreakStatement>(statementBlock[5])
+        assertIs<Break>(statementBlock[5])
 
         val caseAnd = statementBlock[6]
-        assertIs<CaseStatement>(caseAnd)
+        assertIs<Case>(caseAnd)
         val andExpr = caseAnd.caseExpression
         assertIs<BinaryOperator>(andExpr)
         assertEquals("and", andExpr.operatorCode)
@@ -247,33 +247,33 @@ class MatchTest {
         assertEquals(">", andRhs.operatorCode)
         assertRefersTo(andRhs.lhs, paramX)
         assertLiteralValue(0L, andRhs.rhs)
-        assertIs<BreakStatement>(statementBlock[8])
+        assertIs<Break>(statementBlock[8])
 
-        assertIs<CaseStatement>(statementBlock[9])
-        assertIs<BreakStatement>(statementBlock[11])
-        assertIs<CaseStatement>(statementBlock[12])
-        assertIs<BreakStatement>(statementBlock[14])
-        assertIs<CaseStatement>(statementBlock[15])
-        assertIs<BreakStatement>(statementBlock[17])
-        assertIs<CaseStatement>(statementBlock[18])
-        assertIs<BreakStatement>(statementBlock[20])
-        assertIs<CaseStatement>(statementBlock[21])
-        assertIs<BreakStatement>(statementBlock[23])
-        assertIs<CaseStatement>(statementBlock[24])
-        assertIs<BreakStatement>(statementBlock[26])
+        assertIs<Case>(statementBlock[9])
+        assertIs<Break>(statementBlock[11])
+        assertIs<Case>(statementBlock[12])
+        assertIs<Break>(statementBlock[14])
+        assertIs<Case>(statementBlock[15])
+        assertIs<Break>(statementBlock[17])
+        assertIs<Case>(statementBlock[18])
+        assertIs<Break>(statementBlock[20])
+        assertIs<Case>(statementBlock[21])
+        assertIs<Break>(statementBlock[23])
+        assertIs<Case>(statementBlock[24])
+        assertIs<Break>(statementBlock[26])
 
         val caseOr = statementBlock[27]
-        assertIs<CaseStatement>(caseOr)
+        assertIs<Case>(caseOr)
         val orExpr = caseOr.caseExpression
         assertIs<BinaryOperator>(orExpr)
         assertEquals("or", orExpr.operatorCode)
         assertIs<BinaryOperator>(orExpr.lhs)
         assertIs<BinaryOperator>(orExpr.rhs)
-        assertIs<BreakStatement>(statementBlock[29])
+        assertIs<Break>(statementBlock[29])
 
         val caseDefault = statementBlock[30]
-        assertIs<DefaultStatement>(caseDefault)
-        assertIs<BreakStatement>(statementBlock[32])
+        assertIs<Default>(caseDefault)
+        assertIs<Break>(statementBlock[32])
     }
 
     @Test
@@ -289,7 +289,7 @@ class MatchTest {
         val statementBlock = switchStatement.statement
         assertIs<Block>(statementBlock)
         val case = statementBlock[0]
-        assertIs<CaseStatement>(case)
+        assertIs<Case>(case)
         assertIs<ProblemExpression>(case.caseExpression)
     }
 }

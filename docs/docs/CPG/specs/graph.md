@@ -108,23 +108,23 @@ isInferred : boolean
 <span class="classLabel">[Statement](#estatement)</span>
 
 ### Children
-<span class="child">[AssertStatement](#eassertstatement)</span>
-<span class="child">[LoopStatement](#eloopstatement)</span>
+<span class="child">[Assert](#eassert)</span>
+<span class="child">[Loop](#eloop)</span>
 <span class="child">[Expression](#eexpression)</span>
-<span class="child">[CaseStatement](#ecasestatement)</span>
-<span class="child">[ReturnStatement](#ereturnstatement)</span>
-<span class="child">[LabelStatement](#elabelstatement)</span>
-<span class="child">[EmptyStatement](#eemptystatement)</span>
-<span class="child">[IfStatement](#eifstatement)</span>
+<span class="child">[Case](#ecase)</span>
+<span class="child">[Return](#ereturn)</span>
+<span class="child">[Label](#elabel)</span>
+<span class="child">[Empty](#eempty)</span>
+<span class="child">[If](#eif)</span>
 <span class="child">[CatchClause](#ecatchclause)</span>
-<span class="child">[SwitchStatement](#eswitchstatement)</span>
-<span class="child">[GotoStatement](#egotostatement)</span>
-<span class="child">[ContinueStatement](#econtinuestatement)</span>
-<span class="child">[DefaultStatement](#edefaultstatement)</span>
-<span class="child">[SynchronizedStatement](#esynchronizedstatement)</span>
-<span class="child">[TryStatement](#etrystatement)</span>
-<span class="child">[BreakStatement](#ebreakstatement)</span>
-<span class="child">[LookupScopeStatement](#elookupscopestatement)</span>
+<span class="child">[Switch](#eswitch)</span>
+<span class="child">[Goto](#egoto)</span>
+<span class="child">[Continue](#econtinue)</span>
+<span class="child">[Default](#edefault)</span>
+<span class="child">[Synchronized](#esynchronized)</span>
+<span class="child">[Try](#etry)</span>
+<span class="child">[Break](#ebreak)</span>
+<span class="child">[LookupScope](#elookupscope)</span>
 <span class="child">[DeclarationStatement](#edeclarationstatement)</span>
 
 ### Relationships
@@ -193,14 +193,14 @@ Statement--"LOCALS¹"-->StatementLOCALS[<a href='#evaluedeclaration'>ValueDeclar
 
 </div>
 
-## AssertStatement<a id="eassertstatement"></a>
+## Assert<a id="eassert"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[AssertStatement](#eassertstatement)</span>
+<span class="classLabel">[Assert](#eassert)</span>
 
 ### Relationships
-<span class="relationship">[MESSAGE](#AssertStatementMESSAGE)</span>
-<span class="relationship">[CONDITION](#AssertStatementCONDITION)</span>
+<span class="relationship">[MESSAGE](#AssertMESSAGE)</span>
+<span class="relationship">[CONDITION](#AssertCONDITION)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -224,17 +224,17 @@ Statement--"LOCALS¹"-->StatementLOCALS[<a href='#evaluedeclaration'>ValueDeclar
 
 </div>
 
-#### MESSAGE<a id="AssertStatementMESSAGE"></a>
+#### MESSAGE<a id="AssertMESSAGE"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-AssertStatement--"MESSAGE¹"-->AssertStatementMESSAGE[<a href='#estatement'>Statement</a>]:::outer
+Assert--"MESSAGE¹"-->AssertMESSAGE[<a href='#estatement'>Statement</a>]:::outer
 ```
-#### CONDITION<a id="AssertStatementCONDITION"></a>
+#### CONDITION<a id="AssertCONDITION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-AssertStatement--"CONDITION¹"-->AssertStatementCONDITION[<a href='#eexpression'>Expression</a>]:::outer
+Assert--"CONDITION¹"-->AssertCONDITION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -273,20 +273,20 @@ AssertStatement--"CONDITION¹"-->AssertStatementCONDITION[<a href='#eexpression'
 
 </div>
 
-## LoopStatement<a id="eloopstatement"></a>
+## Loop<a id="eloop"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[LoopStatement](#eloopstatement)</span>
+<span class="classLabel">[Loop](#eloop)</span>
 
 ### Children
-<span class="child">[DoStatement](#edostatement)</span>
-<span class="child">[ForStatement](#eforstatement)</span>
-<span class="child">[WhileStatement](#ewhilestatement)</span>
-<span class="child">[ForEachStatement](#eforeachstatement)</span>
+<span class="child">[Do](#edo)</span>
+<span class="child">[For](#efor)</span>
+<span class="child">[While](#ewhile)</span>
+<span class="child">[ForEach](#eforeach)</span>
 
 ### Relationships
-<span class="relationship">[ELSE_STATEMENT](#LoopStatementELSE_STATEMENT)</span>
-<span class="relationship">[STATEMENT](#LoopStatementSTATEMENT)</span>
+<span class="relationship">[ELSE_STATEMENT](#LoopELSE_STATEMENT)</span>
+<span class="relationship">[STATEMENT](#LoopSTATEMENT)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -310,17 +310,17 @@ AssertStatement--"CONDITION¹"-->AssertStatementCONDITION[<a href='#eexpression'
 
 </div>
 
-#### ELSE_STATEMENT<a id="LoopStatementELSE_STATEMENT"></a>
+#### ELSE_STATEMENT<a id="LoopELSE_STATEMENT"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-LoopStatement--"ELSE_STATEMENT¹"-->LoopStatementELSE_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
+Loop--"ELSE_STATEMENT¹"-->LoopELSE_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
 ```
-#### STATEMENT<a id="LoopStatementSTATEMENT"></a>
+#### STATEMENT<a id="LoopSTATEMENT"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-LoopStatement--"STATEMENT¹"-->LoopStatementSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
+Loop--"STATEMENT¹"-->LoopSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -359,20 +359,20 @@ LoopStatement--"STATEMENT¹"-->LoopStatementSTATEMENT[<a href='#estatement'>Stat
 
 </div>
 
-## DoStatement<a id="edostatement"></a>
+## Do<a id="edo"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="superclassLabel">[LoopStatement](#eloopstatement)</span>
-<span class="classLabel">[DoStatement](#edostatement)</span>
+<span class="superclassLabel">[Loop](#eloop)</span>
+<span class="classLabel">[Do](#edo)</span>
 
 ### Relationships
-<span class="relationship">[CONDITION](#DoStatementCONDITION)</span>
+<span class="relationship">[CONDITION](#DoCONDITION)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
-    <span class="inherited-relationship">[ELSE_STATEMENT](#LoopStatementELSE_STATEMENT)</span>
+    <span class="inherited-relationship">[ELSE_STATEMENT](#LoopELSE_STATEMENT)</span>
 
-    <span class="inherited-relationship">[STATEMENT](#LoopStatementSTATEMENT)</span>
+    <span class="inherited-relationship">[STATEMENT](#LoopSTATEMENT)</span>
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
@@ -394,11 +394,11 @@ LoopStatement--"STATEMENT¹"-->LoopStatementSTATEMENT[<a href='#estatement'>Stat
 
 </div>
 
-#### CONDITION<a id="DoStatementCONDITION"></a>
+#### CONDITION<a id="DoCONDITION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-DoStatement--"CONDITION¹"-->DoStatementCONDITION[<a href='#eexpression'>Expression</a>]:::outer
+Do--"CONDITION¹"-->DoCONDITION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -437,23 +437,23 @@ DoStatement--"CONDITION¹"-->DoStatementCONDITION[<a href='#eexpression'>Express
 
 </div>
 
-## ForStatement<a id="eforstatement"></a>
+## For<a id="efor"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="superclassLabel">[LoopStatement](#eloopstatement)</span>
-<span class="classLabel">[ForStatement](#eforstatement)</span>
+<span class="superclassLabel">[Loop](#eloop)</span>
+<span class="classLabel">[For](#efor)</span>
 
 ### Relationships
-<span class="relationship">[CONDITION_DECLARATION](#ForStatementCONDITION_DECLARATION)</span>
-<span class="relationship">[CONDITION](#ForStatementCONDITION)</span>
-<span class="relationship">[ITERATION_STATEMENT](#ForStatementITERATION_STATEMENT)</span>
-<span class="relationship">[INITIALIZER_STATEMENT](#ForStatementINITIALIZER_STATEMENT)</span>
+<span class="relationship">[CONDITION_DECLARATION](#ForCONDITION_DECLARATION)</span>
+<span class="relationship">[CONDITION](#ForCONDITION)</span>
+<span class="relationship">[ITERATION_STATEMENT](#ForITERATION_STATEMENT)</span>
+<span class="relationship">[INITIALIZER_STATEMENT](#ForINITIALIZER_STATEMENT)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
-    <span class="inherited-relationship">[ELSE_STATEMENT](#LoopStatementELSE_STATEMENT)</span>
+    <span class="inherited-relationship">[ELSE_STATEMENT](#LoopELSE_STATEMENT)</span>
 
-    <span class="inherited-relationship">[STATEMENT](#LoopStatementSTATEMENT)</span>
+    <span class="inherited-relationship">[STATEMENT](#LoopSTATEMENT)</span>
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
@@ -475,29 +475,29 @@ DoStatement--"CONDITION¹"-->DoStatementCONDITION[<a href='#eexpression'>Express
 
 </div>
 
-#### CONDITION_DECLARATION<a id="ForStatementCONDITION_DECLARATION"></a>
+#### CONDITION_DECLARATION<a id="ForCONDITION_DECLARATION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ForStatement--"CONDITION_DECLARATION¹"-->ForStatementCONDITION_DECLARATION[<a href='#edeclaration'>Declaration</a>]:::outer
+For--"CONDITION_DECLARATION¹"-->ForCONDITION_DECLARATION[<a href='#edeclaration'>Declaration</a>]:::outer
 ```
-#### CONDITION<a id="ForStatementCONDITION"></a>
+#### CONDITION<a id="ForCONDITION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ForStatement--"CONDITION¹"-->ForStatementCONDITION[<a href='#eexpression'>Expression</a>]:::outer
+For--"CONDITION¹"-->ForCONDITION[<a href='#eexpression'>Expression</a>]:::outer
 ```
-#### ITERATION_STATEMENT<a id="ForStatementITERATION_STATEMENT"></a>
+#### ITERATION_STATEMENT<a id="ForITERATION_STATEMENT"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ForStatement--"ITERATION_STATEMENT¹"-->ForStatementITERATION_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
+For--"ITERATION_STATEMENT¹"-->ForITERATION_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
 ```
-#### INITIALIZER_STATEMENT<a id="ForStatementINITIALIZER_STATEMENT"></a>
+#### INITIALIZER_STATEMENT<a id="ForINITIALIZER_STATEMENT"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ForStatement--"INITIALIZER_STATEMENT¹"-->ForStatementINITIALIZER_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
+For--"INITIALIZER_STATEMENT¹"-->ForINITIALIZER_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -536,21 +536,21 @@ ForStatement--"INITIALIZER_STATEMENT¹"-->ForStatementINITIALIZER_STATEMENT[<a h
 
 </div>
 
-## WhileStatement<a id="ewhilestatement"></a>
+## While<a id="ewhile"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="superclassLabel">[LoopStatement](#eloopstatement)</span>
-<span class="classLabel">[WhileStatement](#ewhilestatement)</span>
+<span class="superclassLabel">[Loop](#eloop)</span>
+<span class="classLabel">[While](#ewhile)</span>
 
 ### Relationships
-<span class="relationship">[CONDITION_DECLARATION](#WhileStatementCONDITION_DECLARATION)</span>
-<span class="relationship">[CONDITION](#WhileStatementCONDITION)</span>
+<span class="relationship">[CONDITION_DECLARATION](#WhileCONDITION_DECLARATION)</span>
+<span class="relationship">[CONDITION](#WhileCONDITION)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
-    <span class="inherited-relationship">[ELSE_STATEMENT](#LoopStatementELSE_STATEMENT)</span>
+    <span class="inherited-relationship">[ELSE_STATEMENT](#LoopELSE_STATEMENT)</span>
 
-    <span class="inherited-relationship">[STATEMENT](#LoopStatementSTATEMENT)</span>
+    <span class="inherited-relationship">[STATEMENT](#LoopSTATEMENT)</span>
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
@@ -572,17 +572,17 @@ ForStatement--"INITIALIZER_STATEMENT¹"-->ForStatementINITIALIZER_STATEMENT[<a h
 
 </div>
 
-#### CONDITION_DECLARATION<a id="WhileStatementCONDITION_DECLARATION"></a>
+#### CONDITION_DECLARATION<a id="WhileCONDITION_DECLARATION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-WhileStatement--"CONDITION_DECLARATION¹"-->WhileStatementCONDITION_DECLARATION[<a href='#edeclaration'>Declaration</a>]:::outer
+While--"CONDITION_DECLARATION¹"-->WhileCONDITION_DECLARATION[<a href='#edeclaration'>Declaration</a>]:::outer
 ```
-#### CONDITION<a id="WhileStatementCONDITION"></a>
+#### CONDITION<a id="WhileCONDITION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-WhileStatement--"CONDITION¹"-->WhileStatementCONDITION[<a href='#eexpression'>Expression</a>]:::outer
+While--"CONDITION¹"-->WhileCONDITION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -621,21 +621,21 @@ WhileStatement--"CONDITION¹"-->WhileStatementCONDITION[<a href='#eexpression'>E
 
 </div>
 
-## ForEachStatement<a id="eforeachstatement"></a>
+## ForEach<a id="eforeach"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="superclassLabel">[LoopStatement](#eloopstatement)</span>
-<span class="classLabel">[ForEachStatement](#eforeachstatement)</span>
+<span class="superclassLabel">[Loop](#eloop)</span>
+<span class="classLabel">[ForEach](#eforeach)</span>
 
 ### Relationships
-<span class="relationship">[ITERABLE](#ForEachStatementITERABLE)</span>
-<span class="relationship">[VARIABLE](#ForEachStatementVARIABLE)</span>
+<span class="relationship">[ITERABLE](#ForEachITERABLE)</span>
+<span class="relationship">[VARIABLE](#ForEachVARIABLE)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
-    <span class="inherited-relationship">[ELSE_STATEMENT](#LoopStatementELSE_STATEMENT)</span>
+    <span class="inherited-relationship">[ELSE_STATEMENT](#LoopELSE_STATEMENT)</span>
 
-    <span class="inherited-relationship">[STATEMENT](#LoopStatementSTATEMENT)</span>
+    <span class="inherited-relationship">[STATEMENT](#LoopSTATEMENT)</span>
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
@@ -657,17 +657,17 @@ WhileStatement--"CONDITION¹"-->WhileStatementCONDITION[<a href='#eexpression'>E
 
 </div>
 
-#### ITERABLE<a id="ForEachStatementITERABLE"></a>
+#### ITERABLE<a id="ForEachITERABLE"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ForEachStatement--"ITERABLE¹"-->ForEachStatementITERABLE[<a href='#estatement'>Statement</a>]:::outer
+ForEach--"ITERABLE¹"-->ForEachITERABLE[<a href='#estatement'>Statement</a>]:::outer
 ```
-#### VARIABLE<a id="ForEachStatementVARIABLE"></a>
+#### VARIABLE<a id="ForEachVARIABLE"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ForEachStatement--"VARIABLE¹"-->ForEachStatementVARIABLE[<a href='#estatement'>Statement</a>]:::outer
+ForEach--"VARIABLE¹"-->ForEachVARIABLE[<a href='#estatement'>Statement</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -3401,13 +3401,13 @@ ExpressionList--"SUBEXPR¹"-->ExpressionListSUBEXPR[<a href='#estatement'>Statem
 
 </div>
 
-## CaseStatement<a id="ecasestatement"></a>
+## Case<a id="ecase"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[CaseStatement](#ecasestatement)</span>
+<span class="classLabel">[Case](#ecase)</span>
 
 ### Relationships
-<span class="relationship">[CASE_EXPRESSION](#CaseStatementCASE_EXPRESSION)</span>
+<span class="relationship">[CASE_EXPRESSION](#CaseCASE_EXPRESSION)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -3431,11 +3431,11 @@ ExpressionList--"SUBEXPR¹"-->ExpressionListSUBEXPR[<a href='#estatement'>Statem
 
 </div>
 
-#### CASE_EXPRESSION<a id="CaseStatementCASE_EXPRESSION"></a>
+#### CASE_EXPRESSION<a id="CaseCASE_EXPRESSION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-CaseStatement--"CASE_EXPRESSION¹"-->CaseStatementCASE_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
+Case--"CASE_EXPRESSION¹"-->CaseCASE_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -3474,13 +3474,13 @@ CaseStatement--"CASE_EXPRESSION¹"-->CaseStatementCASE_EXPRESSION[<a href='#eexp
 
 </div>
 
-## ReturnStatement<a id="ereturnstatement"></a>
+## Return<a id="ereturn"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[ReturnStatement](#ereturnstatement)</span>
+<span class="classLabel">[Return](#ereturn)</span>
 
 ### Relationships
-<span class="relationship">[RETURN_VALUES](#ReturnStatementRETURN_VALUES)</span>
+<span class="relationship">[RETURN_VALUES](#ReturnRETURN_VALUES)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -3504,11 +3504,11 @@ CaseStatement--"CASE_EXPRESSION¹"-->CaseStatementCASE_EXPRESSION[<a href='#eexp
 
 </div>
 
-#### RETURN_VALUES<a id="ReturnStatementRETURN_VALUES"></a>
+#### RETURN_VALUES<a id="ReturnRETURN_VALUES"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ReturnStatement--"RETURN_VALUES¹"-->ReturnStatementRETURN_VALUES[<a href='#eexpression'>Expression</a>]:::outer
+Return--"RETURN_VALUES¹"-->ReturnRETURN_VALUES[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -3547,13 +3547,13 @@ ReturnStatement--"RETURN_VALUES¹"-->ReturnStatementRETURN_VALUES[<a href='#eexp
 
 </div>
 
-## LabelStatement<a id="elabelstatement"></a>
+## Label<a id="elabel"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[LabelStatement](#elabelstatement)</span>
+<span class="classLabel">[Label](#elabel)</span>
 
 ### Relationships
-<span class="relationship">[SUB_STATEMENT](#LabelStatementSUB_STATEMENT)</span>
+<span class="relationship">[SUB_STATEMENT](#LabelSUB_STATEMENT)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -3577,11 +3577,11 @@ ReturnStatement--"RETURN_VALUES¹"-->ReturnStatementRETURN_VALUES[<a href='#eexp
 
 </div>
 
-#### SUB_STATEMENT<a id="LabelStatementSUB_STATEMENT"></a>
+#### SUB_STATEMENT<a id="LabelSUB_STATEMENT"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-LabelStatement--"SUB_STATEMENT¹"-->LabelStatementSUB_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
+Label--"SUB_STATEMENT¹"-->LabelSUB_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
 ```
 ### Properties
 label : String
@@ -3622,10 +3622,10 @@ label : String
 
 </div>
 
-## EmptyStatement<a id="eemptystatement"></a>
+## Empty<a id="eempty"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[EmptyStatement](#eemptystatement)</span>
+<span class="classLabel">[Empty](#eempty)</span>
 
 ### Relationships
 <div class="papers" markdown>
@@ -3965,13 +3965,13 @@ SwitchStatement--"SELECTOR_DECLARATION¹"-->SwitchStatementSELECTOR_DECLARATION[
 
 </div>
 
-## GotoStatement<a id="egotostatement"></a>
+## Goto<a id="egoto"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[GotoStatement](#egotostatement)</span>
+<span class="classLabel">[Goto](#egoto)</span>
 
 ### Relationships
-<span class="relationship">[TARGET_LABEL](#GotoStatementTARGET_LABEL)</span>
+<span class="relationship">[TARGET_LABEL](#GotoTARGET_LABEL)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -3995,11 +3995,11 @@ SwitchStatement--"SELECTOR_DECLARATION¹"-->SwitchStatementSELECTOR_DECLARATION[
 
 </div>
 
-#### TARGET_LABEL<a id="GotoStatementTARGET_LABEL"></a>
+#### TARGET_LABEL<a id="GotoTARGET_LABEL"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-GotoStatement--"TARGET_LABEL¹"-->GotoStatementTARGET_LABEL[<a href='#elabelstatement'>LabelStatement</a>]:::outer
+Goto--"TARGET_LABEL¹"-->GotoTARGET_LABEL[<a href='#elabel'>Label</a>]:::outer
 ```
 ### Properties
 labelName : String
@@ -4040,10 +4040,10 @@ labelName : String
 
 </div>
 
-## ContinueStatement<a id="econtinuestatement"></a>
+## Continue<a id="econtinuet"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[ContinueStatement](#econtinuestatement)</span>
+<span class="classLabel">[Continue](#econtinue)</span>
 
 ### Relationships
 <div class="papers" markdown>
@@ -4108,10 +4108,10 @@ label : String
 
 </div>
 
-## DefaultStatement<a id="edefaultstatement"></a>
+## Default<a id="edefault"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[DefaultStatement](#edefaultstatement)</span>
+<span class="classLabel">[Default](#edefault)</span>
 
 ### Relationships
 <div class="papers" markdown>
@@ -4174,14 +4174,14 @@ label : String
 
 </div>
 
-## SynchronizedStatement<a id="esynchronizedstatement"></a>
+## Synchronized<a id="esynchronized"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[SynchronizedStatement](#esynchronizedstatement)</span>
+<span class="classLabel">[Synchronized](#esynchronized)</span>
 
 ### Relationships
-<span class="relationship">[BLOCK](#SynchronizedStatementBLOCK)</span>
-<span class="relationship">[EXPRESSION](#SynchronizedStatementEXPRESSION)</span>
+<span class="relationship">[BLOCK](#SynchronizedBLOCK)</span>
+<span class="relationship">[EXPRESSION](#SynchronizedEXPRESSION)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -4205,17 +4205,17 @@ label : String
 
 </div>
 
-#### BLOCK<a id="SynchronizedStatementBLOCK"></a>
+#### BLOCK<a id="SynchronizedBLOCK"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-SynchronizedStatement--"BLOCK¹"-->SynchronizedStatementBLOCK[<a href='#eblock'>Block</a>]:::outer
+Synchronized--"BLOCK¹"-->SynchronizedBLOCK[<a href='#eblock'>Block</a>]:::outer
 ```
-#### EXPRESSION<a id="SynchronizedStatementEXPRESSION"></a>
+#### EXPRESSION<a id="SynchronizedEXPRESSION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-SynchronizedStatement--"EXPRESSION¹"-->SynchronizedStatementEXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
+Synchronized--"EXPRESSION¹"-->SynchronizedEXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -4254,10 +4254,10 @@ SynchronizedStatement--"EXPRESSION¹"-->SynchronizedStatementEXPRESSION[<a href=
 
 </div>
 
-## TryStatement<a id="etrystatement"></a>
+## Try<a id="etry"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[TryStatement](#etrystatement)</span>
+<span class="classLabel">[Try](#etry)</span>
 
 ### Relationships
 <span class="relationship">[RESOURCES](#TryStatementRESOURCES)</span>
@@ -4355,10 +4355,10 @@ TryStatement--"CATCH_CLAUSES¹"-->TryStatementCATCH_CLAUSES[<a href='#ecatchclau
 
 </div>
 
-## BreakStatement<a id="ebreakstatement"></a>
+## Break<a id="ebreak"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[BreakStatement](#ebreakstatement)</span>
+<span class="classLabel">[Break](#ebreak)</span>
 
 ### Relationships
 <div class="papers" markdown>
@@ -4423,13 +4423,13 @@ label : String
 
 </div>
 
-## LookupScopeStatement<a id="elookupscopestatement"></a>
+## LookupScope<a id="elookupscope"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[LookupScopeStatement](#elookupscopestatement)</span>
+<span class="classLabel">[LookupScope](#elookupscope)</span>
 
 ### Relationships
-<span class="relationship">[TARGET_SCOPE](#LookupScopeStatementTARGET_SCOPE)</span>
+<span class="relationship">[TARGET_SCOPE](#LookupScopeTARGET_SCOPE)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -4453,11 +4453,11 @@ label : String
 
 </div>
 
-#### TARGET_SCOPE<a id="LookupScopeStatementTARGET_SCOPE"></a>
+#### TARGET_SCOPE<a id="LookupScopeTARGET_SCOPE"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-LookupScopeStatement--"TARGET_SCOPE¹"-->LookupScopeStatementTARGET_SCOPE[<a href='#escope'>Scope</a>]:::outer
+LookupScope--"TARGET_SCOPE¹"-->LookupScopeTARGET_SCOPE[<a href='#escope'>Scope</a>]:::outer
 ```
 ### Properties
 symbols : List

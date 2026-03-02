@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
@@ -637,7 +637,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                     return holder.rhs.type
                 }
             }
-            is ReturnStatement -> {
+            is Return -> {
                 // If this is part of a return statement, we can take the return type
                 val func = hint.firstParentOrNull<Function>()
                 val returnTypes = func?.returnTypes

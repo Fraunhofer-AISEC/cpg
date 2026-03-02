@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.newLookupScopeStatement
+import de.fraunhofer.aisec.cpg.graph.newLookupScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -40,10 +40,10 @@ import java.util.Objects
  * (or the information therein) to [Scope.predefinedLookupScopes]. The reason for this is that we
  * want to avoid AST traversals in the scope/identifier lookup.
  *
- * The [newLookupScopeStatement] node builder will add this automatically, so it is STRONGLY
- * encouraged that the node builder is used instead of creating the node itself.
+ * The [newLookupScope] node builder will add this automatically, so it is STRONGLY encouraged that
+ * the node builder is used instead of creating the node itself.
  */
-class LookupScopeStatement : Statement() {
+class LookupScope : Statement() {
 
     /** The symbols this statement affects. */
     var symbols: List<Symbol> = listOf()
@@ -53,7 +53,7 @@ class LookupScopeStatement : Statement() {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is LookupScopeStatement) return false
+        if (other !is LookupScope) return false
         return super.equals(other) && symbols == other.symbols && targetScope == other.targetScope
     }
 
