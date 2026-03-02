@@ -103,7 +103,7 @@ open class BinaryOperator :
     }
 
     override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
-        // TODO: replicate something similar like propagateTypeOfBinaryOperation for assigned types
+        addAssignedTypes(language.propagateAssignedTypesOfBinaryOperation(operatorCode, lhs, rhs))
     }
 
     /** The binary operator operators on the [lhs]. [rhs] is part of the [operatorArguments]. */

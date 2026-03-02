@@ -34,9 +34,11 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -254,27 +256,36 @@ open class PythonLanguage :
              * - `x and y` returns `x` if `x` is falsy, else `y`.
              *
              * Since we cannot determine the boolean value of `x`, one of the operands could be
-             * returned. Thus, we return `lhsType` if both operands have the same type. If either
-             * side is dynamic, `DynamicType` is returned, and otherwise fall back to
-             * `unknownType()`.
+             * returned. We return `lhsType` if both sides have the same type, otherwise we fall
+             * back to `unknownType()`. The concrete possible types are tracked via
+             * [HasType.assignedTypes] in [propagateAssignedTypesOfBinaryOperation], with which we
+             * model `union types` here.
              *
              * See https://docs.python.org/3/reference/expressions.html#boolean-operations
              * *
              */
-            //            "or",
-            //            "and" -> {
-            //                return when {
-            //                    lhsType == rhsType -> lhsType
-            //                    lhsType is UnknownType || rhsType is UnknownType -> lhsType
-            //                    lhsType is DynamicType || rhsType is DynamicType ->
-            // DynamicType(this)
-            //                    else -> unknownType()
-            //                }
-            //            }
+            "or",
+            "and" -> {
+                return if (lhsType == rhsType) lhsType else unknownType()
+            }
 
             // The rest behaves like other languages
             else ->
                 return super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
+        }
+    }
+
+    override fun propagateAssignedTypesOfBinaryOperation(
+        operatorCode: String?,
+        lhs: Expression,
+        rhs: Expression,
+    ): Set<Type> {
+        // Python's "or" and "and" can return either operand at runtime, so we merge the
+        // assignedTypes of both sides.
+        return when (operatorCode) {
+            "or",
+            "and" -> lhs.assignedTypes + rhs.assignedTypes
+            else -> emptySet()
         }
     }
 

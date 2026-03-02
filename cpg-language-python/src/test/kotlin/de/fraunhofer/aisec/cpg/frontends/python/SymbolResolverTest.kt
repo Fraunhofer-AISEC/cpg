@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
-import de.fraunhofer.aisec.cpg.graph.types.DynamicType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertFullName
@@ -178,8 +177,11 @@ class SymbolResolverTest {
         val clientField = serviceClass.fields["client"]
         assertIs<Field>(clientField)
 
-        val fieldType = clientField.type
-        assertIs<DynamicType>(fieldType)
+        val clientType =
+            clientField.assignedTypes.filterIsInstance<ObjectType>().firstOrNull {
+                it.name.localName == "Client"
+            }
+        assertNotNull(clientType)
 
         val sendMethod = clientClass.methods["send"]
         assertNotNull(sendMethod)

@@ -52,6 +52,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -265,6 +266,22 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
                 }
             else -> unknownType() // We don't know what is this thing
         }
+    }
+
+    /**
+     * Determines how to propagate [HasType.assignedTypes] across binary operations. Returns a
+     * merged set of types if the operator requires special handling (e.g., operators where the left
+     * or the right operand can be the result at runtime), or an empty set if no special handling is
+     * needed.
+     *
+     * Languages can override this to handle language-specific operators.
+     */
+    open fun propagateAssignedTypesOfBinaryOperation(
+        operatorCode: String?,
+        lhs: Expression,
+        rhs: Expression,
+    ): Set<Type> {
+        return emptySet()
     }
 
     /**
