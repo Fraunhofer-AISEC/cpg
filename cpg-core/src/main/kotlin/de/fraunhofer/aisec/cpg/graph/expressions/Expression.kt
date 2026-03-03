@@ -45,8 +45,8 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
-import org.apache.commons.lang3.builder.ToStringBuilder
 import java.util.*
+import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
@@ -59,8 +59,8 @@ import org.neo4j.ogm.annotation.Transient
 abstract class Statement : AstNode(), DeclarationHolder, HasType {
 
     /**
-     * Per default, expressions only read Data. The access value can be changed to modify
-     * this modeling and determine the dataflow direction
+     * Per default, expressions only read Data. The access value can be changed to modify this
+     * modeling and determine the dataflow direction
      */
     open var access: AccessValues = AccessValues.READ
 
@@ -78,19 +78,16 @@ abstract class Statement : AstNode(), DeclarationHolder, HasType {
     var locals by unwrapping(Statement::localEdges)
 
     /**
-     * This property specifies that this node is used as an expression. Depending on the language, an expression can
-     * be terminated by a ";" or a newline to be a statement. Meanwhile, some languages allow using what normally is
-     * considered a statement, as an expression with a normal or an empty value and type. Depending on the node, type
-     * the default will be true or false.
+     * This property specifies that this node is used as an expression. Depending on the language,
+     * an expression can be terminated by a ";" or a newline to be a statement. Meanwhile, some
+     * languages allow using what normally is considered a statement, as an expression with a normal
+     * or an empty value and type. Depending on the node, type the default will be true or false.
      */
     open var usedAsExpression = true
 
-
     @DoNotPersist override var observerEnabled: Boolean = true
 
-
     @Transient override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
-
 
     override var language: Language<*> = UnknownLanguage
         set(value) {
@@ -141,8 +138,8 @@ abstract class Statement : AstNode(), DeclarationHolder, HasType {
         if (other !is Statement) return false
         return super.equals(other) &&
             locals == other.locals &&
-            propertyEqualsList(localEdges, other.localEdges)
-            && type == other.type
+            propertyEqualsList(localEdges, other.localEdges) &&
+            type == other.type
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), locals)
