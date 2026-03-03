@@ -80,7 +80,7 @@ class WithStatementTest : BaseTest() {
         val blockStmts =
             result.statements.filterIsInstance<Block>().filter { it.astParent is Namespace }
 
-        val ref = result.refs["contextManager_00000000-11a2-7efe-ffff-ffffbf8aaab8"]
+        val ref = result.refs["contextManager_00000000-11a2-7efe-0000-00000958dca6"]
         assertNotNull(
             ref,
             "Expected to find a reference to the context manager with a deterministic ID.",

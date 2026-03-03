@@ -118,7 +118,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         // loop through children
         for (childNode in node.children ?: emptyList()) {
             // filter for statements (not sure if this is really sufficient)
-            if (childNode.type.endsWith("Expression")) {
+            if (childNode.type.endsWith("Statement")) {
                 val statement = this.frontend.statementHandler.handle(childNode)
 
                 statement?.let { tu.statements += it }
