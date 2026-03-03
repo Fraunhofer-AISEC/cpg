@@ -69,6 +69,43 @@ export interface EdgeJSON {
   end: string;
 }
 
+// MCP capabilities
+export interface McpToolInfo {
+  name: string;
+  description?: string;
+  inputSchema?: {
+    properties?: Record<string, any>;
+    required?: string[];
+  };
+}
+
+export interface McpPromptArgument {
+  name: string;
+  description?: string;
+  required?: boolean;
+}
+
+export interface McpPromptInfo {
+  name: string;
+  description?: string;
+  arguments?: McpPromptArgument[];
+}
+
+export interface McpResourceInfo {
+  uri: string;
+  name?: string;
+  description?: string;
+  mimeType?: string;
+}
+
+export interface McpCapabilities {
+  serverName: string;
+  serverVersion: string;
+  tools: McpToolInfo[];
+  prompts: McpPromptInfo[];
+  resources: McpResourceInfo[];
+}
+
 // AI Agent / Chat interfaces
 export interface LLMMessage {
   role: 'user' | 'assistant' | 'system';

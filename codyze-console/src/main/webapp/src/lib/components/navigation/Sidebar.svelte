@@ -36,7 +36,7 @@
     { name: 'Dashboard', path: '/dashboard', icon: 'home', disabled: false },
     { name: 'Requirements', path: '/requirements', icon: 'clipboard-check', disabled: false },
     { name: 'Components', path: '/components', icon: 'code', disabled: false },
-    { name: 'Agent', path: '/ai-agent', icon: 'robot', disabled: !mcpEnabled }
+    { name: 'Agent', path: '/chat', icon: 'robot', disabled: !mcpEnabled }
   ]);
 
   let currentPath = $derived($page.url.pathname);

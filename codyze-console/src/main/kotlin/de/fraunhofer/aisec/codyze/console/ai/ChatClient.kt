@@ -48,13 +48,78 @@ class ChatClient(
         )
 
     private var tools: List<Tool> = emptyList()
+    private var prompts: List<Prompt> = emptyList()
+    private var resources: List<Resource> = emptyList()
 
     /** Connect to the MCP server via SSE */
     suspend fun connect() {
         val transport = SseClientTransport(urlString = mcpServerUrl, client = httpClient)
         mcp.connect(transport)
-        val toolsResult = mcp.listTools()
-        tools = toolsResult.tools
+        tools = mcp.listTools().tools
+        prompts = mcp.listPrompts().prompts
+        resources = mcp.listResources().resources
+    }
+
+    /** Return all MCP capabilities */
+    fun getCapabilities(): McpCapabilitiesJSON =
+        McpCapabilitiesJSON(
+            serverName = mcp.serverVersion?.name ?: "MCP Server",
+            serverVersion = mcp.serverVersion?.version ?: "",
+            tools =
+                tools.map { tool ->
+                    ToolInfoJSON(
+                        name = tool.name,
+                        description = tool.description,
+                        inputSchema =
+                            ToolSchemaJSON(
+                                properties = tool.inputSchema.properties,
+                                required = tool.inputSchema.required,
+                            ),
+                    )
+                },
+            prompts =
+                prompts.map { prompt ->
+                    PromptInfoJSON(
+                        name = prompt.name,
+                        description = prompt.description,
+                        arguments =
+                            prompt.arguments?.map { arg ->
+                                PromptArgumentJSON(
+                                    name = arg.name,
+                                    description = arg.description,
+                                    required = arg.required,
+                                )
+                            },
+                    )
+                },
+            resources =
+                resources.map { resource ->
+                    ResourceInfoJSON(
+                        uri = resource.uri,
+                        name = resource.name,
+                        description = resource.description,
+                        mimeType = resource.mimeType,
+                    )
+                },
+        )
+
+    /** Resolve a named MCP prompt and return its messages as [ChatMessageJSON]. */
+    suspend fun getPrompt(
+        name: String,
+        arguments: Map<String, String> = emptyMap(),
+    ): List<ChatMessageJSON> {
+        val result =
+            mcp.getPrompt(
+                GetPromptRequest(
+                    GetPromptRequestParams(name = name, arguments = arguments.ifEmpty { null })
+                )
+            )
+        return result.messages.map { msg ->
+            ChatMessageJSON(
+                role = if (msg.role == Role.User) "user" else "assistant",
+                content = (msg.content as? TextContent)?.text ?: "",
+            )
+        }
     }
 
     /** Maximum number of tool call iterations before forcing a text response. */

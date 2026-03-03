@@ -92,6 +92,11 @@ class ChatService {
         return chatClient.chat(request)
     }
 
+    fun getCapabilities(): McpCapabilitiesJSON = chatClient.getCapabilities()
+
+    suspend fun getPrompt(name: String, arguments: Map<String, String>): List<ChatMessageJSON> =
+        chatClient.getPrompt(name, arguments)
+
     fun close() {
         httpClient.close()
     }
