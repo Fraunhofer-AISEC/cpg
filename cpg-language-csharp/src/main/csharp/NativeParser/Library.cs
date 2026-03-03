@@ -17,9 +17,9 @@ public static class Library
         return ptr;
     }
 
-    private static void PrintASTDump(SyntaxNode node, int indent = 0)
+    private static void PrintASTDump(SyntaxNode node, int indent = 2)
           {
-              Console.Error.WriteLine(new string(' ', indent * 2) + node.GetType().Name + ": " + node.ToString().Split('\n')[0].Trim());
+              Console.Error.WriteLine(new string(' ', indent) + node.GetType().Name + ": " + node.ToString().Split('\n')[0].Trim());
               foreach (var child in node.ChildNodes())
               PrintASTDump(child, indent + 1);
           }
