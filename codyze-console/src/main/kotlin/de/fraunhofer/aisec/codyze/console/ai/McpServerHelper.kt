@@ -40,7 +40,7 @@ object McpServerHelper {
         }
     }
 
-    fun startMcpServer(port: Int, host: String) {
+    fun startMcpServer(port: Int, host: String, wait: Boolean) {
         if (!isEnabled) {
             return
         }
@@ -48,7 +48,7 @@ object McpServerHelper {
         try {
             println("Starting MCP server on port $port...")
             val server = de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer()
-            de.fraunhofer.aisec.cpg.mcp.runSseMcpServerUsingKtorPlugin(port, host, server)
+            de.fraunhofer.aisec.cpg.mcp.runSseMcpServerUsingKtorPlugin(port, host, server, wait)
         } catch (e: Exception) {
             println("Failed to start MCP server: ${e.message}")
             e.printStackTrace()

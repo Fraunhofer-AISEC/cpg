@@ -49,7 +49,7 @@ fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
     // Start MCP server in background if enabled
     if (McpServerHelper.isEnabled) {
         runBlocking {
-            McpServerHelper.startMcpServer(8081, host)
+            McpServerHelper.startMcpServer(8081, host, false)
 
             val translationResult =
                 this@startConsole.getTranslationResult()?.analysisResult?.translationResult
