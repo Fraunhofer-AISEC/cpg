@@ -51,7 +51,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
                 is JReturnStmt -> handleReturnStmt(ctx)
                 is JReturnVoidStmt -> handleReturnVoidStmt(ctx)
                 is JThrowStmt -> handleThrow(ctx)
-                is JNopStmt -> newEmptyStatement(ctx)
+                is JNopStmt -> newEmpty(ctx)
                 else -> {
                     log.warn("Unhandled statement type: ${ctx.javaClass.simpleName}")
                     newProblemExpression(
@@ -105,7 +105,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
             if (label != null) {
                 // If we have a label, we need to create a new label statement, that starts a new
                 // block
-                val stmt = newLabelStatement()
+                val stmt = newLabel()
                 block = newBlock()
                 stmt.label = label
                 stmt.subStatement = block
@@ -139,20 +139,20 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         return assign
     }
 
-    private fun handleIfStmt(ifStmt: JIfStmt): IfStatement {
-        val stmt = newIfStatement(rawNode = ifStmt)
+    private fun handleIfStmt(ifStmt: JIfStmt): IfElse {
+        val stmt = newIfElse(rawNode = ifStmt)
         stmt.condition = frontend.expressionHandler.handle(ifStmt.condition)
         stmt.thenStatement = handleBranchingStmt(ifStmt)
 
         return stmt
     }
 
-    private fun handleGotoStmt(gotoStmt: JGotoStmt): GotoStatement {
+    private fun handleGotoStmt(gotoStmt: JGotoStmt): Goto {
         return handleBranchingStmt(gotoStmt)
     }
 
-    private fun handleBranchingStmt(branchingStmt: BranchingStmt): GotoStatement {
-        val stmt = newGotoStatement(rawNode = branchingStmt)
+    private fun handleBranchingStmt(branchingStmt: BranchingStmt): Goto {
+        val stmt = newGoto(rawNode = branchingStmt)
 
         frontend.body?.let {
             val target = branchingStmt.getTargetStmts(it).firstOrNull()
@@ -164,9 +164,9 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
             // Register a predicate listener that informs us as soon as new label statement that
             // matches our label name is created.
             frontend.registerPredicateListener({ _, to ->
-                (to is LabelStatement && to.label == stmt.labelName)
+                (to is Label && to.label == stmt.labelName)
             }) { _, to ->
-                stmt.targetLabel = to as LabelStatement
+                stmt.targetLabel = to as Label
             }
         }
 
@@ -178,13 +178,12 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
             frontend.expressionHandler.handle(invokeExpr)
         }
 
-    private fun handleReturnStmt(returnStmt: JReturnStmt): ReturnStatement {
-        val stmt = newReturnStatement(rawNode = returnStmt)
+    private fun handleReturnStmt(returnStmt: JReturnStmt): Return {
+        val stmt = newReturn(rawNode = returnStmt)
         stmt.returnValue = frontend.expressionHandler.handle(returnStmt.op)
 
         return stmt
     }
 
-    private fun handleReturnVoidStmt(returnStmt: JReturnVoidStmt) =
-        newReturnStatement(rawNode = returnStmt)
+    private fun handleReturnVoidStmt(returnStmt: JReturnVoidStmt) = newReturn(rawNode = returnStmt)
 }

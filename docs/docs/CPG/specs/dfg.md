@@ -529,7 +529,7 @@ Scheme:
     parentException -.- node;
 ```
 
-## ReturnStatement
+## Return
 
 Interesting fields:
 
@@ -540,7 +540,7 @@ The return value flows to the whole statement.
 Scheme:
 ```mermaid
   flowchart LR
-    returnValue -- DFG --> node([ReturnStatement]);
+    returnValue -- DFG --> node([Return]);
     returnValue -.- node;
 ```
 ## Branching Statements
@@ -556,7 +556,7 @@ node.
     program's behavior. This information can easily be found in the [program
     dependence graph (PDG)](./pdg).
 
-### ForEachStatement
+### ForEach
 
 Interesting fields:
 
@@ -577,7 +577,7 @@ and add the DFG from the iterable to this declaration.
 Scheme:
 ```mermaid
   flowchart LR
-    node([ForEachStatement]) -.- variable[variable: DeclarationStatement]
+    node([ForEach]) -.- variable[variable: DeclarationStatement]
     node -.- iterable[iterable]
     variable -.- declarations["declarations[i]"]
     iterable -- for all i: DFG --> declarations
@@ -591,7 +591,7 @@ looping. We add a DFG edge only to this declaration.
 Scheme:
 ```mermaid
   flowchart LR
-    node([ForEachStatement]) -.- statement[variable]
+    node([ForEach]) -.- statement[variable]
     node -.- iterable[iterable]
     statement -.- localVars[variables]
     localVars -. "last" .-> variable
@@ -599,7 +599,7 @@ Scheme:
     variable -- DFG --> node
 ```
 
-### DoStatement
+### Do
 
 Interesting fields:
 
@@ -609,29 +609,11 @@ Interesting fields:
 Scheme:
 ```mermaid
   flowchart LR
-    node([DoStatement]) -.- condition(condition)
+    node([Do]) -.- condition(condition)
     condition -- DFG --> node
 ```
 
-### WhileStatement
-
-Interesting fields:
-
-* `condition: Statement`: The condition that is evaluated before making the
-  branching decision.
-* `conditionDeclaration: Statement`: A declaration containing the condition in
-  the initializer, used instead of the condition.
-
-Scheme:
-```mermaid
-  flowchart LR
-    node([WhileStatement]) -.- condition(condition)
-    node -.- conditionDeclaration(conditionDeclaration)
-    condition -- DFG --> node
-    conditionDeclaration  -- DFG --> node
-```
-
-### ForStatement
+### While
 
 Interesting fields:
 
@@ -643,14 +625,32 @@ Interesting fields:
 Scheme:
 ```mermaid
   flowchart LR
-    node([ForStatement]) -.- condition(condition)
+    node([While]) -.- condition(condition)
+    node -.- conditionDeclaration(conditionDeclaration)
+    condition -- DFG --> node
+    conditionDeclaration  -- DFG --> node
+```
+
+### For
+
+Interesting fields:
+
+* `condition: Statement`: The condition that is evaluated before making the
+  branching decision.
+* `conditionDeclaration: Statement`: A declaration containing the condition in
+  the initializer, used instead of the condition.
+
+Scheme:
+```mermaid
+  flowchart LR
+    node([For]) -.- condition(condition)
     node -.- conditionDeclaration(conditionDeclaration)
     condition -- DFG --> node
     conditionDeclaration  -- DFG --> node
 ```
 
 
-### IfStatement
+### If
 
 Interesting fields:
 
@@ -662,14 +662,14 @@ Interesting fields:
 Scheme:
 ```mermaid
   flowchart LR
-    node([IfStatement]) -.- condition(condition)
+    node([If]) -.- condition(condition)
     node -.- conditionDeclaration(conditionDeclaration)
     condition -- DFG --> node
     conditionDeclaration  -- DFG --> node
 ```
 
 
-### SwitchStatement
+### Switch
 Interesting fields:
 
 * `selector: Statement`: The expression that is evaluated before making the
@@ -680,7 +680,7 @@ Interesting fields:
 Scheme:
 ```mermaid
   flowchart LR
-    node([SwitchStatement]) -.- selector(selector)
+    node([Switch]) -.- selector(selector)
     node -.- selectorDeclaration(selectorDeclaration)
     selector -- DFG --> node
     selectorDeclaration  -- DFG --> node
@@ -701,7 +701,7 @@ Scheme:
   flowchart LR
     returns -- DFG --> node([FunctionDeclaration]);
     body -.- node;
-    body -.- |in all statements| returns["returns: ReturnStatement"]
+    body -.- |in all statements| returns["returns: Return"]
 ```
 
 

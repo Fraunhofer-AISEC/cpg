@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.policy.ProtectedAsset
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.returns
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.IfElse
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
@@ -95,7 +95,7 @@ class PolicyTest {
                                     .with { Context() }
                                 // Tag IfStatements that compare a Context with a Principal and that
                                 // check access to a ProtectedResource with "CheckAccess"
-                                each<IfStatement>().with {
+                                each<IfElse>().with {
                                     val condition = node.condition as? BinaryOperator
                                     val lhs = condition?.lhs
                                     val rhs = condition?.rhs

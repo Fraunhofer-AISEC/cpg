@@ -39,34 +39,34 @@ import org.neo4j.ogm.annotation.Relationship
  * and default statements. Break statements break out of the switch and labeled breaks in Java are
  * handled properly.
  */
-class SwitchStatement : Statement(), BranchingNode {
+class Switch : Statement(), BranchingNode {
     @Relationship(value = "SELECTOR") var selectorEdge = astOptionalEdgeOf<Expression>()
     /** Selector that determines the case/default statement of the subsequent execution */
-    var selector by unwrapping(SwitchStatement::selectorEdge)
+    var selector by unwrapping(Switch::selectorEdge)
 
     @Relationship(value = "INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Statement>()
     /** C++ can have an initializer statement in a switch */
-    var initializerStatement by unwrapping(SwitchStatement::initializerStatementEdge)
+    var initializerStatement by unwrapping(Switch::initializerStatementEdge)
 
     @Relationship(value = "SELECTOR_DECLARATION")
     var selectorDeclarationEdge = astOptionalEdgeOf<Declaration>()
     /** C++ allows to use a declaration instead of an expression as selector */
-    var selectorDeclaration by unwrapping(SwitchStatement::selectorDeclarationEdge)
+    var selectorDeclaration by unwrapping(Switch::selectorDeclarationEdge)
 
     @Relationship(value = "STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
     /**
      * The compound statement that contains break/default statements with regular statements on the
      * same hierarchy
      */
-    var statement by unwrapping(SwitchStatement::statementEdge)
+    var statement by unwrapping(Switch::statementEdge)
 
     override val branchedBy
         get() = selector
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is SwitchStatement) return false
+        if (other !is Switch) return false
         return super.equals(other) &&
             initializerStatement == other.initializerStatement &&
             selectorDeclaration == other.selectorDeclaration &&

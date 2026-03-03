@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.variables
@@ -143,7 +143,7 @@ class DeclarationTest {
         val body = newMyStruct.body as? Block
         assertNotNull(body)
 
-        val `return` = body.statements.first() as? ReturnStatement
+        val `return` = body.statements.first() as? Return
         assertNotNull(`return`)
 
         val returnValue = `return`.returnValue as? UnaryOperator

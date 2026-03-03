@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.refs
 import de.fraunhofer.aisec.cpg.graph.statements
-import de.fraunhofer.aisec.cpg.graph.statements.EmptyStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
+import de.fraunhofer.aisec.cpg.graph.statements.Empty
+import de.fraunhofer.aisec.cpg.graph.statements.IfElse
+import de.fraunhofer.aisec.cpg.graph.statements.Try
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
@@ -114,7 +114,7 @@ class WithStatementTest : BaseTest() {
         assertIs<Reference>(base)
         assertRefersTo(base, ctxManagerAssignLhs.refersTo)
 
-        val tryStatement = blockStmt.statements.filterIsInstance<TryStatement>().firstOrNull()
+        val tryStatement = blockStmt.statements.filterIsInstance<Try>().firstOrNull()
         assertNotNull(tryStatement)
 
         val tryBlock = tryStatement.tryBlock
@@ -151,7 +151,7 @@ class WithStatementTest : BaseTest() {
         assertEquals(1, catchBody.statements.size)
 
         val exitCallCatchIf = catchBody.statements.first()
-        assertIs<IfStatement>(exitCallCatchIf)
+        assertIs<IfElse>(exitCallCatchIf)
         val condition = exitCallCatchIf.condition
         assertIs<UnaryOperator>(condition)
         val exitCallCatch = condition.input
@@ -203,7 +203,7 @@ class WithStatementTest : BaseTest() {
         assertIs<Reference>(base)
         assertRefersTo(base, ctxManagerAssignLhs.refersTo)
 
-        val tryStatement = blockStmt.statements.filterIsInstance<TryStatement>().firstOrNull()
+        val tryStatement = blockStmt.statements.filterIsInstance<Try>().firstOrNull()
         assertNotNull(tryStatement)
 
         val tryBlock = tryStatement.tryBlock
@@ -211,7 +211,7 @@ class WithStatementTest : BaseTest() {
         assertEquals(1, tryBlock.statements.size)
 
         val emptyStmt = tryBlock.statements.firstOrNull()
-        assertIs<EmptyStatement>(emptyStmt)
+        assertIs<Empty>(emptyStmt)
 
         val catchClause = tryStatement.catchClauses.singleOrNull()
         assertNotNull(catchClause)
@@ -221,7 +221,7 @@ class WithStatementTest : BaseTest() {
         assertEquals(1, catchBody.statements.size)
 
         val exitCallCatchIf = catchBody.statements.first()
-        assertIs<IfStatement>(exitCallCatchIf)
+        assertIs<IfElse>(exitCallCatchIf)
         val condition = exitCallCatchIf.condition
         assertIs<UnaryOperator>(condition)
         val exitCallCatch = condition.input
@@ -281,7 +281,7 @@ class WithStatementTest : BaseTest() {
         val parentNameOfEnterCall = tmpEnterVarAssignRhs.name.parent
         assertEquals("TestContextManager", parentNameOfEnterCall?.localName)
 
-        val tryStatement = withBlockStmts.filterIsInstance<TryStatement>().firstOrNull()
+        val tryStatement = withBlockStmts.filterIsInstance<Try>().firstOrNull()
         assertNotNull(tryStatement)
 
         val tryBlock = tryStatement.tryBlock
@@ -310,7 +310,7 @@ class WithStatementTest : BaseTest() {
         assertEquals(1, catchBody.statements.size)
 
         val exitCallCatchIf = catchBody.statements.first()
-        assertIs<IfStatement>(exitCallCatchIf)
+        assertIs<IfElse>(exitCallCatchIf)
         val condition = exitCallCatchIf.condition
         assertIs<UnaryOperator>(condition)
         val exitCallCatch = condition.input
@@ -372,7 +372,7 @@ class WithStatementTest : BaseTest() {
         assertIs<Reference>(baseA)
         assertRefersTo(baseA, ctxManagerAssignALhs.refersTo)
 
-        val tryStatementA = withBlockStmts.filterIsInstance<TryStatement>().firstOrNull()
+        val tryStatementA = withBlockStmts.filterIsInstance<Try>().firstOrNull()
         assertNotNull(tryStatementA)
 
         val tryBlockA = tryStatementA.tryBlock
@@ -391,7 +391,7 @@ class WithStatementTest : BaseTest() {
         assertRefersTo(enterCallAssignARhs, tmpEnterVarA.refersTo)
 
         val tryStatementB = tryBlockA.statements[3]
-        assertIs<TryStatement>(tryStatementB)
+        assertIs<Try>(tryStatementB)
 
         val catchClauseA = tryStatementA.catchClauses.singleOrNull()
         assertNotNull(catchClauseA)
@@ -401,7 +401,7 @@ class WithStatementTest : BaseTest() {
         assertEquals(1, catchBodyA.statements.size)
 
         val exitCallCatchAIf = catchBodyA.statements.first()
-        assertIs<IfStatement>(exitCallCatchAIf)
+        assertIs<IfElse>(exitCallCatchAIf)
         val conditionA = exitCallCatchAIf.condition
         assertIs<UnaryOperator>(conditionA)
         val exitCallCatchA = conditionA.input
@@ -459,7 +459,7 @@ class WithStatementTest : BaseTest() {
         assertRefersTo(enterCallAssignBRhs, tmpEnterVarB.refersTo)
 
         val tryStatementC = tryBlockB.statements[3]
-        assertIs<TryStatement>(tryStatementC)
+        assertIs<Try>(tryStatementC)
 
         val catchClauseB = tryStatementB.catchClauses.singleOrNull()
         assertNotNull(catchClauseB)
@@ -469,7 +469,7 @@ class WithStatementTest : BaseTest() {
         assertEquals(1, catchBodyB.statements.size)
 
         val exitCallCatchBIf = catchBodyB.statements.first()
-        assertIs<IfStatement>(exitCallCatchBIf)
+        assertIs<IfElse>(exitCallCatchBIf)
         val conditionB = exitCallCatchBIf.condition
         assertIs<UnaryOperator>(conditionB)
         val exitCallCatchB = conditionB.input
@@ -538,7 +538,7 @@ class WithStatementTest : BaseTest() {
         assertEquals(1, catchBodyC.statements.size)
 
         val exitCallCatchCIf = catchBodyC.statements.first()
-        assertIs<IfStatement>(exitCallCatchCIf)
+        assertIs<IfElse>(exitCallCatchCIf)
         val conditionC = exitCallCatchCIf.condition
         assertIs<UnaryOperator>(conditionC)
         val exitCallCatchC = conditionC.input

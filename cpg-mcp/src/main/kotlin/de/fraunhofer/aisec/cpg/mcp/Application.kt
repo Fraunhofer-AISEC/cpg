@@ -35,6 +35,7 @@ import io.ktor.server.engine.*
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
 import io.modelcontextprotocol.kotlin.sdk.server.mcp
+import io.modelcontextprotocol.kotlin.sdk.server.mcpStreamableHttp
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.asSink
@@ -43,18 +44,20 @@ import kotlinx.io.buffered
 
 class Application : CliktCommand(name = "cpg-mcp") {
     private val ssePort by
-        option(
-                "--sse",
-                help =
-                    "Provide the port to run SSE (Server Sent Events). If not specified, the MCP server will run using stdio.",
-            )
-            .int()
+        option("--sse", help = "Provide the port to run SSE (Server Sent Events).").int()
+
+    private val httpPort by
+        option("--http", help = "Provide the port to run streamable HTTP.").int()
 
     override fun run() {
-        val port = ssePort
-        if (port != null) {
-            println("Starting MCP server in SSE mode on port $port...")
-            runSseMcpServerUsingKtorPlugin(port, configureServer(), wait = true)
+        val http = httpPort
+        val sse = ssePort
+        if (http != null) {
+            println("Starting MCP server in streamable HTTP mode on port $http...")
+            runHttpMcpServerUsingKtorPlugin(port = http, server = configureServer(), wait = true)
+        } else if (sse != null) {
+            println("Starting MCP server in SSE mode on port $sse...")
+            runSseMcpServerUsingKtorPlugin(sse, configureServer(), wait = true)
         } else {
             println("Starting MCP server in stdio mode...")
             runMcpServerUsingStdio()
@@ -86,7 +89,35 @@ fun runMcpServerUsingStdio() {
  * @param port The port number on which the SSE MCP server will listen for client connections.
  * @param wait If true the thread is blocked until the server stops. This flag is needed when the
  *   server runs in the background alongside another server (e.g. in codyze-console).
+ * @param host The host/IP address on which the server will bind.
+ * @param server The MCP server instance that will handle incoming requests and provide responses to
+ *   clients.
  */
-fun runSseMcpServerUsingKtorPlugin(port: Int, server: Server, wait: Boolean = false) {
-    embeddedServer(CIO, host = "0.0.0.0", port = port) { mcp { server } }.start(wait = wait)
+fun runSseMcpServerUsingKtorPlugin(
+    port: Int,
+    server: Server,
+    wait: Boolean = false,
+    host: String = "0.0.0.0",
+) {
+    embeddedServer(CIO, host = host, port = port) { mcp { server } }.start(wait = wait)
+}
+
+/**
+ * Starts a streamable HTTP MCP server using the Ktor framework and the specified port.
+ *
+ * @param port The port number on which the HTTP MCP server will listen for client connections.
+ * @param host The host/IP address on which the server will bind.
+ * @param server The MCP server instance that will handle incoming requests and provide responses to
+ *   clients.
+ */
+fun runHttpMcpServerUsingKtorPlugin(
+    port: Int,
+    host: String = "0.0.0.0",
+    server: Server,
+    wait: Boolean = false,
+) {
+    embeddedServer(factory = CIO, host = host, port = port) {
+            mcpStreamableHttp(enableDnsRebindingProtection = false) { server }
+        }
+        .start(wait = wait)
 }

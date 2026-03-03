@@ -353,7 +353,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     recordDeclaration.records += cls
                 }
                 is InitializerDeclaration -> {
-                    val initializerBlock = frontend.statementHandler.handleBlockStatement(decl.body)
+                    val initializerBlock = frontend.statementHandler.handleBlock(decl.body)
                     initializerBlock.isStaticBlock = decl.isStatic
                     recordDeclaration.statements += initializerBlock
                 }

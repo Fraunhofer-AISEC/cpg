@@ -174,7 +174,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val main = declaration.methods[0]
 
         // lets get our try statement
-        val tryStatement = main.bodyOrNull<TryStatement>(0)
+        val tryStatement = main.bodyOrNull<Try>(0)
         assertNotNull(tryStatement)
 
         var scope = tryStatement.scope
@@ -350,16 +350,16 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         assertTrue(graphNodes.isNotEmpty())
 
-        val switchStatements = graphNodes.filterIsInstance<SwitchStatement>()
+        val switchStatements = graphNodes.filterIsInstance<Switch>()
         assertEquals(3, switchStatements.size)
 
         val switchStatement = switchStatements[0]
         assertEquals(11, (switchStatement.statement as? Block)?.statements?.size)
 
-        val caseStatements = switchStatement.allChildren<CaseStatement>()
+        val caseStatements = switchStatement.allChildren<Case>()
         assertEquals(4, caseStatements.size)
 
-        val defaultStatements = switchStatement.allChildren<DefaultStatement>()
+        val defaultStatements = switchStatement.allChildren<Default>()
         assertEquals(1, defaultStatements.size)
     }
 
