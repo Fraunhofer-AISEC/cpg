@@ -79,9 +79,15 @@ class Application : Runnable {
                 port = httpPort,
                 host = host,
                 server = configureServer(),
+                wait = true,
             )
         } else if (ssePort != null) {
-            runSseMcpServerUsingKtorPlugin(port = ssePort, host = host, server = configureServer())
+            runSseMcpServerUsingKtorPlugin(
+                port = ssePort,
+                host = host,
+                server = configureServer(),
+                wait = true,
+            )
         } else if (transport?.stdio == true) {
             runMcpServerUsingStdio()
         } else {
@@ -103,7 +109,7 @@ fun runMcpServerUsingStdio() {
     runBlocking {
         val job = Job()
         server.onClose { job.complete() }
-        server.connect(transport)
+        server.createSession(transport)
         job.join()
     }
 }
@@ -117,10 +123,13 @@ fun runMcpServerUsingStdio() {
  * @param host The host/IP address on which the server will bind.
  * @param server The MCP server instance that will handle incoming requests and provide responses to
  *   clients.
+ * @param wait If true the thread is blocked until the server stops. This flag is needed when the
+ *   server runs in the background alongside another server (e.g. in codyze-console).
  */
-fun runSseMcpServerUsingKtorPlugin(port: Int, host: String, server: Server) = runBlocking {
-    embeddedServer(CIO, host = host, port = port) { mcp { server } }.start(wait = true)
-}
+fun runSseMcpServerUsingKtorPlugin(port: Int, host: String, server: Server, wait: Boolean = false) =
+    runBlocking {
+        embeddedServer(CIO, host = host, port = port) { mcp { server } }.start(wait = wait)
+    }
 
 /**
  * Starts a streamable HTTP MCP server using the Ktor framework and the specified port.
@@ -129,10 +138,17 @@ fun runSseMcpServerUsingKtorPlugin(port: Int, host: String, server: Server) = ru
  * @param host The host/IP address on which the server will bind.
  * @param server The MCP server instance that will handle incoming requests and provide responses to
  *   clients.
+ * @param wait If true the thread is blocked until the server stops. This flag is needed when the
+ *   server runs in the background alongside another server (e.g. in codyze-console).
  */
-fun runHttpMcpServerUsingKtorPlugin(port: Int, host: String, server: Server) {
+fun runHttpMcpServerUsingKtorPlugin(
+    port: Int,
+    host: String,
+    server: Server,
+    wait: Boolean = false,
+) {
     runBlocking {
         embeddedServer(factory = CIO, host = host, port = port) { mcpStreamableHttp { server } }
-            .start(wait = true)
+            .start(wait = wait)
     }
 }

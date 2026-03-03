@@ -36,9 +36,9 @@ import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
-import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.*
 import de.fraunhofer.aisec.cpg.query.*
+import de.fraunhofer.aisec.cpg.serialization.*
 import io.github.detekt.sarif4k.ArtifactLocation
 import io.github.detekt.sarif4k.Result
 import java.net.URI
@@ -46,14 +46,8 @@ import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.toPath
 import kotlin.uuid.Uuid
-import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
 
 /**
  * JSON data class for an analysis request. It contains the source directory, an optional include
@@ -65,14 +59,6 @@ data class AnalyzeRequestJSON(
     val includeDir: String? = null,
     val topLevel: String? = null,
     val conceptsFile: String? = null,
-)
-
-/** JSON data class for an [Edge]. */
-@Serializable
-data class EdgeJSON(
-    var label: String,
-    @Serializable(with = UuidSerializer::class) var start: Uuid,
-    @Serializable(with = UuidSerializer::class) var end: Uuid,
 )
 
 /** JSON data class for a SARIF [Result]. */
@@ -140,25 +126,6 @@ data class ConstructorArguments(
     val argumentName: String,
     val argumentValue: String,
     val argumentType: String? = null, // currently not used
-)
-
-/** JSON data class for a [Node]. */
-@Serializable
-data class NodeJSON(
-    @Serializable(with = UuidSerializer::class) val id: Uuid,
-    val type: String,
-    val startLine: Int,
-    val startColumn: Int,
-    val endLine: Int,
-    val endColumn: Int,
-    val code: String,
-    val name: String,
-    val astChildren: List<NodeJSON>,
-    val prevDFG: List<EdgeJSON> = emptyList(),
-    val nextDFG: List<EdgeJSON> = emptyList(),
-    @Serializable(with = UuidSerializer::class) val translationUnitId: Uuid? = null,
-    val componentName: String? = null,
-    val fileName: String? = null,
 )
 
 /** JSON data class for a requirement category. */
@@ -309,7 +276,7 @@ fun AnalysisResult.toJSON(): AnalysisResultJSON =
             components = components.map { it.toJSON() },
             totalNodes = nodes.size,
             analysisResult = this@toJSON,
-            sourceDir = config.sourceLocations.first().absolutePath,
+            sourceDir = config.sourceLocations.firstOrNull()?.absolutePath ?: "",
             findings = sarif.runs.flatMap { it.results?.map { it.toJSON() } ?: emptyList() },
             requirementCategories =
                 project.requirementCategoriesToJSON(this@toJSON.requirementsResults),
@@ -354,42 +321,6 @@ fun Component.toJSON(): ComponentJSON {
         name = this.name.toString(),
         translationUnits = this.translationUnits.map { tu -> tu.toJSON() },
         topLevel = this.topLevel()?.absolutePath,
-    )
-}
-
-/** Converts a [Node] into its JSON representation. */
-fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
-    return NodeJSON(
-        id = this.id,
-        type = this.javaClass.simpleName,
-        startLine = location?.region?.startLine ?: -1,
-        startColumn = location?.region?.startColumn ?: -1,
-        endLine = location?.region?.endLine ?: -1,
-        endColumn = location?.region?.endColumn ?: -1,
-        code = this.code ?: "",
-        name = this.name.toString(),
-        fileName =
-            this.location?.artifactLocation?.uri?.let { uri ->
-                // Extract filename from URI
-                val path = uri.toString()
-                path.substringAfterLast('/').substringAfterLast('\\')
-            },
-        astChildren =
-            if (noEdges) emptyList()
-            else (this as? AstNode)?.astChildren?.map { it.toJSON() } ?: emptyList(),
-        prevDFG = if (noEdges) emptyList() else this.prevDFGEdges.map { it.toJSON() },
-        nextDFG = if (noEdges) emptyList() else this.nextDFGEdges.map { it.toJSON() },
-        translationUnitId = this.translationUnit?.id,
-        componentName = this.component?.name?.toString(),
-    )
-}
-
-/** Converts an [Edge] into its JSON representation. */
-fun Edge<*>.toJSON(): EdgeJSON {
-    return EdgeJSON(
-        label = this.labels.firstOrNull() ?: "",
-        start = this.start.id,
-        end = this.end.id,
     )
 }
 
@@ -460,23 +391,6 @@ val ArtifactLocation.absolutePath: Path?
             }
         }
     }
-
-/**
- * Custom serializer for [Uuid] to convert it to and from a string representation. This is used for
- * serialization and deserialization of [Uuid] in the JSON data classes.
- */
-object UuidSerializer : KSerializer<Uuid> {
-    override val descriptor: SerialDescriptor =
-        PrimitiveSerialDescriptor("Uuid", PrimitiveKind.STRING)
-
-    override fun serialize(encoder: Encoder, value: Uuid) {
-        encoder.encodeString(value.toString())
-    }
-
-    override fun deserialize(decoder: Decoder): Uuid {
-        return Uuid.parse(decoder.decodeString())
-    }
-}
 
 /** Converts the requirement categories of an [AnalysisProject] into their JSON representation. */
 fun AnalysisProject.requirementCategoriesToJSON(

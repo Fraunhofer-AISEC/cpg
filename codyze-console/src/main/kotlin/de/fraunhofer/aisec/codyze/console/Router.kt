@@ -25,6 +25,9 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.codyze.console.ai.ChatRequestJSON
+import de.fraunhofer.aisec.codyze.console.ai.ChatService
+import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import io.ktor.http.*
@@ -59,7 +62,7 @@ import kotlin.reflect.KClass
  * - POST `/api/concept`: Adds a concept node to the current
  *   [de.fraunhofer.aisec.codyze.AnalysisResult]
  */
-fun Routing.apiRoutes(service: ConsoleService) {
+fun Routing.apiRoutes(service: ConsoleService, chatService: ChatService?) {
     // The API routes are prefixed with /api
     route("/api") {
         // The endpoint to analyze a project
@@ -242,6 +245,44 @@ fun Routing.apiRoutes(service: ConsoleService) {
                     HttpStatusCode.BadRequest,
                     mapOf("error" to "Invalid request format: ${e.message}"),
                 )
+            }
+        }
+
+        // Feature flags endpoint
+        get("/features") { call.respond(mapOf("mcpEnabled" to McpServerHelper.isEnabled)) }
+
+        // Chat endpoint - only available if MCP module is enabled
+        if (chatService != null) {
+            post("/chat") {
+                val request = call.receive<ChatRequestJSON>()
+                call.respondTextWriter(contentType = ContentType.Text.EventStream) {
+                    try {
+                        chatService.chat(request).collect { chunk ->
+                            try {
+                                chunk.split("\n").forEach { line -> write("data: $line\n") }
+                                write("\n") // Empty line marks end of event
+                                flush()
+                            } catch (e: io.ktor.utils.io.ClosedWriteChannelException) {
+                                // Client disconnected - stop processing
+                                throw kotlinx.coroutines.CancellationException(
+                                    "Client disconnected",
+                                    e,
+                                )
+                            }
+                        }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        // Expected when client disconnects - do nothing
+                    } catch (e: Exception) {
+                        // Log unexpected errors
+                        e.printStackTrace()
+                        try {
+                            write("data: ERROR: ${e.message}\n\n")
+                            flush()
+                        } catch (ignored: Exception) {
+                            // Channel already closed
+                        }
+                    }
+                }
             }
         }
 
