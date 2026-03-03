@@ -43,7 +43,7 @@ class ForEach : Loop(), BranchingNode, StatementHolder {
 
     @Relationship("VARIABLE")
     var variableEdge =
-        astOptionalEdgeOf<Statement>(
+        astOptionalEdgeOf<Expression>(
             onChanged = { _, new -> (new?.end as? Expression)?.access = AccessValues.WRITE }
         )
 
@@ -53,16 +53,16 @@ class ForEach : Loop(), BranchingNode, StatementHolder {
      */
     var variable by unwrapping(ForEach::variableEdge)
 
-    @Relationship("ITERABLE") var iterableEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("ITERABLE") var iterableEdge = astOptionalEdgeOf<Expression>()
     /** This field contains the iteration subject of the loop. */
     var iterable by unwrapping(ForEach::iterableEdge)
 
     override val branchedBy
         get() = iterable
 
-    override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
+    override var statementEdges: AstEdges<Expression, AstEdge<Expression>>
         get() {
-            val statements = astEdgesOf<Statement>()
+            val statements = astEdgesOf<Expression>()
             statements += variableEdge
             statements += iterableEdge
             statements += statementEdge
@@ -73,7 +73,7 @@ class ForEach : Loop(), BranchingNode, StatementHolder {
             // Nothing to do here
         }
 
-    override var statements: MutableList<Statement>
+    override var statements: MutableList<Expression>
         get() = unwrapping(ForEach::statementEdges)
         set(value) {}
 

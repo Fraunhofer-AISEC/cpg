@@ -56,8 +56,9 @@ data object FullDataflowGranularity : Granularity
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
- * [Dataflow.end] but only parts of it. Common examples include [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess]s, array or tuple
- * accesses. This class should allow
+ * [Dataflow.end] but only parts of it. Common examples include
+ * [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess]s, array or tuple accesses. This class
+ * should allow
  */
 open class PartialDataflowGranularity<T>(
     /** The target that is affected by this partial dataflow. */
@@ -75,8 +76,8 @@ open class PartialDataflowGranularity<T>(
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
  * [Dataflow.end] but only parts of it, where the part is identified by a (known) [Field]. Common
- * examples include [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess] nodes, where we model a dataflow to the base, but only partially
- * scoped to a particular field.
+ * examples include [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess] nodes, where we model a
+ * dataflow to the base, but only partially scoped to a particular field.
  */
 class FieldDataflowGranularity(partialTarget: Field) :
     PartialDataflowGranularity<Field>(partialTarget)
@@ -111,7 +112,8 @@ fun default() = full()
 
 /**
  * Creates a new [FieldDataflowGranularity]. The [target] is the [Declaration] that is affected by
- * the partial dataflow. Examples include a [Field] for a [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess].
+ * the partial dataflow. Examples include a [Field] for a
+ * [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess].
  */
 fun field(target: Field): FieldDataflowGranularity {
     return FieldDataflowGranularity(target)

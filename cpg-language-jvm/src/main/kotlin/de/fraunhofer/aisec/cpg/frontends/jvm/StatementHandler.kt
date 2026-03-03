@@ -37,9 +37,9 @@ import sootup.core.model.Body
 import sootup.core.util.printer.NormalStmtPrinter
 
 class StatementHandler(frontend: JVMLanguageFrontend) :
-    Handler<Statement?, Any, JVMLanguageFrontend>(::ProblemExpression, frontend) {
+    Handler<Expression?, Any, JVMLanguageFrontend>(::ProblemExpression, frontend) {
 
-    override fun handle(ctx: Any): Statement? {
+    override fun handle(ctx: Any): Expression? {
         try {
             return when (ctx) {
                 is Body -> handleBody(ctx)

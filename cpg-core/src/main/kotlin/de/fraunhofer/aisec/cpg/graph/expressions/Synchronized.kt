@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
-class Synchronized : Statement() {
+class Synchronized : Expression() {
 
     override var usedAsExpression = false
 

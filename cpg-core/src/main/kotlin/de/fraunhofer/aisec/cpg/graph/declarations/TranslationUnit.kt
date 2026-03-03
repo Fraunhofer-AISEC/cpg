@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
-import de.fraunhofer.aisec.cpg.graph.expressions.Statement
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -52,7 +52,7 @@ class TranslationUnit : Declaration(), DeclarationHolder, StatementHolder, EOGSt
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    override var statementEdges = astEdgesOf<Statement>()
+    override var statementEdges = astEdgesOf<Expression>()
     override var statements by unwrapping(TranslationUnit::statementEdges)
 
     override fun addDeclaration(declaration: Declaration) {

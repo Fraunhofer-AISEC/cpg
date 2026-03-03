@@ -40,13 +40,13 @@ import org.neo4j.ogm.annotation.Relationship
  * A label attached to a statement that is used to change control flow by labeled continue and
  * breaks (Java) or goto(C++).
  */
-class Label : Statement(), StatementHolder {
+class Label : Expression(), StatementHolder {
 
     override var usedAsExpression = false
 
-    @Relationship(value = "SUB_STATEMENT") var subStatementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship(value = "SUB_STATEMENT") var subStatementEdge = astOptionalEdgeOf<Expression>()
 
-    /** Statement that the label is attached to. Can be a simple or compound statement. */
+    /** Expression that the label is attached to. Can be a simple or compound statement. */
     var subStatement by unwrapping(Label::subStatementEdge)
 
     /** Label in the form of a String */
@@ -60,9 +60,9 @@ class Label : Statement(), StatementHolder {
             .toString()
     }
 
-    override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
+    override var statementEdges: AstEdges<Expression, AstEdge<Expression>>
         get() {
-            var list = astEdgesOf<Statement>()
+            var list = astEdgesOf<Expression>()
             subStatement?.let { list.resetTo(listOf(it)) }
             return list
         }
@@ -70,7 +70,7 @@ class Label : Statement(), StatementHolder {
             subStatement = value.toNodeCollection().firstOrNull()
         }
 
-    override var statements: MutableList<Statement>
+    override var statements: MutableList<Expression>
         get() = unwrapping(Label::statementEdges)
         set(value) {}
 

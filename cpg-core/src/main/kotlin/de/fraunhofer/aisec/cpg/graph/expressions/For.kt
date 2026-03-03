@@ -44,7 +44,7 @@ import org.neo4j.ogm.annotation.Relationship
 class For : Loop(), BranchingNode, StatementHolder {
 
     @Relationship("INITIALIZER_STATEMENT")
-    var initializerStatementEdge = astOptionalEdgeOf<Statement>()
+    var initializerStatementEdge = astOptionalEdgeOf<Expression>()
     var initializerStatement by unwrapping(For::initializerStatementEdge)
 
     @Relationship("CONDITION_DECLARATION")
@@ -54,15 +54,16 @@ class For : Loop(), BranchingNode, StatementHolder {
     @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     var condition by unwrapping(For::conditionEdge)
 
-    @Relationship("ITERATION_STATEMENT") var iterationStatementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("ITERATION_STATEMENT")
+    var iterationStatementEdge = astOptionalEdgeOf<Expression>()
     var iterationStatement by unwrapping(For::iterationStatementEdge)
 
     override val branchedBy
         get() = condition ?: conditionDeclaration
 
-    override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
+    override var statementEdges: AstEdges<Expression, AstEdge<Expression>>
         get() {
-            val statements = astEdgesOf<Statement>()
+            val statements = astEdgesOf<Expression>()
             statements += initializerStatementEdge
             statements += iterationStatementEdge
             statements += statementEdge
@@ -73,7 +74,7 @@ class For : Loop(), BranchingNode, StatementHolder {
             // Nothing to do here
         }
 
-    override var statements: MutableList<Statement>
+    override var statements: MutableList<Expression>
         get() = unwrapping(For::statementEdges)
         set(value) {}
 

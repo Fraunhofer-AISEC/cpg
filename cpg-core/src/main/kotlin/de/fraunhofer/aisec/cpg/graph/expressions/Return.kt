@@ -37,7 +37,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a statement that returns out of the current function. */
-class Return : Statement(), ArgumentHolder {
+class Return : Expression(), ArgumentHolder {
 
     override var usedAsExpression = false
 

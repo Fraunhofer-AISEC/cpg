@@ -30,10 +30,10 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.followEOGEdgesUntilHit
-import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.followEOGEdgesUntilHit
 
 /** This pass contains fine-grained improvements to the EOG for the [GoLanguage]. */
 @Description("This pass contains fine-grained improvements to the EOG for the go language.")

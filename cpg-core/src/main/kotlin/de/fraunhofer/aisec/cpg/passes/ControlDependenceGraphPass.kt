@@ -34,13 +34,13 @@ import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
+import de.fraunhofer.aisec.cpg.graph.expressions.Comprehension
+import de.fraunhofer.aisec.cpg.graph.expressions.Conditional
 import de.fraunhofer.aisec.cpg.graph.expressions.DoWhile
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
-import de.fraunhofer.aisec.cpg.graph.expressions.Comprehension
-import de.fraunhofer.aisec.cpg.graph.expressions.Conditional
 import de.fraunhofer.aisec.cpg.graph.expressions.ShortCircuitOperator
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
@@ -57,7 +57,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
     class Configuration(
         /**
          * This specifies the maximum complexity (as calculated per
-         * [de.fraunhofer.aisec.cpg.graph.expressions.Statement.cyclomaticComplexity]) a [Function]
+         * [de.fraunhofer.aisec.cpg.graph.expressions.Expression.cyclomaticComplexity]) a [Function]
          * must have in order to be considered.
          */
         var maxComplexity: Int? = null,

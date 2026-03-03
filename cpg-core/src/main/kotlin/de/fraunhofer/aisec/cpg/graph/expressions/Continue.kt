@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.util.Objects
 
 /**
- * Statement used to interrupt further execution of a loop body and jump to the evaluation of the
+ * Expression used to interrupt further execution of a loop body and jump to the evaluation of the
  * loop condition. Can have a loop label, e.g. in Java, to specify which of the nested loops
  * condition should be reevaluated.
  */
-class Continue : Statement() {
+class Continue : Expression() {
 
     override var usedAsExpression = false
 

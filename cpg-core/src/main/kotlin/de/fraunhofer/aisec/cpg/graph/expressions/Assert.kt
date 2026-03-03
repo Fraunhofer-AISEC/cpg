@@ -32,7 +32,7 @@ import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents an assert statement */
-class Assert : Statement() {
+class Assert : Expression() {
 
     override var usedAsExpression = false
 
@@ -40,7 +40,7 @@ class Assert : Statement() {
     /** The condition to be evaluated. */
     var condition by unwrapping(Assert::conditionEdge)
 
-    @Relationship(value = "MESSAGE") var messageEdge = astOptionalEdgeOf<Statement>()
+    @Relationship(value = "MESSAGE") var messageEdge = astOptionalEdgeOf<Expression>()
     /** The *optional* message that is shown, if the assert is evaluated as true */
     var message by unwrapping(Assert::messageEdge)
 

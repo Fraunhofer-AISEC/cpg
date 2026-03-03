@@ -37,12 +37,12 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
-class IfElse : Statement(), BranchingNode, ArgumentHolder {
+class IfElse : Expression(), BranchingNode, ArgumentHolder {
 
     override var usedAsExpression = false
 
     @Relationship(value = "INITIALIZER_STATEMENT")
-    var initializerStatementEdge = astOptionalEdgeOf<Statement>()
+    var initializerStatementEdge = astOptionalEdgeOf<Expression>()
     /** C++ initializer statement. */
     var initializerStatement by unwrapping(IfElse::initializerStatementEdge)
 
@@ -61,11 +61,11 @@ class IfElse : Statement(), BranchingNode, ArgumentHolder {
     /** C++ constexpr construct. */
     var isConstExpression = false
 
-    @Relationship(value = "THEN_STATEMENT") var thenStatementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship(value = "THEN_STATEMENT") var thenStatementEdge = astOptionalEdgeOf<Expression>()
     /** The statement that is executed, if the condition is evaluated as true. Usually a [Block]. */
     var thenStatement by unwrapping(IfElse::thenStatementEdge)
 
-    @Relationship(value = "ELSE_STATEMENT") var elseStatementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship(value = "ELSE_STATEMENT") var elseStatementEdge = astOptionalEdgeOf<Expression>()
     /**
      * The statement that is executed, if the condition is evaluated as false. Usually a [Block].
      */

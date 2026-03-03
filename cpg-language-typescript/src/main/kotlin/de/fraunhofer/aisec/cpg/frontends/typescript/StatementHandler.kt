@@ -26,24 +26,23 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.newBlock
 import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.newReturn
-import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.expressions.Return
-import de.fraunhofer.aisec.cpg.graph.expressions.Statement
-import de.fraunhofer.aisec.cpg.graph.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import kotlin.collections.plusAssign
 
 class StatementHandler(lang: TypeScriptLanguageFrontend) :
-    Handler<Statement, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
+    Handler<Expression, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
 
-    private fun handleNode(node: TypeScriptNode): Statement {
+    private fun handleNode(node: TypeScriptNode): Expression {
         when (node.type) {
             "Block" -> return handleBlock(node)
             "FirstStatement" -> return handleVariableStatement(node)
@@ -56,7 +55,7 @@ class StatementHandler(lang: TypeScriptLanguageFrontend) :
         return ProblemExpression("No handler was implemented for nodes of type " + node.type)
     }
 
-    private fun handleFunction(node: TypeScriptNode): Statement {
+    private fun handleFunction(node: TypeScriptNode): Expression {
         // typescript allows to declare function on a statement level, e.g. within a compound
         // statement. We can wrap it into a declaration statement
         val statement = newDeclarationStatement(rawNode = node)

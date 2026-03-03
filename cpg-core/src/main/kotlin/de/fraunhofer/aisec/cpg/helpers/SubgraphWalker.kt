@@ -400,9 +400,13 @@ object SubgraphWalker {
  *   replacement BEFORE any DFG edges are set. We are re-wiring EOG edges, but nothing else. If one
  *   tries to replace a node with existing [Node.nextDFG] or [Node.prevDFG], we fail.
  * - We also migrate [HasType.typeObservers] from the [old] to the [new] node.
- * - Lastly, if the [new] node is a [de.fraunhofer.aisec.cpg.graph.expressions.Call.callee] of a [de.fraunhofer.aisec.cpg.graph.expressions.Call] parent, and the [old] and [new]
- *   expressions are of different types (e.g., exchanging a simple [de.fraunhofer.aisec.cpg.graph.expressions.Reference] for a
- *   [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess]), we also replace the [de.fraunhofer.aisec.cpg.graph.expressions.Call] with a [de.fraunhofer.aisec.cpg.graph.expressions.MemberCall].
+ * - Lastly, if the [new] node is a [de.fraunhofer.aisec.cpg.graph.expressions.Call.callee] of a
+ *   [de.fraunhofer.aisec.cpg.graph.expressions.Call] parent, and the [old] and [new] expressions
+ *   are of different types (e.g., exchanging a simple
+ *   [de.fraunhofer.aisec.cpg.graph.expressions.Reference] for a
+ *   [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess]), we also replace the
+ *   [de.fraunhofer.aisec.cpg.graph.expressions.Call] with a
+ *   [de.fraunhofer.aisec.cpg.graph.expressions.MemberCall].
  */
 context(provider: ContextProvider)
 fun SubgraphWalker.ScopedWalker<Node>.replace(
@@ -547,8 +551,9 @@ fun Call.toMemberCall(callee: MemberAccess): MemberCall {
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Construction] with the same properties (e.g. ast children, etc.) except from DFG
- * and EOG edges as [this]. It sets the [Construction.callee] to [callee].
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Construction] with the same properties
+ * (e.g. ast children, etc.) except from DFG and EOG edges as [this]. It sets the
+ * [Construction.callee] to [callee].
  */
 fun Call.toConstruct(callee: Reference): Construction {
     val construct = Construction()

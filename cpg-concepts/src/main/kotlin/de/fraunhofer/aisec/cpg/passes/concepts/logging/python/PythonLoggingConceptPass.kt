@@ -104,9 +104,8 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This pass is interested in [Import]s and
-     * [Call]s as these are the relevant parts
-     * of the Python code for logging.
+     * This pass is interested in [Import]s and [Call]s as these are the relevant parts of the
+     * Python code for logging.
      */
     private fun handleNode(node: Node) {
         when (node) {
@@ -148,8 +147,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * - `logging.critical(...)` (and similar for `error` / `warn` / ...) is translated to a
      *   [de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogWrite]
      *
-     * @param callExpression The [Call] to
-     *   handle
+     * @param callExpression The [Call] to handle
      * @return n/a (The new node is created and added to the graph)
      */
     private fun handleCall(callExpression: Call) {

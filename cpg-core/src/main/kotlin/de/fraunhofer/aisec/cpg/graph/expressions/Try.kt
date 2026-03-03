@@ -33,8 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
-/** A [Statement] which represents a try/catch block, primarily used for exception handling. */
-class Try : Statement() {
+/** A [Expression] which represents a try/catch block, primarily used for exception handling. */
+class Try : Expression() {
 
     override var usedAsExpression = false
 
@@ -45,7 +45,7 @@ class Try : Statement() {
      * enter the [tryBlock].
      */
     @Relationship(value = "RESOURCES", direction = Relationship.Direction.OUTGOING)
-    var resourceEdges = astEdgesOf<Statement>()
+    var resourceEdges = astEdgesOf<Expression>()
     var resources by unwrapping(Try::resourceEdges)
 
     /**

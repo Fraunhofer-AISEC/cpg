@@ -64,10 +64,11 @@ import de.fraunhofer.aisec.cpg.graph.types.ProblemType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Literal]. This is the top-most [Node] that a [LanguageFrontend] or [Handler]
- * should create. The [MetadataProvider] receiver will be used to fill different meta-data using
- * [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an appropriate
- * [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Literal]. This is the top-most [Node]
+ * that a [LanguageFrontend] or [Handler] should create. The [MetadataProvider] receiver will be
+ * used to fill different meta-data using [Node.applyMetadata]. Calling this extension function
+ * outside of Kotlin requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an
+ * additional prepended argument.
  */
 @JvmOverloads
 fun <T, V> RawNodeTypeProvider<T>.newLiteral(
@@ -86,7 +87,8 @@ fun <T, V> RawNodeTypeProvider<T>.newLiteral(
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator] or a [de.fraunhofer.aisec.cpg.graph.expressions.ShortCircuitOperator] if the language implements
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator] or a
+ * [de.fraunhofer.aisec.cpg.graph.expressions.ShortCircuitOperator] if the language implements
  * [HasShortCircuitOperators] and if the [operatorCode] is contained in
  * [HasShortCircuitOperators.operatorCodes]. The [MetadataProvider] receiver will be used to fill
  * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
@@ -116,10 +118,11 @@ fun MetadataProvider.newBinaryOperator(operatorCode: String, rawNode: Any? = nul
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator]. This is the top-most [Node] that a [LanguageFrontend] or [Handler]
- * should create. The [MetadataProvider] receiver will be used to fill different meta-data using
- * [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an appropriate
- * [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator]. This is the top-most
+ * [Node] that a [LanguageFrontend] or [Handler] should create. The [MetadataProvider] receiver will
+ * be used to fill different meta-data using [Node.applyMetadata]. Calling this extension function
+ * outside of Kotlin requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an
+ * additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newUnaryOperator(
@@ -141,9 +144,10 @@ fun MetadataProvider.newUnaryOperator(
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Assign]. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Assign]. The [MetadataProvider] receiver
+ * will be used to fill different meta-data using [Node.applyMetadata]. Calling this extension
+ * function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newAssign(
@@ -164,10 +168,11 @@ fun MetadataProvider.newAssign(
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.New]. This is the top-most [Node] that a [LanguageFrontend] or [Handler] should
- * create. The [MetadataProvider] receiver will be used to fill different meta-data using
- * [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an appropriate
- * [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.New]. This is the top-most [Node] that a
+ * [LanguageFrontend] or [Handler] should create. The [MetadataProvider] receiver will be used to
+ * fill different meta-data using [Node.applyMetadata]. Calling this extension function outside of
+ * Kotlin requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newNew(type: Type = unknownType(), rawNode: Any? = null): New {
@@ -181,10 +186,10 @@ fun MetadataProvider.newNew(type: Type = unknownType(), rawNode: Any? = null): N
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Construction]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Construction]. The [MetadataProvider]
+ * receiver will be used to fill different meta-data using [Node.applyMetadata]. Calling this
+ * extension function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newConstruction(
@@ -199,10 +204,10 @@ fun MetadataProvider.newConstruction(
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Conditional]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Conditional]. The [MetadataProvider]
+ * receiver will be used to fill different meta-data using [Node.applyMetadata]. Calling this
+ * extension function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newConditional(
@@ -225,10 +230,10 @@ fun MetadataProvider.newConditional(
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.KeyValue]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.KeyValue]. The [MetadataProvider]
+ * receiver will be used to fill different meta-data using [Node.applyMetadata]. Calling this
+ * extension function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newKeyValue(
@@ -247,9 +252,10 @@ fun MetadataProvider.newKeyValue(
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Lambda]. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Lambda]. The [MetadataProvider] receiver
+ * will be used to fill different meta-data using [Node.applyMetadata]. Calling this extension
+ * function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newLambda(rawNode: Any? = null): Lambda {
@@ -261,9 +267,10 @@ fun MetadataProvider.newLambda(rawNode: Any? = null): Lambda {
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Block]. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Block]. The [MetadataProvider] receiver
+ * will be used to fill different meta-data using [Node.applyMetadata]. Calling this extension
+ * function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newBlock(rawNode: Any? = null): Block {
@@ -275,9 +282,10 @@ fun MetadataProvider.newBlock(rawNode: Any? = null): Block {
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Call]. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Call]. The [MetadataProvider] receiver
+ * will be used to fill different meta-data using [Node.applyMetadata]. Calling this extension
+ * function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newCall(
@@ -304,10 +312,10 @@ fun MetadataProvider.newCall(
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.MemberCall]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.MemberCall]. The [MetadataProvider]
+ * receiver will be used to fill different meta-data using [Node.applyMetadata]. Calling this
+ * extension function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newOperatorCall(
@@ -328,10 +336,10 @@ fun MetadataProvider.newOperatorCall(
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.MemberCall]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.MemberCall]. The [MetadataProvider]
+ * receiver will be used to fill different meta-data using [Node.applyMetadata]. Calling this
+ * extension function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newMemberCall(
@@ -361,10 +369,10 @@ fun MetadataProvider.newMemberCall(
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess]. The [MetadataProvider]
+ * receiver will be used to fill different meta-data using [Node.applyMetadata]. Calling this
+ * extension function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newMemberAccess(
@@ -386,9 +394,10 @@ fun MetadataProvider.newMemberAccess(
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Cast]. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Cast]. The [MetadataProvider] receiver
+ * will be used to fill different meta-data using [Node.applyMetadata]. Calling this extension
+ * function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newCast(rawNode: Any? = null): Cast {
@@ -400,10 +409,10 @@ fun MetadataProvider.newCast(rawNode: Any? = null): Cast {
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.TypeReference]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.TypeReference]. The [MetadataProvider]
+ * receiver will be used to fill different meta-data using [Node.applyMetadata]. Calling this
+ * extension function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newTypeReference(
@@ -424,10 +433,10 @@ fun MetadataProvider.newTypeReference(
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Subscription]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Subscription]. The [MetadataProvider]
+ * receiver will be used to fill different meta-data using [Node.applyMetadata]. Calling this
+ * extension function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newSubscription(rawNode: Any? = null): Subscription {
@@ -439,9 +448,10 @@ fun MetadataProvider.newSubscription(rawNode: Any? = null): Subscription {
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Range]. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Range]. The [MetadataProvider] receiver
+ * will be used to fill different meta-data using [Node.applyMetadata]. Calling this extension
+ * function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newRange(
@@ -460,10 +470,10 @@ fun MetadataProvider.newRange(
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction]. The
+ * [MetadataProvider] receiver will be used to fill different meta-data using [Node.applyMetadata].
+ * Calling this extension function outside of Kotlin requires an appropriate [MetadataProvider],
+ * such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newArrayConstruction(rawNode: Any? = null): ArrayConstruction {
@@ -496,9 +506,10 @@ fun MetadataProvider.newReference(
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Delete]. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.Delete]. The [MetadataProvider] receiver
+ * will be used to fill different meta-data using [Node.applyMetadata]. Calling this extension
+ * function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newDelete(rawNode: Any? = null): Delete {
@@ -510,10 +521,10 @@ fun MetadataProvider.newDelete(rawNode: Any? = null): Delete {
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.ExpressionList]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.ExpressionList]. The [MetadataProvider]
+ * receiver will be used to fill different meta-data using [Node.applyMetadata]. Calling this
+ * extension function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newExpressionList(rawNode: Any? = null): ExpressionList {
@@ -525,10 +536,11 @@ fun MetadataProvider.newExpressionList(rawNode: Any? = null): ExpressionList {
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.InitializerList]. This is the top-most [Node] that a [LanguageFrontend] or
- * [Handler] should create. The [MetadataProvider] receiver will be used to fill different meta-data
- * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
- * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.InitializerList]. This is the top-most
+ * [Node] that a [LanguageFrontend] or [Handler] should create. The [MetadataProvider] receiver will
+ * be used to fill different meta-data using [Node.applyMetadata]. Calling this extension function
+ * outside of Kotlin requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an
+ * additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newInitializerList(
@@ -563,10 +575,10 @@ fun MetadataProvider.newCollectionComprehension(rawNode: Any? = null): Collectio
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.TypeExpression]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.TypeExpression]. The [MetadataProvider]
+ * receiver will be used to fill different meta-data using [Node.applyMetadata]. Calling this
+ * extension function outside of Kotlin requires an appropriate [MetadataProvider], such as a
+ * [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newTypeExpression(
@@ -598,10 +610,10 @@ fun MetadataProvider.newThrow(rawNode: Any? = null): Throw {
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression]. The
+ * [MetadataProvider] receiver will be used to fill different meta-data using [Node.applyMetadata].
+ * Calling this extension function outside of Kotlin requires an appropriate [MetadataProvider],
+ * such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
 fun MetadataProvider.newProblemExpression(

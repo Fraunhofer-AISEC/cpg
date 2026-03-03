@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
-class Goto : Statement() {
+class Goto : Expression() {
 
     override var usedAsExpression = false
 

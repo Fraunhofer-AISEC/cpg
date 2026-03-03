@@ -45,7 +45,7 @@ open class Block : Expression(), StatementHolder {
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    override var statementEdges = astEdgesOf<Statement>()
+    override var statementEdges = astEdgesOf<Expression>()
     override var statements by unwrapping(Block::statementEdges)
     /**
      * This variable helps to differentiate between static and non-static initializer blocks. Static
@@ -69,7 +69,7 @@ open class Block : Expression(), StatementHolder {
     override fun hashCode() = Objects.hash(super.hashCode())
 
     /** Returns the [n]-th statement in this list of statements. */
-    operator fun get(n: Int): Statement {
+    operator fun get(n: Int): Expression {
         return statements[n]
     }
 

@@ -45,10 +45,7 @@ import org.neo4j.ogm.annotation.Relationship
  */
 // TODO Merge and/or refactor
 class Construction : Call() {
-    /**
-     * The link to the [Constructor]. This is populated by the
-     * [SymbolResolver] later.
-     */
+    /** The link to the [Constructor]. This is populated by the [SymbolResolver] later. */
     @PopulatedByPass(SymbolResolver::class)
     var constructor: Constructor? = null
         get() =

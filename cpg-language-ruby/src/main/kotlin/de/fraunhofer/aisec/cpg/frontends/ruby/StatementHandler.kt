@@ -25,18 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.newBlock
 import de.fraunhofer.aisec.cpg.graph.newReturn
-import de.fraunhofer.aisec.cpg.graph.expressions.Return
-import de.fraunhofer.aisec.cpg.graph.expressions.Statement
-import de.fraunhofer.aisec.cpg.graph.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import org.jruby.ast.*
 
 class StatementHandler(lang: RubyLanguageFrontend) :
-    RubyHandler<Statement, Node>({ ProblemExpression() }, lang) {
+    RubyHandler<Expression, Node>({ ProblemExpression() }, lang) {
 
-    override fun handleNode(node: Node): Statement {
+    override fun handleNode(node: Node): Expression {
         return when (node) {
             is BlockNode -> handleBlockNode(node)
             is ReturnNode -> handleReturnNode(node)

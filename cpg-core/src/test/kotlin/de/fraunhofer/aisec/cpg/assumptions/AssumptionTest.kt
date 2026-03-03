@@ -40,7 +40,7 @@ class AssumptionTest {
                 AssumptionStatus.Accepted
 
             val lit = newLiteral(1).assume(AssumptionType.SoundnessAssumption, "We assume 1 is 1")
-            assertEquals(1876412508, lit.hashCode())
+            assertEquals(1107044270, lit.hashCode())
             assertEquals("00000000-0000-0000-0000-00006fd7c85c", lit.id.toString())
 
             val assumption = lit.assumptions.firstOrNull()

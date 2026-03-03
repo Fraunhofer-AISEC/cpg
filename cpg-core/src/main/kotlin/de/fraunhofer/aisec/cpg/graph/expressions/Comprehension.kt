@@ -40,7 +40,7 @@ import org.neo4j.ogm.annotation.Relationship
 class Comprehension : Expression(), ArgumentHolder {
     @Relationship("VARIABLE")
     var variableEdge =
-        astEdgeOf<Statement>(
+        astEdgeOf<Expression>(
             of = ProblemExpression("Missing variableEdge in ${this::class}"),
             onChanged = { _, new -> (new?.end as? Expression)?.access = AccessValues.WRITE },
         )
@@ -58,7 +58,7 @@ class Comprehension : Expression(), ArgumentHolder {
     /** This field contains the iteration subject of the loop. */
     var iterable by unwrapping(Comprehension::iterableEdge)
 
-    @Relationship("PREDICATE") var predicateEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("PREDICATE") var predicateEdge = astOptionalEdgeOf<Expression>()
 
     /**
      * This field contains the predicate which has to hold to evaluate `statement(variable)` and

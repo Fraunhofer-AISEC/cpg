@@ -44,7 +44,6 @@ import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
-import de.fraunhofer.aisec.cpg.graph.expressions.Statement
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.helpers.*
@@ -68,7 +67,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     class Configuration(
         /**
          * This specifies the maximum complexity (as calculated per
-         * [Statement.cyclomaticComplexity]) a [Function] must have in order to be considered.
+         * [Expression.cyclomaticComplexity]) a [Function] must have in order to be considered.
          */
         var maxComplexity: Int? = null,
         /**
@@ -255,10 +254,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     }
 
     /**
-     * Computes the previous write access of [currentEdge].end if it is a [de.fraunhofer.aisec.cpg.graph.expressions.Reference] or
-     * [ValueDeclaration] based on the given [state] (which maps all variables to its last write
-     * instruction). It also updates the [state] if [currentEdge].end performs a write-operation to
-     * a variable.
+     * Computes the previous write access of [currentEdge].end if it is a
+     * [de.fraunhofer.aisec.cpg.graph.expressions.Reference] or [ValueDeclaration] based on the
+     * given [state] (which maps all variables to its last write instruction). It also updates the
+     * [state] if [currentEdge].end performs a write-operation to a variable.
      *
      * It further determines unnecessary implicit return statement which are added by some frontends
      * even if every path reaching this point already contains a return statement.

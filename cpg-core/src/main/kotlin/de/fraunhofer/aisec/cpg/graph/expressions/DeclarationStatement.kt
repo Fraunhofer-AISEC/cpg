@@ -35,12 +35,12 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
- * A [Statement], which contains a single or multiple [Declaration]s. Usually these statements occur
- * if one defines a variable within a function body. A function body is a [ ], which can only
+ * A [Expression], which contains a single or multiple [Declaration]s. Usually these statements
+ * occur if one defines a variable within a function body. A function body is a [ ], which can only
  * contain other statements, but not declarations. Therefore, declarations are wrapped in a
  * [DeclarationStatement].
  */
-open class DeclarationStatement : Statement() {
+open class DeclarationStatement : Expression() {
 
     override var usedAsExpression = false
 

@@ -53,11 +53,16 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
- * If a [Language] has the trait [HasCallAmbiguity], we cannot distinguish between [de.fraunhofer.aisec.cpg.graph.expressions.Call], [de.fraunhofer.aisec.cpg.graph.expressions.Cast] or
- * [de.fraunhofer.aisec.cpg.graph.expressions.Construction] during the initial translation. This stems from the fact that we might not know
- * all the types yet. We therefore need to handle them as regular call expression in a
- * [LanguageFrontend] or [Handler] and then later replace them with a [de.fraunhofer.aisec.cpg.graph.expressions.Cast] or [de.fraunhofer.aisec.cpg.graph.expressions.Construction], if
- * the [de.fraunhofer.aisec.cpg.graph.expressions.Call.callee] refers to name of a [Type] / [Record] rather than a function.
+ * If a [Language] has the trait [HasCallAmbiguity], we cannot distinguish between
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Call],
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Cast] or
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Construction] during the initial translation. This
+ * stems from the fact that we might not know all the types yet. We therefore need to handle them as
+ * regular call expression in a [LanguageFrontend] or [Handler] and then later replace them with a
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Cast] or
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Construction], if the
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Call.callee] refers to name of a [Type] / [Record]
+ * rather than a function.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @DependsOn(TypeResolver::class)

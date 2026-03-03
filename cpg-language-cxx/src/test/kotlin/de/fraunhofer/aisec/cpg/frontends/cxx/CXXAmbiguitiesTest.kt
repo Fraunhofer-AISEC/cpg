@@ -82,7 +82,8 @@ class CXXAmbiguitiesTest {
 
     /**
      * In CXX there is an ambiguity with the statement: "(A)(B);" 1) If A is a function pointer,
-     * this is a [de.fraunhofer.aisec.cpg.graph.expressions.Call] 2) If A is a type, this is a [de.fraunhofer.aisec.cpg.graph.expressions.Cast]
+     * this is a [de.fraunhofer.aisec.cpg.graph.expressions.Call] 2) If A is a type, this is a
+     * [de.fraunhofer.aisec.cpg.graph.expressions.Cast]
      */
     @Test
     fun testFunctionCallOrTypeCast() {
@@ -121,7 +122,8 @@ class CXXAmbiguitiesTest {
 
     /**
      * In CXX there is an ambiguity with the statement: "(A.B)(C);" 1) If B is a method, this is a
-     * [de.fraunhofer.aisec.cpg.graph.expressions.MemberCall] 2) if B is a function pointer, this is a [Call].
+     * [de.fraunhofer.aisec.cpg.graph.expressions.MemberCall] 2) if B is a function pointer, this is
+     * a [Call].
      *
      * Function pointer as a struct member are currently not supported in the cpg. This test case
      * will just ensure that there will be no crash when parsing such a statement. When adding this

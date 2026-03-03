@@ -40,22 +40,22 @@ import org.neo4j.ogm.annotation.Relationship
  * The looping criterion can be a condition or the iteration over all elements in a list and is
  * defined by the subclass.
  */
-abstract class Loop : Statement() {
+abstract class Loop : Expression() {
 
     override var usedAsExpression = false
 
-    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
-    /** This field contains the body of the loop, e.g. a [Block] or single [Statement]. */
+    @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Expression>()
+    /** This field contains the body of the loop, e.g. a [Block] or single [Expression]. */
     var statement by unwrapping(Loop::statementEdge)
 
     /**
      * This represents a single or block of statements that are executed when the loop terminates
      * regularly, e.g. the loop finishes iterating over all elements or the loop-condition evaluates
      * to false. The exact situation when this is happening depends on the language that supports an
-     * `else`-Statement at loop level. E.g. in Python the [elseStatement] is executed when the loop
+     * `else`-Expression at loop level. E.g. in Python the [elseStatement] is executed when the loop
      * was not left through a break.
      */
-    @Relationship(value = "ELSE_STATEMENT") var elseStatementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship(value = "ELSE_STATEMENT") var elseStatementEdge = astOptionalEdgeOf<Expression>()
     var elseStatement by unwrapping(Loop::elseStatementEdge)
 
     override fun toString() =

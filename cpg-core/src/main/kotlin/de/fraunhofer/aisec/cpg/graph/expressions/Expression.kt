@@ -56,7 +56,7 @@ import org.neo4j.ogm.annotation.Transient
  * executable code.
  */
 @NodeEntity
-abstract class Statement : AstNode(), DeclarationHolder, HasType {
+abstract class Expression : AstNode(), DeclarationHolder, HasType {
 
     /**
      * Per default, expressions only read Data. The access value can be changed to modify this
@@ -75,7 +75,7 @@ abstract class Statement : AstNode(), DeclarationHolder, HasType {
     var localEdges = astEdgesOf<ValueDeclaration>()
 
     /** Virtual property to access [localEdges] without property edges. */
-    var locals by unwrapping(Statement::localEdges)
+    var locals by unwrapping(Expression::localEdges)
 
     /**
      * This property specifies that this node is used as an expression. Depending on the language,
@@ -135,7 +135,7 @@ abstract class Statement : AstNode(), DeclarationHolder, HasType {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is Statement) return false
+        if (other !is Expression) return false
         return super.equals(other) &&
             locals == other.locals &&
             propertyEqualsList(localEdges, other.localEdges) &&

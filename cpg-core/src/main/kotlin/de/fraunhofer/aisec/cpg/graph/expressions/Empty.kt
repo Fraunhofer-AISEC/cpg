@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 @Suppress("EqualsOrHashCode")
-class Empty : Statement() {
+class Empty : Expression() {
 
     override var usedAsExpression = false
 

@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.frontends.python.Python.AST
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.expressions.Statement
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import jep.python.PyObject
 
 /**
@@ -104,7 +104,7 @@ interface Python {
          * Python does not really have "declarations", but it has "definitions". Instead of having
          * their own AST class, they are also [AST.BaseStmt]s. In order to be compatible with the
          * remaining languages we need to ensure that elements such as functions or classes, still
-         * turn out to be [Declaration]s, not [Statement]s
+         * turn out to be [Declaration]s, not [Expression]s
          *
          * This interface should be attached to all such statements that we consider to be
          * definitions, and thus [Declaration]s.

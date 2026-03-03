@@ -58,13 +58,13 @@ import kotlin.collections.set
 import org.slf4j.LoggerFactory
 
 class StatementHandler(lang: JavaLanguageFrontend?) :
-    Handler<de.fraunhofer.aisec.cpg.graph.expressions.Statement, Statement, JavaLanguageFrontend>(
+    Handler<de.fraunhofer.aisec.cpg.graph.expressions.Expression, Statement, JavaLanguageFrontend>(
         Supplier { ProblemExpression() },
         lang!!,
     ) {
     fun handleExpressionStatement(
         stmt: Statement
-    ): de.fraunhofer.aisec.cpg.graph.expressions.Statement? {
+    ): de.fraunhofer.aisec.cpg.graph.expressions.Expression? {
         // We want to use the code of the stmt, rather than the expression
         val expr =
             frontend.expressionHandler
@@ -76,7 +76,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     private fun handleThrowStmt(
         stmt: Statement
-    ): de.fraunhofer.aisec.cpg.graph.expressions.Statement {
+    ): de.fraunhofer.aisec.cpg.graph.expressions.Expression {
         val throwStmt = stmt as ThrowStmt
         val throwOperation = newThrow(rawNode = stmt)
         throwOperation.exception =
@@ -93,9 +93,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             val expr = optionalExpression.get()
 
             // handle the expression as the first argument
-            expression =
-                frontend.expressionHandler.handle(expr)
-                    as? de.fraunhofer.aisec.cpg.graph.expressions.Expression
+            expression = frontend.expressionHandler.handle(expr)
         }
         val returnStatement = this.newReturn(rawNode = stmt)
         // JavaParser seems to add implicit return statements, that are not part of the original
@@ -298,7 +296,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     fun handleCaseDefault(
         caseExpression: Expression?,
         sEntry: SwitchEntry,
-    ): de.fraunhofer.aisec.cpg.graph.expressions.Statement {
+    ): de.fraunhofer.aisec.cpg.graph.expressions.Expression {
         val parentLocation = frontend.locationOf(sEntry)
         val optionalTokenRange = sEntry.tokenRange
         var caseTokens = Pair<JavaToken?, JavaToken?>(null, null)

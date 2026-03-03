@@ -38,7 +38,7 @@ import org.neo4j.ogm.annotation.Relationship
  * and default statements. Break statements break out of the switch and labeled breaks in Java are
  * handled properly.
  */
-class Switch : Statement(), BranchingNode {
+class Switch : Expression(), BranchingNode {
 
     override var usedAsExpression = false
 
@@ -47,7 +47,7 @@ class Switch : Statement(), BranchingNode {
     var selector by unwrapping(Switch::selectorEdge)
 
     @Relationship(value = "INITIALIZER_STATEMENT")
-    var initializerStatementEdge = astOptionalEdgeOf<Statement>()
+    var initializerStatementEdge = astOptionalEdgeOf<Expression>()
     /** C++ can have an initializer statement in a switch */
     var initializerStatement by unwrapping(Switch::initializerStatementEdge)
 
@@ -56,7 +56,7 @@ class Switch : Statement(), BranchingNode {
     /** C++ allows to use a declaration instead of an expression as selector */
     var selectorDeclaration by unwrapping(Switch::selectorDeclarationEdge)
 
-    @Relationship(value = "STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
+    @Relationship(value = "STATEMENT") var statementEdge = astOptionalEdgeOf<Expression>()
     /**
      * The compound statement that contains break/default statements with regular statements on the
      * same hierarchy

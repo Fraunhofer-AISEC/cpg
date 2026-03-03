@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
-class CatchClause : Statement(), BranchingNode, EOGStarterHolder {
+class CatchClause : Expression(), BranchingNode, EOGStarterHolder {
 
     override var usedAsExpression = false
 

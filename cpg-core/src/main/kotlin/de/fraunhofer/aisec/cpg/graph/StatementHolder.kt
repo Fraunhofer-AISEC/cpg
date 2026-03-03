@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.collections.UnwrappedEdgeList.Delegate
-import de.fraunhofer.aisec.cpg.graph.expressions.Statement
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 
 /**
  * This interface denotes an AST node that can contain code. This code is stored as statements. This
@@ -39,22 +39,22 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Statement
  * compound statements is that code can be distributed between functions and an encapsulating
  * compound statement would imply a block of code with a code region containing only the statements.
  */
-interface StatementHolder : Holder<Statement> {
+interface StatementHolder : Holder<Expression> {
     /** List of statements as property edges. */
-    var statementEdges: AstEdges<Statement, AstEdge<Statement>>
+    var statementEdges: AstEdges<Expression, AstEdge<Expression>>
 
     /**
      * Virtual property to access [statementEdges] without property edges.
      *
      * Note: We cannot use [Delegate] because delegates are not allowed in interfaces.
      */
-    var statements: MutableList<Statement>
+    var statements: MutableList<Expression>
 
-    override fun replace(old: Statement, new: Statement): Boolean {
+    override fun replace(old: Expression, new: Expression): Boolean {
         return statementEdges.replace(old, new)
     }
 
-    override operator fun plusAssign(node: Statement) {
+    override operator fun plusAssign(node: Expression) {
         statementEdges += node
     }
 }

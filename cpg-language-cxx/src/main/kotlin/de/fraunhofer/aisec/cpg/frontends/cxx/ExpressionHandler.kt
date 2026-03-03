@@ -103,7 +103,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     /**
      * This handles a [CPPASTSimpleTypeConstructorExpression], which handles all cases of
      * [Explicit type conversion](https://en.cppreference.com/w/cpp/language/explicit_cast).
-     * Depending on the case, we either handle this as a [de.fraunhofer.aisec.cpg.graph.expressions.Cast] or a [de.fraunhofer.aisec.cpg.graph.expressions.Construction].
+     * Depending on the case, we either handle this as a
+     * [de.fraunhofer.aisec.cpg.graph.expressions.Cast] or a
+     * [de.fraunhofer.aisec.cpg.graph.expressions.Construction].
      */
     private fun handleSimpleTypeConstructorExpression(
         node: CPPASTSimpleTypeConstructorExpression

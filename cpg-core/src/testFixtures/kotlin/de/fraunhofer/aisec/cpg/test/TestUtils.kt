@@ -276,9 +276,10 @@ fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
 
 /**
  * Asserts that `usingNode` uses/references the provided `usedBase` and `usedMember`. If
- * [ENFORCE_MEMBER_EXPRESSION] is true, `usingNode` must be a [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess] where
- * [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess.base] uses `usedBase` and [ ][MemberAccess.refersTo] uses `usedMember`. Using is
- * checked as preformed per [assertUsageOf]
+ * [ENFORCE_MEMBER_EXPRESSION] is true, `usingNode` must be a
+ * [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess] where
+ * [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess.base] uses `usedBase` and
+ * [ ][MemberAccess.refersTo] uses `usedMember`. Using is checked as preformed per [assertUsageOf]
  *
  * @param usingNode
  * - Node that uses some member

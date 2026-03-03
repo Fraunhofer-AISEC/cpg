@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.util.Objects
 
 /**
- * Statement used to interrupt further execution of a loop body and exit the respective loop
+ * Expression used to interrupt further execution of a loop body and exit the respective loop
  * context. Can have a loop label, e.g. in Java, to specify which of the nested loops should be
  * broken out of.
  */
-class Break : Statement() {
+class Break : Expression() {
 
     override var usedAsExpression = false
 

@@ -372,7 +372,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             val statements = function?.statements
             assertNotNull(statements)
             statements.forEach(
-                Consumer { node: Statement ->
+                Consumer { node: Expression ->
                     log.debug("{}", node)
                     assertTrue(
                         node is DeclarationStatement ||
@@ -960,7 +960,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         }
     }
 
-    private val Function.statements: List<Statement>?
+    private val Function.statements: List<Expression>?
         get() {
             return (this.body as? Block)?.statements
         }

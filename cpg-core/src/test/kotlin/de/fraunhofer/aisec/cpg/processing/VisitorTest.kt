@@ -81,7 +81,7 @@ class VisitorTest : BaseTest() {
         assertNotNull(method)
 
         // the "first" statement includes the block itself, so we need to get index 1 instead of 0
-        val firstStmt = method.bodyOrNull<de.fraunhofer.aisec.cpg.graph.expressions.Statement>(0)
+        val firstStmt = method.bodyOrNull<de.fraunhofer.aisec.cpg.graph.expressions.Expression>(0)
         assertNotNull(firstStmt)
 
         firstStmt.accept(

@@ -57,7 +57,7 @@ class CollectionComprehension : Expression(), ArgumentHolder {
 
     @Relationship("STATEMENT")
     var statementEdge =
-        astEdgeOf<Statement>(
+        astEdgeOf<Expression>(
             ProblemExpression("No statement provided but is required in ${this::class}")
         )
     /**

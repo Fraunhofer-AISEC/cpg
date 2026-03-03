@@ -279,7 +279,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * Adds the DFG edge for a [ForEach]. The data flows from the [ForEach.iterable] to the
-     * [ForEach.variable]. However, since the [ForEach.variable] is a [Statement], we have to
+     * [ForEach.variable]. However, since the [ForEach.variable] is a [Expression], we have to
      * identify the variable which is used in the loop. In most cases, we should have a
      * [DeclarationStatement] which means that we can unwrap the [Variable]. If this is not the
      * case, we assume that the last [Variable] in the statement is the one we care about.

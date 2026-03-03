@@ -56,9 +56,9 @@ import java.util.*
 import java.util.function.Consumer
 
 /**
- * This [Pass] is responsible for resolving dynamic function invokes, i.e., [de.fraunhofer.aisec.cpg.graph.expressions.Call] nodes that
- * contain a reference/pointer to a function and are being "called". A common example includes C/C++
- * function pointers.
+ * This [Pass] is responsible for resolving dynamic function invokes, i.e.,
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Call] nodes that contain a reference/pointer to a
+ * function and are being "called". A common example includes C/C++ function pointers.
  *
  * This pass is intentionally split from the [SymbolResolver] because it depends on DFG edges. This
  * split allows the [SymbolResolver] to be run before any DFG passes, which in turn allow us to also
@@ -108,7 +108,8 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * Resolves function pointers in a [MemberCall]. In this case the [MemberCall.callee] field is a
-     * binary operator on which [de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator.rhs] needs to have a [FunctionPointerType].
+     * binary operator on which [de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator.rhs] needs
+     * to have a [FunctionPointerType].
      */
     private fun handleMemberCall(call: MemberCall) {
         val callee = call.callee

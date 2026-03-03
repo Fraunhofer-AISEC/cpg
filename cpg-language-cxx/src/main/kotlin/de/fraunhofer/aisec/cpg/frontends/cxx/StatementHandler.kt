@@ -44,9 +44,9 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCatchHandler
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class StatementHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Statement, IASTStatement>(Supplier(::ProblemExpression), lang) {
+    CXXHandler<Expression, IASTStatement>(Supplier(::ProblemExpression), lang) {
 
-    override fun handleNode(node: IASTStatement): Statement {
+    override fun handleNode(node: IASTStatement): Expression {
         return when (node) {
             is IASTCompoundStatement -> handleCompoundStatement(node)
             is IASTReturnStatement -> handleReturn(node)
@@ -265,7 +265,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         val decl = frontend.declarationHandler.handle(ctx.declaration)
         val `var` = newDeclarationStatement()
         `var`.singleDeclaration = decl
-        val iterable: Statement? = frontend.expressionHandler.handle(ctx.initializerClause)
+        val iterable: Expression? = frontend.expressionHandler.handle(ctx.initializerClause)
         statement.variable = `var`
         statement.iterable = iterable
         statement.statement = handle(ctx.body)
@@ -291,7 +291,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         return expression
     }
 
-    private fun handleDeclarationStatement(ctx: IASTDeclarationStatement): Statement {
+    private fun handleDeclarationStatement(ctx: IASTDeclarationStatement): Expression {
         return if (ctx.declaration is IASTASMDeclaration) {
             // TODO: Specify the contained language through a language node and find a way to run a
             //  frontend for sub-block if available
