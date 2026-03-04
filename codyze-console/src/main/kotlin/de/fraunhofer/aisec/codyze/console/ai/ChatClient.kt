@@ -51,7 +51,7 @@ class ChatClient(
     private var prompts: List<Prompt> = emptyList()
     private var resources: List<Resource> = emptyList()
 
-    /** Connect to the MCP server via streamable HTTP */
+    /** Connect to the MCP server via SSE. */
     suspend fun connect() {
         val transport = SseClientTransport(urlString = mcpServerUrl, client = httpClient)
         mcp.connect(transport)

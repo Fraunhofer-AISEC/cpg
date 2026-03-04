@@ -35,7 +35,6 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 
@@ -62,7 +61,6 @@ fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
 
 private suspend fun ConsoleService.initChatService(): ChatService {
     McpServerHelper.startMcpServer(8081)
-    delay(500) // give the MCP server time to bind before connecting
 
     val translationResult = getTranslationResult()?.analysisResult?.translationResult
     if (translationResult != null) {

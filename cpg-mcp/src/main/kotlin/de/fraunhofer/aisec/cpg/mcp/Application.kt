@@ -116,8 +116,6 @@ fun runHttpMcpServerUsingKtorPlugin(
     server: Server,
     wait: Boolean = false,
 ) {
-    embeddedServer(factory = CIO, host = host, port = port) {
-            mcpStreamableHttp(enableDnsRebindingProtection = false) { server }
-        }
+    embeddedServer(factory = CIO, host = host, port = port) { mcpStreamableHttp { server } }
         .start(wait = wait)
 }
