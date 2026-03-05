@@ -46,7 +46,16 @@ import kotlinx.serialization.json.Json
 /** ChatService manages LLM client configuration and provides an API for chat interactions. */
 class ChatService {
     // /resources/application.conf
-    private val config = ConfigFactory.load()
+    private val config = run {
+        val config = ConfigFactory.load()
+        if (!config.hasPath("llm.client")) {
+            error(
+                "No application.conf in /resources found. " +
+                    "Please copy application.conf.example to application.conf and configure your models."
+            )
+        }
+        config
+    }
     private val llmProvider: String = config.getString("llm.client")
     private val llmModel: String = config.getString("llm.$llmProvider.model")
     private val llmBaseUrl: String = config.getString("llm.$llmProvider.baseUrl")
