@@ -2290,9 +2290,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     GeneralStateEntryElement(
                         PowersetLattice.Element(doubleState.getAddresses(currentNode, currentNode)),
                         PowersetLattice.Element(),
-                        PowersetLattice.Element(
-                            NodeWithPropertiesKey(currentNode, equalLinkedHashSetOf())
-                        ),
+                        PowersetLattice.Element(),
                     ),
                 )
         }
