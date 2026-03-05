@@ -6,14 +6,13 @@
 
   let { content }: { content: any } = $props();
 
-  // Collect all nodes with an actual node object, depth-first (leaves first = sources first)
+  // Collect all nodes with an actual node object
   function collectNodes(tree: QueryTreeNode): NonNullable<QueryTreeNode['node']>[] {
     const fromChildren = (tree.children ?? []).flatMap(collectNodes);
     if (tree.node) return [...fromChildren, tree.node];
     return fromChildren;
   }
 
-  // Deduplicate by code+type, keep order
   function dedupe(nodes: NonNullable<QueryTreeNode['node']>[]): NonNullable<QueryTreeNode['node']>[] {
     const seen = new Set<string>();
     return nodes.filter((n) => {

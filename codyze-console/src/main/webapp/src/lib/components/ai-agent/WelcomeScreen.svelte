@@ -14,7 +14,7 @@
   let messageInput = $state('');
 
   const suggestedQuestions = [
-    'List all functions and their parameters',
+    'List all functions',
     'What classes are defined?',
     'Which function implements AES encryption?',
     'What functions are called by the main entry point?'

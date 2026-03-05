@@ -52,9 +52,9 @@
   const offsetTop = 1;
   const baseOffsetLeft = 2.4;
 
-  const totalLines = data.translationUnit.code.split('\n').length;
-  const lineNumberWidth = Math.ceil(Math.log10(totalLines + 1));
-  const offsetLeft = baseOffsetLeft + lineNumberWidth * charWidth;
+  const totalLines = $derived(data.translationUnit.code.split('\n').length);
+  const lineNumberWidth = $derived(Math.ceil(Math.log10(totalLines + 1)));
+  const offsetLeft = $derived(baseOffsetLeft + lineNumberWidth * charWidth);
 
   /**
    * Export the added concepts to a YAML file.

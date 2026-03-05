@@ -5,6 +5,9 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import type { AnalysisProjectJSON } from '$lib/types';
+  import type { Snippet } from 'svelte';
+
+  let { children }: { children: Snippet } = $props();
 
   let project = $state<AnalysisProjectJSON | null>(null);
   let loading = $state(true);
@@ -47,7 +50,7 @@
         </div>
       {/if}
 
-      <slot />
+      {@render children()}
     </div>
   </main>
 </div>
