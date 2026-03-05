@@ -499,6 +499,6 @@ class DFGTest {
         assertNotNull(variable)
         assertEquals(1, variable.prevDFG.size)
         val initializer = variable.prevDFG.first()
-        assertEquals(1, initializer.prevDFG.size)
+        assertLocalName("foo", (initializer.prevDFG.singleOrNull() as? Call))
     }
 }
