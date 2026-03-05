@@ -28,10 +28,7 @@ package de.fraunhofer.aisec.cpg.evaluation
 import de.fraunhofer.aisec.cpg.frontends.TestHandler
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
+import kotlin.test.*
 import org.junit.jupiter.api.assertThrows
 
 class NotReallyANumber : Number() {
@@ -60,6 +57,7 @@ class NotReallyANumber : Number() {
     }
 }
 
+// TODO Mathias
 class ValueEvaluatorTest {
 
     @Test

@@ -25,13 +25,42 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.graph.PrintDFGDirection.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+
+/**
+ * Indicates the direction when building the DFG.
+ * - [FORWARD] build the DFG starting from the given node.
+ * - [BACKWARD] build the DFG ending at the given node.
+ * - [BOTH] build the DFG from and to the given node.
+ */
+enum class PrintDFGDirection {
+    FORWARD,
+    BACKWARD,
+    BOTH,
+}
+
+/** Utility function to print the DFG using [printGraph]. */
+fun Node.printDFG2(
+    maxConnections: Int = 25,
+    selector: (Node) -> Boolean = { true },
+    vararg strategies: (Node) -> Iterator<Dataflow> =
+        arrayOf<(Node) -> Iterator<Dataflow>>(
+            Strategy::DFG_EDGES_FORWARD,
+            Strategy::DFG_EDGES_BACKWARD,
+            Strategy::MEMORY_VALUES_FORWARD,
+            Strategy::MEMORY_VALUES_BACKWARD,
+        ),
+): String {
+    return this.printGraphNew(maxConnections = maxConnections, selector, *strategies)
+}
 
 /** Utility function to print the DFG using [printGraph]. */
 fun Node.printDFG(
@@ -67,6 +96,158 @@ fun AstNode.printAST(
         ),
 ): String {
     return this.printGraph(maxConnections, *strategies)
+}
+
+data class Quadtuple(
+    val start: Node,
+    val end: Node,
+    val nextRelevant: Node,
+    val relevantEdge: Boolean,
+) {
+    val component1: Node
+        get() = start
+
+    val component2: Node
+        get() = end
+
+    val component3: Node
+        get() = nextRelevant
+
+    val component4: Boolean
+        get() = relevantEdge
+}
+
+fun <EdgeType : Edge<out Node>> nextStep(
+    edge: EdgeType,
+    lastRelevant: Node?,
+    selector: (Node) -> Boolean = { true },
+    strategy: (Node) -> Iterator<EdgeType>,
+): Quadtuple {
+    val isForward = strategy(edge.start).asSequence().firstOrNull()?.end == edge.end
+    var start: Node
+    var end: Node
+    var nextRelevant: Node
+    var relevantEdge = false
+    if (isForward) {
+        start = lastRelevant ?: edge.start
+        end = edge.end
+        nextRelevant =
+            if (selector(end)) {
+                relevantEdge = true
+                end
+            } else {
+                lastRelevant ?: edge.start
+            }
+    } else {
+        start = edge.start
+        end = lastRelevant ?: edge.end
+        nextRelevant =
+            if (selector(start)) {
+                relevantEdge = true
+                start
+            } else {
+                // TODO: Might be useful to propagate/configure edge labels.
+                lastRelevant ?: edge.end
+            }
+    }
+    return Quadtuple(start, end, nextRelevant, relevantEdge)
+}
+
+/**
+ * This function prints a partial graph, limited to a particular set of edges, starting with the
+ * current [Node] as Markdown, with an embedded [Mermaid](https://mermaid.js.org) graph. The output
+ * can either be pasted into a Markdown document (and then rendered) or directly pasted into GitHub
+ * issues, discussions or pull requests (see
+ * https://github.blog/2022-02-14-include-diagrams-markdown-files-mermaid/).
+ *
+ * @param strategies The strategies to use when iterating the graph. See [Strategy] for
+ *   implementations.
+ * @return The Mermaid graph as a string encapsulated in triple-backticks.
+ */
+fun <EdgeType : Edge<out Node>> Node.printGraphNew(
+    maxConnections: Int = 25,
+    selector: (Node) -> Boolean = { true },
+    vararg strategies: (Node) -> Iterator<EdgeType>,
+): String {
+    val builder = StringBuilder()
+
+    builder.append("```mermaid\n")
+    builder.append("flowchart TD\n")
+
+    // We use a set with a defined ordering to hold our work-list to have a somewhat consistent
+    // ordering of statements in the mermaid file.
+    val worklist = LinkedHashSet<Triple<EdgeType, Node, Node>>()
+    val alreadySeen = identitySetOf<EdgeType>()
+    var conns = 0
+
+    strategies.forEach { strategy ->
+        worklist +=
+            strategy(this)
+                .asSequence()
+                .filter { it !in alreadySeen }
+                .sortedBy { it.end.name }
+                .map { Triple(it, it.start, it.end) }
+    }
+
+    while (worklist.isNotEmpty() && conns < maxConnections) {
+        // Take one edge out of the work-list
+        val item = worklist.first()
+        val (edge, startNode, endNode) = worklist.first()
+        worklist.remove(item)
+
+        if (edge in alreadySeen) {
+            continue
+        }
+
+        // Add it to the seen-list
+        alreadySeen += edge
+
+        // val start = edge.start
+        // val end = edge.end
+        val isForward = endNode == edge.end
+        if (
+            ((isForward && (selector(endNode) || endNode == this)) ||
+                (!isForward && (selector(startNode) || startNode == this))) && startNode != endNode
+        ) {
+            builder.append(
+                "${startNode.hashCode()}[\"${startNode.nodeLabel}\"]-->|${edge.label()}|${endNode.hashCode()}[\"${endNode.nodeLabel}\"]\n"
+            )
+            conns++
+        }
+
+        // Add start and edges to the work-list.
+        strategies.forEach { strategy ->
+            if (strategy(edge.start).asSequence().firstOrNull()?.end == edge.end) {
+                // Is forward strategy
+                worklist +=
+                    strategy(edge.end)
+                        .asSequence()
+                        .sortedBy { it.end.name }
+                        .map { Triple(it, if (selector(it.start)) it.start else startNode, it.end) }
+                worklist +=
+                    strategy(edge.start)
+                        .asSequence()
+                        .sortedBy { it.end.name }
+                        .map { Triple(it, if (selector(it.start)) it.start else startNode, it.end) }
+            } else {
+                // Is backward strategy
+                worklist +=
+                    strategy(edge.end)
+                        .asSequence()
+                        .sortedBy { it.end.name }
+                        .map { Triple(it, it.start, if (selector(it.end)) it.end else endNode) }
+                worklist +=
+                    strategy(edge.start)
+                        .asSequence()
+                        .sortedBy { it.end.name }
+                        .map { Triple(it, it.start, if (selector(it.end)) it.end else endNode) }
+            }
+        }
+    }
+
+    builder.append("```")
+
+    return builder.toString()
 }
 
 /**
@@ -115,7 +296,7 @@ fun <NodeType : Node, EdgeType : Edge<out NodeType>> NodeType.printGraph(
         val start = edge.start
         val end = edge.end
         builder.append(
-            "${start.hashCode()}[\"${start.nodeLabel}\"]-->|${edge.label()}|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
+            "${start.id}[\"${start.nodeLabel}\"]-->|${edge.label()}|${end.id}[\"${end.nodeLabel}\"]\n"
         )
         conns++
 
@@ -139,7 +320,9 @@ private fun Edge<out Node>.label(): String {
     if (this is Dataflow) {
         val granularity = this.granularity
         if (granularity is FieldDataflowGranularity) {
-            builder.append(" (partial, ${granularity.partialTarget.name})")
+            builder.append(" (partial, ${granularity.partialTarget?.name})")
+        } else if (granularity is PointerDataflowGranularity) {
+            builder.append(" (pointer, ${granularity.pointerTarget.name})")
         } else {
             builder.append(" (full)")
         }

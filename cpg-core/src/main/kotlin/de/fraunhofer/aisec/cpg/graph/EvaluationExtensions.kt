@@ -30,7 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ArrayConstruction
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 
-fun Node.evaluate(evaluator: ValueEvaluator = this.language.evaluator): Any? {
+fun Node.evaluate(
+    evaluator: ValueEvaluator = this.language.evaluator,
+    useCache: Boolean = false,
+): Any? {
     return evaluator.evaluate(this)
 }
 

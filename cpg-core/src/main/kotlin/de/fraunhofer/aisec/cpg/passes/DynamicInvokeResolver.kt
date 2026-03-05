@@ -61,6 +61,7 @@ import java.util.function.Consumer
 @DependsOn(SymbolResolver::class)
 @DependsOn(DFGPass::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
+@DependsOn(PointsToPass::class, softDependency = true)
 @Description(
     "Resolves dynamic method invocations and calls of function pointers in the CPG, enhancing the accuracy of call relationships within the graph."
 )
@@ -213,7 +214,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // We have to update the dfg edges because this call could now be resolved (which was not
         // the case before).
-        DFGPass(ctx).handleCall(call, inferDfgForUnresolvedCalls)
+        DFGPass(ctx).handlePreviouslyUnresolvedCallExpression(call, inferDfgForUnresolvedCalls)
     }
 
     override fun cleanup() {

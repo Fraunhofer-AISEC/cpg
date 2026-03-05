@@ -526,6 +526,7 @@ private fun Call.duplicateTo(call: Call, callee: Reference) {
 fun MemberCall.toCall(callee: Reference): Call {
     val call = Call()
     duplicateTo(call, callee)
+    call.arguments.forEach { it.astParent = call }
 
     return call
 }
@@ -537,6 +538,7 @@ fun MemberCall.toCall(callee: Reference): Call {
 fun Call.toMemberCall(callee: MemberAccess): MemberCall {
     val call = MemberCall()
     duplicateTo(call, callee)
+    call.arguments.forEach { it.astParent = call }
 
     return call
 }
@@ -548,6 +550,7 @@ fun Call.toMemberCall(callee: MemberAccess): MemberCall {
 fun Call.toConstruct(callee: Reference): Construction {
     val construct = Construction()
     duplicateTo(construct, callee)
+    construct.arguments.forEach { it.astParent = construct }
 
     return construct
 }

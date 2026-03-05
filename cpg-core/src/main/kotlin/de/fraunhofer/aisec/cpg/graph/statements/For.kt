@@ -58,7 +58,7 @@ class For : Loop(), BranchingNode, StatementHolder {
     @Relationship("ITERATION_STATEMENT") var iterationStatementEdge = astOptionalEdgeOf<Statement>()
     var iterationStatement by unwrapping(For::iterationStatementEdge)
 
-    override val branchedBy
+    override val branchedBy: AstNode?
         get() = condition ?: conditionDeclaration
 
     override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
