@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.builder.assign
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
@@ -274,6 +275,9 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * or the right operand can be the result at runtime), or an empty set if no special handling is
      * needed.
      *
+     * If both [lhs] and [rhs] have only one assigned type, the type will be determined through
+     * [propagateTypeOfBinaryOperation].
+     *
      * Languages can override this to handle language-specific operators.
      */
     open fun propagateAssignedTypesOfBinaryOperation(
@@ -281,6 +285,19 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         lhs: Expression,
         rhs: Expression,
     ): Set<Type> {
+        val lhsAssigned = lhs.assignedTypes
+        val rhsAssigned = rhs.assignedTypes
+        if (lhsAssigned.size == 1 && rhsAssigned.size == 1) {
+            val typeResult =
+                propagateTypeOfBinaryOperation(
+                    operatorCode,
+                    lhsAssigned.single(),
+                    rhsAssigned.single(),
+                )
+            if (typeResult !is UnknownType) {
+                return setOf(typeResult)
+            }
+        }
         return emptySet()
     }
 
