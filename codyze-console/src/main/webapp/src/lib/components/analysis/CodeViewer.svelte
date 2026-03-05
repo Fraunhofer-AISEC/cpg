@@ -92,9 +92,9 @@
   const offsetTop = 1;
   const baseOffsetLeft = 2.4;
 
-  const totalLines = translationUnit.code.split('\n').length;
-  const lineNumberWidth = Math.ceil(Math.log10(totalLines + 1));
-  const offsetLeft = baseOffsetLeft + lineNumberWidth * charWidth;
+  const totalLines = $derived(translationUnit.code.split('\n').length);
+  const lineNumberWidth = $derived(Math.ceil(Math.log10(totalLines + 1)));
+  const offsetLeft = $derived(baseOffsetLeft + lineNumberWidth * charWidth);
 
   // Scroll to highlighted line
   $effect(() => {
