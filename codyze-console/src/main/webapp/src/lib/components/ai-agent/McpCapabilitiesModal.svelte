@@ -44,7 +44,9 @@
 
 <div
   class="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4 backdrop-blur-[2px]"
+  role="presentation"
   onclick={handleBackdropClick}
+  onkeydown={handleKeydown}
 >
   <!-- Modal -->
   <div class="flex w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl" style="max-height: 80vh;">
