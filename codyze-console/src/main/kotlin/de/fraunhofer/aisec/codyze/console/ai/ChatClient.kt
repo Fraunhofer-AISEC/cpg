@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.codyze.console.ai.clients.*
 import io.ktor.client.*
 import io.modelcontextprotocol.kotlin.sdk.client.Client as McpSdkClient
 import io.modelcontextprotocol.kotlin.sdk.client.ClientOptions
-import io.modelcontextprotocol.kotlin.sdk.client.SseClientTransport
+import io.modelcontextprotocol.kotlin.sdk.client.StreamableHttpClientTransport
 import io.modelcontextprotocol.kotlin.sdk.types.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
@@ -53,7 +53,7 @@ class ChatClient(
 
     /** Connect to the MCP server via SSE. */
     suspend fun connect() {
-        val transport = SseClientTransport(urlString = mcpServerUrl, client = httpClient)
+        val transport = StreamableHttpClientTransport(url = mcpServerUrl, client = httpClient)
         mcp.connect(transport)
         tools = mcp.listTools().tools
         prompts = mcp.listPrompts().prompts
