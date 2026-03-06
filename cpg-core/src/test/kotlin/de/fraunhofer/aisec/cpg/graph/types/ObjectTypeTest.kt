@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.declare
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.newMethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.newMethod
+import de.fraunhofer.aisec.cpg.graph.newRecord
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -38,15 +38,15 @@ class ObjectTypeTest {
     @Test
     fun testMethods() {
         with(TestLanguageFrontend()) {
-            val parent = newRecordDeclaration("parent", kind = "class")
+            val parent = newRecord("parent", kind = "class")
             scopeManager.enterScope(parent)
-            val foo = declare(newMethodDeclaration("foo"))
+            val foo = declare(newMethod("foo"))
             parent.methods += foo
             scopeManager.leaveScope(parent)
 
-            val child = newRecordDeclaration("child", kind = "class")
+            val child = newRecord("child", kind = "class")
             scopeManager.enterScope(child)
-            val bar = declare(newMethodDeclaration("bar"))
+            val bar = declare(newMethod("bar"))
             child.methods += bar
             child.superClasses += parent.toType()
             scopeManager.leaveScope(child)

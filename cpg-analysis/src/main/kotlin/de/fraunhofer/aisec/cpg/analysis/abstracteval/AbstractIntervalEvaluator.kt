@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.*
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.helpers.functional.*
@@ -364,8 +364,7 @@ class AbstractIntervalEvaluator {
      *   [LatticeInterval.BOTTOM] if not found.
      */
     fun evaluate(node: Node, targetType: KClass<out Value<LatticeInterval>>): LatticeInterval {
-        val startNode =
-            node.firstParentOrNull<FunctionDeclaration>() ?: return LatticeInterval.BOTTOM
+        val startNode = node.firstParentOrNull<Function>() ?: return LatticeInterval.BOTTOM
         return evaluate(startNode, node, targetType, LatticeInterval.BOTTOM)
     }
 

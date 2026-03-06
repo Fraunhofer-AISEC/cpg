@@ -30,7 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
+import kotlin.collections.plusAssign
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KTypeProjection
@@ -235,7 +238,7 @@ val KClass<out Persistable>.schemaRelationships: Map<String, KProperty1<out Pers
             for (property in properties) {
                 if (isRelationship(property)) {
                     val name = property.relationshipName
-                    schema.put(name, property)
+                    schema[name] = property
                 }
             }
             schema
@@ -348,4 +351,95 @@ val <K, V> KProperty1<K, V>.relationshipName: String
 fun String.toUpperSnakeCase(): String {
     val pattern = "(?<=.)[A-Z]".toRegex()
     return this.replace(pattern, "_$0").uppercase()
+}
+
+/**
+ * Represents a relationship between two [Node] objects (including any properties).
+ *
+ * The following keys MUST be set:
+ * - `startId`: The ID of the start node of the relationship.
+ * - `endId`: The ID of the end node of the relationship.
+ * - `type`: The name of the relationship type.
+ */
+internal typealias Relationship = Map<String, Any?>
+
+/**
+ * Returns all [Node] objects that are connected with this node with some kind of relationship
+ * defined in [schemaRelationships].
+ */
+val Persistable.connectedNodes: IdentitySet<Node>
+    get() {
+        val nodes = identitySetOf<Node>()
+
+        for (entry in this::class.schemaRelationships) {
+            when (val value = entry.value.call(this)) {
+                is EdgeCollection<*, *> -> {
+                    nodes += value.toNodeCollection()
+                }
+                is List<*> -> {
+                    nodes += value.filterIsInstance<Node>()
+                }
+                is Node -> {
+                    nodes += value
+                }
+            }
+        }
+
+        return nodes
+    }
+
+fun List<Node>.collectRelationships(): List<de.fraunhofer.aisec.cpg.persistence.Relationship> {
+    val relationships = mutableListOf<de.fraunhofer.aisec.cpg.persistence.Relationship>()
+
+    for (node in this) {
+        for (entry in node::class.schemaRelationships) {
+            when (val value = entry.value.call(node)) {
+                is EdgeCollection<*, *> -> {
+                    relationships +=
+                        value.map { edge ->
+                            mapOf(
+                                "startId" to edge.start.id.toString(),
+                                "startLegacyId" to edge.start.legacyId,
+                                "endId" to edge.end.id.toString(),
+                                "endLegacyId" to edge.end.legacyId,
+                                "type" to entry.key,
+                            ) + edge.properties()
+                        }
+                }
+                is List<*> -> {
+                    relationships +=
+                        value.filterIsInstance<Node>().map { end ->
+                            mapOf(
+                                "startId" to node.id.toString(),
+                                "startLegacyId" to node.legacyId,
+                                "endId" to end.id.toString(),
+                                "endLegacyId" to end.legacyId,
+                                "type" to entry.key,
+                            )
+                        }
+                }
+                is Node -> {
+                    relationships +=
+                        mapOf(
+                            "startId" to node.id.toString(),
+                            "startLegacyId" to node.legacyId,
+                            "endId" to value.id.toString(),
+                            "endLegacyId" to value.legacyId,
+                            "type" to entry.key,
+                        )
+                }
+            }
+        }
+    }
+
+    // Since Neo4J does not support multiple labels on edges, but we do internally, we
+    // duplicate the edge for each label
+    /*edge.labels.map { label ->
+        mapOf(
+            "startId" to edge.start.id.toString(),
+            "endId" to edge.end.id.toString(),
+            "type" to label
+        ) + edge.properties()
+    }*/
+    return relationships
 }
