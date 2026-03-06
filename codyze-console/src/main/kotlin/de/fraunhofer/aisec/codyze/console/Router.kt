@@ -25,6 +25,9 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.codyze.console.ai.ChatRequestJSON
+import de.fraunhofer.aisec.codyze.console.ai.ChatService
+import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import io.ktor.http.*
@@ -245,6 +248,9 @@ fun Routing.apiRoutes(service: ConsoleService) {
             }
         }
 
+        // Feature flags endpoint
+        get("/features") { call.respond(mapOf("mcpEnabled" to McpServerHelper.isEnabled)) }
+
         // The endpoint to get a QueryTree with its parent IDs for tree expansion
         get("/querytrees/{queryTreeId}/parents") {
             val queryTreeId =
@@ -260,6 +266,45 @@ fun Routing.apiRoutes(service: ConsoleService) {
             } else {
                 call.respond(HttpStatusCode.NotFound, mapOf("error" to "QueryTree not found"))
             }
+        }
+    }
+}
+
+/** Chat and MCP routes — only registered when [ChatService] is available. */
+fun Route.chatRoutes(chatService: ChatService) {
+    route("/api/chat") {
+        post {
+            val request = call.receive<ChatRequestJSON>()
+            call.respondTextWriter(contentType = ContentType.Text.EventStream) {
+                try {
+                    chatService.chat(request).collect { chunk ->
+                        try {
+                            chunk.split("\n").forEach { line -> write("data: $line\n") }
+                            write("\n")
+                            flush()
+                        } catch (e: io.ktor.utils.io.ClosedWriteChannelException) {
+                            throw kotlinx.coroutines.CancellationException("Client disconnected", e)
+                        }
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    // Expected when client disconnects
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    try {
+                        write("data: ERROR: ${e.message}\n\n")
+                        flush()
+                    } catch (ignored: Exception) {}
+                }
+            }
+        }
+
+        get("/mcp/capabilities") { call.respond(chatService.getMcpCapabilities()) }
+
+        post("/mcp/prompts/{name}") {
+            val name =
+                call.parameters["name"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+            val arguments = call.receiveNullable<Map<String, String>>() ?: emptyMap()
+            call.respond(chatService.getPrompt(name, arguments))
         }
     }
 }

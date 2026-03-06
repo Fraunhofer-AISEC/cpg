@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp
+package de.fraunhofer.aisec.cpg.mcp.tools
 
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
@@ -47,7 +47,6 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 class CpgAnalyzeToolTest {
-
     private lateinit var server: Server
 
     @Test
@@ -59,19 +58,21 @@ class CpgAnalyzeToolTest {
                     ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = true))
             )
         server = Server(info, options)
-
         server.addCpgAnalyzeTool()
 
-        val inputSchema = buildJsonObject {
-            put("content", "def hello():\n    print('Hello World')")
-            put("extension", "py")
-        }
-
-        val request =
-            CallToolRequest(CallToolRequestParams(name = "cpg_analyze", arguments = inputSchema))
-
-        val tool = server.tools["cpg_analyze"] ?: error("Tool not registered")
-        val result = tool.handler(request)
+        val result =
+            (server.tools["cpg_analyze"] ?: error("Tool not registered")).handler(
+                CallToolRequest(
+                    CallToolRequestParams(
+                        name = "cpg_analyze",
+                        arguments =
+                            buildJsonObject {
+                                put("content", "def hello():\n    print('Hello World')")
+                                put("extension", "py")
+                            },
+                    )
+                )
+            )
 
         assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
 
@@ -84,7 +85,7 @@ class CpgAnalyzeToolTest {
 
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
-        assertNotNull(analysisResult.nodes)
+        assertNotNull(analysisResult.functionSummaries)
     }
 
     @Test
@@ -96,6 +97,6 @@ class CpgAnalyzeToolTest {
 
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
-        assertNotNull(analysisResult.nodes)
+        assertNotNull(analysisResult.functionSummaries)
     }
 }

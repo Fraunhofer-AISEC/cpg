@@ -1,0 +1,33 @@
+llm {
+  client = "ollama"  # Options: "ollama", "gemini", "vLLM"
+
+  gemini {
+    baseUrl = "https://generativelanguage.googleapis.com/v1beta"
+    model = "gemini-2.5-flash"
+  }
+
+  ollama {
+    baseUrl = "http://localhost:11434"
+    model = "llama3"
+  }
+
+  mlx {
+    baseUrl = "http://localhost:8000"
+    model = "your-mlx-model"
+  }
+
+  local {
+    baseUrl = "http://localhost:1234"
+    model = "your-local-model"
+  }
+
+  vLLM {
+    baseUrl = "http://localhost:8000"
+    model = "your-vllm-model"
+  }
+}
+
+mcp {
+  # MCP Server Configuration
+  serverUrl = "http://localhost:8081/mcp"
+}
