@@ -103,7 +103,7 @@ class ListCommandsTest : McpTestSetup() {
         val functionNames =
             result.content.map {
                 assertIs<TextContent>(it)
-                Json.Default.decodeFromString<FunctionSummary>(it.text ?: "").name
+                Json.decodeFromString<FunctionSummary>(it.text).name
             }
         assertNotNull(
             functionNames.singleOrNull { it == "print" },
@@ -171,10 +171,7 @@ class ListCommandsTest : McpTestSetup() {
                 )
             )
         val callId =
-            Json.Default.decodeFromString<CallSummary>(
-                    (callsResult.content.first() as TextContent).text ?: ""
-                )
-                .id
+            Json.decodeFromString<CallSummary>((callsResult.content.first() as TextContent).text).id
 
         val argsResult =
             client.callTool(
@@ -205,9 +202,7 @@ class ListCommandsTest : McpTestSetup() {
         assertNotNull(wrongArgsResult)
         assertTrue(wrongArgsResult.content.isNotEmpty(), "Should return arguments for the call")
         assertThrows<IllegalArgumentException> {
-            Json.Default.decodeFromString<NodeJSON>(
-                (wrongArgsResult.content.first() as TextContent).text.orEmpty()
-            )
+            Json.decodeFromString<NodeJSON>((wrongArgsResult.content.first() as TextContent).text)
         }
     }
 
@@ -220,10 +215,7 @@ class ListCommandsTest : McpTestSetup() {
                 )
             )
         val callId =
-            Json.Default.decodeFromString<CallSummary>(
-                    (callsResult.content.first() as TextContent).text ?: ""
-                )
-                .id
+            Json.decodeFromString<CallSummary>((callsResult.content.first() as TextContent).text).id
 
         val argResultByIndex =
             client.callTool(
@@ -258,7 +250,7 @@ class ListCommandsTest : McpTestSetup() {
         assertNotNull(argResultByName)
         assertTrue(argResultByName.content.isNotEmpty(), "Should return the error message")
         assertThrows<IllegalArgumentException> {
-            Json.Default.decodeFromString<NodeJSON>(
+            Json.decodeFromString<NodeJSON>(
                 (argResultByName.content.singleOrNull() as? TextContent)?.text.orEmpty()
             )
         }
