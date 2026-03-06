@@ -34,14 +34,13 @@ import io.ktor.utils.io.*
 import io.modelcontextprotocol.kotlin.sdk.types.Tool
 import kotlinx.serialization.json.*
 
-/** OpenAI-compatible API client (Ollama, vLLM, LMStudio) */
+/** OpenAI-compatible API client (Ollama, vLLM, MLX) */
 class OpenAiClient(
     private val httpClient: HttpClient,
     private val model: String,
     private val baseUrl: String,
 ) : LlmClient {
     override val modelName: String = model
-    private val usesThinkTags = model.contains("glm", ignoreCase = true)
 
     override suspend fun sendPrompt(
         userMessage: String,
@@ -166,10 +165,7 @@ class OpenAiClient(
         onReasoning: suspend (String) -> Unit,
         accumulatedToolCalls: MutableList<JsonObject>,
     ) {
-        val toolCallsMap = mutableMapOf<Int, MutableMap<String, Any?>>()
-        val reasoningBuffer = StringBuilder()
-        var seenThinkClose = false
-        var totalOutputChars = 0
+        val streamingToolCalls = mutableMapOf<Int, StreamingToolCall>()
 
         readSseStream(channel) { jsonStr ->
             val chunk = Json.parseToJsonElement(jsonStr).jsonObject
@@ -183,68 +179,42 @@ class OpenAiClient(
                         ?: delta["thinking"]?.jsonPrimitive?.contentOrNull
 
                 if (reasoningContent?.isNotEmpty() == true) {
-                    totalOutputChars += reasoningContent.length
                     onReasoning(reasoningContent)
                 }
 
                 delta["content"]?.jsonPrimitive?.contentOrNull?.let { content ->
-                    totalOutputChars += content.length
                     if (content.isNotEmpty()) {
-                        if (usesThinkTags) {
-                            seenThinkClose =
-                                thinkTagsStreaming(
-                                    content,
-                                    reasoningBuffer,
-                                    seenThinkClose,
-                                    onText,
-                                    onReasoning,
-                                )
-                        } else {
-                            onText(content)
-                        }
+                        onText(content)
                     }
                 }
 
                 delta["tool_calls"]?.jsonArray?.forEach { tool ->
                     val toolJSON = tool.jsonObject
                     val index = toolJSON["index"]?.jsonPrimitive?.intOrNull ?: 0
-                    val toolCall =
-                        toolCallsMap.getOrPut(index) {
-                            mutableMapOf(
-                                "id" to null,
-                                "type" to "function",
-                                "name" to null,
-                                "arguments" to "",
-                            )
-                        }
+                    val entry = streamingToolCalls.getOrPut(index) { StreamingToolCall() }
 
-                    toolJSON["id"]?.jsonPrimitive?.contentOrNull?.let { toolCall["id"] = it }
-                    toolJSON["type"]?.jsonPrimitive?.contentOrNull?.let { toolCall["type"] = it }
+                    toolJSON["id"]?.jsonPrimitive?.contentOrNull?.let { entry.id = it }
                     toolJSON["function"]?.jsonObject?.let { func ->
-                        func["name"]?.jsonPrimitive?.contentOrNull?.let {
-                            toolCall["name"] = it
-                            totalOutputChars += it.length
-                        }
-                        func["arguments"]?.jsonPrimitive?.contentOrNull?.let { args ->
-                            toolCall["arguments"] = (toolCall["arguments"] as String) + args
-                            totalOutputChars += args.length
+                        func["name"]?.jsonPrimitive?.contentOrNull?.let { entry.name = it }
+                        func["arguments"]?.jsonPrimitive?.contentOrNull?.let {
+                            entry.arguments += it
                         }
                     }
                 }
             }
         }
 
-        toolCallsMap.values.forEach { toolCall ->
-            if (toolCall["name"] != null) {
+        streamingToolCalls.values.forEach { entry ->
+            if (entry.name != null) {
                 accumulatedToolCalls.add(
                     buildJsonObject {
-                        toolCall["id"]?.let { put("id", it as String) }
-                        put("type", toolCall["type"] as String)
+                        entry.id?.let { put("id", it) }
+                        put("type", "function")
                         put(
                             "function",
                             buildJsonObject {
-                                put("name", toolCall["name"] as String)
-                                put("arguments", toolCall["arguments"] as String)
+                                put("name", entry.name!!)
+                                put("arguments", entry.arguments)
                             },
                         )
                     }

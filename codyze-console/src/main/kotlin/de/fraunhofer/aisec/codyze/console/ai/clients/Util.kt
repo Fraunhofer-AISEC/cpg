@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.codyze.console.ai.clients
 
+import de.fraunhofer.aisec.codyze.console.ai.ChatClient
 import io.ktor.utils.io.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -32,7 +33,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 const val SYSTEM_PROMPT =
-    "You are a code analysis assistant with access to CPG (Code Property Graph) tools. " +
+    "You are a code analysis agent with access to CPG (Code Property Graph) tools. " +
         "You have ONLY the tools listed in the tool definitions — do NOT invent or guess tool names. " +
         "When the user asks a question about the code, use your tools immediately do not ask for permission or confirmation and also don't ask the user " +
         "to do the analysis themselves. " +
@@ -68,48 +69,7 @@ suspend fun readSseStream(channel: ByteReadChannel, processLine: suspend (String
     }
 }
 
-/** LLMs like GLM use <think> tags instead of the common approach using <reasoning> tags */
-suspend fun thinkTagsStreaming(
-    content: String,
-    reasoningBuffer: StringBuilder,
-    seenThinkClose: Boolean,
-    onText: suspend (String) -> Unit,
-    onReasoning: suspend (String) -> Unit,
-): Boolean {
-    var closed = seenThinkClose
-
-    if (content.contains("</think>")) {
-        val beforeClose = content.substringBefore("</think>")
-        reasoningBuffer.append(beforeClose)
-
-        if (reasoningBuffer.isNotEmpty()) {
-            onReasoning(reasoningBuffer.toString())
-            reasoningBuffer.clear()
-        }
-
-        closed = true
-
-        val afterClose = content.substringAfter("</think>")
-        if (afterClose.isNotEmpty()) {
-            onText(afterClose)
-        }
-    } else {
-        if (!closed) {
-            reasoningBuffer.append(content)
-        } else {
-            onText(content)
-        }
-    }
-
-    return closed
-}
-
-/** Strip <think> tags from non-streaming content Note: Needed for GLM models */
-fun stripThinkTags(content: String): String {
-    return content.replace(Regex("<think>.*?</think>", RegexOption.DOT_MATCHES_ALL), "").trim()
-}
-
-/** Helper to create stream events for the frontend */
+/** SSE event payloads streamed from [ChatClient] to the frontend. */
 object Events {
     fun text(content: String): String =
         Json.encodeToString(

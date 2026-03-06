@@ -298,7 +298,7 @@ fun Route.chatRoutes(chatService: ChatService) {
             }
         }
 
-        get("/mcp/capabilities") { call.respond(chatService.getCapabilities()) }
+        get("/mcp/capabilities") { call.respond(chatService.getMcpCapabilities()) }
 
         post("/mcp/prompts/{name}") {
             val name =

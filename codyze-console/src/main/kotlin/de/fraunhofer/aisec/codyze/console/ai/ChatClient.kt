@@ -51,7 +51,7 @@ class ChatClient(
     private var prompts: List<Prompt> = emptyList()
     private var resources: List<Resource> = emptyList()
 
-    /** Connect to the MCP server via SSE. */
+    /** Connect to the MCP server via streamable HTTP. */
     suspend fun connect() {
         val transport = StreamableHttpClientTransport(url = mcpServerUrl, client = httpClient)
         mcp.connect(transport)
@@ -60,8 +60,8 @@ class ChatClient(
         resources = mcp.listResources().resources
     }
 
-    /** Return all MCP capabilities */
-    fun getCapabilities(): McpCapabilitiesJSON =
+    /** Return the MCP capabilities: tools, prompts, and resources. */
+    fun getMcpCapabilities(): McpCapabilitiesJSON =
         McpCapabilitiesJSON(
             serverName = mcp.serverVersion?.name ?: "MCP Server",
             serverVersion = mcp.serverVersion?.version ?: "",
@@ -103,7 +103,7 @@ class ChatClient(
                 },
         )
 
-    /** Resolve a named MCP prompt and return its messages as [ChatMessageJSON]. */
+    /** Resolve an MCP prompt and return its messages as [ChatMessageJSON]. */
     suspend fun getPrompt(
         name: String,
         arguments: Map<String, String> = emptyMap(),
@@ -127,6 +127,7 @@ class ChatClient(
 
     /** Process a chat query using the LLM with MCP tool support */
     fun chat(request: ChatRequestJSON): Flow<String> = channelFlow {
+        // Used if the LLM needs more time for a "cold-start"
         send(Events.keepalive())
 
         val userMessage = request.messages.lastOrNull()?.content ?: ""

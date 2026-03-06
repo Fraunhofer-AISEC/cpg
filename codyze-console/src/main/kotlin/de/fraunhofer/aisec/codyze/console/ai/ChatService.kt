@@ -36,12 +36,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.sse.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.Flow
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-
-@Serializable data class ChatMessageJSON(val role: String, val content: String)
-
-@Serializable data class ChatRequestJSON(val messages: List<ChatMessageJSON>)
 
 /** ChatService manages LLM client configuration and provides an API for chat interactions. */
 class ChatService {
@@ -101,7 +96,7 @@ class ChatService {
         return chatClient.chat(request)
     }
 
-    fun getCapabilities(): McpCapabilitiesJSON = chatClient.getCapabilities()
+    fun getMcpCapabilities(): McpCapabilitiesJSON = chatClient.getMcpCapabilities()
 
     suspend fun getPrompt(name: String, arguments: Map<String, String>): List<ChatMessageJSON> =
         chatClient.getPrompt(name, arguments)

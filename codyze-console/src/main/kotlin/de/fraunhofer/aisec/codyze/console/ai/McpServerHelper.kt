@@ -46,7 +46,7 @@ object McpServerHelper {
         }
 
         try {
-            println("Starting MCP server on port $port...")
+            println("Starting MCP server with streamable HTTP on port $port...")
             val server = de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer()
             de.fraunhofer.aisec.cpg.mcp.runHttpMcpServerUsingKtorPlugin(
                 port = port,

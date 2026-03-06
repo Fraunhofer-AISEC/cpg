@@ -28,6 +28,10 @@ package de.fraunhofer.aisec.codyze.console.ai
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
+@Serializable data class ChatMessageJSON(val role: String, val content: String)
+
+@Serializable data class ChatRequestJSON(val messages: List<ChatMessageJSON>)
+
 @Serializable data class ToolSchemaJSON(val properties: JsonObject?, val required: List<String>?)
 
 @Serializable
