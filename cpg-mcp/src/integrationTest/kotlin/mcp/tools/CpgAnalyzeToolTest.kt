@@ -37,7 +37,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
-import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -45,35 +44,33 @@ import kotlinx.serialization.json.put
 class CpgAnalyzeToolTest {
 
     @Test
-    fun cpgAnalyzeToolIntegrationTest() = runTest {
-        withMcpServer { _, client ->
-            val result =
-                client.callTool(
-                    CallToolRequest(
-                        CallToolRequestParams(
-                            name = "cpg_analyze",
-                            arguments =
-                                buildJsonObject {
-                                    put("content", "def hello():\n    print('Hello World')")
-                                    put("extension", "py")
-                                },
-                        )
+    fun cpgAnalyzeToolIntegrationTest() = withMcpServer { _, client ->
+        val result =
+            client.callTool(
+                CallToolRequest(
+                    CallToolRequestParams(
+                        name = "cpg_analyze",
+                        arguments =
+                            buildJsonObject {
+                                put("content", "def hello():\n    print('Hello World')")
+                                put("extension", "py")
+                            },
                     )
                 )
+            )
 
-            assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
+        assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
 
-            val resultContent = result.content.firstOrNull()
-            assertIs<TextContent>(resultContent)
-            val resultText = resultContent.text
-            assertNotNull(resultText, "Result content should not be null")
+        val resultContent = result.content.firstOrNull()
+        assertIs<TextContent>(resultContent)
+        val resultText = resultContent.text
+        assertNotNull(resultText, "Result content should not be null")
 
-            val analysisResult = Json.decodeFromString<CpgAnalysisResult>(resultText)
+        val analysisResult = Json.decodeFromString<CpgAnalysisResult>(resultText)
 
-            assertEquals(2, analysisResult.functions)
-            assertEquals(1, analysisResult.callExpressions)
-            assertNotNull(analysisResult.functions)
-        }
+        assertEquals(2, analysisResult.functions)
+        assertEquals(1, analysisResult.callExpressions)
+        assertNotNull(analysisResult.functions)
     }
 
     @Test

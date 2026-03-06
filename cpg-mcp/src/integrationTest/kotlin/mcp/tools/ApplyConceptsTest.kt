@@ -37,7 +37,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
@@ -45,7 +44,7 @@ import kotlinx.serialization.json.putJsonArray
 class ApplyConceptsTest {
 
     @Test
-    fun applyConceptAndListAgain() = runTest {
+    fun applyConceptAndListAgain() {
         val payload =
             CpgAnalyzePayload(
                 content =
