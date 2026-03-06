@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.codyze.console.ai
 
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import de.fraunhofer.aisec.codyze.console.ai.clients.GeminiClient
 import de.fraunhofer.aisec.codyze.console.ai.clients.LlmClient
@@ -39,18 +40,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.Json
 
 /** ChatService manages LLM client configuration and provides an API for chat interactions. */
-class ChatService {
-    // /resources/application.conf
-    private val config = run {
-        val config = ConfigFactory.load()
-        if (!config.hasPath("llm.client")) {
-            error(
-                "No application.conf in /resources found. " +
-                    "Please copy application.conf.example to application.conf and configure your models."
-            )
-        }
-        config
-    }
+class ChatService(config: Config) {
     private val llmProvider: String = config.getString("llm.client")
     private val llmModel: String = config.getString("llm.$llmProvider.model")
     private val llmBaseUrl: String = config.getString("llm.$llmProvider.baseUrl")
@@ -103,5 +93,19 @@ class ChatService {
 
     fun close() {
         httpClient.close()
+    }
+
+    companion object {
+        fun createIfConfigExist(): ChatService? {
+            val config = ConfigFactory.load()
+            if (!config.hasPath("llm.client")) {
+                println(
+                    "No application.conf found, AI chat features disabled. " +
+                        "Copy application.conf.example to application.conf to enable them."
+                )
+                return null
+            }
+            return ChatService(config)
+        }
     }
 }

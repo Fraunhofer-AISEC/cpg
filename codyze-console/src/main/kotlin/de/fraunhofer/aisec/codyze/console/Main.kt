@@ -59,7 +59,9 @@ fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
         .start(wait = true)
 }
 
-private suspend fun ConsoleService.initChatService(): ChatService {
+private suspend fun ConsoleService.initChatService(): ChatService? {
+    val chatService = ChatService.createIfConfigExist() ?: return null
+
     McpServerHelper.startMcpServer(8081)
 
     val translationResult = getTranslationResult()?.analysisResult?.translationResult
@@ -68,10 +70,9 @@ private suspend fun ConsoleService.initChatService(): ChatService {
     }
 
     println("Initializing ChatService...")
-    return ChatService().also {
-        it.connect()
-        println("MCP client connected!")
-    }
+    chatService.connect()
+    println("MCP client connected!")
+    return chatService
 }
 
 /**
