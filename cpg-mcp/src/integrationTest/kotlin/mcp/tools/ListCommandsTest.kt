@@ -25,31 +25,47 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.tools
 
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getAllArgs
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getArgByIndexOrName
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableConcepts
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableOperations
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCalls
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCallsTo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listConceptsAndOperations
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listFunctions
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listRecords
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CallSummary
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.FunctionSummary
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.RecordSummary
-import de.fraunhofer.aisec.cpg.mcp.utils.withMcpServer
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
+import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequestParams
+import io.modelcontextprotocol.kotlin.sdk.types.Implementation
+import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 
 class ListCommandsTest {
+    private lateinit var server: Server
 
-    private fun setupAnalysis() {
+    @BeforeEach
+    fun initializeServer() {
         val payload =
             CpgAnalyzePayload(
                 content =
@@ -61,13 +77,21 @@ class ListCommandsTest {
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
         assertNotNull(analysisResult.functionSummaries)
+        val info = Implementation(name = "test-cpg-server", version = "1.0.0")
+        val options =
+            ServerOptions(
+                capabilities =
+                    ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = true))
+            )
+        server = Server(info, options)
     }
 
     @Test
-    fun listFunctionsTest() = withMcpServer { _, client ->
-        setupAnalysis()
+    fun listFunctionsTest() = runTest {
+        server.listFunctions()
+        val tool = server.tools["cpg_list_functions"] ?: error("Tool not registered")
         val result =
-            client.callTool(
+            tool.handler(
                 CallToolRequest(
                     CallToolRequestParams(
                         name = "cpg_list_functions",
@@ -94,10 +118,11 @@ class ListCommandsTest {
     }
 
     @Test
-    fun listRecordsTest() = withMcpServer { _, client ->
-        setupAnalysis()
+    fun listRecordsTest() = runTest {
+        server.listRecords()
+        val tool = server.tools["cpg_list_records"] ?: error("Tool not registered")
         val result =
-            client.callTool(
+            tool.handler(
                 CallToolRequest(
                     CallToolRequestParams(name = "cpg_list_records", arguments = buildJsonObject {})
                 )
@@ -115,10 +140,11 @@ class ListCommandsTest {
     }
 
     @Test
-    fun listCallsTest() = withMcpServer { _, client ->
-        setupAnalysis()
+    fun listCallsTest() = runTest {
+        server.listCalls()
+        val tool = server.tools["cpg_list_calls"] ?: error("Tool not registered")
         val result =
-            client.callTool(
+            tool.handler(
                 CallToolRequest(
                     CallToolRequestParams(name = "cpg_list_calls", arguments = buildJsonObject {})
                 )
@@ -128,10 +154,11 @@ class ListCommandsTest {
     }
 
     @Test
-    fun listCallsToTest() = withMcpServer { _, client ->
-        setupAnalysis()
+    fun listCallsToTest() = runTest {
+        server.listCallsTo()
+        val tool = server.tools["cpg_list_calls_to"] ?: error("Tool not registered")
         val result =
-            client.callTool(
+            tool.handler(
                 CallToolRequest(
                     CallToolRequestParams(
                         name = "cpg_list_calls_to",
@@ -144,10 +171,11 @@ class ListCommandsTest {
     }
 
     @Test
-    fun getAllArgsTest() = withMcpServer { _, client ->
-        setupAnalysis()
+    fun getAllArgsTest() = runTest {
+        server.listCalls()
+        val callsTool = server.tools["cpg_list_calls"] ?: error("Tool not registered")
         val callsResult =
-            client.callTool(
+            callsTool.handler(
                 CallToolRequest(
                     CallToolRequestParams(name = "cpg_list_calls", arguments = buildJsonObject {})
                 )
@@ -155,8 +183,10 @@ class ListCommandsTest {
         val callId =
             Json.decodeFromString<CallSummary>((callsResult.content.first() as TextContent).text).id
 
+        server.getAllArgs()
+        val argsTool = server.tools["cpg_list_call_args"] ?: error("Tool not registered")
         val argsResult =
-            client.callTool(
+            argsTool.handler(
                 CallToolRequest(
                     CallToolRequestParams(
                         name = "cpg_list_call_args",
@@ -173,7 +203,7 @@ class ListCommandsTest {
         }
 
         val wrongArgsResult =
-            client.callTool(
+            argsTool.handler(
                 CallToolRequest(
                     CallToolRequestParams(
                         name = "cpg_list_call_args",
@@ -189,10 +219,11 @@ class ListCommandsTest {
     }
 
     @Test
-    fun getArgByIndexOrNameTest() = withMcpServer { _, client ->
-        setupAnalysis()
+    fun getArgByIndexOrNameTest() = runTest {
+        server.listCalls()
+        val callsTool = server.tools["cpg_list_calls"] ?: error("Tool not registered")
         val callsResult =
-            client.callTool(
+            callsTool.handler(
                 CallToolRequest(
                     CallToolRequestParams(name = "cpg_list_calls", arguments = buildJsonObject {})
                 )
@@ -200,8 +231,11 @@ class ListCommandsTest {
         val callId =
             Json.decodeFromString<CallSummary>((callsResult.content.first() as TextContent).text).id
 
+        server.getArgByIndexOrName()
+        val argTool =
+            server.tools["cpg_list_call_arg_by_name_or_index"] ?: error("Tool not registered")
         val argResultByIndex =
-            client.callTool(
+            argTool.handler(
                 CallToolRequest(
                     CallToolRequestParams(
                         name = "cpg_list_call_arg_by_name_or_index",
@@ -222,7 +256,7 @@ class ListCommandsTest {
         }
 
         val argResultByName =
-            client.callTool(
+            argTool.handler(
                 CallToolRequest(
                     CallToolRequestParams(
                         name = "cpg_list_call_arg_by_name_or_index",
@@ -240,9 +274,11 @@ class ListCommandsTest {
     }
 
     @Test
-    fun listAvailableConceptsTest() = withMcpServer { _, client ->
+    fun listAvailableConceptsTest() = runTest {
+        server.listAvailableConcepts()
+        val tool = server.tools["cpg_list_available_concepts"] ?: error("Tool not registered")
         val result =
-            client.callTool(
+            tool.handler(
                 CallToolRequest(
                     CallToolRequestParams(
                         name = "cpg_list_available_concepts",
@@ -255,9 +291,11 @@ class ListCommandsTest {
     }
 
     @Test
-    fun listAvailableOperationsTest() = withMcpServer { _, client ->
+    fun listAvailableOperationsTest() = runTest {
+        server.listAvailableOperations()
+        val tool = server.tools["cpg_list_available_operations"] ?: error("Tool not registered")
         val result =
-            client.callTool(
+            tool.handler(
                 CallToolRequest(
                     CallToolRequestParams(
                         name = "cpg_list_available_operations",
@@ -270,9 +308,11 @@ class ListCommandsTest {
     }
 
     @Test
-    fun listAvailableConceptsAndOperationsTest() = withMcpServer { _, client ->
+    fun listAvailableConceptsAndOperationsTest() = runTest {
+        server.listConceptsAndOperations()
+        val tool = server.tools["cpg_list_concepts_and_operations"] ?: error("Tool not registered")
         val result =
-            client.callTool(
+            tool.handler(
                 CallToolRequest(
                     CallToolRequestParams(
                         name = "cpg_list_concepts_and_operations",

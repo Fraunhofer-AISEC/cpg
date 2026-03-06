@@ -25,21 +25,40 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.prompts
 
-import de.fraunhofer.aisec.cpg.mcp.utils.withMcpServer
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addSuggestConceptsPrompt
+import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.types.GetPromptRequest
 import io.modelcontextprotocol.kotlin.sdk.types.GetPromptRequestParams
+import io.modelcontextprotocol.kotlin.sdk.types.Implementation
+import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.test.runTest
 
 class CpgSuggestConceptsPromptTest {
+    private fun createServer(): Server {
+        val server =
+            Server(
+                Implementation(name = "test-cpg-server", version = "1.0.0"),
+                ServerOptions(
+                    ServerCapabilities(prompts = ServerCapabilities.Prompts(listChanged = true))
+                ),
+            )
+        server.addSuggestConceptsPrompt()
+        return server
+    }
 
     @Test
-    fun suggestConceptsNoDescription() = withMcpServer { _, client ->
+    fun suggestConceptsNoDescription() = runTest {
+        val server = createServer()
         val result =
-            client.getPrompt(GetPromptRequest(GetPromptRequestParams(name = "suggest_concepts")))
+            (server.prompts["suggest_concepts"] ?: error("Prompt not registered")).messageProvider(
+                GetPromptRequest(GetPromptRequestParams(name = "suggest_concepts"))
+            )
 
         assertNotNull(result)
         val text = (result.messages.firstOrNull()?.content as? TextContent)?.text
@@ -51,9 +70,10 @@ class CpgSuggestConceptsPromptTest {
     }
 
     @Test
-    fun suggestConceptsWithDescription() = withMcpServer { _, client ->
+    fun suggestConceptsWithDescription() = runTest {
+        val server = createServer()
         val result =
-            client.getPrompt(
+            (server.prompts["suggest_concepts"] ?: error("Prompt not registered")).messageProvider(
                 GetPromptRequest(
                     GetPromptRequestParams(
                         name = "suggest_concepts",

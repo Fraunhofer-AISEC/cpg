@@ -25,28 +25,43 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.tools
 
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.utils.withMcpServer
+import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequestParams
+import io.modelcontextprotocol.kotlin.sdk.types.Implementation
+import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 class CpgAnalyzeToolTest {
+    private lateinit var server: Server
 
     @Test
-    fun cpgAnalyzeToolIntegrationTest() = withMcpServer { _, client ->
+    fun cpgAnalyzeToolIntegrationTest() = runTest {
+        val info = Implementation(name = "test-cpg-server", version = "1.0.0")
+        val options =
+            ServerOptions(
+                capabilities =
+                    ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = true))
+            )
+        server = Server(info, options)
+        server.addCpgAnalyzeTool()
+
         val result =
-            client.callTool(
+            (server.tools["cpg_analyze"] ?: error("Tool not registered")).handler(
                 CallToolRequest(
                     CallToolRequestParams(
                         name = "cpg_analyze",
@@ -70,7 +85,7 @@ class CpgAnalyzeToolTest {
 
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
-        assertNotNull(analysisResult.functions)
+        assertNotNull(analysisResult.functionSummaries)
     }
 
     @Test

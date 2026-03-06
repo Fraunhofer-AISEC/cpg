@@ -26,25 +26,33 @@
 package de.fraunhofer.aisec.cpg.mcp.tools
 
 import de.fraunhofer.aisec.cpg.graph.literals
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgApplyConceptsTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listConceptsAndOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.utils.withMcpServer
+import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequestParams
+import io.modelcontextprotocol.kotlin.sdk.types.Implementation
+import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
+import org.junit.jupiter.api.BeforeEach
 
 class ApplyConceptsTest {
+    private lateinit var server: Server
 
-    @Test
-    fun applyConceptAndListAgain() {
+    @BeforeEach
+    fun initializeServer() {
         val payload =
             CpgAnalyzePayload(
                 content =
@@ -55,56 +63,69 @@ class ApplyConceptsTest {
         assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
+        assertNotNull(analysisResult.functionSummaries)
+        val info = Implementation(name = "test-cpg-server", version = "1.0.0")
+        val options =
+            ServerOptions(
+                capabilities =
+                    ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = true))
+            )
+        server = Server(info, options)
+    }
 
-        withMcpServer { _, client ->
-            val secretInitializer =
-                globalAnalysisResult?.literals?.singleOrNull { it.value == "0000" }
-            assertNotNull(secretInitializer)
+    @Test
+    fun applyConceptAndListAgain() = runTest {
+        server.listConceptsAndOperations()
+        server.addCpgApplyConceptsTool()
+        val applyTool = server.tools["cpg_apply_concepts"] ?: error("Tool not registered")
+        val secretInitializer = globalAnalysisResult?.literals?.singleOrNull { it.value == "0000" }
+        assertNotNull(secretInitializer)
 
-            val applyResult =
-                client.callTool(
-                    CallToolRequest(
-                        CallToolRequestParams(
-                            name = "cpg_apply_concepts",
-                            arguments =
-                                buildJsonObject {
-                                    putJsonArray("assignments") {
-                                        add(
-                                            buildJsonObject {
-                                                put("nodeId", secretInitializer.id.toString())
-                                                put(
-                                                    "overlay",
-                                                    "de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret",
-                                                )
-                                                put("overlayType", "Concept")
-                                            }
-                                        )
-                                    }
-                                },
-                        )
+        val applyResult =
+            applyTool.handler(
+                CallToolRequest(
+                    CallToolRequestParams(
+                        name = "cpg_apply_concepts",
+                        arguments =
+                            buildJsonObject {
+                                putJsonArray("assignments") {
+                                    add(
+                                        buildJsonObject {
+                                            put("nodeId", secretInitializer.id.toString())
+                                            put(
+                                                "overlay",
+                                                "de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret",
+                                            )
+                                            put("overlayType", "Concept")
+                                        }
+                                    )
+                                }
+                            },
                     )
                 )
-            assertNotNull(applyResult)
-            assertTrue(applyResult.content.isNotEmpty(), "We did apply a concept")
-            assertTrue(
-                "Applied 1 concept(s):" in
-                    (applyResult.content.singleOrNull() as? TextContent)?.text.orEmpty()
             )
+        assertNotNull(applyResult)
+        assertTrue(applyResult.content.isNotEmpty(), "We did apply a concept")
+        assertTrue(
+            "Applied 1 concept(s):" in
+                (applyResult.content.singleOrNull() as? TextContent)?.text.orEmpty()
+        )
 
-            val listResult =
-                client.callTool(
-                    CallToolRequest(
-                        CallToolRequestParams(
-                            name = "cpg_list_concepts_and_operations",
-                            arguments = buildJsonObject {},
-                        )
+        val listTool =
+            server.tools["cpg_list_concepts_and_operations"] ?: error("Tool not registered")
+        val listResult =
+            listTool.handler(
+                CallToolRequest(
+                    CallToolRequestParams(
+                        name = "cpg_list_concepts_and_operations",
+                        arguments = buildJsonObject {},
                     )
                 )
-            assertNotNull(listResult)
-            assertTrue(
-                listResult.content.isNotEmpty(),
-                "We did apply a concept, so it should not be empty",
             )
-        }
+        assertNotNull(listResult)
+        assertTrue(
+            listResult.content.isNotEmpty(),
+            "We did apply a concept, so it should not be empty",
+        )
     }
 }
