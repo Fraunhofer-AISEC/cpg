@@ -35,8 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -131,6 +131,15 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is Lambda -> handleLambda(node)
             is UnaryOperator -> handleUnaryOperator(node)
             // Statements
+            is Synchronized -> handleSynchronized(node)
+            is Try -> handleTry(node)
+            is Label -> handleLabel(node)
+            is DeclarationStatement -> handleDeclarationStatement(node)
+            is CatchClause -> handleCatchClause(node)
+            is Break -> handleBreak(node)
+            is Assert -> handleAssert(node)
+
+            is Block -> handleBlock(node)
             is Return -> handleReturn(node)
             is ForEach -> handleForEach(node)
             is DoWhile -> handleDoWhile(node)
@@ -179,6 +188,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun handleThrow(node: Throw) {
         node.exception?.let { node.prevDFGEdges += it }
         node.parentException?.let { node.prevDFGEdges += it }
+        handleBreakableNodesAsExpressions(node)
     }
 
     protected fun handleAssign(node: Assign) {
@@ -215,6 +225,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     (node.refersTo as? Field)?.let { granularity = field(it) }
                 }
             }
+
             AccessValues.READWRITE -> {
                 node.nextDFGEdges.add(node.base) {
                     (node.refersTo as? Field)?.let { granularity = field(it) }
@@ -222,6 +233,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 // We do not make an edge in the other direction on purpose as a workaround for
                 // nested field accesses on the lhs of an assignment.
             }
+
             else -> {
                 node.prevDFGEdges.add(node.base) {
                     (node.refersTo as? Field)?.let { granularity = field(it) }
@@ -279,8 +291,23 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
+     * Adds the DFG edge for a [Block]. The data flows from the last statement which is used as an
+     * expression to the block itself. This depends on whether the block contains an expression used
+     * as such.
+     */
+    protected fun handleBlock(node: Block) {
+        // We use the fact that one of the statements inside is used as an expression
+        var containsExpression = node.statements.any { it.usedAsExpression }
+        if (node.usedAsExpression) {
+            // The actual data then comes from the last evaluated expressions in the execution order
+            // Sometimes this is
+            node.prevEOG.forEach { node.prevDFGEdges += it }
+        }
+    }
+
+    /**
      * Adds the DFG edge for a [ForEach]. The data flows from the [ForEach.iterable] to the
-     * [ForEach.variable]. However, since the [ForEach.variable] is a [Statement], we have to
+     * [ForEach.variable]. However, since the [ForEach.variable] is a [Expression], we have to
      * identify the variable which is used in the loop. In most cases, we should have a
      * [DeclarationStatement] which means that we can unwrap the [Variable]. If this is not the
      * case, we assume that the last [Variable] in the statement is the one we care about.
@@ -302,6 +329,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         node.variable?.let { node.prevDFGEdges += it }
+        if (node.usedAsExpression) {
+            node.statement?.let { node.prevDFGEdges += it }
+        }
+        handleBreakableNodesAsExpressions(node)
     }
 
     /**
@@ -310,6 +341,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleDoWhile(node: DoWhile) {
         node.condition?.let { node.prevDFGEdges += it }
+        if (node.usedAsExpression) {
+            node.statement?.let { node.prevDFGEdges += it }
+            node.elseStatement?.let { node.prevDFGEdges += it }
+        }
+        handleBreakableNodesAsExpressions(node)
     }
 
     /**
@@ -323,6 +359,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             node.condition,
             node.conditionDeclaration,
         )
+        if (node.usedAsExpression) {
+            node.statement?.let { node.prevDFGEdges += it }
+            node.elseStatement?.let { node.prevDFGEdges += it }
+        }
+        handleBreakableNodesAsExpressions(node)
     }
 
     /**
@@ -336,6 +377,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             node.condition,
             node.conditionDeclaration,
         )
+
+        if (node.usedAsExpression) {
+            node.thenStatement?.let { node.prevDFGEdges += it }
+            node.elseStatement?.let { node.prevDFGEdges += it }
+        }
     }
 
     /**
@@ -349,6 +395,13 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             node.selector,
             node.selectorDeclaration,
         )
+        if (node.usedAsExpression) {
+            node.statement?.let {
+                node.prevDFGEdges += it
+                it.usedAsExpression = true
+            }
+        }
+        handleBreakableNodesAsExpressions(node)
     }
 
     /**
@@ -362,6 +415,13 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             node.condition,
             node.conditionDeclaration,
         )
+
+        if (node.usedAsExpression) {
+            node.statement?.let { node.prevDFGEdges += it }
+            node.elseStatement?.let { node.prevDFGEdges += it }
+        }
+
+        handleBreakableNodesAsExpressions(node)
     }
 
     /**
@@ -498,6 +558,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     node.rhs.nextDFGEdges += node
                 }
             }
+
             in node.language.compoundAssignmentOperators -> {
                 node.lhs.let {
                     node.prevDFGEdges += it
@@ -505,6 +566,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
                 node.rhs.let { node.prevDFGEdges += it }
             }
+
             else -> {
                 node.lhs.let { node.prevDFGEdges += it }
                 node.rhs.let { node.prevDFGEdges += it }
@@ -548,5 +610,105 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         call.arguments.forEach { dfgTarget.prevDFGEdges += it }
+    }
+
+    /**
+     * Helper function to connect an expression as a data flow source and mark it as used in an
+     * expression. This is used for expressions that propagate their data flow value up when used as
+     * expressions.
+     */
+    protected fun connectAsExpressionValue(target: Expression, source: Expression?) {
+        source?.let {
+            target.prevDFGEdges += it
+            it.usedAsExpression = true
+        }
+    }
+
+    /**
+     * Helper function to connect multiple expressions as data flow sources and mark them as used in
+     * expressions.
+     */
+    protected fun connectAsExpressionValues(target: Expression, sources: Iterable<Expression>) {
+        sources.forEach { connectAsExpressionValue(target, it) }
+    }
+
+    /**
+     * If the expression is marked as [Expression.usedAsExpression] draws a DFG edge to the synchronized node from
+     * the block and marks the block as [Expression.usedAsExpression].
+     */
+    protected fun handleSynchronized(node: Synchronized) {
+        if (node.usedAsExpression) {
+            node.block?.let { connectAsExpressionValue(node, it) }
+        }
+    }
+
+    /**
+     * If the expression is marked as [Expression.usedAsExpression] draw edges from the try block, catches and finally
+     * blocks, depending on which subchildren exist and marks the block as [Expression.usedAsExpression].
+     */
+    protected fun handleTry(node: Try) {
+        if (node.usedAsExpression) {
+            node.finallyBlock?.let { connectAsExpressionValue(node, it) }
+                ?: {
+                    node.tryBlock?.let { connectAsExpressionValue(node, it) }
+                    connectAsExpressionValues(node, node.catchClauses)
+                }
+        }
+    }
+
+    /**
+     * If the expression is marked as [Expression.usedAsExpression] draws a DFG edge to the label from
+     * the [Label.subStatement] inside and marks it as [Expression.usedAsExpression].
+     */
+    protected fun handleLabel(node: Label) {
+        if (node.usedAsExpression) {
+            node.subStatement?.let { connectAsExpressionValue(node, it) }
+        }
+    }
+
+    /**
+     * If the expression is marked as [Expression.usedAsExpression] draws a DFG edge to the label from
+     * the [Label.subStatement] inside and marks it as [Expression.usedAsExpression].
+     */
+    protected fun handleDeclarationStatement(node: DeclarationStatement) {
+        if (node.usedAsExpression) {
+            node.declarations.forEach {
+                if (it is ValueDeclaration) {
+                    connectAsExpressionValues(node, it.prevEOG.filterIsInstance<Expression>())
+                }
+            }
+        }
+    }
+
+    protected fun handleCatchClause(node: CatchClause) {
+        if (node.usedAsExpression) {
+            node.body?.let { connectAsExpressionValue(node, it) }
+        }
+    }
+
+    protected fun handleBreak(node: Break) {
+        // no action
+    }
+
+    protected fun handleAssert(node: Assert) {
+        if (node.usedAsExpression) {
+            node.condition?.let { connectAsExpressionValue(node, it) }
+        }
+    }
+
+    /**
+     * For nodes which can be used as expressions and contain a break providing and expression, we
+     * need to connect the break statements to the expression as well to make sure that the data
+     * flow is propagated properly. This is especially important for languages like Rust where break
+     * statements can provide and expression, to be returned by a loop.
+     */
+    protected fun handleBreakableNodesAsExpressions(node: Expression) {
+        if (node.usedAsExpression) {
+            SubgraphWalker.getEOGPathEdges(node).exits.forEach {
+                if (it is Break) {
+                    connectAsExpressionValue(node, it)
+                }
+            }
+        }
     }
 }

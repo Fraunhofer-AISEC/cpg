@@ -33,8 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogLevel
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogWrite
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Logging
 import de.fraunhofer.aisec.cpg.graph.declarations.Import
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
@@ -104,9 +104,8 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This pass is interested in [Import]s and
-     * [de.fraunhofer.aisec.cpg.graph.statements.expressions.Call]s as these are the relevant parts
-     * of the Python code for logging.
+     * This pass is interested in [Import]s and [Call]s as these are the relevant parts of the
+     * Python code for logging.
      */
     private fun handleNode(node: Node) {
         when (node) {
@@ -148,8 +147,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * - `logging.critical(...)` (and similar for `error` / `warn` / ...) is translated to a
      *   [de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogWrite]
      *
-     * @param callExpression The [de.fraunhofer.aisec.cpg.graph.statements.expressions.Call] to
-     *   handle
+     * @param callExpression The [Call] to handle
      * @return n/a (The new node is created and added to the graph)
      */
     private fun handleCall(callExpression: Call) {

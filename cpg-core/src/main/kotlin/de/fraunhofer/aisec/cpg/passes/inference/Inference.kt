@@ -36,9 +36,15 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.expressions.TypeExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.Return
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
@@ -425,7 +431,10 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         }
     }
 
-    /** This infers a [Field] based on an unresolved [Reference], which is supplied as a [hint]. */
+    /**
+     * This infers a [Field] based on an unresolved
+     * [de.fraunhofer.aisec.cpg.graph.expressions.Reference], which is supplied as a [hint].
+     */
     fun inferFieldDeclaration(hint: Reference): Field? {
         if (!ctx.config.inferenceConfiguration.inferFields) {
             return null
@@ -539,9 +548,10 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     /**
      * This class implements a [HasType.TypeObserver] and uses the observed type to set the
      * [ValueDeclaration.type] of a [ValueDeclaration], based on the types we see. It can be
-     * registered on objects that are used to "start" an inference, for example a [MemberAccess],
-     * which infers a [Field]. Once the type of the member expression becomes known, we can use this
-     * information to set the type of the field.
+     * registered on objects that are used to "start" an inference, for example a
+     * [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess], which infers a [Field]. Once the
+     * type of the member expression becomes known, we can use this information to set the type of
+     * the field.
      *
      * For now, this implementation uses the first type that we "see" and once the type of our
      * [declaration] is known, we ignore further updates. In a future implementation, we could try
