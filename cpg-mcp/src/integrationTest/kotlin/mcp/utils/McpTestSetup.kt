@@ -29,11 +29,9 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer
 import io.modelcontextprotocol.kotlin.sdk.ExperimentalMcpApi
 import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import io.modelcontextprotocol.kotlin.sdk.server.ServerSession
 import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -41,15 +39,17 @@ import kotlinx.coroutines.runBlocking
 fun withMcpServer(test: suspend (server: Server, client: Client) -> Unit) = runBlocking {
     val server = configureServer()
     val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
+    val client = Client(clientInfo = Implementation(name = "test-client", version = "1.0.0"))
 
-    val client = Client(clientInfo = Implementation(name = "test client", version = "1.0"))
+    val clientConnected = CompletableDeferred<Unit>()
 
-    val serverSessionResult = CompletableDeferred<ServerSession>()
-    listOf(
-            launch { client.connect(clientTransport) },
-            launch { serverSessionResult.complete(server.createSession(serverTransport)) },
-        )
-        .joinAll()
+    launch { server.createSession(serverTransport) }
+    launch {
+        client.connect(clientTransport)
+        clientConnected.complete(Unit)
+    }
+
+    clientConnected.await()
 
     try {
         test(server, client)
