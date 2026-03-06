@@ -23,19 +23,16 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp
+package de.fraunhofer.aisec.cpg.mcp.tools
 
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import io.modelcontextprotocol.kotlin.sdk.server.Server
-import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
+import de.fraunhofer.aisec.cpg.mcp.utils.McpTestSetup
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequestParams
-import io.modelcontextprotocol.kotlin.sdk.types.Implementation
-import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -45,33 +42,30 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import org.junit.jupiter.api.BeforeEach
 
-class CpgAnalyzeToolTest {
+class CpgAnalyzeToolTest : McpTestSetup() {
 
-    private lateinit var server: Server
+    @BeforeEach
+    fun registerTools() {
+        server.addCpgAnalyzeTool()
+    }
 
     @Test
     fun cpgAnalyzeToolIntegrationTest() = runTest {
-        val info = Implementation(name = "test-cpg-server", version = "1.0.0")
-        val options =
-            ServerOptions(
-                capabilities =
-                    ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = true))
+        val result =
+            client.callTool(
+                CallToolRequest(
+                    CallToolRequestParams(
+                        name = "cpg_analyze",
+                        arguments =
+                            buildJsonObject {
+                                put("content", "def hello():\n    print('Hello World')")
+                                put("extension", "py")
+                            },
+                    )
+                )
             )
-        server = Server(info, options)
-
-        server.addCpgAnalyzeTool()
-
-        val inputSchema = buildJsonObject {
-            put("content", "def hello():\n    print('Hello World')")
-            put("extension", "py")
-        }
-
-        val request =
-            CallToolRequest(CallToolRequestParams(name = "cpg_analyze", arguments = inputSchema))
-
-        val tool = server.tools["cpg_analyze"] ?: error("Tool not registered")
-        val result = tool.handler(request)
 
         assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
 
@@ -84,7 +78,7 @@ class CpgAnalyzeToolTest {
 
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
-        assertNotNull(analysisResult.nodes)
+        assertNotNull(analysisResult.functions)
     }
 
     @Test
@@ -96,6 +90,6 @@ class CpgAnalyzeToolTest {
 
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
-        assertNotNull(analysisResult.nodes)
+        assertNotNull(analysisResult.functionSummaries)
     }
 }
