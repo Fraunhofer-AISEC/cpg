@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.utils.McpTestSetup
+import de.fraunhofer.aisec.cpg.mcp.utils.withMcpServer
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequestParams
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -42,36 +42,38 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-class CpgAnalyzeToolTest : McpTestSetup() {
+class CpgAnalyzeToolTest {
 
     @Test
     fun cpgAnalyzeToolIntegrationTest() = runTest {
-        val result =
-            client.callTool(
-                CallToolRequest(
-                    CallToolRequestParams(
-                        name = "cpg_analyze",
-                        arguments =
-                            buildJsonObject {
-                                put("content", "def hello():\n    print('Hello World')")
-                                put("extension", "py")
-                            },
+        withMcpServer { _, client ->
+            val result =
+                client.callTool(
+                    CallToolRequest(
+                        CallToolRequestParams(
+                            name = "cpg_analyze",
+                            arguments =
+                                buildJsonObject {
+                                    put("content", "def hello():\n    print('Hello World')")
+                                    put("extension", "py")
+                                },
+                        )
                     )
                 )
-            )
 
-        assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
+            assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
 
-        val resultContent = result.content.firstOrNull()
-        assertIs<TextContent>(resultContent)
-        val resultText = resultContent.text
-        assertNotNull(resultText, "Result content should not be null")
+            val resultContent = result.content.firstOrNull()
+            assertIs<TextContent>(resultContent)
+            val resultText = resultContent.text
+            assertNotNull(resultText, "Result content should not be null")
 
-        val analysisResult = Json.decodeFromString<CpgAnalysisResult>(resultText)
+            val analysisResult = Json.decodeFromString<CpgAnalysisResult>(resultText)
 
-        assertEquals(2, analysisResult.functions)
-        assertEquals(1, analysisResult.callExpressions)
-        assertNotNull(analysisResult.functions)
+            assertEquals(2, analysisResult.functions)
+            assertEquals(1, analysisResult.callExpressions)
+            assertNotNull(analysisResult.functions)
+        }
     }
 
     @Test

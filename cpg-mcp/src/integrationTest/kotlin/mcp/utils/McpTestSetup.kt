@@ -31,40 +31,26 @@ import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
-import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
 
 @OptIn(ExperimentalMcpApi::class)
-abstract class McpTestSetup {
+suspend fun withMcpServer(test: suspend (server: Server, client: Client) -> Unit) {
+    val server = configureServer()
+    val client = Client(clientInfo = Implementation(name = "test-client", version = "1.0.0"))
+    val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
 
-    protected lateinit var server: Server
-    protected lateinit var client: Client
+    coroutineScope {
+        val serverJob = launch { server.createSession(serverTransport) }
+        val clientJob = launch { client.connect(clientTransport) }
 
-    @BeforeEach
-    fun setUpClientServer() {
-        server = configureServer()
-
-        val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
-
-        client = Client(clientInfo = Implementation(name = "test-client", version = "1.0.0"))
-
-        runBlocking {
-            listOf(
-                    launch { client.connect(clientTransport) },
-                    launch { server.createSession(serverTransport) },
-                )
-                .joinAll()
-        }
-    }
-
-    @AfterEach
-    fun tearDown() {
-        runBlocking {
+        try {
+            test(server, client)
+        } finally {
             client.close()
             server.close()
+            serverJob.cancel()
+            clientJob.cancel()
         }
     }
 }
