@@ -25,50 +25,64 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.tools
 
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.utils.McpTestSetup
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequestParams
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 class CpgAnalyzeToolTest : McpTestSetup() {
 
-    //    @Test
-    //    fun cpgAnalyzeToolIntegrationTest() = runTest {
-    //        val result =
-    //            client.callTool(
-    //                CallToolRequest(
-    //                    CallToolRequestParams(
-    //                        name = "cpg_analyze",
-    //                        arguments =
-    //                            buildJsonObject {
-    //                                put("content", "def hello():\n    print('Hello World')")
-    //                                put("extension", "py")
-    //                            },
-    //                    )
-    //                )
-    //            )
-    //
-    //        assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
-    //
-    //        val resultContent = result.content.firstOrNull()
-    //        assertIs<TextContent>(resultContent)
-    //        val resultText = resultContent.text
-    //        assertNotNull(resultText, "Result content should not be null")
-    //
-    //        val analysisResult = Json.decodeFromString<CpgAnalysisResult>(resultText)
-    //
-    //        assertEquals(2, analysisResult.functions)
-    //        assertEquals(1, analysisResult.callExpressions)
-    //        assertNotNull(analysisResult.functions)
-    //    }
-    //
-    //    @Test
-    //    fun cpgAnalyzeToolUnitTest() {
-    //        val payload =
-    //            CpgAnalyzePayload(content = "def hello():\n    print('Hello World')", extension =
-    // "py")
-    //        val analysisResult = runCpgAnalyze(payload, runPasses = true, cleanup = true)
-    //        assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
-    //
-    //        assertEquals(2, analysisResult.functions)
-    //        assertEquals(1, analysisResult.callExpressions)
-    //        assertNotNull(analysisResult.functionSummaries)
-    //    }
+    @Test
+    fun cpgAnalyzeToolIntegrationTest() = runTest {
+        val result =
+            client.callTool(
+                CallToolRequest(
+                    CallToolRequestParams(
+                        name = "cpg_analyze",
+                        arguments =
+                            buildJsonObject {
+                                put("content", "def hello():\n    print('Hello World')")
+                                put("extension", "py")
+                            },
+                    )
+                )
+            )
+
+        assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
+
+        val resultContent = result.content.firstOrNull()
+        assertIs<TextContent>(resultContent)
+        val resultText = resultContent.text
+        assertNotNull(resultText, "Result content should not be null")
+
+        val analysisResult = Json.decodeFromString<CpgAnalysisResult>(resultText)
+
+        assertEquals(2, analysisResult.functions)
+        assertEquals(1, analysisResult.callExpressions)
+        assertNotNull(analysisResult.functions)
+    }
+
+    @Test
+    fun cpgAnalyzeToolUnitTest() {
+        val payload =
+            CpgAnalyzePayload(content = "def hello():\n    print('Hello World')", extension = "py")
+        val analysisResult = runCpgAnalyze(payload, runPasses = true, cleanup = true)
+        assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
+
+        assertEquals(2, analysisResult.functions)
+        assertEquals(1, analysisResult.callExpressions)
+        assertNotNull(analysisResult.functionSummaries)
+    }
 }
