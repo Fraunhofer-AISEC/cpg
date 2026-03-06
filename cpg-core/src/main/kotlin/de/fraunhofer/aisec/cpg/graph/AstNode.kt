@@ -27,11 +27,17 @@ package de.fraunhofer.aisec.cpg.graph
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -65,5 +71,30 @@ abstract class AstNode : Node() {
 
         // Disconnect all AST children first
         astChildren.forEach { it.disconnectFromGraph() }
+    }
+
+    val idAst: String by lazy {
+        /*
+         * proposed structure:
+         *     {parent}/{simple class name}/{name | signature | value | index}
+         */
+        var item: String =
+            when (this) {
+                is FunctionDeclaration -> signature
+                is Literal<*> -> value.toString()
+                is Block -> astParent.blocks.indexOf(this).toString()
+                is ParameterDeclaration ->
+                    if (name.isEmpty()) astParent.parameters.indexOf(this).toString()
+                    else name.toString()
+                else -> name.toString()
+            }
+
+        // use parent's id as base
+        val parentId = astParent?.let { "${it.idAst}/" }.orEmpty()
+
+        // assemble full id
+        parentId +
+            this::class.simpleName +
+            if (item.isEmpty()) "" else "/" + URLEncoder.encode(item, StandardCharsets.UTF_8)
     }
 }
