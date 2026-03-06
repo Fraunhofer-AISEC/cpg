@@ -119,6 +119,12 @@ class JsonSchemaGeneratorTest {
                                             "A description if this concept could have security implications (optional)",
                                         )
                                     }
+                                    putJsonObject("name") { put("type", "string") }
+                                    putJsonObject("type") { put("type", "string") }
+                                    putJsonObject("code") { put("type", "string") }
+                                    putJsonObject("fileName") { put("type", "string") }
+                                    putJsonObject("startLine") { put("type", "integer") }
+                                    putJsonObject("endLine") { put("type", "integer") }
                                 }
                                 putJsonArray("required") {
                                     add("nodeId")

@@ -32,6 +32,7 @@ import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
@@ -64,8 +65,11 @@ abstract class McpTestSetup {
         client = Client(clientInfo = Implementation(name = "test-client", version = "1.0.0"))
 
         runBlocking {
-            launch { client.connect(clientTransport) }
-            launch { server.createSession(serverTransport) }
+            listOf(
+                    launch { client.connect(clientTransport) },
+                    launch { server.createSession(serverTransport) },
+                )
+                .joinAll()
         }
     }
 
