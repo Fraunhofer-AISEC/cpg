@@ -25,11 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.mcp
 
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgApplyConceptsPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toSchema
+import de.fraunhofer.aisec.cpg.passes.Description
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -44,35 +45,22 @@ class JsonSchemaGeneratorTest {
             ToolSchema(
                 properties =
                     buildJsonObject {
-                        putJsonObject("assignments") {
+                        putJsonObject("items") {
                             put("type", "array")
-                            put("description", "List of concept assignments to perform")
+                            put("description", "List of items")
                             putJsonObject("items") {
                                 put("type", "object")
                                 putJsonObject("properties") {
-                                    putJsonObject("arguments") {
+                                    putJsonObject("entries") {
                                         put("type", "array")
-                                        put(
-                                            "description",
-                                            "Additional constructor arguments (optional)",
-                                        )
                                         putJsonObject("items") {
                                             put("type", "object")
                                             putJsonObject("properties") {
                                                 putJsonObject("key") {
                                                     put("type", "string")
-                                                    put(
-                                                        "description",
-                                                        "The key of the key-value pair",
-                                                    )
+                                                    put("description", "The key")
                                                 }
-                                                putJsonObject("value") {
-                                                    put("type", "string")
-                                                    put(
-                                                        "description",
-                                                        "The value of the key-value pair",
-                                                    )
-                                                }
+                                                putJsonObject("value") { put("type", "string") }
                                             }
                                             putJsonArray("required") {
                                                 add("key")
@@ -80,64 +68,37 @@ class JsonSchemaGeneratorTest {
                                             }
                                         }
                                     }
-                                    putJsonObject("conceptNodeId") {
+                                    putJsonObject("id") {
                                         put("type", "string")
-                                        put(
-                                            "description",
-                                            "NodeId of the concept this operation references (only for operations)",
-                                        )
+                                        put("description", "Required id")
                                     }
-                                    putJsonObject("nodeId") {
+                                    putJsonObject("tag") {
                                         put("type", "string")
-                                        put("description", "ID of the node to apply overlay to")
+                                        put("description", "Optional tag")
                                     }
-                                    putJsonObject("overlay") {
-                                        put("type", "string")
-                                        put(
-                                            "description",
-                                            "Fully qualified name of concept or operation class",
-                                        )
-                                    }
-                                    putJsonObject("overlayType") {
-                                        put("type", "string")
-                                        put(
-                                            "description",
-                                            "Type of overlay: 'Concept' or 'Operation'",
-                                        )
-                                    }
-                                    putJsonObject("reasoning") {
-                                        put("type", "string")
-                                        put(
-                                            "description",
-                                            "Reasoning for applying this concept/operation (optional)",
-                                        )
-                                    }
-                                    putJsonObject("securityImpact") {
-                                        put("type", "string")
-                                        put(
-                                            "description",
-                                            "A description if this concept could have security implications (optional)",
-                                        )
-                                    }
-                                    putJsonObject("name") { put("type", "string") }
-                                    putJsonObject("type") { put("type", "string") }
-                                    putJsonObject("code") { put("type", "string") }
-                                    putJsonObject("fileName") { put("type", "string") }
-                                    putJsonObject("startLine") { put("type", "integer") }
-                                    putJsonObject("endLine") { put("type", "integer") }
                                 }
-                                putJsonArray("required") {
-                                    add("nodeId")
-                                    add("overlay")
-                                }
+                                putJsonArray("required") { add("id") }
                             }
                         }
                     },
-                required = listOf("assignments"),
+                required = listOf("items"),
             )
 
-        val actual = CpgApplyConceptsPayload::class.toSchema()
+        val actual = TestPayload::class.toSchema()
 
         assertEquals(expected, actual)
     }
 }
+
+@Serializable
+private data class TestPair(@Description("The key") val key: String, val value: String)
+
+@Serializable
+private data class TestItem(
+    @Description("Required id") val id: String,
+    @Description("Optional tag") val tag: String? = null,
+    val entries: List<TestPair>? = null,
+)
+
+@Serializable
+private data class TestPayload(@Description("List of items") val items: List<TestItem>)
