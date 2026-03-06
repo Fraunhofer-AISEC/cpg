@@ -26,9 +26,7 @@
 package de.fraunhofer.aisec.cpg.mcp.tools
 
 import de.fraunhofer.aisec.cpg.graph.literals
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgApplyConceptsTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listConceptsAndOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.utils.McpTestSetup
@@ -61,9 +59,6 @@ class ApplyConceptsTest : McpTestSetup() {
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
         assertNotNull(analysisResult.functionSummaries)
-
-        server.listConceptsAndOperations()
-        server.addCpgApplyConceptsTool()
     }
 
     @Test

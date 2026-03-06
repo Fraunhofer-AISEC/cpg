@@ -27,9 +27,6 @@ package de.fraunhofer.aisec.cpg.mcp.tools
 
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgTranslate
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addListPasses
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addRunPass
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.ctx
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
@@ -46,16 +43,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import org.junit.jupiter.api.BeforeEach
 
 class RunPassTest : McpTestSetup() {
-
-    @BeforeEach
-    fun registerTools() {
-        server.addCpgTranslate()
-        server.addListPasses()
-        server.addRunPass()
-    }
 
     private suspend fun translate(content: String = "def hello(x: int):\n    y = x\n    print(y)") {
         client.callTool(

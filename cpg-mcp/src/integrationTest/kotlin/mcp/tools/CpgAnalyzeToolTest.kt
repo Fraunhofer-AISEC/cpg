@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.tools
 
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
@@ -42,14 +41,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import org.junit.jupiter.api.BeforeEach
 
 class CpgAnalyzeToolTest : McpTestSetup() {
-
-    @BeforeEach
-    fun registerTools() {
-        server.addCpgAnalyzeTool()
-    }
 
     @Test
     fun cpgAnalyzeToolIntegrationTest() = runTest {

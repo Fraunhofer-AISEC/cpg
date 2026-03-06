@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.prompts
 
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addSuggestConceptsPrompt
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
@@ -53,8 +52,6 @@ class CpgSuggestConceptsPromptTest : McpTestSetup() {
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
         assertNotNull(analysisResult.functionSummaries)
-
-        server.addSuggestConceptsPrompt()
     }
 
     @Test

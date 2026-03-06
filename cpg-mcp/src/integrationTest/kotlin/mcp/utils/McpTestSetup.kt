@@ -25,13 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.utils
 
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer
 import io.modelcontextprotocol.kotlin.sdk.ExperimentalMcpApi
 import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
-import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -46,19 +45,7 @@ abstract class McpTestSetup {
 
     @BeforeEach
     fun setUpClientServer() {
-        server =
-            Server(
-                serverInfo = Implementation(name = "test-cpg-server", version = "1.0.0"),
-                options =
-                    ServerOptions(
-                        capabilities =
-                            ServerCapabilities(
-                                tools = ServerCapabilities.Tools(listChanged = true),
-                                prompts = ServerCapabilities.Prompts(listChanged = true),
-                                resources = ServerCapabilities.Resources(listChanged = true),
-                            )
-                    ),
-            )
+        server = configureServer()
 
         val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
 

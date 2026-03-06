@@ -25,16 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.tools
 
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getAllArgs
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getArgByIndexOrName
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableConcepts
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableOperations
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCalls
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCallsTo
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listConceptsAndOperations
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listFunctions
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listRecords
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CallSummary
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
@@ -61,7 +52,7 @@ import org.junit.jupiter.api.assertThrows
 class ListCommandsTest : McpTestSetup() {
 
     @BeforeEach
-    fun initializeTools() {
+    fun initializeAnalysis() {
         val payload =
             CpgAnalyzePayload(
                 content =
@@ -74,16 +65,6 @@ class ListCommandsTest : McpTestSetup() {
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
         assertNotNull(analysisResult.functionSummaries)
-
-        server.listFunctions()
-        server.listRecords()
-        server.listCalls()
-        server.listCallsTo()
-        server.getAllArgs()
-        server.getArgByIndexOrName()
-        server.listAvailableConcepts()
-        server.listAvailableOperations()
-        server.listConceptsAndOperations()
     }
 
     @Test
