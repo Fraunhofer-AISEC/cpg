@@ -25,19 +25,23 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
+import de.fraunhofer.aisec.cpg.commonType
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import java.util.*
 import kotlin.collections.ifEmpty
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
-class IfElse : Expression(), BranchingNode, ArgumentHolder {
+class IfElse : Expression(), BranchingNode, ArgumentHolder, HasType.TypeObserver {
 
     override var usedAsExpression = false
 
@@ -61,11 +65,25 @@ class IfElse : Expression(), BranchingNode, ArgumentHolder {
     /** C++ constexpr construct. */
     var isConstExpression = false
 
-    @Relationship(value = "THEN_STATEMENT") var thenStatementEdge = astOptionalEdgeOf<Expression>()
+    @Relationship(value = "THEN_STATEMENT")
+    var thenStatementEdge =
+        astOptionalEdgeOf<Expression>(
+            onChanged = { old, new ->
+                old?.end?.unregisterTypeObserver(this)
+                new?.end?.registerTypeObserver(this)
+            }
+        )
     /** The statement that is executed, if the condition is evaluated as true. Usually a [Block]. */
     var thenStatement by unwrapping(IfElse::thenStatementEdge)
 
-    @Relationship(value = "ELSE_STATEMENT") var elseStatementEdge = astOptionalEdgeOf<Expression>()
+    @Relationship(value = "ELSE_STATEMENT")
+    var elseStatementEdge =
+        astOptionalEdgeOf<Expression>(
+            onChanged = { old, new ->
+                old?.end?.unregisterTypeObserver(this)
+                new?.end?.registerTypeObserver(this)
+            }
+        )
     /**
      * The statement that is executed, if the condition is evaluated as false. Usually a [Block].
      */
@@ -81,16 +99,35 @@ class IfElse : Expression(), BranchingNode, ArgumentHolder {
     }
 
     override fun addArgument(expression: Expression) {
-        this.condition = expression
+        if (condition == null) {
+            condition = expression
+        } else if (thenStatement == null) {
+            thenStatement = expression
+        } else if (elseStatement == null) {
+            elseStatement = expression
+        }
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        this.condition = new
-        return true
+        return when (old) {
+            condition -> {
+                condition = new
+                true
+            }
+            thenStatement -> {
+                thenStatement = new
+                true
+            }
+            elseStatement -> {
+                elseStatement = new
+                true
+            }
+            else -> false
+        }
     }
 
     override fun hasArgument(expression: Expression): Boolean {
-        return this.condition == expression
+        return condition == expression || thenStatement == expression || elseStatement == expression
     }
 
     override fun equals(other: Any?): Boolean {
@@ -124,8 +161,28 @@ class IfElse : Expression(), BranchingNode, ArgumentHolder {
     }
 
     override fun getExitNextEOG(): Collection<Node> {
-        return ((this.thenStatement?.getExitNextEOG() ?: setOf()) +
-                (this.elseStatement?.getExitNextEOG() ?: this.nextEOG))
-            .ifEmpty { this.nextEOG }
+        val thenExit = this.thenStatement?.getExitNextEOG() ?: setOf()
+        val elseExit = this.elseStatement?.getExitNextEOG() ?: this.nextEOG
+        return (thenExit + elseExit).ifEmpty { this.nextEOG }
+    }
+
+    override fun typeChanged(newType: Type, src: HasType) {
+        val types = mutableSetOf<Type>()
+
+        thenStatement?.type?.let { types.add(it) }
+        elseStatement?.type?.let { types.add(it) }
+
+        val alternative = if (types.isNotEmpty()) types.first() else unknownType()
+        this.type = types.commonType ?: alternative
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // Merge and propagate the assigned types of our branches
+        if (src == thenStatement || src == elseStatement) {
+            val types = mutableSetOf<Type>()
+            thenStatement?.assignedTypes?.let { types.addAll(it) }
+            elseStatement?.assignedTypes?.let { types.addAll(it) }
+            addAssignedTypes(types)
+        }
     }
 }

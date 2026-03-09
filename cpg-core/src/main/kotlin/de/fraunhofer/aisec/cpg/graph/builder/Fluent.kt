@@ -791,7 +791,10 @@ fun LanguageFrontend<*, *>.doStmt(needsScope: Boolean = true, init: DoWhile.() -
  */
 context(stmt: IfElse)
 fun LanguageFrontend<*, *>.condition(init: IfElse.() -> Expression): Expression {
-    return init(stmt)
+    val condition = init(stmt)
+    stmt.condition = condition
+
+    return condition
 }
 
 /**
