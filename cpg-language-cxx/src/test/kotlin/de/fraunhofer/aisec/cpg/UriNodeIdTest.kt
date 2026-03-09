@@ -29,27 +29,35 @@ import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
-import java.io.File
-import kotlin.test.Test
+import java.nio.file.Path
+import java.util.stream.Stream
+import kotlin.io.path.Path
+import kotlin.io.path.walk
+import kotlin.streams.asStream
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.assertNotNull
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 
 class UriNodeIdTest : BaseTest() {
 
-    val astIds = mutableListOf<String>()
-
-    @Test
-    fun testUriNodeId() {
-        val file = File("src/test/resources/c/hello-world.c")
+    @ParameterizedTest
+    @MethodSource("getTestFilePaths")
+    fun testAstIdUniqueness(path: Path) {
+        val file = path.toFile()
         val result =
             analyze(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CLanguage>()
             }
         assertNotNull(result)
 
+        val astIds = mutableListOf<String>()
         for (c in result.components) {
-            printAst(c)
+            collectAstIds(c, astIds)
         }
+
+        // for manual checks
+        astIds.forEach { println(it) }
 
         assertEquals(
             astIds.size,
@@ -62,13 +70,21 @@ class UriNodeIdTest : BaseTest() {
         )
     }
 
-    fun printAst(n: AstNode, depth: Int = 0) {
-        println("${"\t".repeat(depth)}${n.idAst}")
-        // println("${"\t".repeat(depth)}${n.idAst} $n")
-        astIds.add(n.idAst)
+    fun collectAstIds(n: AstNode, ids: MutableList<String>) {
+        ids.add(n.idAst)
 
         for (child in n.astChildren) {
-            printAst(child, depth)
+            collectAstIds(child, ids)
+        }
+    }
+
+    companion object {
+        @JvmStatic
+        fun getTestFilePaths(): Stream<Path> {
+            return Path("src/test/resources/")
+                .walk()
+                .filter { it.toString().endsWith("c") || it.toString().endsWith(".cpp") }
+                .asStream()
         }
     }
 }
