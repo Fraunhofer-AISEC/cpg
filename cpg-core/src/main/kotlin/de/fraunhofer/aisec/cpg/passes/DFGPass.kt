@@ -633,8 +633,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * If the expression is marked as [Expression.usedAsExpression] draws a DFG edge to the synchronized node from
-     * the block and marks the block as [Expression.usedAsExpression].
+     * If the expression is marked as [Expression.usedAsExpression] draws a DFG edge to the
+     * synchronized node from the block and marks the block as [Expression.usedAsExpression].
      */
     protected fun handleSynchronized(node: Synchronized) {
         if (node.usedAsExpression) {
@@ -643,8 +643,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * If the expression is marked as [Expression.usedAsExpression] draw edges from the try block, catches and finally
-     * blocks, depending on which subchildren exist and marks the block as [Expression.usedAsExpression].
+     * If the expression is marked as [Expression.usedAsExpression] draw edges from the try block,
+     * catches and finally blocks, depending on which subchildren exist and marks the block as
+     * [Expression.usedAsExpression].
      */
     protected fun handleTry(node: Try) {
         if (node.usedAsExpression) {
@@ -657,8 +658,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * If the expression is marked as [Expression.usedAsExpression] draws a DFG edge to the label from
-     * the [Label.subStatement] inside and marks it as [Expression.usedAsExpression].
+     * If the expression is marked as [Expression.usedAsExpression] draws a DFG edge to the label
+     * from the [Label.subStatement] inside and marks it as [Expression.usedAsExpression].
      */
     protected fun handleLabel(node: Label) {
         if (node.usedAsExpression) {
@@ -667,8 +668,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * If the expression is marked as [Expression.usedAsExpression] draws a DFG edge to the label from
-     * the [Label.subStatement] inside and marks it as [Expression.usedAsExpression].
+     * If the expression is marked as [Expression.usedAsExpression] draws a DFG edge to the label
+     * from the [Label.subStatement] inside and marks it as [Expression.usedAsExpression].
      */
     protected fun handleDeclarationStatement(node: DeclarationStatement) {
         if (node.usedAsExpression) {
