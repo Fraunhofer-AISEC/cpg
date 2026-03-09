@@ -26,11 +26,16 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.IfElse
+import de.fraunhofer.aisec.cpg.graph.statements.Return
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -78,15 +83,52 @@ abstract class AstNode : Node() {
          * proposed structure:
          *     {parent}/{simple class name}/{name | signature | value | index}
          */
-        var item: String =
+        val category =
             when (this) {
-                is FunctionDeclaration -> signature
-                is Literal<*> -> value.toString()
+                // define short names if desired
+                is TranslationResult -> "tr"
+                is TranslationUnit -> "tu"
+                else -> this::class.simpleName?.lowercase()
+            }?.let {
+                // simple pluralize with 's'/'es'
+                if (it.last() != 's') it + "s" else it + "es"
+            }
+
+        var value: String =
+            when (this) {
+                // extract suitable descriptors for specific AST nodes
+                is Function -> {
+                    val sameFunSigs = astParent.functions.filter { it.signature == signature }
+
+                    if (sameFunSigs.size > 1) "${signature}_${astParent.functions.indexOf(this)}"
+                    else signature
+                }
+                is Literal<*> -> {
+                    "${value}_${astParent?.astChildren?.indexOf(this)}"
+                }
                 is Block -> astParent.blocks.indexOf(this).toString()
-                is ParameterDeclaration ->
+                is IfElse -> astParent.ifs.indexOf(this).toString()
+                is Return -> astParent.returns.indexOf(this).toString()
+                is DeclarationStatement ->
+                    astParent
+                        ?.astChildren
+                        ?.filter { it is DeclarationStatement }
+                        ?.indexOf(this)
+                        ?.or(0)
+                        .toString()
+                is Parameter ->
                     if (name.isEmpty()) astParent.parameters.indexOf(this).toString()
                     else name.toString()
-                else -> name.toString()
+                else -> {
+                    val children = astParent?.astChildren?.filter { it.name == this.name }.orEmpty()
+
+                    when (children.size) {
+                        0 -> ""
+                        1 -> "${name}"
+                        else ->
+                            "${name}_${if (children.indexOf(this) < 0) 0 else children.indexOf(this)}"
+                    }
+                }
             }
 
         // use parent's id as base
@@ -94,7 +136,7 @@ abstract class AstNode : Node() {
 
         // assemble full id
         parentId +
-            this::class.simpleName +
-            if (item.isEmpty()) "" else "/" + URLEncoder.encode(item, StandardCharsets.UTF_8)
+            category +
+            if (value.isEmpty()) "" else "/" + URLEncoder.encode(value, StandardCharsets.UTF_8)
     }
 }
