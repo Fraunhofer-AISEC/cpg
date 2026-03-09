@@ -47,11 +47,12 @@ object McpServerHelper {
 
         try {
             println("Starting MCP server with streamable HTTP on port $port...")
-            val server = de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer()
-            de.fraunhofer.aisec.cpg.mcp.runHttpMcpServerUsingKtorPlugin(
-                port = port,
-                server = server,
-            )
+            val mcpServerKt = Class.forName("de.fraunhofer.aisec.cpg.mcp.mcpserver.McpServerKt")
+            val server = mcpServerKt.getMethod("configureDefaultServer").invoke(null)
+
+            val appKt = Class.forName("de.fraunhofer.aisec.cpg.mcp.ApplicationKt")
+            val runServer = appKt.methods.first { it.name == "runHttpMcpServerUsingKtorPlugin" }
+            runServer.invoke(null, port, "0.0.0.0", server, false)
         } catch (e: Exception) {
             println("Failed to start MCP server: ${e.message}")
             e.printStackTrace()
@@ -65,7 +66,10 @@ object McpServerHelper {
         }
 
         try {
-            de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult = result
+            val toolsClass =
+                Class.forName("de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.CpgAnalyzeToolKt")
+            val setResult = toolsClass.getMethod("setGlobalAnalysisResult", result.javaClass)
+            setResult.invoke(null, result)
         } catch (e: Exception) {
             println("Warning: Failed to set globalAnalysisResult in cpg-mcp module: ${e.message}")
             e.printStackTrace()

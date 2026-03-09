@@ -28,6 +28,10 @@ dependencies {
         implementation(libs.mcp)
         // MCP Client SDK - for custom MCP client implementation
         implementation(libs.mcp.client)
+    } else {
+        // MCP SDK only available at compile time so the files in `/ai` compile,
+        compileOnly(libs.mcp)
+        compileOnly(libs.mcp.client)
     }
 
     // Ktor server dependencies

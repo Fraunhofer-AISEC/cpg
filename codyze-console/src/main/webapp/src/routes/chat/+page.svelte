@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { PageProps } from './$types';
   import type { ChatMessage, LLMMessage } from '$lib/types';
-  import { WelcomeScreen, ChatInterface, McpCapabilitiesModal } from '$lib/components/ai-agent';
+  import { WelcomeScreen, ChatInterface, McpCapabilitiesModal, NotConfigured } from '$lib/components/ai-agent';
   import { PageHeader } from '$lib/components/navigation';
   import { llmAgent, type StreamingCallbacks } from '$lib/services/llmAgent';
 
@@ -210,8 +210,10 @@
   subtitle="Understand your code better through AI-powered analysis."
 />
 
-<div class="-mx-6 -mb-6 flex flex-col" style="height: calc(100vh - 180px);">
-  {#if showWelcome}
+<div class="-mx-6 -mb-6 flex flex-1 flex-col">
+  {#if mcpCapabilities === null}
+    <NotConfigured />
+  {:else if showWelcome}
     <div class="flex-1 overflow-hidden">
       <WelcomeScreen
         onWelcomeMessage={handleWelcomeMessage}

@@ -71,6 +71,9 @@ fun configureServer(
     return Server(info, options).configure()
 }
 
+/** Default configureServer constructor call to use via reflection (e.g. from codyze-console). */
+fun configureDefaultServer(): Server = configureServer()
+
 const val cpgDescription =
     """
 This server provides tools to analyze the Fraunhofer AISEC CPG (Code Property Graph) and

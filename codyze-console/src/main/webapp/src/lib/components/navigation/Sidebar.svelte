@@ -68,10 +68,10 @@
           {#if item.disabled}
             <span
               class="flex cursor-not-allowed items-center rounded-md px-3 py-2 text-sm font-medium text-gray-400"
-              title="MCP module not enabled"
+              title="The module 'cpg-mcp' is not enabled."
             >
               {#if item.icon === 'robot'}
-                <svg class="mr-3 h-5 w-5" fill="currentColor" viewBox="0 0 960 960">
+                <svg class="mr-3 h-5 w-5" fill="currentColor" viewBox="0 -960 960 960">
                   <path d="M160-360q-50 0-85-35t-35-85q0-50 35-85t85-35v-80q0-33 23.5-56.5T240-760h120q0-50 35-85t85-35q50 0 85 35t35 85h120q33 0 56.5 23.5T800-680v80q50 0 85 35t35 85q0 50-35 85t-85 35v160q0 33-23.5 56.5T720-120H240q-33 0-56.5-23.5T160-200v-160Zm200-80q25 0 42.5-17.5T420-500q0-25-17.5-42.5T360-560q-25 0-42.5 17.5T300-500q0 25 17.5 42.5T360-440Zm240 0q25 0 42.5-17.5T660-500q0-25-17.5-42.5T600-560q-25 0-42.5 17.5T540-500q0 25 17.5 42.5T600-440ZM320-280h320v-80H320v80Zm-80 80h480v-480H240v480Zm240-240Z" />
                 </svg>
               {/if}
