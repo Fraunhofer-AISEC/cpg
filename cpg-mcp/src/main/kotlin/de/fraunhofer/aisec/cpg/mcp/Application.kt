@@ -31,6 +31,7 @@ import io.ktor.server.engine.*
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
 import io.modelcontextprotocol.kotlin.sdk.server.mcp
+import io.modelcontextprotocol.kotlin.sdk.server.mcpStreamableHttp
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.asSink
@@ -40,21 +41,53 @@ import picocli.CommandLine
 
 @CommandLine.Command(name = "cpg-mcp")
 class Application : Runnable {
+    @CommandLine.ArgGroup(exclusive = true, multiplicity = "0..1")
+    var transport: TransportOptions? = null
+
+    class TransportOptions {
+        @CommandLine.Option(
+            names = ["--stdio"],
+            description = ["Run the MCP server using stdio (default option)."],
+        )
+        var stdio: Boolean = false
+
+        @CommandLine.Option(
+            names = ["--sse"],
+            description = ["Provide the port to run SSE (Server Sent Events)."],
+        )
+        var ssePort: Int? = null
+
+        @CommandLine.Option(names = ["--http"], description = ["Provide the port to run HTTP."])
+        var httpPort: Int? = null
+    }
+
     @CommandLine.Option(
-        names = ["--sse"],
+        names = ["--host"],
         description =
             [
-                "Provide the port to run SSE (Server Sent Events). If not specified, the MCP server will run using stdio."
+                "Configure for which hosts the MCP server should be accessible. We expect a valid IP address. Default is 0.0.0.0"
             ],
     )
-    var ssePort: Int? = null
+    var host: String? = null
 
     override fun run() {
-        val port = ssePort
-        if (port == null) {
+        val host = host ?: "0.0.0.0"
+        val httpPort = transport?.httpPort
+        val ssePort = transport?.ssePort
+        if (httpPort != null) {
+            runHttpMcpServerUsingKtorPlugin(
+                port = httpPort,
+                host = host,
+                server = configureServer(),
+            )
+        } else if (ssePort != null) {
+            runSseMcpServerUsingKtorPlugin(port = ssePort, host = host, server = configureServer())
+        } else if (transport?.stdio == true) {
             runMcpServerUsingStdio()
         } else {
-            runSseMcpServerUsingKtorPlugin(port, configureServer())
+            // this is the default / fallback case if no transport option is provided, we run the
+            // stdio server
+            runMcpServerUsingStdio()
         }
     }
 }
@@ -81,7 +114,25 @@ fun runMcpServerUsingStdio() {
  * The url can be accessed in the MCP inspector at [http://localhost:$port]
  *
  * @param port The port number on which the SSE MCP server will listen for client connections.
+ * @param host The host/IP address on which the server will bind.
+ * @param server The MCP server instance that will handle incoming requests and provide responses to
+ *   clients.
  */
-fun runSseMcpServerUsingKtorPlugin(port: Int, server: Server) = runBlocking {
-    embeddedServer(CIO, host = "0.0.0.0", port = port) { mcp { server } }.start(wait = true)
+fun runSseMcpServerUsingKtorPlugin(port: Int, host: String, server: Server) = runBlocking {
+    embeddedServer(CIO, host = host, port = port) { mcp { server } }.start(wait = true)
+}
+
+/**
+ * Starts a streamable HTTP MCP server using the Ktor framework and the specified port.
+ *
+ * @param port The port number on which the SSE MCP server will listen for client connections.
+ * @param host The host/IP address on which the server will bind.
+ * @param server The MCP server instance that will handle incoming requests and provide responses to
+ *   clients.
+ */
+fun runHttpMcpServerUsingKtorPlugin(port: Int, host: String, server: Server) {
+    runBlocking {
+        embeddedServer(factory = CIO, host = host, port = port) { mcpStreamableHttp { server } }
+            .start(wait = true)
+    }
 }
