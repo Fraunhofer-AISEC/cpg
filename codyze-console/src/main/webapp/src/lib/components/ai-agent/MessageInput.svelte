@@ -10,6 +10,7 @@
     /** MCP prompts available for slash-command completion (e.g. typing "/suggest") */
     prompts?: McpPromptInfo[];
     onPromptSelect?: (name: string, args: Record<string, string>) => void;
+    onNewChat?: () => void;
   }
 
   let {
@@ -19,7 +20,8 @@
     placeholder = 'Ask me anything about your codebase...',
     disabled = false,
     prompts,
-    onPromptSelect
+    onPromptSelect,
+    onNewChat
   }: Props = $props();
 
   let textareaElement: HTMLTextAreaElement;
@@ -138,8 +140,22 @@
   {/if}
 
   <div
-    class="flex items-center gap-3 rounded-3xl border-2 border-gray-200 bg-white py-2 pl-5 pr-2 shadow-lg transition-all duration-200 focus-within:border-blue-400 focus-within:shadow-xl focus-within:ring-4 focus-within:ring-blue-100"
+    class="flex items-center gap-3 rounded-3xl border-2 border-gray-200 bg-white py-2 pl-2 pr-2 shadow-lg transition-all duration-200 focus-within:border-blue-400 focus-within:shadow-xl focus-within:ring-4 focus-within:ring-blue-100"
   >
+    {#if onNewChat}
+      <button
+        type="button"
+        onclick={onNewChat}
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 active:scale-95"
+        aria-label="Start new chat"
+        title="New chat"
+      >
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+        </svg>
+      </button>
+      <div class="h-5 w-px bg-gray-200"></div>
+    {/if}
     <textarea
       bind:this={textareaElement}
       class="max-h-30 min-h-6 flex-1 resize-none border-0 bg-transparent text-base leading-relaxed text-gray-900 placeholder-gray-400 outline-none focus:border-0 focus:outline-none focus:ring-0"

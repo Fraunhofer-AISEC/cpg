@@ -71,6 +71,7 @@ data class FunctionSummary(
     val returnType: String?,
     val callees: List<String>,
     val code: String?,
+    val translationUnitId: String?,
 )
 
 @Serializable
@@ -83,6 +84,7 @@ data class RecordSummary(
     val kind: String?,
     val fieldCount: Int,
     val methodNames: List<String>,
+    val translationUnitId: String?,
 )
 
 @Serializable
@@ -94,6 +96,7 @@ data class CallSummary(
     val endLine: Int?,
     val arguments: List<String>,
     val code: String?,
+    val translationUnitId: String?,
 )
 
 @Serializable

@@ -231,6 +231,7 @@ fun Function.toSummary() =
         returnType = this.returnTypes.firstOrNull()?.typeName,
         callees = this.callees.map { it.name.localName },
         code = this.code,
+        translationUnitId = this.translationUnit?.id?.toString(),
     )
 
 fun Record.toSummary() =
@@ -243,6 +244,7 @@ fun Record.toSummary() =
         kind = this.kind,
         fieldCount = this.fields.size,
         methodNames = this.methods.map { it.name.localName },
+        translationUnitId = this.translationUnit?.id?.toString(),
     )
 
 fun Call.toSummary() =
@@ -254,6 +256,7 @@ fun Call.toSummary() =
         endLine = this.location?.region?.endLine,
         arguments = this.arguments.map { "${it.type.typeName} ${it.name.localName}" },
         code = this.code,
+        translationUnitId = this.translationUnit?.id?.toString(),
     )
 
 /** Returns all available concrete (non-abstract) concept classes. */
