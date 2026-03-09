@@ -6,18 +6,7 @@ export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
   server: {
     proxy: {
-      '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        timeout: 0,
-        proxyTimeout: 0,
-        configure: (proxy) => {
-          proxy.on('proxyReq', (proxyReq) => {
-            // Ensure connection stays alive for SSE
-            proxyReq.setHeader('Connection', 'keep-alive');
-          });
-        }
-      }
+      '/api': 'http://localhost:8080'
     }
   }
 });

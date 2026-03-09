@@ -5,11 +5,11 @@
   interface Props {
     onWelcomeMessage: (message: string) => void;
     mcpCapabilities?: McpCapabilities | null;
-    onOpenMcp?: () => void;
+    onOpenMcpModal?: () => void;
     onPromptSelect?: (name: string, args: Record<string, string>) => void;
   }
 
-  let { onWelcomeMessage, mcpCapabilities, onOpenMcp, onPromptSelect }: Props = $props();
+  let { onWelcomeMessage, mcpCapabilities, onOpenMcpModal, onPromptSelect }: Props = $props();
 
   let messageInput = $state('');
 
@@ -88,11 +88,11 @@
       prompts={mcpCapabilities?.prompts}
       onPromptSelect={onPromptSelect}
     />
-    {#if mcpCapabilities && onOpenMcp}
+    {#if mcpCapabilities && onOpenMcpModal}
       <div class="mt-2 flex items-center">
         <button
           class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-          onclick={onOpenMcp}
+          onclick={onOpenMcpModal}
           title="MCP Server"
         >
           <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">

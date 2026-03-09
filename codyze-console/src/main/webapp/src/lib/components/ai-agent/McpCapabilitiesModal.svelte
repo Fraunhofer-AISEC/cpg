@@ -17,7 +17,8 @@
     { id: 'resources', label: 'Resources', count: capabilities.resources.length }
   ]);
 
-  function getParamEntries(schema: any): { name: string; type: string; required: boolean }[] {
+  /** Extracts the properties of the MCP tool definitions */
+  function getMcpToolProps(schema: any): { name: string; type: string; required: boolean }[] {
     if (!schema?.properties) return [];
     const required: string[] = schema.required ?? [];
     return Object.entries(schema.properties).map(([name, def]: [string, any]) => ({
@@ -27,10 +28,12 @@
     }));
   }
 
-  function isLong(text: string | undefined): boolean {
+  /** Descriptions longer than this are truncated in the collapsed state */
+  function shouldTruncateDescription(text: string | undefined): boolean {
     return !!text && text.length > 120;
   }
 
+  /** Only close when clicking the backdrop itself, not its children */
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) onClose();
   }
@@ -49,9 +52,9 @@
   onkeydown={handleKeydown}
 >
   <!-- Modal -->
-  <div class="flex w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl" style="max-height: 80vh;">
+  <div class="flex w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl max-h-[80vh]">
     <!-- Header -->
-    <div class="flex flex-shrink-0 items-center justify-between border-b border-gray-200 px-5 py-4">
+    <div class="flex shrink-0 items-center justify-between border-b border-gray-200 px-5 py-4">
       <div class="flex items-center gap-3">
         <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -77,7 +80,7 @@
     </div>
 
     <!-- Tabs -->
-    <div class="flex-shrink-0 px-5 pt-3">
+    <div class="shrink-0 px-5 pt-3">
       <TabNavigation {tabs} {activeTab} onTabChange={(id) => (activeTab = id)} />
     </div>
 
@@ -89,13 +92,13 @@
         {:else}
           <ul class="space-y-2">
             {#each capabilities.tools as tool}
-              {@const params = getParamEntries(tool.inputSchema)}
+              {@const params = getMcpToolProps(tool.inputSchema)}
               <li class="rounded-xl border border-gray-200 bg-gray-50">
                 <details class="group">
                   <summary class="flex cursor-pointer list-none items-start gap-3 px-4 py-3">
                     <!-- chevron -->
                     <svg
-                      class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-gray-400 transition-transform duration-150 group-open:rotate-90"
+                      class="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform duration-150 group-open:rotate-90"
                       fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
                     >
                       <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
@@ -110,7 +113,7 @@
                         {/if}
                       </div>
                       {#if tool.description}
-                        {#if isLong(tool.description)}
+                        {#if shouldTruncateDescription(tool.description)}
                           <p class="mt-1 line-clamp-2 text-xs leading-snug text-gray-500 group-open:line-clamp-none">
                             {tool.description}
                           </p>

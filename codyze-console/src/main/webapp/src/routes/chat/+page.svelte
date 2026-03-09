@@ -207,7 +207,7 @@
 
 <PageHeader
   title="CodAIze Agent"
-  subtitle="Understand your code better through AI-powered graph analysis."
+  subtitle="Understand your code better through AI-powered analysis."
 />
 
 <div class="-mx-6 -mb-6 flex flex-col" style="height: calc(100vh - 180px);">
@@ -216,7 +216,7 @@
       <WelcomeScreen
         onWelcomeMessage={handleWelcomeMessage}
         {mcpCapabilities}
-        onOpenMcp={() => (showMcpModal = true)}
+        onOpenMcpModal={() => (showMcpModal = true)}
         onPromptSelect={handlePromptSelect}
       />
     </div>
@@ -233,7 +233,7 @@
       onReset={resetChat}
       onMessageChange={(message) => (currentMessage = message)}
       onPromptSelect={handlePromptSelect}
-      onOpenMcp={() => (showMcpModal = true)}
+      onOpenMcpModal={() => (showMcpModal = true)}
     />
   {/if}
 </div>

@@ -45,13 +45,13 @@ class JsonSchemaGeneratorTest {
             ToolSchema(
                 properties =
                     buildJsonObject {
-                        putJsonObject("items") {
+                        putJsonObject("assignments") {
                             put("type", "array")
-                            put("description", "List of items")
+                            put("description", "List of concept assignments to perform")
                             putJsonObject("items") {
                                 put("type", "object")
                                 putJsonObject("properties") {
-                                    putJsonObject("entries") {
+                                    putJsonObject("arguments") {
                                         put("type", "array")
                                         putJsonObject("items") {
                                             put("type", "object")
@@ -72,16 +72,19 @@ class JsonSchemaGeneratorTest {
                                         put("type", "string")
                                         put("description", "Required id")
                                     }
-                                    putJsonObject("tag") {
+                                    putJsonObject("securityImpact") {
                                         put("type", "string")
-                                        put("description", "Optional tag")
+                                        put(
+                                            "description",
+                                            "A description if this concept could have security implications (optional)",
+                                        )
                                     }
                                 }
                                 putJsonArray("required") { add("id") }
                             }
                         }
                     },
-                required = listOf("items"),
+                required = listOf("assignments"),
             )
 
         val actual = TestPayload::class.toSchema()
@@ -94,11 +97,14 @@ class JsonSchemaGeneratorTest {
 private data class TestPair(@Description("The key") val key: String, val value: String)
 
 @Serializable
-private data class TestItem(
+private data class TestAssignment(
     @Description("Required id") val id: String,
-    @Description("Optional tag") val tag: String? = null,
-    val entries: List<TestPair>? = null,
+    @Description("A description if this concept could have security implications (optional)")
+    val securityImpact: String? = null,
+    val arguments: List<TestPair>? = null,
 )
 
 @Serializable
-private data class TestPayload(@Description("List of items") val items: List<TestItem>)
+private data class TestPayload(
+    @Description("List of concept assignments to perform") val assignments: List<TestAssignment>
+)

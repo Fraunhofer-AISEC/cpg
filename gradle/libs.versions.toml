@@ -66,6 +66,9 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
+ktor-server-sse = { module = "io.ktor:ktor-server-sse", version.ref = "ktor" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 
 mcp = {module = "io.modelcontextprotocol:kotlin-sdk", version = "0.8.4"}
 mcp-client = {module = "io.modelcontextprotocol:kotlin-sdk-client", version = "0.8.4"}
@@ -95,7 +98,8 @@ dex2jar = {module = "de.femtopedia.dex2jar:dex2jar", version="2.4.22" }
 log4j = ["log4j-impl", "log4j-core"]
 neo4j = ["neo4j-ogm-core", "neo4j-ogm-bolt-driver"]
 sootup = ["sootup-core", "sootup-java-core", "sootup-java-sourcecode", "sootup-java-bytecode", "sootup-jimple", "sootup-apk"]
-ktor = ["ktor-server-core", "ktor-server-netty", "ktor-server-cors","ktor-server-content-negotiation", "ktor-serialization-kotlinx-json"]
+ktor = ["ktor-server-core", "ktor-server-netty", "ktor-server-cors","ktor-server-content-negotiation", "ktor-serialization-kotlinx-json", "ktor-server-sse"]
+ktor-client = ["ktor-client-core", "ktor-client-cio", "ktor-client-content-negotiation"]
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin"}

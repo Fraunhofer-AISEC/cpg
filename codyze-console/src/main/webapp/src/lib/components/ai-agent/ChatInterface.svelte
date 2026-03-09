@@ -4,14 +4,11 @@
   import CodeItemList, { isCodeItemContent } from './widgets/CodeItemList.svelte';
   import DfgFlowWidget from './widgets/DfgFlowWidget.svelte';
   import CodePreview from './CodePreview.svelte';
-  import ApiService from '$lib/services/apiService';
   import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, McpCapabilities } from '$lib/types';
 
   // State for code preview split-view
   let selectedNode = $state<NodeJSON | null>(null);
   let showCodePreview = $derived(selectedNode !== null);
-  let showRightPanel = $derived(showCodePreview);
-
 
   function handleNodeClick(node: NodeJSON) {
     selectedNode = node;
@@ -43,13 +40,9 @@
     return null;
   }
 
-  // Helper to create a fallback TranslationUnit if not found
+  // Returns the TranslationUnit for a node, or a minimal fallback if not found
   function getTranslationUnitForNode(node: NodeJSON): TranslationUnitJSON {
-    const found = findTranslationUnit(node);
-    if (found) return found;
-
-    // Fallback: Create minimal TranslationUnit with node's code
-    return {
+    return findTranslationUnit(node) ?? {
       id: node.translationUnitId || 'fallback-tu',
       name: node.fileName || 'unknown',
       path: `file:///${node.fileName || 'unknown'}`,
@@ -70,7 +63,7 @@
     onReset: () => void;
     onMessageChange: (message: string) => void;
     onPromptSelect?: (name: string, args: Record<string, string>) => void;
-    onOpenMcp?: () => void;
+    onOpenMcpModal?: () => void;
   }
 
   let {
@@ -85,7 +78,7 @@
     onReset,
     onMessageChange,
     onPromptSelect,
-    onOpenMcp
+    onOpenMcpModal
   }: Props = $props();
 
   // Only show content when there's actual visible text
@@ -100,50 +93,51 @@
     if (!messagesContainer) return true;
     const threshold = 150; // pixels from bottom
     const position = messagesContainer.scrollTop + messagesContainer.clientHeight;
-    const bottom = messagesContainer.scrollHeight;
-    return bottom - position < threshold;
+    return messagesContainer.scrollHeight - position < threshold;
   }
 
-  // Handle manual scrolling by user
   function handleScroll() {
-    if (messagesContainer) {
-      shouldAutoScroll = isNearBottom();
-    }
+    shouldAutoScroll = isNearBottom();
   }
 
-  // Scroll to bottom function
   function scrollToBottom() {
     if (messagesContainer) {
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
   }
 
-  // Auto-scroll when messages change
+  // Auto-scroll when messages change or streaming content updates
   $effect(() => {
     messages.length;
-    if (shouldAutoScroll) {
-      requestAnimationFrame(() => scrollToBottom());
-    }
-  });
-
-  // Auto-scroll when streaming content updates
-  $effect(() => {
     streamingContent;
     if (shouldAutoScroll) {
       requestAnimationFrame(() => scrollToBottom());
     }
   });
+
+  // Per-message toggle state for the "Thought process" reasoning panel
+  let expandedReasoning = $state<Set<string>>(new Set());
+
+  function toggleReasoning(id: string) {
+    const next = new Set(expandedReasoning);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    expandedReasoning = next;
+  }
 </script>
 
 <div class="flex h-full bg-gray-50">
   <!-- Chat Container - Dynamic Width with Transition -->
   <div
     class="chat-container"
-    class:chat-full={!showRightPanel}
-    class:chat-split={showRightPanel}
+    class:chat-full={!showCodePreview}
+    class:chat-split={showCodePreview}
   >
     <!-- New Chat button bar -->
-    <div class="flex flex-shrink-0 items-center gap-2 px-6 py-3">
+    <div class="flex shrink-0 items-center gap-2 px-6 py-3">
       <button
         class="flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-md transition-all hover:bg-gray-100 hover:shadow-lg active:scale-95"
         onclick={onReset}
@@ -172,22 +166,15 @@
         {:else}
           <!-- AI Message -->
           <div class="px-6 py-6">
-            <!-- Show saved reasoning if present (collapsed by default, inline style) -->
+            <!-- Collapsible "Thought process" reasoning panel -->
             {#if message.reasoning}
-              {@const messageId = message.id}
               <div class="mb-2 inline-block">
                 <button
-                  class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
-                  onclick={() => {
-                    const el = document.getElementById(`reasoning-${messageId}`);
-                    if (el) el.classList.toggle('hidden');
-                    const chevron = document.getElementById(`chevron-${messageId}`);
-                    if (chevron) chevron.classList.toggle('rotate-90');
-                  }}
+                  class="flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600"
+                  onclick={() => toggleReasoning(message.id)}
                 >
                   <svg
-                    id="chevron-{messageId}"
-                    class="h-3 w-3 transition-transform duration-200"
+                    class="h-3 w-3 transition-transform duration-200 {expandedReasoning.has(message.id) ? 'rotate-90' : ''}"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -200,11 +187,13 @@
                   </svg>
                   <span>Thought process</span>
                 </button>
-                <div id="reasoning-{messageId}" class="hidden mt-1.5 ml-4 pl-3 border-l-2 border-gray-200 max-w-xl">
-                  <p class="whitespace-pre-wrap text-xs italic text-gray-400 leading-relaxed">
-                    {message.reasoning}
-                  </p>
-                </div>
+                {#if expandedReasoning.has(message.id)}
+                  <div class="mt-1.5 ml-4 max-w-xl border-l-2 border-gray-200 pl-3">
+                    <p class="whitespace-pre-wrap text-xs italic leading-relaxed text-gray-400">
+                      {message.reasoning}
+                    </p>
+                  </div>
+                {/if}
               </div>
             {/if}
             {#if message.contentType === 'tool-result' && message.toolResult}
@@ -214,20 +203,20 @@
                 <CodeItemList data={message.toolResult} onItemClick={handleNodeClick} />
               {:else}
                 <!-- Fallback: plain text/JSON -->
-                <div class="my-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
-                  <div class="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
+                <div class="my-2 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                  <div class="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-3">
                     {#if message.toolResult.toolName}
-                      <span class="text-sm font-semibold text-gray-700 font-mono">{message.toolResult.toolName}</span>
+                      <span class="font-mono text-sm font-semibold text-gray-700">{message.toolResult.toolName}</span>
                     {/if}
                     {#if message.toolResult.isError}
-                      <span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded uppercase">Error</span>
+                      <span class="rounded bg-red-100 px-2 py-1 text-xs font-semibold uppercase text-red-800">Error</span>
                     {/if}
                   </div>
-                  <pre class="p-4 m-0 font-mono text-sm text-gray-700 overflow-x-auto whitespace-pre-wrap break-words">{typeof message.toolResult.content === 'string' ? message.toolResult.content : JSON.stringify(message.toolResult.content, null, 2)}</pre>
+                  <pre class="m-0 overflow-x-auto whitespace-pre-wrap wrap-break-word p-4 font-mono text-sm text-gray-700">{typeof message.toolResult.content === 'string' ? message.toolResult.content : JSON.stringify(message.toolResult.content, null, 2)}</pre>
                 </div>
               {/if}
             {:else if message.content}
-              <!-- Regular Text or markdown table -->
+              <!-- Regular text / markdown -->
               <div class="prose prose-sm max-w-4xl text-gray-800">
                 <MarkdownRenderer content={message.content} />
               </div>
@@ -239,18 +228,17 @@
       {#if isLoading || displayContent}
         <!-- Streaming AI Message -->
         <div class="px-6 py-6">
-          <!-- Main content -->
           {#if displayContent}
             <div class="prose prose-sm max-w-4xl text-gray-800">
               <MarkdownRenderer content={displayContent} />
             </div>
           {:else}
-            <!-- Typing indicator while loading -->
+            <!-- Typing indicator while waiting for first chunk -->
             <div class="flex items-center gap-2">
               <div class="flex gap-1">
-                <div class="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style="animation-delay: 0ms;"></div>
-                <div class="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style="animation-delay: 150ms;"></div>
-                <div class="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style="animation-delay: 300ms;"></div>
+                <div class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0ms]"></div>
+                <div class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]"></div>
+                <div class="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]"></div>
               </div>
             </div>
           {/if}
@@ -260,7 +248,7 @@
   </div>
 
   <!-- Input Area - Fixed at bottom -->
-  <div class="flex-shrink-0 px-4 pb-0 pt-3">
+  <div class="shrink-0 px-4 pb-0 pt-3">
     <div class="mx-auto max-w-6xl">
       <MessageInput
         value={currentMessage}
@@ -271,11 +259,11 @@
         prompts={mcpCapabilities?.prompts}
         onPromptSelect={onPromptSelect}
       />
-      {#if mcpCapabilities && onOpenMcp}
+      {#if mcpCapabilities && onOpenMcpModal}
         <div class="mt-2 flex items-center">
           <button
             class="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-            onclick={onOpenMcp}
+            onclick={onOpenMcpModal}
             title="MCP Server"
           >
             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -338,7 +326,6 @@
     }
   }
 
-  /* Responsive: Stack on mobile */
   @media (max-width: 768px) {
     .chat-split {
       width: 0;

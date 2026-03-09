@@ -7,6 +7,7 @@
     onValueChange: (value: string) => void;
     placeholder?: string;
     disabled?: boolean;
+    /** MCP prompts available for slash-command completion (e.g. typing "/suggest") */
     prompts?: McpPromptInfo[];
     onPromptSelect?: (name: string, args: Record<string, string>) => void;
   }
@@ -22,39 +23,48 @@
   }: Props = $props();
 
   let textareaElement: HTMLTextAreaElement;
+  /** Index of the currently highlighted prompt in the slash-command picker */
   let pickerIndex = $state(0);
 
-  const slashQuery = $derived(() => {
+  /**
+   * Returns the text after the leading slash when the input matches "/word" exactly.
+   */
+  const slashQuery = $derived.by(() => {
     if (!prompts || prompts.length === 0) return null;
     const match = value.match(/^\/(\S*)$/);
     return match ? match[1] : null;
   });
 
-  const filteredPrompts = $derived(() => {
-    const q = slashQuery();
-    if (q === null) return [];
-    const lower = q.toLowerCase();
+  /** Prompts whose names contain the current slash query (case-insensitive) */
+  const filteredPrompts = $derived.by(() => {
+    if (slashQuery === null) return [];
+    const lower = slashQuery.toLowerCase();
     return prompts!.filter((p) => p.name.toLowerCase().includes(lower));
   });
 
-  const showPicker = $derived(filteredPrompts().length > 0);
+  const showPicker = $derived(filteredPrompts.length > 0);
 
+  function resetTextareaHeight() {
+    if (textareaElement) textareaElement.style.height = 'auto';
+  }
+
+  // Handles keyboard navigation for the slash-command prompt picker,
+  // and sends the message on Enter.
   function handleKeyDown(e: KeyboardEvent) {
     if (showPicker) {
-      const fp = filteredPrompts();
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        pickerIndex = (pickerIndex + 1) % fp.length;
+        pickerIndex = (pickerIndex + 1) % filteredPrompts.length;
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        pickerIndex = (pickerIndex - 1 + fp.length) % fp.length;
+        pickerIndex = (pickerIndex - 1 + filteredPrompts.length) % filteredPrompts.length;
         return;
       }
       if (e.key === 'Enter') {
         e.preventDefault();
-        selectPrompt(fp[pickerIndex]);
+        selectPrompt(filteredPrompts[pickerIndex]);
         return;
       }
       if (e.key === 'Escape') {
@@ -73,39 +83,34 @@
   function handleInput(e: Event) {
     const target = e.target as HTMLTextAreaElement;
     onValueChange(target.value);
+    // Auto-grow up to 120px, then scroll
     target.style.height = 'auto';
     target.style.height = Math.min(target.scrollHeight, 120) + 'px';
-    pickerIndex = 0;
+    pickerIndex = 0; // reset picker selection on every keystroke
   }
 
   function selectPrompt(prompt: McpPromptInfo) {
     onValueChange('');
-    if (textareaElement) textareaElement.style.height = 'auto';
-    if (onPromptSelect) {
-      onPromptSelect(prompt.name, {});
-    }
+    resetTextareaHeight();
+    onPromptSelect?.(prompt.name, {});
   }
 
   function handleSend() {
     if (value.trim() && !disabled) {
       onSend();
-      if (textareaElement) {
-        textareaElement.style.height = 'auto';
-      }
+      resetTextareaHeight();
     }
   }
 
+  // When the parent clears the value (e.g. after sending), reset textarea height too
   $effect(() => {
-    if (value === '' && textareaElement) {
-      textareaElement.style.height = 'auto';
-    }
+    if (value === '') resetTextareaHeight();
   });
 </script>
 
 <div class="relative">
-  <!-- Slash-command picker for mcp prompts -->
+  <!-- Slash-command picker: shown when user types "/..." to filter MCP prompts -->
   {#if showPicker}
-    {@const fp = filteredPrompts()}
     <div
       class="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
     >
@@ -113,7 +118,7 @@
         <p class="text-xs font-medium text-gray-500">Available prompts</p>
       </div>
       <ul>
-        {#each fp as prompt, i}
+        {#each filteredPrompts as prompt, i}
           <li>
             <button
               type="button"
@@ -137,7 +142,7 @@
   >
     <textarea
       bind:this={textareaElement}
-      class="max-h-[120px] min-h-[24px] flex-1 resize-none border-0 bg-transparent text-base leading-relaxed text-gray-900 placeholder-gray-400 outline-none focus:border-0 focus:outline-none focus:ring-0"
+      class="max-h-30 min-h-6 flex-1 resize-none border-0 bg-transparent text-base leading-relaxed text-gray-900 placeholder-gray-400 outline-none focus:border-0 focus:outline-none focus:ring-0"
       {placeholder}
       rows="1"
       {value}
@@ -145,7 +150,7 @@
       onkeydown={handleKeyDown}
     ></textarea>
     <button
-      class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md transition-all duration-200 hover:scale-105 hover:from-blue-700 hover:to-blue-800 hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:opacity-50 disabled:hover:scale-100 disabled:hover:shadow-md"
+      class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linear-to-r from-blue-600 to-blue-700 text-white shadow-md transition-all duration-200 hover:scale-105 hover:from-blue-700 hover:to-blue-800 hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:opacity-50 disabled:hover:scale-100 disabled:hover:shadow-md"
       onclick={handleSend}
       disabled={!value.trim() || disabled}
       aria-label="Send message"

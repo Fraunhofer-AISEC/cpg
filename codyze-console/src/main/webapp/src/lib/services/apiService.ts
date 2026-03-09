@@ -1,9 +1,12 @@
+const DONE_SIGNAL = '[DONE]';
+const ERROR_PREFIX = 'ERROR:';
+
 class ApiService {
   constructor(private readonly baseUrl: string = '') {}
 
   async streamPost(
     url: string,
-    body: any,
+    body: Record<string, unknown>,
     onChunk: (chunk: string) => void,
     onError?: (error: string) => void,
     onComplete?: () => void
@@ -32,7 +35,7 @@ class ApiService {
 
       const decoder = new TextDecoder();
       let buffer = '';
-      let eventDataLines: string[] = []; // Persist across reads
+      let eventDataLines: string[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -43,29 +46,25 @@ class ApiService {
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        buffer = lines.pop() ?? '';
 
-        // SSE spec: collect all "data:" lines until empty line, then emit as one event
-        for (let raw of lines) {
-          const line = raw.replace(/\r?$/, '');
+        for (const raw of lines) {
+          const line = raw.replace(/\r$/, '');
 
-          // Skip comments
           if (line.startsWith(':')) continue;
 
-          // Empty line = end of event
           if (line === '') {
             if (eventDataLines.length > 0) {
-              // Join all data lines with \n and emit
               const eventData = eventDataLines.join('\n');
               eventDataLines = [];
 
-              if (eventData === '[DONE]') {
+              if (eventData === DONE_SIGNAL) {
                 onComplete?.();
                 return;
               }
 
-              if (eventData.startsWith('ERROR:')) {
-                onError?.(eventData.substring('ERROR:'.length).trim());
+              if (eventData.startsWith(ERROR_PREFIX)) {
+                onError?.(eventData.slice(ERROR_PREFIX.length).trim());
                 continue;
               }
 
@@ -74,10 +73,8 @@ class ApiService {
             continue;
           }
 
-          // Collect data lines
           if (line.startsWith('data:')) {
-            const data = line.startsWith('data: ') ? line.slice(6) : line.slice(5).trimStart();
-            eventDataLines.push(data);
+            eventDataLines.push(line.slice(5).trimStart());
           }
         }
       }

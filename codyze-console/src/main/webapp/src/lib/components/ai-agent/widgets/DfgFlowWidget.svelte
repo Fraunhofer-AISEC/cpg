@@ -6,7 +6,6 @@
 
   let { content }: { content: any } = $props();
 
-  // Collect all nodes with an actual node object
   function collectNodes(tree: QueryTreeNode): NonNullable<QueryTreeNode['node']>[] {
     const fromChildren = (tree.children ?? []).flatMap(collectNodes);
     if (tree.node) return [...fromChildren, tree.node];

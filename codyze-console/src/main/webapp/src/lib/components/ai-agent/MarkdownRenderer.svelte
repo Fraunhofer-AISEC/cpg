@@ -8,23 +8,18 @@
 
   let { content }: Props = $props();
 
-  // Configure marked options for better rendering
-  marked.setOptions({
-    gfm: true, // GitHub Flavored Markdown
-    breaks: true // Convert \n to <br>
-  });
-
-  // Custom renderer for code blocks with syntax highlighting
   const renderer = new marked.Renderer();
-
-  renderer.code = function({ text, lang }: Tokens.Code): string {
+  renderer.code = function ({ text, lang }: Tokens.Code): string {
     const language = lang || 'plaintext';
     return `<pre><code class="hljs language-${language}">${text}</code></pre>`;
   };
 
-  marked.use({ renderer });
+  marked.use({
+    gfm: true, // GitHub Flavored Markdown
+    breaks: true, // Convert \n to <br>
+    renderer
+  });
 
-  // Parse markdown content
   let html = $derived(marked.parse(content) as string);
 </script>
 
