@@ -40,6 +40,10 @@ dependencies {
     // Ktor client dependencies
     implementation(libs.bundles.ktor.client)
 
+    // Koog AI agent framework
+    implementation(libs.koog.agents)
+    implementation(libs.koog.agents.mcp)
+
     // Serialization
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.jacksonyml)
