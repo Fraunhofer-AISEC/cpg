@@ -157,7 +157,12 @@ class ListCommandsTest {
 
     @Test
     fun getAllArgsTest() = runTest {
-        withClient(register = { listCalls(); getAllArgs() }) { client ->
+        withClient(
+            register = {
+                listCalls()
+                getAllArgs()
+            }
+        ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             val callId =
                 Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
@@ -178,14 +183,21 @@ class ListCommandsTest {
             assertNotNull(wrongArgsResult)
             assertTrue(wrongArgsResult.content.isNotEmpty(), "Should return arguments for the call")
             assertThrows<IllegalArgumentException> {
-                Json.decodeFromString<NodeInfo>((wrongArgsResult.content.first() as TextContent).text)
+                Json.decodeFromString<NodeInfo>(
+                    (wrongArgsResult.content.first() as TextContent).text
+                )
             }
         }
     }
 
     @Test
     fun getArgByIndexOrNameTest() = runTest {
-        withClient(register = { listCalls(); getArgByIndexOrName() }) { client ->
+        withClient(
+            register = {
+                listCalls()
+                getArgByIndexOrName()
+            }
+        ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             val callId =
                 Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
@@ -197,7 +209,10 @@ class ListCommandsTest {
                     arguments = mapOf("nodeId" to callId, "index" to 0),
                 )
             assertNotNull(argResultByIndex)
-            assertTrue(argResultByIndex.content.isNotEmpty(), "Should return the argument at index 0")
+            assertTrue(
+                argResultByIndex.content.isNotEmpty(),
+                "Should return the argument at index 0",
+            )
             assertDoesNotThrow {
                 Json.decodeFromString<NodeInfo>(
                     (argResultByIndex.content.singleOrNull() as? TextContent)?.text.orEmpty()
@@ -222,7 +237,8 @@ class ListCommandsTest {
     @Test
     fun listAvailableConceptsTest() = runTest {
         withClient(register = { listAvailableConcepts() }) { client ->
-            val result = client.callTool(name = "cpg_list_available_concepts", arguments = emptyMap())
+            val result =
+                client.callTool(name = "cpg_list_available_concepts", arguments = emptyMap())
             assertNotNull(result)
             assertTrue(result.content.isNotEmpty(), "Should return available concepts")
         }
@@ -231,7 +247,8 @@ class ListCommandsTest {
     @Test
     fun listAvailableOperationsTest() = runTest {
         withClient(register = { listAvailableOperations() }) { client ->
-            val result = client.callTool(name = "cpg_list_available_operations", arguments = emptyMap())
+            val result =
+                client.callTool(name = "cpg_list_available_operations", arguments = emptyMap())
             assertNotNull(result)
             assertTrue(result.content.isNotEmpty(), "Should return available operations")
         }
