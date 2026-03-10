@@ -60,10 +60,11 @@ suspend fun CoroutineScope.withClient(
         )
     server.registerTools()
 
-    // The dispatcher is needed to ensure that the transport's internal read loop runs on the same
-    // scheduler as the test, so 'joinAll()' can observe both coroutines completing. Without this,
+    // The dispatcher is needed to ensure that the transport runs on the same scheduler as the test
+    // (uses runTest), so 'joinAll()' can
+    // observe both coroutines completing. Without this,
     // ChannelTransport defaults to Dispatchers.Default (a separate thread), which is invisible
-    // to runTest's scheduler and causes joinAll() to hang until timeout.
+    // to the scheduler of runTest and causes joinAll() to hang until timeout.
     val dispatcher =
         coroutineContext[ContinuationInterceptor] as? CoroutineDispatcher ?: Dispatchers.Default
     val (clientTransport, serverTransport) =
