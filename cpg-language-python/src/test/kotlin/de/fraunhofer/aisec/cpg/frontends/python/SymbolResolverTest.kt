@@ -31,8 +31,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertFullName
+import de.fraunhofer.aisec.cpg.test.assertInvokes
 import de.fraunhofer.aisec.cpg.test.assertNotRefersTo
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import java.io.File
@@ -124,5 +126,49 @@ class SymbolResolverTest {
         val doSomething = result.calls("do_something").singleOrNull()
         assertNotNull(doSomething, "Expected to find a single call to 'do_something'")
         assertIs<MemberCall>(doSomething, "'do_something' should be a member call")
+    }
+
+    @Test
+    fun testFieldCallResolution() {
+        val topLevel = File("src/test/resources/python/field_call_resolution.py")
+        val result =
+            analyze(listOf(topLevel), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val clientClass = result.records["Client"]
+        assertNotNull(clientClass)
+
+        val serviceClass = result.records["Service"]
+        assertNotNull(serviceClass)
+
+        val clientField = serviceClass.fields["client"]
+        assertIs<Field>(clientField, "Expected a field 'client'")
+
+        val fieldType = clientField.type
+        assertIs<ObjectType>(fieldType, "Expected field 'client' to have an ObjectType")
+
+        val sendMethod = clientClass.methods["send"]
+        assertNotNull(sendMethod)
+
+        val sendCall = result.calls["send"]
+        assertNotNull(sendCall)
+        assertIs<MemberCall>(sendCall)
+        assertInvokes(sendCall, sendMethod)
+    }
+
+    @Test
+    fun testFieldCallResolution2() {
+        val topLevel = File("src/test/resources/python/field_call_resolution.py")
+        val result =
+            analyze(listOf(topLevel), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        // TODO: Not sure if this fix in PythonAddDeclarationsPass is correct, as in some cases like
+        // the following one it won't work
+        /** def __init__(self, client): self.client = client or Client() */
     }
 }
