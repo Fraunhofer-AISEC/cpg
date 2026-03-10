@@ -40,6 +40,11 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: cpg-language-go/src/test/resources/golang/integration/go.mod
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0"
+        env:
+          DOTNET_INSTALL_DIR: ~/.dotnet
       - name: Setup neo4j
         run: |
           docker run -d --env NEO4J_AUTH=neo4j/password -p7474:7474 -p7687:7687 -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5 || true
