@@ -65,5 +65,6 @@ suspend fun CoroutineScope.withClient(
     } finally {
         client.close()
         serverJob.cancel()
+        serverJob.join()
     }
 }
