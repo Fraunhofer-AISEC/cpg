@@ -546,8 +546,11 @@ class GraphExamples {
                                     memberCall("create", ref("p1"))
                                     ifStmt {
                                         condition {
-                                            memberCall("nextUInt", ref("URandomKt")) gt
-                                                literal(5, t("int"))
+                                            memberCall(
+                                                "nextUInt",
+                                                ref("URandomKt", makeMagic = false),
+                                                makeMagic = false,
+                                            ) gt literal(5, t("int"))
                                         }
                                         thenStmt { memberCall("foo", ref("this")) { ref("p1") } }
                                     }
