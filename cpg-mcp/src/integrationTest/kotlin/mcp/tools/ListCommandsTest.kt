@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp
+package de.fraunhofer.aisec.cpg.mcp.tools
 
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getAllArgs
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getArgByIndexOrName
@@ -40,32 +40,21 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.FunctionInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.RecordInfo
-import io.modelcontextprotocol.kotlin.sdk.ExperimentalMcpApi
-import io.modelcontextprotocol.kotlin.sdk.client.Client
-import io.modelcontextprotocol.kotlin.sdk.server.Server
-import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
-import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
-import io.modelcontextprotocol.kotlin.sdk.types.Implementation
-import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 
 class ListCommandsTest {
-    @OptIn(ExperimentalMcpApi::class)
-    private suspend fun CoroutineScope.withClient(
-        register: Server.() -> Unit,
-        test: suspend (Client) -> Unit,
-    ) {
+    @BeforeEach
+    fun setAnalysisResult() {
         val payload =
             CpgAnalyzePayload(
                 content =
@@ -73,32 +62,11 @@ class ListCommandsTest {
                 extension = "py",
             )
         runCpgAnalyze(payload, runPasses = true, cleanup = true)
-
-        val server =
-            Server(
-                Implementation(name = "test-cpg-server", version = "1.0.0"),
-                ServerOptions(
-                    capabilities =
-                        ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = true))
-                ),
-            )
-        server.register()
-
-        val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
-        val client = Client(Implementation(name = "test-client", version = "1.0.0"))
-        val serverJob = launch { server.createSession(serverTransport) }
-        client.connect(clientTransport)
-        try {
-            test(client)
-        } finally {
-            client.close()
-            serverJob.cancel()
-        }
     }
 
     @Test
     fun listFunctionsTest() = runTest {
-        withClient(register = { listFunctions() }) { client ->
+        withClient(registerTools = { listFunctions() }) { client ->
             val result = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
 
             assertNotNull(result, "Result should not be null")
@@ -121,7 +89,7 @@ class ListCommandsTest {
 
     @Test
     fun listRecordsTest() = runTest {
-        withClient(register = { listRecords() }) { client ->
+        withClient(registerTools = { listRecords() }) { client ->
             val result = client.callTool(name = "cpg_list_records", arguments = emptyMap())
             assertNotNull(result)
             assertTrue(
@@ -138,7 +106,7 @@ class ListCommandsTest {
 
     @Test
     fun listCallsTest() = runTest {
-        withClient(register = { listCalls() }) { client ->
+        withClient(registerTools = { listCalls() }) { client ->
             val result = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             assertNotNull(result)
             assertEquals(1, result.content.size, "Should return one call expression")
@@ -147,7 +115,7 @@ class ListCommandsTest {
 
     @Test
     fun listCallsToTest() = runTest {
-        withClient(register = { listCallsTo() }) { client ->
+        withClient(registerTools = { listCallsTo() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_calls_to", arguments = mapOf("name" to "print"))
             assertNotNull(result)
@@ -158,7 +126,7 @@ class ListCommandsTest {
     @Test
     fun getAllArgsTest() = runTest {
         withClient(
-            register = {
+            registerTools = {
                 listCalls()
                 getAllArgs()
             }
@@ -193,7 +161,7 @@ class ListCommandsTest {
     @Test
     fun getArgByIndexOrNameTest() = runTest {
         withClient(
-            register = {
+            registerTools = {
                 listCalls()
                 getArgByIndexOrName()
             }
@@ -236,7 +204,7 @@ class ListCommandsTest {
 
     @Test
     fun listAvailableConceptsTest() = runTest {
-        withClient(register = { listAvailableConcepts() }) { client ->
+        withClient(registerTools = { listAvailableConcepts() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_available_concepts", arguments = emptyMap())
             assertNotNull(result)
@@ -246,7 +214,7 @@ class ListCommandsTest {
 
     @Test
     fun listAvailableOperationsTest() = runTest {
-        withClient(register = { listAvailableOperations() }) { client ->
+        withClient(registerTools = { listAvailableOperations() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_available_operations", arguments = emptyMap())
             assertNotNull(result)
@@ -256,7 +224,7 @@ class ListCommandsTest {
 
     @Test
     fun listAvailableConceptsAndOperationsTest() = runTest {
-        withClient(register = { listConceptsAndOperations() }) { client ->
+        withClient(registerTools = { listConceptsAndOperations() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_concepts_and_operations", arguments = emptyMap())
             assertNotNull(result)
