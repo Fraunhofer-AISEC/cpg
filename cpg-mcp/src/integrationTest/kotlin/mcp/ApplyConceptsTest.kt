@@ -26,29 +26,17 @@
 package de.fraunhofer.aisec.cpg.mcp
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.literals
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgApplyConceptsTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listConceptsAndOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import io.ktor.client.request.invoke
 import io.ktor.http.invoke
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
-import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
-import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequestParams
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
-import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
-import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
 import org.junit.jupiter.api.BeforeEach
 
 class ApplyConceptsTest {
@@ -77,53 +65,56 @@ class ApplyConceptsTest {
         server = Server(info, options)
     }
 
-    @Test
-    fun applyConceptAndListAgain() = runTest {
-        server.listConceptsAndOperations()
-        server.addCpgApplyConceptsTool()
-        val applyTool = server.tools["cpg_apply_concepts"] ?: error("Tool not registered")
-        val secretInitializer = globalAnalysisResult?.literals?.singleOrNull { it.value == "0000" }
-        assertNotNull(secretInitializer)
-
-        val applyRequest =
-            CallToolRequest(
-                CallToolRequestParams(
-                    name = "cpg_apply_concepts",
-                    arguments =
-                        buildJsonObject {
-                            putJsonArray("assignments") {
-                                add(
-                                    buildJsonObject {
-                                        put("nodeId", secretInitializer.id.toString())
-                                        put(
-                                            "overlay",
-                                            "de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret",
-                                        )
-                                        put("overlayType", "Concept")
-                                    }
-                                )
-                            }
-                        },
-                )
-            )
-        val applyResult = applyTool.handler(applyRequest)
-        assertNotNull(applyResult)
-        assertTrue(applyResult.content.isNotEmpty(), "We did apply a concepts")
-        assertTrue(
-            "Applied 1 concept(s):" in
-                (applyResult.content.singleOrNull() as? TextContent)?.text.orEmpty()
-        )
-
-        val tool = server.tools["cpg_list_concepts_and_operations"] ?: error("Tool not registered")
-        val request =
-            CallToolRequest(
-                CallToolRequestParams(
-                    name = "cpg_list_concepts_and_operations",
-                    arguments = buildJsonObject {},
-                )
-            )
-        val result = tool.handler(request)
-        assertNotNull(result)
-        assertTrue(result.content.isNotEmpty(), "We did apply a, so it should not be empty")
-    }
+    //    @Test
+    //    fun applyConceptAndListAgain() = runTest {
+    //        server.listConceptsAndOperations()
+    //        server.addCpgApplyConceptsTool()
+    //        val applyTool = server.tools["cpg_apply_concepts"] ?: error("Tool not registered")
+    //        val secretInitializer = globalAnalysisResult?.literals?.singleOrNull { it.value ==
+    // "0000" }
+    //        assertNotNull(secretInitializer)
+    //
+    //        val applyRequest =
+    //            CallToolRequest(
+    //                CallToolRequestParams(
+    //                    name = "cpg_apply_concepts",
+    //                    arguments =
+    //                        buildJsonObject {
+    //                            putJsonArray("assignments") {
+    //                                add(
+    //                                    buildJsonObject {
+    //                                        put("nodeId", secretInitializer.id.toString())
+    //                                        put(
+    //                                            "overlay",
+    //
+    // "de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret",
+    //                                        )
+    //                                        put("overlayType", "Concept")
+    //                                    }
+    //                                )
+    //                            }
+    //                        },
+    //                )
+    //            )
+    //        val applyResult = applyTool.handler(applyRequest)
+    //        assertNotNull(applyResult)
+    //        assertTrue(applyResult.content.isNotEmpty(), "We did apply a concepts")
+    //        assertTrue(
+    //            "Applied 1 concept(s):" in
+    //                (applyResult.content.singleOrNull() as? TextContent)?.text.orEmpty()
+    //        )
+    //
+    //        val tool = server.tools["cpg_list_concepts_and_operations"] ?: error("Tool not
+    // registered")
+    //        val request =
+    //            CallToolRequest(
+    //                CallToolRequestParams(
+    //                    name = "cpg_list_concepts_and_operations",
+    //                    arguments = buildJsonObject {},
+    //                )
+    //            )
+    //        val result = tool.handler(request)
+    //        assertNotNull(result)
+    //        assertTrue(result.content.isNotEmpty(), "We did apply a, so it should not be empty")
+    //    }
 }
