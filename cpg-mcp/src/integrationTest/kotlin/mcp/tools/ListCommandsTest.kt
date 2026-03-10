@@ -47,7 +47,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -66,7 +66,7 @@ class ListCommandsTest {
     }
 
     @Test
-    fun listFunctionsTest() = runTest {
+    fun listFunctionsTest() = runBlocking {
         withClient(registerTools = { listFunctions() }) { client ->
             val result = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
 
@@ -89,7 +89,7 @@ class ListCommandsTest {
     }
 
     @Test
-    fun listRecordsTest() = runTest {
+    fun listRecordsTest() = runBlocking {
         withClient(registerTools = { listRecords() }) { client ->
             val result = client.callTool(name = "cpg_list_records", arguments = emptyMap())
             assertNotNull(result)
@@ -106,7 +106,7 @@ class ListCommandsTest {
     }
 
     @Test
-    fun listCallsTest() = runTest {
+    fun listCallsTest() = runBlocking {
         withClient(registerTools = { listCalls() }) { client ->
             val result = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             assertNotNull(result)
@@ -115,7 +115,7 @@ class ListCommandsTest {
     }
 
     @Test
-    fun listCallsToTest() = runTest {
+    fun listCallsToTest() = runBlocking {
         withClient(registerTools = { listCallsTo() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_calls_to", arguments = mapOf("name" to "print"))
@@ -125,7 +125,7 @@ class ListCommandsTest {
     }
 
     @Test
-    fun getAllArgsTest() = runTest {
+    fun getAllArgsTest() = runBlocking {
         withClient(
             registerTools = {
                 listCalls()
@@ -160,7 +160,7 @@ class ListCommandsTest {
     }
 
     @Test
-    fun getArgByIndexOrNameTest() = runTest {
+    fun getArgByIndexOrNameTest() = runBlocking {
         withClient(
             registerTools = {
                 listCalls()
@@ -204,7 +204,7 @@ class ListCommandsTest {
     }
 
     @Test
-    fun listAvailableConceptsTest() = runTest {
+    fun listAvailableConceptsTest() = runBlocking {
         withClient(registerTools = { listAvailableConcepts() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_available_concepts", arguments = emptyMap())
@@ -214,7 +214,7 @@ class ListCommandsTest {
     }
 
     @Test
-    fun listAvailableOperationsTest() = runTest {
+    fun listAvailableOperationsTest() = runBlocking {
         withClient(registerTools = { listAvailableOperations() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_available_operations", arguments = emptyMap())
@@ -224,7 +224,7 @@ class ListCommandsTest {
     }
 
     @Test
-    fun listAvailableConceptsAndOperationsTest() = runTest {
+    fun listAvailableConceptsAndOperationsTest() = runBlocking {
         withClient(registerTools = { listConceptsAndOperations() }) { client ->
             val result =
                 client.callTool(name = "cpg_list_concepts_and_operations", arguments = emptyMap())

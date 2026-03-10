@@ -32,10 +32,7 @@ import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
-import kotlin.coroutines.ContinuationInterceptor
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 
@@ -60,15 +57,7 @@ suspend fun CoroutineScope.withClient(
         )
     server.registerTools()
 
-    // The dispatcher is needed to ensure that the transport runs on the same scheduler as the test
-    // (uses runTest), so 'joinAll()' can
-    // observe both coroutines completing. Without this,
-    // ChannelTransport defaults to Dispatchers.Default (a separate thread), which is invisible
-    // to the scheduler of runTest and causes joinAll() to hang until timeout.
-    val dispatcher =
-        coroutineContext[ContinuationInterceptor] as? CoroutineDispatcher ?: Dispatchers.Default
-    val (clientTransport, serverTransport) =
-        ChannelTransport.createLinkedPair(dispatcher = dispatcher)
+    val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
     val client = Client(Implementation(name = "test-client", version = "1.0.0"))
 
     listOf(
