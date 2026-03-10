@@ -29,12 +29,10 @@ import io.modelcontextprotocol.kotlin.sdk.ExperimentalMcpApi
 import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
-import io.modelcontextprotocol.kotlin.sdk.server.ServerSession
 import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import kotlin.coroutines.ContinuationInterceptor
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -62,16 +60,19 @@ suspend fun CoroutineScope.withClient(
         )
     server.registerTools()
 
+    // The dispatcher is needed to ensure that the transport's internal read loop runs on the same
+    // scheduler as the test, so 'joinAll()' can observe both coroutines completing. Without this,
+    // ChannelTransport defaults to Dispatchers.Default (a separate thread), which is invisible
+    // to runTest's scheduler and causes joinAll() to hang until timeout.
     val dispatcher =
         coroutineContext[ContinuationInterceptor] as? CoroutineDispatcher ?: Dispatchers.Default
     val (clientTransport, serverTransport) =
         ChannelTransport.createLinkedPair(dispatcher = dispatcher)
     val client = Client(Implementation(name = "test-client", version = "1.0.0"))
 
-    val serverSessionResult = CompletableDeferred<ServerSession>()
     listOf(
             launch { client.connect(clientTransport) },
-            launch { serverSessionResult.complete(server.createSession(serverTransport)) },
+            launch { server.createSession(serverTransport) },
         )
         .joinAll()
 
