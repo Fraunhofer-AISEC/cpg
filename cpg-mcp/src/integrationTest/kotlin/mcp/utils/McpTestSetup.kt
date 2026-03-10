@@ -33,7 +33,6 @@ import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 
 /**
@@ -59,15 +58,13 @@ suspend fun CoroutineScope.withClient(
 
     val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
     val client = Client(Implementation(name = "test-client", version = "1.0.0"))
-    listOf(
-            launch { client.connect(clientTransport) },
-            launch { server.createSession(serverTransport) },
-        )
-        .joinAll()
+    val serverJob = launch { server.createSession(serverTransport) }
+    client.connect(clientTransport)
     try {
         test(client)
     } finally {
         client.close()
         server.close()
+        serverJob.join()
     }
 }
