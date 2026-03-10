@@ -530,7 +530,6 @@ fun LanguageFrontend<*, *>.memberCall(
     localName: CharSequence,
     base: Expression,
     isStatic: Boolean = false,
-    makeMagic: Boolean = true,
     init: (MemberCall.() -> Unit)? = null,
 ): MemberCall {
     // Try to parse the name
@@ -544,12 +543,10 @@ fun LanguageFrontend<*, *>.memberCall(
         init(node)
     }
 
-    if (makeMagic) {
-        if (holder is StatementHolder) {
-            holder += node
-        } else if (holder is ArgumentHolder) {
-            holder += node
-        }
+    if (holder is StatementHolder) {
+        holder += node
+    } else if (holder is ArgumentHolder) {
+        holder += node
     }
 
     return node
@@ -685,7 +682,10 @@ fun LanguageFrontend<*, *>.forStmt(init: For.() -> Unit): For {
  */
 context(stmt: For)
 fun LanguageFrontend<*, *>.forCondition(init: For.() -> Expression): Expression {
-    return init(stmt)
+    var node = init(stmt)
+    stmt.condition = node
+
+    return node
 }
 
 /**
@@ -1026,6 +1026,11 @@ fun LanguageFrontend<*, *>.default(): Default {
 context(holder: Holder<out Expression>)
 fun <N> LanguageFrontend<*, *>.literal(value: N, type: Type = unknownType()): Literal<N> {
     val node = newLiteral(value, type).apply { this.location = getCallerFileAndLine() }
+
+    // Only add this to an argument holder if the nearest holder is an argument holder
+    if (holder is ArgumentHolder) {
+        holder += node
+    }
 
     return node
 }
