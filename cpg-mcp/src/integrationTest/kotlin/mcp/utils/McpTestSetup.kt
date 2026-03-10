@@ -35,6 +35,12 @@ import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+/**
+ * Set up MCP server/client for testing.
+ *
+ * [ChannelTransport] is the testing-only transport, which creates an in-process connection between
+ * server and client.
+ */
 @OptIn(ExperimentalMcpApi::class)
 suspend fun CoroutineScope.withClient(
     registerTools: Server.() -> Unit,
