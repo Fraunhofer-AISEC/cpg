@@ -99,35 +99,16 @@ class IfElse : Expression(), BranchingNode, ArgumentHolder, HasType.TypeObserver
     }
 
     override fun addArgument(expression: Expression) {
-        if (condition == null) {
-            condition = expression
-        } else if (thenStatement == null) {
-            thenStatement = expression
-        } else if (elseStatement == null) {
-            elseStatement = expression
-        }
+        condition = expression
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        return when (old) {
-            condition -> {
-                condition = new
-                true
-            }
-            thenStatement -> {
-                thenStatement = new
-                true
-            }
-            elseStatement -> {
-                elseStatement = new
-                true
-            }
-            else -> false
-        }
+        this.condition = new
+        return true
     }
 
     override fun hasArgument(expression: Expression): Boolean {
-        return condition == expression || thenStatement == expression || elseStatement == expression
+        return this.condition == expression
     }
 
     override fun equals(other: Any?): Boolean {
