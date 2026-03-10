@@ -95,8 +95,10 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         }
 
         // If this is a member expression, and we do not know the base's type, we cannot create a
-        // declaration
-        if (ref is MemberAccess && ref.base.type is UnknownType) {
+        // declaration. However, we need to exclude the receiver (self) because its type is
+        // not yet resolved at this point, but we still need to
+        // create fields for assignments.
+        if (ref is MemberAccess && ref.base.type is UnknownType && !ref.refersToReceiver) {
             return null
         }
 
@@ -135,11 +137,14 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
             when {
                 // Check, whether we are referring to a "self.X", which would create a field
                 scopeManager.isInRecord && scopeManager.isInFunction && ref.refersToReceiver -> {
+                    val recordScope = scopeManager.firstScopeIsInstanceOrNull<RecordScope>()
+                    // If the field already exists in the record scope, do not create a duplicate
+                    if (recordScope?.symbols?.containsKey(ref.name.localName) == true) {
+                        return null
+                    }
                     // We need to temporarily jump into the scope of the current record to
                     // add the field. These are instance attributes
-                    scopeManager.withScope(scopeManager.firstScopeIsInstanceOrNull<RecordScope>()) {
-                        newField(ref.name)
-                    }
+                    scopeManager.withScope(recordScope) { newField(ref.name) }
                 }
                 scopeManager.isInRecord && scopeManager.isInFunction && ref is MemberAccess -> {
                     // If this is any other member expression, we are usually not interested in

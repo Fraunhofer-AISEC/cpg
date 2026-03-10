@@ -36,7 +36,12 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -248,10 +253,42 @@ open class PythonLanguage :
                     primitiveType("float")
                 }
             }
+            /**
+             * Python boolean operators 'or' and 'and' are interpreted as follows:
+             * - `x or y` return `x` if `x` is truthy, else `y`
+             * - `x and y` returns `x` if `x` is falsy, else `y`.
+             *
+             * Since we cannot determine the boolean value of `x`, one of the operands could be
+             * returned. We return `lhsType` if both sides have the same type, otherwise we fall
+             * back to `unknownType()`. The concrete possible types are tracked via
+             * [HasType.assignedTypes] in [propagateAssignedTypesOfBinaryOperation], with which we
+             * model `union types` here.
+             *
+             * See https://docs.python.org/3/reference/expressions.html#boolean-operations
+             * *
+             */
+            "or",
+            "and" -> {
+                return if (lhsType == rhsType) lhsType else unknownType()
+            }
 
             // The rest behaves like other languages
             else ->
                 return super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
+        }
+    }
+
+    override fun propagateAssignedTypesOfBinaryOperation(
+        operatorCode: String?,
+        lhs: Expression,
+        rhs: Expression,
+    ): Set<Type> {
+        // Python's "or" and "and" can return either operand at runtime, so we merge the
+        // assignedTypes of both sides.
+        return when (operatorCode) {
+            "or",
+            "and" -> lhs.assignedTypes + rhs.assignedTypes
+            else -> emptySet()
         }
     }
 

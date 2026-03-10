@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.builder.assign
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
@@ -54,6 +55,11 @@ import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -265,6 +271,38 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
                 }
             else -> unknownType() // We don't know what is this thing
         }
+    }
+
+    /**
+     * Determines how to propagate [HasType.assignedTypes] across binary operations. Returns a
+     * merged set of types if the operator requires special handling (e.g., operators where the left
+     * or the right operand can be the result at runtime), or an empty set if no special handling is
+     * needed.
+     *
+     * If both [lhs] and [rhs] have only one assigned type, the type will be determined through
+     * [propagateTypeOfBinaryOperation].
+     *
+     * Languages can override this to handle language-specific operators.
+     */
+    open fun propagateAssignedTypesOfBinaryOperation(
+        operatorCode: String?,
+        lhs: Expression,
+        rhs: Expression,
+    ): Set<Type> {
+        val lhsAssigned = lhs.assignedTypes
+        val rhsAssigned = rhs.assignedTypes
+        if (lhsAssigned.size == 1 && rhsAssigned.size == 1) {
+            val typeResult =
+                propagateTypeOfBinaryOperation(
+                    operatorCode,
+                    lhsAssigned.single(),
+                    rhsAssigned.single(),
+                )
+            if (typeResult !is UnknownType) {
+                return setOf(typeResult)
+            }
+        }
+        return emptySet()
     }
 
     /**

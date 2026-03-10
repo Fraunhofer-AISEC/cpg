@@ -31,8 +31,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertFullName
+import de.fraunhofer.aisec.cpg.test.assertInvokes
 import de.fraunhofer.aisec.cpg.test.assertNotRefersTo
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import java.io.File
@@ -124,5 +126,69 @@ class SymbolResolverTest {
         val doSomething = result.calls("do_something").singleOrNull()
         assertNotNull(doSomething, "Expected to find a single call to 'do_something'")
         assertIs<MemberCall>(doSomething, "'do_something' should be a member call")
+    }
+
+    @Test
+    fun testFieldCallResolution() {
+        val topLevel = File("src/test/resources/python/field_call.py")
+        val result =
+            analyze(listOf(topLevel), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val clientClass = result.records["Client"]
+        assertNotNull(clientClass)
+
+        val serviceClass = result.records["Service"]
+        assertNotNull(serviceClass)
+
+        val clientField = serviceClass.fields["client"]
+        assertIs<Field>(clientField)
+
+        val fieldType = clientField.type
+        assertIs<ObjectType>(fieldType)
+        assertEquals("Client", fieldType.name.localName)
+
+        val sendMethod = clientClass.methods["send"]
+        assertNotNull(sendMethod)
+
+        val sendCall = result.calls["send"]
+        assertNotNull(sendCall)
+        assertIs<MemberCall>(sendCall)
+        assertInvokes(sendCall, sendMethod)
+    }
+
+    @Test
+    fun testFieldCallResolutionWithOrOperator() {
+        val topLevel = File("src/test/resources/python/field_call.py")
+        val result =
+            analyze(listOf(topLevel), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val clientClass = result.records["Client"]
+        assertNotNull(clientClass)
+
+        val serviceClass = result.records["Service2"]
+        assertNotNull(serviceClass)
+
+        val clientField = serviceClass.fields["client"]
+        assertIs<Field>(clientField)
+
+        val clientType =
+            clientField.assignedTypes.filterIsInstance<ObjectType>().firstOrNull {
+                it.name.localName == "Client"
+            }
+        assertNotNull(clientType)
+
+        val sendMethod = clientClass.methods["send"]
+        assertNotNull(sendMethod)
+
+        val sendCall = result.calls["send"]
+        assertNotNull(sendCall)
+        assertIs<MemberCall>(sendCall)
+        assertInvokes(sendCall, sendMethod)
     }
 }
