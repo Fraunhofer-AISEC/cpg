@@ -33,8 +33,11 @@ import io.modelcontextprotocol.kotlin.sdk.server.ServerSession
 import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
+import kotlin.coroutines.ContinuationInterceptor
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 
@@ -59,7 +62,10 @@ suspend fun CoroutineScope.withClient(
         )
     server.registerTools()
 
-    val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
+    val dispatcher =
+        coroutineContext[ContinuationInterceptor] as? CoroutineDispatcher ?: Dispatchers.Default
+    val (clientTransport, serverTransport) =
+        ChannelTransport.createLinkedPair(dispatcher = dispatcher)
     val client = Client(Implementation(name = "test-client", version = "1.0.0"))
 
     val serverSessionResult = CompletableDeferred<ServerSession>()
