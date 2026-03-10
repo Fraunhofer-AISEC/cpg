@@ -32,7 +32,9 @@ import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.withTimeout
 
 /**
  * Set up MCP server/client for testing.
@@ -60,10 +62,9 @@ suspend fun CoroutineScope.withClient(
 
     client.connect(clientTransport)
     val serverSession = server.createSession(serverTransport)
-    client.listTools()
 
     try {
-        test(client)
+        withTimeout(30.seconds) { test(client) }
     } finally {
         client.close()
         serverSession.close()
