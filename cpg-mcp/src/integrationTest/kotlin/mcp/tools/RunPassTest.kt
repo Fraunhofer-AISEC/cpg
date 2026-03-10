@@ -39,7 +39,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
 
@@ -48,7 +48,7 @@ class RunPassTest {
         mapOf("content" to "def hello(x: int):\n    y = x\n    print(y)", "extension" to "py")
 
     @Test
-    fun serverAddsToolsAndRunsPassOnSelectedNode() = runTest {
+    fun serverAddsToolsAndRunsPassOnSelectedNode() = runBlocking {
         withClient(
             registerTools = {
                 addCpgTranslate()
@@ -85,7 +85,7 @@ class RunPassTest {
     }
 
     @Test
-    fun serverListsPassesWithRequiredNodeType() = runTest {
+    fun serverListsPassesWithRequiredNodeType() = runBlocking {
         withClient(registerTools = { addListPasses() }) { client ->
             val result = client.callTool(name = "cpg_list_passes", arguments = emptyMap())
             assertTrue(result.content.isNotEmpty())
@@ -99,7 +99,7 @@ class RunPassTest {
     }
 
     @Test
-    fun serverTranslateToolProducesNodes() = runTest {
+    fun serverTranslateToolProducesNodes() = runBlocking {
         withClient(registerTools = { addCpgTranslate() }) { client ->
             val result =
                 client.callTool(
@@ -119,7 +119,7 @@ class RunPassTest {
     }
 
     @Test
-    fun testNoCtx() = runTest {
+    fun testNoCtx() = runBlocking {
         withClient(
             registerTools = {
                 addCpgTranslate()
@@ -156,7 +156,7 @@ class RunPassTest {
     }
 
     @Test
-    fun testInvalidNodeId() = runTest {
+    fun testInvalidNodeId() = runBlocking {
         withClient(
             registerTools = {
                 addCpgTranslate()
@@ -193,7 +193,7 @@ class RunPassTest {
     }
 
     @Test
-    fun testInvalidPassName() = runTest {
+    fun testInvalidPassName() = runBlocking {
         withClient(
             registerTools = {
                 addCpgTranslate()
@@ -234,7 +234,7 @@ class RunPassTest {
     }
 
     @Test
-    fun testExecuteSamePassTwice() = runTest {
+    fun testExecuteSamePassTwice() = runBlocking {
         withClient(
             registerTools = {
                 addCpgTranslate()

@@ -35,13 +35,13 @@ import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
 
 class CpgAnalyzeToolTest {
     @Test
-    fun cpgAnalyzeToolIntegrationTest() = runTest {
+    fun cpgAnalyzeToolIntegrationTest() = runBlocking {
         withClient(registerTools = { addCpgAnalyzeTool() }) { client ->
             val result =
                 client.callTool(

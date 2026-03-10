@@ -36,7 +36,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -57,7 +57,7 @@ class ApplyConceptsTest {
     }
 
     @Test
-    fun applyConceptAndListAgain() = runTest {
+    fun applyConceptAndListAgain() = runBlocking {
         withClient(
             registerTools = {
                 listConceptsAndOperations()

@@ -34,7 +34,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -47,7 +47,7 @@ class CpgLlmAnalyzeToolTest {
     }
 
     @Test
-    fun cpgLlmAnalyzeNoPayload() = runTest {
+    fun cpgLlmAnalyzeNoPayload() = runBlocking {
         withClient(registerTools = { addCpgLlmAnalyzeTool() }) { client ->
             val result = client.callTool(name = "cpg_llm_analyze", arguments = emptyMap())
 
@@ -62,7 +62,7 @@ class CpgLlmAnalyzeToolTest {
     }
 
     @Test
-    fun cpgLlmAnalyzeWithPayload() = runTest {
+    fun cpgLlmAnalyzeWithPayload() = runBlocking {
         withClient(registerTools = { addCpgLlmAnalyzeTool() }) { client ->
             val result =
                 client.callTool(
