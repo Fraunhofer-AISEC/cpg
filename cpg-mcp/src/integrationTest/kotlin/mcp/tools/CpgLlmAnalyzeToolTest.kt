@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.mcp.tools
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgLlmAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.assertFalse
 import kotlin.test.assertIs

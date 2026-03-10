@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.FunctionInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.RecordInfo
+import de.fraunhofer.aisec.cpg.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertEquals

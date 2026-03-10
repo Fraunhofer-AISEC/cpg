@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp.tools
+package de.fraunhofer.aisec.cpg.mcp.utils
 
 import io.modelcontextprotocol.kotlin.sdk.ExperimentalMcpApi
 import io.modelcontextprotocol.kotlin.sdk.client.Client
@@ -33,6 +33,7 @@ import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 
 /**
@@ -58,13 +59,15 @@ suspend fun CoroutineScope.withClient(
 
     val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
     val client = Client(Implementation(name = "test-client", version = "1.0.0"))
-    val serverJob = launch { server.createSession(serverTransport) }
-    client.connect(clientTransport)
+    listOf(
+            launch { client.connect(clientTransport) },
+            launch { server.createSession(serverTransport) },
+        )
+        .joinAll()
     try {
         test(client)
     } finally {
         client.close()
-        serverJob.cancel()
-        serverJob.join()
+        server.close()
     }
 }

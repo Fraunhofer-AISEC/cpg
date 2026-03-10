@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.ctx
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.PassInfo
+import de.fraunhofer.aisec.cpg.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
