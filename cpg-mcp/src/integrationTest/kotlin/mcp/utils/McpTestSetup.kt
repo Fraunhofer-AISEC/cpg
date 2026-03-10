@@ -33,7 +33,10 @@ import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
 /**
@@ -44,7 +47,7 @@ import kotlinx.coroutines.withTimeout
  */
 @OptIn(ExperimentalMcpApi::class)
 suspend fun CoroutineScope.withClient(
-    registerTools: Server.() -> Unit,
+    registerTools: Server.() -> Unit = {},
     test: suspend (Client) -> Unit,
 ) {
     val server =
@@ -55,19 +58,26 @@ suspend fun CoroutineScope.withClient(
                     ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = true))
             ),
         )
+
     server.registerTools()
 
     val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
     val client = Client(Implementation(name = "test-client", version = "1.0.0"))
+    val serverSessionDeferred = CompletableDeferred<Unit>()
 
-    client.connect(clientTransport)
-    val serverSession = server.createSession(serverTransport)
+    listOf(
+            launch { client.connect(clientTransport) },
+            launch {
+                server.createSession(serverTransport)
+                serverSessionDeferred.complete(Unit)
+            },
+        )
+        .joinAll()
 
     try {
         withTimeout(30.seconds) { test(client) }
     } finally {
         client.close()
-        serverSession.close()
         server.close()
     }
 }
