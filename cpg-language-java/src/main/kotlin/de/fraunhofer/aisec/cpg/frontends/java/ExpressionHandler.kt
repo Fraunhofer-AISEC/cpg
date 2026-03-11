@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
 import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
@@ -109,15 +110,15 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 
     /**
-     * Creates a new [de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction], which is usually
+     * Creates a new [ArrayConstruction], which is usually
      * used as an initializer of a [Variable].
      *
      * @param expr the expression
-     * @return the [de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction]
+     * @return the [ArrayConstruction]
      */
     private fun handleArrayCreationExpr(
         expr: JPExpression
-    ): de.fraunhofer.aisec.cpg.graph.expressions.Expression {
+    ): Expression {
         val arrayCreationExpr = expr as ArrayCreationExpr
         val creationExpression = newArrayConstruction(rawNode = expr)
 
@@ -152,7 +153,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         val initializers =
             arrayInitializerExpr.values
                 .map { handle(it) }
-                .map { de.fraunhofer.aisec.cpg.graph.expressions.Expression::class.java.cast(it) }
+                .map { Expression::class.java.cast(it) }
                 .toMutableList()
         initList.initializers = initializers
         return initList
@@ -231,7 +232,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     /**
      * Translates a Java
      * [field access expression](https://docs.oracle.com/javase/specs/jls/se23/html/jls-15.html#jls-15.11)
-     * into a [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess].
+     * into a [MemberAccess].
      */
     private fun handleFieldAccessExpression(fieldAccessExpr: FieldAccessExpr): MemberAccess {
         var baseType = unknownType()
@@ -250,7 +251,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         } catch (_: UnsolvedSymbolException) {}
 
         var base =
-            handle(fieldAccessExpr.scope) as de.fraunhofer.aisec.cpg.graph.expressions.Expression
+            handle(fieldAccessExpr.scope) as Expression
         base.type = baseType
 
         return newMemberAccess(
@@ -455,7 +456,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         if (frontend.getQualifiedNameFromImports(qualifiedName) != null) {
             isStatic = true
         }
-        val base: de.fraunhofer.aisec.cpg.graph.expressions.Expression
+        val base: Expression
         // the scope could either be a variable or also the class name (static call!)
         // thus, only because the scope is present, this is not automatically a member call
         if (o.isPresent) {
@@ -516,8 +517,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
      *
      * @return the "this" reference expression
      */
-    private fun createImplicitThis(): de.fraunhofer.aisec.cpg.graph.expressions.Expression {
-        val base: de.fraunhofer.aisec.cpg.graph.expressions.Expression
+    private fun createImplicitThis(): Expression {
+        val base: Expression
         val thisType = frontend.scopeManager.currentRecord?.toType() ?: unknownType()
         base = newReference("this", thisType).implicit("this")
         return base
@@ -613,7 +614,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         map[VariableDeclarationExpr::class.java] = HandlerInterface { handleVariableExpr(it) }
         map[MethodCallExpr::class.java] = HandlerInterface { handleMethodCall(it) }
         map[ObjectCreationExpr::class.java] = HandlerInterface { handleObjectCreationExpr(it) }
-        map[com.github.javaparser.ast.expr.ConditionalExpr::class.java] = HandlerInterface {
+        map[ConditionalExpr::class.java] = HandlerInterface {
             handleConditional(it)
         }
         map[EnclosedExpr::class.java] = HandlerInterface { handleEnclosedExpression(it) }

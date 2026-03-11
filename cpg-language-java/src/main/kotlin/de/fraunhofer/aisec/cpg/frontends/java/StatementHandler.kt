@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.github.javaparser.JavaToken
-import com.github.javaparser.ast.expr.Expression
+import com.github.javaparser.ast.expr.Expression as JPExpression
 import com.github.javaparser.ast.stmt.*
-import com.github.javaparser.ast.stmt.CatchClause
+import com.github.javaparser.ast.stmt.CatchClause as JPCatchClause
 import com.github.javaparser.ast.stmt.Statement
 import com.github.javaparser.ast.type.UnionType
 import com.github.javaparser.utils.Pair
@@ -64,7 +64,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     ) {
     fun handleExpressionStatement(
         stmt: Statement
-    ): de.fraunhofer.aisec.cpg.graph.expressions.Expression? {
+    ): Expression? {
         // We want to use the code of the stmt, rather than the expression
         val expr =
             frontend.expressionHandler
@@ -76,19 +76,19 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     private fun handleThrowStmt(
         stmt: Statement
-    ): de.fraunhofer.aisec.cpg.graph.expressions.Expression {
+    ): Expression {
         val throwStmt = stmt as ThrowStmt
         val throwOperation = newThrow(rawNode = stmt)
         throwOperation.exception =
             frontend.expressionHandler.handle(throwStmt.expression)
-                as de.fraunhofer.aisec.cpg.graph.expressions.Expression
+                as Expression
         return throwOperation
     }
 
     private fun handleReturn(stmt: Statement): Return {
         val returnStmt = stmt.asReturnStmt()
         val optionalExpression = returnStmt.expression
-        var expression: de.fraunhofer.aisec.cpg.graph.expressions.Expression? = null
+        var expression: Expression? = null
         if (optionalExpression.isPresent) {
             val expr = optionalExpression.get()
 
@@ -116,7 +116,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         ifStatement.thenStatement = handle(thenStatement)
         ifStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
-                as de.fraunhofer.aisec.cpg.graph.expressions.Expression
+                as Expression
         optionalElseStatement.ifPresent { ifStatement.elseStatement = handle(it) }
         frontend.scopeManager.leaveScope(ifStatement)
         return ifStatement
@@ -129,7 +129,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val assertStatement = newAssert(rawNode = stmt)
         assertStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
-                as de.fraunhofer.aisec.cpg.graph.expressions.Expression
+                as Expression
         thenStatement.ifPresent {
             assertStatement.message = frontend.expressionHandler.handle(thenStatement.get())
         }
@@ -145,7 +145,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         whileStatement.statement = handle(statement)
         whileStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
-                as de.fraunhofer.aisec.cpg.graph.expressions.Expression
+                as Expression
         frontend.scopeManager.leaveScope(whileStatement)
         return whileStatement
     }
@@ -189,10 +189,10 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
             statement.initializerStatement =
                 frontend.expressionHandler.handle(forStmt.initialization[0])
         }
-        forStmt.compare.ifPresent { condition: Expression ->
+        forStmt.compare.ifPresent { condition: JPExpression ->
             statement.condition =
                 frontend.expressionHandler.handle(condition)
-                    as de.fraunhofer.aisec.cpg.graph.expressions.Expression
+                    as Expression
         }
 
         // Adds true expression node where default empty condition evaluates to true, remove here
@@ -236,7 +236,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         doStatement.statement = handle(statement)
         doStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
-                as de.fraunhofer.aisec.cpg.graph.expressions.Expression
+                as Expression
         frontend.scopeManager.leaveScope(doStatement)
         return doStatement
     }
@@ -250,7 +250,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val synchronizedCPG = newSynchronized(rawNode = stmt)
         synchronizedCPG.expression =
             frontend.expressionHandler.handle(synchronizedJava.expression)
-                as de.fraunhofer.aisec.cpg.graph.expressions.Expression
+                as Expression
         synchronizedCPG.block = handle(synchronizedJava.body) as Block?
         return synchronizedCPG
     }
@@ -294,9 +294,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     }
 
     fun handleCaseDefault(
-        caseExpression: Expression?,
+        caseExpression: JPExpression?,
         sEntry: SwitchEntry,
-    ): de.fraunhofer.aisec.cpg.graph.expressions.Expression {
+    ): Expression {
         val parentLocation = frontend.locationOf(sEntry)
         val optionalTokenRange = sEntry.tokenRange
         var caseTokens = Pair<JavaToken?, JavaToken?>(null, null)
@@ -335,7 +335,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val caseStatement = this.newCase()
         caseStatement.caseExpression =
             frontend.expressionHandler.handle(caseExpression)
-                as de.fraunhofer.aisec.cpg.graph.expressions.Expression
+                as Expression
         caseStatement.location = getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b)
         return caseStatement
     }
@@ -411,7 +411,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         frontend.scopeManager.enterScope(switchStatement)
         switchStatement.selector =
             frontend.expressionHandler.handle(switchStmt.selector)
-                as de.fraunhofer.aisec.cpg.graph.expressions.Expression
+                as Expression
 
         // Compute region and code for self generated compound statement to match the c++ versions
         var start: JavaToken? = null
@@ -473,7 +473,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val arguments =
             explicitConstructorInvocationStmt.arguments
                 .map(frontend.expressionHandler::handle)
-                .filterIsInstance<de.fraunhofer.aisec.cpg.graph.expressions.Expression>()
+                .filterIsInstance<Expression>()
                 .toMutableList()
         node.arguments = arguments
 
@@ -509,8 +509,8 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     }
 
     private fun handleCatchClause(
-        catchCls: CatchClause
-    ): de.fraunhofer.aisec.cpg.graph.expressions.CatchClause {
+        catchCls: JPCatchClause
+    ): CatchClause {
         val cClause = newCatchClause(rawNode = catchCls)
         frontend.scopeManager.enterScope(cClause)
         val possibleTypes = mutableSetOf<Type>()
@@ -547,39 +547,39 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     }
 
     init {
-        map[com.github.javaparser.ast.stmt.IfStmt::class.java] =
+        map[IfStmt::class.java] =
             HandlerInterface { stmt: Statement ->
                 handleIf(stmt)
             }
-        map[com.github.javaparser.ast.stmt.AssertStmt::class.java] =
+        map[AssertStmt::class.java] =
             HandlerInterface { stmt: Statement ->
                 handleAssert(stmt)
             }
-        map[com.github.javaparser.ast.stmt.WhileStmt::class.java] =
+        map[WhileStmt::class.java] =
             HandlerInterface { stmt: Statement ->
                 handleWhile(stmt)
             }
-        map[com.github.javaparser.ast.stmt.DoStmt::class.java] =
+        map[DoStmt::class.java] =
             HandlerInterface { stmt: Statement ->
                 handleDo(stmt)
             }
-        map[com.github.javaparser.ast.stmt.ForEachStmt::class.java] =
+        map[ForEachStmt::class.java] =
             HandlerInterface { stmt: Statement ->
                 handleForEach(stmt)
             }
-        map[com.github.javaparser.ast.stmt.ForStmt::class.java] =
+        map[ForStmt::class.java] =
             HandlerInterface { stmt: Statement ->
                 handleFor(stmt)
             }
-        map[com.github.javaparser.ast.stmt.BreakStmt::class.java] =
+        map[BreakStmt::class.java] =
             HandlerInterface { stmt: Statement ->
                 handleBreak(stmt)
             }
-        map[com.github.javaparser.ast.stmt.ContinueStmt::class.java] =
+        map[ContinueStmt::class.java] =
             HandlerInterface { stmt: Statement ->
                 handleContinue(stmt)
             }
-        map[com.github.javaparser.ast.stmt.ReturnStmt::class.java] =
+        map[ReturnStmt::class.java] =
             HandlerInterface { stmt: Statement ->
                 handleReturn(stmt)
             }
@@ -591,19 +591,19 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         map[ExpressionStmt::class.java] = HandlerInterface { stmt: Statement ->
             handleExpressionStatement(stmt)
         }
-        map[com.github.javaparser.ast.stmt.SwitchStmt::class.java] =
+        map[SwitchStmt::class.java] =
             HandlerInterface { stmt: Statement ->
                 handleSwitch(stmt)
             }
-        map[com.github.javaparser.ast.stmt.EmptyStmt::class.java] =
+        map[EmptyStmt::class.java] =
             HandlerInterface { stmt: Statement ->
                 handleEmpty(stmt)
             }
-        map[com.github.javaparser.ast.stmt.SynchronizedStmt::class.java] =
+        map[SynchronizedStmt::class.java] =
             HandlerInterface { stmt: Statement ->
                 handleSynchronized(stmt)
             }
-        map[com.github.javaparser.ast.stmt.TryStmt::class.java] =
+        map[TryStmt::class.java] =
             HandlerInterface { stmt: Statement ->
                 handleTry(stmt)
             }
