@@ -33,6 +33,7 @@ import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -46,7 +47,7 @@ import kotlinx.coroutines.withTimeout
  */
 @OptIn(ExperimentalMcpApi::class)
 fun withClient(registerTools: Server.() -> Unit = {}, test: suspend (Client) -> Unit) =
-    runBlocking() {
+    runBlocking(Dispatchers.Default) {
         val server =
             Server(
                 Implementation(name = "test-cpg-server", version = "1.0.0"),
