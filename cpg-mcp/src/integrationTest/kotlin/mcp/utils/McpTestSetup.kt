@@ -47,6 +47,8 @@ import kotlinx.coroutines.withTimeout
  */
 @OptIn(ExperimentalMcpApi::class)
 fun withClient(registerTools: Server.() -> Unit = {}, test: suspend (Client) -> Unit) =
+    // We need to set multiple threads here, same as ChannelTransport does internally.
+    // If not doing so, client and server would share a single thread which leads to deadlock.
     runBlocking(Dispatchers.Default) {
         val server =
             Server(
