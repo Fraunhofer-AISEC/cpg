@@ -81,7 +81,7 @@ class ListCommandsTest {
                 "There is exactly one function declaration with name print",
             )
             assertNotNull(
-                functionNames.singleOrNull { it.endsWith(".hello") },
+                functionNames.singleOrNull { it.endsWith("hello") },
                 "There is exactly one function declaration with local name hello",
             )
         }
