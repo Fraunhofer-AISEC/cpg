@@ -26,68 +26,53 @@
 package de.fraunhofer.aisec.cpg.mcp.prompts
 
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addSuggestConceptsPrompt
-import io.modelcontextprotocol.kotlin.sdk.server.Server
-import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
+import de.fraunhofer.aisec.cpg.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.GetPromptRequest
 import io.modelcontextprotocol.kotlin.sdk.types.GetPromptRequestParams
-import io.modelcontextprotocol.kotlin.sdk.types.Implementation
-import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.test.runTest
 
 class CpgSuggestConceptsPromptTest {
-    private fun createServer(): Server {
-        val server =
-            Server(
-                Implementation(name = "test-cpg-server", version = "1.0.0"),
-                ServerOptions(
-                    ServerCapabilities(prompts = ServerCapabilities.Prompts(listChanged = true))
-                ),
+    @Test
+    fun suggestConceptsNoDescription() =
+        withClient(registerPrompts = { addSuggestConceptsPrompt() }) { client ->
+            val result =
+                client.getPrompt(
+                    GetPromptRequest(GetPromptRequestParams(name = "suggest_concepts"))
+                )
+
+            assertNotNull(result)
+            val text = (result.messages.firstOrNull()?.content as? TextContent)?.text
+            assertNotNull(text, "Prompt message should have text content")
+            assertFalse(
+                "## Additional Context" in text,
+                "Result should not contain 'Additional Context' when no description is given",
             )
-        server.addSuggestConceptsPrompt()
-        return server
-    }
+        }
 
     @Test
-    fun suggestConceptsNoDescription() = runTest {
-        val server = createServer()
-        val result =
-            (server.prompts["suggest_concepts"] ?: error("Prompt not registered")).messageProvider(
-                GetPromptRequest(GetPromptRequestParams(name = "suggest_concepts"))
-            )
-
-        assertNotNull(result)
-        val text = (result.messages.firstOrNull()?.content as? TextContent)?.text
-        assertNotNull(text, "Prompt message should have text content")
-        assertFalse(
-            "## Additional Context" in text,
-            "Result should not contain 'Additional Context' when no description is given",
-        )
-    }
-
-    @Test
-    fun suggestConceptsWithDescription() = runTest {
-        val server = createServer()
-        val result =
-            (server.prompts["suggest_concepts"] ?: error("Prompt not registered")).messageProvider(
-                GetPromptRequest(
-                    GetPromptRequestParams(
-                        name = "suggest_concepts",
-                        arguments = mapOf("description" to "We have some additional context here."),
+    fun suggestConceptsWithDescription() =
+        withClient(registerPrompts = { addSuggestConceptsPrompt() }) { client ->
+            val result =
+                client.getPrompt(
+                    GetPromptRequest(
+                        GetPromptRequestParams(
+                            name = "suggest_concepts",
+                            arguments =
+                                mapOf("description" to "We have some additional context here."),
+                        )
                     )
                 )
-            )
 
-        assertNotNull(result)
-        val text = (result.messages.firstOrNull()?.content as? TextContent)?.text
-        assertNotNull(text, "Prompt message should have text content")
-        assertTrue(
-            "## Additional Context" in text,
-            "Result should contain 'Additional Context' when description is provided",
-        )
-    }
+            assertNotNull(result)
+            val text = (result.messages.firstOrNull()?.content as? TextContent)?.text
+            assertNotNull(text, "Prompt message should have text content")
+            assertTrue(
+                "## Additional Context" in text,
+                "Result should contain 'Additional Context' when description is provided",
+            )
+        }
 }
