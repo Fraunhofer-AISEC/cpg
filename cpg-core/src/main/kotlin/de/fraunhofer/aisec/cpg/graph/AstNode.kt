@@ -104,7 +104,7 @@ abstract class AstNode : Node() {
                     else signature
                 }
                 is Literal<*> -> {
-                    "${value}_${astParent?.astChildren?.indexOf(this)}"
+                    "${value}_${astParent?.astChildren?.indexOfFirst { it === this }}"
                 }
                 is Block -> astParent.blocks.indexOf(this).toString()
                 is IfElse -> astParent.ifs.indexOf(this).toString()
