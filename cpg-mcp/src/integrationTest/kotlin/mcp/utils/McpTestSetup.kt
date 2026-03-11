@@ -29,11 +29,12 @@ import io.modelcontextprotocol.kotlin.sdk.ExperimentalMcpApi
 import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
+import io.modelcontextprotocol.kotlin.sdk.server.ServerSession
 import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -50,39 +51,38 @@ fun withClient(
     registerTools: Server.() -> Unit = {},
     registerPrompts: Server.() -> Unit = {},
     test: suspend (Client) -> Unit,
-) =
-    // We need to set multiple threads here, same as ChannelTransport does internally.
-    // If not doing so, client and server would share a single thread which leads to deadlock.
-    runBlocking(Dispatchers.Default) {
-        val server =
-            Server(
-                Implementation(name = "test-cpg-server", version = "1.0.0"),
-                ServerOptions(
-                    capabilities =
-                        ServerCapabilities(
-                            tools = ServerCapabilities.Tools(),
-                            resources = ServerCapabilities.Resources(),
-                            prompts = ServerCapabilities.Prompts(),
-                        )
-                ),
-            )
+): Unit = runBlocking {
+    val server =
+        Server(
+            Implementation(name = "test-cpg-server", version = "1.0.0"),
+            ServerOptions(
+                capabilities =
+                    ServerCapabilities(
+                        tools = ServerCapabilities.Tools(),
+                        resources = ServerCapabilities.Resources(),
+                        prompts = ServerCapabilities.Prompts(),
+                    )
+            ),
+        )
 
-        server.registerTools()
-        server.registerPrompts()
+    server.registerTools()
+    server.registerPrompts()
 
-        val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
-        val client = Client(Implementation(name = "test-client", version = "1.0.0"))
+    val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
+    val client = Client(Implementation(name = "test-client", version = "1.0.0"))
 
-        listOf(
-                launch { client.connect(clientTransport) },
-                launch { server.createSession(serverTransport) },
-            )
-            .joinAll()
+    val serverSessionResult = CompletableDeferred<ServerSession>()
+    listOf(
+            launch { client.connect(clientTransport) },
+            launch { serverSessionResult.complete(server.createSession(serverTransport)) },
+        )
+        .joinAll()
+    serverSessionResult.await()
 
-        try {
-            withTimeout(30.seconds) { test(client) }
-        } finally {
-            client.close()
-            server.close()
-        }
+    try {
+        withTimeout(30.seconds) { test(client) }
+    } finally {
+        client.close()
+        server.close()
     }
+}
