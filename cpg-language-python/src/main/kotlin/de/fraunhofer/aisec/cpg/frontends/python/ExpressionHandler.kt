@@ -77,7 +77,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     /**
      * Translates a Python
      * [`comprehension`](https://docs.python.org/3/library/ast.html#ast.comprehension) into a
-     * [de.fraunhofer.aisec.cpg.graph.expressions.Comprehension].
+     * [Comprehension].
      *
      * Connects multiple predicates by `and`.
      */
@@ -107,7 +107,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     /**
      * Translates a Python
      * [`GeneratorExp`](https://docs.python.org/3/library/ast.html#ast.GeneratorExp) into a
-     * [de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension].
+     * [CollectionComprehension].
      */
     private fun handleGeneratorExp(node: Python.AST.GeneratorExp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).applyWithScope {
@@ -156,7 +156,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`NamedExpr`](https://docs.python.org/3/library/ast.html#ast.NamedExpr)
-     * into an [de.fraunhofer.aisec.cpg.graph.expressions.Assign].
+     * into an [Assign].
      *
      * As opposed to the Assign node, both target and value must be single nodes.
      */
@@ -290,7 +290,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Joins the [nodes] with a [de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator] with the
+     * Joins the [nodes] with a [BinaryOperator] with the
      * [operatorCode]. Nests the whole thing, where the first element in [nodes] is the lhs of the
      * root of the tree of binary operators. The last operands are further down the tree.
      */
@@ -510,10 +510,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Handles an `ast.Call` Python node. This can be one of
-     * - [de.fraunhofer.aisec.cpg.graph.expressions.MemberCall]
-     * - [de.fraunhofer.aisec.cpg.graph.expressions.Construction]
-     * - [de.fraunhofer.aisec.cpg.graph.expressions.Cast]
-     * - [de.fraunhofer.aisec.cpg.graph.expressions.Call]
+     * - [MemberCall]
+     * - [Construction]
+     * - [Cast]
+     * - [Call]
      *
      * TODO: cast, memberexpression, magic
      */

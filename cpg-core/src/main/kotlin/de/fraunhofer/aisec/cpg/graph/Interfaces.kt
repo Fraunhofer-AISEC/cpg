@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Operator
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -63,7 +64,7 @@ interface HasOperatorCode : HasScope {
 
     /**
      * The operator code, identifying an operation executed on one or more
-     * [de.fraunhofer.aisec.cpg.graph.expressions.Expression]s
+     * [Expression]s
      */
     val operatorCode: String?
 }
@@ -137,7 +138,7 @@ interface HasAliases : HasScope {
 }
 
 /**
- * Specifies that this node (e.g. a [de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator])
+ * Specifies that this node (e.g. a [BinaryOperator])
  * contains an operation that can be overloaded by an [Operator].
  */
 interface HasOverloadedOperation : HasOperatorCode {

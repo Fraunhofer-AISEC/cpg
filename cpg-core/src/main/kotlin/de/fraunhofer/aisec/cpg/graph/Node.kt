@@ -178,7 +178,7 @@ abstract class Node() :
 
     /**
      * Virtual property for accessing [nextDFGEdges] that have a
-     * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
+     * [FullDataflowGranularity].
      */
     @DoNotPersist
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
@@ -202,7 +202,7 @@ abstract class Node() :
 
     /**
      * Virtual property for accessing [nextDFGEdges] that have a
-     * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
+     * [FullDataflowGranularity].
      */
     @DoNotPersist
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)

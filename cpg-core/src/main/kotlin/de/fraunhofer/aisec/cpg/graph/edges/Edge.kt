@@ -45,8 +45,8 @@ import org.neo4j.ogm.annotation.*
  * neither of the two nodes directly.
  *
  * An example would be the name (in this case `a`) of an argument between a
- * [de.fraunhofer.aisec.cpg.graph.expressions.Call] (`foo`) and its argument (a
- * [de.fraunhofer.aisec.cpg.graph.expressions.Literal] of `2`) in languages that support keyword
+ * [Call] (`foo`) and its argument (a
+ * [Literal] of `2`) in languages that support keyword
  * arguments, such as Python:
  * ```python
  * foo("bar", a = 2)

@@ -277,8 +277,8 @@ fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
 /**
  * Asserts that `usingNode` uses/references the provided `usedBase` and `usedMember`. If
  * [ENFORCE_MEMBER_EXPRESSION] is true, `usingNode` must be a
- * [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess] where
- * [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess.base] uses `usedBase` and
+ * [MemberAccess] where
+ * [MemberAccess.base] uses `usedBase` and
  * [ ][MemberAccess.refersTo] uses `usedMember`. Using is checked as preformed per [assertUsageOf]
  *
  * @param usingNode
@@ -319,7 +319,7 @@ fun assertLocalName(localName: String, node: Node?, message: String? = null) {
 
 /**
  * Asserts that
- * - the expression in [expr] is a [de.fraunhofer.aisec.cpg.graph.expressions.Literal] and
+ * - the expression in [expr] is a [Literal] and
  * - that it's value is equal to [expected].
  *
  * Guarantees that [expr] is not null if the assertion on the value succeeds.
