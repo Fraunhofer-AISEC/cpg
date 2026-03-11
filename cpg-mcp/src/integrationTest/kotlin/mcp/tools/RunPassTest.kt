@@ -39,7 +39,6 @@ import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
 
@@ -48,7 +47,7 @@ class RunPassTest {
         mapOf("content" to "def hello(x: int):\n    y = x\n    print(y)", "extension" to "py")
 
     @Test
-    fun serverAddsToolsAndRunsPassOnSelectedNode() = runBlocking {
+    fun serverAddsToolsAndRunsPassOnSelectedNode() =
         withClient(
             registerTools = {
                 addCpgTranslate()
@@ -82,10 +81,9 @@ class RunPassTest {
             assertNotNull(content)
             assertTrue(content.contains("Successfully ran"))
         }
-    }
 
     @Test
-    fun serverListsPassesWithRequiredNodeType() = runBlocking {
+    fun serverListsPassesWithRequiredNodeType() =
         withClient(registerTools = { addListPasses() }) { client ->
             val result = client.callTool(name = "cpg_list_passes", arguments = emptyMap())
             assertTrue(result.content.isNotEmpty())
@@ -96,10 +94,9 @@ class RunPassTest {
             assertTrue(fqns.contains("de.fraunhofer.aisec.cpg.passes.TypeResolver"))
             assertTrue(fqns.contains("de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass"))
         }
-    }
 
     @Test
-    fun serverTranslateToolProducesNodes() = runBlocking {
+    fun serverTranslateToolProducesNodes() =
         withClient(registerTools = { addCpgTranslate() }) { client ->
             val result =
                 client.callTool(
@@ -116,10 +113,9 @@ class RunPassTest {
             assertNotNull(parsed.nodes)
             assertTrue(parsed.nodes.any { it.name.contains("hello") || it.name.contains("print") })
         }
-    }
 
     @Test
-    fun testNoCtx() = runBlocking {
+    fun testNoCtx() =
         withClient(
             registerTools = {
                 addCpgTranslate()
@@ -153,10 +149,9 @@ class RunPassTest {
             assertNotNull(content)
             assertTrue(content.contains("Cannot run run_pass without translation context."))
         }
-    }
 
     @Test
-    fun testInvalidNodeId() = runBlocking {
+    fun testInvalidNodeId() =
         withClient(
             registerTools = {
                 addCpgTranslate()
@@ -190,10 +185,9 @@ class RunPassTest {
             assertNotNull(content)
             assertTrue(content.contains("Could not find any node with the ID 0."))
         }
-    }
 
     @Test
-    fun testInvalidPassName() = runBlocking {
+    fun testInvalidPassName() =
         withClient(
             registerTools = {
                 addCpgTranslate()
@@ -231,10 +225,9 @@ class RunPassTest {
                 )
             )
         }
-    }
 
     @Test
-    fun testExecuteSamePassTwice() = runBlocking {
+    fun testExecuteSamePassTwice() =
         withClient(
             registerTools = {
                 addCpgTranslate()
@@ -294,5 +287,4 @@ class RunPassTest {
             assertNotNull(content2)
             assertTrue(content2.contains("Successfully ran"))
         }
-    }
 }
