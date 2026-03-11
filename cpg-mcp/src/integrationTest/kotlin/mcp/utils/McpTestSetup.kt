@@ -29,14 +29,12 @@ import io.modelcontextprotocol.kotlin.sdk.ExperimentalMcpApi
 import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
-import io.modelcontextprotocol.kotlin.sdk.server.ServerSession
 import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -54,6 +52,8 @@ fun withClient(
     test: suspend (Client) -> Unit,
 ): Unit =
     runBlocking(Dispatchers.Default) {
+        val serverReady = CompletableDeferred<Unit>()
+
         val server =
             Server(
                 Implementation(name = "test-cpg-server", version = "1.0.0"),
@@ -67,19 +67,18 @@ fun withClient(
                 ),
             )
 
+        server.onConnect { serverReady.complete(Unit) }
         server.registerTools()
         server.registerPrompts()
 
         val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
         val client = Client(Implementation(name = "test-client", version = "1.0.0"))
 
-        val serverSessionResult = CompletableDeferred<ServerSession>()
-        listOf(
-                launch { client.connect(clientTransport) },
-                launch { serverSessionResult.complete(server.createSession(serverTransport)) },
-            )
-            .joinAll()
-        serverSessionResult.await()
+        val serverJob = launch { server.createSession(serverTransport) }
+
+        serverReady.await()
+        client.connect(clientTransport)
+        serverJob.join()
 
         try {
             withTimeout(30.seconds) { test(client) }
