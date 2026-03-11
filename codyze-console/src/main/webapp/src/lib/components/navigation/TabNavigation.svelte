@@ -14,27 +14,21 @@
   let { tabs, activeTab, onTabChange }: Props = $props();
 </script>
 
-<div class="border-b border-gray-200">
-  <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-    {#each tabs as tab}
-      <button
-        class="border-b-2 px-1 py-2 text-sm font-medium whitespace-nowrap {activeTab === tab.id
-          ? 'border-blue-500 text-blue-600'
-          : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}"
-        onclick={() => onTabChange(tab.id)}
-        aria-current={activeTab === tab.id ? 'page' : undefined}
-      >
-        {tab.label}
-        {#if tab.count !== undefined}
-          <span
-            class="ml-2 rounded-full px-2.5 py-0.5 text-xs {activeTab === tab.id
-              ? 'bg-blue-100 text-blue-600'
-              : 'bg-gray-100 text-gray-900'}"
-          >
-            {tab.count}
-          </span>
-        {/if}
-      </button>
-    {/each}
-  </nav>
+<div class="flex gap-1 p-1.5 bg-gray-100 rounded-lg mx-2 my-1.5">
+  {#each tabs as tab}
+    <button
+      class="flex-1 flex items-center justify-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors whitespace-nowrap
+        {activeTab === tab.id ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+      onclick={() => onTabChange(tab.id)}
+      aria-current={activeTab === tab.id ? 'page' : undefined}
+    >
+      {tab.label}
+      {#if tab.count !== undefined}
+        <span class="rounded-full px-1.5 py-0.5 text-[10px] font-semibold
+          {activeTab === tab.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-500'}">
+          {tab.count}
+        </span>
+      {/if}
+    </button>
+  {/each}
 </div>
