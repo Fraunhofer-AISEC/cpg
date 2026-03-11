@@ -33,6 +33,7 @@ import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -61,7 +62,8 @@ suspend fun withClient(registerTools: Server.() -> Unit = {}, test: suspend (Cli
 
         server.registerTools()
 
-        val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
+        val (clientTransport, serverTransport) =
+            ChannelTransport.createLinkedPair(dispatcher = Dispatchers.Unconfined)
         val client = Client(Implementation(name = "test-client", version = "1.0.0"))
 
         listOf(
