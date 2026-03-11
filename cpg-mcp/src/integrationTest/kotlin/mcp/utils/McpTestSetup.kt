@@ -33,8 +33,7 @@ import io.modelcontextprotocol.kotlin.sdk.testing.ChannelTransport
 import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -46,38 +45,35 @@ import kotlinx.coroutines.withTimeout
  * server and client.
  */
 @OptIn(ExperimentalMcpApi::class)
-suspend fun CoroutineScope.withClient(
-    registerTools: Server.() -> Unit = {},
-    test: suspend (Client) -> Unit,
-) {
-    val server =
-        Server(
-            Implementation(name = "test-cpg-server", version = "1.0.0"),
-            ServerOptions(
-                capabilities =
-                    ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = true))
-            ),
-        )
+suspend fun withClient(registerTools: Server.() -> Unit = {}, test: suspend (Client) -> Unit) =
+    coroutineScope {
+        val server =
+            Server(
+                Implementation(name = "test-cpg-server", version = "1.0.0"),
+                ServerOptions(
+                    capabilities =
+                        ServerCapabilities(
+                            tools = ServerCapabilities.Tools(),
+                            resources = ServerCapabilities.Resources(),
+                        )
+                ),
+            )
 
-    server.registerTools()
+        server.registerTools()
 
-    val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
-    val client = Client(Implementation(name = "test-client", version = "1.0.0"))
-    val serverSessionDeferred = CompletableDeferred<Unit>()
+        val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
+        val client = Client(Implementation(name = "test-client", version = "1.0.0"))
 
-    listOf(
-            launch { client.connect(clientTransport) },
-            launch {
-                server.createSession(serverTransport)
-                serverSessionDeferred.complete(Unit)
-            },
-        )
-        .joinAll()
+        listOf(
+                launch { client.connect(clientTransport) },
+                launch { server.createSession(serverTransport) },
+            )
+            .joinAll()
 
-    try {
-        withTimeout(30.seconds) { test(client) }
-    } finally {
-        client.close()
-        server.close()
+        try {
+            withTimeout(30.seconds) { test(client) }
+        } finally {
+            client.close()
+            server.close()
+        }
     }
-}
