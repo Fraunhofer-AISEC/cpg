@@ -603,7 +603,7 @@ class DFGTest {
         val func = result.functions["func"]
         assertNotNull(func)
         val declarationS: DeclarationStatement? =
-            func.body?.astChildren?.filterIsInstance<DeclarationStatement>()?.first()
+            func.body?.astChildren?.filterIsInstance<DeclarationStatement>()?.last()
         assertNotNull(declarationS)
         assertContains(declarationS.prevDFG, declarationS.literals.first())
     }
