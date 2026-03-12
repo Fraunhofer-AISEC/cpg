@@ -295,7 +295,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun handleBlock(node: Block) {
         // If the Block is used as an Expression, we use the last subchild as an expression
         if (node.usedAsExpression) {
-            node.statements.lastOrNull()?.let { connectAsExpressionValue(node, it) }
+            node.statements.lastOrNull()?.let { node.prevDFGEdges += it }
         }
     }
 
@@ -325,6 +325,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         node.variable?.let { node.prevDFGEdges += it }
         if (node.usedAsExpression) {
             node.statement?.let { node.prevDFGEdges += it }
+            node.elseStatement?.let { node.prevDFGEdges += it }
         }
         handleBreakableNodesAsExpressions(node)
     }
@@ -607,34 +608,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Helper function to connect an expression as a data flow source and mark it as used as an
-     * expression. This is used to propagate the information to the nodes that are now sources of a
-     * DFG and therefore are also handled as an expression. Because the DFG pass operates by
-     * traversing the AST downwards, setting this flag propagates this information far enough to
-     * connect all relevant nodes.
-     */
-    protected fun connectAsExpressionValue(target: Expression, source: Expression?) {
-        source?.let {
-            target.prevDFGEdges += it
-            it.usedAsExpression = true
-        }
-    }
-
-    /**
-     * Helper function to connect multiple expressions as data flow sources and mark them as used as
-     * expressions.
-     */
-    protected fun connectAsExpressionValues(target: Expression, sources: Iterable<Expression>) {
-        sources.forEach { connectAsExpressionValue(target, it) }
-    }
-
-    /**
      * If the expression is marked as [Expression.usedAsExpression] draws a DFG edge to the
      * synchronized node from the block and marks the block as [Expression.usedAsExpression].
      */
     protected fun handleSynchronized(node: Synchronized) {
         if (node.usedAsExpression) {
-            node.block?.let { connectAsExpressionValue(node, it) }
+            node.block?.let { node.prevDFGEdges += it }
         }
     }
 
@@ -645,10 +624,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleTry(node: Try) {
         if (node.usedAsExpression) {
-            node.finallyBlock?.let { connectAsExpressionValue(node, it) }
+            node.finallyBlock?.let { node.prevDFGEdges += it }
                 ?: {
-                    node.tryBlock?.let { connectAsExpressionValue(node, it) }
-                    connectAsExpressionValues(node, node.catchClauses)
+                    node.tryBlock?.let { node.prevDFGEdges += it }
+                    node.catchClauses.forEach { node.prevDFGEdges += it }
                 }
         }
     }
@@ -659,7 +638,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleLabel(node: Label) {
         if (node.usedAsExpression) {
-            node.subStatement?.let { connectAsExpressionValue(node, it) }
+            node.subStatement?.let { node.prevDFGEdges += it }
         }
     }
 
@@ -672,7 +651,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             node.declarations.forEach {
                 if (it is ValueDeclaration) {
                     it.astChildren.filterIsInstance<Expression>().lastOrNull()?.let {
-                        connectAsExpressionValue(node, it)
+                        node.prevDFGEdges += it
                     }
                 }
             }
@@ -681,7 +660,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun handleCatchClause(node: CatchClause) {
         if (node.usedAsExpression) {
-            node.body?.let { connectAsExpressionValue(node, it) }
+            node.body?.let { node.prevDFGEdges += it }
         }
     }
 
@@ -691,7 +670,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun handleAssert(node: Assert) {
         if (node.usedAsExpression) {
-            node.condition?.let { connectAsExpressionValue(node, it) }
+            node.condition?.let { node.prevDFGEdges += it }
         }
     }
 
@@ -717,7 +696,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 breaksOfNode += breaks.filter { it.label != null && it.label == label.label }
             }
 
-            breaksOfNode.forEach { connectAsExpressionValue(node, it) }
+            breaksOfNode.forEach { node.prevDFGEdges += it }
         }
     }
 }
