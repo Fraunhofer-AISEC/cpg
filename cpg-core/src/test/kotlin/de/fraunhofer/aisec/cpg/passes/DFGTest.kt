@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Conditional
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
@@ -582,5 +583,28 @@ class DFGTest {
         val body = label.subStatement
         assertNotNull(body)
         assertContains(label.prevDFG, body)
+    }
+
+    @Test
+    fun testDFGSwitchAsExpression() {
+        val result = GraphExamples.getStatementsAsExpressions()
+        val switch = result.switches.firstOrNull()
+        assertNotNull(switch)
+        val body = switch.statement
+        assertNotNull(body)
+        assertContains(switch.prevDFG, body)
+
+        switch.breaks.forEach { assertContains(switch.prevDFG, it) }
+    }
+
+    @Test
+    fun testDFGDeclareAsExpression() {
+        val result = GraphExamples.getStatementsAsExpressions()
+        val func = result.functions["func"]
+        assertNotNull(func)
+        val declarationS: DeclarationStatement? =
+            func.body?.astChildren?.filterIsInstance<DeclarationStatement>()?.first()
+        assertNotNull(declarationS)
+        assertContains(declarationS.prevDFG, declarationS.literals.first())
     }
 }

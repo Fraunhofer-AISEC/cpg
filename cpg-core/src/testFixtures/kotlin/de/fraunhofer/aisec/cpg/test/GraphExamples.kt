@@ -288,11 +288,14 @@ class GraphExamples {
                                         loopBody { call("bodyCall") }
                                         loopElseStmt { call("elseCall") }
                                     }
-                                    whileStmt {
+                                    label("lab") {
                                         usedAsExpression = true
-                                        whileCondition { literal(true, t("bool")) }
-                                        loopBody { call("bodyCall") }
-                                        loopElseStmt { call("elseCall") }
+                                        whileStmt {
+                                            usedAsExpression = true
+                                            whileCondition { literal(true, t("bool")) }
+                                            loopBody { call("bodyCall") }
+                                            loopElseStmt { call("elseCall") }
+                                        }
                                     }
 
                                     ifStmt {
@@ -316,10 +319,11 @@ class GraphExamples {
                                             breakStmt()
                                         }
                                     }
-                                    label("lab") {
+                                    declare {
                                         usedAsExpression = true
-                                        call("labeledCall")
+                                        variable("a") { literal(42, t("int")) }
                                     }
+                                    // Todo
                                 }
                             }
                         }
