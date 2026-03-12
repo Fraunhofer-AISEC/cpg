@@ -40,9 +40,7 @@ import org.neo4j.ogm.annotation.Relationship
  * The looping criterion can be a condition or the iteration over all elements in a list and is
  * defined by the subclass.
  */
-abstract class Loop : Expression() {
-
-    override var usedAsExpression = false
+abstract class Loop : Expression(false) {
 
     @Relationship("STATEMENT") var statementEdge = astOptionalEdgeOf<Expression>()
     /** This field contains the body of the loop, e.g. a [Block] or single [Expression]. */

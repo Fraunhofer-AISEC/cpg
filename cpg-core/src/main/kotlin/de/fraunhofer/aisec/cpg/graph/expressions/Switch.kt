@@ -38,9 +38,7 @@ import org.neo4j.ogm.annotation.Relationship
  * and default statements. Break statements break out of the switch and labeled breaks in Java are
  * handled properly.
  */
-class Switch : Expression(), BranchingNode {
-
-    override var usedAsExpression = false
+class Switch : Expression(false), BranchingNode {
 
     @Relationship(value = "SELECTOR") var selectorEdge = astOptionalEdgeOf<Expression>()
     /** Selector that determines the case/default statement of the subsequent execution */

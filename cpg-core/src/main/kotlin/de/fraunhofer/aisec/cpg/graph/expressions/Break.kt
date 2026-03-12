@@ -33,9 +33,7 @@ import java.util.Objects
  * context. Can have a loop label, e.g. in Java, to specify which of the nested loops should be
  * broken out of.
  */
-class Break : Expression() {
-
-    override var usedAsExpression = false
+class Break : Expression(false) {
 
     /** Specifies the label of the loop in a nested structure that this statement will 'break' */
     var label: String? = null

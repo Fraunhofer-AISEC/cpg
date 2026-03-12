@@ -40,9 +40,7 @@ import org.neo4j.ogm.annotation.Relationship
  * A label attached to a statement that is used to change control flow by labeled continue and
  * breaks (Java) or goto(C++).
  */
-class Label : Expression(), StatementHolder {
-
-    override var usedAsExpression = false
+class Label : Expression(false), StatementHolder {
 
     @Relationship(value = "SUB_STATEMENT") var subStatementEdge = astOptionalEdgeOf<Expression>()
 

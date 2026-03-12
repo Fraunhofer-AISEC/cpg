@@ -42,10 +42,7 @@ import java.util.Objects
  * The [newLookupScope] node builder will add this automatically, so it is STRONGLY encouraged that
  * the node builder is used instead of creating the node itself.
  */
-class LookupScope : Expression() {
-
-    override var usedAsExpression = false
-
+class LookupScope : Expression(false) {
     /** The symbols this statement affects. */
     var symbols: List<Symbol> = listOf()
 

@@ -55,7 +55,7 @@ import org.slf4j.LoggerFactory
  * from the (first) rhs to the [Assign] itself.
  */
 class Assign :
-    Expression(), AssignmentHolder, ArgumentHolder, HasType.TypeObserver, HasOperatorCode {
+    Expression(false), AssignmentHolder, ArgumentHolder, HasType.TypeObserver, HasOperatorCode {
 
     override var operatorCode: String = "="
 
@@ -88,13 +88,6 @@ class Assign :
             it.end.unregisterTypeObserver(this)
         }
     var rhs by unwrapping(Assign::rhsEdges)
-
-    /**
-     * This property specifies, that this is actually used as an expression. Not many languages
-     * support that. In the regular case, an assignment is a simple statement and does not hold any
-     * value itself.
-     */
-    override var usedAsExpression = false
 
     /**
      * If this node is used an expression, this property contains a reference of the [Expression]

@@ -40,9 +40,7 @@ import org.neo4j.ogm.annotation.Relationship
  * contain other statements, but not declarations. Therefore, declarations are wrapped in a
  * [DeclarationStatement].
  */
-open class DeclarationStatement : Expression() {
-
-    override var usedAsExpression = false
+open class DeclarationStatement : Expression(false) {
 
     /**
      * The list of declarations declared or defined by this statement. It is always a list, even if

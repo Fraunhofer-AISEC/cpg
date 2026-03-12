@@ -37,9 +37,7 @@ import org.neo4j.ogm.annotation.Relationship
  * choose from. THe statements executed after the entry are on the same AST hierarchy in the parent
  * compound statement.
  */
-class Case : Expression() {
-
-    override var usedAsExpression = false
+class Case : Expression(false) {
 
     @Relationship(value = "CASE_EXPRESSION")
     var caseExpressionEdge = astOptionalEdgeOf<Expression>()

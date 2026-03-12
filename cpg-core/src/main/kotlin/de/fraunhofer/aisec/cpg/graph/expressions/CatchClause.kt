@@ -36,9 +36,7 @@ import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
-class CatchClause : Expression(), BranchingNode, EOGStarterHolder {
-
-    override var usedAsExpression = false
+class CatchClause : Expression(false), BranchingNode, EOGStarterHolder {
 
     @Relationship(value = "PARAMETER") var parameterEdge = astOptionalEdgeOf<Variable>()
 

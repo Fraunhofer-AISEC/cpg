@@ -26,9 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 @Suppress("EqualsOrHashCode")
-class Empty : Expression() {
-
-    override var usedAsExpression = false
+class Empty : Expression(false) {
 
     override fun equals(other: Any?): Boolean {
         return other is Empty && super.equals(other)

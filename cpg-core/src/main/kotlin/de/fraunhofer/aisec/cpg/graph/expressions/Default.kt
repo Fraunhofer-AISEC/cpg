@@ -30,6 +30,4 @@ package de.fraunhofer.aisec.cpg.graph.expressions
  * statements executed after the entry are on the same AST hierarchy in the parent compound
  * statement.
  */
-class Default : Expression() {
-    override var usedAsExpression = false
-}
+class Default : Expression(false)

@@ -37,9 +37,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a statement that returns out of the current function. */
-class Return : Expression(), ArgumentHolder {
-
-    override var usedAsExpression = false
+class Return : Expression(false), ArgumentHolder {
 
     @Relationship(value = "RETURN_VALUES")
     var returnValueEdges =

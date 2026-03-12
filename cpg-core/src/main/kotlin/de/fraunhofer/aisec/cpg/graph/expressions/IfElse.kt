@@ -41,9 +41,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
-class IfElse : Expression(), BranchingNode, ArgumentHolder, HasType.TypeObserver {
-
-    override var usedAsExpression = false
+class IfElse : Expression(false), BranchingNode, ArgumentHolder, HasType.TypeObserver {
 
     @Relationship(value = "INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Expression>()

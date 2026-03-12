@@ -34,9 +34,7 @@ import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** A [Expression] which represents a try/catch block, primarily used for exception handling. */
-class Try : Expression() {
-
-    override var usedAsExpression = false
+class Try : Expression(false) {
 
     /**
      * This represents some kind of resource which is typically opened (or similar) while entering

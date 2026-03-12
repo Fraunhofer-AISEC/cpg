@@ -44,9 +44,7 @@ import org.neo4j.ogm.annotation.Relationship
  * Note: For assignments, i.e., using an `=` or `+=`, etc. the [Assign] MUST be used.
  */
 open class BinaryOperator :
-    Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
-
-    override var usedAsExpression = false
+    Expression(false), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
 
     /** The left-hand expression. */
     @Relationship("LHS")

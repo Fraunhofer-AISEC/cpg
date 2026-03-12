@@ -29,9 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
-class Goto : Expression() {
-
-    override var usedAsExpression = false
+class Goto : Expression(false) {
 
     var labelName: String = ""
     var targetLabel: Label? = null

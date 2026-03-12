@@ -31,9 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
-class Synchronized : Expression() {
-
-    override var usedAsExpression = false
+class Synchronized : Expression(false) {
 
     @Relationship(value = "EXPRESSION") var expressionEdge = astOptionalEdgeOf<Expression>()
     var expression by unwrapping(Synchronized::expressionEdge)

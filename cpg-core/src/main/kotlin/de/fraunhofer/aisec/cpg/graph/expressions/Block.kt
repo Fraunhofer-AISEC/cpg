@@ -39,9 +39,7 @@ import org.neo4j.ogm.annotation.Relationship
  * A statement which contains a list of statements. A common example is a function body within a
  * [Function].
  */
-open class Block : Expression(), StatementHolder {
-
-    override var usedAsExpression = false
+open class Block : Expression(false), StatementHolder {
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
