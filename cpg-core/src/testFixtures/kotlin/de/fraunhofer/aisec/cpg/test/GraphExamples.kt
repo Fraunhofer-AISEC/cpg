@@ -271,17 +271,25 @@ class GraphExamples {
                                         loopBody { call("inBody") }
                                         loopElseStmt { call("inElse") }
                                     }
-                                    forStmt {
-                                        usedAsExpression = true
-                                        loopBody { call("bodyCall") }
-                                        forInitializer {
-                                            declareVar("a", t("int")) { literal(0, t("int")) }
+                                    declare {
+                                        variable("a") {
+                                            literal(1, t("int"))
+                                                .plus(
+                                                    forStmt {
+                                                        usedAsExpression = true
+                                                        loopBody { call("bodyCall") }
+                                                        forInitializer {
+                                                            declareVar("a", t("int")) {
+                                                                literal(0, t("int"))
+                                                            }
+                                                        }
+                                                        forCondition { literal(true, t("bool")) }
+                                                        forIteration { ref("a").inc() }
+                                                        loopElseStmt { call("elseCall") }
+                                                    }
+                                                )
                                         }
-                                        forCondition { literal(true, t("bool")) }
-                                        forIteration { ref("a").inc() }
-                                        loopElseStmt { call("elseCall") }
                                     }
-
                                     doStmt {
                                         usedAsExpression = true
                                         doCondition { literal(true, t("bool")) }
