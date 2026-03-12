@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
 import de.fraunhofer.aisec.cpg.graph.expressions.*
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -294,12 +293,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * as such.
      */
     protected fun handleBlock(node: Block) {
-        // If the Block is used as an Expression, we use all incoming EOG edges to find nodes we
-        // consider to be used as
-        // Expressions
+        // If the Block is used as an Expression, we use the last subchild as an expression
         if (node.usedAsExpression) {
-            // The actual data then comes from the last evaluated expressions in the execution order
-            node.prevEOG.forEach { node.prevDFGEdges += it }
+            node.statements.lastOrNull()?.let { connectAsExpressionValue(node, it) }
         }
     }
 
@@ -675,7 +671,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (node.usedAsExpression) {
             node.declarations.forEach {
                 if (it is ValueDeclaration) {
-                    connectAsExpressionValues(node, it.prevEOG.filterIsInstance<Expression>())
+                    it.astChildren.filterIsInstance<Expression>().lastOrNull()?.let {
+                        connectAsExpressionValue(node, it)
+                    }
                 }
             }
         }
@@ -704,12 +702,22 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * statements can provide and expression, to be returned by a loop.
      */
     protected fun handleBreakableNodesAsExpressions(node: Expression) {
+        var breaksOfNode = mutableSetOf<Break>()
         if (node.usedAsExpression) {
-            SubgraphWalker.getEOGPathEdges(node).exits.forEach {
-                if (it is Break) {
-                    connectAsExpressionValue(node, it)
+            val breaks = node.breaks
+
+            breaksOfNode +=
+                breaks.filter {
+                    it.label == null &&
+                        it.firstParentOrNull { p: Node -> p is Loop || p is Try || p is Switch } ==
+                            node
                 }
+
+            (node.astParent as? Label)?.let { label ->
+                breaksOfNode += breaks.filter { it.label != null && it.label == label.label }
             }
+
+            breaksOfNode.forEach { connectAsExpressionValue(node, it) }
         }
     }
 }
