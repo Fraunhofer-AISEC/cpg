@@ -110,15 +110,12 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 
     /**
-     * Creates a new [ArrayConstruction], which is usually
-     * used as an initializer of a [Variable].
+     * Creates a new [ArrayConstruction], which is usually used as an initializer of a [Variable].
      *
      * @param expr the expression
      * @return the [ArrayConstruction]
      */
-    private fun handleArrayCreationExpr(
-        expr: JPExpression
-    ): Expression {
+    private fun handleArrayCreationExpr(expr: JPExpression): Expression {
         val arrayCreationExpr = expr as ArrayCreationExpr
         val creationExpression = newArrayConstruction(rawNode = expr)
 
@@ -250,8 +247,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
             }
         } catch (_: UnsolvedSymbolException) {}
 
-        var base =
-            handle(fieldAccessExpr.scope) as Expression
+        var base = handle(fieldAccessExpr.scope) as Expression
         base.type = baseType
 
         return newMemberAccess(
@@ -614,9 +610,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         map[VariableDeclarationExpr::class.java] = HandlerInterface { handleVariableExpr(it) }
         map[MethodCallExpr::class.java] = HandlerInterface { handleMethodCall(it) }
         map[ObjectCreationExpr::class.java] = HandlerInterface { handleObjectCreationExpr(it) }
-        map[ConditionalExpr::class.java] = HandlerInterface {
-            handleConditional(it)
-        }
+        map[ConditionalExpr::class.java] = HandlerInterface { handleConditional(it) }
         map[EnclosedExpr::class.java] = HandlerInterface { handleEnclosedExpression(it) }
         map[ArrayAccessExpr::class.java] = HandlerInterface { handleArrayAccessExpr(it) }
         map[ArrayCreationExpr::class.java] = HandlerInterface { handleArrayCreationExpr(it) }

@@ -294,7 +294,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * as such.
      */
     protected fun handleBlock(node: Block) {
-        // If the Block is used as an Expression, we use all incoming EOG edges to find nodes we consider to be used as
+        // If the Block is used as an Expression, we use all incoming EOG edges to find nodes we
+        // consider to be used as
         // Expressions
         if (node.usedAsExpression) {
             // The actual data then comes from the last evaluated expressions in the execution order
@@ -611,9 +612,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * Helper function to connect an expression as a data flow source and mark it as used as an
-     * expression. This is used to propagate the information to the nodes that are now sources of a DFG and therefore are
-     * also handled as an expression. Because the DFG pass operates by traversing the AST downwards, setting this flag propagates
-     * this information far enough to connect all relevant nodes.
+     * expression. This is used to propagate the information to the nodes that are now sources of a
+     * DFG and therefore are also handled as an expression. Because the DFG pass operates by
+     * traversing the AST downwards, setting this flag propagates this information far enough to
+     * connect all relevant nodes.
      */
     protected fun connectAsExpressionValue(target: Expression, source: Expression?) {
         source?.let {

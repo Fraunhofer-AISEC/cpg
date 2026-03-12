@@ -45,8 +45,7 @@ import org.bytedeco.llvm.global.LLVM.*
 
 /**
  * This handler primarily handles operands, as returned by [LLVMGetOperand] and turns them into an
- * [Expression]. Operands are basically arguments to an
- * instruction.
+ * [Expression]. Operands are basically arguments to an instruction.
  */
 class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     Handler<Expression, LLVMValueRef, LLVMIRLanguageFrontend>(::ProblemExpression, lang) {
@@ -241,8 +240,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Handles a constant struct value, which belongs to the
      * [complex constants](https://llvm.org/docs/LangRef.html#complex-constants). Its type needs to
      * be a structure type (either identified or literal) and we currently map this to a
-     * [Construction], with the individual struct members
-     * being added as arguments.
+     * [Construction], with the individual struct members being added as arguments.
      */
     private fun handleConstantStructValue(value: LLVMValueRef): Expression {
         // retrieve the type
@@ -268,8 +266,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Handles a constant array value, which belongs to the
      * [complex constants](https://llvm.org/docs/LangRef.html#complex-constants). Their element
      * types and number of elements needs to match the specified array type. We parse the array
-     * contents as an [InitializerList], similar to the C
-     * syntax of `int a[] = { 1, 2 }`.
+     * contents as an [InitializerList], similar to the C syntax of `int a[] = { 1, 2 }`.
      *
      * There is a special case, in which LLVM allows to represent the array as a double-quoted
      * string, prefixed with `c`. In this case we
@@ -370,9 +367,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * [`extractvalue`](https://llvm.org/docs/LangRef.html#extractvalue-instruction) instruction
      * which works in a similar way.
      *
-     * We try to convert it either into an [Subscription]
-     * or an [MemberAccess], depending on whether the
-     * accessed variable is a struct or an array. Furthermore, since `getelementptr` allows an
+     * We try to convert it either into an [Subscription] or an [MemberAccess], depending on whether
+     * the accessed variable is a struct or an array. Furthermore, since `getelementptr` allows an
      * (infinite) chain of sub-element access within a single instruction, we need to unwrap those
      * into individual expressions.
      */

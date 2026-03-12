@@ -56,7 +56,8 @@ import org.neo4j.ogm.annotation.Transient
  * executable code.
  */
 @NodeEntity
-abstract class Expression(usedAsExpression: Boolean = true) : AstNode(), DeclarationHolder, HasType {
+abstract class Expression(usedAsExpression: Boolean = true) :
+    AstNode(), DeclarationHolder, HasType {
 
     /**
      * This property specifies that this node is used as an expression. Depending on the language,
@@ -66,7 +67,9 @@ abstract class Expression(usedAsExpression: Boolean = true) : AstNode(), Declara
      */
     open var usedAsExpression = true
 
-    init { this.usedAsExpression = usedAsExpression }
+    init {
+        this.usedAsExpression = usedAsExpression
+    }
 
     /**
      * Per default, expressions only read Data. The access value can be changed to modify this
@@ -86,7 +89,6 @@ abstract class Expression(usedAsExpression: Boolean = true) : AstNode(), Declara
 
     /** Virtual property to access [localEdges] without property edges. */
     var locals by unwrapping(Expression::localEdges)
-
 
     @DoNotPersist override var observerEnabled: Boolean = true
 

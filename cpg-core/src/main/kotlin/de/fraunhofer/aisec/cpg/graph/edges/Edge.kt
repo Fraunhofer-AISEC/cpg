@@ -44,10 +44,8 @@ import org.neo4j.ogm.annotation.*
  * store additional information that relate to the relationship between the two nodes that belong to
  * neither of the two nodes directly.
  *
- * An example would be the name (in this case `a`) of an argument between a
- * [Call] (`foo`) and its argument (a
- * [Literal] of `2`) in languages that support keyword
- * arguments, such as Python:
+ * An example would be the name (in this case `a`) of an argument between a [Call] (`foo`) and its
+ * argument (a [Literal] of `2`) in languages that support keyword arguments, such as Python:
  * ```python
  * foo("bar", a = 2)
  * ```
@@ -78,10 +76,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
     val overlaying: Boolean
         get() = end is OverlayNode || start is OverlayNode
 
-    /**
-     * The index of this node, if it is stored in an
-     * [EdgeList].
-     */
+    /** The index of this node, if it is stored in an [EdgeList]. */
     var index: Int? = null
 
     /** An optional name. */

@@ -62,9 +62,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         Supplier { ProblemExpression() },
         lang!!,
     ) {
-    fun handleExpressionStatement(
-        stmt: Statement
-    ): Expression? {
+    fun handleExpressionStatement(stmt: Statement): Expression? {
         // We want to use the code of the stmt, rather than the expression
         val expr =
             frontend.expressionHandler
@@ -74,14 +72,11 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return expr
     }
 
-    private fun handleThrowStmt(
-        stmt: Statement
-    ): Expression {
+    private fun handleThrowStmt(stmt: Statement): Expression {
         val throwStmt = stmt as ThrowStmt
         val throwOperation = newThrow(rawNode = stmt)
         throwOperation.exception =
-            frontend.expressionHandler.handle(throwStmt.expression)
-                as Expression
+            frontend.expressionHandler.handle(throwStmt.expression) as Expression
         return throwOperation
     }
 
@@ -114,9 +109,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val ifStatement = newIfElse(rawNode = stmt)
         frontend.scopeManager.enterScope(ifStatement)
         ifStatement.thenStatement = handle(thenStatement)
-        ifStatement.condition =
-            frontend.expressionHandler.handle(conditionExpression)
-                as Expression
+        ifStatement.condition = frontend.expressionHandler.handle(conditionExpression) as Expression
         optionalElseStatement.ifPresent { ifStatement.elseStatement = handle(it) }
         frontend.scopeManager.leaveScope(ifStatement)
         return ifStatement
@@ -128,8 +121,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val thenStatement = assertStmt.message
         val assertStatement = newAssert(rawNode = stmt)
         assertStatement.condition =
-            frontend.expressionHandler.handle(conditionExpression)
-                as Expression
+            frontend.expressionHandler.handle(conditionExpression) as Expression
         thenStatement.ifPresent {
             assertStatement.message = frontend.expressionHandler.handle(thenStatement.get())
         }
@@ -144,8 +136,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         frontend.scopeManager.enterScope(whileStatement)
         whileStatement.statement = handle(statement)
         whileStatement.condition =
-            frontend.expressionHandler.handle(conditionExpression)
-                as Expression
+            frontend.expressionHandler.handle(conditionExpression) as Expression
         frontend.scopeManager.leaveScope(whileStatement)
         return whileStatement
     }
@@ -190,9 +181,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
                 frontend.expressionHandler.handle(forStmt.initialization[0])
         }
         forStmt.compare.ifPresent { condition: JPExpression ->
-            statement.condition =
-                frontend.expressionHandler.handle(condition)
-                    as Expression
+            statement.condition = frontend.expressionHandler.handle(condition) as Expression
         }
 
         // Adds true expression node where default empty condition evaluates to true, remove here
@@ -234,9 +223,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val doStatement = newDoWhile(rawNode = stmt)
         frontend.scopeManager.enterScope(doStatement)
         doStatement.statement = handle(statement)
-        doStatement.condition =
-            frontend.expressionHandler.handle(conditionExpression)
-                as Expression
+        doStatement.condition = frontend.expressionHandler.handle(conditionExpression) as Expression
         frontend.scopeManager.leaveScope(doStatement)
         return doStatement
     }
@@ -249,8 +236,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val synchronizedJava = stmt.asSynchronizedStmt()
         val synchronizedCPG = newSynchronized(rawNode = stmt)
         synchronizedCPG.expression =
-            frontend.expressionHandler.handle(synchronizedJava.expression)
-                as Expression
+            frontend.expressionHandler.handle(synchronizedJava.expression) as Expression
         synchronizedCPG.block = handle(synchronizedJava.body) as Block?
         return synchronizedCPG
     }
@@ -293,10 +279,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return compoundStatement
     }
 
-    fun handleCaseDefault(
-        caseExpression: JPExpression?,
-        sEntry: SwitchEntry,
-    ): Expression {
+    fun handleCaseDefault(caseExpression: JPExpression?, sEntry: SwitchEntry): Expression {
         val parentLocation = frontend.locationOf(sEntry)
         val optionalTokenRange = sEntry.tokenRange
         var caseTokens = Pair<JavaToken?, JavaToken?>(null, null)
@@ -334,8 +317,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         }
         val caseStatement = this.newCase()
         caseStatement.caseExpression =
-            frontend.expressionHandler.handle(caseExpression)
-                as Expression
+            frontend.expressionHandler.handle(caseExpression) as Expression
         caseStatement.location = getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b)
         return caseStatement
     }
@@ -410,8 +392,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
         frontend.scopeManager.enterScope(switchStatement)
         switchStatement.selector =
-            frontend.expressionHandler.handle(switchStmt.selector)
-                as Expression
+            frontend.expressionHandler.handle(switchStmt.selector) as Expression
 
         // Compute region and code for self generated compound statement to match the c++ versions
         var start: JavaToken? = null
@@ -508,9 +489,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         return tryStatement
     }
 
-    private fun handleCatchClause(
-        catchCls: JPCatchClause
-    ): CatchClause {
+    private fun handleCatchClause(catchCls: JPCatchClause): CatchClause {
         val cClause = newCatchClause(rawNode = catchCls)
         frontend.scopeManager.enterScope(cClause)
         val possibleTypes = mutableSetOf<Type>()
@@ -547,42 +526,15 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     }
 
     init {
-        map[IfStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleIf(stmt)
-            }
-        map[AssertStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleAssert(stmt)
-            }
-        map[WhileStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleWhile(stmt)
-            }
-        map[DoStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleDo(stmt)
-            }
-        map[ForEachStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleForEach(stmt)
-            }
-        map[ForStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleFor(stmt)
-            }
-        map[BreakStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleBreak(stmt)
-            }
-        map[ContinueStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleContinue(stmt)
-            }
-        map[ReturnStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleReturn(stmt)
-            }
+        map[IfStmt::class.java] = HandlerInterface { stmt: Statement -> handleIf(stmt) }
+        map[AssertStmt::class.java] = HandlerInterface { stmt: Statement -> handleAssert(stmt) }
+        map[WhileStmt::class.java] = HandlerInterface { stmt: Statement -> handleWhile(stmt) }
+        map[DoStmt::class.java] = HandlerInterface { stmt: Statement -> handleDo(stmt) }
+        map[ForEachStmt::class.java] = HandlerInterface { stmt: Statement -> handleForEach(stmt) }
+        map[ForStmt::class.java] = HandlerInterface { stmt: Statement -> handleFor(stmt) }
+        map[BreakStmt::class.java] = HandlerInterface { stmt: Statement -> handleBreak(stmt) }
+        map[ContinueStmt::class.java] = HandlerInterface { stmt: Statement -> handleContinue(stmt) }
+        map[ReturnStmt::class.java] = HandlerInterface { stmt: Statement -> handleReturn(stmt) }
         map[BlockStmt::class.java] = HandlerInterface { stmt: Statement -> handleBlock(stmt) }
         map[LabeledStmt::class.java] = HandlerInterface { stmt: Statement -> handleLabel(stmt) }
         map[ExplicitConstructorInvocationStmt::class.java] = HandlerInterface { stmt: Statement ->
@@ -591,22 +543,12 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         map[ExpressionStmt::class.java] = HandlerInterface { stmt: Statement ->
             handleExpressionStatement(stmt)
         }
-        map[SwitchStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleSwitch(stmt)
-            }
-        map[EmptyStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleEmpty(stmt)
-            }
-        map[SynchronizedStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleSynchronized(stmt)
-            }
-        map[TryStmt::class.java] =
-            HandlerInterface { stmt: Statement ->
-                handleTry(stmt)
-            }
+        map[SwitchStmt::class.java] = HandlerInterface { stmt: Statement -> handleSwitch(stmt) }
+        map[EmptyStmt::class.java] = HandlerInterface { stmt: Statement -> handleEmpty(stmt) }
+        map[SynchronizedStmt::class.java] = HandlerInterface { stmt: Statement ->
+            handleSynchronized(stmt)
+        }
+        map[TryStmt::class.java] = HandlerInterface { stmt: Statement -> handleTry(stmt) }
         map[ThrowStmt::class.java] = HandlerInterface { stmt: Statement -> handleThrowStmt(stmt) }
     }
 }

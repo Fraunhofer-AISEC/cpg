@@ -38,10 +38,9 @@ import org.slf4j.LoggerFactory
 class CouldNotResolve
 
 /**
- * The value evaluator tries to evaluate the (constant) value of an
- * [Expression] basically by following DFG edges until we
- * reach a [Literal]. It also evaluates simple binary
- * operations, such as arithmetic operations, as well as simple string concatenations.
+ * The value evaluator tries to evaluate the (constant) value of an [Expression] basically by
+ * following DFG edges until we reach a [Literal]. It also evaluates simple binary operations, such
+ * as arithmetic operations, as well as simple string concatenations.
  *
  * The result can be retrieved in two ways:
  * * The result of the [resolve] function is a JVM object which represents the constant value
@@ -403,8 +402,7 @@ open class ValueEvaluator(
 
     /**
      * For arrays, we check whether we can actually access the contents of the array. This is
-     * basically the case if the base of the subscript expression is a list of
-     * [KeyValue] s.
+     * basically the case if the base of the subscript expression is a list of [KeyValue] s.
      */
     protected fun handleSubscription(expr: Subscription, depth: Int): Any? {
         val array = (expr.arrayExpression as? Reference)?.refersTo as? Variable

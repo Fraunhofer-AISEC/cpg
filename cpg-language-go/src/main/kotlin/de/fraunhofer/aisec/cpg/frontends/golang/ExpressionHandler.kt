@@ -372,9 +372,8 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
     /**
      * This function handles an ast.SliceExpr, which is an extended version of ast.IndexExpr. We are
-     * modeling this as a combination of a [Subscription] that contains a
-     * [Range] as its subscriptExpression to share some
-     * code between this and an index expression.
+     * modeling this as a combination of a [Subscription] that contains a [Range] as its
+     * subscriptExpression to share some code between this and an index expression.
      */
     private fun handleSliceExpr(sliceExpr: GoStandardLibrary.Ast.SliceExpr): Subscription {
         val ase = newSubscription(rawNode = sliceExpr)

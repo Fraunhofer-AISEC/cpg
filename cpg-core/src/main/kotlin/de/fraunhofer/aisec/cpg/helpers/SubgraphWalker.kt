@@ -400,13 +400,9 @@ object SubgraphWalker {
  *   replacement BEFORE any DFG edges are set. We are re-wiring EOG edges, but nothing else. If one
  *   tries to replace a node with existing [Node.nextDFG] or [Node.prevDFG], we fail.
  * - We also migrate [HasType.typeObservers] from the [old] to the [new] node.
- * - Lastly, if the [new] node is a [Call.callee] of a
- *   [Call] parent, and the [old] and [new] expressions
- *   are of different types (e.g., exchanging a simple
- *   [Reference] for a
- *   [MemberAccess]), we also replace the
- *   [Call] with a
- *   [MemberCall].
+ * - Lastly, if the [new] node is a [Call.callee] of a [Call] parent, and the [old] and [new]
+ *   expressions are of different types (e.g., exchanging a simple [Reference] for a
+ *   [MemberAccess]), we also replace the [Call] with a [MemberCall].
  */
 context(provider: ContextProvider)
 fun SubgraphWalker.ScopedWalker<Node>.replace(
@@ -551,9 +547,8 @@ fun Call.toMemberCall(callee: MemberAccess): MemberCall {
 }
 
 /**
- * Creates a new [Construction] with the same properties
- * (e.g. ast children, etc.) except from DFG and EOG edges as [this]. It sets the
- * [Construction.callee] to [callee].
+ * Creates a new [Construction] with the same properties (e.g. ast children, etc.) except from DFG
+ * and EOG edges as [this]. It sets the [Construction.callee] to [callee].
  */
 fun Call.toConstruct(callee: Reference): Construction {
     val construct = Construction()

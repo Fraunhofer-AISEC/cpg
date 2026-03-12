@@ -87,11 +87,9 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  *
  * ## Adjust Names of Keys in Key Value Expressions to FQN
  *
- * This pass also adjusts the names of keys in a
- * [KeyValue], which is part of an
- * [InitializerList] to a fully-qualified name that
- * contains the name of the [ObjectType] that the expression is creating. This way we can resolve
- * the static references to the field to the actual field.
+ * This pass also adjusts the names of keys in a [KeyValue], which is part of an [InitializerList]
+ * to a fully-qualified name that contains the name of the [ObjectType] that the expression is
+ * creating. This way we can resolve the static references to the field to the actual field.
  *
  * ## Add Methods of Embedded Structs to the Record's Scope
  *
@@ -239,9 +237,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * handleInitializerList changes the references of keys in a
-     * [KeyValue] to include the object it is creating as
-     * a parent name.
+     * handleInitializerList changes the references of keys in a [KeyValue] to include the object it
+     * is creating as a parent name.
      */
     private fun handleInitializerList(node: InitializerList) {
         var type: Type? = node.type

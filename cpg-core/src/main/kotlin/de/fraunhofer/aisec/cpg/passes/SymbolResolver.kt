@@ -56,35 +56,29 @@ import org.slf4j.LoggerFactory
 /**
  * Creates new connections between the place where a variable is declared and where it is used.
  *
- * A field access is modeled with a [MemberAccess]. After
- * AST building, its base and member references are set to
- * [Reference] stubs. This pass resolves those references
- * and makes the member point to the appropriate [Field] and the base to the "this" [Field] of the
- * containing class. It is also capable of resolving references to fields that are inherited from a
- * superclass and thus not declared in the actual base class. When base or member declarations are
- * not found in the graph, a new "inferred" [Field] is being created that is then used to collect
- * all usages to the same unknown declaration. [Reference]
- * stubs are removed from the graph after being resolved.
+ * A field access is modeled with a [MemberAccess]. After AST building, its base and member
+ * references are set to [Reference] stubs. This pass resolves those references and makes the member
+ * point to the appropriate [Field] and the base to the "this" [Field] of the containing class. It
+ * is also capable of resolving references to fields that are inherited from a superclass and thus
+ * not declared in the actual base class. When base or member declarations are not found in the
+ * graph, a new "inferred" [Field] is being created that is then used to collect all usages to the
+ * same unknown declaration. [Reference] stubs are removed from the graph after being resolved.
  *
- * Accessing a local variable is modeled directly with a
- * [Reference]. This step of the pass doesn't remove the
- * [Reference] nodes like in the field usage case but
- * rather makes their "refersTo" point to the appropriate [ValueDeclaration].
+ * Accessing a local variable is modeled directly with a [Reference]. This step of the pass doesn't
+ * remove the [Reference] nodes like in the field usage case but rather makes their "refersTo" point
+ * to the appropriate [ValueDeclaration].
  *
- * Resolves [Call] and
- * [New] targets.
+ * Resolves [Call] and [New] targets.
  *
- * A [Call] specifies the method that wants to be called
- * via [Call.name]. The call target is a method of the
- * same class the caller belongs to, so the name is resolved to the appropriate [Method]. This pass
- * also takes into consideration that a method might not be present in the current class, but rather
- * has its implementation in a superclass, and sets the pointer accordingly.
+ * A [Call] specifies the method that wants to be called via [Call.name]. The call target is a
+ * method of the same class the caller belongs to, so the name is resolved to the appropriate
+ * [Method]. This pass also takes into consideration that a method might not be present in the
+ * current class, but rather has its implementation in a superclass, and sets the pointer
+ * accordingly.
  *
- * Constructor calls with [Construction] are resolved in
- * such a way that their [Construction.instantiates]
- * points to the correct [Record]. Additionally, the
- * [Construction.constructor] is set to the according
- * [Constructor].
+ * Constructor calls with [Construction] are resolved in such a way that their
+ * [Construction.instantiates] points to the correct [Record]. Additionally, the
+ * [Construction.constructor] is set to the according [Constructor].
  *
  * This pass should NOT use any DFG edges because they are computed / adjusted in a later stage.
  */
@@ -204,30 +198,24 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * This function handles symbol resolving for a
-     * [Reference]. After a successful lookup of the
-     * symbol contained in [Reference.name], the property
-     * [Reference.refersTo] is set to the best (or only)
-     * candidate.
+     * This function handles symbol resolving for a [Reference]. After a successful lookup of the
+     * symbol contained in [Reference.name], the property [Reference.refersTo] is set to the best
+     * (or only) candidate.
      *
      * On a high-level, it performs the following steps:
      * - Use [ScopeManager.lookupSymbolByName] to retrieve [Declaration] candidates based on the
-     *   [Reference.name]. This can either result in an
-     *   "unqualified" or "qualified" lookup, depending on the name.
-     * - The results of the lookup are stored in
-     *   [Reference.candidates]. The purpose of this is
+     *   [Reference.name]. This can either result in an "unqualified" or "qualified" lookup,
+     *   depending on the name.
+     * - The results of the lookup are stored in [Reference.candidates]. The purpose of this is
      *   two-fold. First, it is a good way to debug potential symbol resolution errors. Second, it
      *   is used by other functions, for example [handleCall], which then picks the best viable
-     *   option out of the candidates (if the reference is part of the
-     *   [Call.callee]).
+     *   option out of the candidates (if the reference is part of the [Call.callee]).
      * - In the next step, we need to decide whether we are resolving a standalone reference (which
-     *   most likely points to a [Variable]) or if we are part of a
-     *   [Call.callee]. In the first case, we can directly
-     *   assign [Reference.refersTo] based on the
-     *   candidates (at the moment we only assign it if we have exactly one candidate). In the
-     *   second case, we are finished and let [handleCall] take care of the rest once the EOG
-     *   reaches the appropriate [Call] (which should
-     *   actually be just be the next EOG node).
+     *   most likely points to a [Variable]) or if we are part of a [Call.callee]. In the first
+     *   case, we can directly assign [Reference.refersTo] based on the candidates (at the moment we
+     *   only assign it if we have exactly one candidate). In the second case, we are finished and
+     *   let [handleCall] take care of the rest once the EOG reaches the appropriate [Call] (which
+     *   should actually be just be the next EOG node).
      */
     protected open fun handleReference(ref: Reference) {
         val language = ref.language
@@ -338,13 +326,12 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * This function handles resolving of a [MemberAccess]
-     * in the [ScopeManager.currentRecord]. This works similar to [handleReference]. First, we set
-     * the [MemberAccess.candidates] based on [resolveMemberByName], which internally calls
-     * [ScopeManager.lookupSymbolByName] based on the current class and its parent classes. Then, if
-     * we resolve a [MemberCall], we abort (and later pick
-     * up resolving in [handleCall]). In case of a field access, we set the [MemberAccess.refersTo]
-     * based on [Language.bestViableReferenceCandidate].
+     * This function handles resolving of a [MemberAccess] in the [ScopeManager.currentRecord]. This
+     * works similar to [handleReference]. First, we set the [MemberAccess.candidates] based on
+     * [resolveMemberByName], which internally calls [ScopeManager.lookupSymbolByName] based on the
+     * current class and its parent classes. Then, if we resolve a [MemberCall], we abort (and later
+     * pick up resolving in [handleCall]). In case of a field access, we set the
+     * [MemberAccess.refersTo] based on [Language.bestViableReferenceCandidate].
      */
     protected open fun handleMemberAccess(current: MemberAccess) {
         // Some locals for easier smart casting
@@ -737,8 +724,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
          *
          * @param templateParams of the [Variable]/[New]
          * @param constructExpression duplicate TemplateParameters (implicit) to preserve AST, as
-         *   [Construction] uses AST as well as the
-         *   [Variable]/[New]
+         *   [Construction] uses AST as well as the [Variable]/[New]
          */
         fun addImplicitTemplateParametersToCall(
             templateParams: List<Node>,

@@ -58,8 +58,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         var maxComplexity: Int? = null,
         /**
          * This specifies the maximum time (in ms) we want to spend analyzing a single
-         * [EOGStarterHolder]. If the time is exceeded, we skip the
-         * function (or whatever is starting the EOG). If `null`, no time limit is enforced.
+         * [EOGStarterHolder]. If the time is exceeded, we skip the function (or whatever is
+         * starting the EOG). If `null`, no time limit is enforced.
          */
         var timeout: Long? = null,
     ) : PassConfiguration()
@@ -240,10 +240,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     }
 
     /**
-     * Computes the previous write access of [currentEdge].end if it is a
-     * [Reference] or [ValueDeclaration] based on the
-     * given [state] (which maps all variables to its last write instruction). It also updates the
-     * [state] if [currentEdge].end performs a write-operation to a variable.
+     * Computes the previous write access of [currentEdge].end if it is a [Reference] or
+     * [ValueDeclaration] based on the given [state] (which maps all variables to its last write
+     * instruction). It also updates the [state] if [currentEdge].end performs a write-operation to
+     * a variable.
      *
      * It further determines unnecessary implicit return statement which are added by some frontends
      * even if every path reaching this point already contains a return statement.

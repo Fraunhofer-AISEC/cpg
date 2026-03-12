@@ -290,9 +290,9 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Joins the [nodes] with a [BinaryOperator] with the
-     * [operatorCode]. Nests the whole thing, where the first element in [nodes] is the lhs of the
-     * root of the tree of binary operators. The last operands are further down the tree.
+     * Joins the [nodes] with a [BinaryOperator] with the [operatorCode]. Nests the whole thing,
+     * where the first element in [nodes] is the lhs of the root of the tree of binary operators.
+     * The last operands are further down the tree.
      */
     internal fun joinListWithBinOp(
         operatorCode: String,
