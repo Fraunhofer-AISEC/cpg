@@ -34,14 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.Construction
-import de.fraunhofer.aisec.cpg.graph.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
-import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
-import de.fraunhofer.aisec.cpg.graph.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.expressions.TypeExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.expressions.operatorCallFromDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -63,34 +56,34 @@ import org.slf4j.LoggerFactory
 /**
  * Creates new connections between the place where a variable is declared and where it is used.
  *
- * A field access is modeled with a [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess]. After
+ * A field access is modeled with a [MemberAccess]. After
  * AST building, its base and member references are set to
- * [de.fraunhofer.aisec.cpg.graph.expressions.Reference] stubs. This pass resolves those references
+ * [Reference] stubs. This pass resolves those references
  * and makes the member point to the appropriate [Field] and the base to the "this" [Field] of the
  * containing class. It is also capable of resolving references to fields that are inherited from a
  * superclass and thus not declared in the actual base class. When base or member declarations are
  * not found in the graph, a new "inferred" [Field] is being created that is then used to collect
- * all usages to the same unknown declaration. [de.fraunhofer.aisec.cpg.graph.expressions.Reference]
+ * all usages to the same unknown declaration. [Reference]
  * stubs are removed from the graph after being resolved.
  *
  * Accessing a local variable is modeled directly with a
- * [de.fraunhofer.aisec.cpg.graph.expressions.Reference]. This step of the pass doesn't remove the
- * [de.fraunhofer.aisec.cpg.graph.expressions.Reference] nodes like in the field usage case but
+ * [Reference]. This step of the pass doesn't remove the
+ * [Reference] nodes like in the field usage case but
  * rather makes their "refersTo" point to the appropriate [ValueDeclaration].
  *
- * Resolves [de.fraunhofer.aisec.cpg.graph.expressions.Call] and
- * [de.fraunhofer.aisec.cpg.graph.expressions.New] targets.
+ * Resolves [Call] and
+ * [New] targets.
  *
- * A [de.fraunhofer.aisec.cpg.graph.expressions.Call] specifies the method that wants to be called
- * via [de.fraunhofer.aisec.cpg.graph.expressions.Call.name]. The call target is a method of the
+ * A [Call] specifies the method that wants to be called
+ * via [Call.name]. The call target is a method of the
  * same class the caller belongs to, so the name is resolved to the appropriate [Method]. This pass
  * also takes into consideration that a method might not be present in the current class, but rather
  * has its implementation in a superclass, and sets the pointer accordingly.
  *
- * Constructor calls with [de.fraunhofer.aisec.cpg.graph.expressions.Construction] are resolved in
- * such a way that their [de.fraunhofer.aisec.cpg.graph.expressions.Construction.instantiates]
+ * Constructor calls with [Construction] are resolved in
+ * such a way that their [Construction.instantiates]
  * points to the correct [Record]. Additionally, the
- * [de.fraunhofer.aisec.cpg.graph.expressions.Construction.constructor] is set to the according
+ * [Construction.constructor] is set to the according
  * [Constructor].
  *
  * This pass should NOT use any DFG edges because they are computed / adjusted in a later stage.
@@ -212,28 +205,28 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     /**
      * This function handles symbol resolving for a
-     * [de.fraunhofer.aisec.cpg.graph.expressions.Reference]. After a successful lookup of the
-     * symbol contained in [de.fraunhofer.aisec.cpg.graph.expressions.Reference.name], the property
-     * [de.fraunhofer.aisec.cpg.graph.expressions.Reference.refersTo] is set to the best (or only)
+     * [Reference]. After a successful lookup of the
+     * symbol contained in [Reference.name], the property
+     * [Reference.refersTo] is set to the best (or only)
      * candidate.
      *
      * On a high-level, it performs the following steps:
      * - Use [ScopeManager.lookupSymbolByName] to retrieve [Declaration] candidates based on the
-     *   [de.fraunhofer.aisec.cpg.graph.expressions.Reference.name]. This can either result in an
+     *   [Reference.name]. This can either result in an
      *   "unqualified" or "qualified" lookup, depending on the name.
      * - The results of the lookup are stored in
-     *   [de.fraunhofer.aisec.cpg.graph.expressions.Reference.candidates]. The purpose of this is
+     *   [Reference.candidates]. The purpose of this is
      *   two-fold. First, it is a good way to debug potential symbol resolution errors. Second, it
      *   is used by other functions, for example [handleCall], which then picks the best viable
      *   option out of the candidates (if the reference is part of the
-     *   [de.fraunhofer.aisec.cpg.graph.expressions.Call.callee]).
+     *   [Call.callee]).
      * - In the next step, we need to decide whether we are resolving a standalone reference (which
      *   most likely points to a [Variable]) or if we are part of a
-     *   [de.fraunhofer.aisec.cpg.graph.expressions.Call.callee]. In the first case, we can directly
-     *   assign [de.fraunhofer.aisec.cpg.graph.expressions.Reference.refersTo] based on the
+     *   [Call.callee]. In the first case, we can directly
+     *   assign [Reference.refersTo] based on the
      *   candidates (at the moment we only assign it if we have exactly one candidate). In the
      *   second case, we are finished and let [handleCall] take care of the rest once the EOG
-     *   reaches the appropriate [de.fraunhofer.aisec.cpg.graph.expressions.Call] (which should
+     *   reaches the appropriate [Call] (which should
      *   actually be just be the next EOG node).
      */
     protected open fun handleReference(ref: Reference) {
@@ -345,11 +338,11 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * This function handles resolving of a [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess]
+     * This function handles resolving of a [MemberAccess]
      * in the [ScopeManager.currentRecord]. This works similar to [handleReference]. First, we set
      * the [MemberAccess.candidates] based on [resolveMemberByName], which internally calls
      * [ScopeManager.lookupSymbolByName] based on the current class and its parent classes. Then, if
-     * we resolve a [de.fraunhofer.aisec.cpg.graph.expressions.MemberCall], we abort (and later pick
+     * we resolve a [MemberCall], we abort (and later pick
      * up resolving in [handleCall]). In case of a field access, we set the [MemberAccess.refersTo]
      * based on [Language.bestViableReferenceCandidate].
      */
@@ -599,7 +592,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * [HasOperatorOverloading.overloadedOperatorNames].
      *
      * Internally, it takes the result of [resolveOperator] and if successful, replaces the node
-     * with the resolved [de.fraunhofer.aisec.cpg.graph.expressions.OperatorCall].
+     * with the resolved [OperatorCall].
      */
     protected open fun handleOverloadedOperator(op: HasOverloadedOperation) {
         val result = resolveOperator(op)
@@ -742,10 +735,10 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         /**
          * Adds implicit duplicates of the TemplateParams to the implicit Construction
          *
-         * @param templateParams of the [Variable]/[de.fraunhofer.aisec.cpg.graph.expressions.New]
+         * @param templateParams of the [Variable]/[New]
          * @param constructExpression duplicate TemplateParameters (implicit) to preserve AST, as
          *   [Construction] uses AST as well as the
-         *   [Variable]/[de.fraunhofer.aisec.cpg.graph.expressions.New]
+         *   [Variable]/[New]
          */
         fun addImplicitTemplateParametersToCall(
             templateParams: List<Node>,

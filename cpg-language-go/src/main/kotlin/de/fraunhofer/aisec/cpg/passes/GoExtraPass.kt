@@ -88,8 +88,8 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * ## Adjust Names of Keys in Key Value Expressions to FQN
  *
  * This pass also adjusts the names of keys in a
- * [de.fraunhofer.aisec.cpg.graph.expressions.KeyValue], which is part of an
- * [de.fraunhofer.aisec.cpg.graph.expressions.InitializerList] to a fully-qualified name that
+ * [KeyValue], which is part of an
+ * [InitializerList] to a fully-qualified name that
  * contains the name of the [ObjectType] that the expression is creating. This way we can resolve
  * the static references to the field to the actual field.
  *
@@ -240,7 +240,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * handleInitializerList changes the references of keys in a
-     * [de.fraunhofer.aisec.cpg.graph.expressions.KeyValue] to include the object it is creating as
+     * [KeyValue] to include the object it is creating as
      * a parent name.
      */
     private fun handleInitializerList(node: InitializerList) {

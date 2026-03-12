@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Range
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
@@ -372,7 +373,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
     /**
      * This function handles an ast.SliceExpr, which is an extended version of ast.IndexExpr. We are
      * modeling this as a combination of a [Subscription] that contains a
-     * [de.fraunhofer.aisec.cpg.graph.expressions.Range] as its subscriptExpression to share some
+     * [Range] as its subscriptExpression to share some
      * code between this and an index expression.
      */
     private fun handleSliceExpr(sliceExpr: GoStandardLibrary.Ast.SliceExpr): Subscription {

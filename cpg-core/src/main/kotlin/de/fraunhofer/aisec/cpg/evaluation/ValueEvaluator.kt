@@ -30,19 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
-import de.fraunhofer.aisec.cpg.graph.expressions.Assign
-import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.Cast
-import de.fraunhofer.aisec.cpg.graph.expressions.Conditional
-import de.fraunhofer.aisec.cpg.graph.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
-import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
-import de.fraunhofer.aisec.cpg.graph.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
-import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.Util
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -51,8 +39,8 @@ class CouldNotResolve
 
 /**
  * The value evaluator tries to evaluate the (constant) value of an
- * [de.fraunhofer.aisec.cpg.graph.expressions.Expression] basically by following DFG edges until we
- * reach a [de.fraunhofer.aisec.cpg.graph.expressions.Literal]. It also evaluates simple binary
+ * [Expression] basically by following DFG edges until we
+ * reach a [Literal]. It also evaluates simple binary
  * operations, such as arithmetic operations, as well as simple string concatenations.
  *
  * The result can be retrieved in two ways:
@@ -416,7 +404,7 @@ open class ValueEvaluator(
     /**
      * For arrays, we check whether we can actually access the contents of the array. This is
      * basically the case if the base of the subscript expression is a list of
-     * [de.fraunhofer.aisec.cpg.graph.expressions.KeyValue] s.
+     * [KeyValue] s.
      */
     protected fun handleSubscription(expr: Subscription, depth: Int): Any? {
         val array = (expr.arrayExpression as? Reference)?.refersTo as? Variable

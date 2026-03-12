@@ -80,7 +80,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
 
     /**
      * The index of this node, if it is stored in an
-     * [de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList].
+     * [EdgeList].
      */
     var index: Int? = null
 

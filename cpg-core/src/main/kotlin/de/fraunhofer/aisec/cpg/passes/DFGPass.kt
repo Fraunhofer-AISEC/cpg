@@ -130,7 +130,6 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is KeyValue -> handleKeyValue(node)
             is Lambda -> handleLambda(node)
             is UnaryOperator -> handleUnaryOperator(node)
-            // Statements
             is Synchronized -> handleSynchronized(node)
             is Try -> handleTry(node)
             is Label -> handleLabel(node)
@@ -138,7 +137,6 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is CatchClause -> handleCatchClause(node)
             is Break -> handleBreak(node)
             is Assert -> handleAssert(node)
-
             is Block -> handleBlock(node)
             is Return -> handleReturn(node)
             is ForEach -> handleForEach(node)
@@ -296,11 +294,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * as such.
      */
     protected fun handleBlock(node: Block) {
-        // We use the fact that one of the statements inside is used as an expression
-        var containsExpression = node.statements.any { it.usedAsExpression }
+        // If the Block is used as an Expression, we use all incoming EOG edges to find nodes we consider to be used as
+        // Expressions
         if (node.usedAsExpression) {
             // The actual data then comes from the last evaluated expressions in the execution order
-            // Sometimes this is
             node.prevEOG.forEach { node.prevDFGEdges += it }
         }
     }
@@ -613,9 +610,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Helper function to connect an expression as a data flow source and mark it as used in an
-     * expression. This is used for expressions that propagate their data flow value up when used as
-     * expressions.
+     * Helper function to connect an expression as a data flow source and mark it as used as an
+     * expression. This is used to propagate the information to the nodes that are now sources of a DFG and therefore are
+     * also handled as an expression. Because the DFG pass operates by traversing the AST downwards, setting this flag propagates
+     * this information far enough to connect all relevant nodes.
      */
     protected fun connectAsExpressionValue(target: Expression, source: Expression?) {
         source?.let {
@@ -625,7 +623,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Helper function to connect multiple expressions as data flow sources and mark them as used in
+     * Helper function to connect multiple expressions as data flow sources and mark them as used as
      * expressions.
      */
     protected fun connectAsExpressionValues(target: Expression, sources: Iterable<Expression>) {

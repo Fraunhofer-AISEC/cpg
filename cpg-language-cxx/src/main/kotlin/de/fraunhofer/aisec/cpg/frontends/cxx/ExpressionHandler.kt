@@ -29,19 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.Conditional
-import de.fraunhofer.aisec.cpg.graph.expressions.Construction
-import de.fraunhofer.aisec.cpg.graph.expressions.Delete
-import de.fraunhofer.aisec.cpg.graph.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.expressions.ExpressionList
-import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
-import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
-import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.expressions.TypeReference
-import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -104,8 +92,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
      * This handles a [CPPASTSimpleTypeConstructorExpression], which handles all cases of
      * [Explicit type conversion](https://en.cppreference.com/w/cpp/language/explicit_cast).
      * Depending on the case, we either handle this as a
-     * [de.fraunhofer.aisec.cpg.graph.expressions.Cast] or a
-     * [de.fraunhofer.aisec.cpg.graph.expressions.Construction].
+     * [Cast] or a [Construction].
      */
     private fun handleSimpleTypeConstructorExpression(
         node: CPPASTSimpleTypeConstructorExpression
@@ -356,7 +343,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     /**
      * Translates a C/C++
      * [member access](https://en.cppreference.com/w/cpp/language/operator_member_access) into a
-     * [de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess].
+     * [MemberAccess].
      */
     private fun handleFieldReference(ctx: IASTFieldReference): Expression {
         val base = handle(ctx.fieldOwner) ?: return newProblemExpression("base of field is null")
