@@ -132,4 +132,33 @@ public static class Library
     {
         return Nodes[handlePtr].GetLocation().GetLineSpan().EndLinePosition.Character + 1;
     }
+    [UnmanagedCallersOnly(EntryPoint = "GetFieldDeclarationSyntax")]
+    public static IntPtr GetFieldDeclarationSyntax(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((FieldDeclarationSyntax)Nodes[handlePtr]).ToString());
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetFieldDeclarationSyntaxVariableCount")]
+    public static int GetFieldDeclarationSyntaxVariableCount(IntPtr handlePtr)
+    {
+        return ((FieldDeclarationSyntax)Nodes[handlePtr]).Declaration.Variables.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetVariableDeclaratorSyntax")]
+    public static IntPtr GetVariableDeclaratorSyntax(IntPtr handlePtr, int index)
+    {
+        return Register(((FieldDeclarationSyntax)Nodes[handlePtr]).Declaration.Variables[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetVariableDeclarationSyntax")]
+    public static IntPtr GetVariableDeclarationSyntax(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((VariableDeclarationSyntax)Nodes[handlePtr]).ToString());
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetVariableDeclaratorSyntaxString")]
+    public static IntPtr GetVariableDeclaratorSyntaxString(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((VariableDeclaratorSyntax)Nodes[handlePtr]).Identifier.ToString());
+    }
 }
