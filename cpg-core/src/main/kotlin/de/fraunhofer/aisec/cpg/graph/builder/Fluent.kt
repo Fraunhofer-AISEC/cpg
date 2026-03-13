@@ -36,9 +36,8 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -335,7 +334,7 @@ fun LanguageFrontend<*, *>.returnStmt(init: Return.() -> Unit): Return {
     return node
 }
 
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.subscriptExpr(init: (Subscription.() -> Unit)? = null): Subscription {
     val node = newSubscription().apply { this.location = getCallerFileAndLine() }
 
@@ -351,7 +350,7 @@ fun LanguageFrontend<*, *>.subscriptExpr(init: (Subscription.() -> Unit)? = null
     return node
 }
 
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.listComp(
     init: (CollectionComprehension.() -> Unit)? = null
 ): CollectionComprehension {
@@ -371,7 +370,7 @@ fun LanguageFrontend<*, *>.listComp(
     return node
 }
 
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.compExpr(init: (Comprehension.() -> Unit)? = null): Comprehension {
     val node = newComprehension().apply { this.location = getCallerFileAndLine() }
 
@@ -477,7 +476,7 @@ fun LanguageFrontend<*, *>.problemDecl(
  * [Reference] or [MemberAccess] and sets it as the [Call.callee]. The [init] block can be used to
  * create further sub-nodes as well as configuring the created node itself.
  */
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.call(
     name: CharSequence,
     isStatic: Boolean = false,
@@ -526,7 +525,7 @@ fun LanguageFrontend<*, *>.call(
  * [Reference] or [MemberAccess] and sets it as the [Call.callee]. The [init] block can be used to
  * create further sub-nodes as well as configuring the created node itself.
  */
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.memberCall(
     localName: CharSequence,
     base: Expression,
@@ -560,7 +559,7 @@ fun LanguageFrontend<*, *>.memberCall(
  * [ArgumentHolder], the function [ArgumentHolder.addArgument] is invoked. The [init] block can be
  * used to create further sub-nodes as well as configuring the created node itself.
  */
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.construct(
     name: CharSequence,
     init: (Construction.() -> Unit)? = null,
@@ -581,7 +580,7 @@ fun LanguageFrontend<*, *>.construct(
     return node
 }
 
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.cast(castType: Type, init: (Cast.() -> Unit)? = null): Cast {
     val node = newCast().apply { this.location = getCallerFileAndLine() }
     node.castType = castType
@@ -596,7 +595,7 @@ fun LanguageFrontend<*, *>.cast(castType: Type, init: (Cast.() -> Unit)? = null)
     return node
 }
 
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.new(init: (New.() -> Unit)? = null): New {
     val node = newNew().apply { this.location = getCallerFileAndLine() }
     if (init != null) init(node)
@@ -683,7 +682,6 @@ fun LanguageFrontend<*, *>.forStmt(init: For.() -> Unit): For {
  */
 context(stmt: For)
 fun LanguageFrontend<*, *>.forCondition(init: For.() -> Expression): Expression {
-
     var node = init(stmt)
     stmt.condition = node
 
@@ -695,7 +693,7 @@ fun LanguageFrontend<*, *>.forCondition(init: For.() -> Expression): Expression 
  * block can be used to create further sub-nodes as well as configuring the created node itself.
  */
 context(stmt: For)
-fun LanguageFrontend<*, *>.forInitializerExpr(init: For.() -> Statement): Statement {
+fun LanguageFrontend<*, *>.forInitializerExpr(init: For.() -> Expression): Expression {
     val node = init(stmt)
     stmt.initializerStatement = node
     return node
@@ -726,7 +724,7 @@ fun LanguageFrontend<*, *>.forInitializer(
  * itself.
  */
 context(stmt: For)
-fun LanguageFrontend<*, *>.forIteration(init: For.() -> Statement): Statement {
+fun LanguageFrontend<*, *>.forIteration(init: For.() -> Expression): Expression {
     val node = init(stmt)
     stmt.iterationStatement = node
 
@@ -865,7 +863,7 @@ fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
  * itself.
  */
 context(stmt: ForEach)
-fun LanguageFrontend<*, *>.variable(init: ForEach.() -> Statement): Statement {
+fun LanguageFrontend<*, *>.variable(init: ForEach.() -> Expression): Expression {
     val variable = init(stmt)
     stmt.variable = variable
     return variable
@@ -877,7 +875,7 @@ fun LanguageFrontend<*, *>.variable(init: ForEach.() -> Statement): Statement {
  * itself.
  */
 context(stmt: ForEach)
-fun LanguageFrontend<*, *>.iterable(init: ForEach.() -> Statement): Statement {
+fun LanguageFrontend<*, *>.iterable(init: ForEach.() -> Expression): Expression {
     val iterable = init(stmt)
     stmt.iterable = iterable
     return iterable
@@ -941,8 +939,8 @@ fun LanguageFrontend<*, *>.loopElseStmt(needsScope: Boolean = true, init: Block.
  * Creates a new [Label] in the Fluent Node DSL and adds it to the nearest enclosing
  * [StatementHolder].
  */
-context(holder: Holder<out Statement>)
-fun LanguageFrontend<*, *>.label(label: String, init: (Label.() -> Statement)? = null): Label {
+context(holder: Holder<out Expression>)
+fun LanguageFrontend<*, *>.label(label: String, init: (Label.() -> Expression)? = null): Label {
     val node = newLabel().apply { this.location = getCallerFileAndLine() }
     node.label = label
     if (init != null) {
@@ -975,7 +973,7 @@ fun LanguageFrontend<*, *>.continueStmt(label: String? = null): Continue {
  * Creates a new [Break] in the Fluent Node DSL and adds it to the nearest enclosing [Holder], but
  * only if it is an [StatementHolder].
  */
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.breakStmt(label: String? = null): Break {
     val node = newBreak().apply { this.location = getCallerFileAndLine() }
     node.label = label
@@ -992,7 +990,7 @@ fun LanguageFrontend<*, *>.breakStmt(label: String? = null): Break {
  * Creates a new [Case] in the Fluent Node DSL and adds it to the nearest enclosing [Holder], but
  * only if it is an [StatementHolder].
  */
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.case(caseExpression: Expression? = null): Case {
     val node = newCase().apply { this.location = getCallerFileAndLine() }
     node.caseExpression = caseExpression
@@ -1009,7 +1007,7 @@ fun LanguageFrontend<*, *>.case(caseExpression: Expression? = null): Case {
  * Creates a new [Default] in the Fluent Node DSL and adds it to the nearest enclosing
  * [StatementHolder].
  */
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.default(): Default {
     val node = newDefault().apply { this.location = getCallerFileAndLine() }
 
@@ -1025,7 +1023,7 @@ fun LanguageFrontend<*, *>.default(): Default {
  * Creates a new [Literal] in the Fluent Node DSL and invokes [ArgumentHolder.addArgument] of the
  * nearest enclosing [Holder], but only if it is an [ArgumentHolder].
  */
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun <N> LanguageFrontend<*, *>.literal(value: N, type: Type = unknownType()): Literal<N> {
     val node = newLiteral(value, type).apply { this.location = getCallerFileAndLine() }
 
@@ -1041,7 +1039,7 @@ fun <N> LanguageFrontend<*, *>.literal(value: N, type: Type = unknownType()): Li
  * Creates a new [InitializerList] in the Fluent Node DSL and invokes [ArgumentHolder.addArgument]
  * of the nearest enclosing [Holder], but only if it is an [ArgumentHolder].
  */
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.ile(
     targetType: Type = unknownType(),
     init: (InitializerList.() -> Unit)? = null,
@@ -1064,7 +1062,7 @@ fun LanguageFrontend<*, *>.ile(
  * Creates a new [Reference] in the Fluent Node DSL and invokes [ArgumentHolder.addArgument] of the
  * nearest enclosing [Holder], but only if it is an [ArgumentHolder].
  */
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.ref(
     name: CharSequence,
     type: Type = unknownType(),
@@ -1112,7 +1110,7 @@ fun Expression.line(i: Int): Expression {
  * the nearest enclosing [Holder], but only if it is an [ArgumentHolder]. If the [name] doesn't
  * already contain a fqn, we add an implicit "this" as base.
  */
-context(holder: Holder<out Statement>)
+context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.member(
     name: CharSequence,
     base: Expression? = null,
@@ -1331,7 +1329,7 @@ fun reference(input: Expression): UnaryOperator {
  * Creates a new [UnaryOperator] with a `--` postfix [UnaryOperator.operatorCode] in the Fluent Node
  * DSL and adds it to the nearest enclosing [StatementHolder].
  */
-context(frontend: LanguageFrontend<*, *>, holder: Holder<out Statement>)
+context(frontend: LanguageFrontend<*, *>, holder: Holder<out Expression>)
 operator fun Expression.dec(): UnaryOperator {
     val node =
         frontend.newUnaryOperator("--", true, false).apply {
@@ -1350,7 +1348,7 @@ operator fun Expression.dec(): UnaryOperator {
  * Creates a new [UnaryOperator] with a `++` postfix [UnaryOperator.operatorCode] in the Fluent Node
  * DSL and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
-context(frontend: LanguageFrontend<*, *>, holder: Holder<out Statement>)
+context(frontend: LanguageFrontend<*, *>, holder: Holder<out Expression>)
 operator fun Expression.inc(): UnaryOperator {
     val node =
         frontend.newUnaryOperator("++", true, false).apply {
@@ -1369,7 +1367,7 @@ operator fun Expression.inc(): UnaryOperator {
  * Creates a new [UnaryOperator] with a `--` prefix [UnaryOperator.operatorCode] in the Fluent Node
  * DSL and adds it to the nearest enclosing [StatementHolder].
  */
-context(frontend: LanguageFrontend<*, *>, holder: Holder<out Statement>)
+context(frontend: LanguageFrontend<*, *>, holder: Holder<out Expression>)
 fun Expression.decPrefix(): UnaryOperator {
     val node =
         frontend.newUnaryOperator("--", false, true).apply {
@@ -1388,7 +1386,7 @@ fun Expression.decPrefix(): UnaryOperator {
  * Creates a new [UnaryOperator] with a `++` prefix [UnaryOperator.operatorCode] in the Fluent Node
  * DSL and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
-context(frontend: LanguageFrontend<*, *>, holder: Holder<out Statement>)
+context(frontend: LanguageFrontend<*, *>, holder: Holder<out Expression>)
 fun Expression.incPrefix(): UnaryOperator {
     val node =
         frontend.newUnaryOperator("++", false, true).apply {
