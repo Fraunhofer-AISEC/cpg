@@ -104,8 +104,9 @@ fun runSseMcpServerUsingKtorPlugin(
     server: Server,
     wait: Boolean = false,
     host: String = "0.0.0.0",
-) {
-    embeddedServer(CIO, host = host, port = port) { mcp { server } }.start(wait = wait)
+): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
+    return embeddedServer(CIO, host = host, port = port) { mcp { server } }
+        .apply { start(wait = wait) }
 }
 
 /**
@@ -121,10 +122,10 @@ fun runHttpMcpServerUsingKtorPlugin(
     host: String = "0.0.0.0",
     server: Server,
     wait: Boolean = false,
-) {
-    embeddedServer(factory = CIO, host = host, port = port) {
+): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
+    return embeddedServer(factory = CIO, host = host, port = port) {
             install(ContentNegotiation) { json() }
             mcpStreamableHttp { server }
         }
-        .start(wait = wait)
+        .apply { start(wait = wait) }
 }

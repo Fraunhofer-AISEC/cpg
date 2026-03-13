@@ -76,6 +76,11 @@ dependencies {
     // Command line interface support
     implementation(libs.clikt)
 
+    integrationTestImplementation(libs.ktor.server.cio)
+    integrationTestImplementation(libs.ktor.server.test.host)
+    integrationTestImplementation(libs.mcp.client)
+    integrationTestImplementation(libs.ktor.client.cio)
+    integrationTestImplementation(libs.ktor.client.content.negotiation)
     integrationTestImplementation(libs.kotlin.reflect)
     implementation(libs.reflections)
     integrationTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
