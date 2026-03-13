@@ -180,6 +180,26 @@ class ChatClient(
         }
     }
 
+    /**
+     * Parse a list of text content items from an MCP tool result into a [JsonElement]. JSON strings
+     * are parsed into their structured form; plain text is wrapped as [JsonPrimitive]. A single
+     * item is returned directly; multiple items are wrapped in a [JsonArray].
+     */
+    internal fun parseToolResultContent(contentTexts: List<String>): JsonElement {
+        if (contentTexts.isEmpty()) {
+            return JsonArray(emptyList())
+        }
+        val parsedItems =
+            contentTexts.map { text ->
+                try {
+                    Json.parseToJsonElement(text)
+                } catch (_: Exception) {
+                    JsonPrimitive(text)
+                }
+            }
+        return if (parsedItems.size == 1) parsedItems[0] else JsonArray(parsedItems)
+    }
+
     /** Execute a tool call and emit result to frontend */
     private suspend fun executeToolCall(
         toolCall: ToolCall,
@@ -192,20 +212,7 @@ class ChatClient(
             val contentTexts = result.content.mapNotNull { (it as? TextContent)?.text }
             val resultText = contentTexts.joinToString("\n")
 
-            val content =
-                if (contentTexts.isEmpty()) {
-                    JsonArray(emptyList())
-                } else {
-                    val parsedItems =
-                        contentTexts.map { text ->
-                            try {
-                                Json.parseToJsonElement(text)
-                            } catch (_: Exception) {
-                                JsonPrimitive(text)
-                            }
-                        }
-                    if (parsedItems.size == 1) parsedItems[0] else JsonArray(parsedItems)
-                }
+            val content = parseToolResultContent(contentTexts)
             val event = Events.toolResult(toolCall.name, content)
             log.debug("Emitting tool result event: {}", event)
             emit(event)
