@@ -31,8 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.helpers.LatticeElement
 import de.fraunhofer.aisec.cpg.helpers.PowersetLattice
@@ -56,13 +55,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     class Configuration(
         /**
          * This specifies the maximum complexity (as calculated per
-         * [Statement.cyclomaticComplexity]) a [Function] must have in order to be considered.
+         * [Expression.cyclomaticComplexity]) a [Function] must have in order to be considered.
          */
         var maxComplexity: Int? = null,
         /**
          * This specifies the maximum time (in ms) we want to spend analyzing a single
-         * [de.fraunhofer.aisec.cpg.graph.EOGStarterHolder]. If the time is exceeded, we skip the
-         * function (or whatever is starting the EOG). If `null`, no time limit is enforced.
+         * [EOGStarterHolder]. If the time is exceeded, we skip the function (or whatever is
+         * starting the EOG). If `null`, no time limit is enforced.
          */
         var timeout: Long? = null,
         val parallel: Boolean = true,

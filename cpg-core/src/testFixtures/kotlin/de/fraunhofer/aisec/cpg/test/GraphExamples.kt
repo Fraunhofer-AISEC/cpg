@@ -251,6 +251,94 @@ class GraphExamples {
                 }
             }
 
+        fun getStatementsAsExpressions(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage<TestLanguage>()
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("statementsAsExpressions.py") {
+                        record("someRecord") {
+                            method("func") {
+                                body {
+                                    forEachStmt {
+                                        usedAsExpression = true
+                                        iterable { call("listOf") }
+                                        variable { declare { variable("a") } }
+                                        loopBody { call("inBody") }
+                                        loopElseStmt { call("inElse") }
+                                    }
+                                    declare {
+                                        variable("a") {
+                                            literal(1, t("int"))
+                                                .plus(
+                                                    forStmt {
+                                                        usedAsExpression = true
+                                                        loopBody { call("bodyCall") }
+                                                        forInitializer {
+                                                            declareVar("a", t("int")) {
+                                                                literal(0, t("int"))
+                                                            }
+                                                        }
+                                                        forCondition { literal(true, t("bool")) }
+                                                        forIteration { ref("a").inc() }
+                                                        loopElseStmt { call("elseCall") }
+                                                    }
+                                                )
+                                        }
+                                    }
+                                    doStmt {
+                                        usedAsExpression = true
+                                        doCondition { literal(true, t("bool")) }
+                                        loopBody { call("bodyCall") }
+                                        loopElseStmt { call("elseCall") }
+                                    }
+                                    label("lab") {
+                                        usedAsExpression = true
+                                        whileStmt {
+                                            usedAsExpression = true
+                                            whileCondition { literal(true, t("bool")) }
+                                            loopBody { call("bodyCall") }
+                                            loopElseStmt { call("elseCall") }
+                                        }
+                                    }
+
+                                    ifStmt {
+                                        usedAsExpression = true
+                                        condition { ref("param") gt literal(7, t("int")) }
+                                        thenStmt { call("thenCall") }
+                                        elseStmt { call("elseCall") }
+                                    }
+
+                                    switchStmt(ref("someref")) {
+                                        usedAsExpression = true
+                                        switchBody {
+                                            case(ref("True"))
+                                            ref("a") assign { ref("a") * literal(2, t("int")) }
+                                            ref("c") assign literal(-2, t("int"))
+                                            breakStmt()
+                                            case(ref("False"))
+                                            ref("a") assign literal(290, t("int"))
+                                            ref("d") assign literal(-2, t("int"))
+                                            ref("b") assign literal(-2, t("int"))
+                                            breakStmt()
+                                        }
+                                    }
+                                    declare {
+                                        usedAsExpression = true
+                                        variable("a") { literal(42, t("int")) }
+                                    }
+                                    // Todo
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun getNestedComprehensions(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()

@@ -30,9 +30,8 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.ARRAY
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.POINTER
@@ -374,7 +373,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             val statements = function?.statements
             assertNotNull(statements)
             statements.forEach(
-                Consumer { node: Statement ->
+                Consumer { node: Expression ->
                     log.debug("{}", node)
                     assertTrue(
                         node is DeclarationStatement ||
@@ -997,7 +996,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         }
     }
 
-    private val Function.statements: List<Statement>?
+    private val Function.statements: List<Expression>?
         get() {
             return (this.body as? Block)?.statements
         }

@@ -32,11 +32,11 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Invokes
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
+import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.DynamicType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.buildSignature
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
@@ -60,7 +60,7 @@ open class Function :
     EOGStarterHolder,
     HasType.TypeObserver,
     HasSecondaryTypeEdge {
-    @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Expression>()
     /** The function body. Usually a [Block]. */
     var body by unwrapping(Function::bodyEdge)
 
@@ -286,47 +286,49 @@ open class Function :
 }
 
 /** This is a very basic implementation of Cyclomatic Complexity. */
-fun Statement.cyclomaticComplexity(depth: Int = 1): Long {
-    var i: Long = 0
-    for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {
-        when (stmt) {
-            is ForEach,
-            is For -> {
-                // add the depth and include the children
-                i += depth * ((stmt.statement?.cyclomaticComplexity(depth + 1) ?: 0) + 1)
-            }
-            is IfElse -> {
-                // add the depth for each branch (and include the children)
-                stmt.thenStatement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
-                stmt.elseStatement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
-            }
-            is Switch -> {
-                // forward it to the block containing the case statements
-                stmt.statement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
-            }
-            is Case -> {
-                // add the depth for each branch (and include the children)
-                stmt.caseExpression?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
-            }
-            is DoWhile,
-            is While -> {
-                // add one for the do statement (and include the children)
-                i += depth + ((stmt.statement?.cyclomaticComplexity(depth + 1) ?: 0))
-            }
-            is Goto -> {
-                // Analyze where the goto jumps to. Then go through the target block and fetch its
-                // complexity
-                /*                stmt.nextEOG.forEach { next ->
-                    i += next.firstParentOrNull<Block>()?.cyclomaticComplexity(depth + 1) ?: 0
-                }*/
-                // add the depth
-                i += depth
-            }
-            is StatementHolder -> {
-                i += depth + stmt.cyclomaticComplexity(depth + 1)
+val Expression.cyclomaticComplexity: Int
+    get() {
+        var i = 0
+        for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {
+            when (stmt) {
+                is ForEach -> {
+                    // add one and include the children
+                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
+                }
+                is For -> {
+                    // add one and include the children
+                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
+                }
+                is IfElse -> {
+                    // add one for each branch (and include the children)
+                    stmt.thenStatement?.let { i += it.cyclomaticComplexity + 1 }
+                    stmt.elseStatement?.let { i += it.cyclomaticComplexity + 1 }
+                }
+                is Switch -> {
+                    // forward it to the block containing the case statements
+                    stmt.statement?.let { i += it.cyclomaticComplexity }
+                }
+                is Case -> {
+                    // add one for each branch (and include the children)
+                    stmt.caseExpression?.let { i += it.cyclomaticComplexity }
+                }
+                is DoWhile -> {
+                    // add one for the do statement (and include the children)
+                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
+                }
+                is While -> {
+                    // add one for the while statement (and include the children)
+                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
+                }
+                is Goto -> {
+                    // add one
+                    i++
+                }
+                is StatementHolder -> {
+                    i += stmt.cyclomaticComplexity
+                }
             }
         }
-    }
 
     return i
 }

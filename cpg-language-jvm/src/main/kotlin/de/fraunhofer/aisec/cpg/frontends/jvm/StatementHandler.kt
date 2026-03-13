@@ -27,19 +27,19 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import kotlin.jvm.optionals.getOrNull
 import sootup.core.jimple.common.stmt.*
 import sootup.core.model.Body
 import sootup.core.util.printer.NormalStmtPrinter
 
 class StatementHandler(frontend: JVMLanguageFrontend) :
-    Handler<Statement?, Any, JVMLanguageFrontend>(::ProblemExpression, frontend) {
+    Handler<Expression?, Any, JVMLanguageFrontend>(::ProblemExpression, frontend) {
 
-    override fun handle(ctx: Any): Statement? {
+    override fun handle(ctx: Any): Expression? {
         try {
             return when (ctx) {
                 is Body -> handleBody(ctx)

@@ -30,11 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.DoWhile
-import de.fraunhofer.aisec.cpg.graph.statements.For
-import de.fraunhofer.aisec.cpg.graph.statements.IfElse
-import de.fraunhofer.aisec.cpg.graph.statements.Loop
-import de.fraunhofer.aisec.cpg.graph.statements.While
+import de.fraunhofer.aisec.cpg.graph.expressions.DoWhile
+import de.fraunhofer.aisec.cpg.graph.expressions.For
+import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
+import de.fraunhofer.aisec.cpg.graph.expressions.Loop
+import de.fraunhofer.aisec.cpg.graph.expressions.While
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
