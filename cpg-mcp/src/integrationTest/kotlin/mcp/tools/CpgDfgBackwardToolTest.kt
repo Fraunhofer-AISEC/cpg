@@ -25,55 +25,61 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.tools
 
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgLlmAnalyzeTool
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addDfgBackwardTool
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCalls
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CallSummary
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.QueryTreeNode
 import de.fraunhofer.aisec.cpg.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
-import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.BeforeEach
 
-class CpgLlmAnalyzeToolTest {
+class CpgDfgBackwardToolTest {
     @BeforeEach
     fun setAnalysisResult() {
         val payload =
-            CpgAnalyzePayload(content = "def hello():\n    print('Hello World')", extension = "py")
+            CpgAnalyzePayload(
+                content = "def hello():\n    foo = bar\n    print(foo)",
+                extension = "py",
+            )
         runCpgAnalyze(payload, runPasses = true, cleanup = true)
     }
 
     @Test
-    fun cpgLlmAnalyzeNoPayload() =
-        withClient(registerTools = { addCpgLlmAnalyzeTool() }) { client ->
-            val result = client.callTool(name = "cpg_llm_analyze", arguments = emptyMap())
+    fun dfgBackwardToolTest() =
+        withClient(
+            registerTools = {
+                listCalls()
+                addDfgBackwardTool()
+            }
+        ) { client ->
+            val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
+            assertNotNull(callsResult)
+            assertTrue(callsResult.content.isNotEmpty(), "Should have call expressions")
 
-            val resultContent = result.content.firstOrNull()
-            assertIs<TextContent>(resultContent)
-            assertNotNull(resultContent.text, "Result content should not be null")
-            assertFalse(
-                "## Additional Context" in resultContent.text,
-                "Result content should not contain the section 'Additional Context'",
-            )
-        }
-
-    @Test
-    fun cpgLlmAnalyzeWithPayload() =
-        withClient(registerTools = { addCpgLlmAnalyzeTool() }) { client ->
-            val result =
-                client.callTool(
-                    name = "cpg_llm_analyze",
-                    arguments = mapOf("description" to "We have some additional context here."),
+            val callSummary =
+                Json.decodeFromString<CallSummary>(
+                    (callsResult.content.first() as TextContent).text
                 )
 
-            val resultContent = result.content.firstOrNull()
-            assertIs<TextContent>(resultContent)
-            assertNotNull(resultContent.text, "Result content should not be null")
-            assertTrue(
-                "## Additional Context" in resultContent.text,
-                "Result content should contain the section 'Additional Context'",
-            )
+            val result =
+                client.callTool(
+                    name = "cpg_dfg_backward",
+                    arguments = mapOf("id" to callSummary.id),
+                )
+            assertNotNull(result)
+            assertTrue(result.content.isNotEmpty())
+
+            val content = result.content.single()
+            assertIs<TextContent>(content)
+
+            val queryTreeNode = Json.decodeFromString<QueryTreeNode>(content.text)
+            assertNotNull(queryTreeNode)
         }
 }

@@ -1,0 +1,252 @@
+/*
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.codyze.console.ai.clients
+
+import de.fraunhofer.aisec.codyze.console.ai.ChatMessageJSON
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import io.ktor.utils.io.*
+import io.modelcontextprotocol.kotlin.sdk.types.Tool
+import kotlinx.serialization.json.*
+
+/**
+ * Gemini API client using the `streamGenerateContent` endpoint with SSE.
+ *
+ * @see <a
+ *   href="https://ai.google.dev/api/generate-content#v1beta.models.streamGenerateContent">Gemini
+ *   streamGenerateContent API</a>
+ */
+class GeminiClient(
+    private val httpClient: HttpClient,
+    private val model: String,
+    private val apiKey: String,
+    private val baseUrl: String,
+) : LlmClient {
+    override val modelName: String = model
+
+    override suspend fun sendPrompt(
+        userMessage: String,
+        conversationHistory: List<ChatMessageJSON>,
+        tools: List<Tool>,
+        toolCallHistory: List<List<ToolCallWithResult>>?,
+        onText: suspend (String) -> Unit,
+        onReasoning: suspend (String) -> Unit,
+    ): List<ToolCall> {
+        val toolCalls = mutableListOf<ToolCall>()
+
+        /*
+         * Gemini tool format:
+         * ```json
+         * {
+         *   "functionDeclarations": [{
+         *     "name": "...",
+         *     "description": "...",
+         *     "parameters": {
+         *       "type": "object",
+         *       "properties": { ... }
+         *     }
+         *   }]
+         * }
+         * ```
+         */
+        val geminiTools =
+            if (tools.isNotEmpty()) {
+                listOf(
+                    GeminiTools(
+                        functionDeclarations =
+                            tools.map { tool ->
+                                GeminiFunctionDef(
+                                    name = tool.name,
+                                    description = tool.description ?: "",
+                                    parameters =
+                                        buildJsonObject {
+                                            put("type", "object")
+                                            put(
+                                                "properties",
+                                                tool.inputSchema.properties ?: buildJsonObject {},
+                                            )
+                                        },
+                                )
+                            }
+                    )
+                )
+            } else null
+
+        /*
+         * Gemini contents (with agentic tool calling loop):
+         * ```json
+         * [
+         *   { "role": "user", "parts": [{ "text": "..." }] },
+         *   { "role": "model", "parts": [{
+         *       "functionCall": { "name": "...", "args": { ... } }
+         *   }]},
+         *   { "role": "user", "parts": [{
+         *       "functionResponse": { "name": "...", "response": { "result": "..." } }
+         *   }]}
+         * ]
+         * ```
+         */
+        val historyContents = buildList {
+            conversationHistory.dropLast(1).forEach { msg ->
+                if (msg.content.isNotBlank()) {
+                    val role = if (msg.role == "assistant") "model" else "user"
+                    add(GeminiContent(role = role, parts = listOf(GeminiPart(text = msg.content))))
+                }
+            }
+        }
+
+        val contents =
+            if (toolCallHistory != null) {
+                historyContents +
+                    listOf(
+                        GeminiContent(role = "user", parts = listOf(GeminiPart(text = userMessage)))
+                    ) +
+                    toolCallHistory.flatMap { roundtrip ->
+                        listOf(
+                            GeminiContent(
+                                role = "model",
+                                parts =
+                                    roundtrip.map { tool ->
+                                        GeminiPart(
+                                            functionCall =
+                                                GeminiFunctionCall(
+                                                    name = tool.call.name,
+                                                    args =
+                                                        Json.parseToJsonElement(tool.call.arguments)
+                                                            .jsonObject,
+                                                )
+                                        )
+                                    },
+                            ),
+                            GeminiContent(
+                                role = "user",
+                                parts =
+                                    roundtrip.map { tool ->
+                                        GeminiPart(
+                                            functionResponse =
+                                                GeminiFunctionResponse(
+                                                    name = tool.call.name,
+                                                    response =
+                                                        buildJsonObject {
+                                                            put("result", tool.result)
+                                                        },
+                                                )
+                                        )
+                                    },
+                            ),
+                        )
+                    }
+            } else {
+                historyContents +
+                    listOf(
+                        GeminiContent(role = "user", parts = listOf(GeminiPart(text = userMessage)))
+                    )
+            }
+
+        val request =
+            GeminiRequest(
+                systemInstruction = GeminiContent(parts = listOf(GeminiPart(text = SYSTEM_PROMPT))),
+                contents = contents,
+                tools = geminiTools,
+            )
+
+        httpClient
+            .preparePost("$baseUrl/models/$model:streamGenerateContent?alt=sse&key=$apiKey") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            .execute { response ->
+                if (response.status.value >= 400) {
+                    val errorBody = response.body<String>()
+                    onText("Gemini API error (${response.status}): $errorBody")
+                    return@execute
+                }
+
+                val channel = response.body<ByteReadChannel>()
+                handleStreamingResponse(channel, onText, toolCalls)
+            }
+
+        return toolCalls
+    }
+
+    /**
+     * Handles streaming response from Gemini. Unlike OpenAI, Gemini sends complete tool calls in a
+     * single chunk.
+     *
+     * ```json
+     * {
+     *   "candidates": [{
+     *     "content": {
+     *       "parts": [
+     *         { "text": "..." },
+     *         { "functionCall": { "name": "...", "args": { ... } } }
+     *       ]
+     *     }
+     *   }]
+     * }
+     * ```
+     *
+     * @see <a
+     *   href="https://ai.google.dev/api/generate-content#v1beta.GenerateContentResponse">Gemini
+     *   GenerateContentResponse</a>
+     */
+    private suspend fun handleStreamingResponse(
+        channel: ByteReadChannel,
+        onText: suspend (String) -> Unit,
+        toolCalls: MutableList<ToolCall>,
+    ) {
+        readSseStream(channel) { jsonStr ->
+            val chunk = Json.parseToJsonElement(jsonStr).jsonObject
+            val parts =
+                chunk["candidates"]
+                    ?.jsonArray
+                    ?.firstOrNull()
+                    ?.jsonObject
+                    ?.get("content")
+                    ?.jsonObject
+                    ?.get("parts")
+                    ?.jsonArray
+
+            parts?.forEach { part ->
+                val partJSON = part.jsonObject
+
+                partJSON["text"]?.jsonPrimitive?.contentOrNull?.let { text ->
+                    if (text.isNotEmpty()) onText(text)
+                }
+
+                partJSON["functionCall"]?.jsonObject?.let { functionCall ->
+                    val name = functionCall["name"]?.jsonPrimitive?.contentOrNull
+                    val args = functionCall["args"]?.jsonObject
+                    if (name != null) {
+                        toolCalls.add(ToolCall(name = name, arguments = args?.toString() ?: "{}"))
+                    }
+                }
+            }
+        }
+    }
+}

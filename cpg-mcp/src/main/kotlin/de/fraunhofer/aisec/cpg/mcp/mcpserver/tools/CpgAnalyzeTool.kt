@@ -69,9 +69,9 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgRunPassPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.PassInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.addTool
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toSchema
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toSummary
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
 import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
@@ -218,14 +218,12 @@ fun runCpgAnalyze(
     val variables = result.variables
     val callExpressions = result.calls
 
-    val nodeInfos = allNodes.map { node: Node -> node.toNodeInfo() }
-
     return CpgAnalysisResult(
         totalNodes = allNodes.size,
         functions = functions.size,
         variables = variables.size,
         callExpressions = callExpressions.size,
-        nodes = nodeInfos,
+        functionSummaries = functions.map { it.toSummary() },
     )
 }
 

@@ -90,7 +90,7 @@ class RunPassTest {
 
             // Ensure some known passes are present
             val texts = result.content.map { (it as TextContent).text }
-            val fqns = texts.map { Json.Default.decodeFromString<PassInfo>(it).fqn }
+            val fqns = texts.map { Json.decodeFromString<PassInfo>(it).fqn }
             assertTrue(fqns.contains("de.fraunhofer.aisec.cpg.passes.TypeResolver"))
             assertTrue(fqns.contains("de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass"))
         }
@@ -109,9 +109,13 @@ class RunPassTest {
                 )
             val text = (result.content.firstOrNull() as? TextContent)?.text
             assertNotNull(text)
-            val parsed = Json.Default.decodeFromString<CpgAnalysisResult>(text)
-            assertNotNull(parsed.nodes)
-            assertTrue(parsed.nodes.any { it.name.contains("hello") || it.name.contains("print") })
+            val parsed = Json.decodeFromString<CpgAnalysisResult>(text)
+            assertNotNull(parsed.functionSummaries)
+            assertTrue(
+                parsed.functionSummaries.any {
+                    it.name.contains("hello") || it.name.contains("print")
+                }
+            )
         }
 
     @Test

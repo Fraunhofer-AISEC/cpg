@@ -67,7 +67,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
       - name: Build ${{ env.version }}
         run: |
-          ./gradlew --parallel spotlessCheck -x spotlessApply build -x distZip -x distTar koverXmlReport koverHtmlReport performanceTest integrationTest
+          ./gradlew --parallel spotlessCheck -x spotlessApply build -x distZip -x distTar -x shadowJar -x shadowDistZip -x shadowDistTar koverXmlReport koverHtmlReport performanceTest integrationTest
         id: build
         env:
           ORG_GRADLE_PROJECT_version: ${{ env.version }}

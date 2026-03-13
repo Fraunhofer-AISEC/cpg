@@ -14,12 +14,31 @@ mavenPublishing {
     }
 }
 
+val mcpEnabled = findProject(":cpg-mcp") != null
+
 dependencies {
     // CPG modules
     implementation(projects.cpgConcepts)
+    implementation(projects.cpgSerialization)
+
+    // MCP dependencies
+    if (mcpEnabled) {
+        implementation(project(":cpg-mcp"))
+        // MCP SDK
+        implementation(libs.mcp)
+        // MCP Client SDK - for custom MCP client implementation
+        implementation(libs.mcp.client)
+    } else {
+        // MCP SDK only available at compile time so the files in `/ai` compile,
+        compileOnly(libs.mcp)
+        compileOnly(libs.mcp.client)
+    }
 
     // Ktor server dependencies
     implementation(libs.bundles.ktor)
+
+    // Ktor client dependencies
+    implementation(libs.bundles.ktor.client)
 
     // Serialization
     implementation(libs.kotlinx.serialization.json)
