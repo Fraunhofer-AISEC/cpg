@@ -67,7 +67,7 @@ class ChatClient(
             serverVersion = mcp.serverVersion?.version ?: "",
             tools =
                 tools.map { tool ->
-                    ToolInfoJSON(
+                    McpToolJSON(
                         name = tool.name,
                         description = tool.description,
                         inputSchema =
@@ -79,7 +79,7 @@ class ChatClient(
                 },
             prompts =
                 prompts.map { prompt ->
-                    PromptInfoJSON(
+                    McpPromptJSON(
                         name = prompt.name,
                         description = prompt.description,
                         arguments =
@@ -94,7 +94,7 @@ class ChatClient(
                 },
             resources =
                 resources.map { resource ->
-                    ResourceInfoJSON(
+                    McpResourceJSON(
                         uri = resource.uri,
                         name = resource.name,
                         description = resource.description,

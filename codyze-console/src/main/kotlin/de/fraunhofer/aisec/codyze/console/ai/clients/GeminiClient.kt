@@ -34,6 +34,13 @@ import io.ktor.utils.io.*
 import io.modelcontextprotocol.kotlin.sdk.types.Tool
 import kotlinx.serialization.json.*
 
+/**
+ * Gemini API client using the `streamGenerateContent` endpoint with SSE.
+ *
+ * @see <a
+ *   href="https://ai.google.dev/api/generate-content#v1beta.models.streamGenerateContent">Gemini
+ *   streamGenerateContent API</a>
+ */
 class GeminiClient(
     private val httpClient: HttpClient,
     private val model: String,
@@ -52,6 +59,21 @@ class GeminiClient(
     ): List<ToolCall> {
         val toolCalls = mutableListOf<ToolCall>()
 
+        /*
+         * Gemini tool format:
+         * ```json
+         * {
+         *   "functionDeclarations": [{
+         *     "name": "...",
+         *     "description": "...",
+         *     "parameters": {
+         *       "type": "object",
+         *       "properties": { ... }
+         *     }
+         *   }]
+         * }
+         * ```
+         */
         val geminiTools =
             if (tools.isNotEmpty()) {
                 listOf(
@@ -75,6 +97,20 @@ class GeminiClient(
                 )
             } else null
 
+        /*
+         * Gemini contents (with agentic tool calling loop):
+         * ```json
+         * [
+         *   { "role": "user", "parts": [{ "text": "..." }] },
+         *   { "role": "model", "parts": [{
+         *       "functionCall": { "name": "...", "args": { ... } }
+         *   }]},
+         *   { "role": "user", "parts": [{
+         *       "functionResponse": { "name": "...", "response": { "result": "..." } }
+         *   }]}
+         * ]
+         * ```
+         */
         val historyContents = buildList {
             conversationHistory.dropLast(1).forEach { msg ->
                 if (msg.content.isNotBlank()) {
@@ -152,13 +188,34 @@ class GeminiClient(
                 }
 
                 val channel = response.body<ByteReadChannel>()
-                streamMessages(channel, onText, toolCalls)
+                handleStreamingResponse(channel, onText, toolCalls)
             }
 
         return toolCalls
     }
 
-    private suspend fun streamMessages(
+    /**
+     * Handles streaming response from Gemini. Unlike OpenAI, Gemini sends complete tool calls in a
+     * single chunk.
+     *
+     * ```json
+     * {
+     *   "candidates": [{
+     *     "content": {
+     *       "parts": [
+     *         { "text": "..." },
+     *         { "functionCall": { "name": "...", "args": { ... } } }
+     *       ]
+     *     }
+     *   }]
+     * }
+     * ```
+     *
+     * @see <a
+     *   href="https://ai.google.dev/api/generate-content#v1beta.GenerateContentResponse">Gemini
+     *   GenerateContentResponse</a>
+     */
+    private suspend fun handleStreamingResponse(
         channel: ByteReadChannel,
         onText: suspend (String) -> Unit,
         toolCalls: MutableList<ToolCall>,
@@ -186,7 +243,7 @@ class GeminiClient(
                     val name = functionCall["name"]?.jsonPrimitive?.contentOrNull
                     val args = functionCall["args"]?.jsonObject
                     if (name != null) {
-                        toolCalls.add(ToolCall(name, args?.toString() ?: "{}"))
+                        toolCalls.add(ToolCall(name = name, arguments = args?.toString() ?: "{}"))
                     }
                 }
             }

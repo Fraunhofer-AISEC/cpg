@@ -35,7 +35,7 @@ import kotlinx.serialization.json.JsonObject
 @Serializable data class ToolSchemaJSON(val properties: JsonObject?, val required: List<String>?)
 
 @Serializable
-data class ToolInfoJSON(
+data class McpToolJSON(
     val name: String,
     val description: String?,
     val inputSchema: ToolSchemaJSON?,
@@ -45,14 +45,14 @@ data class ToolInfoJSON(
 data class PromptArgumentJSON(val name: String, val description: String?, val required: Boolean?)
 
 @Serializable
-data class PromptInfoJSON(
+data class McpPromptJSON(
     val name: String,
     val description: String?,
     val arguments: List<PromptArgumentJSON>?,
 )
 
 @Serializable
-data class ResourceInfoJSON(
+data class McpResourceJSON(
     val uri: String,
     val name: String?,
     val description: String?,
@@ -63,7 +63,7 @@ data class ResourceInfoJSON(
 data class McpCapabilitiesJSON(
     val serverName: String,
     val serverVersion: String,
-    val tools: List<ToolInfoJSON>,
-    val prompts: List<PromptInfoJSON>,
-    val resources: List<ResourceInfoJSON>,
+    val tools: List<McpToolJSON>,
+    val prompts: List<McpPromptJSON>,
+    val resources: List<McpResourceJSON>,
 )
