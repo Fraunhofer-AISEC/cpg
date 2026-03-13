@@ -37,6 +37,9 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import org.slf4j.LoggerFactory
+
+private val log = LoggerFactory.getLogger("de.fraunhofer.aisec.codyze.console.Main")
 
 /**
  * This function starts the embedded server for the web console. It uses the Netty engine and
@@ -48,11 +51,9 @@ fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
         if (McpServerHelper.isEnabled) {
             runBlocking { initChatService() }
         } else {
-            println("MCP module not enabled, AI chat features will be disabled")
+            log.info("MCP module not enabled, AI chat features will be disabled")
             null
         }
-
-    println("Starting main server on port $port...")
     embeddedServer(Netty, host = host, port = port) {
             configureWebconsole(this@startConsole, chatService)
         }
@@ -68,10 +69,8 @@ private suspend fun ConsoleService.initChatService(): ChatService? {
     if (translationResult != null) {
         McpServerHelper.setGlobalAnalysisResult(translationResult)
     }
-
-    println("Initializing ChatService...")
     chatService.connect()
-    println("MCP client connected!")
+    log.info("MCP client connected")
     return chatService
 }
 

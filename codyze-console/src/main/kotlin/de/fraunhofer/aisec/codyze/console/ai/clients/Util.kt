@@ -50,7 +50,7 @@ suspend fun readSseStream(channel: ByteReadChannel, processLine: suspend (String
     while (!channel.isClosedForRead) {
         val line =
             try {
-                channel.readLine()
+                channel.readUTF8Line()
             } catch (_: Exception) {
                 break
             }
