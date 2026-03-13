@@ -30,9 +30,9 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.Connect
@@ -599,7 +599,7 @@ internal class EOGTest : BaseTest() {
         // Assert: Entries of case statements have one edge to switch root
         for (s in
             Stream.of(cases, defaults)
-                .flatMap { n: List<Statement> -> n.stream() }
+                .flatMap { n: List<Expression> -> n.stream() }
                 .collect(Collectors.toList())) {
             assertTrue(
                 Util.eogConnect(

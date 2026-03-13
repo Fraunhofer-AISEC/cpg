@@ -30,17 +30,17 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonHandler
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Empty
+import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Try
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.refs
 import de.fraunhofer.aisec.cpg.graph.statements
-import de.fraunhofer.aisec.cpg.graph.statements.Empty
-import de.fraunhofer.aisec.cpg.graph.statements.IfElse
-import de.fraunhofer.aisec.cpg.graph.statements.Try
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCall
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLocalName
@@ -80,7 +80,7 @@ class WithStatementTest : BaseTest() {
         val blockStmts =
             result.statements.filterIsInstance<Block>().filter { it.astParent is Namespace }
 
-        val ref = result.refs["contextManager_00000000-11a2-7efe-ffff-ffffbf8aaab8"]
+        val ref = result.refs["contextManager_00000000-11a2-7efe-0000-00000958dca6"]
         assertNotNull(
             ref,
             "Expected to find a reference to the context manager with a deterministic ID.",
