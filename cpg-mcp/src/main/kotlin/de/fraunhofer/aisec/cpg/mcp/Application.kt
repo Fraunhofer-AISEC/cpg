@@ -103,7 +103,7 @@ fun runMcpServerUsingStdio() {
     runBlocking {
         val job = Job()
         server.onClose { job.complete() }
-        server.connect(transport)
+        server.createSession(transport)
         job.join()
     }
 }

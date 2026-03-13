@@ -79,6 +79,7 @@ dependencies {
     implementation(libs.reflections)
     integrationTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     integrationTestImplementation(libs.mcp)
+    integrationTestImplementation(libs.mcp.testing)
     integrationTestImplementation(libs.ktor.serialization.kotlinx.json)
     // We depend on the Python frontend for the integration tests, but the frontend is only
     // available if enabled.
