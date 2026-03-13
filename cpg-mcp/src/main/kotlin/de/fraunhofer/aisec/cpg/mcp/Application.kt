@@ -44,8 +44,11 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.io.asSink
 import kotlinx.io.asSource
 import kotlinx.io.buffered
+import org.slf4j.LoggerFactory
 
 class Application : CliktCommand(name = "cpg-mcp") {
+    private val log = LoggerFactory.getLogger(Application::class.java)
+
     private val ssePort by
         option("--sse", help = "Provide the port to run SSE (Server Sent Events).").int()
 
@@ -56,13 +59,13 @@ class Application : CliktCommand(name = "cpg-mcp") {
         val http = httpPort
         val sse = ssePort
         if (http != null) {
-            println("Starting MCP server in streamable HTTP mode on port $http...")
+            log.info("Starting MCP server in streamable HTTP mode on port {}...", http)
             runHttpMcpServerUsingKtorPlugin(port = http, server = configureServer(), wait = true)
         } else if (sse != null) {
-            println("Starting MCP server in SSE mode on port $sse...")
+            log.info("Starting MCP server in SSE mode on port {}...", sse)
             runSseMcpServerUsingKtorPlugin(sse, configureServer(), wait = true)
         } else {
-            println("Starting MCP server in stdio mode...")
+            log.info("Starting MCP server in stdio mode...")
             runMcpServerUsingStdio()
         }
     }
