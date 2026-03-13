@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.mcp.tools
 
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getAllArgs
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getArgByIndexOrName
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getNode
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableConcepts
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCalls
@@ -228,5 +229,35 @@ class ListCommandsTest {
                 result.content.isEmpty(),
                 "We did not apply any concepts or operations, so it should be empty",
             )
+        }
+
+    @Test
+    fun getNodeTest() =
+        withClient(
+            registerTools = {
+                listFunctions()
+                getNode()
+            }
+        ) { client ->
+            val listResult = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
+            assertNotNull(listResult)
+            assertTrue(listResult.content.isNotEmpty(), "Should have function declarations")
+
+            val functionSummary =
+                Json.decodeFromString<FunctionSummary>(
+                    (listResult.content.first() as TextContent).text
+                )
+
+            val result =
+                client.callTool(
+                    name = "cpg_get_node",
+                    arguments = mapOf("id" to functionSummary.id),
+                )
+            assertNotNull(result)
+            assertTrue(result.content.isNotEmpty(), "Should return the node")
+
+            val content = result.content.single()
+            assertIs<TextContent>(content)
+            assertDoesNotThrow { Json.decodeFromString<NodeJSON>(content.text) }
         }
 }
