@@ -32,11 +32,13 @@ import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Cast
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.scopes.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
 import kotlin.reflect.KClass
@@ -66,20 +68,20 @@ interface HasTemplates : HasGenerics {
     /**
      * This function can be used to fine-tune the resolution of template function calls.
      *
-     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
-     * list of possible candidates.
+     * Note: The function itself should NOT set the [Call.invokes] but rather return a list of
+     * possible candidates.
      *
      * @return a pair in which the first member denotes whether resolution was successful and the
-     *   second parameter is a list of [FunctionDeclaration] candidates.
+     *   second parameter is a list of [Function] candidates.
      */
     fun handleTemplateFunctionCalls(
-        curClass: RecordDeclaration?,
-        templateCall: CallExpression,
+        curClass: Record?,
+        templateCall: Call,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration?,
+        currentTU: TranslationUnit?,
         needsExactMatch: Boolean,
-    ): Pair<Boolean, List<FunctionDeclaration>>
+    ): Pair<Boolean, List<Function>>
 }
 
 /**
@@ -119,8 +121,8 @@ interface HasSuperClasses : LanguageTrait {
     val superClassKeyword: String
 
     fun SymbolResolver.handleSuperExpression(
-        memberExpression: MemberExpression,
-        curClass: RecordDeclaration,
+        memberExpression: MemberAccess,
+        curClass: Record,
     ): Boolean
 }
 
@@ -207,16 +209,15 @@ interface HasAnonymousIdentifier : LanguageTrait {
 
 /**
  * A language trait, that specifies that this language has global variables directly in the
- * [GlobalScope], i.e., not within a namespace, but directly contained in a
- * [TranslationUnitDeclaration].
+ * [GlobalScope], i.e., not within a namespace, but directly contained in a [TranslationUnit].
  */
 interface HasGlobalVariables : LanguageTrait
 
 /**
  * A language trait, that specifies that this language has global functions directly in the
- * [GlobalScope], i.e., not within a namespace, but directly contained in a
- * [TranslationUnitDeclaration]. For example, C++ has global functions, Java and Go do not (as every
- * function is either in a class or a namespace).
+ * [GlobalScope], i.e., not within a namespace, but directly contained in a [TranslationUnit]. For
+ * example, C++ has global functions, Java and Go do not (as every function is either in a class or
+ * a namespace).
  */
 interface HasGlobalFunctions : LanguageTrait
 
@@ -226,36 +227,36 @@ interface HasGlobalFunctions : LanguageTrait
  * and a qualified call because of an import, if "a" is an import / namespace.
  *
  * We can only resolve this after we have dealt with imports and know all symbols. Therefore, we
- * invoke the [ResolveMemberExpressionAmbiguityPass].
+ * invoke the [ResolveMemberAmbiguityPass].
  */
-interface HasMemberExpressionAmbiguity : LanguageTrait
+interface HasMemberAmbiguity : LanguageTrait
 
 /**
  * A common super-class for all language traits that arise because they are an ambiguity of a
  * function call, e.g., function-style casts. This means that we cannot differentiate between a
- * [CallExpression] and other expressions during the frontend, and we need to invoke the
- * [ResolveCallExpressionAmbiguityPass] to resolve this.
+ * [Call] and other expressions during the frontend, and we need to invoke the
+ * [ResolveCallAmbiguityPass] to resolve this.
  */
-sealed interface HasCallExpressionAmbiguity : LanguageTrait
+sealed interface HasCallAmbiguity : LanguageTrait
 
 /**
  * A language trait, that specifies that the language has so-called functional style casts, meaning
  * that they look like regular call expressions. Since we can therefore not distinguish between a
- * [CallExpression] and a [CastExpression], we need to employ an additional pass
- * ([ResolveCallExpressionAmbiguityPass]) after the initial language frontends are done.
+ * [Call] and a [Cast], we need to employ an additional pass ([ResolveCallAmbiguityPass]) after the
+ * initial language frontends are done.
  */
-interface HasFunctionStyleCasts : HasCallExpressionAmbiguity
+interface HasFunctionStyleCasts : HasCallAmbiguity
 
 /**
  * A language trait, that specifies that the language has functional style (object) construction,
  * meaning that constructor calls look like regular call expressions (usually meaning that the
  * language has no dedicated `new` keyword).
  *
- * Since we can therefore not distinguish between a [CallExpression] and a [ConstructExpression] in
- * the frontend, we need to employ an additional pass ([ResolveCallExpressionAmbiguityPass]) after
- * the initial language frontends are done.
+ * Since we can therefore not distinguish between a [Call] and a [Construction] in the frontend, we
+ * need to employ an additional pass ([ResolveCallAmbiguityPass]) after the initial language
+ * frontends are done.
  */
-interface HasFunctionStyleConstruction : HasCallExpressionAmbiguity
+interface HasFunctionStyleConstruction : HasCallAmbiguity
 
 /**
  * A language trait that specifies that this language allowed overloading functions, meaning that

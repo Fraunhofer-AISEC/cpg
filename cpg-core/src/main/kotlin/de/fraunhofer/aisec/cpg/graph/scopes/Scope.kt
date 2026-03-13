@@ -35,16 +35,15 @@ import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import
+import de.fraunhofer.aisec.cpg.graph.declarations.Import
+import de.fraunhofer.aisec.cpg.graph.declarations.Typedef
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.expressions.Label
+import de.fraunhofer.aisec.cpg.graph.expressions.LookupScope
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
-import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
-import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.NodeEntity
@@ -85,22 +84,22 @@ sealed class Scope(
     @Relationship(value = "PARENT", direction = Relationship.Direction.INCOMING)
     var children = mutableListOf<Scope>()
 
-    @Transient var labelStatements = mutableMapOf<String, LabelStatement>()
+    @Transient var labels = mutableMapOf<String, Label>()
 
     /** A map of symbols and their respective [Declaration] nodes that declare them. */
     @Transient var symbols: SymbolMap = mutableMapOf()
 
     /**
-     * A list of [ImportDeclaration] nodes that have an
-     * [ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE] import style ("wildcard" import).
+     * A list of [Import] nodes that have an [ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE] import
+     * style ("wildcard" import).
      */
-    @Transient var wildcardImports: MutableSet<ImportDeclaration> = mutableSetOf()
+    @Transient var wildcardImports: MutableSet<Import> = mutableSetOf()
 
     /**
      * This set of edges is used to store [Import] edges that denotes foreign [NamespaceScope]
      * information that is imported into this scope. The edge holds information about the "style" of
-     * the import (see [ImportStyle]) and the [ImportDeclaration] that is responsible for this. The
-     * property is populated by the [ImportResolver].
+     * the import (see [ImportStyle]) and the [Import] that is responsible for this. The property is
+     * populated by the [ImportResolver].
      */
     @Relationship(value = "IMPORTS_SCOPE", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(ImportResolver::class)
@@ -114,23 +113,23 @@ sealed class Scope(
      * In some languages, the lookup scope of a symbol that is being resolved (e.g. of a
      * [Reference]) can be adjusted through keywords (such as `global` in Python or PHP).
      *
-     * We store this information in the form of a [LookupScopeStatement] in the AST, but we need to
-     * also store this information in the scope to avoid unnecessary AST traversals when resolving
+     * We store this information in the form of a [LookupScope] in the AST, but we need to also
+     * store this information in the scope to avoid unnecessary AST traversals when resolving
      * symbols using [lookupSymbol].
      */
-    @Transient var predefinedLookupScopes: MutableMap<Symbol, LookupScopeStatement> = mutableMapOf()
+    @Transient var predefinedLookupScopes: MutableMap<Symbol, LookupScope> = mutableMapOf()
 
     /**
      * A map of typedefs keyed by their alias name. This is still needed as a bridge until we
      * completely redesign the alias / typedef system.
      */
-    @Transient val typedefs = mutableMapOf<Name, TypedefDeclaration>()
+    @Transient val typedefs = mutableMapOf<Name, Typedef>()
 
     /**
      * Adds a [typedef] declaration to the scope. This is used to store typedefs in the scope, so
      * that they can be resolved later on.
      */
-    fun addTypedef(typedef: TypedefDeclaration) {
+    fun addTypedef(typedef: Typedef) {
         typedefs[typedef.alias.name] = typedef
     }
 
@@ -138,7 +137,7 @@ sealed class Scope(
     context(provider: ContextProvider)
     open fun addSymbol(symbol: Symbol, declaration: Declaration) {
         if (
-            declaration is ImportDeclaration &&
+            declaration is Import &&
                 declaration.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE
         ) {
             // Because a wildcard import does not really have a valid "symbol", we store it in a
@@ -166,8 +165,8 @@ sealed class Scope(
      * @param qualifiedLookup whether the lookup is looked to a specific namespace, and we therefore
      *   should stay in the current scope for lookup. If the lookup is unqualified we traverse the
      *   current scopes parents if no match was found.
-     * @param replaceImports whether any symbols pointing to [ImportDeclaration.importedSymbols] or
-     *   wildcards should be replaced with their actual nodes
+     * @param replaceImports whether any symbols pointing to [Import.importedSymbols] or wildcards
+     *   should be replaced with their actual nodes
      * @param predicate An optional predicate which should be used in the lookup.
      */
     context(provider: ContextProvider)
@@ -263,8 +262,8 @@ sealed class Scope(
         return list ?: listOf()
     }
 
-    fun addLabelStatement(labelStatement: LabelStatement) {
-        labelStatement.label?.let { labelStatements[it] = labelStatement }
+    fun addLabel(label: Label) {
+        label.label?.let { labels[it] = label }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -310,12 +309,12 @@ sealed class Scope(
 }
 
 /**
- * This function loops through all [ImportDeclaration] nodes in the [MutableSet] and resolves the
- * imports to a set of [ImportDeclaration.importedSymbols] with the name [symbol]. The
- * [ImportDeclaration] is then removed from the list.
+ * This function loops through all [Import] nodes in the [MutableSet] and resolves the imports to a
+ * set of [Import.importedSymbols] with the name [symbol]. The [Import] is then removed from the
+ * list.
  */
 private fun MutableList<Declaration>.replaceImports(symbol: Symbol) {
-    val imports = this.filterIsInstance<ImportDeclaration>()
+    val imports = this.filterIsInstance<Import>()
     for (import in imports) {
         val set = import.importedSymbols[symbol]
         if (set != null) {

@@ -26,10 +26,16 @@
 package de.fraunhofer.aisec.cpg.mcp
 
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.ctx
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import io.modelcontextprotocol.kotlin.sdk.*
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNotSame
 
 class CpgAnalyzeToolTest {
 
@@ -40,6 +46,9 @@ class CpgAnalyzeToolTest {
         val testServer = configureServer()
         assertEquals(
             setOf(
+                "cpg_translate",
+                "cpg_list_passes",
+                "cpg_run_pass",
                 "cpg_analyze",
                 "cpg_llm_analyze",
                 "cpg_apply_concepts",
@@ -56,5 +65,28 @@ class CpgAnalyzeToolTest {
             ),
             testServer.tools.keys,
         )
+    }
+
+    @Test
+    fun testReanalyze() {
+        // Build a small CPG without passes
+        runCpgAnalyze(
+            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+            runPasses = false,
+            cleanup = true,
+        )
+        val oldGlobalAnalysisResult = globalAnalysisResult
+        val oldCtx = ctx
+        assertNotNull(oldGlobalAnalysisResult)
+        assertNotNull(oldCtx)
+
+        // Bild the CPG again but we expect a new ctx and globalAnalysisResult
+        runCpgAnalyze(
+            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+            runPasses = false,
+            cleanup = true,
+        )
+        assertNotSame(oldCtx, ctx)
+        assertNotSame(oldGlobalAnalysisResult, globalAnalysisResult)
     }
 }

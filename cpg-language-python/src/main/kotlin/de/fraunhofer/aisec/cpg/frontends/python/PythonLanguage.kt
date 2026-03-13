@@ -30,13 +30,15 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -46,12 +48,12 @@ import org.neo4j.ogm.annotation.Transient
 import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /** The Python language. */
-class PythonLanguage :
+open class PythonLanguage :
     Language<PythonLanguageFrontend>(),
     HasShortCircuitOperators,
     HasOperatorOverloading,
     HasFunctionStyleConstruction,
-    HasMemberExpressionAmbiguity,
+    HasMemberAmbiguity,
     HasBuiltins,
     HasDefaultArguments {
     override val fileExtensions = listOf("py", "pyi")
@@ -228,15 +230,17 @@ class PythonLanguage :
         rhsType: Type,
         hint: BinaryOperator?,
     ): Type {
-        when {
-            operatorCode == "/" && lhsType is NumericType && rhsType is NumericType -> {
+        when (operatorCode) {
+            "/" if lhsType is NumericType && rhsType is NumericType -> {
                 // In Python, the / operation automatically casts the result to a float
                 return primitiveType("float")
             }
-            operatorCode == "*" && lhsType is StringType && rhsType is NumericType -> {
+
+            "*" if lhsType is StringType && rhsType is NumericType -> {
                 return lhsType
             }
-            operatorCode == "//" && lhsType is NumericType && rhsType is NumericType -> {
+
+            "//" if lhsType is NumericType && rhsType is NumericType -> {
                 return if (lhsType is IntegerType && rhsType is IntegerType) {
                     // In Python, the // operation keeps the type as an int if both inputs are
                     // integers
@@ -246,10 +250,42 @@ class PythonLanguage :
                     primitiveType("float")
                 }
             }
+            /**
+             * Python boolean operators 'or' and 'and' are interpreted as follows:
+             * - `x or y` return `x` if `x` is truthy, else `y`
+             * - `x and y` returns `x` if `x` is falsy, else `y`.
+             *
+             * Since we cannot determine the boolean value of `x`, one of the operands could be
+             * returned. We return `lhsType` if both sides have the same type, otherwise we fall
+             * back to `unknownType()`. The concrete possible types are tracked via
+             * [HasType.assignedTypes] in [propagateAssignedTypesOfBinaryOperation], with which we
+             * model `union types` here.
+             *
+             * See https://docs.python.org/3/reference/expressions.html#boolean-operations
+             * *
+             */
+            "or",
+            "and" -> {
+                return if (lhsType == rhsType) lhsType else unknownType()
+            }
 
             // The rest behaves like other languages
             else ->
                 return super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
+        }
+    }
+
+    override fun propagateAssignedTypesOfBinaryOperation(
+        operatorCode: String?,
+        lhs: Expression,
+        rhs: Expression,
+    ): Set<Type> {
+        // Python's "or" and "and" can return either operand at runtime, so we merge the
+        // assignedTypes of both sides.
+        return when (operatorCode) {
+            "or",
+            "and" -> lhs.assignedTypes + rhs.assignedTypes
+            else -> emptySet()
         }
     }
 
@@ -261,7 +297,7 @@ class PythonLanguage :
     ): CastResult {
         // Parameters in python do not have a static type. Therefore, we need to match for all types
         // when trying to cast one type to the type of a function parameter at *runtime*
-        if (targetHint is ParameterDeclaration) {
+        if (targetHint is Parameter) {
             // However, if we find type hints, we at least want to issue a warning if the types
             // would not match
             if (hint != null && targetType !is UnknownType && targetType !is AutoType) {
@@ -308,15 +344,15 @@ class PythonLanguage :
     companion object {
         /**
          * This is a "modifier" to differentiate parameters in functions that are "positional" only.
-         * This information will be stored in [ParameterDeclaration.modifiers] so that we can use is
-         * later in call resolving.
+         * This information will be stored in [Parameter.modifiers] so that we can use is later in
+         * call resolving.
          */
         const val MODIFIER_POSITIONAL_ONLY_ARGUMENT = "posonlyarg"
 
         /**
          * This is a "modifier" to differentiate parameters in functions that are "keyword" only.
-         * This information will be stored in [ParameterDeclaration.modifiers] so that we can use is
-         * later in call resolving.
+         * This information will be stored in [Parameter.modifiers] so that we can use is later in
+         * call resolving.
          */
         const val MODIFIER_KEYWORD_ONLY_ARGUMENT = "kwonlyarg"
 

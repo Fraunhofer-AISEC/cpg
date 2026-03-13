@@ -1,0 +1,296 @@
+/*
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.graph.concepts.manualExtensions
+
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.AsymmetricCipher
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Cipher
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.CipherSuite
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.InitializationVector
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Input
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.MessageAuthenticationCode
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Secret
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.SelectorKey
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.TransportEncryption
+import kotlin.collections.toMutableList
+
+/*
+This file contains a collection of Concepts and Operations which provide additional information compared to the basic CPG model.
+They can be used to build more complex queries and encode more information which is required for evaluating the CRA and the
+SOTA of certain regulations/standards/requirements/guidelines. The classes should be migrated to the CPG project if they are generally useful or to the ontology.
+ */
+
+open class HashFunction(
+    var hashFunctionName: String? = null,
+    var outputSize: Int? = null,
+    underlyingNode: Node?,
+) : Concept(underlyingNode)
+
+open class TLS(
+    versionNumber: Float,
+    cipherSuites: MutableList<CipherSuite?>,
+    basedOn: Cipher,
+    secret: Secret,
+    underlyingNode: Node,
+) :
+    TransportEncryption(
+        true,
+        true,
+        "TLS",
+        versionNumber,
+        cipherSuites,
+        basedOn,
+        secret,
+        underlyingNode,
+    )
+
+class TLS1_2(
+    val cipherSuites12: MutableList<TLS1_2_CipherSuite>,
+    basedOn: Cipher,
+    secret: Secret,
+    underlyingNode: Node,
+) : TLS(1.2f, cipherSuites12.toMutableList(), basedOn, secret, underlyingNode)
+
+class TLS1_3(
+    /** The supported groups (also known as elliptic curves) communicated by this client/server. */
+    val supportedGroups: Set<String>,
+    /** The supported signature algorithms communicated by this client/server. */
+    val signatureAlgorithms: Set<String>,
+    /** The supported PSK modes communicated by this client/server. */
+    val pskHandshakeModes: Set<String>,
+    /**
+     * The supported fields sent in signature_algorithms_cert" in the "certificate_authority"
+     * extension of a certificate request sent from the server to the client or what is
+     * used/supported by the client. `null` if no certificate request was sent.
+     */
+    val certificateSignatureAlgorithms: Set<String>? = null,
+    /** The supported AEAD algorithms communicated by this client/server. */
+    basedOn: Cipher,
+    secret: Secret,
+    cipherSuites: MutableList<CipherSuite?>,
+    underlyingNode: Node,
+) : TLS(1.3f, cipherSuites, basedOn, secret, underlyingNode)
+
+class TLS1_2_CipherSuite(
+    val ciphersuiteName: String?,
+    authenticationMechanism: String?,
+    keyExchangeAlgorithm: String?,
+    macAlgorithm: String?,
+    ciphers: MutableList<Cipher?>,
+    val supportedGroups: List<String?>,
+    underlyingNode: Node?,
+) :
+    CipherSuite(
+        authenticationMechanism = authenticationMechanism,
+        keyExchangeAlgorithm = keyExchangeAlgorithm,
+        macAlgorithm = macAlgorithm,
+        sessionCipher = TODO(),
+        ciphers = ciphers,
+        underlyingNode = underlyingNode!!,
+    )
+
+/**
+ * This class represents a Random Number Generator (RNG) concept in the code property graph (CPG).
+ * It extends the [Concept] class and is used to identify nodes in the CPG that are associated with
+ * random number generation functionality.
+ */
+class RNG(underlyingNode: Node?) : Concept(underlyingNode)
+
+/**
+ * This class represents an operation that retrieves random numbers from a random number generator
+ * (RNG). It extends the [Operation] class and is associated with an [RNG] concept to indicate that
+ * it performs a get operation on the RNG.
+ */
+class RngGet(underlyingNode: Node?, val rng: RNG) : Operation(rng, underlyingNode)
+
+class SHA_256(underlyingNode: Node?) :
+    HashFunction(hashFunctionName = "SHA-256", outputSize = 256, underlyingNode = underlyingNode)
+
+class SHA_384(underlyingNode: Node?) :
+    HashFunction(hashFunctionName = "SHA-284", outputSize = 384, underlyingNode = underlyingNode)
+
+class SHA_512(underlyingNode: Node?) :
+    HashFunction(hashFunctionName = "SHA-512", outputSize = 512, underlyingNode = underlyingNode)
+
+class SHA_512_256(underlyingNode: Node?) :
+    HashFunction(
+        hashFunctionName = "SHA-512/256",
+        outputSize = 256,
+        underlyingNode = underlyingNode,
+    )
+
+class SHA3_256(underlyingNode: Node?) :
+    HashFunction(hashFunctionName = "SHA3-256", outputSize = 256, underlyingNode = underlyingNode)
+
+class SHA3_384(underlyingNode: Node?) :
+    HashFunction(hashFunctionName = "SHA3-384", outputSize = 384, underlyingNode = underlyingNode)
+
+class SHA3_512(underlyingNode: Node?) :
+    HashFunction(hashFunctionName = "SHA3-512", outputSize = 512, underlyingNode = underlyingNode)
+
+class DHKeyExchange(pSize: Int?, underlyingNode: Node?) :
+    AsymmetricCipher(
+        blockSize = pSize,
+        cipherName = "DH",
+        keySize = pSize,
+        padding = null,
+        underlyingNode = underlyingNode,
+    )
+
+class ECDHKeyExchange(val parameter: String?, pSize: Int?, underlyingNode: Node?) :
+    AsymmetricCipher(
+        blockSize = pSize,
+        cipherName = "ECDH",
+        keySize = pSize,
+        padding = null,
+        underlyingNode = underlyingNode,
+    )
+
+class CMAC(val cipher: Cipher?, input: Input?, key: SelectorKey?, underlyingNode: Node?) :
+    MessageAuthenticationCode(
+        type = "CMAC",
+        input = input,
+        selectorKey = key,
+        underlyingNode = underlyingNode,
+    )
+
+class GMAC(
+    val cipher: Cipher?,
+    val iv: InitializationVector?,
+    input: Input?,
+    key: SelectorKey?,
+    underlyingNode: Node?,
+) :
+    MessageAuthenticationCode(
+        type = "GMAC",
+        input = input,
+        selectorKey = key,
+        underlyingNode = underlyingNode,
+    )
+
+class KMAC(
+    val hashFunction: HashFunction?,
+    val strength: Int?,
+    input: Input?,
+    key: SelectorKey?,
+    underlyingNode: Node?,
+) :
+    MessageAuthenticationCode(
+        type = "KMAC",
+        input = input,
+        selectorKey = key,
+        underlyingNode = underlyingNode,
+    )
+
+class HMAC(
+    val hashFunction: HashFunction?,
+    input: Input?,
+    key: SelectorKey?,
+    underlyingNode: Node?,
+) :
+    MessageAuthenticationCode(
+        type = "HMAC",
+        input = input,
+        selectorKey = key,
+        underlyingNode = underlyingNode,
+    )
+
+open class Signature(val schemeName: String?, val key: SelectorKey?, underlyingNode: Node?) :
+    Concept(underlyingNode = underlyingNode)
+
+class RSASignature(
+    val rsaCipher: AsymmetricCipher?,
+    val formattingScheme: FormattingScheme?,
+    key: SelectorKey?,
+    underlyingNode: Node?,
+) : Signature(schemeName = "RSA", key = key, underlyingNode = underlyingNode)
+
+class DSASignature(
+    val primePSize: Int?,
+    val primeQSize: Int?,
+    val hashFunction: HashFunction?,
+    key: SelectorKey?,
+    underlyingNode: Node?,
+) : Signature(schemeName = "DSA", key = key, underlyingNode = underlyingNode)
+
+class ECDSASignature(
+    val parameter: String?,
+    val algorithmName: String?,
+    val hashFunction: HashFunction?,
+    key: SelectorKey?,
+    underlyingNode: Node?,
+) : Signature(schemeName = "DSA", key = key, underlyingNode = underlyingNode)
+
+class SlhDsaSignature(
+    val parameter: String?,
+    val algorithmName: String?,
+    val variant: Variant?,
+    val hashFunction: HashFunction?,
+    val version: Version?,
+    key: SelectorKey?,
+    underlyingNode: Node?,
+) : Signature(schemeName = "SLH-DSA", key = key, underlyingNode = underlyingNode)
+
+class MlDsaSignature(
+    val parameter: String?,
+    val algorithmName: String?,
+    val variant: Variant?,
+    val hashFunction: HashFunction?,
+    val version: Version?,
+    key: SelectorKey?,
+    underlyingNode: Node?,
+) : Signature(schemeName = "ML-DSA", key = key, underlyingNode = underlyingNode)
+
+class StatefulHashBasedSignature(
+    val parameter: String?,
+    schemeName: String?,
+    val variant: Variant?,
+    val hashFunction: HashFunction?,
+    val version: Version?,
+    key: SelectorKey?,
+    underlyingNode: Node?,
+) : Signature(schemeName = schemeName, key = key, underlyingNode = underlyingNode)
+
+open class FormattingScheme(val schemeName: String?, underlyingNode: Node?) :
+    Concept(underlyingNode = underlyingNode)
+
+class EMSA_PSS(underlyingNode: Node?) : FormattingScheme("EMSA-PSS", underlyingNode)
+
+class DS2(underlyingNode: Node?) : FormattingScheme("DS2", underlyingNode)
+
+class DS3(underlyingNode: Node?) : FormattingScheme("DS3", underlyingNode)
+
+enum class Variant {
+    Hedged,
+    Deterministic,
+}
+
+enum class Version {
+    Pure,
+    PreHash,
+}

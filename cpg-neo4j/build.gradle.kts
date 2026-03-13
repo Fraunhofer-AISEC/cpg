@@ -65,18 +65,12 @@ mavenPublishing {
 }
 
 dependencies {
-    // Neo4j OGM. This will be removed at some point
-    implementation(libs.bundles.neo4j)
-    integrationTestImplementation(libs.bundles.neo4j)
-
     // Neo4J Driver
     api(libs.neo4j.driver)
 
     // Command line interface support
     api(libs.picocli)
     annotationProcessor(libs.picocli.codegen)
-
-    integrationTestImplementation(libs.kotlin.reflect)
 
     // We depend on the C++ frontend for the integration tests, but the frontend is only available
     // if enabled.

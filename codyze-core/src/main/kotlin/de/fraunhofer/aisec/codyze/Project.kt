@@ -228,10 +228,7 @@ class AnalysisProject(
         ): AnalysisProject? {
             // We need to evaluate the script in order to invoke our project builder inside the
             // script
-            val script = evaluateScriptAndIncludes(file)
-            if (script == null) {
-                return null
-            }
+            val script = evaluateScriptAndIncludes(file) ?: return null
 
             return script.projectBuilder.build(
                 postProcess = postProcess,
@@ -308,7 +305,7 @@ class AnalysisProject(
                                 }
                                 .toMutableMap()
                         )
-                        .topLevels(it.associate { Pair(it, componentDir.resolve(it).toFile()) })
+                        .topLevels(it.associateWith { componentDir.resolve(it).toFile() })
             }
 
             val addSourcesFolder = librariesPath?.toFile()

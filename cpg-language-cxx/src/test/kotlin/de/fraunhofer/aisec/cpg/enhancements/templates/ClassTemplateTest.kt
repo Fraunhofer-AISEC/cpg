@@ -28,7 +28,10 @@ package de.fraunhofer.aisec.cpg.enhancements.templates
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.New
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
@@ -42,33 +45,29 @@ internal class ClassTemplateTest : BaseTest() {
     private val topLevel = Path.of("src", "test", "resources", "templates", "classtemplates")
 
     private fun testTemplateStructure(
-        template: RecordTemplateDeclaration,
-        pair: RecordDeclaration?,
-        type1: TypeParameterDeclaration?,
-        type2: TypeParameterDeclaration?,
+        template: RecordTemplate,
+        pair: Record?,
+        type1: TypeParameter?,
+        type2: TypeParameter?,
     ) {
         assertEquals(2, template.parameters.size)
-        assertEquals(type1, template.parameters[0] as TypeParameterDeclaration?)
-        assertEquals(type2, template.parameters[1] as TypeParameterDeclaration?)
+        assertEquals(type1, template.parameters[0] as TypeParameter?)
+        assertEquals(type2, template.parameters[1] as TypeParameter?)
         assertEquals(1, template.realizations.size)
         assertNotNull(pair)
         assertEquals(pair, template.realizations[0])
     }
 
-    private fun testClassTemplateFields(
-        pair: RecordDeclaration,
-        first: FieldDeclaration?,
-        second: FieldDeclaration?,
-    ) {
+    private fun testClassTemplateFields(pair: Record, first: Field?, second: Field?) {
         assertTrue(pair.fields.contains(first))
         assertTrue(pair.fields.contains(second))
     }
 
     private fun testClassTemplatesTypes(
-        pair: RecordDeclaration?,
-        receiver: VariableDeclaration,
-        type1: TypeParameterDeclaration,
-        type2: TypeParameterDeclaration,
+        pair: Record?,
+        receiver: Variable,
+        type1: TypeParameter,
+        type2: TypeParameter,
     ): ObjectType {
         assertLocalName("Pair*", receiver.type)
         assertTrue(receiver.type is PointerType)
@@ -86,9 +85,9 @@ internal class ClassTemplateTest : BaseTest() {
     }
 
     private fun testClassTemplateConstructor(
-        pair: RecordDeclaration,
+        pair: Record,
         pairType: ObjectType?,
-        pairConstructorDeclaration: ConstructorDeclaration,
+        pairConstructorDeclaration: Constructor,
     ) {
         assertEquals(pair, pairConstructorDeclaration.recordDeclaration)
         assertTrue(pair.constructors.contains(pairConstructorDeclaration))
@@ -99,12 +98,12 @@ internal class ClassTemplateTest : BaseTest() {
     }
 
     private fun testClassTemplateInvocation(
-        pairConstructorDeclaration: ConstructorDeclaration?,
-        constructExpression: ConstructExpression,
-        pair: RecordDeclaration?,
+        pairConstructorDeclaration: Constructor?,
+        constructExpression: Construction,
+        pair: Record?,
         pairType: ObjectType,
-        template: RecordTemplateDeclaration?,
-        point1: VariableDeclaration,
+        template: RecordTemplate?,
+        point1: Variable,
     ) {
         assertEquals(pairConstructorDeclaration, constructExpression.constructor)
         assertNotNull(pairConstructorDeclaration)
@@ -128,11 +127,11 @@ internal class ClassTemplateTest : BaseTest() {
         assertLocalName("int", (templateParameters[1] as TypeExpression).type)
         assertTrue(templateParameters[0].isImplicit)
         assertTrue(templateParameters[1].isImplicit)
-        assertEquals(2, point1.templateParameters?.size)
-        assertLocalName("int", (point1.templateParameters?.get(0) as TypeExpression).type)
-        assertLocalName("int", (point1.templateParameters!![1] as TypeExpression).type)
-        assertFalse(point1.templateParameters!![0].isImplicit)
-        assertFalse(point1.templateParameters!![1].isImplicit)
+        assertEquals(2, point1.templateParameters.size)
+        assertLocalName("int", (point1.templateParameters[0] as TypeExpression).type)
+        assertLocalName("int", (point1.templateParameters[1] as TypeExpression).type)
+        assertFalse(point1.templateParameters[0].isImplicit)
+        assertFalse(point1.templateParameters[1].isImplicit)
     }
 
     @Test
@@ -142,15 +141,15 @@ internal class ClassTemplateTest : BaseTest() {
             analyze(listOf(Path.of(topLevel.toString(), "pair.cpp").toFile()), topLevel, true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val recordTemplateDeclarations = result.allChildren<RecordTemplateDeclaration>()
+        val recordTemplateDeclarations = result.allChildren<RecordTemplate>()
         val template =
             findByUniqueName(
                 recordTemplateDeclarations,
                 "template<class Type1, class Type2> class Pair",
             )
         val pair = findByUniqueName(result.records, "Pair")
-        val type1 = findByUniqueName(result.allChildren<TypeParameterDeclaration>(), "class Type1")
-        val type2 = findByUniqueName(result.allChildren<TypeParameterDeclaration>(), "class Type2")
+        val type1 = findByUniqueName(result.allChildren<TypeParameter>(), "class Type1")
+        val type2 = findByUniqueName(result.allChildren<TypeParameter>(), "class Type2")
         val first = findByUniqueName(result.fields, "first")
         val second = findByUniqueName(result.fields, "second")
         val constructor = pair.constructors["Pair"]
@@ -159,12 +158,9 @@ internal class ClassTemplateTest : BaseTest() {
         val receiver = constructor.receiver
         assertNotNull(receiver)
 
-        val pairConstructorDecl =
-            findByUniqueName(result.allChildren<ConstructorDeclaration>(), "Pair")
+        val pairConstructorDecl = findByUniqueName(result.allChildren<Constructor>(), "Pair")
         val constructExpression =
-            findByUniquePredicate(result.allChildren()) { c: ConstructExpression ->
-                c.code == "Pair()"
-            }
+            findByUniquePredicate(result.allChildren()) { c: Construction -> c.code == "Pair()" }
         val point1 = findByUniqueName(result.variables, "point1")
 
         // Test Template Structure
@@ -198,7 +194,7 @@ internal class ClassTemplateTest : BaseTest() {
             analyze(listOf(Path.of(topLevel.toString(), "pair2.cpp").toFile()), topLevel, true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val recordTemplateDeclarations = result.allChildren<RecordTemplateDeclaration>()
+        val recordTemplateDeclarations = result.allChildren<RecordTemplate>()
         val template =
             findByUniqueName(
                 recordTemplateDeclarations,
@@ -210,10 +206,9 @@ internal class ClassTemplateTest : BaseTest() {
         val receiver = pair.constructors["Pair"]?.receiver
         assertNotNull(receiver)
 
-        val pairConstructorDecl =
-            findByUniqueName(result.allChildren<ConstructorDeclaration>(), "Pair")
+        val pairConstructorDecl = findByUniqueName(result.allChildren<Constructor>(), "Pair")
         val constructExpr =
-            findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "Pair()" }
+            findByUniquePredicate(result.allChildren<Construction>()) { it.code == "Pair()" }
         val literal3 = findByUniquePredicate(result.literals) { it.value == 3 && !it.isImplicit }
         val literal3Implicit =
             findByUniquePredicate(result.literals) { it.value == 3 && it.isImplicit }
@@ -237,9 +232,9 @@ internal class ClassTemplateTest : BaseTest() {
         assertLocalName("int", instantiatedType.generics[0])
         assertLocalName("int", instantiatedType.generics[1])
 
-        // Test TemplateParameter of VariableDeclaration
-        assertEquals(3, point1.templateParameters?.size)
-        assertEquals(literal3, point1.templateParameters?.get(2))
+        // Test TemplateParameter of Variable
+        assertEquals(3, point1.templateParameters.size)
+        assertEquals(literal3, point1.templateParameters[2])
 
         // Test Invocation
         val templateParameters = constructExpr.templateArguments
@@ -247,7 +242,7 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(3, templateParameters.size)
         assertEquals(literal3Implicit, templateParameters[2])
         assertEquals(
-            TemplateDeclaration.TemplateInitialization.EXPLICIT,
+            Template.TemplateInitialization.EXPLICIT,
             constructExpr.templateArgumentEdges?.get(2)?.instantiation,
         )
         assertEquals(pair, constructExpr.instantiates)
@@ -255,11 +250,11 @@ internal class ClassTemplateTest : BaseTest() {
     }
 
     private fun testStructTemplateWithSameDefaultTypeInvocation(
-        template: RecordTemplateDeclaration?,
-        pair: RecordDeclaration?,
-        pairConstructorDeclaration: ConstructorDeclaration?,
-        constructExpression: ConstructExpression,
-        point1: VariableDeclaration,
+        template: RecordTemplate?,
+        pair: Record?,
+        pairConstructorDeclaration: Constructor?,
+        constructExpression: Construction,
+        point1: Variable,
     ) {
         assertEquals(pair, constructExpression.instantiates)
         assertEquals(template, constructExpression.templateInstantiation)
@@ -267,12 +262,12 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(2, constructExpression.templateArguments.size)
         assertLocalName("int", constructExpression.templateArguments[0])
         assertEquals(
-            TemplateDeclaration.TemplateInitialization.EXPLICIT,
+            Template.TemplateInitialization.EXPLICIT,
             constructExpression.templateArgumentEdges?.get(0)?.instantiation,
         )
         assertLocalName("int", constructExpression.templateArguments[1])
         assertEquals(
-            TemplateDeclaration.TemplateInitialization.EXPLICIT,
+            Template.TemplateInitialization.EXPLICIT,
             constructExpression.templateArgumentEdges?.get(1)?.instantiation,
         )
 
@@ -294,20 +289,18 @@ internal class ClassTemplateTest : BaseTest() {
             }
         val template =
             findByUniqueName(
-                result.allChildren<RecordTemplateDeclaration>(),
+                result.allChildren<RecordTemplate>(),
                 "template<class Type1, class Type2 = Type1> struct Pair",
             )
         val pair = findByUniqueName(result.records, "Pair")
-        val pairConstructorDecl =
-            findByUniqueName(result.allChildren<ConstructorDeclaration>(), "Pair")
-        val type1 = findByUniqueName(result.allChildren<TypeParameterDeclaration>(), "class Type1")
-        val type2 =
-            findByUniqueName(result.allChildren<TypeParameterDeclaration>(), "class Type2 = Type1")
+        val pairConstructorDecl = findByUniqueName(result.allChildren<Constructor>(), "Pair")
+        val type1 = findByUniqueName(result.allChildren<TypeParameter>(), "class Type1")
+        val type2 = findByUniqueName(result.allChildren<TypeParameter>(), "class Type2 = Type1")
         val first = findByUniqueName(result.fields, "first")
         val second = findByUniqueName(result.fields, "second")
         val point1 = findByUniqueName(result.variables, "point1")
         val constructExpr =
-            findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "Pair()" }
+            findByUniquePredicate(result.allChildren<Construction>()) { it.code == "Pair()" }
         assertEquals(1, template.realizations.size)
         assertEquals(pair, template.realizations[0])
         assertEquals(2, template.parameters.size)
@@ -353,12 +346,12 @@ internal class ClassTemplateTest : BaseTest() {
             }
         val template =
             findByUniqueName(
-                result.allChildren<RecordTemplateDeclaration>(),
+                result.allChildren<RecordTemplate>(),
                 "template<class Type1, class Type2 = Type1, int A=1, int B=A> struct Pair",
             )
         val pair = findByUniqueName(result.records, "Pair")
         val constructExpr =
-            findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "Pair()" }
+            findByUniquePredicate(result.allChildren<Construction>()) { it.code == "Pair()" }
         val literal2 = findByUniquePredicate(result.literals) { it.value == 2 && !it.isImplicit }
         assertNotNull(literal2)
         val literal2Implicit =
@@ -368,22 +361,22 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(4, constructExpr.templateArguments.size)
         assertLocalName("int", constructExpr.templateArguments[0])
         assertEquals(
-            TemplateDeclaration.TemplateInitialization.EXPLICIT,
+            Template.TemplateInitialization.EXPLICIT,
             constructExpr.templateArgumentEdges?.get(0)?.instantiation,
         )
         assertLocalName("int", constructExpr.templateArguments[1])
         assertEquals(
-            TemplateDeclaration.TemplateInitialization.EXPLICIT,
+            Template.TemplateInitialization.EXPLICIT,
             constructExpr.templateArgumentEdges?.get(1)?.instantiation,
         )
         assertEquals(literal2Implicit, constructExpr.templateArguments[2])
         assertEquals(
-            TemplateDeclaration.TemplateInitialization.EXPLICIT,
+            Template.TemplateInitialization.EXPLICIT,
             constructExpr.templateArgumentEdges?.get(2)?.instantiation,
         )
         assertEquals(literal2Implicit, constructExpr.templateArguments[3])
         assertEquals(
-            TemplateDeclaration.TemplateInitialization.DEFAULT,
+            Template.TemplateInitialization.DEFAULT,
             constructExpr.templateArgumentEdges?.get(3)?.instantiation,
         )
 
@@ -404,16 +397,14 @@ internal class ClassTemplateTest : BaseTest() {
             }
         val template =
             findByUniqueName(
-                result.allChildren<RecordTemplateDeclaration>(),
+                result.allChildren<RecordTemplate>(),
                 "template<class Type1, class Type2 = Type1, int A=1, int B=A> struct Pair",
             )
         val pair = findByUniqueName(result.records, "Pair")
         val paramA = findByUniqueName(result.parameters, "A")
         val paramB = findByUniqueName(result.parameters, "B")
         val constructExpression =
-            findByUniquePredicate(result.allChildren()) { c: ConstructExpression ->
-                c.code == "Pair()"
-            }
+            findByUniquePredicate(result.allChildren()) { c: Construction -> c.code == "Pair()" }
         val literal1 = findByUniquePredicate(result.literals) { it.value == 1 }
         assertEquals(4, template.parameters.size)
         assertEquals(paramA, template.parameters[2])
@@ -425,25 +416,25 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(4, constructExpression.templateArguments.size)
         assertLocalName("int", (constructExpression.templateArguments[0] as TypeExpression).type)
         assertEquals(
-            TemplateDeclaration.TemplateInitialization.EXPLICIT,
+            Template.TemplateInitialization.EXPLICIT,
             constructExpression.templateArgumentEdges?.get(0)?.instantiation,
         )
         assertEquals(0, constructExpression.templateArgumentEdges?.get(0)?.index)
         assertLocalName("int", (constructExpression.templateArguments[1] as TypeExpression).type)
         assertEquals(
-            TemplateDeclaration.TemplateInitialization.DEFAULT,
+            Template.TemplateInitialization.DEFAULT,
             constructExpression.templateArgumentEdges?.get(1)?.instantiation,
         )
         assertEquals(1, constructExpression.templateArgumentEdges?.get(1)?.index)
         assertEquals(literal1, constructExpression.templateArguments[2])
         assertEquals(
-            TemplateDeclaration.TemplateInitialization.DEFAULT,
+            Template.TemplateInitialization.DEFAULT,
             constructExpression.templateArgumentEdges?.get(2)?.instantiation,
         )
         assertEquals(2, constructExpression.templateArgumentEdges?.get(2)?.index)
         assertEquals(literal1, constructExpression.templateArguments[3])
         assertEquals(
-            TemplateDeclaration.TemplateInitialization.DEFAULT,
+            Template.TemplateInitialization.DEFAULT,
             constructExpression.templateArgumentEdges?.get(3)?.instantiation,
         )
         assertEquals(3, constructExpression.templateArgumentEdges?.get(3)?.index)
@@ -465,12 +456,12 @@ internal class ClassTemplateTest : BaseTest() {
             }
         val template =
             findByUniqueName(
-                result.allChildren<RecordTemplateDeclaration>(),
+                result.allChildren<RecordTemplate>(),
                 "template<typename T, int N=10> class Array",
             )
         val array = findByUniqueName(result.records, "Array")
         val paramN = findByUniqueName(result.parameters, "N")
-        val paramT = findByUniqueName(result.allChildren<TypeParameterDeclaration>(), "typename T")
+        val paramT = findByUniqueName(result.allChildren<TypeParameter>(), "typename T")
         val literal10 = findByUniquePredicate(result.literals) { it.value == 10 }
         val mArray = findByUniqueName(result.fields, "m_Array")
         assertEquals(2, template.parameters.size)
@@ -496,9 +487,7 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(typeT, tArray.elementType)
 
         val constructExpr =
-            findByUniquePredicate(result.allChildren<ConstructExpression>()) {
-                it.code == "Array()"
-            }
+            findByUniquePredicate(result.allChildren<Construction>()) { it.code == "Array()" }
         assertEquals(template, constructExpr.templateInstantiation)
         assertEquals(array, constructExpr.instantiates)
         assertLocalName("int", constructExpr.templateArguments[0])
@@ -520,14 +509,12 @@ internal class ClassTemplateTest : BaseTest() {
             }
         val template =
             findByUniqueName(
-                result.allChildren<RecordTemplateDeclaration>(),
+                result.allChildren<RecordTemplate>(),
                 "template<typename T, int N=10> class Array",
             )
         val array = findByUniqueName(result.records, "Array")
         val constructExpression =
-            findByUniquePredicate(result.allChildren()) { c: ConstructExpression ->
-                c.code == "Array()"
-            }
+            findByUniquePredicate(result.allChildren()) { c: Construction -> c.code == "Array()" }
         val literal5 =
             findByUniquePredicate(result.literals) {
                 it.value == 5 && it.location!!.region.endColumn == 41 && !it.isImplicit
@@ -542,17 +529,17 @@ internal class ClassTemplateTest : BaseTest() {
                 it.value == 5 && it.location!!.region.endColumn == 41 && it.isImplicit
             }
         val arrayVariable = findByUniqueName(result.variables, "array")
-        val newExpression = findByUniqueName(result.allChildren<NewExpression>(), "")
+        val newExpression = findByUniqueName(result.allChildren<New>(), "")
         assertEquals(array, constructExpression.instantiates)
         assertEquals(template, constructExpression.templateInstantiation)
         assertEquals(2, constructExpression.templateArguments.size)
         assertLocalName("int", (constructExpression.templateArguments[0] as TypeExpression).type)
         assertTrue(constructExpression.templateArguments[0].isImplicit)
         assertEquals(literal5Implicit, constructExpression.templateArguments[1])
-        assertEquals(2, arrayVariable.templateParameters?.size)
-        assertLocalName("int", (arrayVariable.templateParameters?.get(0) as TypeExpression).type)
-        assertFalse(arrayVariable.templateParameters!![0].isImplicit)
-        assertEquals(literal5Declaration, arrayVariable.templateParameters!![1])
+        assertEquals(2, arrayVariable.templateParameters.size)
+        assertLocalName("int", (arrayVariable.templateParameters[0] as TypeExpression).type)
+        assertFalse(arrayVariable.templateParameters[0].isImplicit)
+        assertEquals(literal5Declaration, arrayVariable.templateParameters[1])
         assertLocalName("Array", constructExpression.type)
 
         val arrayType = constructExpression.type as ObjectType

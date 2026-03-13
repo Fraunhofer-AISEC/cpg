@@ -25,18 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.newBlock
-import de.fraunhofer.aisec.cpg.graph.newReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.newReturn
 import org.jruby.ast.*
 
 class StatementHandler(lang: RubyLanguageFrontend) :
-    RubyHandler<Statement, Node>({ ProblemExpression() }, lang) {
+    RubyHandler<Expression, Node>({ ProblemExpression() }, lang) {
 
-    override fun handleNode(node: Node): Statement {
+    override fun handleNode(node: Node): Expression {
         return when (node) {
             is BlockNode -> handleBlockNode(node)
             is ReturnNode -> handleReturnNode(node)
@@ -58,8 +58,8 @@ class StatementHandler(lang: RubyLanguageFrontend) :
         return compoundStatement
     }
 
-    private fun handleReturnNode(node: ReturnNode): ReturnStatement {
-        val stmt = newReturnStatement()
+    private fun handleReturnNode(node: ReturnNode): Return {
+        val stmt = newReturn()
         stmt.returnValue = frontend.expressionHandler.handleNode(node.valueNode)
 
         return stmt

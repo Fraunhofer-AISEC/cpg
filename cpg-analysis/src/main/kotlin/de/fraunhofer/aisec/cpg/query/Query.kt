@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.evaluation.NumberSet
 import de.fraunhofer.aisec.cpg.evaluation.SizeEvaluator
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 /**
@@ -191,8 +191,7 @@ fun min(n: List<Node>?, eval: ValueEvaluator = IntegerIntervalEvaluator()): Quer
         )
 
     for (node in n) {
-        val evalRes = eval.evaluate(node)
-        when (evalRes) {
+        when (val evalRes = eval.evaluate(node)) {
             is LatticeInterval -> {
                 val minValue =
                     ((evalRes as? LatticeInterval.Bounded)?.upper as? LatticeInterval.Bound.Value)
@@ -234,8 +233,7 @@ fun max(n: List<Node>?, eval: ValueEvaluator = IntegerIntervalEvaluator()): Quer
         )
 
     for (node in n) {
-        val evalRes = eval.evaluate(node)
-        when (evalRes) {
+        when (val evalRes = eval.evaluate(node)) {
             is LatticeInterval -> {
                 val maxValue =
                     ((evalRes as? LatticeInterval.Bounded)?.upper as? LatticeInterval.Bound.Value)

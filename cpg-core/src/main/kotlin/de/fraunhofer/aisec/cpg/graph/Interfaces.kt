@@ -26,9 +26,12 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Operator
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -133,7 +136,7 @@ interface HasAliases : HasScope {
 
 /**
  * Specifies that this node (e.g. a [BinaryOperator]) contains an operation that can be overloaded
- * by an [OperatorDeclaration].
+ * by an [Operator].
  */
 interface HasOverloadedOperation : HasOperatorCode {
 
@@ -145,7 +148,26 @@ interface HasOverloadedOperation : HasOperatorCode {
 
     /**
      * The base expression this operator works on. The [Type] of this is also the source where the
-     * [SymbolResolver] is looking for an overloaded [OperatorDeclaration].
+     * [SymbolResolver] is looking for an overloaded [Operator].
      */
     val operatorBase: Expression
+}
+
+/**
+ * Specifies that a node has modifiers, e.g., determining its visibility (typically `public` or
+ * `private) or other modifiers like `mut`. The modifiers are represented as a set of strings and
+ * are specific to the language.
+ *
+ * Careful distinction between modifiers and types is necessary and might be different for different
+ * languages, for example in C++ `int` is a type, but `const` or `volatile` are most likely
+ * modifiers.
+ */
+interface HasModifiers {
+
+    /**
+     * The modifiers of this node. The actual modifiers are language-specific and can be any string,
+     * but typical examples include `public`, `private`, `protected` for [Method]s and `mut` or
+     * `volatile` for [Variable]s.
+     */
+    var modifiers: Set<String>
 }

@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -36,7 +36,7 @@ import kotlin.test.assertTrue
 class EvaluationOrderGraphPassTest {
 
     @Test
-    fun testWhileStatement() {
+    fun testWhile() {
         val whileTest = GraphExamples.getWhileWithElseAndBreak()
 
         val whileStmt = whileTest.whileLoops.firstOrNull()
@@ -86,7 +86,7 @@ class EvaluationOrderGraphPassTest {
     }
 
     @Test
-    fun testDoStatement() {
+    fun testDo() {
         val doTest = GraphExamples.getDoWithElseAndBreak()
 
         val doStmt = doTest.doLoops.firstOrNull()
@@ -136,7 +136,7 @@ class EvaluationOrderGraphPassTest {
     }
 
     @Test
-    fun testForStatement() {
+    fun testFor() {
         val forTest = GraphExamples.getForWithElseAndBreak()
 
         val forStmt = forTest.forLoops.firstOrNull()
@@ -237,7 +237,7 @@ class EvaluationOrderGraphPassTest {
 
     @Test
     fun testCollectionComprehensionStatement() {
-        val compExample = GraphExamples.getNestedComprehensionExpressions()
+        val compExample = GraphExamples.getNestedComprehensions()
 
         val listComp = compExample.allChildren<CollectionComprehension>().first()
         assertNotNull(listComp)
@@ -250,11 +250,11 @@ class EvaluationOrderGraphPassTest {
 
         assertTrue { listComp.comprehensionExpressions.size == 2 }
 
-        val outerComprehensionExpression = listComp.comprehensionExpressions.first()
-        assertNotNull(outerComprehensionExpression)
+        val outerComprehension = listComp.comprehensionExpressions.first()
+        assertNotNull(outerComprehension)
 
-        val innerComprehensionExpression = listComp.comprehensionExpressions.last()
-        assertNotNull(innerComprehensionExpression)
+        val innerComprehension = listComp.comprehensionExpressions.last()
+        assertNotNull(innerComprehension)
 
         assertTrue(
             Util.eogConnect(
@@ -275,13 +275,8 @@ class EvaluationOrderGraphPassTest {
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
-                startNode = outerComprehensionExpression,
-                endNodes =
-                    listOf(
-                        innerComprehensionExpression,
-                        listComp,
-                        outerComprehensionExpression.variable,
-                    ),
+                startNode = outerComprehension,
+                endNodes = listOf(innerComprehension, listComp, outerComprehension.variable),
                 connectEnd = Util.Connect.SUBTREE,
             )
         )
@@ -289,8 +284,8 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 quantifier = Util.Quantifier.ANY,
                 edgeDirection = Util.Edge.EXITS,
-                startNode = outerComprehensionExpression,
-                endNodes = listOf(innerComprehensionExpression),
+                startNode = outerComprehension,
+                endNodes = listOf(innerComprehension),
                 connectEnd = Util.Connect.SUBTREE,
                 predicate = { it.branch == true },
             )
@@ -300,7 +295,7 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 quantifier = Util.Quantifier.ANY,
                 edgeDirection = Util.Edge.EXITS,
-                startNode = outerComprehensionExpression,
+                startNode = outerComprehension,
                 endNodes = listOf(listComp),
                 connectEnd = Util.Connect.SUBTREE,
                 predicate = { it.branch == false },
@@ -310,8 +305,8 @@ class EvaluationOrderGraphPassTest {
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
-                startNode = innerComprehensionExpression,
-                endNodes = listOf(outerComprehensionExpression, listComp.statement),
+                startNode = innerComprehension,
+                endNodes = listOf(outerComprehension, listComp.statement),
                 connectEnd = Util.Connect.SUBTREE,
             )
         )
@@ -320,7 +315,7 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 quantifier = Util.Quantifier.ANY,
                 edgeDirection = Util.Edge.EXITS,
-                startNode = innerComprehensionExpression,
+                startNode = innerComprehension,
                 endNodes = listOf(listComp.statement),
                 connectEnd = Util.Connect.SUBTREE,
                 predicate = { it.branch == true },
@@ -331,8 +326,8 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 quantifier = Util.Quantifier.ANY,
                 edgeDirection = Util.Edge.EXITS,
-                startNode = innerComprehensionExpression,
-                endNodes = listOf(outerComprehensionExpression),
+                startNode = innerComprehension,
+                endNodes = listOf(outerComprehension),
                 connectEnd = Util.Connect.SUBTREE,
                 predicate = { it.branch == false },
             )
@@ -342,8 +337,8 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 quantifier = Util.Quantifier.ANY,
                 edgeDirection = Util.Edge.EXITS,
-                startNode = outerComprehensionExpression.iterable,
-                endNodes = listOf(outerComprehensionExpression.variable),
+                startNode = outerComprehension.iterable,
+                endNodes = listOf(outerComprehension.variable),
                 connectEnd = Util.Connect.SUBTREE,
                 predicate = { it.branch == true },
             )
@@ -353,8 +348,8 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 quantifier = Util.Quantifier.ANY,
                 edgeDirection = Util.Edge.EXITS,
-                startNode = innerComprehensionExpression.iterable,
-                endNodes = listOf(innerComprehensionExpression.variable),
+                startNode = innerComprehension.iterable,
+                endNodes = listOf(innerComprehension.variable),
                 connectEnd = Util.Connect.SUBTREE,
                 predicate = { it.branch == true },
             )

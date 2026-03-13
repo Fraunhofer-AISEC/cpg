@@ -42,13 +42,13 @@ import org.neo4j.ogm.annotation.Relationship
  */
 open class ObjectType : Type, HasSecondaryTypeEdge {
     /**
-     * Reference from the [ObjectType] to its class ([RecordDeclaration]), only if the class is
-     * available. This is set by the [TypeResolver].
+     * Reference from the [ObjectType] to its class ([Record]), only if the class is available. This
+     * is set by the [TypeResolver].
      *
-     * This also sets this type's [scope] to the [RecordDeclaration.scope].
+     * This also sets this type's [scope] to the [Record.scope].
      */
     @PopulatedByPass(TypeResolver::class)
-    var recordDeclaration: RecordDeclaration? = null
+    var recordDeclaration: Record? = null
         set(value) {
             field = value
             this.scope = value?.scope
@@ -123,27 +123,27 @@ open class ObjectType : Type, HasSecondaryTypeEdge {
      * Returns all constructors that are declared in this type and its super types. See
      * [findMembers] for more details.
      */
-    val constructors: Set<ConstructorDeclaration>
+    val constructors: Set<Constructor>
         get() {
-            return findMembers<ConstructorDeclaration>()
+            return findMembers<Constructor>()
         }
 
     /**
      * Returns all methods that are declared in this type and its super types. See [findMembers] for
      * more details.
      */
-    val methods: Set<MethodDeclaration>
+    val methods: Set<Method>
         get() {
-            return findMembers<MethodDeclaration>()
+            return findMembers<Method>()
         }
 
     /**
      * Returns all fields that are declared in this type and its super types. See [findMembers] for
      * more details.
      */
-    val fields: Set<FieldDeclaration>
+    val fields: Set<Field>
         get() {
-            return findMembers<FieldDeclaration>()
+            return findMembers<Field>()
         }
 
     /**

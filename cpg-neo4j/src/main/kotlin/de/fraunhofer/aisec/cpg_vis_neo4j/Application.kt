@@ -25,26 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
-import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
-import de.fraunhofer.aisec.cpg.persistence.persist
+import de.fraunhofer.aisec.cpg.persistence.Neo4jConnectionDefaults
+import de.fraunhofer.aisec.cpg.persistence.persistJson
+import de.fraunhofer.aisec.cpg.persistence.pushToNeo4j
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
 import java.util.concurrent.Callable
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
-import org.neo4j.driver.GraphDatabase
-import org.neo4j.ogm.context.EntityGraphMapper
-import org.neo4j.ogm.context.MappingContext
-import org.neo4j.ogm.cypher.compiler.MultiStatementCypherCompiler
-import org.neo4j.ogm.cypher.compiler.builders.node.DefaultNodeBuilder
-import org.neo4j.ogm.cypher.compiler.builders.node.DefaultRelationshipBuilder
-import org.neo4j.ogm.metadata.MetaData
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
@@ -54,26 +47,9 @@ private const val S_TO_MS_FACTOR = 1000
 private const val EXIT_SUCCESS = 0
 private const val EXIT_FAILURE = 1
 private const val DEBUG_PARSER = true
-private const val PROTOCOL = "neo4j://"
 
-private const val DEFAULT_HOST = "localhost"
-private const val DEFAULT_PORT = 7687
-private const val DEFAULT_USER_NAME = "neo4j"
-private const val DEFAULT_PASSWORD = "password"
 private const val DEFAULT_SAVE_DEPTH = -1
 private const val DEFAULT_MAX_COMPLEXITY = -1
-
-data class JsonNode(val id: Long, val labels: Set<String>, val properties: Map<String, Any>)
-
-data class JsonEdge(
-    val id: Long,
-    val type: String,
-    val startNode: Long,
-    val endNode: Long,
-    val properties: Map<String, Any>,
-)
-
-data class JsonGraph(val nodes: List<JsonNode>, val edges: List<JsonEdge>)
 
 /**
  * An application to export the <a href="https://github.com/Fraunhofer-AISEC/cpg">cpg</a> to a <a
@@ -84,7 +60,7 @@ data class JsonGraph(val nodes: List<JsonNode>, val edges: List<JsonEdge>)
  *
  * For example using docker:
  * ```
- * docker run -p 7474:7474 -p 7687:7687 -d -e NEO4J_AUTH=neo4j/password -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5
+ * docker run -p 127.0.0.1:7474:7474 -p 127.0.0.1:7687:7687 -d -e NEO4J_AUTH=neo4j/password -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5
  * ```
  */
 class Application : Callable<Int> {
@@ -139,27 +115,29 @@ class Application : Callable<Int> {
 
     @CommandLine.Option(
         names = ["--user"],
-        description = ["Neo4j user name (default: $DEFAULT_USER_NAME)"],
+        description = ["Neo4j user name (default: ${Neo4jConnectionDefaults.USERNAME})"],
     )
-    var neo4jUsername: String = DEFAULT_USER_NAME
+    var neo4jUsername: String = Neo4jConnectionDefaults.USERNAME
 
     @CommandLine.Option(
         names = ["--password"],
-        description = ["Neo4j password (default: $DEFAULT_PASSWORD"],
+        description = ["Neo4j password (default: ${Neo4jConnectionDefaults.USERNAME})"],
     )
-    var neo4jPassword: String = DEFAULT_PASSWORD
+    var neo4jPassword: String = Neo4jConnectionDefaults.PASSWORD
 
     @CommandLine.Option(
         names = ["--host"],
-        description = ["Set the host of the neo4j Database (default: $DEFAULT_HOST)."],
+        description =
+            ["Set the host of the neo4j Database (default: ${Neo4jConnectionDefaults.HOST})."],
     )
-    private var host: String = DEFAULT_HOST
+    private var host: String = Neo4jConnectionDefaults.HOST
 
     @CommandLine.Option(
         names = ["--port"],
-        description = ["Set the port of the neo4j Database (default: $DEFAULT_PORT)."],
+        description =
+            ["Set the port of the neo4j Database (default: ${Neo4jConnectionDefaults.PORT})."],
     )
-    private var port: Int = DEFAULT_PORT
+    private var port: Int = Neo4jConnectionDefaults.PORT
 
     @CommandLine.Option(
         names = ["--save-depth"],
@@ -298,136 +276,6 @@ class Application : Callable<Int> {
         arrayOf("de.fraunhofer.aisec.cpg.graph", "de.fraunhofer.aisec.cpg.frontends")
 
     /**
-     * Create node and relationship builders to map the cpg via OGM. This method is not a public API
-     * of the OGM, thus we use reflection to access the related methods.
-     *
-     * @param translationResult, translationResult to map
-     */
-    fun translateCPGToOGMBuilders(
-        translationResult: TranslationResult
-    ): Pair<List<DefaultNodeBuilder>?, List<DefaultRelationshipBuilder>?> {
-        val meta = MetaData(*packages)
-        val con = MappingContext(meta)
-        val entityGraphMapper = EntityGraphMapper(meta, con)
-
-        translationResult.components.map { entityGraphMapper.map(it, depth) }
-        translationResult.additionalNodes.map { entityGraphMapper.map(it, depth) }
-
-        val compiler = entityGraphMapper.compileContext().compiler
-
-        // get private fields of `CypherCompiler` via reflection
-        val getNewNodeBuilders =
-            MultiStatementCypherCompiler::class.java.getDeclaredField("newNodeBuilders")
-        val getNewRelationshipBuilders =
-            MultiStatementCypherCompiler::class.java.getDeclaredField("newRelationshipBuilders")
-        getNewNodeBuilders.isAccessible = true
-        getNewRelationshipBuilders.isAccessible = true
-
-        // We only need `newNodeBuilders` and `newRelationshipBuilders` as we are "importing" to an
-        // empty "db" and all nodes and relations will be new
-        val newNodeBuilders =
-            (getNewNodeBuilders[compiler] as? ArrayList<*>)?.filterIsInstance<DefaultNodeBuilder>()
-        val newRelationshipBuilders =
-            (getNewRelationshipBuilders[compiler] as? ArrayList<*>)?.filterIsInstance<
-                DefaultRelationshipBuilder
-            >()
-        return newNodeBuilders to newRelationshipBuilders
-    }
-
-    /**
-     * Use the provided node and relationship builders to create list of nodes and edges
-     *
-     * @param newNodeBuilders, input node builders
-     * @param newRelationshipBuilders, input relationship builders
-     */
-    fun buildJsonGraph(
-        newNodeBuilders: List<DefaultNodeBuilder>?,
-        newRelationshipBuilders: List<DefaultRelationshipBuilder>?,
-    ): JsonGraph {
-        // create simple json structure with flat list of nodes and edges
-        val nodes =
-            newNodeBuilders?.map {
-                val node = it.node()
-                JsonNode(
-                    node.id,
-                    node.labels.toSet(),
-                    node.propertyList.associate { prop -> prop.key to prop.value },
-                )
-            } ?: emptyList()
-        val edges =
-            newRelationshipBuilders
-                // For some reason, there are edges without start or end node??
-                ?.filter { it.edge().startNode != null }
-                ?.map {
-                    val edge = it.edge()
-                    JsonEdge(
-                        edge.id,
-                        edge.type,
-                        edge.startNode,
-                        edge.endNode,
-                        edge.propertyList.associate { prop -> prop.key to prop.value },
-                    )
-                } ?: emptyList()
-
-        return JsonGraph(nodes, edges)
-    }
-
-    /**
-     * Exports the TranslationResult to json. Serialization is done via the Neo4j OGM.
-     *
-     * @param translationResult, input translationResult, not null
-     * @param path, path to output json file
-     */
-    fun exportToJson(translationResult: TranslationResult, path: File) {
-        val bench = Benchmark(this.javaClass, "Export cpg to json", false, translationResult)
-        log.info("Export graph to json using import depth: $depth")
-
-        val (nodes, edges) = translateCPGToOGMBuilders(translationResult)
-        val graph = buildJsonGraph(nodes, edges)
-        val objectMapper = ObjectMapper()
-        objectMapper.writeValue(path, graph)
-
-        log.info(
-            "Exported ${graph.nodes.size} Nodes and ${graph.edges.size} Edges to json file ${path.absoluteFile}"
-        )
-        bench.addMeasurement()
-    }
-
-    /**
-     * Pushes the whole translationResult to the neo4j db.
-     *
-     * @param translationResult, not null
-     */
-    fun pushToNeo4j(translationResult: TranslationResult) {
-        val session = connect()
-        with(session) {
-            if (!noPurgeDb) executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
-            translationResult.persist()
-        }
-        session.close()
-    }
-
-    /**
-     * Connects to the neo4j db.
-     *
-     * @return a Pair of Optionals of the Session and the SessionFactory, if it is possible to
-     *   connect to neo4j. If it is not possible, the return value is a Pair of empty Optionals.
-     * @throws InterruptedException, if the thread is interrupted while it try´s to connect to the
-     *   neo4j db.
-     * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
-     */
-    @Throws(InterruptedException::class, ConnectException::class)
-    fun connect(): org.neo4j.driver.Session {
-        val driver =
-            GraphDatabase.driver(
-                "$PROTOCOL$host:$port",
-                org.neo4j.driver.AuthTokens.basic(neo4jUsername, neo4jPassword),
-            )
-        driver.verifyConnectivity()
-        return driver.session()
-    }
-
-    /**
      * Checks if all elements in the parameter are a valid file and returns a list of files.
      *
      * @param filenames The filenames to check
@@ -469,7 +317,6 @@ class Application : Callable<Int> {
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
-                .useParallelPasses(false)
 
         topLevel?.let { translationConfiguration.topLevel(it) }
 
@@ -544,7 +391,7 @@ class Application : Callable<Int> {
         return translationConfiguration.build()
     }
 
-    public fun printSchema(filenames: Collection<String>, format: Schema.Format) {
+    fun printSchema(filenames: Collection<String>, format: Schema.Format) {
         val schema = Schema()
         schema.extractSchema()
         filenames.forEach { schema.printToFile(it, format) }
@@ -593,9 +440,15 @@ class Application : Callable<Int> {
             "Benchmark: analyzing code in " + (analyzingTime - startTime) / S_TO_MS_FACTOR + " s."
         )
 
-        exportJsonFile?.let { exportToJson(translationResult, it) }
+        exportJsonFile?.let { translationResult.persistJson(it) }
         if (!noNeo4j) {
-            pushToNeo4j(translationResult)
+            translationResult.pushToNeo4j(
+                noPurgeDb = noPurgeDb,
+                host = host,
+                port = port,
+                neo4jUsername = neo4jUsername,
+                neo4jPassword = neo4jPassword,
+            )
         }
 
         val pushTime = System.currentTimeMillis()
@@ -619,7 +472,7 @@ class Application : Callable<Int> {
 /**
  * Starts a command line application of the cpg-vis-neo4j.
  *
- * @throws IllegalArgumentException, if there was no arguments provided, or the path does not point
+ * @throws IllegalArgumentException, if there were no arguments provided, or the path does not point
  *   to a file, is a directory or point to a hidden file or the paths does not have the same top
  *   level path
  * @throws InterruptedException, if the thread is interrupted while it try´s to connect to the neo4j

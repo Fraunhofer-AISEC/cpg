@@ -59,12 +59,14 @@ class OverlaySingleEdge(
     of: Node?,
     override var mirrorProperty: KProperty<MutableCollection<OverlayEdge>>,
     outgoing: Boolean = true,
+    onChange: ((old: OverlayEdge?, new: OverlayEdge?) -> Unit)? = null,
 ) :
     EdgeSingletonList<Node, Node?, OverlayEdge>(
         thisRef = thisRef,
         init = ::OverlayEdge,
         outgoing = outgoing,
         of = of,
+        onChanged = onChange,
     ),
     MirroredEdgeCollection<Node, OverlayEdge>
 

@@ -25,8 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.python.Python.AST
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import jep.python.PyObject
 
 /**
@@ -75,27 +76,27 @@ interface Python {
          */
         interface WithLocation : AST { // TODO make the fields accessible `by lazy`
             /** Maps to the `lineno` filed from Python's ast. */
-            val lineno: Int
+            val lineno: Int?
                 get() {
-                    return (pyObject.getAttr("lineno") as? Long)?.toInt() ?: TODO()
+                    return (pyObject.getAttr("lineno") as? Long)?.toInt()
                 }
 
             /** Maps to the `col_offset` filed from Python's ast. */
-            val col_offset: Int
+            val col_offset: Int?
                 get() {
-                    return (pyObject.getAttr("col_offset") as? Long)?.toInt() ?: TODO()
+                    return (pyObject.getAttr("col_offset") as? Long)?.toInt()
                 }
 
             /** Maps to the `end_lineno` filed from Python's ast. */
-            val end_lineno: Int
+            val end_lineno: Int?
                 get() {
-                    return (pyObject.getAttr("end_lineno") as? Long)?.toInt() ?: TODO()
+                    return (pyObject.getAttr("end_lineno") as? Long)?.toInt()
                 }
 
             /** Maps to the `end_col_offset` filed from Python's ast. */
-            val end_col_offset: Int
+            val end_col_offset: Int?
                 get() {
-                    return (pyObject.getAttr("end_col_offset") as? Long)?.toInt() ?: TODO()
+                    return (pyObject.getAttr("end_col_offset") as? Long)?.toInt()
                 }
         }
 
@@ -103,7 +104,7 @@ interface Python {
          * Python does not really have "declarations", but it has "definitions". Instead of having
          * their own AST class, they are also [AST.BaseStmt]s. In order to be compatible with the
          * remaining languages we need to ensure that elements such as functions or classes, still
-         * turn out to be [Declaration]s, not [Statement]s
+         * turn out to be [Declaration]s, not [Expression]s
          *
          * This interface should be attached to all such statements that we consider to be
          * definitions, and thus [Declaration]s.

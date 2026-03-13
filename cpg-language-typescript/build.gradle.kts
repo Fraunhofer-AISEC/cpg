@@ -38,6 +38,8 @@ mavenPublishing {
     }
 }
 
+deno { version("v2.5.6") }
+
 val compileWindowsX8664 =
     tasks.register<RunDenoTask>("compileWindowsX8664") {
         dependsOn(tasks.installDeno)

@@ -28,10 +28,10 @@ package de.fraunhofer.aisec.cpg.frontends.python
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
@@ -56,7 +56,7 @@ class PythonValueEvaluator : ValueEvaluator() {
 
     override val cannotEvaluate: (Node?, ValueEvaluator) -> Any?
         get() = { node, evaluator ->
-            if (node is InitializerListExpression) {
+            if (node is InitializerList) {
                 // We can evaluate initializer lists if all elements are constant
                 val values = node.initializers.map { evaluator.evaluate(it) }
                 if (values.all { it is Number }) {
@@ -88,19 +88,15 @@ class PythonValueEvaluator : ValueEvaluator() {
         }
     }
 
-    override fun handleCallExpression(call: CallExpression, depth: Int): Any? {
-        return when (call.reconstructedImportName.toString()) {
+    override fun handleCall(node: Call, depth: Int): Any? {
+        return when (node.reconstructedImportName.toString()) {
             "os.path.join" -> {
-                call.arguments.joinToString(separator = "/") { arg ->
+                node.arguments.joinToString(separator = "/") { arg ->
                     super.evaluate(arg).toString()
                 }
             }
-            else -> super.handleCallExpression(call, depth)
+            else -> super.handleCall(node, depth)
         }
-    }
-
-    override fun handlePrevDFG(node: Node, depth: Int): Any? {
-        return super.handlePrevDFG(node, depth)
     }
 
     override fun computeBinaryOpEffect(

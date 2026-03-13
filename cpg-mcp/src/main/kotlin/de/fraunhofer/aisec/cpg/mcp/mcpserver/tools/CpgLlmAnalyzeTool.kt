@@ -30,10 +30,11 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgLlmAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableConcepts
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
-import io.modelcontextprotocol.kotlin.sdk.CallToolResult
-import io.modelcontextprotocol.kotlin.sdk.TextContent
-import io.modelcontextprotocol.kotlin.sdk.Tool
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toSchema
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -51,30 +52,18 @@ fun Server.addCpgLlmAnalyzeTool() {
         """
             .trimIndent()
 
-    val inputSchema =
-        Tool.Input(
-            properties =
-                buildJsonObject {
-                    putJsonObject("description") {
-                        put("type", "string")
-                        put("description", "Additional context for the analysis")
-                    }
-                },
-            required = listOf(),
-        )
-
     this.addTool(
         name = "cpg_llm_analyze",
         description = toolDescription,
-        inputSchema = inputSchema,
+        inputSchema = CpgLlmAnalyzePayload::class.toSchema(),
         //        outputSchema = outputSchema - not supported by all LLMs yet
     ) { request ->
         try {
             val payload =
-                if (request.arguments.isEmpty()) {
+                if (request.arguments.isNullOrEmpty()) {
                     CpgLlmAnalyzePayload()
                 } else {
-                    request.arguments.toObject<CpgLlmAnalyzePayload>()
+                    request.arguments?.toObject<CpgLlmAnalyzePayload>() ?: CpgLlmAnalyzePayload()
                 }
 
             val hasAnalysisResult = globalAnalysisResult != null
@@ -199,7 +188,7 @@ fun Server.addCpgLlmAnalyzeTool() {
 // Note: The output schema is not supported by all LLMs yet.
 @Suppress("unused")
 val outputSchema =
-    Tool.Output(
+    ToolSchema(
         properties =
             buildJsonObject {
                 putJsonObject("prompt") {

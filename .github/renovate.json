@@ -1,21 +1,31 @@
 {
   "extends": [
-    "config:base",
+    "config:recommended",
     "schedule:weekly",
     ":enableVulnerabilityAlerts"
   ],
   "patch": {
     "enabled": false
   },
-  "labels": ["dependencies"],
+  "labels": [
+    "dependencies"
+  ],
   "packageRules": [
     {
-      "matchManagers": ["gomod"],
-      "addLabels": ["go"]
+      "matchManagers": [
+        "gomod"
+      ],
+      "addLabels": [
+        "go"
+      ]
     },
     {
-      "matchManagers": ["npm"],
-      "addLabels": ["npm"]
+      "matchManagers": [
+        "npm"
+      ],
+      "addLabels": [
+        "npm"
+      ]
     }
   ]
 }

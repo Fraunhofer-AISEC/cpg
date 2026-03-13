@@ -65,18 +65,21 @@ mavenPublishing {
 
 dependencies {
     implementation(libs.mcp)
+    implementation(libs.ktor.server.cio)
     implementation(libs.ktor.serialization.kotlinx.json)
 
     // Test dependencies
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 
     // Command line interface support
     api(libs.picocli)
     annotationProcessor(libs.picocli.codegen)
 
     integrationTestImplementation(libs.kotlin.reflect)
-    integrationTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
+    implementation(libs.reflections)
+    integrationTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     integrationTestImplementation(libs.mcp)
+    integrationTestImplementation(libs.mcp.testing)
     integrationTestImplementation(libs.ktor.serialization.kotlinx.json)
     // We depend on the Python frontend for the integration tests, but the frontend is only
     // available if enabled.
