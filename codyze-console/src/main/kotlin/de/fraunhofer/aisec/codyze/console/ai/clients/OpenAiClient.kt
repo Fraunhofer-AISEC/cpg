@@ -46,11 +46,11 @@ class OpenAiClient(
         userMessage: String,
         conversationHistory: List<ChatMessageJSON>,
         tools: List<Tool>,
-        maxAgentSteps: List<List<ToolCallWithResult>>?,
+        toolCallHistory: List<List<ToolCallWithResult>>?,
         onText: suspend (String) -> Unit,
         onReasoning: suspend (String) -> Unit,
     ): List<ToolCall> {
-        val messages = buildMessages(userMessage, conversationHistory, maxAgentSteps)
+        val messages = buildMessages(userMessage, conversationHistory, toolCallHistory)
         val openAiTools = convertToolDefinitions(tools)
 
         val request =
@@ -101,7 +101,7 @@ class OpenAiClient(
     private fun buildMessages(
         userMessage: String,
         conversationHistory: List<ChatMessageJSON>,
-        maxAgentSteps: List<List<ToolCallWithResult>>?,
+        toolCallHistory: List<List<ToolCallWithResult>>?,
     ): List<OpenAiMessage> {
         val messages = mutableListOf<OpenAiMessage>()
         messages += OpenAiMessage(role = "system", content = JsonPrimitive(SYSTEM_PROMPT))
@@ -113,9 +113,9 @@ class OpenAiClient(
 
         messages += OpenAiMessage(role = "user", content = JsonPrimitive(userMessage))
 
-        if (maxAgentSteps != null) {
+        if (toolCallHistory != null) {
             var callIdCounter = 0
-            for (agentStep in maxAgentSteps) {
+            for (agentStep in toolCallHistory) {
                 val startId = callIdCounter
                 messages +=
                     OpenAiMessage(

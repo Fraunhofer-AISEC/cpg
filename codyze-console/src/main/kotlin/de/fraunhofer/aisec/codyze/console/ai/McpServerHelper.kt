@@ -25,11 +25,14 @@
  */
 package de.fraunhofer.aisec.codyze.console.ai
 
+import org.slf4j.LoggerFactory
+
 /**
  * Helper object to make the features of the `cpg-mcp` module conditionally available. When the
  * module is available in the build, this will use the actual MCP functions directly.
  */
 object McpServerHelper {
+    private val log = LoggerFactory.getLogger(McpServerHelper::class.java)
     /** Check if mcp module is enabled */
     val isEnabled: Boolean by lazy {
         try {
@@ -46,7 +49,7 @@ object McpServerHelper {
         }
 
         try {
-            println("Starting MCP server with streamable HTTP on port $port...")
+            log.info("Starting MCP server with streamable HTTP on port {}...", port)
             val mcpServerKt = Class.forName("de.fraunhofer.aisec.cpg.mcp.mcpserver.McpServerKt")
             val server = mcpServerKt.getMethod("configureDefaultServer").invoke(null)
 
@@ -54,8 +57,7 @@ object McpServerHelper {
             val runServer = appKt.methods.first { it.name == "runHttpMcpServerUsingKtorPlugin" }
             runServer.invoke(null, port, "0.0.0.0", server, false)
         } catch (e: Exception) {
-            println("Failed to start MCP server: ${e.message}")
-            e.printStackTrace()
+            log.error("Failed to start MCP server: {}", e.message, e)
         }
     }
 
@@ -71,8 +73,7 @@ object McpServerHelper {
             val setResult = toolsClass.getMethod("setGlobalAnalysisResult", result.javaClass)
             setResult.invoke(null, result)
         } catch (e: Exception) {
-            println("Warning: Failed to set globalAnalysisResult in cpg-mcp module: ${e.message}")
-            e.printStackTrace()
+            log.warn("Failed to set globalAnalysisResult in cpg-mcp module: {}", e.message, e)
         }
     }
 }

@@ -38,6 +38,7 @@ import io.ktor.client.plugins.sse.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.Json
+import org.slf4j.LoggerFactory
 
 /** ChatService manages LLM client configuration and provides an API for chat interactions. */
 class ChatService(config: Config) {
@@ -96,10 +97,12 @@ class ChatService(config: Config) {
     }
 
     companion object {
+        private val log = LoggerFactory.getLogger(ChatService::class.java)
+
         fun createIfConfigExist(): ChatService? {
             val config = ConfigFactory.load()
             if (!config.hasPath("llm.client")) {
-                println(
+                log.warn(
                     "No application.conf found, AI chat features disabled. " +
                         "Copy application.conf.example to application.conf to enable them."
                 )

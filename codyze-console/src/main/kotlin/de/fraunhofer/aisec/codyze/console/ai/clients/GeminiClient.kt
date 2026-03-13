@@ -53,7 +53,7 @@ class GeminiClient(
         userMessage: String,
         conversationHistory: List<ChatMessageJSON>,
         tools: List<Tool>,
-        maxAgentSteps: List<List<ToolCallWithResult>>?,
+        toolCallHistory: List<List<ToolCallWithResult>>?,
         onText: suspend (String) -> Unit,
         onReasoning: suspend (String) -> Unit,
     ): List<ToolCall> {
@@ -121,12 +121,12 @@ class GeminiClient(
         }
 
         val contents =
-            if (maxAgentSteps != null) {
+            if (toolCallHistory != null) {
                 historyContents +
                     listOf(
                         GeminiContent(role = "user", parts = listOf(GeminiPart(text = userMessage)))
                     ) +
-                    maxAgentSteps.flatMap { roundtrip ->
+                    toolCallHistory.flatMap { roundtrip ->
                         listOf(
                             GeminiContent(
                                 role = "model",

@@ -34,12 +34,15 @@ import io.modelcontextprotocol.kotlin.sdk.types.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.serialization.json.*
+import org.slf4j.LoggerFactory
 
 class ChatClient(
     private val httpClient: HttpClient,
     private val llm: LlmClient,
     private val mcpServerUrl: String,
 ) {
+
+    private val log = LoggerFactory.getLogger(ChatClient::class.java)
 
     private val mcp: McpSdkClient =
         McpSdkClient(
@@ -134,8 +137,8 @@ class ChatClient(
         val conversationHistory = request.messages
 
         try {
-            val maxAgentSteps = mutableListOf<List<ToolCallWithResult>>()
-            var counter = 0
+            val toolCallHistory = mutableListOf<List<ToolCallWithResult>>()
+            var iteration = 0
 
             var toolCalls =
                 llm.sendPrompt(
@@ -145,32 +148,34 @@ class ChatClient(
                     onText = { text -> send(Events.text(text)) },
                     onReasoning = { thought -> send(Events.reasoning(thought)) },
                 )
-            println(
-                "Agent- Initial sendPrompt returned ${toolCalls.size} tool calls: ${toolCalls.map { it.name }}"
+            log.info(
+                "Initial prompt returned {} tool calls: {}",
+                toolCalls.size,
+                toolCalls.map { it.name },
             )
 
-            while (toolCalls.isNotEmpty() && counter < maxToolIterations) {
-                counter++
-                println("Agent- Round $counter: executing ${toolCalls.map { it.name }}")
+            while (toolCalls.isNotEmpty() && iteration < maxToolIterations) {
+                iteration++
+                log.info("Agent: Round {}: executing {}", iteration, toolCalls.map { it.name })
                 val roundtripResults =
                     toolCalls.map { toolCall ->
                         val result = executeToolCall(toolCall) { jsonEvent -> send(jsonEvent) }
                         ToolCallWithResult(toolCall, result)
                     }
-                maxAgentSteps.add(roundtripResults)
+                toolCallHistory.add(roundtripResults)
 
                 toolCalls =
                     llm.sendPrompt(
                         userMessage = userMessage,
                         conversationHistory = conversationHistory,
-                        maxAgentSteps = maxAgentSteps,
+                        toolCallHistory = toolCallHistory,
                         tools = tools,
                         onText = { text -> send(Events.text(text)) },
                         onReasoning = { thought -> send(Events.reasoning(thought)) },
                     )
             }
         } catch (e: Exception) {
-            println("ChatClient.chat - Error: ${e.message}")
+            log.error("Chat error: {}", e.message, e)
             send(Events.text("Error: ${e.message}"))
         }
     }
@@ -181,16 +186,28 @@ class ChatClient(
         emit: suspend (String) -> Unit,
     ): String {
         return try {
-            val jsonArgs = Json.parseToJsonElement(toolCall.arguments).jsonObject
-            val arguments: Map<String, Any?> = jsonArgs.toMap()
+            val arguments = Json.parseToJsonElement(toolCall.arguments).jsonObject
 
             val result = mcp.callTool(name = toolCall.name, arguments = arguments)
             val contentTexts = result.content.mapNotNull { (it as? TextContent)?.text }
             val resultText = contentTexts.joinToString("\n")
 
-            val content = buildToolContentPayload(contentTexts)
+            val content =
+                if (contentTexts.isEmpty()) {
+                    JsonArray(emptyList())
+                } else {
+                    val parsedItems =
+                        contentTexts.map { text ->
+                            try {
+                                Json.parseToJsonElement(text)
+                            } catch (_: Exception) {
+                                JsonPrimitive(text)
+                            }
+                        }
+                    if (parsedItems.size == 1) parsedItems[0] else JsonArray(parsedItems)
+                }
             val event = Events.toolResult(toolCall.name, content)
-            println("Tool - Emitting event: $event")
+            log.debug("Emitting tool result event: {}", event)
             emit(event)
 
             resultText
@@ -200,50 +217,4 @@ class ChatClient(
             errorMsg
         }
     }
-}
-
-// Helper to convert JsonObject to Map
-private fun JsonObject.toMap(): Map<String, Any?> {
-    return this.mapValues { (_, value) ->
-        when (value) {
-            is JsonPrimitive -> {
-                when {
-                    value.isString -> value.content
-                    value.booleanOrNull != null -> value.boolean
-                    value.intOrNull != null -> value.int
-                    value.longOrNull != null -> value.long
-                    value.doubleOrNull != null -> value.double
-                    else -> value.content
-                }
-            }
-            is JsonObject -> value.toMap()
-            is JsonArray ->
-                value.map {
-                    when (it) {
-                        is JsonPrimitive -> it.content
-                        is JsonObject -> it.toMap()
-                        is JsonArray -> it.toString()
-                        is JsonNull -> null
-                    }
-                }
-            is JsonNull -> null
-        }
-    }
-}
-
-private fun buildToolContentPayload(contentTexts: List<String>): JsonElement {
-    if (contentTexts.isEmpty()) {
-        return JsonArray(emptyList())
-    }
-
-    val parsedItems =
-        contentTexts.map { text ->
-            try {
-                Json.parseToJsonElement(text)
-            } catch (_: Exception) {
-                JsonPrimitive(text)
-            }
-        }
-
-    return if (parsedItems.size == 1) parsedItems[0] else JsonArray(parsedItems)
 }
