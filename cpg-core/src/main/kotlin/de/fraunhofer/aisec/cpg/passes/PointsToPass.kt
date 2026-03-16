@@ -301,10 +301,24 @@ fun calculateInnerConcurrencyCounter(outerConcurrencyCounter: Int): Int {
     else if (outerConcurrencyCounter > CPU_CORES) 1 else CPU_CORES / outerConcurrencyCounter
 }
 
+fun removePossibleCasts(node: Expression): Expression {
+    var ret = node
+    while (ret is Cast) ret = ret.expression
+    return ret
+}
+
 private fun isGlobal(node: Node): Boolean {
     return when (node) {
         is Variable -> node.isGlobal
         is MemberAccess -> isGlobal(node.base)
+        is PointerDereference,
+        is PointerReference -> {
+            val input =
+                removePossibleCasts(
+                    (node as? PointerDereference)?.input ?: (node as PointerReference).input
+                )
+            isGlobal(input)
+        }
         is Reference -> node.refersTo is Function || (node.refersTo as? Variable)?.isGlobal == true
         is MemoryAddress -> node.isGlobal
         is Function -> true
@@ -2360,8 +2374,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // The EOG of Declarations does not play in our favor: We will handle the
                 // Declaration before we handled the initializer. So we explicitly handle the
                 // initializer before continuing
-                var ini = initializer
-                while (ini is Cast) ini = ini.expression
+                val ini = removePossibleCasts(initializer)
                 doubleState =
                     when (ini) {
                         is PointerReference -> handleExpression(lattice, ini.input, doubleState)
@@ -3171,13 +3184,8 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
                         (value.lhs is Reference || value.lhs is Cast) &&
                         value.rhs is Literal<*>
                 ) {
-                    var lhs = value.lhs
-                    // Remove possible casts
-                    while (lhs is Cast) {
-                        lhs = lhs.expression
-                    }
                     val sub = Subscription()
-                    sub.arrayExpression = lhs
+                    sub.arrayExpression = removePossibleCasts(value.lhs)
                     sub.subscriptExpression = value.rhs
                     ret.addAll(getAddresses(sub, startNode))
                 } else ret.add(value)
