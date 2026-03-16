@@ -26,16 +26,19 @@
 package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsBinExpr
 import uniffi.cpgrust.RsBlockExpr
 import uniffi.cpgrust.RsCallExpr
 import uniffi.cpgrust.RsExpr
+import uniffi.cpgrust.RsIfExpr
+import uniffi.cpgrust.RsLetExpr
 import uniffi.cpgrust.RsLiteral
 import uniffi.cpgrust.RsLiteralType
 import uniffi.cpgrust.RsMacroExpr
 import uniffi.cpgrust.RsMethodCallExpr
+import uniffi.cpgrust.RsPat
 import uniffi.cpgrust.RsPathExpr
 import uniffi.cpgrust.RsPrefixExpr
 import uniffi.cpgrust.RsRecordExpr
@@ -60,6 +63,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.PrefixExpr -> handlePrefixExpr(node.v1)
             is RsExpr.ParenExpr -> handleNode(node.v1.expr.first())
             is RsExpr.RecordExpr -> handleRecordExpr(node.v1)
+            is RsExpr.IfExpr -> handleIfExpr(node.v1)
+            is RsExpr.LetExpr -> handleLetExpr(node.v1)
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -126,12 +131,11 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
     }
 
-    fun handleCallExpr(callExpr: RsCallExpr): CallExpression {
+    fun handleCallExpr(callExpr: RsCallExpr): Call {
 
         val callee: Expression? = callExpr.expr.getOrNull(0)?.let { handleNode(it) }
 
-        val call =
-            newCallExpression(callee = callee, rawNode = RsAst.RustExpr(RsExpr.CallExpr(callExpr)))
+        val call = newCall(callee = callee, rawNode = RsAst.RustExpr(RsExpr.CallExpr(callExpr)))
 
         for (arg in callExpr.arguments) {
             call.arguments += handleNode(arg)
@@ -140,23 +144,19 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return call
     }
 
-    fun handleMethodCallExpr(methodCallExpr: RsMethodCallExpr): MemberCallExpression {
+    fun handleMethodCallExpr(methodCallExpr: RsMethodCallExpr): MemberCall {
 
         val callee: Expression? =
             methodCallExpr.receiver.firstOrNull()?.let {
                 val base = handleNode(it)
 
                 methodCallExpr.nameRef?.let { call ->
-                    newMemberExpression(
-                        call.text,
-                        base,
-                        rawNode = RsAst.RustExpr(RsExpr.NameRef(call)),
-                    )
+                    newMemberAccess(call.text, base, rawNode = RsAst.RustExpr(RsExpr.NameRef(call)))
                 }
             }
 
         val method =
-            newMemberCallExpression(
+            newMemberCall(
                 callee = callee,
                 rawNode = RsAst.RustExpr(RsExpr.MethodCallExpr(methodCallExpr)),
             )
@@ -175,7 +175,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 it.path?.segment?.nameRef?.let {
                     newReference(it.text, rawNode = RsAst.RustExpr(RsExpr.NameRef(it)))
                 }
-            val call = newCallExpression(callee = base, rawNode = raw)
+            val call = newCall(callee = base, rawNode = raw)
             call.arguments += newLiteral(it.macroString)
             return call
         }
@@ -237,6 +237,58 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 "Operator based expression has an incorrect amount of ${binExpr.expressions} operators",
             rawNode = raw,
         )
+    }
+
+    fun handleIfExpr(ifExpr: RsIfExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.IfExpr(ifExpr))
+        val ifElse = newIfElse(raw)
+        frontend.scopeManager.enterScope(ifElse)
+
+        // Depending on whether the first expression is a let expression we want fo fill condition
+        // or condition declaration
+        ifExpr.expressions.first().let {
+            val condExpr = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            if (condExpr is DeclarationStatement) {
+                // There should only be one declaration inside a let of an if
+                ifElse.conditionDeclaration = condExpr.declarations.first()
+            } else {
+                ifElse.condition = condExpr
+            }
+        }
+
+        ifExpr.expressions.getOrNull(1)?.let {
+            ifElse.thenStatement = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        ifExpr.expressions.getOrNull(2)?.let {
+            ifElse.elseStatement = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        frontend.scopeManager.leaveScope(ifElse)
+        return ifElse
+    }
+
+    fun handleLetExpr(letExpr: RsLetExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.LetExpr(letExpr))
+
+        val declarationStatement = newDeclarationStatement(rawNode = raw)
+
+        val variable =
+            newVariable(
+                name = (letExpr.pat as? RsPat.IdentPat)?.v1?.name ?: "",
+                type = unknownType(),
+                rawNode = raw,
+            )
+
+        letExpr.expr.let {
+            variable.initializer = frontend.expressionHandler.handle(RsAst.RustExpr(it.first()))
+        }
+
+        declarationStatement.declarations += variable
+
+        declarationStatement.usedAsExpression = true
+
+        return declarationStatement
     }
 
     fun handleRecordExpr(recordExpr: RsRecordExpr): Expression {

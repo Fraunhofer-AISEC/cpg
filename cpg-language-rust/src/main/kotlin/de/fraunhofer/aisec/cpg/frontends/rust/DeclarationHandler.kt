@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import uniffi.cpgrust.RsAssocItem
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsConst
@@ -57,13 +58,13 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
     }
 
-    private fun handleFunctionDeclaration(fn: RsFn): FunctionDeclaration {
+    private fun handleFunctionDeclaration(fn: RsFn): Function {
         val name = frontend.scopeManager.currentNamespace.fqn(fn.name ?: "")
         val raw = RsAst.RustItem(RsItem.Fn(fn))
 
         val function =
             fn.paramList?.selfParam?.let {
-                newMethodDeclaration(
+                newMethod(
                         name,
                         recordDeclaration = frontend.scopeManager.currentRecord,
                         rawNode = raw,
@@ -71,20 +72,20 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     .apply {
                         val type = it.ty?.let { frontend.typeOf(it) }
                         this.parameters +=
-                            newParameterDeclaration(
+                            newParameter(
                                 it.astNode.text,
                                 type = type ?: unknownType(),
                                 rawNode = RsAst.RustItem(RsItem.SelfParam(it)),
                             )
                         frontend.scopeManager.addDeclaration(this.parameters.last())
                     }
-            } ?: newFunctionDeclaration(name, rawNode = raw)
+            } ?: newFunction(name, rawNode = raw)
 
         fn.retType?.let { function.type = frontend.typeOf(it) }
 
         frontend.scopeManager.enterScope(function)
         for (param in fn.paramList?.params ?: listOf()) {
-            function.parameters += handleParameterDeclaration(param) as ParameterDeclaration
+            function.parameters += handleParameterDeclaration(param) as Parameter
         }
 
         fn.body?.let { function.body = frontend.expressionHandler.handleBlockExpr(it) }
@@ -100,7 +101,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val name = (param.pat as? RsPat.IdentPat)?.v1?.name ?: ""
 
         val parameter =
-            newParameterDeclaration(
+            newParameter(
                 name,
                 type = type ?: unknownType(),
                 rawNode = RsAst.RustItem(RsItem.Param(param)),
@@ -113,10 +114,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     private fun handleModule(module: RsModule): Declaration {
         val namespace =
-            newNamespaceDeclaration(
-                module.name ?: "",
-                rawNode = RsAst.RustItem(RsItem.Module(module)),
-            )
+            newNamespace(module.name ?: "", rawNode = RsAst.RustItem(RsItem.Module(module)))
         frontend.scopeManager.enterScope(namespace)
 
         for (item in module.items) {
@@ -132,7 +130,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     private fun handleStruct(struct: RsStruct): Declaration {
         val raw = RsAst.RustItem(RsItem.Struct(struct))
 
-        val record = newRecordDeclaration(struct.name ?: "", "struct", raw)
+        val record = newRecord(struct.name ?: "", "struct", raw)
 
         frontend.scopeManager.enterScope(record)
 
@@ -143,7 +141,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     for (rField in rfs.fields) {
                         val type = rField.fieldType?.let { frontend.typeOf(it) }
 
-                        val field = newFieldDeclaration(rField.name ?: "", type ?: unknownType())
+                        val field = newField(rField.name ?: "", type ?: unknownType())
 
                         field.initializer =
                             rField.expr?.let {
@@ -159,8 +157,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     for (tField in tfs.fields) {
                         val type = tField.fieldType?.let { frontend.typeOf(it) }
 
-                        val field =
-                            newFieldDeclaration(fieldCounter.toString(), type ?: unknownType())
+                        val field = newField(fieldCounter.toString(), type ?: unknownType())
 
                         record.fields += field
                         frontend.scopeManager.addDeclaration(field)
@@ -179,7 +176,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     private fun handleTrait(trait: RsTrait): Declaration {
         val raw = RsAst.RustItem(RsItem.Trait(trait))
 
-        val record = newRecordDeclaration(trait.name ?: "", "trait", raw)
+        val record = newRecord(trait.name ?: "", "trait", raw)
 
         frontend.scopeManager.enterScope(record)
 
@@ -228,14 +225,14 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         // If the implementation blocks pathTypes is longer than one element, a trait was
         // implemented for the record.
-        if (scopedNode is RecordDeclaration && impl.pathTypes.size > 1) {
+        if (scopedNode is Record && impl.pathTypes.size > 1) {
             val implInterface = impl.pathTypes.first()
             name = implInterface.path?.segment?.nameRef?.let { parseName(it.text) } ?: Name("")
             scopedNode.superClasses +=
                 objectType(name, rawNode = RsAst.RustType(RsType.PathType(implInterface)))
         }
 
-        val extensionDeclaration = newExtensionDeclaration(name, RsAst.RustItem(RsItem.Impl(impl)))
+        val extensionDeclaration = newExtension(name, RsAst.RustItem(RsItem.Impl(impl)))
 
         frontend.scopeManager.enterScope(extensionDeclaration)
 
@@ -244,7 +241,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                 is RsAssocItem.Fn -> {
                     val func = handleFunctionDeclaration(item.v1)
 
-                    if (scopedNode is RecordDeclaration) {
+                    if (scopedNode is Record) {
                         frontend.scopeManager.addDeclaration(func)
                     }
                     extensionDeclaration.declarations += func
@@ -279,7 +276,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         val type = const.ty?.let { frontend.typeOf(it) }
 
-        return newVariableDeclaration(name, type ?: unknownType(), rawNode = raw).apply {
+        return newVariable(name, type ?: unknownType(), rawNode = raw).apply {
             const.expr.firstOrNull()?.let {
                 this.initializer = frontend.expressionHandler.handle(RsAst.RustExpr(it))
             }

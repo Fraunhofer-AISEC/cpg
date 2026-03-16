@@ -1,7 +1,6 @@
 uniffi::setup_scaffolding!();
 
 use std::fs;
-use std::sync::Arc;
 use ra_ap_syntax::{ast, SourceFile, SyntaxNode};
 use ra_ap_syntax::{AstNode, Edition};
 use itertools::Itertools;
@@ -677,9 +676,16 @@ impl From<FieldExpr> for RSFieldExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSForExpr {pub(crate) ast_node: RSNode}
+pub struct RSForExpr {pub(crate) ast_node: RSNode, pat: Option<RSPat>, expressions: Vec<RSExpr>}
 impl From<ForExpr> for RSForExpr {
-    fn from(node:  ForExpr) -> Self {RSForExpr{ast_node: node.syntax().into()}}
+    fn from(node:  ForExpr) -> Self {
+        RSForExpr{
+            ast_node: node.syntax().into(),
+            pat: node.pat().map(Into::into),
+            expressions: node.syntax().children().filter_map(Expr::cast).map(Into::into)
+                .collect()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -689,11 +695,13 @@ impl From<FormatArgsExpr> for RSFormatArgsExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSIfExpr {pub(crate) ast_node: RSNode}
+pub struct RSIfExpr {pub(crate) ast_node: RSNode, expressions: Vec<RSExpr>}
 impl From<IfExpr> for RSIfExpr {
     fn from(node: IfExpr ) -> Self {
         RSIfExpr{
-            ast_node: node.syntax().into()
+            ast_node: node.syntax().into(),
+            expressions: node.syntax().children().filter_map(Expr::cast).map(Into::into)
+                .collect()
         }
     }
 }
@@ -881,9 +889,15 @@ impl From<UnderscoreExpr> for RSUnderscoreExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSWhileExpr {pub(crate) ast_node: RSNode}
+pub struct RSWhileExpr {pub(crate) ast_node: RSNode, expressions: Vec<RSExpr>}
 impl From<WhileExpr> for RSWhileExpr {
-    fn from(node: WhileExpr ) -> Self {RSWhileExpr{ast_node: node.syntax().into()}}
+    fn from(node: WhileExpr ) -> Self {
+        RSWhileExpr{
+            ast_node: node.syntax().into(),
+            expressions: node.syntax().children().filter_map(Expr::cast).map(Into::into)
+                .collect()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

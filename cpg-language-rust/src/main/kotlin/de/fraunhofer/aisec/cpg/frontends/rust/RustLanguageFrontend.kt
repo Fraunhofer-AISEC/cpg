@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -62,7 +62,7 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
     private var lastColumnLength: Int = -1
 
     @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         fileContent = file.readText(Charsets.UTF_8)
         uri = file.toURI()
 
@@ -74,7 +74,7 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         val rsRustFile = parseRustCode(file.absolutePath)
         println(rsRustFile?.astNode?.text)
         val tud =
-            newTranslationUnitDeclaration(file.path, rawNode = null).apply {
+            newTranslationUnit(file.path, rawNode = null).apply {
                 this.location =
                     PhysicalLocation(
                         uri = uri,

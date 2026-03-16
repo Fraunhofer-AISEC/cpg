@@ -27,9 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import kotlin.collections.plusAssign
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsExprStmt
@@ -39,14 +37,14 @@ import uniffi.cpgrust.RsPat
 import uniffi.cpgrust.RsStmt
 
 class StatementHandler(frontend: RustLanguageFrontend) :
-    RustHandler<Statement, RsAst.RustStmt>(::ProblemExpression, frontend) {
+    RustHandler<Expression, RsAst.RustStmt>(::ProblemExpression, frontend) {
 
-    override fun handleNode(node: RsAst.RustStmt): Statement {
+    override fun handleNode(node: RsAst.RustStmt): Expression {
         val unwrapped = node.v1
         return handleNode(unwrapped)
     }
 
-    fun handleNode(node: RsStmt): Statement {
+    fun handleNode(node: RsStmt): Expression {
         return when (node) {
             is RsStmt.LetStmt -> handleLetStmt(node.v1)
             is RsStmt.ExprStmt -> handleExprStmt(node.v1)
@@ -59,13 +57,13 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         }
     }
 
-    fun handleLetStmt(letStmt: RsLetStmt): Statement {
+    fun handleLetStmt(letStmt: RsLetStmt): Expression {
         val raw = RsAst.RustStmt(RsStmt.LetStmt(letStmt))
 
         val declarationStatement = newDeclarationStatement(rawNode = raw)
 
         val variable =
-            newVariableDeclaration(
+            newVariable(
                 name = (letStmt.pat as? RsPat.IdentPat)?.v1?.name ?: "",
                 type = letStmt.ty?.let { frontend.typeOf(it) } ?: unknownType(),
                 rawNode = raw,
@@ -82,11 +80,13 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         return declarationStatement
     }
 
-    fun handleExprStmt(exprStmt: RsExprStmt): Statement {
+    fun handleExprStmt(exprStmt: RsExprStmt): Expression {
         val raw = RsAst.RustStmt(RsStmt.ExprStmt(exprStmt))
 
         exprStmt.expr.getOrNull(0)?.let {
-            return frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            return frontend.expressionHandler.handle(RsAst.RustExpr(it)).also {
+                it.usedAsExpression = false
+            }
         }
 
         return newProblemExpression(
@@ -95,7 +95,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         )
     }
 
-    fun handleItem(item: RsItem): Statement {
+    fun handleItem(item: RsItem): Expression {
 
         val declarationStatement = newDeclarationStatement(rawNode = RsAst.RustItem(item))
 
