@@ -49,6 +49,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.absolute
 import kotlin.io.path.name
 import kotlin.io.path.readText
+import kotlin.math.max
 import kotlin.reflect.full.findAnnotation
 import kotlin.time.DurationUnit
 import org.slf4j.LoggerFactory
@@ -109,10 +110,11 @@ private constructor(
             }
         }
 
+        // ensure LoC is non-zero for division in average time per LoC
         log.info(
             "Translated {} LoC in total ({} / LoC)",
             result.stats.totalLinesOfCode,
-            (outerBench.duration / result.stats.totalLinesOfCode).toString(
+            (outerBench.duration / max(result.stats.totalLinesOfCode, 1)).toString(
                 DurationUnit.MILLISECONDS,
                 decimals = 3,
             ),
