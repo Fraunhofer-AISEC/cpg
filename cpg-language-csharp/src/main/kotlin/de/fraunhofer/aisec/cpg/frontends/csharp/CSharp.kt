@@ -90,6 +90,9 @@ interface Csharp : Library {
                 return when (INSTANCE.GetKind(nativeValue)) {
                     "NamespaceDeclaration" -> NamespaceDeclarationSyntax(nativeValue)
                     "ClassDeclaration" -> ClassDeclarationSyntax(nativeValue)
+                    "FieldDeclaration" -> FieldDeclarationSyntax(nativeValue)
+                    "MethodDeclaration" -> MethodDeclarationSyntax(nativeValue)
+                    "VariableDeclarator" -> VariableDeclaratorSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -115,7 +118,7 @@ interface Csharp : Library {
          */
         class ClassDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
             val identifier: String by lazy { INSTANCE.GetClassDeclarationIdentifier(this) }
-            val members: List<BaseMethodDeclarationSyntax> by lazy {
+            val members: List<MemberDeclarationSyntax> by lazy {
                 val count = INSTANCE.GetClassDeclarationMembersCount(this)
                 (0 until count).map { i -> INSTANCE.GetClassDeclarationMember(this, i) }
             }
@@ -133,7 +136,6 @@ interface Csharp : Library {
                     return super.fromNative(nativeValue, context)
                 }
                 return when (INSTANCE.GetKind(nativeValue)) {
-                    "MethodDeclaration" -> MethodDeclarationSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -146,6 +148,17 @@ interface Csharp : Library {
          */
         class MethodDeclarationSyntax(p: Pointer? = Pointer.NULL) : BaseMethodDeclarationSyntax(p) {
             val identifier: String by lazy { INSTANCE.GetMethodDeclarationIdentifier(this) }
+        }
+
+        class FieldDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
+            val variables: List<VariableDeclaratorSyntax> by lazy {
+                val count = INSTANCE.GetFieldDeclarationSyntaxVariableCount(this)
+                (0 until count).map { i -> INSTANCE.GetVariableDeclaratorSyntax(this, i) }
+            }
+        }
+
+        class VariableDeclaratorSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
+            val identifier: String by lazy { INSTANCE.GetVariableDeclaratorSyntaxString(this) }
         }
     }
 
@@ -187,9 +200,18 @@ interface Csharp : Library {
     fun GetClassDeclarationMember(
         handle: AST.ClassDeclarationSyntax,
         index: Int,
-    ): AST.BaseMethodDeclarationSyntax
+    ): AST.MemberDeclarationSyntax
+
+    fun GetFieldDeclarationSyntaxVariableCount(handle: AST.FieldDeclarationSyntax): Int
+
+    fun GetVariableDeclaratorSyntax(
+        handle: AST.FieldDeclarationSyntax,
+        index: Int,
+    ): AST.VariableDeclaratorSyntax
 
     fun GetMethodDeclarationIdentifier(handle: AST.MethodDeclarationSyntax): String
+
+    fun GetVariableDeclaratorSyntaxString(handle: AST.VariableDeclaratorSyntax): String
 
     fun GetCode(handle: AST.Node): String
 

@@ -33,14 +33,14 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.expressions.Comprehension
+import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.ForEach
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Assign
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Comprehension
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerList
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberAccess
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -95,8 +95,10 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         }
 
         // If this is a member expression, and we do not know the base's type, we cannot create a
-        // declaration
-        if (ref is MemberAccess && ref.base.type is UnknownType) {
+        // declaration. However, we need to exclude the receiver (self) because its type is
+        // not yet resolved at this point, but we still need to
+        // create fields for assignments.
+        if (ref is MemberAccess && ref.base.type is UnknownType && !ref.refersToReceiver) {
             return null
         }
 
@@ -135,11 +137,14 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
             when {
                 // Check, whether we are referring to a "self.X", which would create a field
                 scopeManager.isInRecord && scopeManager.isInFunction && ref.refersToReceiver -> {
+                    val recordScope = scopeManager.firstScopeIsInstanceOrNull<RecordScope>()
+                    // If the field already exists in the record scope, do not create a duplicate
+                    if (recordScope?.symbols?.containsKey(ref.name.localName) == true) {
+                        return null
+                    }
                     // We need to temporarily jump into the scope of the current record to
                     // add the field. These are instance attributes
-                    scopeManager.withScope(scopeManager.firstScopeIsInstanceOrNull<RecordScope>()) {
-                        newField(ref.name)
-                    }
+                    scopeManager.withScope(recordScope) { newField(ref.name) }
                 }
                 scopeManager.isInRecord && scopeManager.isInFunction && ref is MemberAccess -> {
                     // If this is any other member expression, we are usually not interested in
