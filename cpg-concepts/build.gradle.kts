@@ -53,7 +53,7 @@ dependencies {
     implementation("com.squareup:kotlinpoet:2.2.0")
     // owl-api
     implementation("net.sourceforge.owlapi:owlapi-distribution:4.5.4")
-    implementation("net.sourceforge.owlapi:org.semanticweb.hermit:1.3.8.413")
+    implementation("net.sourceforge.owlapi:org.semanticweb.hermit:1.4.5.519")
 
     // roaster
     implementation("org.jboss.forge.roaster:roaster-api:2.31.0.Final")
