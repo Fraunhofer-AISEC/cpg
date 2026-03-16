@@ -630,9 +630,15 @@ impl From<BlockExpr> for RSBlockExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSBreakExpr {pub(crate) ast_node: RSNode}
+pub struct RSBreakExpr {pub(crate) ast_node: RSNode, expr: Vec<RSExpr>, lifetime: Option<RSLifetime>}
 impl From<BreakExpr> for RSBreakExpr {
-    fn from(node:  BreakExpr) -> Self {RSBreakExpr{ast_node: node.syntax().into()}}
+    fn from(node:  BreakExpr) -> Self {
+        RSBreakExpr{
+            ast_node: node.syntax().into(),
+            expr: node.expr().map(Into::into).into_iter().collect(),
+            lifetime: node.lifetime().map(Into::into)
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -664,9 +670,14 @@ impl From<ClosureExpr> for RSClosureExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSContinueExpr {pub(crate) ast_node: RSNode}
+pub struct RSContinueExpr {pub(crate) ast_node: RSNode, lifetime: Option<RSLifetime>}
 impl From<ContinueExpr> for RSContinueExpr {
-    fn from(node:  ContinueExpr) -> Self {RSContinueExpr{ast_node: node.syntax().into()}}
+    fn from(node:  ContinueExpr) -> Self {
+        RSContinueExpr{
+            ast_node: node.syntax().into(),
+            lifetime: node.lifetime().map(Into::into)
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1362,9 +1373,14 @@ impl From<UseBoundGenericArg> for RSUseBoundGenericArg {
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSLifetime {pub(crate) ast_node: RSNode}
+pub struct RSLifetime {pub(crate) ast_node: RSNode, name: String}
 impl From<Lifetime> for RSLifetime {
-    fn from(node: Lifetime ) -> Self {RSLifetime{ast_node: node.syntax().into()}}
+    fn from(node: Lifetime ) -> Self {
+        RSLifetime{
+            ast_node: node.syntax().into(),
+            name: node.to_string()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

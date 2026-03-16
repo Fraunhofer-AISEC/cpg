@@ -30,7 +30,9 @@ import de.fraunhofer.aisec.cpg.graph.expressions.*
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsBinExpr
 import uniffi.cpgrust.RsBlockExpr
+import uniffi.cpgrust.RsBreakExpr
 import uniffi.cpgrust.RsCallExpr
+import uniffi.cpgrust.RsContinueExpr
 import uniffi.cpgrust.RsExpr
 import uniffi.cpgrust.RsFieldExpr
 import uniffi.cpgrust.RsForExpr
@@ -75,6 +77,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.LoopExpr -> handleLoopExpr(node.v1)
             is RsExpr.RangeExpr -> handleRangeExpr(node.v1)
             is RsExpr.FieldExpr -> handleFieldExpr(node.v1)
+            is RsExpr.BreakExpr -> handleBreakExpr(node.v1)
+            is RsExpr.ContinueExpr -> handleContinueExpr(node.v1)
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -388,6 +392,31 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         forEach.usedAsExpression = true
 
         return forEach
+    }
+
+    fun handleBreakExpr(breakExpr: RsBreakExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.BreakExpr(breakExpr))
+
+        val breakExpression = newBreak(raw)
+
+        breakExpr.lifetime?.let { breakExpression.label = it.name }
+
+        breakExpr.expr.firstOrNull()?.let {
+            breakExpression.expr = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            breakExpression.usedAsExpression = true
+        }
+
+        return breakExpression
+    }
+
+    fun handleContinueExpr(continueExpr: RsContinueExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ContinueExpr(continueExpr))
+
+        val continueExpression = newContinue(raw)
+
+        continueExpr.lifetime?.let { continueExpression.label = it.name }
+
+        return continueExpression
     }
 
     fun handleRangeExpr(rangeExpr: RsRangeExpr): Expression {
