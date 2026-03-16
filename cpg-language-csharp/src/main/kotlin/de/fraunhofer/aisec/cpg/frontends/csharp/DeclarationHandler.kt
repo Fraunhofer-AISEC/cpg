@@ -70,11 +70,13 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
                     for (variable in member.variables) {
                         val field = newField(variable.identifier, rawNode = member)
                         frontend.scopeManager.addDeclaration(field)
+                        record.addDeclaration(field)
                     }
                 }
                 else -> {
                     val decl = handle(member)
                     frontend.scopeManager.addDeclaration(decl)
+                    record.addDeclaration(decl)
                 }
             }
         }

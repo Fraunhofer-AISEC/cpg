@@ -35,11 +35,37 @@ import kotlin.test.assertNotNull
 class CSharpLanguageFrontendTest : BaseTest() {
 
     @Test
-    fun testHelloWorld() {
+    fun testNamespaces() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("helloworld.cs").toFile()),
+                listOf(topLevel.resolve("namespace.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val foo = tu.namespaces["Foo"]
+        assertNotNull(foo)
+
+        val bar = foo.namespaces["Bar"]
+        assertNotNull(bar)
+
+        val baz = bar.records["Baz"]
+        assertNotNull(baz)
+
+        val dottedNameSpace = tu.namespaces["Dotted.NameSpace"]
+        assertNotNull(dottedNameSpace)
+    }
+
+    @Test
+    fun testFileScopedNamespace() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("fileScoped_namespace.cs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -49,26 +75,18 @@ class CSharpLanguageFrontendTest : BaseTest() {
 
         val ns = tu.namespaces["HelloWorld"]
         assertNotNull(ns)
-        assertEquals(1, ns.location?.region?.startLine)
 
         val foo = ns.records["Foo"]
         assertNotNull(foo)
-        assertEquals(11, foo.location?.region?.startLine)
 
-        val bar = foo.methods["Bar"]
-        assertNotNull(bar)
-        assertEquals(13, bar.location?.region?.startLine)
+        assertEquals("bar", foo.fields["bar"]?.name?.localName)
     }
 
     @Test
     fun testFieldDeclarations() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("helloworld.cs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("fields.cs").toFile()), topLevel, true) {
                 it.registerLanguage<CSharpLanguage>()
             }
         assertNotNull(tu)

@@ -88,7 +88,8 @@ interface Csharp : Library {
                     return super.fromNative(nativeValue, context)
                 }
                 return when (INSTANCE.GetKind(nativeValue)) {
-                    "NamespaceDeclaration" -> NamespaceDeclarationSyntax(nativeValue)
+                    "NamespaceDeclaration",
+                    "FileScopedNamespaceDeclaration" -> NamespaceDeclarationSyntax(nativeValue)
                     "ClassDeclaration" -> ClassDeclarationSyntax(nativeValue)
                     "FieldDeclaration" -> FieldDeclarationSyntax(nativeValue)
                     "MethodDeclaration" -> MethodDeclarationSyntax(nativeValue)

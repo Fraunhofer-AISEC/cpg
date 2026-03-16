@@ -32,7 +32,7 @@ public static class Library
         var source = Marshal.PtrToStringUTF8(sourcePtr);
         // Roslyn parses the source code -> AST
         var root = (CSharpSyntaxNode)CSharpSyntaxTree.ParseText(source).GetRoot();
-        PrintASTDump(root);
+//        PrintASTDump(root);
         return Register(root);
     }
 
@@ -55,24 +55,26 @@ public static class Library
         return Register(((CompilationUnitSyntax)Nodes[handlePtr]).Members[index]);
     }
 
+    // Cast to BaseNamespaceDeclarationSyntax to support both block-scoped (NamespaceDeclarationSyntax)
+    // and file-scoped (FileScopedNamespaceDeclarationSyntax) namespaces.
     [UnmanagedCallersOnly(EntryPoint = "GetNamespaceDeclarationName")]
     public static IntPtr GetNamespaceDeclarationName(IntPtr handlePtr)
     {
         return Marshal.StringToCoTaskMemUTF8(
-            ((NamespaceDeclarationSyntax)Nodes[handlePtr]).Name.ToString()
+            ((BaseNamespaceDeclarationSyntax)Nodes[handlePtr]).Name.ToString()
         );
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetNamespaceDeclarationMembersCount")]
     public static int GetNamespaceDeclarationMembersCount(IntPtr handlePtr)
     {
-        return ((NamespaceDeclarationSyntax)Nodes[handlePtr]).Members.Count;
+        return ((BaseNamespaceDeclarationSyntax)Nodes[handlePtr]).Members.Count;
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetNamespaceDeclarationMember")]
     public static IntPtr GetNamespaceDeclarationMember(IntPtr handlePtr, int index)
     {
-        return Register(((NamespaceDeclarationSyntax)Nodes[handlePtr]).Members[index]);
+        return Register(((BaseNamespaceDeclarationSyntax)Nodes[handlePtr]).Members[index]);
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetClassDeclarationIdentifier")]
