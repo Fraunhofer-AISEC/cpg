@@ -191,7 +191,7 @@ class ChatService(
      * are parsed into their structured form; plain text is wrapped as [JsonPrimitive]. A single
      * item is returned directly; multiple items are wrapped in a [JsonArray].
      */
-    internal fun parseToolResultContent(contentTexts: List<String>): JsonElement {
+    fun parseToolResultContent(contentTexts: List<String>): JsonElement {
         if (contentTexts.isEmpty()) {
             return JsonArray(emptyList())
         }
