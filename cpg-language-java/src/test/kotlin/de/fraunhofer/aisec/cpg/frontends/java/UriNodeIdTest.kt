@@ -23,9 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg
+package de.fraunhofer.aisec.cpg.frontends.java
 
-import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -35,7 +34,7 @@ import kotlin.io.path.Path
 import kotlin.io.path.walk
 import kotlin.streams.asStream
 import kotlin.test.assertEquals
-import org.junit.jupiter.api.assertNotNull
+import kotlin.test.assertNotNull
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
@@ -47,7 +46,7 @@ class UriNodeIdTest : BaseTest() {
         val file = path.toFile()
         val result =
             analyze(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage<CLanguage>()
+                it.registerLanguage<JavaLanguage>()
             }
         assertNotNull(result)
 
@@ -83,7 +82,7 @@ class UriNodeIdTest : BaseTest() {
         fun getTestFilePaths(): Stream<Path> {
             return Path("src/test/resources/")
                 .walk()
-                .filter { it.toString().endsWith("c") || it.toString().endsWith(".cpp") }
+                .filter { it.toString().endsWith("java") }
                 .asStream()
         }
     }
