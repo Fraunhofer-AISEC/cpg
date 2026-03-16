@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.codyze.console.ai.clients
 
-import de.fraunhofer.aisec.codyze.console.ai.ChatClient
+import de.fraunhofer.aisec.codyze.console.ai.ChatService
 import io.ktor.utils.io.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -69,7 +69,7 @@ suspend fun readSseStream(channel: ByteReadChannel, processLine: suspend (String
     }
 }
 
-/** SSE event payloads streamed from [ChatClient] to the frontend. */
+/** SSE event payloads streamed from [ChatService] to the frontend. */
 object Events {
     fun text(content: String): String =
         Json.encodeToString(

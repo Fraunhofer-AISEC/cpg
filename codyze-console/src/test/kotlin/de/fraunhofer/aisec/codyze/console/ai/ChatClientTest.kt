@@ -34,48 +34,48 @@ import io.modelcontextprotocol.kotlin.sdk.types.Tool
 import kotlin.test.*
 import kotlinx.serialization.json.*
 
-class ChatClientTest {
+class ChatServiceTest {
 
-    private fun createChatClient(llm: LlmClient): ChatClient {
-        return ChatClient(httpClient = HttpClient(), llm = llm, mcpServerUrl = "localhost")
+    private fun createChatService(llm: LlmClient): ChatService {
+        return ChatService(httpClient = HttpClient(), llm = llm, mcpServerUrl = "localhost")
     }
 
     @Test
     fun parseToolResultContentEmptyTest() {
-        val client = createChatClient(TestLlmClient())
-        val result = client.parseToolResultContent(emptyList())
+        val service = createChatService(TestLlmClient())
+        val result = service.parseToolResultContent(emptyList())
         assertIs<JsonArray>(result)
         assertEquals(0, result.size)
     }
 
     @Test
     fun parseToolResultContentSinglePlainTextTest() {
-        val client = createChatClient(TestLlmClient())
-        val result = client.parseToolResultContent(listOf("hello world"))
+        val service = createChatService(TestLlmClient())
+        val result = service.parseToolResultContent(listOf("hello world"))
         assertIs<JsonPrimitive>(result)
         assertEquals("hello world", result.content)
     }
 
     @Test
     fun parseToolResultContentSingleJsonObjectTest() {
-        val client = createChatClient(TestLlmClient())
-        val result = client.parseToolResultContent(listOf("""{"key": "value"}"""))
+        val service = createChatService(TestLlmClient())
+        val result = service.parseToolResultContent(listOf("""{"key": "value"}"""))
         assertIs<JsonObject>(result)
         assertEquals(JsonPrimitive("value"), result["key"])
     }
 
     @Test
     fun parseToolResultContentSingleJsonArrayTest() {
-        val client = createChatClient(TestLlmClient())
-        val result = client.parseToolResultContent(listOf("""[1, 2, 3]"""))
+        val service = createChatService(TestLlmClient())
+        val result = service.parseToolResultContent(listOf("""[1, 2, 3]"""))
         assertIs<JsonArray>(result)
         assertEquals(3, result.size)
     }
 
     @Test
     fun parseToolResultContentMultipleItemsTest() {
-        val client = createChatClient(TestLlmClient())
-        val result = client.parseToolResultContent(listOf("""{"a": 1}""", "plain text", """[1]"""))
+        val service = createChatService(TestLlmClient())
+        val result = service.parseToolResultContent(listOf("""{"a": 1}""", "plain text", """[1]"""))
         assertIs<JsonArray>(result)
         assertEquals(3, result.size)
         assertIs<JsonObject>(result[0])
@@ -85,8 +85,8 @@ class ChatClientTest {
 
     @Test
     fun parseToolResultContentInvalidJsonFallsBackToPrimitiveTest() {
-        val client = createChatClient(TestLlmClient())
-        val result = client.parseToolResultContent(listOf("{invalid json"))
+        val service = createChatService(TestLlmClient())
+        val result = service.parseToolResultContent(listOf("{invalid json"))
         assertIs<JsonPrimitive>(result)
         assertEquals("{invalid json", result.content)
     }
