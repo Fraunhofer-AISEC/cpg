@@ -32,16 +32,19 @@ import uniffi.cpgrust.RsBinExpr
 import uniffi.cpgrust.RsBlockExpr
 import uniffi.cpgrust.RsCallExpr
 import uniffi.cpgrust.RsExpr
+import uniffi.cpgrust.RsForExpr
 import uniffi.cpgrust.RsIfExpr
 import uniffi.cpgrust.RsLetExpr
 import uniffi.cpgrust.RsLiteral
 import uniffi.cpgrust.RsLiteralType
+import uniffi.cpgrust.RsLoopExpr
 import uniffi.cpgrust.RsMacroExpr
 import uniffi.cpgrust.RsMethodCallExpr
 import uniffi.cpgrust.RsPat
 import uniffi.cpgrust.RsPathExpr
 import uniffi.cpgrust.RsPrefixExpr
 import uniffi.cpgrust.RsRecordExpr
+import uniffi.cpgrust.RsWhileExpr
 
 class ExpressionHandler(frontend: RustLanguageFrontend) :
     RustHandler<Expression, RsAst.RustExpr>(::ProblemExpression, frontend) {
@@ -65,6 +68,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.RecordExpr -> handleRecordExpr(node.v1)
             is RsExpr.IfExpr -> handleIfExpr(node.v1)
             is RsExpr.LetExpr -> handleLetExpr(node.v1)
+            is RsExpr.WhileExpr -> handleWhileExpr(node.v1)
+            is RsExpr.ForExpr -> handleForExpr(node.v1)
+            is RsExpr.LoopExpr -> handleLoopExpr(node.v1)
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -211,11 +217,18 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     fun handleBinExpr(binExpr: RsBinExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.BinExpr(binExpr))
         if (binExpr.expressions.size == 2) {
+            val lhs = frontend.expressionHandler.handle(RsAst.RustExpr(binExpr.expressions.first()))
+            val rhs = frontend.expressionHandler.handle(RsAst.RustExpr(binExpr.expressions.last()))
+            if (
+                binExpr.operator in language.compoundAssignmentOperators ||
+                    binExpr.operator in language.simpleAssignmentOperators
+            ) {
+                return newAssign(binExpr.operator, listOf(lhs), listOf(rhs), raw)
+            }
+
             return newBinaryOperator(binExpr.operator, raw).also {
-                it.lhs =
-                    frontend.expressionHandler.handle(RsAst.RustExpr(binExpr.expressions.first()))
-                it.rhs =
-                    frontend.expressionHandler.handle(RsAst.RustExpr(binExpr.expressions.last()))
+                it.lhs = lhs
+                it.rhs = rhs
             }
         } else if (binExpr.expressions.size == 1) {
             return newUnaryOperator(
@@ -289,6 +302,88 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         declarationStatement.usedAsExpression = true
 
         return declarationStatement
+    }
+
+    fun handleWhileExpr(whileExpr: RsWhileExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.WhileExpr(whileExpr))
+
+        val whileExpression = newWhile(raw)
+
+        frontend.scopeManager.enterScope(whileExpression)
+
+        whileExpr.expressions.first().let {
+            val condExpr = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            if (condExpr is DeclarationStatement) {
+                // There should only be one declaration inside a let of an if
+                whileExpression.conditionDeclaration = condExpr.declarations.first()
+            } else {
+                whileExpression.condition = condExpr
+            }
+        }
+
+        whileExpr.expressions.getOrNull(1)?.let {
+            whileExpression.statement = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        frontend.scopeManager.leaveScope(whileExpression)
+
+        whileExpression.usedAsExpression = true
+
+        return whileExpression
+    }
+
+    fun handleLoopExpr(loopExpr: RsLoopExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.LoopExpr(loopExpr))
+        val whileExpression = newWhile(raw)
+
+        frontend.scopeManager.enterScope(whileExpression)
+
+        whileExpression.condition =
+            newLiteral(true, language.builtInTypes["bool"] ?: unknownType(), raw).also {
+                it.isImplicit = true
+            }
+
+        loopExpr.body.firstOrNull()?.let {
+            whileExpression.statement = frontend.expressionHandler.handleBlockExpr(it)
+        }
+
+        frontend.scopeManager.leaveScope(whileExpression)
+
+        whileExpression.usedAsExpression = true
+
+        return whileExpression
+    }
+
+    fun handleForExpr(forExpr: RsForExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ForExpr(forExpr))
+        val forEach = newForEach(rawNode = raw)
+        frontend.scopeManager.enterScope(forEach)
+
+        val variable =
+            newVariable(
+                name = (forExpr.pat as? RsPat.IdentPat)?.v1?.name ?: "",
+                type = unknownType(),
+                rawNode = raw,
+            )
+        val declarationStatement = newDeclarationStatement()
+        declarationStatement.singleDeclaration = variable
+
+        forExpr.expressions.first().let {
+            val iterable = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            forEach.iterable = iterable
+        }
+
+        forExpr.expressions.getOrNull(1)?.let {
+            forEach.statement = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        forEach.variable = declarationStatement
+
+        frontend.scopeManager.leaveScope(forEach)
+
+        forEach.usedAsExpression = true
+
+        return forEach
     }
 
     fun handleRecordExpr(recordExpr: RsRecordExpr): Expression {
