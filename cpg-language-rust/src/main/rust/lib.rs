@@ -658,9 +658,15 @@ impl From<CallExpr> for RSCallExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSCastExpr {pub(crate) ast_node: RSNode}
+pub struct RSCastExpr {pub(crate) ast_node: RSNode, expr: Vec<RSExpr>, ty: Vec<RSType>}
 impl From<CastExpr> for RSCastExpr {
-    fn from(node:  CastExpr) -> Self {RSCastExpr{ast_node: node.syntax().into()}}
+    fn from(node:  CastExpr) -> Self {
+        RSCastExpr{
+            ast_node: node.syntax().into(),
+            expr: node.expr().map(Into::into).into_iter().collect(),
+            ty: node.ty().map(Into::into).into_iter().collect()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

@@ -32,6 +32,7 @@ import uniffi.cpgrust.RsBinExpr
 import uniffi.cpgrust.RsBlockExpr
 import uniffi.cpgrust.RsBreakExpr
 import uniffi.cpgrust.RsCallExpr
+import uniffi.cpgrust.RsCastExpr
 import uniffi.cpgrust.RsContinueExpr
 import uniffi.cpgrust.RsExpr
 import uniffi.cpgrust.RsFieldExpr
@@ -79,6 +80,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.FieldExpr -> handleFieldExpr(node.v1)
             is RsExpr.BreakExpr -> handleBreakExpr(node.v1)
             is RsExpr.ContinueExpr -> handleContinueExpr(node.v1)
+            is RsExpr.CastExpr -> handleCastExpr(node.v1)
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -449,6 +451,19 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             problem = "FieldExpression does not contain a base expression or a name reference",
             rawNode = raw,
         )
+    }
+
+    fun handleCastExpr(castExpr: RsCastExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.CastExpr(castExpr))
+
+        val input = frontend.expressionHandler.handle(RsAst.RustExpr(castExpr.expr.first()))
+
+        val type = castExpr.ty.firstOrNull()?.let { frontend.typeOf(it) } ?: unknownType()
+
+        return newCast(raw).also {
+            it.expression = input
+            it.castType = type
+        }
     }
 
     fun handleRecordExpr(recordExpr: RsRecordExpr): Expression {
