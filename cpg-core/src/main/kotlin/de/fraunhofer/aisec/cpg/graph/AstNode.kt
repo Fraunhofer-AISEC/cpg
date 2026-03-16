@@ -33,13 +33,12 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfElse
-import de.fraunhofer.aisec.cpg.graph.statements.Return
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -48,7 +47,7 @@ import org.neo4j.ogm.annotation.Relationship
 /**
  * This is the base class for all AST nodes in the CPG. It is used to represent any node in the
  * abstract syntax tree (AST) of a program. It serves as a base class for more specific node types
- * such as [Statement]s, [Expression]s, [Declaration]s, etc.
+ * such as [Expression]s, [Expression]s, [Declaration]s, etc.
  */
 abstract class AstNode : Node() {
 

@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.statements.Goto
-import de.fraunhofer.aisec.cpg.graph.statements.Label
+import de.fraunhofer.aisec.cpg.graph.expressions.Goto
+import de.fraunhofer.aisec.cpg.graph.expressions.Label
 import java.util.function.BiConsumer
 import java.util.function.BiPredicate
 

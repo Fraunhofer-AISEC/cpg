@@ -27,15 +27,14 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 class StatementHandler(frontend: GoLanguageFrontend) :
-    GoHandler<Statement, GoStandardLibrary.Ast.Stmt>(::ProblemExpression, frontend) {
+    GoHandler<Expression, GoStandardLibrary.Ast.Stmt>(::ProblemExpression, frontend) {
 
-    override fun handleNode(node: GoStandardLibrary.Ast.Stmt): Statement {
+    override fun handleNode(node: GoStandardLibrary.Ast.Stmt): Expression {
         return when (node) {
             is GoStandardLibrary.Ast.AssignStmt -> handleAssignStmt(node)
             is GoStandardLibrary.Ast.BranchStmt -> handleBranchStmt(node)
@@ -77,7 +76,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return newAssign(operatorCode, lhs, rhs, rawNode = assignStmt)
     }
 
-    private fun handleBranchStmt(branchStmt: GoStandardLibrary.Ast.BranchStmt): Statement {
+    private fun handleBranchStmt(branchStmt: GoStandardLibrary.Ast.BranchStmt): Expression {
         when (branchStmt.tokString) {
             "break" -> {
                 val stmt = newBreak(rawNode = branchStmt)
@@ -99,7 +98,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return newProblemExpression("unknown token \"${branchStmt.tokString}\" in branch statement")
     }
 
-    private fun handleBlockStmt(blockStmt: GoStandardLibrary.Ast.BlockStmt): Statement {
+    private fun handleBlockStmt(blockStmt: GoStandardLibrary.Ast.BlockStmt): Expression {
         val compound = newBlock(rawNode = blockStmt)
 
         frontend.scopeManager.enterScope(compound)
@@ -122,7 +121,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         caseClause: GoStandardLibrary.Ast.CaseClause,
         typeSwitchLhs: Node? = null,
         typeSwitchRhs: Expression? = null,
-    ): Statement {
+    ): Expression {
         val isTypeSwitch = typeSwitchRhs != null
 
         val case =
@@ -378,7 +377,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         return op
     }
 
-    private fun handleSwitchStmt(switchStmt: GoStandardLibrary.Ast.SwitchStmt): Statement {
+    private fun handleSwitchStmt(switchStmt: GoStandardLibrary.Ast.SwitchStmt): Expression {
         val switch = newSwitch(rawNode = switchStmt)
 
         frontend.scopeManager.enterScope(switch)

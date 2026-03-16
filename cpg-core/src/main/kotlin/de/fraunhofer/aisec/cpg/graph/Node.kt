@@ -176,10 +176,7 @@ abstract class Node() :
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     var prevDFG by unwrapping(Node::prevDFGEdges)
 
-    /**
-     * Virtual property for accessing [nextDFGEdges] that have a
-     * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
-     */
+    /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
     @DoNotPersist
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     val prevFullDFG: List<Node>
@@ -200,10 +197,7 @@ abstract class Node() :
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     var nextDFG by unwrapping(Node::nextDFGEdges)
 
-    /**
-     * Virtual property for accessing [nextDFGEdges] that have a
-     * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
-     */
+    /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
     @DoNotPersist
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     val nextFullDFG: List<Node>

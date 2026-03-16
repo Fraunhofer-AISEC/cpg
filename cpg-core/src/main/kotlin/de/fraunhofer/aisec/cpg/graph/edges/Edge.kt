@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.Persistable
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
 import kotlin.reflect.KProperty
@@ -77,10 +76,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
     val overlaying: Boolean
         get() = end is OverlayNode || start is OverlayNode
 
-    /**
-     * The index of this node, if it is stored in an
-     * [de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList].
-     */
+    /** The index of this node, if it is stored in an [EdgeList]. */
     var index: Int? = null
 
     /** An optional name. */
