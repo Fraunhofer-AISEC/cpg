@@ -112,10 +112,10 @@ private constructor(
         log.info(
             "Translated {} LoC in total ({} / LoC)",
             result.stats.totalLinesOfCode,
-            (outerBench.duration / result.stats.totalLinesOfCode).toString(
-                DurationUnit.MILLISECONDS,
-                decimals = 3,
-            ),
+            (outerBench.duration /
+                    (if (result.stats.totalLinesOfCode != 0) result.stats.totalLinesOfCode
+                    else 1)) // TODO potential fix for illegal argument exception
+                .toString(DurationUnit.MILLISECONDS, decimals = 3),
         )
 
         return result
