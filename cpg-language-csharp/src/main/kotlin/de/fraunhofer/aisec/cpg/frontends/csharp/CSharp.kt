@@ -92,7 +92,6 @@ interface Csharp : Library {
                     "ClassDeclaration" -> ClassDeclarationSyntax(nativeValue)
                     "FieldDeclaration" -> FieldDeclarationSyntax(nativeValue)
                     "MethodDeclaration" -> MethodDeclarationSyntax(nativeValue)
-                    "VariableDeclarator" -> VariableDeclaratorSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -152,13 +151,13 @@ interface Csharp : Library {
 
         class FieldDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
             val variables: List<VariableDeclaratorSyntax> by lazy {
-                val count = INSTANCE.GetFieldDeclarationSyntaxVariableCount(this)
-                (0 until count).map { i -> INSTANCE.GetVariableDeclaratorSyntax(this, i) }
+                val count = INSTANCE.GetFieldVariableCount(this)
+                (0 until count).map { i -> INSTANCE.GetFieldVariable(this, i) }
             }
         }
 
-        class VariableDeclaratorSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
-            val identifier: String by lazy { INSTANCE.GetVariableDeclaratorSyntaxString(this) }
+        class VariableDeclaratorSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val identifier: String by lazy { INSTANCE.GetVariableDeclaratorIdentifier(this) }
         }
     }
 
@@ -202,16 +201,16 @@ interface Csharp : Library {
         index: Int,
     ): AST.MemberDeclarationSyntax
 
-    fun GetFieldDeclarationSyntaxVariableCount(handle: AST.FieldDeclarationSyntax): Int
+    fun GetFieldVariableCount(handle: AST.FieldDeclarationSyntax): Int
 
-    fun GetVariableDeclaratorSyntax(
+    fun GetFieldVariable(
         handle: AST.FieldDeclarationSyntax,
         index: Int,
     ): AST.VariableDeclaratorSyntax
 
-    fun GetMethodDeclarationIdentifier(handle: AST.MethodDeclarationSyntax): String
+    fun GetVariableDeclaratorIdentifier(handle: AST.VariableDeclaratorSyntax): String
 
-    fun GetVariableDeclaratorSyntaxString(handle: AST.VariableDeclaratorSyntax): String
+    fun GetMethodDeclarationIdentifier(handle: AST.MethodDeclarationSyntax): String
 
     fun GetCode(handle: AST.Node): String
 

@@ -40,10 +40,6 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.NamespaceDeclarationSyntax -> handleNamespaceDeclaration(node)
             is Csharp.AST.ClassDeclarationSyntax -> handleClassDeclaration(node)
             is Csharp.AST.MethodDeclarationSyntax -> handleMethodDeclaration(node)
-            is Csharp.AST.FieldDeclarationSyntax -> handleFieldDeclaration(node)
-            // is Csharp.AST.LocalDeclarationStatementSyntax -> handleLocalDeclaration(node)
-            // is Csharp.AST.VariableDeclaratorSyntax -> handleVariableDeclarator(node)
-            // is Csharp.AST.VariableDeclarationSyntax -> handleVariableDeclaration(node)
             else -> ProblemDeclaration("Not supported: ${node.csharpType}")
         }
     }
@@ -69,9 +65,18 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         frontend.scopeManager.enterScope(record)
 
         for (member in node.members) {
-            val decl = handle(member)
-            frontend.scopeManager.addDeclaration(decl)
-            record.addDeclaration(decl)
+            when (member) {
+                is Csharp.AST.FieldDeclarationSyntax -> {
+                    for (variable in member.variables) {
+                        val field = newField(variable.identifier, rawNode = member)
+                        frontend.scopeManager.addDeclaration(field)
+                    }
+                }
+                else -> {
+                    val decl = handle(member)
+                    frontend.scopeManager.addDeclaration(decl)
+                }
+            }
         }
 
         frontend.scopeManager.leaveScope(record)
@@ -79,12 +84,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     }
 
     private fun handleMethodDeclaration(node: Csharp.AST.MethodDeclarationSyntax): Declaration {
-
         val method = newMethod(node.identifier, rawNode = node)
         return method
-    }
-
-    private fun handleFieldDeclaration(node: Csharp.AST.FieldDeclarationSyntax): Declaration {
-        return newField(node.variables[0].identifier, rawNode = node)
     }
 }

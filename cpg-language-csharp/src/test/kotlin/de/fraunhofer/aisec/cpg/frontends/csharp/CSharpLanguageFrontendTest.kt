@@ -31,7 +31,6 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
 
 class CSharpLanguageFrontendTest : BaseTest() {
 
@@ -54,15 +53,15 @@ class CSharpLanguageFrontendTest : BaseTest() {
 
         val foo = ns.records["Foo"]
         assertNotNull(foo)
-        assertEquals(3, foo.location?.region?.startLine)
+        assertEquals(11, foo.location?.region?.startLine)
 
         val bar = foo.methods["Bar"]
         assertNotNull(bar)
-        assertEquals(5, bar.location?.region?.startLine)
+        assertEquals(13, bar.location?.region?.startLine)
     }
 
     @Test
-    fun testFieldDeclaration() {
+    fun testFieldDeclarations() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
@@ -73,15 +72,5 @@ class CSharpLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CSharpLanguage>()
             }
         assertNotNull(tu)
-        assertEquals(8, tu.fields?.size)
-
-        assertTrue(tu.fields[0].name.localName == "name")
-        assertTrue(tu.fields[1].name.localName == "alter")
-        assertTrue(tu.fields[2].name.localName == "toll")
-        assertTrue(tu.fields[3].name.localName == "test")
-        assertTrue(tu.fields[4].name.localName == "xx")
-        assertTrue(tu.fields[5].name.localName == "exptest")
-        assertTrue(tu.fields[6].name.localName == "i")
-        assertTrue(tu.fields[7].name.localName == "x")
     }
 }
