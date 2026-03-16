@@ -605,12 +605,22 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         val operatorCode = String(ASTStringUtil.getBinaryOperatorString(ctx))
         val assign = newAssign(operatorCode, listOf(lhs), listOf(rhs), rawNode = ctx)
-        if (rhs is PointerReference && rhs.input is Reference) {
-            (rhs.input as Reference).resolutionHelper = lhs
-            rhs.resolutionHelper = lhs
-        } else if (rhs is PointerDereference && rhs.input is Reference) {
-            (rhs.input as Reference).resolutionHelper = lhs
-            rhs.resolutionHelper = lhs
+        if (rhs is PointerReference) {
+            var ref = rhs.input
+            // Ignore any possible casts
+            while (ref is Cast) ref = ref.expression
+            if (ref is Reference) {
+                ref.resolutionHelper = lhs
+                rhs.resolutionHelper = lhs
+            }
+        } else if (rhs is PointerDereference) {
+            var ref = rhs.input
+            // Ignore any possible casts
+            while (ref is Cast) ref = ref.expression
+            if (ref is Reference) {
+                ref.resolutionHelper = lhs
+                rhs.resolutionHelper = lhs
+            }
         }
 
         return assign
