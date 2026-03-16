@@ -109,10 +109,13 @@ private constructor(
             }
         }
 
+        // ensure LoC is non-zero for division in average time per LoC
+        val divisionSafeLoC =
+            if (result.stats.totalLinesOfCode > 0) result.stats.totalLinesOfCode else 1
         log.info(
             "Translated {} LoC in total ({} / LoC)",
             result.stats.totalLinesOfCode,
-            (outerBench.duration / result.stats.totalLinesOfCode).toString(
+            (outerBench.duration / divisionSafeLoC).toString(
                 DurationUnit.MILLISECONDS,
                 decimals = 3,
             ),
