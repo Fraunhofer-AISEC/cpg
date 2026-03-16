@@ -32,6 +32,7 @@ import uniffi.cpgrust.RsBinExpr
 import uniffi.cpgrust.RsBlockExpr
 import uniffi.cpgrust.RsCallExpr
 import uniffi.cpgrust.RsExpr
+import uniffi.cpgrust.RsFieldExpr
 import uniffi.cpgrust.RsForExpr
 import uniffi.cpgrust.RsIfExpr
 import uniffi.cpgrust.RsLetExpr
@@ -43,6 +44,7 @@ import uniffi.cpgrust.RsMethodCallExpr
 import uniffi.cpgrust.RsPat
 import uniffi.cpgrust.RsPathExpr
 import uniffi.cpgrust.RsPrefixExpr
+import uniffi.cpgrust.RsRangeExpr
 import uniffi.cpgrust.RsRecordExpr
 import uniffi.cpgrust.RsWhileExpr
 
@@ -71,6 +73,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.WhileExpr -> handleWhileExpr(node.v1)
             is RsExpr.ForExpr -> handleForExpr(node.v1)
             is RsExpr.LoopExpr -> handleLoopExpr(node.v1)
+            is RsExpr.RangeExpr -> handleRangeExpr(node.v1)
+            is RsExpr.FieldExpr -> handleFieldExpr(node.v1)
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -384,6 +388,38 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         forEach.usedAsExpression = true
 
         return forEach
+    }
+
+    fun handleRangeExpr(rangeExpr: RsRangeExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.RangeExpr(rangeExpr))
+        val range = newRange(rawNode = raw)
+
+        rangeExpr.expressions.getOrNull(0)?.let {
+            range.floor = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        rangeExpr.expressions.getOrNull(1)?.let {
+            range.ceiling = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        range.operatorCode = rangeExpr.operator
+        return range
+    }
+
+    fun handleFieldExpr(fieldExpr: RsFieldExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.FieldExpr(fieldExpr))
+
+        fieldExpr.expr.first().let {
+            val base = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            fieldExpr.nameRef?.let { nameRef ->
+                return newMemberAccess(name = nameRef.text, base = base, rawNode = raw)
+            }
+        }
+
+        return newProblemExpression(
+            problem = "FieldExpression does not contain a base expression or a name reference",
+            rawNode = raw,
+        )
     }
 
     fun handleRecordExpr(recordExpr: RsRecordExpr): Expression {

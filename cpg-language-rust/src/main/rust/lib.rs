@@ -670,9 +670,15 @@ impl From<ContinueExpr> for RSContinueExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSFieldExpr {pub(crate) ast_node: RSNode}
+pub struct RSFieldExpr {pub(crate) ast_node: RSNode, expr: Vec<RSExpr>, name_ref: Option<RSNameRef>}
 impl From<FieldExpr> for RSFieldExpr {
-    fn from(node:  FieldExpr) -> Self {RSFieldExpr{ast_node: node.syntax().into()}}
+    fn from(node:  FieldExpr) -> Self {
+        RSFieldExpr{
+            ast_node: node.syntax().into(),
+            expr: node.expr().map(Into::into).into_iter().collect(),
+            name_ref: node.name_ref().map(Into::into)
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -848,9 +854,16 @@ impl From<PrefixExpr> for RSPrefixExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSRangeExpr {pub(crate) ast_node: RSNode}
+pub struct RSRangeExpr {pub(crate) ast_node: RSNode, expressions: Vec<RSExpr>, operator: String}
 impl From<RangeExpr> for RSRangeExpr {
-    fn from(node: RangeExpr ) -> Self {RSRangeExpr{ast_node: node.syntax().into()}}
+    fn from(node: RangeExpr ) -> Self {
+        RSRangeExpr{
+            ast_node: node.syntax().into(),
+            operator: node.syntax().children_with_tokens().filter(|sn|sn.kind().is_punct()).map(|p|p.to_string()).into_iter().collect(),
+            expressions: node.syntax().children().filter_map(Expr::cast).map(Into::into)
+                .collect()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -944,7 +957,6 @@ impl From<Stmt> for RSStmt {
 pub struct RSExprStmt {pub(crate) ast_node: RSNode, expr: Vec<RSExpr>}
 impl From<ExprStmt> for RSExprStmt {
     fn from(node: ExprStmt ) -> Self {
-        // Todo
         RSExprStmt{ast_node: node.syntax().into(), expr: node.expr().map(Into::into).into_iter().collect()}
     }
 }
@@ -1068,9 +1080,16 @@ impl From<PathPat> for RSPathPat {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSRangePat {pub(crate) ast_node: RSNode}
+pub struct RSRangePat {pub(crate) ast_node: RSNode, patterns: Vec<RSPat>, operator: String}
 impl From<RangePat> for RSRangePat {
-    fn from(node: RangePat ) -> Self {RSRangePat{ast_node: node.syntax().into()}}
+    fn from(node: RangePat ) -> Self {
+        RSRangePat{
+            ast_node: node.syntax().into(),
+            operator: node.syntax().children_with_tokens().filter(|sn|sn.kind().is_punct()).map(|p|p.to_string()).into_iter().collect(),
+            patterns: node.syntax().children().filter_map(Pat::cast).map(Into::into)
+                .collect()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
