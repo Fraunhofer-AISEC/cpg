@@ -38,7 +38,6 @@ abstract class CSharpHandler<ResultNode : Node>(
     override fun handle(ctx: Csharp.AST.Node): ResultNode {
         val node = handleNode(ctx)
 
-        // TODO: implement setComment
         frontend.setComment(node, ctx)
         frontend.process(ctx, node)
 

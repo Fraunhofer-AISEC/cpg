@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.newField
 import de.fraunhofer.aisec.cpg.graph.newMethod
 import de.fraunhofer.aisec.cpg.graph.newNamespace
@@ -45,6 +44,11 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         }
     }
 
+    /**
+     * Translates a C#
+     * [`NamespaceDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.namespacedeclarationsyntax?view=roslyn-dotnet-5.0.0)
+     * into a [Namespace].
+     */
     private fun handleNamespaceDeclaration(
         node: Csharp.AST.NamespaceDeclarationSyntax
     ): Declaration {
@@ -61,6 +65,11 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         return namespace
     }
 
+    /**
+     * Translates a C#
+     * [`ClassDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.classdeclarationsyntax?view=roslyn-dotnet-5.0.0)
+     * into a [Record].
+     */
     private fun handleClassDeclaration(node: Csharp.AST.ClassDeclarationSyntax): Declaration {
         val record = newRecord(node.identifier, "class", rawNode = node)
         frontend.scopeManager.enterScope(record)
@@ -86,6 +95,11 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         return record
     }
 
+    /**
+     * Translates a C#
+     * [`MethodDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.methoddeclarationsyntax?view=roslyn-dotnet-5.0.0)
+     * into a [Method].
+     */
     private fun handleMethodDeclaration(node: Csharp.AST.MethodDeclarationSyntax): Declaration {
         val method = newMethod(node.identifier, rawNode = node)
         frontend.scopeManager.enterScope(method)
