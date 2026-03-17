@@ -46,7 +46,11 @@ import kotlinx.coroutines.withTimeout
  * server and client.
  */
 @OptIn(ExperimentalMcpApi::class)
-fun withClient(registerTools: Server.() -> Unit = {}, test: suspend (Client) -> Unit) =
+fun withClient(
+    registerTools: Server.() -> Unit = {},
+    registerPrompts: Server.() -> Unit = {},
+    test: suspend (Client) -> Unit,
+): Unit =
     runBlocking(Dispatchers.Default) {
         val serverReady = CompletableDeferred<Unit>()
 
@@ -65,6 +69,7 @@ fun withClient(registerTools: Server.() -> Unit = {}, test: suspend (Client) -> 
 
         server.onConnect { serverReady.complete(Unit) }
         server.registerTools()
+        server.registerPrompts()
 
         val (clientTransport, serverTransport) = ChannelTransport.createLinkedPair()
         val client = Client(Implementation(name = "test-client", version = "1.0.0"))

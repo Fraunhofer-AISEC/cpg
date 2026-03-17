@@ -28,11 +28,11 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgApplyConceptsTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgDataflowTool
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgLlmAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgTranslate
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addDfgBackwardTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addListPasses
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addRunPass
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addSuggestConceptsPrompt
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getAllArgs
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getArgByIndexOrName
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableConcepts
@@ -49,11 +49,11 @@ import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 
 fun configureServer(
     configure: Server.() -> Server = {
+        // TOOLS
         this.addCpgTranslate()
         this.addListPasses()
         this.addRunPass()
         this.addCpgAnalyzeTool()
-        this.addCpgLlmAnalyzeTool()
         this.addCpgApplyConceptsTool()
         this.addCpgDataflowTool()
         this.listFunctions()
@@ -66,6 +66,8 @@ fun configureServer(
         this.getArgByIndexOrName()
         this.listConceptsAndOperations()
         this.addDfgBackwardTool()
+        // PROMPTS
+        this.addSuggestConceptsPrompt()
         this
     }
 ): Server {
