@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.Util.matchArgumentsToCallParameters
 import de.fraunhofer.aisec.cpg.helpers.concurrentIdentitySetOf
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
@@ -1120,20 +1121,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      */
     private suspend fun calculateIncomingCallingContexts(
         lattice: PointsToState,
-        Function: Function,
-        Call: Call,
+        function: Function,
+        call: Call,
         doubleState: PointsToState.Element,
     ): PointsToState.Element = coroutineScope {
         var doubleState = doubleState
         val callingContext =
             CallingContextIn(
-                mutableListOf(Call)
+                mutableListOf(call)
             ) // TODO: Indicate somehow if this has already been done?
-        val innerConcurrencyCounter = calculateInnerConcurrencyCounter(Call.arguments.size)
+        val innerConcurrencyCounter = calculateInnerConcurrencyCounter(call.arguments.size)
 
-        if (Call is MemberCall && Function is Method) {
-            val base = Call.base
-            val receiver = Function.receiver
+        if (call is MemberCall && function is Method) {
+            val base = call.base
+            val receiver = function.receiver
             if (base != null && receiver != null) {
                 doubleState =
                     lattice.push(
@@ -1157,9 +1158,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val getLastWritesCache =
             ConcurrentIdentityHashMap<Node, PowersetLattice.Element<NodeWithPropertiesKey>>()
 
-        Call.arguments.forEach { arg ->
+        val paramArgMatching = matchArgumentsToCallParameters(function, call)
+
+        call.arguments.forEach { arg ->
             launch(Dispatchers.Default) {
-                if (arg.argumentIndex < Function.parameters.size) {
+                if (arg.argumentIndex < function.parameters.size) {
                     // In C(++), the reference to an array is a
                     // pointer, leading to the
                     // situation that handing "arg" or "&arg" as
@@ -1177,7 +1180,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     }
                     // Create a DFG-Edge from the argument to the Parameter or its
                     // ParameterMemoryValue
-                    val p = Function.parameters[arg.argumentIndex]
+                    val p = paramArgMatching[arg]
+                    if (p == null) {
+                        log.warn(
+                            "Did not find a matching parameter for argument $arg of call $call and function $function"
+                        )
+                        return@launch
+                    }
                     val derefPMVs = async {
                         p.memoryValueEdges
                             .filter {

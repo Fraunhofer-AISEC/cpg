@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
@@ -394,8 +395,71 @@ object Util {
     }
 
     /**
+     * Returns a list which parameter of a [Function] matches with arguments of a [Call] It handles
+     * positional arguments, named/default arguments, and variadic parameters.
+     *
+     * @param target The call's target [Function]
+     * @param call The [Call]
+     * @return Map Argument -> Parameter
+     */
+    fun matchArgumentsToCallParameters(target: Function, call: Call): MutableMap<Node, Parameter> {
+        val ret = mutableMapOf<Node, Parameter>()
+        val functionParameters = target.parameters
+        val argumentEdges = call.argumentEdges
+        var argumentIndex = 0
+
+        for (param in functionParameters) {
+            val argumentEdge = argumentEdges.getOrNull(argumentIndex)
+            // Try to find a named argument matching this parameter
+            val namedEdge = argumentEdges.firstOrNull { it.name == param.name.localName }
+            if (namedEdge != null) {
+                ret[namedEdge.end] = param
+                argumentIndex++
+                continue // Move to next parameter
+            }
+
+            // Handle variadic parameters
+            if (param.isVariadic) {
+                val remainingEdges = argumentEdges.drop(argumentIndex)
+                if (remainingEdges.isNotEmpty()) {
+                    // If it is the last parameter, it is a keyword required parameter (e.g.
+                    // **kwargs in python);
+                    val isKeywordVariadic = functionParameters.lastOrNull { it.isVariadic } == param
+                    remainingEdges.forEach { edge ->
+                        if (isKeywordVariadic) {
+                            ret[edge.end] = param
+                            argumentIndex++
+                        } else {
+                            // otherwise it is a positional variadic parameter (e.g. *args in
+                            // python) without keyword
+                            if (edge.name == null) {
+                                ret[edge.end] = param
+                                argumentIndex++
+                            }
+                        }
+                    }
+                }
+                continue // Move to next parameter
+            }
+
+            // Handle only positional parameters, ignoring named arguments
+            if (argumentEdge != null && argumentEdge.name == null) {
+                ret[argumentEdge.end] = param
+                argumentIndex++
+                continue // Move to next parameter
+            }
+
+            // Handle default parameters when not explicitly provided
+            val default = param.default
+            if (default != null) {
+                ret[default] = param
+            }
+        }
+        return ret
+    }
+
+    /**
      * Establishes data-flow from the arguments of a [Call] to the parameters of a [Function]
-     * parameters. It handles positional arguments, named/default arguments, and variadic
      * parameters. Additionally, if the call is a [MemberCall], it establishes a data-flow from the
      * [MemberCall.base] towards the [Method.receiver].
      *
@@ -415,71 +479,11 @@ object Util {
             }
         }
 
-        val functionParameters = target.parameters
-        val argumentEdges = call.argumentEdges
-        var argumentIndex = 0
-
-        for (param in functionParameters) {
-            val argumentEdge = argumentEdges.getOrNull(argumentIndex)
-            // Try to find a named argument matching this parameter
-            val namedEdge = argumentEdges.firstOrNull { it.name == param.name.localName }
-            if (namedEdge != null) {
-                param.prevDFGEdges.addContextSensitive(
-                    namedEdge.end,
-                    callingContext = CallingContextIn(mutableListOf(call)),
-                )
-                argumentIndex++
-                continue // Move to next parameter
-            }
-
-            // Handle variadic parameters
-            if (param.isVariadic) {
-                val remainingEdges = argumentEdges.drop(argumentIndex)
-                if (remainingEdges.isNotEmpty()) {
-                    // If it is the last parameter, it is a keyword required parameter (e.g.
-                    // **kwargs in python);
-                    val isKeywordVariadic = functionParameters.lastOrNull { it.isVariadic } == param
-                    remainingEdges.forEach { edge ->
-                        if (isKeywordVariadic) {
-                            param.prevDFGEdges.addContextSensitive(
-                                edge.end,
-                                callingContext = CallingContextIn(mutableListOf(call)),
-                            )
-                            argumentIndex++
-                        } else {
-                            // otherwise it is a positional variadic parameter (e.g. *args in
-                            // python) without keyword
-                            if (edge.name == null) {
-                                param.prevDFGEdges.addContextSensitive(
-                                    edge.end,
-                                    callingContext = CallingContextIn(mutableListOf(call)),
-                                )
-                                argumentIndex++
-                            }
-                        }
-                    }
-                }
-                continue // Move to next parameter
-            }
-
-            // Handle only positional parameters, ignoring named arguments
-            if (argumentEdge != null && argumentEdge.name == null) {
-                param.prevDFGEdges.addContextSensitive(
-                    argumentEdge.end,
-                    callingContext = CallingContextIn(mutableListOf(call)),
-                )
-                argumentIndex++
-                continue // Move to next parameter
-            }
-
-            // Handle default parameters when not explicitly provided
-            val default = param.default
-            if (default != null) {
-                param.prevDFGEdges.addContextSensitive(
-                    default,
-                    callingContext = CallingContextIn(mutableListOf(call)),
-                )
-            }
+        matchArgumentsToCallParameters(target, call).forEach { (argument, param) ->
+            param.prevDFGEdges.addContextSensitive(
+                argument,
+                callingContext = CallingContextIn(mutableListOf(call)),
+            )
         }
     }
 
