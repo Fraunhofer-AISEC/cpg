@@ -91,4 +91,27 @@ class CSharpLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
     }
+
+    @Test
+    fun testMethodDeclarationsTest() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("method.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val foo = tu.namespaces["HelloWorld"]?.records["Foo"]
+        assertNotNull(foo)
+
+        val bar = foo.methods["Bar"]
+        assertNotNull(bar)
+        assertEquals(0, bar.parameters.size)
+
+        val baz = foo.methods["Baz"]
+        assertNotNull(baz)
+        assertEquals(2, baz.parameters.size)
+        assertEquals("a", baz.parameters[0].name.localName)
+        assertEquals("b", baz.parameters[1].name.localName)
+    }
 }

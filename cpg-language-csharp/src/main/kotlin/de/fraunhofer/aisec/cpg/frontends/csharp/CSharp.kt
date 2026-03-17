@@ -61,6 +61,15 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
+         * [`TypeSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.typesyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
+        class TypeSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val name: String by lazy { INSTANCE.GetTypeName(this) }
+        }
+
+        /**
+         * Represents the Roslyn
          * [`CompilationUnitSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.compilationunitsyntax?view=roslyn-dotnet-5.0.0)
          * class.
          */
@@ -148,8 +157,17 @@ interface Csharp : Library {
          */
         class MethodDeclarationSyntax(p: Pointer? = Pointer.NULL) : BaseMethodDeclarationSyntax(p) {
             val identifier: String by lazy { INSTANCE.GetMethodDeclarationIdentifier(this) }
+            val parameters: List<ParameterSyntax> by lazy {
+                val count = INSTANCE.GetMethodDeclarationParameterCount(this)
+                (0 until count).map { i -> INSTANCE.GetMethodDeclarationParameter(this, i) }
+            }
         }
 
+        /**
+         * Represents the Roslyn
+         * [`FieldDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.fielddeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
         class FieldDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
             val variables: List<VariableDeclaratorSyntax> by lazy {
                 val count = INSTANCE.GetFieldVariableCount(this)
@@ -157,8 +175,23 @@ interface Csharp : Library {
             }
         }
 
+        /**
+         * Represents the Roslyn
+         * [`VariableDeclaratorSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.variabledeclaratorsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
         class VariableDeclaratorSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
             val identifier: String by lazy { INSTANCE.GetVariableDeclaratorIdentifier(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ParameterSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.parametersyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
+        class ParameterSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val identifier: String by lazy { INSTANCE.GetParameterIdentifier(this) }
+            val type: TypeSyntax by lazy { INSTANCE.GetParameterType(this) }
         }
     }
 
@@ -212,6 +245,19 @@ interface Csharp : Library {
     fun GetVariableDeclaratorIdentifier(handle: AST.VariableDeclaratorSyntax): String
 
     fun GetMethodDeclarationIdentifier(handle: AST.MethodDeclarationSyntax): String
+
+    fun GetMethodDeclarationParameterCount(handle: AST.MethodDeclarationSyntax): Int
+
+    fun GetMethodDeclarationParameter(
+        handle: AST.MethodDeclarationSyntax,
+        index: Int,
+    ): AST.ParameterSyntax
+
+    fun GetParameterIdentifier(handle: AST.ParameterSyntax): String
+
+    fun GetParameterType(handle: AST.ParameterSyntax): AST.TypeSyntax
+
+    fun GetTypeName(handle: AST.TypeSyntax): String
 
     fun GetCode(handle: AST.Node): String
 

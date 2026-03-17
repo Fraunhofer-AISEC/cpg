@@ -153,4 +153,41 @@ public static class Library
             ((VariableDeclaratorSyntax)Nodes[handlePtr]).Identifier.ToString()
         );
     }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetMethodDeclarationParameterCount")]
+    public static int GetMethodDeclarationParameterCount(IntPtr handlePtr)
+    {
+        return ((MethodDeclarationSyntax)Nodes[handlePtr]).ParameterList.Parameters.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetMethodDeclarationParameter")]
+    public static IntPtr GetMethodDeclarationParameter(IntPtr handlePtr, int index)
+    {
+        return Register(((MethodDeclarationSyntax)Nodes[handlePtr]).ParameterList.Parameters[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetParameterIdentifier")]
+    public static IntPtr GetParameterIdentifier(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((ParameterSyntax)Nodes[handlePtr]).Identifier.ToString()
+        );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetParameterType")]
+    public static IntPtr GetParameterType(IntPtr handlePtr)
+    {
+        return Register(((ParameterSyntax)Nodes[handlePtr]).Type);
+    }
+
+    // We need to call ToString() on the TypeSyntax node to get the actual type name
+    // (e.g. "int", "string"). Otherwise, it would return the syntax node category
+    // (e.g. "PredefinedType", "IdentifierName").
+    [UnmanagedCallersOnly(EntryPoint = "GetTypeName")]
+    public static IntPtr GetTypeName(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((TypeSyntax)Nodes[handlePtr]).ToString()
+        );
+    }
 }

@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.newTranslationUnit
+import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -64,7 +65,12 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
         return tu
     }
 
-    override fun typeOf(type: Csharp.AST.Node): Type = unknownType()
+    override fun typeOf(type: Csharp.AST.Node): Type {
+        return when (type) {
+            is Csharp.AST.TypeSyntax -> objectType(type.name)
+            else -> unknownType()
+        }
+    }
 
     override fun codeOf(astNode: Csharp.AST.Node): String = Csharp.INSTANCE.GetCode(astNode)
 

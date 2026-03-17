@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.newField
 import de.fraunhofer.aisec.cpg.graph.newMethod
 import de.fraunhofer.aisec.cpg.graph.newNamespace
+import de.fraunhofer.aisec.cpg.graph.newParameter
 import de.fraunhofer.aisec.cpg.graph.newRecord
 
 class DeclarationHandler(frontend: CSharpLanguageFrontend) :
@@ -87,6 +88,20 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
 
     private fun handleMethodDeclaration(node: Csharp.AST.MethodDeclarationSyntax): Declaration {
         val method = newMethod(node.identifier, rawNode = node)
+        frontend.scopeManager.enterScope(method)
+
+        for (parameter in node.parameters) {
+            val param =
+                newParameter(
+                    name = parameter.identifier,
+                    type = frontend.typeOf(parameter.type),
+                    rawNode = parameter,
+                )
+            frontend.scopeManager.addDeclaration(param)
+            method.parameters += param
+        }
+
+        frontend.scopeManager.leaveScope(method)
         return method
     }
 }
