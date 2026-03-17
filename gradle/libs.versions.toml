@@ -76,7 +76,7 @@ mcp-testing = {module = "io.modelcontextprotocol:kotlin-sdk-testing", version = 
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.14.1"}
-mockito = { module = "org.mockito:mockito-core", version = "5.22.0"}
+mockito = { module = "org.mockito:mockito-core", version = "5.23.0"}
 
 # plugins needed for build.gradle.kts in buildSrc
 publish-central = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "publish" }
