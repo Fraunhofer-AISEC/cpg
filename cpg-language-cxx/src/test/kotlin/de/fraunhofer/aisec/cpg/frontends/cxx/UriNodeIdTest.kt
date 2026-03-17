@@ -47,6 +47,7 @@ class UriNodeIdTest : BaseTest() {
         val result =
             analyze(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CLanguage>()
+                it.registerLanguage<CPPLanguage>()
             }
         assertNotNull(result)
 
