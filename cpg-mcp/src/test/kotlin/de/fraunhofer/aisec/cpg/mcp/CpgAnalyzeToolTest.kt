@@ -50,7 +50,6 @@ class CpgAnalyzeToolTest {
                 "cpg_list_passes",
                 "cpg_run_pass",
                 "cpg_analyze",
-                "cpg_llm_analyze",
                 "cpg_apply_concepts",
                 "cpg_dataflow",
                 "cpg_list_functions",
@@ -65,6 +64,7 @@ class CpgAnalyzeToolTest {
             ),
             testServer.tools.keys,
         )
+        assertEquals(setOf("suggest_concepts"), testServer.prompts.keys)
     }
 
     @Test
