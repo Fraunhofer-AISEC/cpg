@@ -100,12 +100,6 @@ data class CpgDataflowPayload(
     @Description("Target concept type (e.g., 'HttpRequest', 'Call')") val to: String,
 )
 
-@Serializable
-data class CpgLlmAnalyzePayload(
-    @Description("A special description of what to take care of while analyzing the target")
-    val description: String? = null
-)
-
 /**
  * This class represents information about a pass, including its fully qualified name (FQN), a
  * description, required node type, dependencies, and soft dependencies.
