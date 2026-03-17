@@ -26,6 +26,12 @@
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.types.BooleanType
+import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import de.fraunhofer.aisec.cpg.graph.types.NumericType
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.StringType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
@@ -39,5 +45,32 @@ class CSharpLanguage : Language<CSharpLanguageFrontend>() {
 
     override val compoundAssignmentOperators = setOf<String>()
 
-    @Transient override val builtInTypes = mapOf<String, Type>()
+    /**
+     * See
+     * [Documentation](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/built-in-types).
+     */
+    @Transient
+    override val builtInTypes =
+        mapOf<String, Type>(
+            // Boolean type
+            "bool" to BooleanType(typeName = "bool", language = this),
+            // Integral Types:
+            // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/integral-numeric-types
+            "int" to IntegerType("int", Integer.MAX_VALUE, this, NumericType.Modifier.SIGNED),
+            "short" to IntegerType("short", 16, this, NumericType.Modifier.SIGNED),
+            "long" to IntegerType("long", 64, this, NumericType.Modifier.SIGNED),
+            "ulong" to IntegerType("ulong", 64, this, NumericType.Modifier.UNSIGNED),
+            "byte" to IntegerType("byte", 8, this, NumericType.Modifier.UNSIGNED),
+            "sbyte" to IntegerType("sbyte", 8, this, NumericType.Modifier.SIGNED),
+            // Floating-Point types:
+            // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/floating-point-numeric-types
+            "float" to FloatingPointType("float", 32, this, NumericType.Modifier.SIGNED),
+            "double" to FloatingPointType("double", 64, this, NumericType.Modifier.SIGNED),
+            "decimal" to FloatingPointType("decimal", 128, this, NumericType.Modifier.SIGNED),
+            // Char Type
+            "char" to IntegerType("char", 16, this, NumericType.Modifier.UNSIGNED),
+            // String Type
+            "string" to StringType("string", this),
+            "object" to ObjectType("object", listOf(), false, true, this),
+        )
 }
