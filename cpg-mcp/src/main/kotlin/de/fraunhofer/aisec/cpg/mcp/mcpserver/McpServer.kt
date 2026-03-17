@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgApplyConceptsTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgDataflowTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgTranslate
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addDfgBackwardTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addListPasses
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addRunPass
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addSuggestConceptsPrompt
@@ -64,6 +65,7 @@ fun configureServer(
         this.getAllArgs()
         this.getArgByIndexOrName()
         this.listConceptsAndOperations()
+        this.addDfgBackwardTool()
         // PROMPTS
         this.addSuggestConceptsPrompt()
         this
