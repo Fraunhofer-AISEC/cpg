@@ -38,14 +38,9 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonObject
 
 fun Server.listFunctions() {
     val toolDescription =
@@ -198,34 +193,14 @@ fun Server.getNode() {
         """
             .trimIndent()
 
-    val inputSchema =
-        ToolSchema(
-            properties =
-                buildJsonObject {
-                    putJsonObject("id") {
-                        put("type", "string")
-                        put("description", "The id of the node to retrieve.")
-                    }
-                },
-            required = listOf("id"),
-        )
-
-    this.addTool(name = "cpg_get_node", description = toolDescription, inputSchema = inputSchema) {
-        request ->
-        request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload =
-                request.arguments?.toObject<CpgIdPayload>()
-                    ?: return@runOnCpg CallToolResult(
-                        content =
-                            listOf(TextContent("Invalid or missing payload for cpg_get_node tool."))
-                    )
-
-            val node = result.nodes.find { it.id.toString() == payload.id }
-            if (node != null) {
-                CallToolResult(content = listOf(TextContent(node.toJson())))
-            } else {
-                CallToolResult(content = listOf(TextContent("No node found with ${payload.id}")))
-            }
+    this.addTool<CpgIdPayload>(name = "cpg_get_node", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgIdPayload ->
+        val node = result.nodes.find { it.id.toString() == payload.id }
+        if (node != null) {
+            CallToolResult(content = listOf(TextContent(node.toJson())))
+        } else {
+            CallToolResult(content = listOf(TextContent("No node found with ${payload.id}")))
         }
     }
 }
