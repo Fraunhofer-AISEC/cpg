@@ -94,9 +94,8 @@ class OpenAiClient(
      * ]
      * ```
      *
-     * @see <a
-     *   href="https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create">OpenAI
-     *   Chat Completions</a>
+     * See
+     * [OpenAI Chat Completions](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)
      */
     private fun buildMessages(
         userMessage: String,
@@ -166,8 +165,7 @@ class OpenAiClient(
      * }]
      * ```
      *
-     * @see <a href="https://developers.openai.com/api/docs/guides/function-calling">OpenAI function
-     *   calling</a>
+     * See [OpenAI function calling](https://developers.openai.com/api/docs/guides/function-calling)
      */
     private fun convertToolDefinitions(tools: List<Tool>): List<OpenAiTool>? {
         if (tools.isEmpty()) return null
@@ -211,11 +209,9 @@ class OpenAiClient(
      * }
      * ```
      *
-     * @see <a
-     *   href="https://developers.openai.com/api/reference/resources/chat/subresources/completions/streaming-events">OpenAI
-     *   streaming events</a>
-     * @see <a href="https://developers.openai.com/api/docs/guides/streaming-responses">OpenAI
-     *   Streaming API</a>
+     * See
+     * [OpenAI streaming events]https://developers.openai.com/api/reference/resources/chat/subresources/completions/streaming-events"></a>
+     * See [OpenAI Streaming API](https://developers.openai.com/api/docs/guides/streaming-responses)
      */
     private suspend fun handleStreamingResponse(
         channel: ByteReadChannel,

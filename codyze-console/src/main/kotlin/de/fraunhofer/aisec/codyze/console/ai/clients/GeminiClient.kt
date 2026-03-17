@@ -37,9 +37,8 @@ import kotlinx.serialization.json.*
 /**
  * Gemini API client using the `streamGenerateContent` endpoint with SSE.
  *
- * @see <a
- *   href="https://ai.google.dev/api/generate-content#v1beta.models.streamGenerateContent">Gemini
- *   streamGenerateContent API</a>
+ * See
+ * [Gemini streamGenerateContent API](https://ai.google.dev/api/generate-content#v1beta.models.streamGenerateContent)
  */
 class GeminiClient(
     private val httpClient: HttpClient,
@@ -211,9 +210,8 @@ class GeminiClient(
      * }
      * ```
      *
-     * @see <a
-     *   href="https://ai.google.dev/api/generate-content#v1beta.GenerateContentResponse">Gemini
-     *   GenerateContentResponse</a>
+     * See
+     * [Gemini GenerateContentResponse](https://ai.google.dev/api/generate-content#v1beta.GenerateContentResponse)
      */
     private suspend fun handleStreamingResponse(
         channel: ByteReadChannel,

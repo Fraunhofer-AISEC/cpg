@@ -35,7 +35,9 @@ import io.ktor.server.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.utils.io.ClosedWriteChannelException
 import kotlin.reflect.KClass
+import kotlinx.coroutines.CancellationException
 
 /**
  * This function sets up the API routes for the web application. It defines the endpoints for
@@ -282,11 +284,11 @@ fun Route.chatRoutes(chatService: ChatService) {
                             chunk.split("\n").forEach { line -> write("data: $line\n") }
                             write("\n")
                             flush()
-                        } catch (e: io.ktor.utils.io.ClosedWriteChannelException) {
-                            throw kotlinx.coroutines.CancellationException("Client disconnected", e)
+                        } catch (e: ClosedWriteChannelException) {
+                            throw CancellationException("Client disconnected", e)
                         }
                     }
-                } catch (e: kotlinx.coroutines.CancellationException) {
+                } catch (e: CancellationException) {
                     // Expected when client disconnects
                 } catch (e: Exception) {
                     e.printStackTrace()

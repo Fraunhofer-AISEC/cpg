@@ -55,15 +55,31 @@ class Application : CliktCommand(name = "cpg-mcp") {
     private val httpPort by
         option("--http", help = "Provide the port to run streamable HTTP.").int()
 
+    private val host by option("--host", help = "The host/IP address to bind the server to.")
+
     override fun run() {
         val http = httpPort
         val sse = ssePort
+        if (http != null && sse != null) {
+            log.error("Please specify only one option, either --sse or --http.")
+            return
+        }
         if (http != null) {
             log.info("Starting MCP server in streamable HTTP mode on port {}...", http)
-            runHttpMcpServerUsingKtorPlugin(port = http, server = configureServer(), wait = true)
+            runHttpMcpServerUsingKtorPlugin(
+                port = http,
+                host = host ?: "0.0.0.0",
+                server = configureServer(),
+                wait = true,
+            )
         } else if (sse != null) {
             log.info("Starting MCP server in SSE mode on port {}...", sse)
-            runSseMcpServerUsingKtorPlugin(sse, configureServer(), wait = true)
+            runSseMcpServerUsingKtorPlugin(
+                port = sse,
+                server = configureServer(),
+                wait = true,
+                host = host ?: "0.0.0.0",
+            )
         } else {
             log.info("Starting MCP server in stdio mode...")
             runMcpServerUsingStdio()
