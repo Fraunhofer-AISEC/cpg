@@ -25,12 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.tools
 
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addDfgBackwardTool
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCalls
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CallSummary
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.*
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.QueryTreeNode
 import de.fraunhofer.aisec.cpg.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
@@ -61,17 +57,15 @@ class CpgDfgBackwardToolTest {
         ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             assertNotNull(callsResult)
-            assertTrue(callsResult.content.isNotEmpty(), "Should have call expressions")
+            assertTrue(callsResult.content.isNotEmpty())
 
-            val callSummary =
-                Json.decodeFromString<CallSummary>(
-                    (callsResult.content.first() as TextContent).text
-                )
+            val callInfo =
+                Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
 
             val result =
                 client.callTool(
                     name = "cpg_dfg_backward",
-                    arguments = mapOf("id" to callSummary.id),
+                    arguments = mapOf("id" to callInfo.nodeId),
                 )
             assertNotNull(result)
             assertTrue(result.content.isNotEmpty())
@@ -79,7 +73,7 @@ class CpgDfgBackwardToolTest {
             val content = result.content.single()
             assertIs<TextContent>(content)
 
-            val queryTreeNode = Json.decodeFromString<QueryTreeNode>(content.text)
-            assertNotNull(queryTreeNode)
+            val nodes = Json.decodeFromString<List<NodeInfo>>(content.text)
+            assertTrue(nodes.isNotEmpty())
         }
 }

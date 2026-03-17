@@ -26,26 +26,15 @@
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.Backward
-import de.fraunhofer.aisec.cpg.graph.GraphToFollow
-import de.fraunhofer.aisec.cpg.graph.Interprocedural
+import de.fraunhofer.aisec.cpg.graph.collectAllPrevDFGPaths
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgIdPayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toQueryTreeNode
-import de.fraunhofer.aisec.cpg.query.May
-import de.fraunhofer.aisec.cpg.query.dataFlow
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.addTool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlin.uuid.Uuid
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonObject
 
 fun Server.addDfgBackwardTool() {
     val toolDescription =
@@ -57,61 +46,22 @@ fun Server.addDfgBackwardTool() {
 
         Example usage:
         - "Where does this value come from?"
-
-        Parameters:
-        - id: The ID of the node to start the backward traversal from.
     """
             .trimIndent()
 
-    val inputSchema =
-        ToolSchema(
-            properties =
-                buildJsonObject {
-                    putJsonObject("id") {
-                        put("type", "string")
-                        put(
-                            "description",
-                            "The ID of the node to start the backward DFG traversal from.",
-                        )
-                    }
-                },
-            required = listOf("id"),
-        )
-
-    this.addTool(
-        name = "cpg_dfg_backward",
-        description = toolDescription,
-        inputSchema = inputSchema,
-    ) { request ->
-        request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload =
-                request.arguments?.toObject<CpgIdPayload>()
-                    ?: return@runOnCpg CallToolResult(
-                        content =
-                            listOf(
-                                TextContent("Invalid or missing payload for cpg_dfg_backward tool.")
-                            )
-                    )
-
-            val startId = Uuid.parse(payload.id)
-            val startNode =
-                result.nodes.find { it.id == startId }
-                    ?: return@runOnCpg CallToolResult(
-                        content = listOf(TextContent("No node found with ID ${payload.id}"))
-                    )
-
-            val queryTree =
-                dataFlow(
-                    startNode = startNode,
-                    direction = Backward(GraphToFollow.DFG),
-                    type = May,
-                    scope = Interprocedural(),
-                    predicate = { it.prevDFG.isEmpty() },
+    this.addTool<CpgIdPayload>(name = "cpg_dfg_backward", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgIdPayload ->
+        val startId = Uuid.parse(payload.id)
+        val startNode =
+            result.nodes.find { it.id == startId }
+                ?: return@addTool CallToolResult(
+                    content = listOf(TextContent("No node found with ID ${payload.id}"))
                 )
 
-            CallToolResult(
-                content = listOf(TextContent(Json.encodeToString(queryTree.toQueryTreeNode())))
-            )
-        }
+        val paths = startNode.collectAllPrevDFGPaths()
+        val nodes = paths.flatMap { it.nodes }.map { NodeInfo(it) }
+
+        CallToolResult(content = listOf(TextContent(Json.encodeToString(nodes))))
     }
 }
