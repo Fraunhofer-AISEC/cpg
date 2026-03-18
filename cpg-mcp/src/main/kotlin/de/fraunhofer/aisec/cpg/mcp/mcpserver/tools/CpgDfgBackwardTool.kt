@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.collectAllPrevDFGPaths
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgIdPayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.addTool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult

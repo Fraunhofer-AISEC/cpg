@@ -61,7 +61,6 @@ class CpgAnalyzeToolTest {
             val analysisResult = Json.decodeFromString<CpgAnalysisResult>(resultContent.text)
             assertEquals(2, analysisResult.functions)
             assertEquals(1, analysisResult.callExpressions)
-            assertNotNull(analysisResult.functionSummaries)
         }
 
     @Test
@@ -72,6 +71,5 @@ class CpgAnalyzeToolTest {
         assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
-        assertNotNull(analysisResult.functionSummaries)
     }
 }

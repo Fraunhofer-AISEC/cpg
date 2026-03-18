@@ -26,7 +26,9 @@
 package de.fraunhofer.aisec.cpg.mcp.tools
 
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.*
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.mcp.utils.withClient
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test

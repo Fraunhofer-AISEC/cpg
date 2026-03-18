@@ -56,7 +56,7 @@ fun Server.listFunctions() {
     this.addTool(name = "cpg_list_functions", description = toolDescription) { request ->
         request.runOnCpg { result: TranslationResult, _ ->
             CallToolResult(
-                content = result.functions.map { TextContent(Json.encodeToString(it.toSummary())) }
+                content = result.functions.map { TextContent(Json.encodeToString(it.toInfo())) }
             )
         }
     }
@@ -77,7 +77,7 @@ fun Server.listRecords() {
     this.addTool(name = "cpg_list_records", description = toolDescription) { request ->
         request.runOnCpg { result: TranslationResult, _ ->
             CallToolResult(
-                content = result.records.map { TextContent(Json.encodeToString(it.toSummary())) }
+                content = result.records.map { TextContent(Json.encodeToString(it.toInfo())) }
             )
         }
     }
@@ -114,7 +114,7 @@ fun Server.listCalls() {
     this.addTool(name = "cpg_list_calls", description = toolDescription) { request ->
         request.runOnCpg { result: TranslationResult, _ ->
             CallToolResult(
-                content = result.calls.map { TextContent(Json.encodeToString(it.toSummary())) }
+                content = result.calls.map { TextContent(Json.encodeToString(it.toInfo())) }
             )
         }
     }

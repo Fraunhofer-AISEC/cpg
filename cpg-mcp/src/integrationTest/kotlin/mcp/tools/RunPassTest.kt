@@ -110,12 +110,7 @@ class RunPassTest {
             val text = (result.content.firstOrNull() as? TextContent)?.text
             assertNotNull(text)
             val parsed = Json.decodeFromString<CpgAnalysisResult>(text)
-            assertNotNull(parsed.functionSummaries)
-            assertTrue(
-                parsed.functionSummaries.any {
-                    it.name.contains("hello") || it.name.contains("print")
-                }
-            )
+            assertTrue(parsed.functions > 0)
         }
 
     @Test

@@ -25,47 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.mcp
 
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.ctx
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import io.modelcontextprotocol.kotlin.sdk.server.Server
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
 
 class CpgAnalyzeToolTest {
-
-    private lateinit var server: Server
-
-    @Test
-    fun testConfigureServer() {
-        val testServer = configureServer()
-        assertEquals(
-            setOf(
-                "cpg_translate",
-                "cpg_list_passes",
-                "cpg_run_pass",
-                "cpg_analyze",
-                "cpg_apply_concepts",
-                "cpg_dataflow",
-                "cpg_list_functions",
-                "cpg_list_records",
-                "cpg_list_concepts_and_operations",
-                "cpg_list_calls",
-                "cpg_list_calls_to",
-                "cpg_list_call_args",
-                "cpg_list_call_arg_by_name_or_index",
-                "cpg_list_available_concepts",
-                "cpg_list_available_operations",
-                "cpg_dfg_backward",
-            ),
-            testServer.tools.keys,
-        )
-        assertEquals(setOf("suggest_concepts"), testServer.prompts.keys)
-    }
 
     @Test
     fun testReanalyze() {

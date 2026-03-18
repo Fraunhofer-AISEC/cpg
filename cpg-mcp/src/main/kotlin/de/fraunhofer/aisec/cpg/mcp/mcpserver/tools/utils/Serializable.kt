@@ -25,7 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.callees
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.translationUnit
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import kotlinx.serialization.Serializable
 
@@ -58,46 +67,148 @@ data class OverlayInfo(
     )
 }
 
-@Serializable data class ParameterInfo(val id: String, val name: String, val type: String)
-
 @Serializable
-data class FunctionSummary(
-    val id: String,
+data class NodeInfo(
+    val nodeId: String,
     val name: String,
+    val code: String?,
+    val type: String?,
     val fileName: String?,
     val startLine: Int?,
     val endLine: Int?,
+) {
+    constructor(
+        node: Node
+    ) : this(
+        nodeId = node.id.toString(),
+        name = node.name.localName,
+        code = node.code,
+        type = node::class.simpleName,
+        fileName = node.location?.artifactLocation?.fileName,
+        startLine = node.location?.region?.startLine,
+        endLine = node.location?.region?.endLine,
+    )
+}
+
+@Serializable
+data class TypeInfo(val name: String) {
+    constructor(type: Type) : this(type.name.toString())
+}
+
+@Serializable
+data class ParameterInfo(val name: String, val type: TypeInfo, val defaultValue: String? = null) {
+    constructor(
+        parameterDeclaration: Parameter
+    ) : this(
+        name = parameterDeclaration.name.toString(),
+        type = TypeInfo(parameterDeclaration.type),
+        defaultValue = parameterDeclaration.default.toString(),
+    )
+}
+
+@Serializable
+data class FieldInfo(
+    val nodeId: String,
+    val name: String,
+    val type: TypeInfo,
+    val fileName: String?,
+    val startLine: Int?,
+    val endLine: Int?,
+) {
+    constructor(
+        field: Field
+    ) : this(
+        nodeId = field.id.toString(),
+        name = field.name.toString(),
+        type = TypeInfo(field.type),
+        fileName = field.location?.artifactLocation?.fileName,
+        startLine = field.location?.region?.startLine,
+        endLine = field.location?.region?.endLine,
+    )
+}
+
+@Serializable
+data class FunctionInfo(
+    val nodeId: String,
+    val name: String,
     val parameters: List<ParameterInfo>,
-    val returnType: String?,
+    val signature: String,
     val callees: List<String>,
     val code: String?,
-    val translationUnitId: String?,
-)
-
-@Serializable
-data class RecordSummary(
-    val id: String,
-    val name: String,
     val fileName: String?,
     val startLine: Int?,
     val endLine: Int?,
+    val translationUnitId: String?,
+) {
+    constructor(
+        functionDeclaration: Function
+    ) : this(
+        nodeId = functionDeclaration.id.toString(),
+        name = functionDeclaration.name.toString(),
+        parameters = functionDeclaration.parameters.map { ParameterInfo(it) },
+        signature = functionDeclaration.signature,
+        callees = functionDeclaration.callees.map { it.name.localName },
+        code = functionDeclaration.code,
+        fileName = functionDeclaration.location?.artifactLocation?.fileName,
+        startLine = functionDeclaration.location?.region?.startLine,
+        endLine = functionDeclaration.location?.region?.endLine,
+        translationUnitId = functionDeclaration.translationUnit?.id?.toString(),
+    )
+}
+
+@Serializable
+data class RecordInfo(
+    val nodeId: String,
+    val name: String,
     val kind: String?,
-    val fieldCount: Int,
     val methodNames: List<String>,
-    val translationUnitId: String?,
-)
-
-@Serializable
-data class CallSummary(
-    val id: String,
-    val name: String,
+    val fieldNames: List<String>,
     val fileName: String?,
     val startLine: Int?,
     val endLine: Int?,
-    val arguments: List<String>,
-    val code: String?,
     val translationUnitId: String?,
-)
+) {
+    constructor(
+        recordDeclaration: Record
+    ) : this(
+        nodeId = recordDeclaration.id.toString(),
+        name = recordDeclaration.name.toString(),
+        kind = recordDeclaration.kind,
+        methodNames = recordDeclaration.methods.map { it.name.localName },
+        fieldNames = recordDeclaration.fields.map { it.name.localName },
+        fileName = recordDeclaration.location?.artifactLocation?.fileName,
+        startLine = recordDeclaration.location?.region?.startLine,
+        endLine = recordDeclaration.location?.region?.endLine,
+        translationUnitId = recordDeclaration.translationUnit?.id?.toString(),
+    )
+}
+
+@Serializable
+data class CallInfo(
+    val nodeId: String,
+    val name: String,
+    val argumentNames: List<String>,
+    val resolvedTo: List<String>,
+    val code: String?,
+    val fileName: String?,
+    val startLine: Int?,
+    val endLine: Int?,
+    val translationUnitId: String?,
+) {
+    constructor(
+        callExpression: Call
+    ) : this(
+        nodeId = callExpression.id.toString(),
+        name = callExpression.name.toString(),
+        argumentNames = callExpression.arguments.map { it.name.localName },
+        resolvedTo = callExpression.invokes.map { it.name.toString() },
+        code = callExpression.code,
+        fileName = callExpression.location?.artifactLocation?.fileName,
+        startLine = callExpression.location?.region?.startLine,
+        endLine = callExpression.location?.region?.endLine,
+        translationUnitId = callExpression.translationUnit?.id?.toString(),
+    )
+}
 
 @Serializable
 data class CpgAnalysisResult(
@@ -105,7 +216,6 @@ data class CpgAnalysisResult(
     val functions: Int,
     val variables: Int,
     val callExpressions: Int,
-    val functionSummaries: List<FunctionSummary>,
 )
 
 @Serializable

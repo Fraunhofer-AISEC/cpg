@@ -36,10 +36,10 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listConceptsAndOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listFunctions
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listRecords
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CallSummary
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.FunctionSummary
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.RecordSummary
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.FunctionInfo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.RecordInfo
 import de.fraunhofer.aisec.cpg.mcp.utils.withClient
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -75,7 +75,7 @@ class ListCommandsTest {
             val functionNames =
                 result.content.map {
                     assertIs<TextContent>(it)
-                    Json.decodeFromString<FunctionSummary>(it.text).name
+                    Json.decodeFromString<FunctionInfo>(it.text).name
                 }
             assertNotNull(
                 functionNames.singleOrNull { it == "print" },
@@ -97,7 +97,7 @@ class ListCommandsTest {
                 "There is a record declaration \"Foo\" in the test code",
             )
             assertDoesNotThrow {
-                Json.decodeFromString<RecordSummary>(
+                Json.decodeFromString<RecordInfo>(
                     (result.content.singleOrNull() as? TextContent)?.text.orEmpty()
                 )
             }
@@ -130,10 +130,8 @@ class ListCommandsTest {
         ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             val callId =
-                Json.decodeFromString<CallSummary>(
-                        (callsResult.content.first() as TextContent).text
-                    )
-                    .id
+                Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
+                    .nodeId
 
             val argsResult =
                 client.callTool(name = "cpg_list_call_args", arguments = mapOf("id" to callId))
@@ -166,10 +164,8 @@ class ListCommandsTest {
         ) { client ->
             val callsResult = client.callTool(name = "cpg_list_calls", arguments = emptyMap())
             val callId =
-                Json.decodeFromString<CallSummary>(
-                        (callsResult.content.first() as TextContent).text
-                    )
-                    .id
+                Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
+                    .nodeId
 
             val argResultByIndex =
                 client.callTool(
@@ -243,16 +239,11 @@ class ListCommandsTest {
             assertNotNull(listResult)
             assertTrue(listResult.content.isNotEmpty(), "Should have function declarations")
 
-            val functionSummary =
-                Json.decodeFromString<FunctionSummary>(
-                    (listResult.content.first() as TextContent).text
-                )
+            val nodeJson =
+                Json.decodeFromString<NodeJSON>((listResult.content.first() as TextContent).text)
 
             val result =
-                client.callTool(
-                    name = "cpg_get_node",
-                    arguments = mapOf("id" to functionSummary.id),
-                )
+                client.callTool(name = "cpg_get_node", arguments = mapOf("id" to nodeJson.id))
             assertNotNull(result)
             assertTrue(result.content.isNotEmpty(), "Should return the node")
 
