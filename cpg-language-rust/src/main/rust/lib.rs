@@ -896,9 +896,17 @@ impl From<RecordExpr> for RSRecordExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSRefExpr {pub(crate) ast_node: RSNode}
+pub struct RSRefExpr {pub(crate) ast_node: RSNode, expr: Vec<RSExpr>, mutable: bool, is_ref: bool, is_const: bool}
 impl From<RefExpr> for RSRefExpr {
-    fn from(node:  RefExpr) -> Self {RSRefExpr{ast_node: node.syntax().into()}}
+    fn from(node:  RefExpr) -> Self {
+        RSRefExpr{
+            ast_node: node.syntax().into(),
+            mutable: node.mut_token().is_some(),
+            is_ref: node.amp_token().is_some(),
+            is_const: node.const_token().is_some(),
+            expr: node.expr().map(Into::into).into_iter().collect()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

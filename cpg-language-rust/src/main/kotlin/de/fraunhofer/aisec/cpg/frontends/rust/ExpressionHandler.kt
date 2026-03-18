@@ -50,6 +50,7 @@ import uniffi.cpgrust.RsPathExpr
 import uniffi.cpgrust.RsPrefixExpr
 import uniffi.cpgrust.RsRangeExpr
 import uniffi.cpgrust.RsRecordExpr
+import uniffi.cpgrust.RsRefExpr
 import uniffi.cpgrust.RsWhileExpr
 
 class ExpressionHandler(frontend: RustLanguageFrontend) :
@@ -83,6 +84,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.ContinueExpr -> handleContinueExpr(node.v1)
             is RsExpr.CastExpr -> handleCastExpr(node.v1)
             is RsExpr.IndexExpr -> handleIndexExpr(node.v1)
+            is RsExpr.RefExpr -> handleRefExpr(node.v1)
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -213,6 +215,28 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
         return newProblemExpression(
             problem = "PathExpression does not contain reference to a name",
+            rawNode = raw,
+        )
+    }
+
+    fun handleRefExpr(refExpr: RsRefExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.RefExpr(refExpr))
+
+        refExpr.expr.firstOrNull()?.let {
+            val subExpr = handleNode(it)
+
+            // We for now do not handle const and mut modifiers as they have no direct consequence
+            // in control or data flow.
+            // They are relevant to whether code is compilable, and therefore we may need to include
+            // it as the type.
+            return if (refExpr.isRef)
+                newUnaryOperator(operatorCode = "&", postfix = false, prefix = true, rawNode = raw)
+                    .also { unaryOp -> unaryOp.input = subExpr }
+            else subExpr
+        }
+
+        return newProblemExpression(
+            problem = "Reference expressions are not supported yet",
             rawNode = raw,
         )
     }
