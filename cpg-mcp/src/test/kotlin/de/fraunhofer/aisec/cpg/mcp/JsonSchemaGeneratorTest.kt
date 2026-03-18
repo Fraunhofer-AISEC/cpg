@@ -53,14 +53,27 @@ class JsonSchemaGeneratorTest {
                                 putJsonObject("properties") {
                                     putJsonObject("arguments") {
                                         put("type", "array")
+                                        put(
+                                            "description",
+                                            "Additional constructor arguments (optional)",
+                                        )
                                         putJsonObject("items") {
                                             put("type", "object")
                                             putJsonObject("properties") {
                                                 putJsonObject("key") {
                                                     put("type", "string")
-                                                    put("description", "The key")
+                                                    put(
+                                                        "description",
+                                                        "The key of the key-value pair",
+                                                    )
                                                 }
-                                                putJsonObject("value") { put("type", "string") }
+                                                putJsonObject("value") {
+                                                    put("type", "string")
+                                                    put(
+                                                        "description",
+                                                        "The value of the key-value pair",
+                                                    )
+                                                }
                                             }
                                             putJsonArray("required") {
                                                 add("key")
@@ -94,13 +107,17 @@ class JsonSchemaGeneratorTest {
 }
 
 @Serializable
-private data class TestPair(@Description("The key") val key: String, val value: String)
+private data class TestPair(
+    @Description("The key of the key-value pair") val key: String,
+    @Description("The value of the key-value pair") val value: String,
+)
 
 @Serializable
 private data class TestAssignment(
     @Description("Required id") val id: String,
     @Description("A description if this concept could have security implications (optional)")
     val securityImpact: String? = null,
+    @Description("Additional constructor arguments (optional)")
     val arguments: List<TestPair>? = null,
 )
 
