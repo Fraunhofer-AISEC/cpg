@@ -239,11 +239,16 @@ class ListCommandsTest {
             assertNotNull(listResult)
             assertTrue(listResult.content.isNotEmpty(), "Should have function declarations")
 
-            val nodeJson =
-                Json.decodeFromString<NodeJSON>((listResult.content.first() as TextContent).text)
+            val functionInfo =
+                Json.decodeFromString<FunctionInfo>(
+                    (listResult.content.first() as TextContent).text
+                )
 
             val result =
-                client.callTool(name = "cpg_get_node", arguments = mapOf("id" to nodeJson.id))
+                client.callTool(
+                    name = "cpg_get_node",
+                    arguments = mapOf("id" to functionInfo.nodeId),
+                )
             assertNotNull(result)
             assertTrue(result.content.isNotEmpty(), "Should return the node")
 
