@@ -300,11 +300,10 @@ class DFGFunctionSummariesTest {
     }
 
     // TODO for merge
-    @Ignore
+    @Ignore(
+        "We keep this ignored for now as the DFGPass does not draw these edges anymore, this should be done by the PointsToPass. In the future, the DFGPass could still draw the edges and the PtP could remove them again to have a more lightweight but less precise version of the DFG"
+    )
     @Test
-    // Todo Konrad This test does not make sense because the DFGPass does not draw the edges between
-    // a reference to the Declaration any more, which is, however, the functionality that this test
-    // aims at.
     fun testPropagateArgumentsControlFlowInsensitive() {
         // We don't use the ControlFlowSensitiveDFGPass here to check the method
         // DFGPass.connectInferredCallArguments
