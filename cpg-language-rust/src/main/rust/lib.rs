@@ -730,9 +730,15 @@ impl From<IfExpr> for RSIfExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSIndexExpr {pub(crate) ast_node: RSNode}
+pub struct RSIndexExpr {pub(crate) ast_node: RSNode, expressions: Vec<RSExpr>}
 impl From<IndexExpr> for RSIndexExpr {
-    fn from(node:  IndexExpr) -> Self {RSIndexExpr{ast_node: node.syntax().into()}}
+    fn from(node:  IndexExpr) -> Self {
+        RSIndexExpr{
+            ast_node: node.syntax().into(),
+            expressions: node.syntax().children().filter_map(Expr::cast).map(Into::into)
+                .collect()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

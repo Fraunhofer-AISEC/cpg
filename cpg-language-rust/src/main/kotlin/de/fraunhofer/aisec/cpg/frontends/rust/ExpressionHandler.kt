@@ -38,6 +38,7 @@ import uniffi.cpgrust.RsExpr
 import uniffi.cpgrust.RsFieldExpr
 import uniffi.cpgrust.RsForExpr
 import uniffi.cpgrust.RsIfExpr
+import uniffi.cpgrust.RsIndexExpr
 import uniffi.cpgrust.RsLetExpr
 import uniffi.cpgrust.RsLiteral
 import uniffi.cpgrust.RsLiteralType
@@ -81,6 +82,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.BreakExpr -> handleBreakExpr(node.v1)
             is RsExpr.ContinueExpr -> handleContinueExpr(node.v1)
             is RsExpr.CastExpr -> handleCastExpr(node.v1)
+            is RsExpr.IndexExpr -> handleIndexExpr(node.v1)
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -464,6 +466,29 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             it.expression = input
             it.castType = type
         }
+    }
+
+    fun handleIndexExpr(indexExpr: RsIndexExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.IndexExpr(indexExpr))
+
+        if (indexExpr.expressions.size >= 2) {
+            return newSubscription(rawNode = raw).also { subscription ->
+                indexExpr.expressions.getOrNull(0)?.let {
+                    subscription.arrayExpression =
+                        frontend.expressionHandler.handle(RsAst.RustExpr(it))
+                }
+
+                indexExpr.expressions.getOrNull(1)?.let {
+                    subscription.subscriptExpression =
+                        frontend.expressionHandler.handle(RsAst.RustExpr(it))
+                }
+            }
+        }
+
+        return newProblemExpression(
+            problem = "Index expressions was not parsed with two ore more expressions.",
+            rawNode = raw,
+        )
     }
 
     fun handleRecordExpr(recordExpr: RsRecordExpr): Expression {
