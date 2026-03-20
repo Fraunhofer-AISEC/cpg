@@ -38,13 +38,15 @@ class Break : Expression(false) {
     /** Specifies the label of the loop in a nested structure that this statement will 'break' */
     var label: String? = null
 
+    var expr: Expression? = null
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Break) return false
-        return super.equals(other) && label == other.label
+        return super.equals(other) && label == other.label && expr == other.expr
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), label)
+    override fun hashCode() = Objects.hash(super.hashCode(), label, expr)
 
     override fun getStartingPrevEOG(): Collection<Node> {
         return this.prevEOG

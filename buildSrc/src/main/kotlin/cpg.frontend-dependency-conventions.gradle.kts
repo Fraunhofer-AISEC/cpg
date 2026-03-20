@@ -10,6 +10,7 @@ val enablePythonFrontend: Boolean by rootProject.extra
 val enableLLVMFrontend: Boolean by rootProject.extra
 val enableTypeScriptFrontend: Boolean by rootProject.extra
 val enableRubyFrontend: Boolean by rootProject.extra
+val enableRustFrontend: Boolean by rootProject.extra
 val enableJVMFrontend: Boolean by rootProject.extra
 val enableINIFrontend: Boolean by rootProject.extra
 
@@ -37,6 +38,9 @@ dependencies {
     }
     if (enableRubyFrontend) {
         implementation(project(":cpg-language-ruby"))
+    }
+    if (enableRustFrontend) {
+        implementation(project(":cpg-language-rust"))
     }
     if (enableINIFrontend) {
         implementation(project(":cpg-language-ini"))

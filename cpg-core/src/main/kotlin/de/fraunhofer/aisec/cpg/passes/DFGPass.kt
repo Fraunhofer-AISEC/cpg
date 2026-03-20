@@ -665,7 +665,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     protected fun handleBreak(node: Break) {
-        // no action
+        if (node.usedAsExpression) {
+            node.expr?.let { node.prevDFGEdges += it }
+        }
     }
 
     protected fun handleAssert(node: Assert) {

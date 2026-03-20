@@ -829,6 +829,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * See [Specification for Break](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#break)
      */
     protected fun handleBreak(node: Break) {
+        node.expr?.let { handleEOG(it) }
         attachToEOG(node)
         val label = node.label
         val breakableNode =

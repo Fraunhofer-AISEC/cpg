@@ -1,0 +1,25 @@
+[package]
+name = "cpgrust"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "cpgrust"
+crate-type = ["cdylib"]
+path = "lib.rs"
+
+[dependencies]
+uniffi = { version = "0.30.0", features = [ "cli" ] }
+ra_ap_parser = {version = "0.0.307"}
+ra_ap_syntax = {version = "0.0.307"}
+rowan = {version = "0.16.1"}
+itertools = "0.14.0"
+
+
+[build-dependencies]
+uniffi = { version = "0.30.0", features = [ "build" ] }
+
+[[bin]]
+# This binary for binding generation comes from https://mozilla.github.io/uniffi-rs/latest/tutorial/foreign_language_bindings.html
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"
