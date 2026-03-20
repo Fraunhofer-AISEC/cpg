@@ -308,7 +308,9 @@ fun removePossibleCasts(node: Expression): Expression {
     return ret
 }
 
-private fun isGlobal(node: Node): Boolean {
+fun isGlobal(node: Node): Boolean {
+    /*    if (node.name.localName.startsWith("contextManager") && (node is Variable || node is Reference))
+    return true*/
     return when (node) {
         is Variable -> node.isGlobal
         is MemberAccess -> isGlobal(node.base)
@@ -373,6 +375,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         if (node !is EOGStarterHolder || node.eogStarters.isEmpty()) {
             return
         }
+        // TODO: Check if eogstarter has no prevEOG, otherwise skip it
 
         return runBlocking { node.eogStarters.forEach { starter -> acceptInternal(starter) } }
     }
@@ -1956,10 +1959,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // so we leave it empty
         val destination: ConcurrentIdentitySet<Node> =
             if (argument is Call) concurrentIdentitySetOf(argument)
-            // if the argument is PointerReference for a global variable, the destination is it's
+            // if the argument is a PointerReference for a global variable, the destination is it's
             // refersTo
             // It might also be the case that argument is a Reference to an array, so then we treat
             // it like a PointerReference
+            // TODO: This does make sense for C(++), but how about other languages?
             else if (
                 (argument is PointerReference ||
                     argument is Reference &&
@@ -2195,6 +2199,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToState.Element,
     ): PointsToState.Element {
         var doubleState = doubleState
+
+        // If the expression is global, the DFG-Edges should have already been drawn by the DFGPass
+        if (isGlobal(currentNode)) return doubleState
 
         /* If we have an Expression that is written to, we handle its values later and ignore it now */
         val access =
