@@ -26,10 +26,12 @@
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
 class CSharpLanguageFrontendTest : BaseTest() {
@@ -93,7 +95,7 @@ class CSharpLanguageFrontendTest : BaseTest() {
     }
 
     @Test
-    fun testMethodDeclarationsTest() {
+    fun testMethodDeclarations() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("method.cs").toFile()), topLevel, true) {
@@ -113,5 +115,35 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertEquals(2, baz.parameters.size)
         assertEquals("a", baz.parameters[0].name.localName)
         assertEquals("b", baz.parameters[1].name.localName)
+    }
+
+    @Test
+    fun testConstructorDeclarations() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("constructor.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val foo = tu.namespaces["HelloWorld"]?.records["Foo"]
+        assertNotNull(foo)
+
+        val constructors = foo.constructors
+        assertEquals(2, constructors.size)
+
+        val noParameter = constructors.single { it.parameters.isEmpty() }
+        assertNotNull(noParameter)
+        assertIs<Constructor>(noParameter)
+
+        val twoParameters = constructors.single { it.parameters.size == 2 }
+        assertNotNull(twoParameters)
+        assertIs<Constructor>(twoParameters)
+        assertEquals("x", twoParameters.parameters[0].name.localName)
+        assertEquals("y", twoParameters.parameters[1].name.localName)
     }
 }

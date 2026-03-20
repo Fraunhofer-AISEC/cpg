@@ -180,6 +180,26 @@ public static class Library
         return Register(((ParameterSyntax)Nodes[handlePtr]).Type);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetConstructorDeclarationIdentifier")]
+    public static IntPtr GetConstructorDeclarationIdentifier(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((ConstructorDeclarationSyntax)Nodes[handlePtr]).Identifier.ToString()
+        );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetConstructorDeclarationParameterCount")]
+    public static int GetConstructorDeclarationParameterCount(IntPtr handlePtr)
+    {
+        return ((ConstructorDeclarationSyntax)Nodes[handlePtr]).ParameterList.Parameters.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetConstructorDeclarationParameter")]
+    public static IntPtr GetConstructorDeclarationParameter(IntPtr handlePtr, int index)
+    {
+        return Register(((ConstructorDeclarationSyntax)Nodes[handlePtr]).ParameterList.Parameters[index]);
+    }
+
     // We need to call ToString() on the TypeSyntax node to get the actual type name
     // (e.g. "int", "string"). Otherwise, it would return the syntax node category
     // (e.g. "PredefinedType", "IdentifierName").
@@ -189,5 +209,24 @@ public static class Library
         return Marshal.StringToCoTaskMemUTF8(
             ((TypeSyntax)Nodes[handlePtr]).ToString()
         );
+    }
+
+    // `BaseMethodDeclarationSyntax` to get the body for Methods and Constructors.
+    [UnmanagedCallersOnly(EntryPoint = "GetBaseMethodDeclarationBody")]
+    public static IntPtr GetBaseMethodDeclarationBody(IntPtr handlePtr)
+    {
+        return Register(((BaseMethodDeclarationSyntax)Nodes[handlePtr]).Body);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetBlockStatementCount")]
+    public static int GetBlockStatementCount(IntPtr handlePtr)
+    {
+        return ((BlockSyntax)Nodes[handlePtr]).Statements.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetBlockStatement")]
+    public static IntPtr GetBlockStatement(IntPtr handlePtr, int index)
+    {
+        return Register(((BlockSyntax)Nodes[handlePtr]).Statements[index]);
     }
 }

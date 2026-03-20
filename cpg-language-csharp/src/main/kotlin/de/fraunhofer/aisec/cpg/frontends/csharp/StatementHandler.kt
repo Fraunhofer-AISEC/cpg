@@ -25,29 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
-import de.fraunhofer.aisec.cpg.frontends.Handler
-import de.fraunhofer.aisec.cpg.graph.Node
-import java.util.function.Supplier
-
-/** Base class for all C# handlers. */
-abstract class CSharpHandler<ResultNode : Node, HandlerNode : Csharp.AST.Node>(
-    configConstructor: Supplier<ResultNode>,
-    frontend: CSharpLanguageFrontend,
-) :
-    Handler<ResultNode, HandlerNode, CSharpLanguageFrontend>(
-        configConstructor = configConstructor,
-        frontend = frontend,
-    ) {
-
-    override fun handle(ctx: HandlerNode): ResultNode {
-        val node = handleNode(ctx)
-
-        frontend.setComment(node, ctx)
-        frontend.process(ctx, node)
-
-        lastNode = node
-        return node
-    }
-
-    abstract fun handleNode(node: HandlerNode): ResultNode
-}
+// class StatementHandler(frontend: CSharpLanguageFrontend) : CSharpHandler<Expression,
+// Csharp.AST.StatementSyntax>(
+//    configConstructor = ::ProblemExpression,
+//    frontend = frontend
+// ) {
+//    override fun handleNode(node: Csharp.AST.StatementSyntax): Expression {
+////        return when (node) {
+////            is Csharp.AST.ReturnSyntax -> handleReturn(node)
+////        }
+////    }
+////
+////    private fun handleReturn(node: Csharp.AST.StatementSyntax): Expression {
+////    }
+// }

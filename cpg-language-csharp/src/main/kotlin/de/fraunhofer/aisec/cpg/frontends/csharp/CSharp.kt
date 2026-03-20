@@ -102,6 +102,7 @@ interface Csharp : Library {
                     "ClassDeclaration" -> ClassDeclarationSyntax(nativeValue)
                     "FieldDeclaration" -> FieldDeclarationSyntax(nativeValue)
                     "MethodDeclaration" -> MethodDeclarationSyntax(nativeValue)
+                    "ConstructorDeclaration" -> ConstructorDeclarationSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -160,6 +161,39 @@ interface Csharp : Library {
             val parameters: List<ParameterSyntax> by lazy {
                 val count = INSTANCE.GetMethodDeclarationParameterCount(this)
                 (0 until count).map { i -> INSTANCE.GetMethodDeclarationParameter(this, i) }
+            }
+            val body: BlockSyntax by lazy { INSTANCE.GetBaseMethodDeclarationBody(this) }
+        }
+
+        class BlockSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            val statements: List<StatementSyntax> by lazy {
+                val count = INSTANCE.GetBlockStatementCount(this)
+                (0 until count).map { i -> INSTANCE.GetBlockStatement(this, i) }
+            }
+        }
+
+        open class StatementSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any {
+                if (nativeValue !is Pointer) {
+                    return super.fromNative(nativeValue, context)
+                }
+                return when (INSTANCE.GetKind(nativeValue)) {
+                    else -> super.fromNative(nativeValue, context)
+                }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ConstructorDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.constructordeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
+        class ConstructorDeclarationSyntax(p: Pointer? = Pointer.NULL) :
+            BaseMethodDeclarationSyntax(p) {
+            val identifier: String by lazy { INSTANCE.GetConstructorDeclarationIdentifier(this) }
+            val parameters: List<ParameterSyntax> by lazy {
+                val count = INSTANCE.GetConstructorDeclarationParameterCount(this)
+                (0 until count).map { i -> INSTANCE.GetConstructorDeclarationParameter(this, i) }
             }
         }
 
@@ -258,6 +292,21 @@ interface Csharp : Library {
     fun GetParameterType(handle: AST.ParameterSyntax): AST.TypeSyntax
 
     fun GetTypeName(handle: AST.TypeSyntax): String
+
+    fun GetConstructorDeclarationIdentifier(handle: AST.ConstructorDeclarationSyntax): String
+
+    fun GetConstructorDeclarationParameterCount(handle: AST.ConstructorDeclarationSyntax): Int
+
+    fun GetConstructorDeclarationParameter(
+        handle: AST.ConstructorDeclarationSyntax,
+        index: Int,
+    ): AST.ParameterSyntax
+
+    fun GetBaseMethodDeclarationBody(handle: AST.MethodDeclarationSyntax): AST.BlockSyntax
+
+    fun GetBlockStatementCount(handle: AST.StatementSyntax): Int
+
+    fun GetBlockStatement(handle: AST.StatementSyntax, index: Int): AST.StatementSyntax
 
     fun GetCode(handle: AST.Node): String
 

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.newConstructor
 import de.fraunhofer.aisec.cpg.graph.newField
 import de.fraunhofer.aisec.cpg.graph.newMethod
 import de.fraunhofer.aisec.cpg.graph.newNamespace
@@ -33,13 +34,13 @@ import de.fraunhofer.aisec.cpg.graph.newParameter
 import de.fraunhofer.aisec.cpg.graph.newRecord
 
 class DeclarationHandler(frontend: CSharpLanguageFrontend) :
-    CSharpHandler<Declaration>(::ProblemDeclaration, frontend) {
-
-    override fun handleNode(node: Csharp.AST.Node): Declaration {
+    CSharpHandler<Declaration, Csharp.AST.MemberDeclarationSyntax>(::ProblemDeclaration, frontend) {
+    override fun handleNode(node: Csharp.AST.MemberDeclarationSyntax): Declaration {
         return when (node) {
             is Csharp.AST.NamespaceDeclarationSyntax -> handleNamespaceDeclaration(node)
             is Csharp.AST.ClassDeclarationSyntax -> handleClassDeclaration(node)
             is Csharp.AST.MethodDeclarationSyntax -> handleMethodDeclaration(node)
+            is Csharp.AST.ConstructorDeclarationSyntax -> handleConstructorDeclaration(node)
             else -> ProblemDeclaration("Not supported: ${node.csharpType}")
         }
     }
@@ -117,5 +118,32 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
 
         frontend.scopeManager.leaveScope(method)
         return method
+    }
+
+    /**
+     * Translates a C#
+     * [`ConstructorDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.constructordeclarationsyntax?view=roslyn-dotnet-5.0.0)
+     * into a [Constructor].
+     */
+    private fun handleConstructorDeclaration(
+        node: Csharp.AST.ConstructorDeclarationSyntax
+    ): Declaration {
+        val record = frontend.scopeManager.currentRecord
+        val constructor = newConstructor(node.identifier, record, rawNode = node)
+        frontend.scopeManager.enterScope(constructor)
+
+        for (parameter in node.parameters) {
+            val param =
+                newParameter(
+                    name = parameter.identifier,
+                    type = frontend.typeOf(parameter.type),
+                    rawNode = parameter,
+                )
+            frontend.scopeManager.addDeclaration(param)
+            constructor.parameters += param
+        }
+
+        frontend.scopeManager.leaveScope(constructor)
+        return constructor
     }
 }
