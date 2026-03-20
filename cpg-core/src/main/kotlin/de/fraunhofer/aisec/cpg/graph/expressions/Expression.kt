@@ -45,17 +45,18 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.NodeEntity
-import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.Transient
 
 /**
+ * Represents one expression. It is used as a base class for multiple different types of
+ * expressions. The only constraint is, that each expression has a type. The result of an expression
+ * can also be ignored, e.g. terminated with ; to make it a statement.
+ *
  * This [Node] is the most basic node type that represents source code elements which represents
  * executable code.
  */
-@NodeEntity
 abstract class Expression(usedAsExpression: Boolean = true) :
     AstNode(), DeclarationHolder, HasType {
 
@@ -66,6 +67,8 @@ abstract class Expression(usedAsExpression: Boolean = true) :
      * or an empty value and type. Depending on the node, type the default will be true or false.
      */
     open var usedAsExpression = true
+
+    @DoNotPersist override var observerEnabled: Boolean = true
 
     init {
         this.usedAsExpression = usedAsExpression
@@ -90,9 +93,7 @@ abstract class Expression(usedAsExpression: Boolean = true) :
     /** Virtual property to access [localEdges] without property edges. */
     var locals by unwrapping(Expression::localEdges)
 
-    @DoNotPersist override var observerEnabled: Boolean = true
-
-    @Transient override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
+    @DoNotPersist override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
     override var language: Language<*> = UnknownLanguage
         set(value) {

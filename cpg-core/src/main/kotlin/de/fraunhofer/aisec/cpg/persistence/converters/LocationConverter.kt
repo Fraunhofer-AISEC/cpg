@@ -23,12 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.helpers.neo4j
+package de.fraunhofer.aisec.cpg.persistence.converters
 
+import de.fraunhofer.aisec.cpg.persistence.CompositeAttributeConverter
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
-import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
 
 interface CpgCompositeConverter<A> : CompositeAttributeConverter<A> {
     /**

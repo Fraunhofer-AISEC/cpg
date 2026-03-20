@@ -30,13 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import kotlin.reflect.KProperty
-import org.neo4j.ogm.annotation.RelationshipEntity
 
 /**
  * An edge in a Control Dependence Graph (CDG). Denotes that the [start] node exercises control
  * dependence on the [end] node. See [ControlDependenceGraphPass].
  */
-@RelationshipEntity
 class ControlDependence(
     start: Node,
     end: Node,
@@ -64,7 +62,7 @@ class ControlDependence(
     }
 }
 
-/** A container of [ControlDependence] edges. [NodeType] is necessary because of the Neo4J OGM. */
+/** A container of [ControlDependence] edges. [NodeType] is necessary for type safety. */
 class ControlDependences<NodeType : Node> :
     EdgeList<Node, ControlDependence>, MirroredEdgeCollection<Node, ControlDependence> {
 

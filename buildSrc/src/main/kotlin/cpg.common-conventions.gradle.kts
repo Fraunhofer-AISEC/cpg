@@ -141,7 +141,6 @@ val serialExecutionService =
 val libs = the<LibrariesForLibs>()  // necessary to be able to use the version catalog in buildSrc
 dependencies {
     implementation(libs.apache.commons.lang3)
-    implementation(libs.neo4j.ogm.core)
     implementation(libs.jackson)
 }
 

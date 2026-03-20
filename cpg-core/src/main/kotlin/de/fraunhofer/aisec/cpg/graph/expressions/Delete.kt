@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.expressions
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
-import org.neo4j.ogm.annotation.Relationship
 
 class Delete : Expression() {
     @Relationship("OPERANDS") var operandEdges = astEdgesOf<Expression>()

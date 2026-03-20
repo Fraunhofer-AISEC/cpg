@@ -40,12 +40,11 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
-import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
+import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.converters.SimpleNameConverter
 import java.io.File
 import kotlin.reflect.KClass
-import org.neo4j.ogm.annotation.Transient
-import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /** The Python language. */
 open class PythonLanguage :
@@ -62,7 +61,7 @@ open class PythonLanguage :
     override val builtinsNamespace: Name = Name("builtins")
     override val builtinsFileCandidates = nameToLanguageFiles(builtinsNamespace)
 
-    @Transient
+    @DoNotPersist
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
     override val conjunctiveOperators = listOf("and")
     override val disjunctiveOperators = listOf("or")
@@ -83,7 +82,7 @@ open class PythonLanguage :
         setOf("+=", "-=", "*=", "**=", "/=", "//=", "%=", "<<=", ">>=", "&=", "|=", "^=", "@=")
 
     // https://docs.python.org/3/reference/datamodel.html#special-method-names
-    @Transient
+    @DoNotPersist
     override val overloadedOperatorNames:
         Map<Pair<KClass<out HasOverloadedOperation>, String>, Symbol> =
         mapOf(
@@ -132,7 +131,7 @@ open class PythonLanguage :
         )
 
     /** See [Documentation](https://docs.python.org/3/library/stdtypes.html#). */
-    @Transient
+    @DoNotPersist
     override val builtInTypes =
         mapOf(
             "bool" to BooleanType(typeName = "bool", language = this),

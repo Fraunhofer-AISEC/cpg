@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
 import kotlin.reflect.KProperty
-import org.neo4j.ogm.annotation.RelationshipEntity
 
 /** The types of dependences that might be represented in the CPG */
 enum class DependenceType {
@@ -77,7 +76,6 @@ class ProgramDependences<NodeType : Node> :
  * This edge class defines that there's some kind of dependency between [start] and [end]. The
  * nature of this dependency is defined by [dependence].
  */
-@RelationshipEntity
 open class ProgramDependence(
     start: Node,
     end: Node,
