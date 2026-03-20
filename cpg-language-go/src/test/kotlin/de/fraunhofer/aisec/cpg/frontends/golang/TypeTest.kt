@@ -27,13 +27,10 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-// TODO for merge
-@Ignore
 class TypeTest {
     @Test
     fun testTypeNameConfusion() {
