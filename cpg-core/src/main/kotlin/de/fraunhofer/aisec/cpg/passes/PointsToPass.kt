@@ -309,10 +309,10 @@ fun removePossibleCasts(node: Expression): Expression {
 }
 
 fun isGlobal(node: Node): Boolean {
-    if (node.name.localName.startsWith("contextManager") && (node is Variable || node is Reference))
-        return true
     return when (node) {
-        is Variable -> node.isGlobal
+        is Variable -> {
+            node.isGlobal || node.isNonLocal
+        }
         is MemberAccess -> isGlobal(node.base)
         is PointerDereference,
         is PointerReference -> {
@@ -322,7 +322,11 @@ fun isGlobal(node: Node): Boolean {
                 )
             isGlobal(input)
         }
-        is Reference -> node.refersTo is Function || (node.refersTo as? Variable)?.isGlobal == true
+        is Reference -> {
+            node.refersTo is Function ||
+                (node.refersTo as? Variable)?.isGlobal == true ||
+                (node.refersTo as? Variable)?.isNonLocal == true
+        }
         is MemoryAddress -> node.isGlobal
         is Function -> true
         else -> false
