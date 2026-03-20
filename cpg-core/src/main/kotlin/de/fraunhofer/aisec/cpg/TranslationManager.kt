@@ -88,7 +88,7 @@ private constructor(
      */
     fun analyze(
         ctx: TranslationContext? = null,
-        callbacks: Collection<TranslationProgressCallback>,
+        callbacks: Collection<TranslationProgressCallback>? = null,
     ): CompletableFuture<TranslationResult> {
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
         return CompletableFuture.supplyAsync {
@@ -98,7 +98,7 @@ private constructor(
 
     private fun analyzeNonAsync(
         ctx: TranslationContext,
-        callbacks: Collection<TranslationProgressCallback>,
+        callbacks: Collection<TranslationProgressCallback>?,
     ): TranslationResult {
         var executedFrontends = setOf<LanguageFrontend<*, *>>()
 
@@ -112,7 +112,7 @@ private constructor(
             // Parse Java/C/CPP files
             val bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
             executedFrontends = runFrontends(ctx, result)
-            callbacks.forEach { callback ->
+            callbacks?.forEach { callback ->
                 runCatching { callback.afterFrontends(ctx, result, executedFrontends) }
                     .onFailure {
                         log.warn(
