@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.edges
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
+import de.fraunhofer.aisec.cpg.graph.expressions.MemoryAddress
 import kotlin.reflect.KProperty
 import org.neo4j.ogm.annotation.RelationshipEntity
 
