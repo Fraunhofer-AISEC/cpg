@@ -375,9 +375,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         if (node !is EOGStarterHolder || node.eogStarters.isEmpty()) {
             return
         }
-        // TODO: Check if eogstarter has no prevEOG, otherwise skip it
 
-        return runBlocking { node.eogStarters.forEach { starter -> acceptInternal(starter) } }
+        return runBlocking {
+            node.eogStarters
+                // To avoid analyzing starters multiple times, we only take the ones w/o prevEOG
+                .filter { starter -> starter.prevEOG.isEmpty() == true }
+                .forEach { starter -> acceptInternal(starter) }
+        }
     }
 
     suspend fun acceptInternal(node: Node) {
