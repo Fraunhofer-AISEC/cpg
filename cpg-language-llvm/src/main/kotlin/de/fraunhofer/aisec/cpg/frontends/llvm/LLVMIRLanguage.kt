@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
 
 /** The LLVM IR language. */
-class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
+open class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
     override val fileExtensions = listOf("ll")
     override val namespaceDelimiter = "::"
     @DoNotPersist

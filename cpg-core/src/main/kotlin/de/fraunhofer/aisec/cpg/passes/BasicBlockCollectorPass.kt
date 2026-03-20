@@ -31,10 +31,9 @@ import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import java.util.*
 
 /**
  * This pass collects [BasicBlock]s by iterating through the EOG of [EOGStarterHolder]s. A basic

@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.helpers.functional
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.Loop
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.io.Serializable
@@ -312,12 +312,12 @@ interface Lattice<T : Lattice.Element> {
 
                 val oldGlobalIt = globalState[it]
 
-                // If we're on the loop head (some node is LoopStatement), and we use WIDENING or
+                // If we're on the loop head (some node is Loop), and we use WIDENING or
                 // WIDENING_NARROWING, we have to apply the widening/narrowing here (if oldGlobalIt
                 // is not null).
                 val newGlobalIt =
                     if (
-                        nextEdge.end is LoopStatement &&
+                        nextEdge.end is Loop &&
                             (strategy == Strategy.WIDENING ||
                                 strategy == Strategy.WIDENING_NARROWING) &&
                             oldGlobalIt != null

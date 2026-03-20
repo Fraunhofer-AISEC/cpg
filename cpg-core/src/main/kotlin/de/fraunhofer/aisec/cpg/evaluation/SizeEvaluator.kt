@@ -27,7 +27,10 @@ package de.fraunhofer.aisec.cpg.evaluation
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -51,7 +54,7 @@ class SizeEvaluator : ValueEvaluator() {
         node?.let { this.path += it }
 
         return when (node) {
-            is NewArrayExpression ->
+            is ArrayConstruction ->
                 if (node.initializer != null) {
                     evaluateInternal(node.initializer, depth + 1)
                 } else {
@@ -61,7 +64,7 @@ class SizeEvaluator : ValueEvaluator() {
             is Reference -> evaluateInternal(node.refersTo, depth + 1)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> if (node.value is String) (node.value as String).length else node.value
-            is SubscriptExpression -> evaluate(node.arrayExpression)
+            is Subscription -> evaluate(node.arrayExpression)
             else -> cannotEvaluate(node, this)
         }
     }

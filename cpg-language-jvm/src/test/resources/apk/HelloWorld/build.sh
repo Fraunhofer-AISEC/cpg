@@ -27,7 +27,7 @@ fi
 
 # Create APK (which is just a JAR file)
 echo "Creating app-debug.apk..."
-jar -cf app-debug.apk MainActivity.class
+jar -cf app-debug.apk MainActivity.class AndroidManifest.xml
 
 # Verify APK was created
 if [ ! -f "app-debug.apk" ]; then

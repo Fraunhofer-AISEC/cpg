@@ -31,10 +31,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -120,7 +120,7 @@ open class JavaLanguage :
     }
 
     override fun SymbolResolver.handleSuperExpression(
-        memberExpression: MemberExpression,
+        memberExpression: MemberAccess,
         curClass: Record,
     ) = handleSuperExpressionHelper(memberExpression, curClass)
 
@@ -133,7 +133,7 @@ open class JavaLanguage :
         // Therefore, it can be that we both import a field and a method with the same name. We
         // therefore do some additional filtering of the candidates here, before handling it.
         if (ref.candidates.size > 1) {
-            if (ref.resolutionHelper is CallExpression) {
+            if (ref.resolutionHelper is Call) {
                 ref.candidates = ref.candidates.filter { it is Function }.toSet()
             } else {
                 ref.candidates = ref.candidates.filter { it is Variable }.toSet()

@@ -33,8 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.Persistable
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.persistence.*
 import java.util.*
 import kotlin.reflect.KProperty
@@ -45,9 +44,8 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * store additional information that relate to the relationship between the two nodes that belong to
  * neither of the two nodes directly.
  *
- * An example would be the name (in this case `a`) of an argument between a [CallExpression] (`foo`)
- * and its argument (a [Literal] of `2`) in languages that support keyword arguments, such as
- * Python:
+ * An example would be the name (in this case `a`) of an argument between a [Call] (`foo`) and its
+ * argument (a [Literal] of `2`) in languages that support keyword arguments, such as Python:
  * ```python
  * foo("bar", a = 2)
  * ```
@@ -77,10 +75,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
     val overlaying: Boolean
         get() = end is OverlayNode || start is OverlayNode
 
-    /**
-     * The index of this node, if it is stored in an
-     * [de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList].
-     */
+    /** The index of this node, if it is stored in an [EdgeList]. */
     var index: Int? = null
 
     /** An optional name. */

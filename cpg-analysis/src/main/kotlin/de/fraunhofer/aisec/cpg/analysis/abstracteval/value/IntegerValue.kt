@@ -38,11 +38,11 @@ import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -484,7 +484,7 @@ class IntegerValue : Value<LatticeInterval> {
             return newValue
         }
         // Assignments and combined assign expressions
-        else if (node is AssignExpression) {
+        else if (node is Assign) {
             if (node.lhs.size == 1 && node.rhs.size == 1) {
                 // The lhs and rhs must already have been evaluated before reaching the operator.
                 // This should be guaranteed by the evaluation order graph.

@@ -31,14 +31,20 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.expressions.Comprehension
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
@@ -112,8 +118,8 @@ class FluentTest {
         assertTrue(lit1.scope is LocalScope)
         assertEquals(1, lit1.value)
 
-        // Second line should be an IfStatement
-        val ifStatement = main[1] as? IfStatement
+        // Second line should be an If
+        val ifStatement = main[1] as? IfElse
         assertNotNull(ifStatement)
         assertTrue(ifStatement.scope is LocalScope)
 
@@ -127,7 +133,7 @@ class FluentTest {
         assertEquals("then", printf.arguments[0]<Literal<*>>()?.value)
 
         // The "else" contains another if (else-if) and a call to "printf" with argument "elseIf"
-        val elseIf = ifStatement.elseStatement as? IfStatement
+        val elseIf = ifStatement.elseStatement as? IfElse
         assertNotNull(elseIf)
 
         printf = elseIf.thenStatement.calls["printf"]
@@ -146,17 +152,17 @@ class FluentTest {
         assertNotNull(lit1)
         assertEquals(1, lit1.value)
 
-        // Fourth line is the CallExpression (containing another MemberCallExpression as argument)
-        val call = main[3] as? CallExpression
+        // Fourth line is the Call (containing another MemberCall as argument)
+        val call = main[3] as? Call
         assertNotNull(call)
         assertLocalName("do", call)
 
-        val mce = call.arguments[0] as? MemberCallExpression
+        val mce = call.arguments[0] as? MemberCall
         assertNotNull(mce)
         assertFullName("UNKNOWN.func", mce)
 
-        // Fifth line is the ReturnStatement
-        val returnStatement = main[4] as? ReturnStatement
+        // Fifth line is the Return
+        val returnStatement = main[4] as? Return
         assertNotNull(returnStatement)
         assertNotNull(returnStatement.scope)
 
@@ -235,7 +241,7 @@ class FluentTest {
         assertLocalName("i", listComp.statement)
         assertEquals(1, listComp.comprehensionExpressions.size)
         val compExpr = listComp.comprehensionExpressions.single()
-        assertIs<ComprehensionExpression>(compExpr)
+        assertIs<Comprehension>(compExpr)
         assertIs<Reference>(compExpr.variable)
         assertLocalName("i", compExpr.variable)
         assertIs<Reference>(compExpr.iterable)
@@ -288,7 +294,7 @@ class FluentTest {
         assertLocalName("i", listComp.statement)
         assertEquals(1, listComp.comprehensionExpressions.size)
         val compExpr = listComp.comprehensionExpressions.single()
-        assertIs<ComprehensionExpression>(compExpr)
+        assertIs<Comprehension>(compExpr)
         val variableDecl = compExpr.variable
         assertIs<DeclarationStatement>(variableDecl)
         assertLocalName("i", variableDecl.singleDeclaration)
@@ -345,7 +351,7 @@ class FluentTest {
         assertLocalName("i", listComp.statement)
         assertEquals(1, listComp.comprehensionExpressions.size)
         val compExpr = listComp.comprehensionExpressions.single()
-        assertIs<ComprehensionExpression>(compExpr)
+        assertIs<Comprehension>(compExpr)
         val variableDecl = compExpr.variable
         assertIs<DeclarationStatement>(variableDecl)
         assertLocalName("i", variableDecl.declarations[0])

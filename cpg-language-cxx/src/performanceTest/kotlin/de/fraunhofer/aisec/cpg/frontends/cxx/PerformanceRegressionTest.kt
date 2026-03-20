@@ -30,9 +30,9 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.primitiveType
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.time.Duration
@@ -81,7 +81,7 @@ class PerformanceRegressionTest {
         with(TestLanguageFrontend()) {
             val tu = TranslationUnit()
             val decl = Variable()
-            val list = InitializerListExpression()
+            val list = InitializerList()
 
             for (i in 0 until 50000) {
                 list.initializerEdges.add(AstEdge(list, newLiteral(i, primitiveType("int"), null)))

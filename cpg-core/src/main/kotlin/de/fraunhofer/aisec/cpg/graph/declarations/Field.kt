@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder

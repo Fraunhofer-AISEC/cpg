@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.testcases.GraphExamples
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -113,11 +113,11 @@ class SimpleDFAOrderEvaluationTest {
         val nodesToOp = mutableMapOf<Node, Set<String>>()
         // We model the calls to start() for the then and the else branch
         val thenBranch =
-            ((functionOk.body as Block).statements[2] as? IfStatement)?.thenStatement as? Block
+            ((functionOk.body as Block).statements[2] as? IfElse)?.thenStatement as? Block
         assertNotNull(thenBranch)
         nodesToOp[thenBranch.statements[0]] = setOf("start()")
         val elseBranch =
-            ((functionOk.body as Block).statements[2] as? IfStatement)?.elseStatement as? Block
+            ((functionOk.body as Block).statements[2] as? IfElse)?.elseStatement as? Block
         assertNotNull(elseBranch)
         nodesToOp[elseBranch.statements[0]] = setOf("start()")
 
@@ -181,7 +181,7 @@ class SimpleDFAOrderEvaluationTest {
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
         val thenBranch =
-            ((functionOk.body as Block).statements[1] as? IfStatement)?.thenStatement as? Block
+            ((functionOk.body as Block).statements[1] as? IfElse)?.thenStatement as? Block
         assertNotNull(thenBranch)
         nodesToOp[thenBranch.statements[0]] = setOf("start()")
         nodesToOp[(functionOk.body as Block).statements[2]] = setOf("finish()")
@@ -203,7 +203,7 @@ class SimpleDFAOrderEvaluationTest {
 
         val nodesToOp = mutableMapOf<Node, Set<String>>()
         val thenBranch =
-            ((functionOk.body as Block).statements[1] as? IfStatement)?.thenStatement as? Block
+            ((functionOk.body as Block).statements[1] as? IfElse)?.thenStatement as? Block
         assertNotNull(thenBranch)
         nodesToOp[thenBranch.statements[0]] = setOf("start()")
         nodesToOp[thenBranch.statements[1]] = setOf("finish()")

@@ -31,14 +31,14 @@ import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Template
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
-import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.ResolveCallAmbiguityPass
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -338,7 +338,7 @@ val Collection<Type>.commonType: Type?
 /**
  * A utility function that checks whether our [Reference] refers to a [Type]. This is used by many
  * passes that replace certain [Reference] nodes with other nodes, e.g., the
- * [ResolveCallExpressionAmbiguityPass].
+ * [ResolveCallAmbiguityPass].
  *
  * Note: This involves some symbol lookup (using [ScopeManager.lookupTypeSymbolByName]), so this can
  * only be used in passes.

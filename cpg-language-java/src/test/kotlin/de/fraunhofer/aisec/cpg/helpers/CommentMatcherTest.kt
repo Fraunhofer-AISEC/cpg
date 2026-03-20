@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.For
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import kotlin.test.*
@@ -92,7 +92,7 @@ class CommentMatcherTest {
 
         val mainMethod = classDeclaration.declarations[2] as Method
         assertNull(mainMethod.comment)
-        val forLoop = (mainMethod.body as Block).statements[0] as ForStatement
+        val forLoop = (mainMethod.body as Block).statements[0] as For
         forLoop.comment = null
 
         val comment6 = "for loop"

@@ -27,8 +27,15 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.ExpressionList
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
+import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -157,7 +164,7 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(token)
         assertLocalName("token", token)
 
-        val callInitializer = token.initializer as? CallExpression
+        val callInitializer = token.initializer as? Call
         assertNotNull(callInitializer)
 
         val stringArg = callInitializer.arguments.first() as? Literal<*>
@@ -165,10 +172,10 @@ class TypeScriptLanguageFrontendTest {
 
         assertEquals("access_token", stringArg.value)
 
-        val chainedCall = function.bodyOrNull<MemberCallExpression>(3)
+        val chainedCall = function.bodyOrNull<MemberCall>(3)
         assertNotNull(chainedCall)
 
-        val fetch = chainedCall.base as? CallExpression
+        val fetch = chainedCall.base as? Call
         assertNotNull(fetch)
 
         val refArg = fetch.arguments.first() as? Reference
@@ -177,27 +184,27 @@ class TypeScriptLanguageFrontendTest {
         assertLocalName("apiUrl", refArg)
         assertSame(apiUrl, refArg.refersTo)
 
-        var objectArg = fetch.arguments.last() as? InitializerListExpression
+        var objectArg = fetch.arguments.last() as? InitializerList
         assertNotNull(objectArg)
 
         assertEquals(3, objectArg.initializers.size)
 
-        var keyValue = objectArg.initializers.first() as? KeyValueExpression
+        var keyValue = objectArg.initializers.first() as? KeyValue
         assertNotNull(keyValue)
 
         assertLocalName("method", keyValue.key as? Reference)
         assertEquals("POST", (keyValue.value as? Literal<*>)?.value)
 
-        keyValue = objectArg.initializers.last() as? KeyValueExpression
+        keyValue = objectArg.initializers.last() as? KeyValue
         assertNotNull(keyValue)
 
         // nested object creation
-        objectArg = keyValue.value as? InitializerListExpression
+        objectArg = keyValue.value as? InitializerList
         assertNotNull(objectArg)
 
         assertEquals(2, objectArg.initializers.size)
 
-        keyValue = objectArg.initializers.first() as? KeyValueExpression
+        keyValue = objectArg.initializers.first() as? KeyValue
         assertNotNull(keyValue)
 
         assertEquals("Authorization", (keyValue.key as? Literal<*>)?.value)
@@ -205,7 +212,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertLocalName("then", chainedCall)
 
-        val funcArg = chainedCall.arguments.firstOrNull() as? LambdaExpression
+        val funcArg = chainedCall.arguments.firstOrNull() as? Lambda
         assertNotNull(funcArg)
 
         val arrowFunction = funcArg.function
@@ -295,7 +302,7 @@ class TypeScriptLanguageFrontendTest {
         val loginForm = tu.variables["LoginForm"]
         assertNotNull(loginForm)
 
-        val lambdaFunction = (loginForm.initializer as? LambdaExpression)?.function
+        val lambdaFunction = (loginForm.initializer as? Lambda)?.function
         assertNotNull(lambdaFunction)
 
         val validateForm = lambdaFunction.functions["validateForm"]
@@ -348,12 +355,11 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(tu)
 
         val onPost =
-            tu.statements.firstOrNull {
-                it is MemberCallExpression && it.name.localName == "onPost"
-            } as? MemberCallExpression
+            tu.statements.firstOrNull { it is MemberCall && it.name.localName == "onPost" }
+                as? MemberCall
         assertNotNull(onPost)
 
-        val lambda = onPost.arguments.drop(1).firstOrNull() as? LambdaExpression
+        val lambda = onPost.arguments.drop(1).firstOrNull() as? Lambda
         assertNotNull(lambda)
 
         val func = lambda.function

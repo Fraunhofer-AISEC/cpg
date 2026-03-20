@@ -40,10 +40,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Typedef
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.expressions.Label
+import de.fraunhofer.aisec.cpg.graph.expressions.LookupScope
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
-import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
-import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.persistence.Relationship
@@ -83,7 +83,7 @@ sealed class Scope(
     @Relationship(value = "PARENT", direction = Relationship.Direction.INCOMING)
     var children = mutableListOf<Scope>()
 
-    @DoNotPersist var labelStatements = mutableMapOf<String, LabelStatement>()
+    @DoNotPersist var labels = mutableMapOf<String, Label>()
 
     /** A map of symbols and their respective [Declaration] nodes that declare them. */
     @DoNotPersist var symbols: SymbolMap = mutableMapOf()
@@ -112,12 +112,11 @@ sealed class Scope(
      * In some languages, the lookup scope of a symbol that is being resolved (e.g. of a
      * [Reference]) can be adjusted through keywords (such as `global` in Python or PHP).
      *
-     * We store this information in the form of a [LookupScopeStatement] in the AST, but we need to
-     * also store this information in the scope to avoid unnecessary AST traversals when resolving
+     * We store this information in the form of a [LookupScope] in the AST, but we need to also
+     * store this information in the scope to avoid unnecessary AST traversals when resolving
      * symbols using [lookupSymbol].
      */
-    @DoNotPersist
-    var predefinedLookupScopes: MutableMap<Symbol, LookupScopeStatement> = mutableMapOf()
+    @DoNotPersist var predefinedLookupScopes: MutableMap<Symbol, LookupScope> = mutableMapOf()
 
     /**
      * A map of typedefs keyed by their alias name. This is still needed as a bridge until we
@@ -262,8 +261,8 @@ sealed class Scope(
         return list ?: listOf()
     }
 
-    fun addLabelStatement(labelStatement: LabelStatement) {
-        labelStatement.label?.let { labelStatements[it] = labelStatement }
+    fun addLabel(label: Label) {
+        label.label?.let { labels[it] = label }
     }
 
     override fun equals(other: Any?): Boolean {

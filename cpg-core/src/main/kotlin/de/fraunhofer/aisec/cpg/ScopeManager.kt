@@ -29,9 +29,8 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -231,14 +230,14 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         if (!scopeMap.containsKey(nodeToScope)) {
             val newScope =
                 when (nodeToScope) {
-                    is WhileStatement,
-                    is DoStatement,
-                    is AssertStatement,
-                    is ForStatement,
-                    is ForEachStatement,
-                    is SwitchStatement,
-                    is TryStatement,
-                    is IfStatement,
+                    is While,
+                    is DoWhile,
+                    is Assert,
+                    is For,
+                    is ForEach,
+                    is Switch,
+                    is Try,
+                    is IfElse,
                     is CatchClause,
                     is CollectionComprehension,
                     is Block -> LocalScope(nodeToScope)
@@ -425,16 +424,16 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
-     * This function retrieves the [LabelStatement] associated with the [labelString]. This depicts
-     * the feature of some languages to attach a label to a point in the source code and use it as
-     * the target for control flow manipulation, e.g. [BreakStatement], [GotoStatement].
+     * This function retrieves the [Label] associated with the [labelString]. This depicts the
+     * feature of some languages to attach a label to a point in the source code and use it as the
+     * target for control flow manipulation, e.g. [Break], [Goto].
      */
-    fun getLabelStatement(labelString: String?): LabelStatement? {
+    fun getLabel(labelString: String?): Label? {
         if (labelString == null) return null
-        var labelStatement: LabelStatement?
+        var labelStatement: Label?
         var searchScope: Scope? = currentScope
         while (searchScope != null) {
-            labelStatement = searchScope.labelStatements[labelString]
+            labelStatement = searchScope.labels[labelString]
             if (labelStatement != null) {
                 return labelStatement
             }
@@ -880,7 +879,7 @@ fun <T : Declaration> ContextProvider.declare(declaration: T): T {
 
 /**
  * [SignatureResult] will be the result of the function [Function.matchesSignature] which calculates
- * whether the provided [CallExpression] will match the signature of the current [Function].
+ * whether the provided [Call] will match the signature of the current [Function].
  */
 sealed class SignatureResult(open val casts: List<CastResult>? = null) {
     val ranking: Int
@@ -975,14 +974,14 @@ fun Function.matchesSignature(
  * [bestViable]) of the call resolution.
  */
 data class CallResolutionResult(
-    /** The original expression that triggered the resolution. Most likely a [CallExpression]. */
+    /** The original expression that triggered the resolution. Most likely a [Call]. */
     val source: Expression,
 
     /** The arguments that were supplied to the expression. */
     val arguments: List<Expression>,
 
     /**
-     * A set of candidate symbols we discovered based on the [CallExpression.callee] (using
+     * A set of candidate symbols we discovered based on the [Call.callee] (using
      * [ScopeManager.lookupSymbolByName]), more specifically a list of [Function] nodes.
      */
     var candidateFunctions: Set<Function>,
@@ -1025,7 +1024,7 @@ data class CallResolutionResult(
          * Ideally, we have only one function in [bestViable], but it could be that we still have
          * multiple functions in this list. The most common scenario for this is if we have a member
          * call to an interface, and we know at least partially which implemented classes could be
-         * in the [MemberExpression.base]. In this case, all best viable functions of each of the
+         * in the [MemberAccess.base]. In this case, all best viable functions of each of the
          * implemented classes are contained in [bestViable].
          */
         SUCCESSFUL,

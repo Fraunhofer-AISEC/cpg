@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.newBlock
 import de.fraunhofer.aisec.cpg.graph.newFunction
-import de.fraunhofer.aisec.cpg.graph.newLookupScopeStatement
+import de.fraunhofer.aisec.cpg.graph.newLookupScope
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -56,7 +56,7 @@ class ScopeTest {
 
             // now, we pretend to have a lookup scope modifier for a symbol, e.g. through "global"
             // in Python
-            val stmt = newLookupScopeStatement(listOf("a"), targetScope = globalScope)
+            val stmt = newLookupScope(listOf("a"), targetScope = globalScope)
             scope.predefinedLookupScopes["a"] = stmt
 
             // let's try the lookup again, this time it should point to the global A

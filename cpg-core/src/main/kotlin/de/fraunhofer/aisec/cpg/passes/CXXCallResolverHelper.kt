@@ -29,7 +29,10 @@ import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Cast
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.tryCast
 import java.util.HashMap
@@ -55,12 +58,11 @@ fun shouldContinueSearchInParent(recordDeclaration: Record?, name: String?): Boo
 }
 
 /**
- * Performs all necessary steps to make a CallExpression instantiate a template: 1. Set
- * TemplateInstantiation Edge from CallExpression to Template 2. Set Invokes Edge to all
- * realizations of the Template 3. Set return type of the CallExpression and checks if it uses a
- * ParameterizedType and therefore has to be instantiated 4. Set Template Parameters Edge from the
- * CallExpression to all Instantiation Values 5. Set DFG Edges from instantiation to Parameter in
- * Template
+ * Performs all necessary steps to make a Call instantiate a template: 1. Set TemplateInstantiation
+ * Edge from Call to Template 2. Set Invokes Edge to all realizations of the Template 3. Set return
+ * type of the Call and checks if it uses a ParameterizedType and therefore has to be
+ * instantiated 4. Set Template Parameters Edge from the Call to all Instantiation Values 5. Set DFG
+ * Edges from instantiation to Parameter in Template
  *
  * @param templateCall call to instantiate and invoke a function template
  * @param functionTemplateDeclaration functionTemplate we have identified that should be
@@ -73,7 +75,7 @@ fun shouldContinueSearchInParent(recordDeclaration: Record?, name: String?): Boo
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  */
 fun applyTemplateInstantiation(
-    templateCall: CallExpression,
+    templateCall: Call,
     functionTemplateDeclaration: FunctionTemplate?,
     function: Function,
     initializationSignature: Map<Declaration?, AstNode?>,
@@ -137,25 +139,25 @@ fun applyTemplateInstantiation(
  * @param arguments arguments of the call
  * @param functionSignature Types of the signature of the possible invocation candidate
  * @return List containing either null on the i-th position (if the type of i-th argument of the
- *   call equals the type of the i-th argument of the Function) or a CastExpression on the i-th
- *   position (if the argument of the call can be cast to match the type of the argument at the i-th
- *   position of the Function). If the list is empty the signature of the Function cannot be reached
- *   through implicit casts
+ *   call equals the type of the i-th argument of the Function) or a Cast on the i-th position (if
+ *   the argument of the call can be cast to match the type of the argument at the i-th position of
+ *   the Function). If the list is empty the signature of the Function cannot be reached through
+ *   implicit casts
  */
 fun signatureWithImplicitCastTransformation(
-    call: CallExpression,
+    call: Call,
     callSignature: List<Type?>,
     arguments: List<Expression>,
     functionSignature: List<Type>,
-): MutableList<CastExpression?> {
-    val implicitCasts = mutableListOf<CastExpression?>()
+): MutableList<Cast?> {
+    val implicitCasts = mutableListOf<Cast?>()
     if (callSignature.size != functionSignature.size) return implicitCasts
 
     for (i in callSignature.indices) {
         val callType = callSignature[i]
         val funcType = functionSignature[i]
         if (callType?.isPrimitive == true && funcType.isPrimitive && callType != funcType) {
-            val implicitCast = CastExpression()
+            val implicitCast = Cast()
             implicitCast.isImplicit = true
             implicitCast.castType = funcType
             implicitCast.language = funcType.language
@@ -212,12 +214,12 @@ fun getParameterizedSignaturesFromInitialization(
  */
 fun getTemplateInitializationSignature(
     functionTemplateDeclaration: FunctionTemplate,
-    templateCall: CallExpression,
+    templateCall: Call,
     instantiationType: MutableMap<AstNode?, Template.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
     explicitInstantiated: MutableList<ParameterizedType>,
 ): Map<Declaration?, AstNode?>? {
-    // Construct Signature
+    // Construction Signature
     val signature =
         constructTemplateInitializationSignatureFromTemplateParameters(
             functionTemplateDeclaration,
@@ -272,7 +274,7 @@ fun getTemplateInitializationSignature(
  */
 fun constructTemplateInitializationSignatureFromTemplateParameters(
     functionTemplateDeclaration: FunctionTemplate,
-    templateCall: CallExpression,
+    templateCall: Call,
     instantiationType: MutableMap<AstNode?, Template.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
     explicitInstantiated: MutableList<ParameterizedType>,
@@ -408,7 +410,7 @@ fun getCallSignature(
  * @param functionDeclaration Function realization of the template
  * @param functionDeclarationSignature Signature of the realization Function, but replacing the
  *   ParameterizedTypes with the ones provided in the instantiation
- * @param templateCallExpression CallExpression that instantiates the template
+ * @param templateCall Call that instantiates the template
  * @param explicitInstantiation list of the explicitly instantiated type parameters
  * @return true if the instantiation of the template is compatible with the template declaration,
  *   false otherwise
@@ -416,7 +418,7 @@ fun getCallSignature(
 fun checkArgumentValidity(
     functionDeclaration: Function,
     functionDeclarationSignature: List<Type>,
-    templateCallExpression: CallExpression,
+    templateCall: Call,
     explicitInstantiation: List<ParameterizedType>,
     needsExactMatch: Boolean,
 ): Boolean {
@@ -424,10 +426,10 @@ fun checkArgumentValidity(
     // casting two parameterized types into two different arguments
     val convertedTypes = mutableMapOf<ParameterizedType, Type>()
 
-    if (templateCallExpression.arguments.size <= functionDeclaration.parameters.size) {
+    if (templateCall.arguments.size <= functionDeclaration.parameters.size) {
         val callArguments =
             mutableListOf<Expression?>(
-                *templateCallExpression.arguments.toTypedArray()
+                *templateCall.arguments.toTypedArray()
             ) // Use provided arguments
         callArguments.addAll(
             functionDeclaration.defaultParameters

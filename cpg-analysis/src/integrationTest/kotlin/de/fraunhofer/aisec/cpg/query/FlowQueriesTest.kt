@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.query
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.analyze
 import kotlin.io.path.Path
 import kotlin.test.*
@@ -54,7 +54,7 @@ class FlowQueriesTest {
                     func.followEOGEdgesUntilHit(
                         collectFailedPaths = false,
                         predicate = { node ->
-                            node is CallExpression && node.name.localName == "inner_authorize"
+                            node is Call && node.name.localName == "inner_authorize"
                         },
                     )
                 innerAuthorizeCalls.fulfilled
@@ -91,13 +91,13 @@ class FlowQueriesTest {
                     func.followEOGEdgesUntilHit(
                         collectFailedPaths = false,
                         predicate = { node ->
-                            node is CallExpression && node.name.localName == "inner_authorize"
+                            node is Call && node.name.localName == "inner_authorize"
                         },
                     )
                 innerAuthorizeCalls.fulfilled
                     .map { path ->
-                        val call = path.nodes.lastOrNull() as? CallExpression
-                        assertNotNull(call, "Expected last node to be a CallExpression")
+                        val call = path.nodes.lastOrNull() as? Call
+                        assertNotNull(call, "Expected last node to be a Call")
 
                         val flow =
                             dataFlow(

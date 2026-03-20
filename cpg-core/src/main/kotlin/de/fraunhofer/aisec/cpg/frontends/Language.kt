@@ -41,19 +41,21 @@ import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.builder.assign
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -152,10 +154,10 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * [builtInTypes] map, it returns null. The [typeString] must precisely match the key in the
      * map.
      */
-    fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString.toString()]
+    open fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString.toString()]
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
-    fun handlesFile(file: File): Boolean {
+    open fun handlesFile(file: File): Boolean {
         return file.extension in fileExtensions
     }
 
@@ -264,6 +266,38 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
                 }
             else -> unknownType() // We don't know what is this thing
         }
+    }
+
+    /**
+     * Determines how to propagate [HasType.assignedTypes] across binary operations. Returns a
+     * merged set of types if the operator requires special handling (e.g., operators where the left
+     * or the right operand can be the result at runtime), or an empty set if no special handling is
+     * needed.
+     *
+     * If both [lhs] and [rhs] have only one assigned type, the type will be determined through
+     * [propagateTypeOfBinaryOperation].
+     *
+     * Languages can override this to handle language-specific operators.
+     */
+    open fun propagateAssignedTypesOfBinaryOperation(
+        operatorCode: String?,
+        lhs: Expression,
+        rhs: Expression,
+    ): Set<Type> {
+        val lhsAssigned = lhs.assignedTypes
+        val rhsAssigned = rhs.assignedTypes
+        if (lhsAssigned.size == 1 && rhsAssigned.size == 1) {
+            val typeResult =
+                propagateTypeOfBinaryOperation(
+                    operatorCode,
+                    lhsAssigned.single(),
+                    rhsAssigned.single(),
+                )
+            if (typeResult !is UnknownType) {
+                return setOf(typeResult)
+            }
+        }
+        return emptySet()
     }
 
     /**
@@ -404,7 +438,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         // case, we need to check, whether a template matches directly after we have no direct
         // matches
         val source = result.source
-        if (this is HasTemplates && source is CallExpression) {
+        if (this is HasTemplates && source is Call) {
             source.templateArgumentEdges = TemplateArguments(source)
             val (ok, candidates) =
                 this.handleTemplateFunctionCalls(
@@ -486,7 +520,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * @param source the source that was responsible for the inference
      */
     context(provider: ContextProvider)
-    fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnit {
+    open fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnit {
         // The easiest way to identify the current component would be traversing the AST, but that
         // does not work for types. But types have a scope and the scope (should) have the
         // connection to the AST. We add several fallbacks here to make sure that we have a

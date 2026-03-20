@@ -29,13 +29,13 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
@@ -165,7 +165,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      */
     private fun handleFunctionDefinition(ctx: IASTFunctionDefinition): Declaration {
         // TODO: A problem with cpp functions is that we cannot know if they may throw an exception
-        //  as throw(...) is not compiler enforced (Problem for TryStatement)
+        //  as throw(...) is not compiler enforced (Problem for Try)
         val declaration = frontend.declaratorHandler.handle(ctx.declarator)
 
         if (declaration !is Function) {
@@ -208,14 +208,14 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 val statements = bodyStatement.statementEdges
 
                 // get the last statement
-                var lastStatement: Statement? = null
+                var lastStatement: Expression? = null
                 if (statements.isNotEmpty()) {
                     lastStatement = statements[statements.size - 1].end
                 }
 
                 // add an implicit return statement, if there is none
-                if (lastStatement !is ReturnStatement) {
-                    val returnStatement = newReturnStatement()
+                if (lastStatement !is Return) {
+                    val returnStatement = newReturn()
                     returnStatement.isImplicit = true
                     bodyStatement.statements += returnStatement
                 }
@@ -481,7 +481,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // We want to make sure that we parse the initializer *after* we have set the
                 // type. This has several advantages:
                 // * This way we can deduce, whether our initializer needs to have the
-                //   declared type (in case of a ConstructExpression);
+                //   declared type (in case of a Construction);
                 // * or if the declaration needs to have the same type as the initializer (when
                 //   an auto-type is used). The latter case is done internally by the
                 //   Variable class and its type observer.

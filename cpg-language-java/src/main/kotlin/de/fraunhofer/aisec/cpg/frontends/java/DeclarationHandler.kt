@@ -46,8 +46,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Enumeration
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -238,7 +238,6 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 variable.initializer
                     .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
                     .orElse(null)
-                    as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
             var type: Type
             try {
                 // Resolve type first with ParameterizedType
@@ -353,13 +352,13 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     recordDeclaration.records += cls
                 }
                 is InitializerDeclaration -> {
-                    val initializerBlock = frontend.statementHandler.handleBlockStatement(decl.body)
+                    val initializerBlock = frontend.statementHandler.handleBlock(decl.body)
                     initializerBlock.isStaticBlock = decl.isStatic
                     recordDeclaration.statements += initializerBlock
                 }
                 else -> {
                     log.debug(
-                        "Member {} of type {} is something that we do not parse yet: {}",
+                        "MemberAccess {} of type {} is something that we do not parse yet: {}",
                         decl,
                         recordDeclaration.name,
                         decl.javaClass.simpleName,
@@ -401,10 +400,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         val result = this.newEnumConstant(enumConstDecl.nameAsString, rawNode = enumConstDecl)
         if (enumConstDecl.arguments.isNotEmpty()) {
             val arguments =
-                enumConstDecl.arguments.mapNotNull {
-                    frontend.expressionHandler.handle(it)
-                        as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-                }
+                enumConstDecl.arguments.mapNotNull { frontend.expressionHandler.handle(it) }
             // TODO: This call resolution in the frontend might fail, in particular if we haven't
             // processed the constructor yet. Should be cleaned up in the future but requires
             // changes to the starting points of call/symbol resolution.
@@ -413,8 +409,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     it.matchesSignature(arguments.map { it.type }).isDirectMatch
                 }
 
-            val constructExpr =
-                newConstructExpression(matchingConstructor?.name ?: currentEnum?.name)
+            val constructExpr = newConstruction(matchingConstructor?.name ?: currentEnum?.name)
             arguments.forEach { constructExpr.addArgument(it) }
             matchingConstructor?.let { constructExpr.constructor = matchingConstructor }
             result.initializer = constructExpr
@@ -449,10 +444,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         }
         val oInitializer = variable.initializer
         if (oInitializer.isPresent) {
-            val initializer =
-                frontend.expressionHandler.handle(oInitializer.get())
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
-            if (initializer is NewArrayExpression) {
+            val initializer = frontend.expressionHandler.handle(oInitializer.get())
+            if (initializer is ArrayConstruction) {
                 declaration.isArray = true
             }
             declaration.initializer = initializer

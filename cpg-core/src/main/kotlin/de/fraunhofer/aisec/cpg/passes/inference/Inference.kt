@@ -36,9 +36,8 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
@@ -82,7 +81,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         isStatic: Boolean,
         signature: List<Type?>,
         incomingReturnType: Type?,
-        hint: CallExpression? = null,
+        hint: Call? = null,
     ): Function? {
         if (!ctx.config.inferenceConfiguration.inferFunctions) {
             return null
@@ -303,7 +302,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
      * @param call
      * @return inferred FunctionTemplate which can be invoked by the call
      */
-    fun inferFunctionTemplate(call: CallExpression): FunctionTemplate {
+    fun inferFunctionTemplate(call: Call): FunctionTemplate {
         // We assume that the start is either a record or the translation unit
         val record = start as? Record
         val tu = start as? TranslationUnit
@@ -539,9 +538,9 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     /**
      * This class implements a [HasType.TypeObserver] and uses the observed type to set the
      * [ValueDeclaration.type] of a [ValueDeclaration], based on the types we see. It can be
-     * registered on objects that are used to "start" an inference, for example a
-     * [MemberExpression], which infers a [Field]. Once the type of the member expression becomes
-     * known, we can use this information to set the type of the field.
+     * registered on objects that are used to "start" an inference, for example a [MemberAccess],
+     * which infers a [Field]. Once the type of the member expression becomes known, we can use this
+     * information to set the type of the field.
      *
      * For now, this implementation uses the first type that we "see" and once the type of our
      * [declaration] is known, we ignore further updates. In a future implementation, we could try
@@ -591,9 +590,9 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
 
     /**
      * This function tries to infer a return type for an inferred [Function] based the original
-     * [CallExpression] (as the [hint]) parameter that was used to infer the function.
+     * [Call] (as the [hint]) parameter that was used to infer the function.
      */
-    fun inferReturnType(hint: CallExpression): Type? {
+    fun inferReturnType(hint: Call): Type? {
         // Try to find out, if the supplied hint is part of an assignment. If yes, we can use their
         // type as the return type of the function
         val targetType =
@@ -625,7 +624,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                     return numericTypes.lastOrNull()
                 }
             }
-            is ConstructExpression -> {
+            is Construction -> {
                 return holder.type
             }
             is BinaryOperator -> {
@@ -637,7 +636,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                     return holder.rhs.type
                 }
             }
-            is ReturnStatement -> {
+            is Return -> {
                 // If this is part of a return statement, we can take the return type
                 val func = hint.firstParentOrNull<Function>()
                 val returnTypes = func?.returnTypes
@@ -676,9 +675,9 @@ fun Node.startInference(ctx: TranslationContext): Inference? {
     return Inference(this, ctx)
 }
 
-/** Tries to infer a [Function] from a [CallExpression]. */
+/** Tries to infer a [Function] from a [Call]. */
 fun TranslationUnit.inferFunction(
-    call: CallExpression,
+    call: Call,
     isStatic: Boolean = false,
     ctx: TranslationContext,
 ): Function? {
@@ -694,9 +693,9 @@ fun TranslationUnit.inferFunction(
         )
 }
 
-/** Tries to infer a [Function] from a [CallExpression]. */
+/** Tries to infer a [Function] from a [Call]. */
 fun Namespace.inferFunction(
-    call: CallExpression,
+    call: Call,
     isStatic: Boolean = false,
     ctx: TranslationContext,
 ): Function? {
@@ -712,12 +711,8 @@ fun Namespace.inferFunction(
         )
 }
 
-/** Tries to infer a [Method] from a [CallExpression]. */
-fun Record.inferMethod(
-    call: CallExpression,
-    isStatic: Boolean = false,
-    ctx: TranslationContext,
-): Method? {
+/** Tries to infer a [Method] from a [Call]. */
+fun Record.inferMethod(call: Call, isStatic: Boolean = false, ctx: TranslationContext): Method? {
     return startInference(ctx)
         ?.inferFunctionDeclaration(
             call.name.localName,

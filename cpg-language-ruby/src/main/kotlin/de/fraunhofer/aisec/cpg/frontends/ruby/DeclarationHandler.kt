@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.newFunction
 import de.fraunhofer.aisec.cpg.graph.newParameter
-import de.fraunhofer.aisec.cpg.graph.newReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.newReturn
 import org.jruby.ast.ArgumentNode
 import org.jruby.ast.DefnNode
 import org.jruby.ast.Node
@@ -74,8 +74,8 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
             val lastStatement = body.statements.lastOrNull()
 
             // add an implicit return statement, if there is no return statement
-            if (lastStatement !is ReturnStatement) {
-                val returnStatement = newReturnStatement()
+            if (lastStatement !is Return) {
+                val returnStatement = newReturn()
                 returnStatement.isImplicit = true
                 body += returnStatement
 

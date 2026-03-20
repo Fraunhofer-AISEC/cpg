@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
@@ -140,8 +140,8 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
             val body = funcDecl.body?.let { frontend.statementHandler.handle(it) }
             if (body is Block) {
                 val last = body.statements.lastOrNull()
-                if (last !is ReturnStatement) {
-                    val ret = newReturnStatement()
+                if (last !is Return) {
+                    val ret = newReturn()
                     ret.isImplicit = true
                     body += ret
                 }

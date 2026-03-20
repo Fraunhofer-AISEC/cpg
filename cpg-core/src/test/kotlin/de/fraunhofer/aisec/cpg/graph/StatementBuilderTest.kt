@@ -37,7 +37,7 @@ import kotlin.test.assertNotNull
 
 class StatementBuilderTest {
     @Test
-    fun testNewLookupScopeStatement() {
+    fun testNewLookupScope() {
         val frontend =
             TestLanguageFrontend(
                 ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
@@ -66,7 +66,7 @@ class StatementBuilderTest {
                             scopeManager.addDeclaration(localA)
                             body += stmt
 
-                            body += newLookupScopeStatement(listOf("a"), scopeManager.globalScope)
+                            body += newLookupScope(listOf("a"), scopeManager.globalScope)
                             body += newReference("a")
 
                             scopeManager.leaveScope(body)

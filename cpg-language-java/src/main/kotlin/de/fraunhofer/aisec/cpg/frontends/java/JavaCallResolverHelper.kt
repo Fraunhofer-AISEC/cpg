@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -46,7 +46,7 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.LOGGER
  * @param curClass The class containing the call
  */
 fun SymbolResolver.handleSuperExpressionHelper(
-    memberExpression: MemberExpression,
+    memberExpression: MemberAccess,
     curClass: Record,
 ): Boolean {
     // Because the "super" keyword still refers to "this" (but cast to another class), we
@@ -101,7 +101,7 @@ fun SymbolResolver.handleSuperExpressionHelper(
     return false
 }
 
-fun SymbolResolver.handleSpecificSupertype(callee: MemberExpression, curClass: Record): Record? {
+fun SymbolResolver.handleSpecificSupertype(callee: MemberAccess, curClass: Record): Record? {
     val baseName = callee.base.name.parent ?: return null
 
     val type = typeManager.lookupResolvedType(baseName.toString()) ?: callee.unknownType()
