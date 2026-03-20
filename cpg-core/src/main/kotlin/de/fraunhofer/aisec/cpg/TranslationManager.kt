@@ -67,24 +67,12 @@ private constructor(
     private val isCancelled = AtomicBoolean(false)
 
     /**
-     * Kicks off the analysis.
-     *
-     * This method orchestrates all passes that will do the main work.
-     *
-     * @param ctx - The [TranslationContext] to use for the analysis. If none is provided, a new one
-     *   is created.
-     * @return a [CompletableFuture] with the [TranslationResult].
-     */
-    fun analyze(ctx: TranslationContext? = null): CompletableFuture<TranslationResult> {
-        return analyze(ctx, emptyList())
-    }
-
-    /**
      * Kicks off the analysis and reports progress through [callbacks].
      *
      * @param ctx The [TranslationContext] to use for the analysis. If none is provided, a new one
      *   is created.
      * @param callbacks Callback(s) that are notified after frontend parsing and after each pass.
+     * @return a [CompletableFuture] with the [TranslationResult].
      */
     fun analyze(
         ctx: TranslationContext? = null,
