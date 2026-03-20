@@ -309,8 +309,8 @@ fun removePossibleCasts(node: Expression): Expression {
 }
 
 fun isGlobal(node: Node): Boolean {
-    /*    if (node.name.localName.startsWith("contextManager") && (node is Variable || node is Reference))
-    return true*/
+    if (node.name.localName.startsWith("contextManager") && (node is Variable || node is Reference))
+        return true
     return when (node) {
         is Variable -> node.isGlobal
         is MemberAccess -> isGlobal(node.base)
