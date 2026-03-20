@@ -126,7 +126,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is MemberAccess -> handleMemberAccess(node)
             is PointerReference -> handlePointerReference(node)
             is PointerDereference -> handlePointerDereference(node)
-            // is Reference -> handleReference(node)
+            is Reference -> handleReference(node)
             is ExpressionList -> handleExpressionList(node)
             is New -> handleNew(node)
             // We keep the logic for the InitializerList in that class because the
@@ -428,13 +428,16 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * - For a combined read and write, both edges for data flows are added.
      */
     protected fun handleReference(node: Reference) {
+        // We only do this for global references, the rest will be done by the PointsToPass
         node.refersTo?.let {
-            when (node.access) {
-                AccessValues.WRITE -> node.nextDFGEdges += it
-                AccessValues.READ -> node.prevDFGEdges += Dataflow(start = it, end = node)
-                else -> {
-                    node.nextDFGEdges += it
-                    node.prevDFGEdges += Dataflow(start = it, end = node)
+            if (isGlobal(it)) {
+                when (node.access) {
+                    AccessValues.WRITE -> node.nextDFGEdges += it
+                    AccessValues.READ -> node.prevDFGEdges += Dataflow(start = it, end = node)
+                    else -> {
+                        node.nextDFGEdges += it
+                        node.prevDFGEdges += Dataflow(start = it, end = node)
+                    }
                 }
             }
         }

@@ -655,3 +655,7 @@ undefined8 test_PMV_flows(void *param_1) {
 
   printf("%d\n", vVar7);
 }
+
+int testGlobalWrite() {
+  key = 1;
+}

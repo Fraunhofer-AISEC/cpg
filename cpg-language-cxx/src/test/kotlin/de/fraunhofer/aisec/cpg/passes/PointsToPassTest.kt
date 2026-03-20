@@ -2645,18 +2645,33 @@ class PointsToPassTest {
                 .size,
         )
 
-        // All references have as prevDFG the global Declaration
+        // All references with READ access have as prevDFG the global Declaration
         val keyPrevDFGs =
             tu.allChildren<Reference> {
                     it !is PointerDereference &&
                         it !is PointerReference &&
-                        it.name.localName == "key"
+                        it.name.localName == "key" &&
+                        it.access == AccessValues.READ
                 }
                 .flatMap { it.prevDFG }
                 .toIdentitySet()
 
-        // Ensure that all key-references point to keyDecl as prevDFG
+        // Ensure that all read key-references point to keyDecl as prevDFG
         assertEquals(keyDecl, keyPrevDFGs.singleOrNull())
+
+        // all references with WRITE access have the global Declaration as nextDFG
+        val keyNextDFGs =
+            tu.allChildren<Reference> {
+                    it !is PointerDereference &&
+                        it !is PointerReference &&
+                        it.name.localName == "key" &&
+                        it.access == AccessValues.WRITE
+                }
+                .flatMap { it.nextDFG }
+                .toIdentitySet()
+
+        // Ensure that all key-references point to keyDecl as nextDFG
+        assertEquals(keyDecl, keyNextDFGs.singleOrNull())
     }
 
     @Test
