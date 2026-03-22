@@ -762,13 +762,15 @@ internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: Cal
     val result = resolveWithArguments(callee.candidates, call.arguments, call)
     when (result.success) {
         PROBLEMATIC -> {
-            Pass.Companion.log.error(
+            Pass.log.error(
                 "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
             )
-            call.invokes = result.bestViable.toMutableList()
+            call.invokes =
+                if (result.bestViable.isEmpty()) tryFunctionInference(call, result).toMutableList()
+                else result.bestViable.toMutableList()
         }
         AMBIGUOUS -> {
-            Pass.Companion.log.warn(
+            Pass.log.warn(
                 "Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain the the ambiguous functions"
             )
             call.invokes = result.bestViable.toMutableList()
