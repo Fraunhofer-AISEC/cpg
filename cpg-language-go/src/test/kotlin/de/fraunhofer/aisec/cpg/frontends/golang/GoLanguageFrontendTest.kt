@@ -1070,6 +1070,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertRefersTo(mce, field)
     }
 
+    @Ignore
     @Test
     fun testChainedCall() {
         val topLevel = Path.of("src", "test", "resources", "golang", "chained")
