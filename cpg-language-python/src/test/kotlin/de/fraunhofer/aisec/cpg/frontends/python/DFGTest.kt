@@ -507,8 +507,6 @@ class DFGTest {
         )
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testListAccess() {
         val topLevel = Path.of("src", "test", "resources", "python")
