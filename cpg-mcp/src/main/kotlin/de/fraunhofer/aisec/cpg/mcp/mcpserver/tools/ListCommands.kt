@@ -27,10 +27,10 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.invoke
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.*
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgCallArgumentByNameOrIndexPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgIdPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgNamePayload
@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import kotlinx.serialization.json.Json
 
 fun Server.listFunctions() {
     val toolDescription =
@@ -54,7 +55,9 @@ fun Server.listFunctions() {
 
     this.addTool(name = "cpg_list_functions", description = toolDescription) { request ->
         request.runOnCpg { result: TranslationResult, _ ->
-            CallToolResult(content = result.functions.map { TextContent(it.toJson()) })
+            CallToolResult(
+                content = result.functions.map { TextContent(Json.encodeToString(it.toInfo())) }
+            )
         }
     }
 }
@@ -62,8 +65,9 @@ fun Server.listFunctions() {
 fun Server.listRecords() {
     val toolDescription =
         """
-        This tool lists all classes and structs, more precisely their declarations, which are held in the graph.
-        
+        This tool lists all classes and structs, more precisely their declarations as compact summaries.
+        Use cpg_get_node with a id to retrieve the full node details.
+
         Example prompts:
         - "Show me all classes in the code"
         - "What data structures are defined here?"
@@ -72,7 +76,9 @@ fun Server.listRecords() {
 
     this.addTool(name = "cpg_list_records", description = toolDescription) { request ->
         request.runOnCpg { result: TranslationResult, _ ->
-            CallToolResult(content = result.records.map { TextContent(it.toJson()) })
+            CallToolResult(
+                content = result.records.map { TextContent(Json.encodeToString(it.toInfo())) }
+            )
         }
     }
 }
@@ -96,8 +102,9 @@ fun Server.listConceptsAndOperations() {
 fun Server.listCalls() {
     val toolDescription =
         """
-        This tool lists all function and method calls, which are held in the graph.
-        
+        This tool lists all function and method calls as compact summaries.
+        Use cpg_get_node with a id to retrieve the full node details.
+
         Example prompts:
         - "Show me all function calls in the code"
         - "What functions are being called?"
@@ -106,7 +113,9 @@ fun Server.listCalls() {
 
     this.addTool(name = "cpg_list_calls", description = toolDescription) { request ->
         request.runOnCpg { result: TranslationResult, _ ->
-            CallToolResult(content = result.calls.map { TextContent(it.toJson()) })
+            CallToolResult(
+                content = result.calls.map { TextContent(Json.encodeToString(it.toInfo())) }
+            )
         }
     }
 }
@@ -173,5 +182,25 @@ fun Server.getArgByIndexOrName() {
                     )
                 )
         )
+    }
+}
+
+fun Server.getNode() {
+    val toolDescription =
+        """
+        Retrieves the complete information of a single node by its id, including its source code.
+        Use this after list commands to inspect the actual code and details of specific nodes.
+        """
+            .trimIndent()
+
+    this.addTool<CpgIdPayload>(name = "cpg_get_node", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgIdPayload ->
+        val node = result.nodes.find { it.id.toString() == payload.id }
+        if (node != null) {
+            CallToolResult(content = listOf(TextContent(node.toJson())))
+        } else {
+            CallToolResult(content = listOf(TextContent("No node found with ${payload.id}")))
+        }
     }
 }
