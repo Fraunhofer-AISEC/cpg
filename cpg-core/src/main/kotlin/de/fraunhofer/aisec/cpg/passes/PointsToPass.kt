@@ -2109,7 +2109,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             currentNode.rhs.flatMapTo(PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>()) {
                 doubleState.getValues(it, it).map { Triple(it.first, it.second, false) }
             }
-        val destinations: ConcurrentIdentitySet<Node> = currentNode.lhs.toConcurrentIdentitySet()
+        val destinations: ConcurrentIdentitySet<Node> = concurrentIdentitySetOf()
+        currentNode.lhs.forEach {
+            if (it is InitializerList) destinations.addAll(it.initializers)
+            else destinations.add(it)
+        }
         val destinationsAddresses =
             destinations.flatMapTo(ConcurrentIdentitySet()) { doubleState.getAddresses(it, it) }
         val lastWrites: MutableSet<NodeWithPropertiesKey> =
