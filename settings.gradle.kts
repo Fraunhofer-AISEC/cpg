@@ -10,6 +10,7 @@ include(":cpg-core")
 include(":cpg-analysis")
 include(":cpg-neo4j")
 include(":cpg-concepts")
+include(":cpg-serialization")
 
 include(":codyze")
 include(":codyze-core")
