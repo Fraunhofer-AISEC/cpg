@@ -42,6 +42,7 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
     LanguageFrontend<Csharp.AST.Node, Csharp.AST.Node>(ctx, language) {
 
     val declarationHandler = DeclarationHandler(this)
+    val statementHandler = StatementHandler(this)
 
     private var currentFile: File? = null
 

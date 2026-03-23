@@ -183,6 +183,8 @@ interface Csharp : Library {
             }
         }
 
+        class ReturnStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {}
+
         /**
          * Represents the Roslyn
          * [`ConstructorDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.constructordeclarationsyntax?view=roslyn-dotnet-5.0.0)
@@ -195,6 +197,7 @@ interface Csharp : Library {
                 val count = INSTANCE.GetConstructorDeclarationParameterCount(this)
                 (0 until count).map { i -> INSTANCE.GetConstructorDeclarationParameter(this, i) }
             }
+            //            val body: StatementSyntax by lazy { StatementSyntax(p) }
         }
 
         /**

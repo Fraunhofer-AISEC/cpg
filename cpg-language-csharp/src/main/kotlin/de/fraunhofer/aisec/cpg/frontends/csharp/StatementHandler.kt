@@ -25,17 +25,34 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
-// class StatementHandler(frontend: CSharpLanguageFrontend) : CSharpHandler<Expression,
-// Csharp.AST.StatementSyntax>(
-//    configConstructor = ::ProblemExpression,
-//    frontend = frontend
-// ) {
-//    override fun handleNode(node: Csharp.AST.StatementSyntax): Expression {
-////        return when (node) {
-////            is Csharp.AST.ReturnSyntax -> handleReturn(node)
-////        }
-////    }
-////
-////    private fun handleReturn(node: Csharp.AST.StatementSyntax): Expression {
-////    }
-// }
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.newBlock
+
+class StatementHandler(frontend: CSharpLanguageFrontend) :
+    CSharpHandler<Expression, Csharp.AST.StatementSyntax>(
+        configConstructor = ::ProblemExpression,
+        frontend = frontend,
+    ) {
+    override fun handleNode(node: Csharp.AST.StatementSyntax): Expression {
+        return when (node) {
+            is Csharp.AST.BlockSyntax -> handleBlock(node)
+            else -> ProblemExpression("Not supported: ${node.csharpType}")
+        }
+    }
+
+    /**
+     * Translates a C#
+     * [`BlockSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.blocksyntax?view=roslyn-dotnet-5.0.0)
+     * into a [Block].
+     */
+    private fun handleBlock(node: Csharp.AST.BlockSyntax): Block {
+        val block = newBlock(rawNode = node)
+        for (stmt in node.statements) {
+            val statement = handle(stmt)
+            statement.let { block.statements += it }
+        }
+        return block
+    }
+}
