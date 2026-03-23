@@ -3447,8 +3447,7 @@ suspend fun PointsToState.Element.updateValues(
 
             // If we have any full writes, we eliminate the previous state
             if (fullSourcesExist) {
-                val newDeclState = this@updateValues.declarationsState.duplicate()
-                newDeclState.put(
+                doubleState.declarationsState.put(
                     destAddr,
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(currentEntries),
@@ -3456,7 +3455,6 @@ suspend fun PointsToState.Element.updateValues(
                         PowersetLattice.Element(prevDFG),
                     ),
                 )
-                doubleState = PointsToState.Element(doubleState.generalState, newDeclState)
             } else {
                 doubleState =
                     lattice.pushToDeclarationsState(
@@ -3498,13 +3496,12 @@ suspend fun PointsToState.Element.updateValues(
                 }
                 .joinAll()
 
-            val newGenState = this@updateValues.generalState.duplicate()
             destinations
                 .splitInto()
                 .map { chunk ->
                     launch(Dispatchers.Default) {
                         for (d in chunk) {
-                            newGenState.put(
+                            doubleState.generalState.put(
                                 d,
                                 GeneralStateEntryElement(
                                     PowersetLattice.Element(destinationAddresses),
@@ -3527,7 +3524,6 @@ suspend fun PointsToState.Element.updateValues(
                     }
                 }
                 .joinAll()
-            doubleState = PointsToState.Element(newGenState, doubleState.declarationsState)
         } else {
             // For globals, we draw a DFG Edge from the source to the destination
             destinations
@@ -3545,7 +3541,7 @@ suspend fun PointsToState.Element.updateValues(
                                 }
                             sources
                                 .filter { it.first != null }
-                                .map {
+                                .forEach {
                                     entry.third.add(
                                         NodeWithPropertiesKey(
                                             it.first!!,
