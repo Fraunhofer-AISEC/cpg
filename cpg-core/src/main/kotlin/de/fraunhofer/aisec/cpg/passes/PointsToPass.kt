@@ -1023,11 +1023,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     handleCall(lattice, currentNode, doubleState)
                 }
 
+                is Return -> handleReturn(lattice, currentNode, doubleState)
+
                 is Expression -> {
                     handleExpression(lattice, currentNode, doubleState)
                 }
-
-                is Return -> handleReturn(lattice, currentNode, doubleState)
                 else -> doubleState
             }
         return doubleState

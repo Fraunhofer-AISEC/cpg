@@ -246,8 +246,6 @@ class DFGTest {
         assertEquals(0, forwardsPathBToC.size)
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testContextSensitive() {
         val topLevel = Path.of("src", "test", "resources", "python")
