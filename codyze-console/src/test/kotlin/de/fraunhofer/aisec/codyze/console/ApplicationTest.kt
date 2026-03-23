@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.github.detekt.sarif4k.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*

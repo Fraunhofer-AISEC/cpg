@@ -1,11 +1,14 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+
   interface Props {
     title: string;
     actionText?: string;
     actionHref?: string;
+    children: Snippet;
   }
 
-  let { title, actionText, actionHref }: Props = $props();
+  let { title, actionText, actionHref, children }: Props = $props();
 </script>
 
 <div class="mb-8 rounded-lg border border-gray-200 bg-white p-6">
@@ -18,6 +21,6 @@
     {/if}
   </div>
   <div class="mt-4">
-    <slot />
+    {@render children()}
   </div>
 </div>

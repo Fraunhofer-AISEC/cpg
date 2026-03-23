@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
-import io.ktor.http.HttpHeaders
+import de.fraunhofer.aisec.codyze.console.ai.ChatService
+import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -33,7 +35,11 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import org.slf4j.LoggerFactory
+
+private val log = LoggerFactory.getLogger("de.fraunhofer.aisec.codyze.console.Main")
 
 /**
  * This function starts the embedded server for the web console. It uses the Netty engine and
@@ -41,8 +47,31 @@ import kotlinx.serialization.json.Json
  * the [configureWebconsole] function.
  */
 fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
-    embeddedServer(Netty, host = host, port = port) { configureWebconsole(this@startConsole) }
+    val chatService: ChatService? =
+        if (McpServerHelper.isEnabled) {
+            runBlocking { initChatService() }
+        } else {
+            log.info("MCP module not enabled, AI chat features will be disabled")
+            null
+        }
+    embeddedServer(Netty, host = host, port = port) {
+            configureWebconsole(this@startConsole, chatService)
+        }
         .start(wait = true)
+}
+
+private suspend fun ConsoleService.initChatService(): ChatService? {
+    val chatService = ChatService.createIfConfigExist() ?: return null
+
+    McpServerHelper.startMcpServer(8081)
+
+    val translationResult = getTranslationResult()?.analysisResult?.translationResult
+    if (translationResult != null) {
+        McpServerHelper.setGlobalAnalysisResult(translationResult)
+    }
+    chatService.connect()
+    log.info("MCP client connected")
+    return chatService
 }
 
 /**
@@ -52,7 +81,10 @@ fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
  * Note: Currently, the CORS policy allows any host. This should be restricted to specific hosts in
  * a production environment and will be made available as an option later.
  */
-fun Application.configureWebconsole(service: ConsoleService = ConsoleService()) {
+fun Application.configureWebconsole(
+    service: ConsoleService = ConsoleService(),
+    chatService: ChatService? = null,
+) {
     install(CORS) {
         anyHost()
         allowHeader(HttpHeaders.ContentType)
@@ -67,17 +99,21 @@ fun Application.configureWebconsole(service: ConsoleService = ConsoleService()) 
         )
     }
 
-    configureRouting(service)
+    configureRouting(service, chatService)
 }
 
 /**
  * This function sets up the routing for the web console. It defines the API routes and static
  * resources (for serving the single-page application frontend).
  */
-fun Application.configureRouting(service: ConsoleService) {
+fun Application.configureRouting(service: ConsoleService, chatService: ChatService? = null) {
     routing {
-        // We'll add routes here
         apiRoutes(service)
+        // If the cpg-mcp module is enabled, chatService won't be null, so the endpoints will be
+        // reachable
+        if (chatService != null) {
+            chatRoutes(chatService)
+        }
         frontendRoutes()
     }
 }
