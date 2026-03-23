@@ -67,22 +67,27 @@ private constructor(
     private val isCancelled = AtomicBoolean(false)
 
     /**
-     * Kicks off the analysis.
+     * Kicks off the analysis and reports progress through [callbacks].
      *
-     * This method orchestrates all passes that will do the main work.
-     *
-     * @param ctx - The [TranslationContext] to use for the analysis. If none is provided, a new one
+     * @param ctx The [TranslationContext] to use for the analysis. If none is provided, a new one
      *   is created.
+     * @param callbacks Callback(s) that are notified after frontend parsing and after each pass.
      * @return a [CompletableFuture] with the [TranslationResult].
      */
-    fun analyze(ctx: TranslationContext? = null): CompletableFuture<TranslationResult> {
+    fun analyze(
+        ctx: TranslationContext? = null,
+        callbacks: Collection<TranslationProgressCallback>? = null,
+    ): CompletableFuture<TranslationResult> {
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
         return CompletableFuture.supplyAsync {
-            analyzeNonAsync(ctx = ctx ?: TranslationContext(config))
+            analyzeNonAsync(ctx = ctx ?: TranslationContext(config), callbacks = callbacks)
         }
     }
 
-    private fun analyzeNonAsync(ctx: TranslationContext): TranslationResult {
+    private fun analyzeNonAsync(
+        ctx: TranslationContext,
+        callbacks: Collection<TranslationProgressCallback>?,
+    ): TranslationResult {
         var executedFrontends = setOf<LanguageFrontend<*, *>>()
 
         // Build a new translation result
@@ -95,10 +100,20 @@ private constructor(
             // Parse Java/C/CPP files
             val bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
             executedFrontends = runFrontends(ctx, result)
+            callbacks?.forEach { callback ->
+                runCatching { callback.afterFrontends(ctx, result, executedFrontends) }
+                    .onFailure {
+                        log.warn(
+                            "Progress callback {} failed after frontend execution",
+                            callback::class.simpleName ?: callback.javaClass.simpleName,
+                            it,
+                        )
+                    }
+            }
             ctx.executedFrontends.addAll(executedFrontends)
             bench.addMeasurement()
 
-            executePassesSequentially(ctx, result, executedFrontends)
+            executePassesSequentially(ctx, result, executedFrontends, callbacks)
         } catch (ex: TranslationException) {
             throw CompletionException(ex)
         } finally {

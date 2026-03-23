@@ -303,6 +303,7 @@ fun executePassesSequentially(
     ctx: TranslationContext,
     result: TranslationResult,
     executedFrontends: Set<LanguageFrontend<*, *>>,
+    callbacks: Collection<TranslationProgressCallback>? = null,
 ) {
     // Execute all passes in sequence. First convert the list of passes to a queue
     val queue = ArrayDeque<KClass<out Pass<out Node>>>()
@@ -328,6 +329,17 @@ fun executePassesSequentially(
 
         // Execute it
         executePass(pass, ctx, result, executedFrontends)
+        callbacks?.forEach { callback ->
+            runCatching { callback.afterPass(pass, ctx, result) }
+                .onFailure {
+                    TranslationManager.log.warn(
+                        "Progress callback {} failed after pass {}",
+                        callback::class.simpleName ?: callback.javaClass.simpleName,
+                        pass.simpleName,
+                        it,
+                    )
+                }
+        }
 
         // Increment executions
         executions[pass] = numExec + 1
