@@ -10,4 +10,9 @@ class Foo
     {
         return 1;
     }
+
+    void returnWithoutExpression()
+    {
+        return;
+    }
 }

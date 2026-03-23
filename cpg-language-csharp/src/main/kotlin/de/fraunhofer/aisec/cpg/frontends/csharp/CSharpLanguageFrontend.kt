@@ -43,6 +43,7 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)
+    val expressionHandler = ExpressionHandler(this)
 
     private var currentFile: File? = null
 

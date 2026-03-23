@@ -211,7 +211,7 @@ public static class Library
         );
     }
 
-    // `BaseMethodDeclarationSyntax` to get the body for Methods and Constructors.
+    // We use `BaseMethodDeclarationSyntax` to get the body for Methods and Constructors.
     [UnmanagedCallersOnly(EntryPoint = "GetBaseMethodDeclarationBody")]
     public static IntPtr GetBaseMethodDeclarationBody(IntPtr handlePtr)
     {
@@ -228,5 +228,25 @@ public static class Library
     public static IntPtr GetBlockStatement(IntPtr handlePtr, int index)
     {
         return Register(((BlockSyntax)Nodes[handlePtr]).Statements[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetReturnStatementExpression")]
+    public static IntPtr GetReturnStatementExpression(IntPtr handlePtr)
+    {
+        var expression = ((ReturnStatementSyntax)Nodes[handlePtr]).Expression;
+        if(expression != null)
+        {
+            return Register(expression);
+        }
+        else
+        {
+            return IntPtr.Zero;
+        };
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetLiteralExpressionValue")]
+    public static IntPtr GetLiteralExpressionValue(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((LiteralExpressionSyntax)Nodes[handlePtr]).Token.Value.ToString());
     }
 }

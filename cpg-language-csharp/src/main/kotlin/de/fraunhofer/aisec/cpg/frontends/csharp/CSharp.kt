@@ -178,12 +178,18 @@ interface Csharp : Library {
                     return super.fromNative(nativeValue, context)
                 }
                 return when (INSTANCE.GetKind(nativeValue)) {
+                    "ReturnStatement" -> ReturnStatementSyntax(nativeValue)
+                    "Block" -> BlockSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
         }
 
-        class ReturnStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {}
+        class ReturnStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            val expression: ExpressionSyntax? by lazy {
+                INSTANCE.GetReturnStatementExpression(this)
+            }
+        }
 
         /**
          * Represents the Roslyn
@@ -229,6 +235,27 @@ interface Csharp : Library {
         class ParameterSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
             val identifier: String by lazy { INSTANCE.GetParameterIdentifier(this) }
             val type: TypeSyntax by lazy { INSTANCE.GetParameterType(this) }
+        }
+
+        open class ExpressionSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any? {
+                if (nativeValue !is Pointer) {
+                    return super.fromNative(nativeValue, context)
+                }
+                return when (INSTANCE.GetKind(nativeValue)) {
+                    "NumericLiteralExpression",
+                    "StringLiteralExpression",
+                    "TrueLiteralExpression",
+                    "FalseLiteralExpression",
+                    "NullLiteralExpression",
+                    "CharacterLiteralExpression" -> LiteralExpressionSyntax(nativeValue)
+                    else -> super.fromNative(nativeValue, context)
+                }
+            }
+        }
+
+        class LiteralExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val value: String by lazy { INSTANCE.GetLiteralExpressionValue(this) }
         }
     }
 
@@ -310,6 +337,10 @@ interface Csharp : Library {
     fun GetBlockStatementCount(handle: AST.StatementSyntax): Int
 
     fun GetBlockStatement(handle: AST.StatementSyntax, index: Int): AST.StatementSyntax
+
+    fun GetLiteralExpressionValue(handle: AST.ExpressionSyntax): String
+
+    fun GetReturnStatementExpression(handle: AST.StatementSyntax): AST.ExpressionSyntax?
 
     fun GetCode(handle: AST.Node): String
 

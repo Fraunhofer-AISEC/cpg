@@ -27,12 +27,16 @@ package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class CSharpLanguageFrontendTest : BaseTest() {
 
@@ -145,5 +149,105 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertIs<Constructor>(twoParameters)
         assertEquals("x", twoParameters.parameters[0].name.localName)
         assertEquals("y", twoParameters.parameters[1].name.localName)
+    }
+
+    @Test
+    fun testReturnStatement() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("method.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val foo = tu.namespaces["HelloWorld"]?.records["Foo"]
+        assertNotNull(foo)
+
+        // return 1;
+        val returnSomething = foo.methods["returnSomething"]
+        assertNotNull(returnSomething)
+        val body = returnSomething.body
+        assertIs<Block>(body)
+        assertEquals(1, body.statements.size)
+
+        val returnStmt = body.statements.first()
+        assertIs<Return>(returnStmt)
+
+        val literal = returnStmt.returnValue
+        assertIs<Literal<*>>(literal)
+        assertEquals(1, literal.value)
+
+        // return;
+        val returnWithout = foo.methods["returnWithoutExpression"]
+        assertNotNull(returnWithout)
+        val body2 = returnWithout.body
+        assertIs<Block>(body2)
+
+        val returnStmt2 = body2.statements.first()
+        assertIs<Return>(returnStmt2)
+        assertNull(returnStmt2.returnValue)
+    }
+
+    @Test
+    fun testLiteralExpressionsTypes() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("literals.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val foo = tu.records["Foo"]
+        assertNotNull(foo)
+
+        // int
+        val returnInt = foo.methods["returnInt"]
+        assertNotNull(returnInt)
+        val intReturn = (returnInt.body as Block).statements.first()
+        assertIs<Return>(intReturn)
+        val intLiteral = intReturn.returnValue
+        assertIs<Literal<*>>(intLiteral)
+        assertEquals(42, intLiteral.value)
+        assertEquals("int", intLiteral.type.name.localName)
+
+        // string
+        val returnString = foo.methods["returnString"]
+        assertNotNull(returnString)
+        val stringReturn = (returnString.body as Block).statements.first()
+        assertIs<Return>(stringReturn)
+        val stringLiteral = stringReturn.returnValue
+        assertIs<Literal<*>>(stringLiteral)
+        assertEquals("hello", stringLiteral.value)
+        assertEquals("string", stringLiteral.type.name.localName)
+
+        // bool true
+        val returnTrue = foo.methods["returnTrue"]
+        assertNotNull(returnTrue)
+        val trueReturn = (returnTrue.body as Block).statements.first()
+        assertIs<Return>(trueReturn)
+        val trueLiteral = trueReturn.returnValue
+        assertIs<Literal<*>>(trueLiteral)
+        assertEquals(true, trueLiteral.value)
+        assertEquals("bool", trueLiteral.type.name.localName)
+
+        // bool false
+        val returnFalse = foo.methods["returnFalse"]
+        assertNotNull(returnFalse)
+        val falseReturn = (returnFalse.body as Block).statements.first()
+        assertIs<Return>(falseReturn)
+        val falseLiteral = falseReturn.returnValue
+        assertIs<Literal<*>>(falseLiteral)
+        assertEquals(false, falseLiteral.value)
+        assertEquals("bool", falseLiteral.type.name.localName)
+
+        // char
+        val returnChar = foo.methods["returnChar"]
+        assertNotNull(returnChar)
+        val charReturn = (returnChar.body as Block).statements.first()
+        assertIs<Return>(charReturn)
+        val charLiteral = charReturn.returnValue
+        assertIs<Literal<*>>(charLiteral)
+        assertEquals('a', charLiteral.value)
+        assertEquals("char", charLiteral.type.name.localName)
     }
 }

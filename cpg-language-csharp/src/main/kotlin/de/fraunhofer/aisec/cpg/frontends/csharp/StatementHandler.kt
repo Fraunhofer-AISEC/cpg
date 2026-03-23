@@ -28,7 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.csharp
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.newBlock
+import de.fraunhofer.aisec.cpg.graph.newReturn
 
 class StatementHandler(frontend: CSharpLanguageFrontend) :
     CSharpHandler<Expression, Csharp.AST.StatementSyntax>(
@@ -38,8 +40,15 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
     override fun handleNode(node: Csharp.AST.StatementSyntax): Expression {
         return when (node) {
             is Csharp.AST.BlockSyntax -> handleBlock(node)
+            is Csharp.AST.ReturnStatementSyntax -> handleReturn(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
+    }
+
+    private fun handleReturn(node: Csharp.AST.ReturnStatementSyntax): Return {
+        val ret = newReturn(rawNode = node)
+        node.expression?.let { ret.returnValue = frontend.expressionHandler.handle(it) }
+        return ret
     }
 
     /**
