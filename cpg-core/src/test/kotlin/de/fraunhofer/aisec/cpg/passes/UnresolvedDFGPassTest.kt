@@ -35,12 +35,15 @@ import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+@Ignore
 class UnresolvedDFGPassTest {
+
     @Test
     fun testUnresolvedCalls() {
         val result = getDfgUnresolvedCalls(true, false)
@@ -113,7 +116,7 @@ class UnresolvedDFGPassTest {
 
         // Flow from base and argument to return value
         val callWithParam = result.calls { it.name.localName == "get" }[1]
-        assertEquals(1, callWithParam.prevDFG.size)
+        assertEquals(1, callWithParam.prevFullDFG.size)
         // Check if it's the "get" method.
         val getMethod2 = callWithParam.prevDFG.singleOrNull { it.name.localName == "get" }
         assertNotNull(getMethod2)

@@ -117,6 +117,9 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 }
                 log.trace("Done with stack clone iteration.")
 
+                // We mark the incoming SCC-edge of the loopEntryElement that comes from the loop
+                // with an SCC-flag to make the difference to a mergePoint (which also has 2
+                // incoming EOG-Edges)
                 val loopEntryElements = sccElements.filter { it.prevEOG.any { it !in sccElements } }
                 loopEntryElements.forEach { loopEntryElement ->
                     loopEntryElement.prevEOGEdges
@@ -129,7 +132,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                                 ?.nextEOGEdges
                                 // in case of multiple nextEOGEdges, make sure we take the one
                                 // pointing to a node that's part an sccElements-block
-                                ?.filter { it.end.basicBlock.single() in sccElements }
+                                ?.filter { it.end.basicBlock.all { it in sccElements } }
                                 ?.forEach { nodeEdge -> nodeEdge.scc = level }
                         }
                 }
@@ -147,10 +150,13 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         .forEach { edge ->
                             edge.scc = level
                             // also label the respective edges between node
-                            (edge.end as? BasicBlock)?.startNode?.prevEOGEdges?.forEach { nodeEdge
-                                ->
-                                nodeEdge.scc = level
-                            }
+                            (edge.end as? BasicBlock)
+                                ?.startNode
+                                ?.prevEOGEdges
+                                // in case of multiple prevEOGEdges, make sure we take the one
+                                // coming from a node that's part an sccElements-block
+                                ?.filter { it.start.basicBlock.all { it in sccElements } }
+                                ?.forEach { nodeEdge -> nodeEdge.scc = level }
                         }
                 }
 

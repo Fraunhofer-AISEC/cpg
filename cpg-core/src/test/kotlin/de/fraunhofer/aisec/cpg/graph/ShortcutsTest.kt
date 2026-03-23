@@ -49,6 +49,7 @@ import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ShortcutsTest {
+
     @Test
     fun followDFGUntilHitTest() {
         val result = GraphExamples.getDataflowClass()
@@ -472,13 +473,20 @@ class ShortcutsTest {
     fun testUnwrapReference() {
         with(TestLanguageFrontend()) {
             val a = newReference("a")
+            val aPtrRef = newPointerReference("a")
             val op = newUnaryOperator("&", prefix = true, postfix = false)
             op.input = a
             val cast = newCast()
             cast.castType = objectType("int64")
             cast.expression = op
+            val castPtrRef = newCast()
+            castPtrRef.castType = objectType("int64")
+            castPtrRef.expression = aPtrRef
 
-            assertEquals(a, cast.unwrapReference())
+            assertNull(cast.unwrapReference())
+            assertNull(op.unwrapReference())
+            assertEquals(aPtrRef, aPtrRef.unwrapReference())
+            assertEquals(aPtrRef, castPtrRef.unwrapReference())
         }
     }
 

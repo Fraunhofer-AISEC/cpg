@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
@@ -74,6 +75,12 @@ open class Variable : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
                 exchangeTypeObserverWithAccessPropagation(old, new)
                 if (value is Reference) {
                     value.resolutionHelper = this
+                    // If we are dealing with Pointer(De)References, we also have to set the
+                    // resolutionHelper for the input
+                    val input =
+                        ((value as? PointerReference)?.input as? Reference)
+                            ?: ((value as? PointerDereference)?.input as? Reference)
+                    input?.let { it.resolutionHelper = this }
                 }
             }
         )

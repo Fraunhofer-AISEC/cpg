@@ -31,10 +31,7 @@ import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.edges.flows.field
-import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
-import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
+import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -44,8 +41,9 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(SymbolResolver::class)
+@DependsOn(NonLocalVariablesIdentificationPass::class)
 @Description("Adds DFG edges to the graph but without considering the control flow.")
-class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
+open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private val callsInferredFunctions = mutableListOf<Call>()
 
     override fun accept(component: Component) {
@@ -74,22 +72,27 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun connectInferredCallArguments(functionSummaries: DFGFunctionSummaries) {
         for (call in callsInferredFunctions) {
             for (invoked in call.invokes.filter { it.isInferred }) {
-                val changedParams =
-                    functionSummaries.functionToChangedParameters[invoked] ?: mapOf()
+                val changedParams = invoked.functionSummary
                 for ((param, _) in changedParams) {
                     if (param == (invoked as? Method)?.receiver) {
                         (call as? MemberCall)
                             ?.base
                             ?.prevDFGEdges
-                            ?.addContextSensitive(param, callingContext = CallingContextOut(call))
+                            ?.addContextSensitive(
+                                param,
+                                callingContext = CallingContextOut(mutableListOf(call)),
+                            )
                     } else if (param is Parameter) {
                         val arg = call.arguments[param.argumentIndex]
                         arg.prevDFGEdges.addContextSensitive(
                             param,
-                            callingContext = CallingContextOut(call),
+                            callingContext = CallingContextOut(mutableListOf(call)),
                         )
                         arg.access = AccessValues.READWRITE
                         (arg as? Reference)?.let {
+                            // The access value stays on READ. Even if it's a pointer, only the
+                            // dereference will be written.
+                            // it.access = AccessValues.READWRITE
                             it.refersTo?.let { it1 -> it.nextDFGEdges += it1 }
                         }
                     }
@@ -112,6 +115,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Expressions
             is CollectionComprehension -> handleCollectionComprehension(node)
             is Comprehension -> handleComprehension(node)
+            // Only for handling callExpressions w/o invokes edges
             is Call -> handleCall(node, inferDfgForUnresolvedSymbols)
             is Cast -> handleCast(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
@@ -120,6 +124,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is Subscription -> handleSubscription(node)
             is Conditional -> handleConditional(node)
             is MemberAccess -> handleMemberAccess(node)
+            is PointerReference -> handlePointerReference(node)
+            is PointerDereference -> handlePointerDereference(node)
             is Reference -> handleReference(node)
             is ExpressionList -> handleExpressionList(node)
             is New -> handleNew(node)
@@ -200,7 +206,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Find all targets of rhs and connect them
             node.rhs.forEach {
                 val targets = node.findTargets(it)
-                targets.forEach { target -> it.nextDFGEdges += target }
+                targets.forEach { target -> it.nextDFGEdges += Dataflow(start = it, end = target) }
             }
         }
 
@@ -258,23 +264,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * Adds the DFG edge for a [Function]. The data flows from the return statement(s) to the
      * function.
      */
-    protected fun handleFunction(node: Function, functionSummaries: DFGFunctionSummaries) {
-        if (node.isInferred) {
-            val summaryExists = with(functionSummaries) { addFlowsToFunctionDeclaration(node) }
-
-            if (!summaryExists) {
-                // If the function is inferred, we connect all parameters to the function
-                // declaration.  The condition should make sure that we don't add edges multiple
-                // times, i.e., we only handle the declaration exactly once.
-                node.prevDFGEdges.addAll(node.parameters)
-                // If it's a method with a receiver, we connect that one too.
-                if (node is Method) {
-                    node.receiver?.let { node.prevDFGEdges += it }
-                }
-            }
-        } else {
-            node.allChildren<Return>().forEach { node.prevDFGEdges += it }
-        }
+    protected open fun handleFunction(node: Function, functionSummaries: DFGFunctionSummaries) {
+        with(functionSummaries) { addFlowsToFunctionDeclaration(node) }
     }
 
     /** Adds the DFG edge for a [Field]. The data flows from the initializer to the field. */
@@ -424,10 +415,14 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * case of the operators "++" and "--" also from the node back to the input.
      */
     protected fun handleUnaryOperator(node: UnaryOperator) {
-        node.input.let {
-            node.prevDFGEdges += it
-            if (node.operatorCode == "++" || node.operatorCode == "--") {
-                node.nextDFGEdges += it
+        if ((node.input as? Reference)?.access == AccessValues.WRITE) {
+            node.input.let { node.nextDFGEdges += it }
+        } else {
+            node.input.let {
+                node.prevDFGEdges += it
+                if (node.operatorCode == "++" || node.operatorCode == "--") {
+                    node.nextDFGEdges += it
+                }
             }
         }
     }
@@ -489,15 +484,40 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * - For a combined read and write, both edges for data flows are added.
      */
     protected fun handleReference(node: Reference) {
+        // We only do this for global references, the rest will be done by the PointsToPass
         node.refersTo?.let {
-            when (node.access) {
-                AccessValues.WRITE -> node.nextDFGEdges += it
-                AccessValues.READ -> node.prevDFGEdges += it
-                else -> {
-                    node.nextDFGEdges += it
-                    node.prevDFGEdges += it
+            if (isGlobal(it)) {
+                when (node.access) {
+                    AccessValues.WRITE -> node.nextDFGEdges += it
+                    AccessValues.READ -> node.prevDFGEdges += Dataflow(start = it, end = node)
+                    else -> {
+                        node.nextDFGEdges += it
+                        node.prevDFGEdges += Dataflow(start = it, end = node)
+                    }
                 }
             }
+        }
+    }
+
+    /**
+     * Adds the DFG edges to a [PointerReference] as follows:
+     * - A partial DFG edge from the input to the PointerReference
+     */
+    protected fun handlePointerReference(node: PointerReference) {
+        node.input.let {
+            node.prevDFGEdges +=
+                Dataflow(it, node, granularity = PartialDataflowGranularity("PointerReference"))
+        }
+    }
+
+    /**
+     * Adds the DFG edges to a [PointerDereference] as follows:
+     * - A partial DFG edge from the input to the PointerReference
+     */
+    protected fun handlePointerDereference(node: PointerDereference) {
+        node.input.let {
+            node.prevDFGEdges +=
+                Dataflow(it, node, granularity = PartialDataflowGranularity("PointerDereference"))
         }
     }
 
@@ -583,10 +603,40 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (call.invokes.isEmpty() && inferDfgForUnresolvedSymbols) {
             // Unresolved call expression
             handleUnresolvedCalls(call, call)
+        } /*else if (call.invokes.isNotEmpty()) {
+              call.invokes.forEach {
+                  Util.attachCallParameters(it, call)
+                  call.prevDFGEdges.addContextSensitive(
+                      it,
+                      callingContext = CallingContextOut(mutableListOf(call)),
+                  )
+                  if (it.isInferred) {
+                      callsInferredFunctions.add(call)
+                  }
+              }
+          }*/
+    }
+
+    /** Adds the DFG edges to a previously unresolved [Call]. */
+    // TODO: This should be handled by the PointsToPass
+    fun handlePreviouslyUnresolvedCallExpression(
+        call: Call,
+        inferDfgForUnresolvedSymbols: Boolean,
+    ) {
+        // Remove existing DFG edges since they are no longer valid (e.g. after updating the
+        // CallExpression with the invokes edges to the called functions)
+        call.prevDFGEdges.clear()
+
+        if (call.invokes.isEmpty() && inferDfgForUnresolvedSymbols) {
+            // Unresolved call expression
+            handleUnresolvedCalls(call, call)
         } else if (call.invokes.isNotEmpty()) {
             call.invokes.forEach {
                 Util.attachCallParameters(it, call)
-                call.prevDFGEdges.addContextSensitive(it, callingContext = CallingContextOut(call))
+                call.prevDFGEdges.addContextSensitive(
+                    it,
+                    callingContext = CallingContextOut(mutableListOf(call)),
+                )
                 if (it.isInferred) {
                     callsInferredFunctions.add(call)
                 }

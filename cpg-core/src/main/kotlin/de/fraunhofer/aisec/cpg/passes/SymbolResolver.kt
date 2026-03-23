@@ -335,7 +335,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
      */
     protected open fun handleMemberAccess(current: MemberAccess) {
         // Some locals for easier smart casting
-        val base = current.base
+        val base = (current.base as? PointerDereference)?.input ?: current.base
         val language = current.language
         val record = scopeManager.currentRecord
 
@@ -608,7 +608,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     private fun resolveOperator(op: HasOverloadedOperation): CallResolutionResult? {
         val language = op.language
         val base = op.operatorBase
-        if (language !is HasOperatorOverloading || language.isPrimitive(base.type)) {
+        val baseType = (base as? PointerDereference)?.input?.type ?: base.type
+        if (language !is HasOperatorOverloading || language.isPrimitive(baseType)) {
             return null
         }
 
@@ -621,8 +622,11 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         val possibleTypes = mutableSetOf<Type>()
-        possibleTypes.add(op.operatorBase.type)
-        possibleTypes.addAll(op.operatorBase.assignedTypes)
+        possibleTypes.add(baseType)
+        val baseAssignedtype =
+            (base as? PointerDereference)?.input?.assignedTypes ?: base.assignedTypes
+
+        possibleTypes.addAll(baseAssignedtype)
 
         val candidates =
             resolveMemberByName(symbol, possibleTypes).filterIsInstance<Operator>().toSet()
@@ -690,9 +694,9 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     /**
      * @param constructExpression we want to find an invocation target for
      * @param recordDeclaration associated with the Object the Construction constructs
-     * @return a ConstructDeclaration that is an invocation of the given Construction. If there is
-     *   no valid ConstructDeclaration we will create an implicit ConstructDeclaration that matches
-     *   the Construction.
+     * @return a [Constructor] that is an invocation of the given Construction. If there is no valid
+     *   [Constructor] we will create an implicit ConstructDeclaration that matches the
+     *   Construction.
      */
     private fun getConstructorDeclaration(
         constructExpression: Construction,
@@ -758,13 +762,15 @@ internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: Cal
     val result = resolveWithArguments(callee.candidates, call.arguments, call)
     when (result.success) {
         PROBLEMATIC -> {
-            Pass.Companion.log.error(
+            Pass.log.error(
                 "Resolution of ${call.name} returned an problematic result and we cannot decide correctly, the invokes edge will contain all possible viable functions"
             )
-            call.invokes = result.bestViable.toMutableList()
+            call.invokes =
+                if (result.bestViable.isEmpty()) tryFunctionInference(call, result).toMutableList()
+                else result.bestViable.toMutableList()
         }
         AMBIGUOUS -> {
-            Pass.Companion.log.warn(
+            Pass.log.warn(
                 "Resolution of ${call.name} returned an ambiguous result and we cannot decide correctly, the invokes edge will contain the the ambiguous functions"
             )
             call.invokes = result.bestViable.toMutableList()
@@ -790,9 +796,10 @@ internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>,
     val possibleTypes = mutableSetOf<Type>()
     var bestGuess: Type? = null
     if (ref is MemberAccess) {
-        bestGuess = ref.base.type
-        possibleTypes.add(ref.base.type)
-        possibleTypes.addAll(ref.base.assignedTypes)
+        val base = (ref.base as? PointerDereference)?.input ?: ref.base
+        bestGuess = base.type
+        possibleTypes.add(base.type)
+        possibleTypes.addAll(base.assignedTypes)
     } else if (ref.language is HasImplicitReceiver) {
         // This could be a member call with an implicit receiver, so let's add the current class
         // to the possible list

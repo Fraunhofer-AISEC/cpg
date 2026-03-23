@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
@@ -394,24 +395,15 @@ object Util {
     }
 
     /**
-     * Establishes data-flow from the arguments of a [Call] to the parameters of a [Function]
-     * parameters. It handles positional arguments, named/default arguments, and variadic
-     * parameters. Additionally, if the call is a [MemberCall], it establishes a data-flow from the
-     * [MemberCall.base] towards the [Method.receiver].
+     * Returns a list which parameter of a [Function] matches with arguments of a [Call] It handles
+     * positional arguments, named/default arguments, and variadic parameters.
      *
      * @param target The call's target [Function]
      * @param call The [Call]
+     * @return Map Argument -> Parameter
      */
-    fun attachCallParameters(target: Function, call: Call) {
-        // Add an incoming DFG edge from a member call's base to the method's receiver
-        if (target is Method && call is MemberCall && !call.isStatic) {
-            target.receiver?.let { receiver ->
-                call.base
-                    ?.nextDFGEdges
-                    ?.addContextSensitive(receiver, callingContext = CallingContextIn(call))
-            }
-        }
-
+    fun matchArgumentsToCallParameters(target: Function, call: Call): MutableMap<Node, Parameter> {
+        val ret = mutableMapOf<Node, Parameter>()
         val functionParameters = target.parameters
         val argumentEdges = call.argumentEdges
         var argumentIndex = 0
@@ -421,10 +413,7 @@ object Util {
             // Try to find a named argument matching this parameter
             val namedEdge = argumentEdges.firstOrNull { it.name == param.name.localName }
             if (namedEdge != null) {
-                param.prevDFGEdges.addContextSensitive(
-                    namedEdge.end,
-                    callingContext = CallingContextIn(call),
-                )
+                ret[namedEdge.end] = param
                 argumentIndex++
                 continue // Move to next parameter
             }
@@ -438,19 +427,13 @@ object Util {
                     val isKeywordVariadic = functionParameters.lastOrNull { it.isVariadic } == param
                     remainingEdges.forEach { edge ->
                         if (isKeywordVariadic) {
-                            param.prevDFGEdges.addContextSensitive(
-                                edge.end,
-                                callingContext = CallingContextIn(call),
-                            )
+                            ret[edge.end] = param
                             argumentIndex++
                         } else {
                             // otherwise it is a positional variadic parameter (e.g. *args in
                             // python) without keyword
                             if (edge.name == null) {
-                                param.prevDFGEdges.addContextSensitive(
-                                    edge.end,
-                                    callingContext = CallingContextIn(call),
-                                )
+                                ret[edge.end] = param
                                 argumentIndex++
                             }
                         }
@@ -461,10 +444,7 @@ object Util {
 
             // Handle only positional parameters, ignoring named arguments
             if (argumentEdge != null && argumentEdge.name == null) {
-                param.prevDFGEdges.addContextSensitive(
-                    argumentEdge.end,
-                    callingContext = CallingContextIn(call),
-                )
+                ret[argumentEdge.end] = param
                 argumentIndex++
                 continue // Move to next parameter
             }
@@ -472,11 +452,38 @@ object Util {
             // Handle default parameters when not explicitly provided
             val default = param.default
             if (default != null) {
-                param.prevDFGEdges.addContextSensitive(
-                    default,
-                    callingContext = CallingContextIn(call),
-                )
+                ret[default] = param
             }
+        }
+        return ret
+    }
+
+    /**
+     * Establishes data-flow from the arguments of a [Call] to the parameters of a [Function]
+     * parameters. Additionally, if the call is a [MemberCall], it establishes a data-flow from the
+     * [MemberCall.base] towards the [Method.receiver].
+     *
+     * @param target The call's target [Function]
+     * @param call The [Call]
+     */
+    fun attachCallParameters(target: Function, call: Call) {
+        // Add an incoming DFG edge from a member call's base to the method's receiver
+        if (target is Method && call is MemberCall && !call.isStatic) {
+            target.receiver?.let { receiver ->
+                call.base
+                    ?.nextDFGEdges
+                    ?.addContextSensitive(
+                        receiver,
+                        callingContext = CallingContextIn(mutableListOf(call)),
+                    )
+            }
+        }
+
+        matchArgumentsToCallParameters(target, call).forEach { (argument, param) ->
+            param.prevDFGEdges.addContextSensitive(
+                argument,
+                callingContext = CallingContextIn(mutableListOf(call)),
+            )
         }
     }
 

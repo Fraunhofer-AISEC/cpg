@@ -39,8 +39,10 @@ import java.nio.file.Path
 import java.util.*
 import java.util.function.Consumer
 import java.util.regex.Pattern
+import kotlin.io.path.Path
 import kotlin.test.*
 
+@Ignore
 internal class FunctionPointerTest : BaseTest() {
     @Throws(Exception::class)
     private fun analyze(

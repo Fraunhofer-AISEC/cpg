@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
@@ -50,7 +51,7 @@ class While : Loop(), BranchingNode, ArgumentHolder {
     /** The condition that decides if the block is executed. */
     var condition by unwrapping(While::conditionEdge)
 
-    override val branchedBy
+    override val branchedBy: AstNode?
         get() = condition ?: conditionDeclaration
 
     override fun toString(): String {
