@@ -141,9 +141,21 @@ Every PR that changes the graph or interaction with one of the classes that run 
 
 Please stick to English for all discussions and comments. This helps to make the project accessible for a larger audience.
 
-# Publishing
+# CI / CD
 
-To publish a release, push a tag that contains the version number beginning with `v`, i.e. `v2.0.0`. The GitHub Actions workflow will then automatically build a release zip and create a GitHub release. Afterward it would be good to adjust the release text to include a minimal changelog.
+## CI
+For CI the project uses a single workflow ([build.yml](.github/workflows/build.yml)). It compiles the project, checks formatting via spotless and runs unit, 
+integration and performance tests. Code coverage is collected with Kover and uploaded to Codecov. Snapshots are published to Maven Central on pushes to `main` and on pull requests 
+labeled with `publish-to-github-packages`. When a version tag is pushed, a release is published to Maven Central and a GitHub release is created. 
+JavaDoc generation via Dokka is currently disabled.
+
+Note that distribution archives (distZip, distTar) and shadow JARs are not built in CI, since they are currently not needed. 
+
+## Publishing
+
+To publish a release, push a tag that contains the version number beginning with `v`, i.e. `v2.0.0`. The GitHub Actions workflow will 
+then automatically build a release zip and create a GitHub release. Afterward it would be good to adjust the release text to include a 
+minimal changelog.
 
 ## Versioning
 The versioning number is split up in major, minor and bugfix releases: `major.minor.bugfix`. Most releases will have the form `major.minor.0`, and bugfixes will be either included in a future version, and the bugfix release number will only be used to ship bug fixes for older versions when necessary.
