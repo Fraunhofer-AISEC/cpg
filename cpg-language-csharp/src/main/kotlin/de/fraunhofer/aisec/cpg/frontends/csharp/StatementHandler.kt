@@ -27,9 +27,11 @@ package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.newBlock
+import de.fraunhofer.aisec.cpg.graph.newIfElse
 import de.fraunhofer.aisec.cpg.graph.newReturn
 
 class StatementHandler(frontend: CSharpLanguageFrontend) :
@@ -41,10 +43,22 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
         return when (node) {
             is Csharp.AST.BlockSyntax -> handleBlock(node)
             is Csharp.AST.ReturnStatementSyntax -> handleReturn(node)
+            is Csharp.AST.IfStatementSyntax -> handleIf(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
     }
 
+    private fun handleIf(node: Csharp.AST.IfStatementSyntax): IfElse {
+        return newIfElse(rawNode = node).apply {
+            this.condition = frontend.expressionHandler.handle(node.condition)
+        }
+    }
+
+    /**
+     * Translates a C#
+     * [`ReturnStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.returnstatementsyntax?view=roslyn-dotnet-5.0.0)
+     * into a [Return]. The return value expression is optional (e.g. `return;` in void methods).
+     */
     private fun handleReturn(node: Csharp.AST.ReturnStatementSyntax): Return {
         val ret = newReturn(rawNode = node)
         node.expression?.let { ret.returnValue = frontend.expressionHandler.handle(it) }

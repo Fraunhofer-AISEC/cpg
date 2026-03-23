@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.objectType
-import de.fraunhofer.aisec.cpg.graph.primitiveType
 
 class ExpressionHandler(frontend: CSharpLanguageFrontend) :
     CSharpHandler<Expression, Csharp.AST.ExpressionSyntax>(::ProblemExpression, frontend) {
@@ -45,19 +45,27 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
         }
     }
 
+    /**
+     * Translates a C#
+     * [`LiteralExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.literalexpressionsyntax?view=roslyn-dotnet-5.0.0)
+     * into a [Literal].
+     */
     private fun handleLiteral(node: Csharp.AST.LiteralExpressionSyntax): Expression {
+        val builtInTypes = frontend.language.builtInTypes
         return when (node.csharpType) {
             "NumericLiteralExpression" ->
-                newLiteral(node.value.toInt(), primitiveType("int"), rawNode = node)
+                newLiteral(node.value.toInt(), builtInTypes.getValue("int"), rawNode = node)
             "StringLiteralExpression" ->
-                newLiteral(node.value, primitiveType("string"), rawNode = node)
-            "TrueLiteralExpression" -> newLiteral(true, primitiveType("bool"), rawNode = node)
-            "FalseLiteralExpression" -> newLiteral(false, primitiveType("bool"), rawNode = node)
+                newLiteral(node.value, builtInTypes.getValue("string"), rawNode = node)
+            "TrueLiteralExpression" ->
+                newLiteral(true, builtInTypes.getValue("bool"), rawNode = node)
+            "FalseLiteralExpression" ->
+                newLiteral(false, builtInTypes.getValue("bool"), rawNode = node)
             "NullLiteralExpression" -> newLiteral(null, objectType("null"), rawNode = node)
             "CharacterLiteralExpression" ->
-                newLiteral(node.value.single(), primitiveType("char"), rawNode = node)
+                newLiteral(node.value.single(), builtInTypes.getValue("char"), rawNode = node)
             else ->
-                // TODO: Return unknowntype() instead?
+                // TODO: Return unknownType() instead?
                 newProblemExpression("Unknown type: ${node.csharpType}", rawNode = node)
         }
     }

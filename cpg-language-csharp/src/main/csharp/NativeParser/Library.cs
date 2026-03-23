@@ -249,4 +249,10 @@ public static class Library
     {
         return Marshal.StringToCoTaskMemUTF8(((LiteralExpressionSyntax)Nodes[handlePtr]).Token.Value.ToString());
     }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetIfStatementSyntaxCondition")]
+    public static IntPtr GetIfStatementSyntaxCondition(IntPtr handlePtr)
+    {
+        return Register(((IfStatementSyntax)Nodes[handlePtr]).Condition);
+    }
 }

@@ -45,7 +45,7 @@ class CSharpLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("namespace.cs").toFile()),
+                listOf(topLevel.resolve("Namespaces.cs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -71,7 +71,7 @@ class CSharpLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("fileScoped_namespace.cs").toFile()),
+                listOf(topLevel.resolve("FileScopedNamespace.cs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -92,7 +92,7 @@ class CSharpLanguageFrontendTest : BaseTest() {
     fun testFieldDeclarations() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("fields.cs").toFile()), topLevel, true) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("Fields.cs").toFile()), topLevel, true) {
                 it.registerLanguage<CSharpLanguage>()
             }
         assertNotNull(tu)
@@ -102,7 +102,7 @@ class CSharpLanguageFrontendTest : BaseTest() {
     fun testMethodDeclarations() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("method.cs").toFile()), topLevel, true) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("Methods.cs").toFile()), topLevel, true) {
                 it.registerLanguage<CSharpLanguage>()
             }
         assertNotNull(tu)
@@ -126,7 +126,7 @@ class CSharpLanguageFrontendTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("constructor.cs").toFile()),
+                listOf(topLevel.resolve("Constructor.cs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -155,7 +155,7 @@ class CSharpLanguageFrontendTest : BaseTest() {
     fun testReturnStatement() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("method.cs").toFile()), topLevel, true) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("Methods.cs").toFile()), topLevel, true) {
                 it.registerLanguage<CSharpLanguage>()
             }
         assertNotNull(tu)
@@ -192,7 +192,7 @@ class CSharpLanguageFrontendTest : BaseTest() {
     fun testLiteralExpressionsTypes() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("literals.cs").toFile()), topLevel, true) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("Literals.cs").toFile()), topLevel, true) {
                 it.registerLanguage<CSharpLanguage>()
             }
         assertNotNull(tu)

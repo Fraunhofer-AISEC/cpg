@@ -180,6 +180,7 @@ interface Csharp : Library {
                 return when (INSTANCE.GetKind(nativeValue)) {
                     "ReturnStatement" -> ReturnStatementSyntax(nativeValue)
                     "Block" -> BlockSyntax(nativeValue)
+                    "IfStatementSyntax" -> IfStatementSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -189,6 +190,10 @@ interface Csharp : Library {
             val expression: ExpressionSyntax? by lazy {
                 INSTANCE.GetReturnStatementExpression(this)
             }
+        }
+
+        class IfStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            val condition: ExpressionSyntax by lazy { INSTANCE.GetIfStatementSyntaxCondition(this) }
         }
 
         /**
@@ -341,6 +346,8 @@ interface Csharp : Library {
     fun GetLiteralExpressionValue(handle: AST.ExpressionSyntax): String
 
     fun GetReturnStatementExpression(handle: AST.StatementSyntax): AST.ExpressionSyntax?
+
+    fun GetIfStatementSyntaxCondition(handle: AST.StatementSyntax): AST.ExpressionSyntax
 
     fun GetCode(handle: AST.Node): String
 
