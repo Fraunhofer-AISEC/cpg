@@ -310,6 +310,8 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     "We assume that the last Variable in the statement kept in \"variable\" is the variable we care about in the ForEach if there is no DeclarationStatement related to the iterable.\n\n" +
                         "To verify this assumption, we need to check if the last Variable of the variable is indeed the one where we assign the iterable's elements to.",
                 )
+                // Also draw the DFG-Edge from the variable itself to the iterable
+                node.variable?.prevDFGEdges += iterable
             }
         }
 
