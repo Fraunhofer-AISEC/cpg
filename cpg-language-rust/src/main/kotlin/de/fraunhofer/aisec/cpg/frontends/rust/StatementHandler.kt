@@ -71,6 +71,22 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
         letStmt.initializer?.let {
             variable.initializer = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+
+            // Here, if we have the classical pattern for initializers we set the base of the
+            // contained member access
+            val initializingExpressions =
+                when (variable.initializer) {
+                    is Construction -> (variable.initializer as Construction).arguments
+                    is InitializerList -> (variable.initializer as InitializerList).initializers
+                    else -> listOf()
+                }
+            initializingExpressions.forEach {
+                (it as? Assign)?.lhs?.forEach {
+                    (it as? MemberAccess)?.let { memberAccess ->
+                        memberAccess.base = newReference(variable.name)
+                    }
+                }
+            }
         }
 
         declarationStatement.declarations += variable

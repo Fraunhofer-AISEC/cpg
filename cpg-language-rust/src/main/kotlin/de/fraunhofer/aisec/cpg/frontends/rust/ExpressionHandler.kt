@@ -25,8 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.rust
 
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
+import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
+import uniffi.cpgrust.RsArrayExpr
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsBinExpr
 import uniffi.cpgrust.RsBlockExpr
@@ -85,6 +88,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.CastExpr -> handleCastExpr(node.v1)
             is RsExpr.IndexExpr -> handleIndexExpr(node.v1)
             is RsExpr.RefExpr -> handleRefExpr(node.v1)
+            is RsExpr.ArrayExpr -> handleArrayExpr(node.v1)
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -515,13 +519,74 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         )
     }
 
+    fun handleArrayExpr(arrayExpr: RsArrayExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ArrayExpr(arrayExpr))
+
+        val arrayConstruction =
+            newArrayConstruction(rawNode = raw).also { arrayConstruction ->
+                val initializer = newInitializerList(rawNode = raw)
+                for (expr in arrayExpr.expressions) {
+                    initializer.initializers +=
+                        frontend.expressionHandler.handle(RsAst.RustExpr(expr))
+                }
+                arrayConstruction.initializer = initializer
+            }
+
+        if (arrayExpr.repeating) {
+            arrayConstruction.assume(
+                assumptionType = AssumptionType.DataFlowAssumption,
+                "Using the repetition expression as value in the array model a direct DF although it is an indirect DF.",
+                arrayConstruction,
+            )
+        }
+
+        return arrayConstruction
+    }
+
     fun handleRecordExpr(recordExpr: RsRecordExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.RecordExpr(recordExpr))
 
-        return newProblemExpression(
-            problem =
-                "RecordExpression needs more complex initialization, which is not supported yet",
-            rawNode = raw,
-        )
+        val t = recordExpr.path?.let { frontend.typeOf(it.astNode.text) } ?: unknownType()
+
+        val construction = newConstruction(rawNode = raw)
+        construction.type = t
+
+        val refName = "null"
+
+        // We add this first, such that dfg handling then properly captures overwriting variables
+        recordExpr.spread.firstOrNull()?.let {
+            construction.addArgument(
+                newAssign(
+                    lhs = listOf(newReference("null")),
+                    rhs = listOf(handle(RsAst.RustExpr(it))),
+                    rawNode = RsAst.RustExpr(it),
+                )
+            )
+        }
+
+        recordExpr.fields.forEach { field ->
+            val rawField = RsAst.RustExpr(RsExpr.RecordExprField(field))
+            field.expr.firstOrNull()?.let { expr ->
+                val value = handle(RsAst.RustExpr(expr))
+
+                val member =
+                    field.name?.let {
+                        newMemberAccess(it.text, newReference(refName), rawNode = rawField)
+                    }
+                        ?: newMemberAccess(
+                            value.toString(),
+                            newReference(refName),
+                            rawNode = rawField,
+                        )
+
+                construction.addArgument(
+                    newAssign(lhs = listOf(member), rhs = listOf(value), rawNode = rawField).also {
+                        it.usedAsExpression = true
+                    }
+                )
+            }
+        }
+
+        return construction
     }
 }

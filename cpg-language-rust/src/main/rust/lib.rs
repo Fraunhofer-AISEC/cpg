@@ -5,7 +5,7 @@ use ra_ap_syntax::{ast, SourceFile, SyntaxNode};
 use ra_ap_syntax::{AstNode, Edition};
 use itertools::Itertools;
 use ra_ap_parser::SyntaxKind;
-use ra_ap_syntax::ast::{Abi, Adt, ArgList, ArrayExpr, ArrayType, AsmClobberAbi, AsmConst, AsmExpr, AsmLabel, AsmOperand, AsmOperandNamed, AsmOptions, AsmPiece, AsmRegOperand, AsmSym, AssocItem, AssocTypeArg, AwaitExpr, BecomeExpr, BinExpr, BlockExpr, BoxPat, BreakExpr, CallExpr, CastExpr, ClosureExpr, Const, ConstArg, ConstBlockPat, ConstParam, ContinueExpr, DocCommentIter, DynTraitType, Enum, Expr, ExprStmt, ExternBlock, ExternCrate, ExternItem, FieldExpr, FieldList, Fn, FnPtrType, ForExpr, ForType, FormatArgsExpr, GenericArg, GenericParam, HasArgList, HasLoopBody, HasName, IdentPat, IfExpr, Impl, ImplTraitType, IndexExpr, InferType, Item, LetElse, LetExpr, LetStmt, Lifetime, LifetimeArg, LifetimeParam, Literal, LiteralPat, LoopExpr, MacroCall, MacroDef, MacroExpr, MacroPat, MacroRules, MacroType, MatchExpr, MethodCallExpr, Module, NameRef, NeverType, OffsetOfExpr, OrPat, Param, ParamList, ParenExpr, ParenPat, ParenType, Pat, Path, PathExpr, PathPat, PathSegment, PathType, PrefixExpr, PtrType, RangeExpr, RangePat, RecordExpr, RecordField, RecordFieldList, RecordPat, RefExpr, RefPat, RefType, RestPat, RetType, ReturnExpr, SelfParam, SlicePat, SliceType, Static, Stmt, Struct, TokenTree, Trait, TryExpr, TupleExpr, TupleField, TupleFieldList, TuplePat, TupleStructPat, TupleType, Type, TypeAlias, TypeArg, TypeBound, TypeBoundList, TypeParam, UnderscoreExpr, Union, Use, UseBoundGenericArg, Variant, VariantDef, WhileExpr, WildcardPat, YeetExpr, YieldExpr};
+use ra_ap_syntax::ast::{Abi, Adt, ArgList, ArrayExpr, ArrayType, AsmClobberAbi, AsmConst, AsmExpr, AsmLabel, AsmOperand, AsmOperandNamed, AsmOptions, AsmPiece, AsmRegOperand, AsmSym, AssocItem, AssocTypeArg, AwaitExpr, BecomeExpr, BinExpr, BlockExpr, BoxPat, BreakExpr, CallExpr, CastExpr, ClosureExpr, Const, ConstArg, ConstBlockPat, ConstParam, ContinueExpr, DocCommentIter, DynTraitType, Enum, Expr, ExprStmt, ExternBlock, ExternCrate, ExternItem, FieldExpr, FieldList, Fn, FnPtrType, ForExpr, ForType, FormatArgsExpr, GenericArg, GenericParam, HasArgList, HasLoopBody, HasName, IdentPat, IfExpr, Impl, ImplTraitType, IndexExpr, InferType, Item, LetElse, LetExpr, LetStmt, Lifetime, LifetimeArg, LifetimeParam, Literal, LiteralPat, LoopExpr, MacroCall, MacroDef, MacroExpr, MacroPat, MacroRules, MacroType, MatchExpr, MethodCallExpr, Module, NameRef, NeverType, OffsetOfExpr, OrPat, Param, ParamList, ParenExpr, ParenPat, ParenType, Pat, Path, PathExpr, PathPat, PathSegment, PathType, PrefixExpr, PtrType, RangeExpr, RangePat, RecordExpr, RecordExprField, RecordField, RecordFieldList, RecordPat, RefExpr, RefPat, RefType, RestPat, RetType, ReturnExpr, SelfParam, SlicePat, SliceType, Static, Stmt, Struct, TokenTree, Trait, TryExpr, TupleExpr, TupleField, TupleFieldList, TuplePat, TupleStructPat, TupleType, Type, TypeAlias, TypeArg, TypeBound, TypeBoundList, TypeParam, UnderscoreExpr, Union, Use, UseBoundGenericArg, Variant, VariantDef, WhileExpr, WildcardPat, YeetExpr, YieldExpr};
 use crate::RSAst::RustProblem;
 use ra_ap_syntax::ast::HasModuleItem;
 
@@ -528,7 +528,8 @@ pub enum RSExpr {
     YieldExpr(RSYieldExpr),
     Path(RSPath),
     PathSegment(RSPathSegment),
-    NameRef(RSNameRef)
+    NameRef(RSNameRef),
+    RecordExprField(RSRecordExprField)
 }
 
 impl From<Expr> for RSExpr {
@@ -576,9 +577,15 @@ impl From<Expr> for RSExpr {
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSArrayExpr {pub(crate) ast_node: RSNode}
+pub struct RSArrayExpr {pub(crate) ast_node: RSNode, expressions: Vec<RSExpr>, repeating: bool}
 impl From<ArrayExpr> for RSArrayExpr {
-    fn from(node:  ArrayExpr) -> Self {RSArrayExpr{ast_node: node.syntax().into()}}
+    fn from(node:  ArrayExpr) -> Self {
+        RSArrayExpr{
+            ast_node: node.syntax().into(),
+            expressions: node.exprs().into_iter().map(Into::into).collect(),
+            repeating : node.semicolon_token().is_some()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -890,10 +897,31 @@ impl From<RangeExpr> for RSRangeExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSRecordExpr {pub(crate) ast_node: RSNode}
+pub struct RSRecordExpr {pub(crate) ast_node: RSNode, path: Option<RSPath>, fields: Vec<RSRecordExprField>, spread: Vec<RSExpr>}
 impl From<RecordExpr> for RSRecordExpr {
-    fn from(node: RecordExpr ) -> Self {RSRecordExpr{ast_node: node.syntax().into()}}
+    fn from(node: RecordExpr ) -> Self {
+        RSRecordExpr{
+            ast_node: node.syntax().into(),
+            path: node.path().map(Into::into),
+            fields: node.record_expr_field_list().map(|fl|fl.fields().map(Into::into).collect()).unwrap_or_default(),
+            spread: node.record_expr_field_list().map(|fl|fl.spread().map(Into::into)).unwrap_or_default().into_iter().collect(),
+        }
+    }
 }
+
+#[derive(uniffi::Record)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RSRecordExprField {pub(crate) ast_node: RSNode, name: Option<RSNameRef>, expr: Vec<RSExpr>}
+impl From<RecordExprField> for RSRecordExprField {
+    fn from(node: RecordExprField ) -> Self {
+        RSRecordExprField{
+            ast_node: node.syntax().into(),
+            name: node.name_ref().map(Into::into),
+            expr: node.expr().map(Into::into).into_iter().collect()
+        }
+    }
+}
+
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RSRefExpr {pub(crate) ast_node: RSNode, expr: Vec<RSExpr>, mutable: bool, is_ref: bool, is_const: bool}

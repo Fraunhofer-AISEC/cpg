@@ -89,6 +89,7 @@ fun RsExpr.astNode(): RsNode {
         is RsExpr.Path -> this.v1.astNode
         is RsExpr.PathSegment -> this.v1.astNode
         is RsExpr.NameRef -> this.v1.astNode
+        is RsExpr.RecordExprField -> this.v1.astNode
     }
 }
 
