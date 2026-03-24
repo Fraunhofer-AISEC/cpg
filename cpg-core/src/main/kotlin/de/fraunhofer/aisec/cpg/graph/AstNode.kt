@@ -39,9 +39,11 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.expressions.Switch
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import kotlin.math.max
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -97,17 +99,26 @@ abstract class AstNode : Node() {
             when (this) {
                 // extract suitable descriptors for specific AST nodes
                 is Function -> {
-                    val sameFunSigs = astParent.functions.filter { it.signature == signature }
-
-                    if (sameFunSigs.size > 1) "${signature}_${astParent.functions.indexOf(this)}"
-                    else signature
+                    "${name}_${astParent.functions.filter { it.name == name }.indexOfFirst { it === this }}"
                 }
                 is Literal<*> -> {
-                    "${value}_${astParent?.astChildren?.indexOfFirst { it === this }}"
+                    "${value}_${astParent.literals.filter { it.value == value }.indexOfFirst { it === this }}"
                 }
-                is Block -> astParent.blocks.indexOf(this).toString()
-                is IfElse -> astParent.ifs.indexOf(this).toString()
-                is Return -> astParent.returns.indexOf(this).toString()
+                is Block -> {
+                    // only indices
+                    "${astParent.blocks.indexOfFirst { it === this }}"
+                }
+                is IfElse -> {
+                    // only indices
+                    "${astParent.ifs.indexOfFirst { it === this }}"
+                }
+                is Return -> {
+                    // only indices
+                    "${astParent.returns.indexOfFirst { it === this }}"
+                }
+                is Switch -> {
+                    "${astParent.switches.indexOfFirst { it === this }}"
+                }
                 is DeclarationStatement ->
                     astParent
                         ?.astChildren
@@ -124,8 +135,7 @@ abstract class AstNode : Node() {
                     when (children.size) {
                         0 -> ""
                         1 -> "${name}"
-                        else ->
-                            "${name}_${if (children.indexOf(this) < 0) 0 else children.indexOf(this)}"
+                        else -> "${name}_${max(children.indexOfFirst { it === this }, 0)}"
                     }
                 }
             }
