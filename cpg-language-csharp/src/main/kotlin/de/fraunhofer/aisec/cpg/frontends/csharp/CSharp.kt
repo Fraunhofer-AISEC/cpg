@@ -39,7 +39,7 @@ interface Csharp : Library {
     open class CsharpObject(p: Pointer? = Pointer.NULL) : PointerType(p) {
         val csharpType: String
             get() {
-                return INSTANCE.GetKind(this.pointer)
+                return INSTANCE.GetType(this.pointer)
             }
     }
 
@@ -96,13 +96,14 @@ interface Csharp : Library {
                 if (nativeValue !is Pointer) {
                     return super.fromNative(nativeValue, context)
                 }
-                return when (INSTANCE.GetKind(nativeValue)) {
-                    "NamespaceDeclaration",
-                    "FileScopedNamespaceDeclaration" -> NamespaceDeclarationSyntax(nativeValue)
-                    "ClassDeclaration" -> ClassDeclarationSyntax(nativeValue)
-                    "FieldDeclaration" -> FieldDeclarationSyntax(nativeValue)
-                    "MethodDeclaration" -> MethodDeclarationSyntax(nativeValue)
-                    "ConstructorDeclaration" -> ConstructorDeclarationSyntax(nativeValue)
+                return when (INSTANCE.GetType(nativeValue)) {
+                    "NamespaceDeclarationSyntax",
+                    "FileScopedNamespaceDeclarationSyntax" ->
+                        NamespaceDeclarationSyntax(nativeValue)
+                    "ClassDeclarationSyntax" -> ClassDeclarationSyntax(nativeValue)
+                    "FieldDeclarationSyntax" -> FieldDeclarationSyntax(nativeValue)
+                    "MethodDeclarationSyntax" -> MethodDeclarationSyntax(nativeValue)
+                    "ConstructorDeclarationSyntax" -> ConstructorDeclarationSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -145,7 +146,7 @@ interface Csharp : Library {
                 if (nativeValue !is Pointer) {
                     return super.fromNative(nativeValue, context)
                 }
-                return when (INSTANCE.GetKind(nativeValue)) {
+                return when (INSTANCE.GetType(nativeValue)) {
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -177,9 +178,9 @@ interface Csharp : Library {
                 if (nativeValue !is Pointer) {
                     return super.fromNative(nativeValue, context)
                 }
-                return when (INSTANCE.GetKind(nativeValue)) {
-                    "ReturnStatement" -> ReturnStatementSyntax(nativeValue)
-                    "Block" -> BlockSyntax(nativeValue)
+                return when (INSTANCE.GetType(nativeValue)) {
+                    "ReturnStatementSyntax" -> ReturnStatementSyntax(nativeValue)
+                    "BlockSyntax" -> BlockSyntax(nativeValue)
                     "IfStatementSyntax" -> IfStatementSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
@@ -247,13 +248,10 @@ interface Csharp : Library {
                 if (nativeValue !is Pointer) {
                     return super.fromNative(nativeValue, context)
                 }
-                return when (INSTANCE.GetKind(nativeValue)) {
-                    "NumericLiteralExpression",
-                    "StringLiteralExpression",
-                    "TrueLiteralExpression",
-                    "FalseLiteralExpression",
-                    "NullLiteralExpression",
-                    "CharacterLiteralExpression" -> LiteralExpressionSyntax(nativeValue)
+                return when (INSTANCE.GetType(nativeValue)) {
+                    "LiteralExpressionSyntax" -> LiteralExpressionSyntax(nativeValue)
+                    "BinaryExpressionSyntax" -> BinaryExpressionSyntax(nativeValue)
+                    "IdentifierNameSyntax" -> IdentifierNameSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -261,6 +259,17 @@ interface Csharp : Library {
 
         class LiteralExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
             val value: String by lazy { INSTANCE.GetLiteralExpressionValue(this) }
+            val kind: String by lazy { INSTANCE.GetLiteralExpressionKind(this) }
+        }
+
+        class BinaryExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val left: ExpressionSyntax by lazy { INSTANCE.GetBinaryExpressionLeft(this) }
+            val operatorToken: String by lazy { INSTANCE.GetBinaryExpressionOperator(this) }
+            val right: ExpressionSyntax by lazy { INSTANCE.GetBinaryExpressionRight(this) }
+        }
+
+        class IdentifierNameSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val identifier: String by lazy { INSTANCE.GetIdentifierNameSyntaxIdentifier(this) }
         }
     }
 
@@ -278,6 +287,8 @@ interface Csharp : Library {
     fun CSharpRoslynSyntaxTreeParseText(source: String): Pointer
 
     fun GetKind(handle: Pointer): String
+
+    fun GetType(handle: Pointer): String
 
     fun GetCompilationUnitMembersCount(handle: AST.CompilationUnitSyntax): Int
 
@@ -343,11 +354,19 @@ interface Csharp : Library {
 
     fun GetBlockStatement(handle: AST.StatementSyntax, index: Int): AST.StatementSyntax
 
-    fun GetLiteralExpressionValue(handle: AST.ExpressionSyntax): String
+    fun GetLiteralExpressionValue(handle: AST.LiteralExpressionSyntax): String
+
+    fun GetLiteralExpressionKind(handle: AST.LiteralExpressionSyntax): String
 
     fun GetReturnStatementExpression(handle: AST.StatementSyntax): AST.ExpressionSyntax?
 
     fun GetIfStatementSyntaxCondition(handle: AST.StatementSyntax): AST.ExpressionSyntax
+
+    fun GetBinaryExpressionLeft(handle: AST.BinaryExpressionSyntax): AST.ExpressionSyntax
+
+    fun GetBinaryExpressionOperator(handle: AST.BinaryExpressionSyntax): String
+
+    fun GetBinaryExpressionRight(handle: AST.BinaryExpressionSyntax): AST.ExpressionSyntax
 
     fun GetCode(handle: AST.Node): String
 
@@ -358,6 +377,8 @@ interface Csharp : Library {
     fun GetNodeEndLine(handle: AST.Node): Int
 
     fun GetNodeEndColumn(handle: AST.Node): Int
+
+    fun GetIdentifierNameSyntaxIdentifier(handle: AST.IdentifierNameSyntax): String
 
     companion object {
         val INSTANCE: Csharp by lazy {

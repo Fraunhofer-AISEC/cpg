@@ -19,7 +19,7 @@ public static class Library
 
     private static void PrintASTDump(SyntaxNode node, int indent = 2)
           {
-              Console.Error.WriteLine(new string(' ', indent) + node.GetType().Name + ": " + node.ToString().Split('\n')[0].Trim());
+              Console.Error.WriteLine(new string(' ', indent) + node.GetType().Name + " (Kind: " + ((CSharpSyntaxNode)node).Kind() + "): " + node.ToString().Split('\n')[0].Trim());
               foreach (var child in node.ChildNodes())
               PrintASTDump(child, indent + 1);
           }
@@ -41,6 +41,12 @@ public static class Library
     {
         var kind = Nodes[handlePtr].Kind().ToString();
         return Marshal.StringToCoTaskMemUTF8(kind);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetType")]
+    public static IntPtr GetType(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(Nodes[handlePtr].GetType().Name);
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetCompilationUnitMembersCount")]
@@ -250,9 +256,71 @@ public static class Library
         return Marshal.StringToCoTaskMemUTF8(((LiteralExpressionSyntax)Nodes[handlePtr]).Token.Value.ToString());
     }
 
+    // Maps .NET runtime types (e.g. System.Int32) to C# keywords (e.g. "int").
+    // Roslyn's Token.Value returns .NET runtime types, but we need the C# keywords to match
+    // the built-in type definitions on the Kotlin side.
+
+    // The alternative would be to use Roslyn's SyntaxKind (e.g. "NumericLiteralExpression",
+    // "StringLiteralExpression") via GetKind() and do the mapping on the Kotlin side.
+    private static readonly Dictionary<Type, string> DotNetTypeToCSharpKeyword = new()
+    {
+        { typeof(int), "int" },
+        { typeof(long), "long" },
+        { typeof(float), "float" },
+        { typeof(double), "double" },
+        { typeof(decimal), "decimal" },
+        { typeof(string), "string" },
+        { typeof(bool), "bool" },
+        { typeof(char), "char" },
+        { typeof(byte), "byte" },
+        { typeof(sbyte), "sbyte" },
+        { typeof(short), "short" },
+        { typeof(ushort), "ushort" },
+        { typeof(uint), "uint" },
+        { typeof(ulong), "ulong" },
+    };
+
+    [UnmanagedCallersOnly(EntryPoint = "GetLiteralExpressionKind")]
+    public static IntPtr GetLiteralExpressionKind(IntPtr handlePtr)
+    {
+        var value = ((LiteralExpressionSyntax)Nodes[handlePtr]).Token.Value;
+        if (value == null)
+        {
+            return Marshal.StringToCoTaskMemUTF8("null");
+        }
+        else
+        {
+            return Marshal.StringToCoTaskMemUTF8(DotNetTypeToCSharpKeyword.TryGetValue(value.GetType(), out var keyword) ? keyword : value.GetType().Name);
+        }
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetIfStatementSyntaxCondition")]
     public static IntPtr GetIfStatementSyntaxCondition(IntPtr handlePtr)
     {
         return Register(((IfStatementSyntax)Nodes[handlePtr]).Condition);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetBinaryExpressionLeft")]
+    public static IntPtr GetBinaryExpressionLeft(IntPtr handlePtr)
+    {
+        return Register(((BinaryExpressionSyntax)Nodes[handlePtr]).Left);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetBinaryExpressionRight")]
+    public static IntPtr GetBinaryExpressionRight(IntPtr handlePtr)
+    {
+        return Register(((BinaryExpressionSyntax)Nodes[handlePtr]).Right);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetBinaryExpressionOperator")]
+    public static IntPtr GetBinaryExpressionOperator(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((BinaryExpressionSyntax)Nodes[handlePtr]).OperatorToken.Text);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetIdentifierNameSyntaxIdentifier")]
+    public static IntPtr GetIdentifierNameSyntaxIdentifier(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((IdentifierNameSyntax)Nodes[handlePtr]).Identifier.ToString());
     }
 }

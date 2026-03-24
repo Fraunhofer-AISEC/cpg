@@ -25,18 +25,24 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
+import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.objectType
 
 class ExpressionHandler(frontend: CSharpLanguageFrontend) :
     CSharpHandler<Expression, Csharp.AST.ExpressionSyntax>(::ProblemExpression, frontend) {
     override fun handleNode(node: Csharp.AST.ExpressionSyntax): Expression {
         return when (node) {
-            is Csharp.AST.LiteralExpressionSyntax -> handleLiteral(node)
+            is Csharp.AST.IdentifierNameSyntax -> handleIdentifierName(node)
+            is Csharp.AST.LiteralExpressionSyntax -> handleLiteralExpression(node)
+            is Csharp.AST.BinaryExpressionSyntax -> handleBinaryExpression(node)
             else ->
                 newProblemExpression(
                     "The expression of class ${node.javaClass} is not supported yet",
@@ -45,28 +51,32 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
         }
     }
 
+    private fun handleIdentifierName(node: Csharp.AST.IdentifierNameSyntax): Reference {
+        return newReference(name = node.identifier, rawNode = node)
+    }
+
+    private fun handleBinaryExpression(node: Csharp.AST.BinaryExpressionSyntax): BinaryOperator {
+        val binOp = newBinaryOperator(operatorCode = node.operatorToken, rawNode = node)
+        binOp.lhs = handle(node.left)
+        binOp.rhs = handle(node.right)
+        return binOp
+    }
+
     /**
      * Translates a C#
      * [`LiteralExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.literalexpressionsyntax?view=roslyn-dotnet-5.0.0)
      * into a [Literal].
      */
-    private fun handleLiteral(node: Csharp.AST.LiteralExpressionSyntax): Expression {
+    private fun handleLiteralExpression(node: Csharp.AST.LiteralExpressionSyntax): Expression {
         val builtInTypes = frontend.language.builtInTypes
-        return when (node.csharpType) {
-            "NumericLiteralExpression" ->
-                newLiteral(node.value.toInt(), builtInTypes.getValue("int"), rawNode = node)
-            "StringLiteralExpression" ->
-                newLiteral(node.value, builtInTypes.getValue("string"), rawNode = node)
-            "TrueLiteralExpression" ->
-                newLiteral(true, builtInTypes.getValue("bool"), rawNode = node)
-            "FalseLiteralExpression" ->
-                newLiteral(false, builtInTypes.getValue("bool"), rawNode = node)
-            "NullLiteralExpression" -> newLiteral(null, objectType("null"), rawNode = node)
-            "CharacterLiteralExpression" ->
-                newLiteral(node.value.single(), builtInTypes.getValue("char"), rawNode = node)
-            else ->
-                // TODO: Return unknownType() instead?
-                newProblemExpression("Unknown type: ${node.csharpType}", rawNode = node)
+        return when (node.kind) {
+            "int" -> newLiteral(node.value.toInt(), builtInTypes.getValue("int"), rawNode = node)
+            "string" -> newLiteral(node.value, builtInTypes.getValue("string"), rawNode = node)
+            "bool" ->
+                newLiteral(node.value.toBoolean(), builtInTypes.getValue("bool"), rawNode = node)
+            "char" -> newLiteral(node.value.single(), builtInTypes.getValue("char"), rawNode = node)
+            "null" -> newLiteral(null, objectType("null"), rawNode = node)
+            else -> newProblemExpression("Unknown literal kind: ${node.kind}", rawNode = node)
         }
     }
 }

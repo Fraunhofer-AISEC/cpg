@@ -250,4 +250,21 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertEquals('a', charLiteral.value)
         assertEquals("char", charLiteral.type.name.localName)
     }
+
+    @Test
+    fun testIfStatement() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("IfStatements.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val bar = tu.records["Bar"]
+        assertNotNull(bar)
+    }
 }
