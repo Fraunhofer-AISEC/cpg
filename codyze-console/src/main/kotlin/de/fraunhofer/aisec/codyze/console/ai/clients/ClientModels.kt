@@ -55,7 +55,7 @@ data class GeminiPart(
 @Serializable
 data class GeminiFunctionDef(val name: String, val description: String, val parameters: JsonObject)
 
-data class ToolCall(val name: String, val arguments: String)
+data class ToolCall(var id: String? = null, var name: String = "", var arguments: String = "")
 
 data class ToolCallWithResult(val call: ToolCall, val result: String)
 

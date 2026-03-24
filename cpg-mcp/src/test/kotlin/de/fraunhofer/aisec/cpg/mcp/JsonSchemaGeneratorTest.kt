@@ -25,11 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.mcp
 
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgApplyConceptsPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toSchema
+import de.fraunhofer.aisec.cpg.passes.Description
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -80,37 +81,9 @@ class JsonSchemaGeneratorTest {
                                             }
                                         }
                                     }
-                                    putJsonObject("conceptNodeId") {
+                                    putJsonObject("id") {
                                         put("type", "string")
-                                        put(
-                                            "description",
-                                            "NodeId of the concept this operation references (only for operations)",
-                                        )
-                                    }
-                                    putJsonObject("nodeId") {
-                                        put("type", "string")
-                                        put("description", "ID of the node to apply overlay to")
-                                    }
-                                    putJsonObject("overlay") {
-                                        put("type", "string")
-                                        put(
-                                            "description",
-                                            "Fully qualified name of concept or operation class",
-                                        )
-                                    }
-                                    putJsonObject("overlayType") {
-                                        put("type", "string")
-                                        put(
-                                            "description",
-                                            "Type of overlay: 'Concept' or 'Operation'",
-                                        )
-                                    }
-                                    putJsonObject("reasoning") {
-                                        put("type", "string")
-                                        put(
-                                            "description",
-                                            "Reasoning for applying this concept/operation (optional)",
-                                        )
+                                        put("description", "Required id")
                                     }
                                     putJsonObject("securityImpact") {
                                         put("type", "string")
@@ -120,18 +93,35 @@ class JsonSchemaGeneratorTest {
                                         )
                                     }
                                 }
-                                putJsonArray("required") {
-                                    add("nodeId")
-                                    add("overlay")
-                                }
+                                putJsonArray("required") { add("id") }
                             }
                         }
                     },
                 required = listOf("assignments"),
             )
 
-        val actual = CpgApplyConceptsPayload::class.toSchema()
+        val actual = TestPayload::class.toSchema()
 
         assertEquals(expected, actual)
     }
 }
+
+@Serializable
+private data class TestPair(
+    @Description("The key of the key-value pair") val key: String,
+    @Description("The value of the key-value pair") val value: String,
+)
+
+@Serializable
+private data class TestAssignment(
+    @Description("Required id") val id: String,
+    @Description("A description if this concept could have security implications (optional)")
+    val securityImpact: String? = null,
+    @Description("Additional constructor arguments (optional)")
+    val arguments: List<TestPair>? = null,
+)
+
+@Serializable
+private data class TestPayload(
+    @Description("List of concept assignments to perform") val assignments: List<TestAssignment>
+)

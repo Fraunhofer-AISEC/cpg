@@ -1,30 +1,19 @@
 <script lang="ts">
-  interface QueryTreeNode {
-    node?: { name?: string; type?: string; code?: string; startLine?: number; fileName?: string } | null;
-    children?: QueryTreeNode[];
+  interface NodeInfo {
+    nodeId: string;
+    name: string;
+    code?: string | null;
+    type?: string | null;
+    fileName?: string | null;
+    startLine?: number | null;
+    endLine?: number | null;
+    startColumn?: number | null;
+    endColumn?: number | null;
   }
 
-  let { content }: { content: any } = $props();
+  let { content }: { content: NodeInfo[] } = $props();
 
-  // Collect all nodes with an actual node object, depth-first (leaves first = sources first)
-  function collectNodes(tree: QueryTreeNode): NonNullable<QueryTreeNode['node']>[] {
-    const fromChildren = (tree.children ?? []).flatMap(collectNodes);
-    if (tree.node) return [...fromChildren, tree.node];
-    return fromChildren;
-  }
-
-  // Deduplicate by code+type, keep order
-  function dedupe(nodes: NonNullable<QueryTreeNode['node']>[]): NonNullable<QueryTreeNode['node']>[] {
-    const seen = new Set<string>();
-    return nodes.filter((n) => {
-      const key = `${n.type}:${n.code}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }
-
-  let nodes = $derived(dedupe(collectNodes(content)));
+  let nodes = $derived(content ?? []);
 </script>
 
 {#if nodes.length === 0}

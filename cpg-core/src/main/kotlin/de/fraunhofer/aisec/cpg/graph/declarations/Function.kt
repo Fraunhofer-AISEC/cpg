@@ -32,11 +32,11 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Invokes
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
+import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.DynamicType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.buildSignature
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
@@ -55,7 +55,7 @@ open class Function :
     EOGStarterHolder,
     HasType.TypeObserver,
     HasSecondaryTypeEdge {
-    @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>()
+    @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Expression>()
     /** The function body. Usually a [Block]. */
     var body by unwrapping(Function::bodyEdge)
 
@@ -241,7 +241,7 @@ open class Function :
 }
 
 /** This is a very basic implementation of Cyclomatic Complexity. */
-val Statement.cyclomaticComplexity: Int
+val Expression.cyclomaticComplexity: Int
     get() {
         var i = 0
         for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {

@@ -26,20 +26,18 @@
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.callees
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.query.QueryTree
-import de.fraunhofer.aisec.cpg.serialization.toJSON
+import de.fraunhofer.aisec.cpg.serialization.*
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -213,48 +211,11 @@ fun Node.toJson() = Json.encodeToString(this.toJSON())
 
 fun OverlayNode.toJson() = Json.encodeToString(OverlayInfo(this))
 
-fun Function.toSummary() =
-    FunctionSummary(
-        id = this.id.toString(),
-        name = this.name.localName,
-        fileName = this.location?.artifactLocation?.fileName,
-        startLine = this.location?.region?.startLine,
-        endLine = this.location?.region?.endLine,
-        parameters =
-            this.parameters.map {
-                ParameterInfo(
-                    id = it.id.toString(),
-                    name = it.name.localName,
-                    type = it.type.typeName,
-                )
-            },
-        returnType = this.returnTypes.firstOrNull()?.typeName,
-        callees = this.callees.map { it.name.localName },
-        code = this.code,
-    )
+fun Function.toInfo() = FunctionInfo(this)
 
-fun Record.toSummary() =
-    RecordSummary(
-        id = this.id.toString(),
-        name = this.name.localName,
-        fileName = this.location?.artifactLocation?.fileName,
-        startLine = this.location?.region?.startLine,
-        endLine = this.location?.region?.endLine,
-        kind = this.kind,
-        fieldCount = this.fields.size,
-        methodNames = this.methods.map { it.name.localName },
-    )
+fun Record.toInfo() = RecordInfo(this)
 
-fun Call.toSummary() =
-    CallSummary(
-        id = this.id.toString(),
-        name = this.name.localName,
-        fileName = this.location?.artifactLocation?.fileName,
-        startLine = this.location?.region?.startLine,
-        endLine = this.location?.region?.endLine,
-        arguments = this.arguments.map { "${it.type.typeName} ${it.name.localName}" },
-        code = this.code,
-    )
+fun Call.toInfo() = CallInfo(this)
 
 /** Returns all available concrete (non-abstract) concept classes. */
 fun getAvailableConcepts(): List<Class<out Concept>> {

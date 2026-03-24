@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.*
 import java.util.function.BiConsumer
@@ -44,9 +44,9 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCatchHandler
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 class StatementHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Statement, IASTStatement>(Supplier(::ProblemExpression), lang) {
+    CXXHandler<Expression, IASTStatement>(Supplier(::ProblemExpression), lang) {
 
-    override fun handleNode(node: IASTStatement): Statement {
+    override fun handleNode(node: IASTStatement): Expression {
         return when (node) {
             is IASTCompoundStatement -> handleCompoundStatement(node)
             is IASTReturnStatement -> handleReturn(node)
@@ -265,7 +265,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         val decl = frontend.declarationHandler.handle(ctx.declaration)
         val `var` = newDeclarationStatement()
         `var`.singleDeclaration = decl
-        val iterable: Statement? = frontend.expressionHandler.handle(ctx.initializerClause)
+        val iterable: Expression? = frontend.expressionHandler.handle(ctx.initializerClause)
         statement.variable = `var`
         statement.iterable = iterable
         statement.statement = handle(ctx.body)
@@ -291,7 +291,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         return expression
     }
 
-    private fun handleDeclarationStatement(ctx: IASTDeclarationStatement): Statement {
+    private fun handleDeclarationStatement(ctx: IASTDeclarationStatement): Expression {
         return if (ctx.declaration is IASTASMDeclaration) {
             // TODO: Specify the contained language through a language node and find a way to run a
             //  frontend for sub-block if available

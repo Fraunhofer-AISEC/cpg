@@ -31,10 +31,12 @@
     baseUrl
   }: Props = $props();
 
-  // Early return if queryTree is undefined
-  if (!queryTree) {
-    console.error('QueryTreeExplorer: queryTree prop is undefined');
-  }
+  // Log if queryTree is undefined
+  $effect(() => {
+    if (!queryTree) {
+      console.error('QueryTreeExplorer: queryTree prop is undefined');
+    }
+  });
 
   // Use hasChildren from the QueryTree data structure
   const hasChildren = $derived(

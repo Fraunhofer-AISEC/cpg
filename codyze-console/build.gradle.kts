@@ -21,25 +21,24 @@ dependencies {
     implementation(projects.cpgConcepts)
     implementation(projects.cpgSerialization)
 
-    // MCP dependencies - only when enabled
+    // MCP dependencies
     if (mcpEnabled) {
         implementation(project(":cpg-mcp"))
-        // MCP SDK - needed for McpServerHelper and custom MCP client
+        // MCP SDK
         implementation(libs.mcp)
         // MCP Client SDK - for custom MCP client implementation
         implementation(libs.mcp.client)
+    } else {
+        // MCP SDK only available at compile time so the files in `/ai` compile,
+        compileOnly(libs.mcp)
+        compileOnly(libs.mcp.client)
     }
 
     // Ktor server dependencies
     implementation(libs.bundles.ktor)
 
     // Ktor client dependencies
-    implementation("io.ktor:ktor-client-core:${libs.versions.ktor.get()}")
-    implementation("io.ktor:ktor-client-cio:${libs.versions.ktor.get()}")
-    implementation("io.ktor:ktor-client-content-negotiation:${libs.versions.ktor.get()}")
-
-    // Ktor SSE plugin
-    implementation("io.ktor:ktor-server-sse:${libs.versions.ktor.get()}")
+    implementation(libs.bundles.ktor.client)
 
     // Serialization
     implementation(libs.kotlinx.serialization.json)

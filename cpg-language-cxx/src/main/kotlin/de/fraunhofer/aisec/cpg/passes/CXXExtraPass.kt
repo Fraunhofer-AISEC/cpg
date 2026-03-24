@@ -30,8 +30,12 @@ import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
@@ -75,9 +79,10 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * In the frontend, we keep parenthesis around some expressions, so we can decide whether they
-     * are [Cast] nodes or just simply brackets with no syntactic value. The [Cast] conversion is
-     * done in [convertOperators], but in this function we are trying to get rid of those ()-unary
-     * operators that are meaningless, in order to reduce clutter to the graph.
+     * are [de.fraunhofer.aisec.cpg.graph.expressions.Cast] nodes or just simply brackets with no
+     * syntactic value. The [de.fraunhofer.aisec.cpg.graph.expressions.Cast] conversion is done in
+     * [convertOperators], but in this function we are trying to get rid of those ()-unary operators
+     * that are meaningless, in order to reduce clutter to the graph.
      */
     private fun removeBracketOperators(node: UnaryOperator) {
         val input = node.input

@@ -37,6 +37,9 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import org.slf4j.LoggerFactory
+
+private val log = LoggerFactory.getLogger("de.fraunhofer.aisec.codyze.console.Main")
 
 /**
  * This function starts the embedded server for the web console. It uses the Netty engine and
@@ -44,35 +47,31 @@ import kotlinx.serialization.json.Json
  * the [configureWebconsole] function.
  */
 fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
-    var chatService: ChatService? = null
-
-    // Start MCP server in background if enabled
-    if (McpServerHelper.isEnabled) {
-        runBlocking {
-            McpServerHelper.startMcpServer(8081, host, false)
-
-            val translationResult =
-                this@startConsole.getTranslationResult()?.analysisResult?.translationResult
-            if (translationResult != null) {
-                McpServerHelper.setGlobalAnalysisResult(translationResult)
-            }
-
-            // Initialize ChatService (with MCP client)
-            println("Initializing ChatService...")
-            chatService = ChatService()
-            chatService.connect()
-            println("MCP client connected!")
+    val chatService: ChatService? =
+        if (McpServerHelper.isEnabled) {
+            runBlocking { initChatService() }
+        } else {
+            log.info("MCP module not enabled, AI chat features will be disabled")
+            null
         }
-    } else {
-        println("MCP module not enabled, AI chat features will be disabled")
-    }
-
-    // Start main server on port 8080
-    println("Starting main server on port $port...")
     embeddedServer(Netty, host = host, port = port) {
             configureWebconsole(this@startConsole, chatService)
         }
         .start(wait = true)
+}
+
+private suspend fun ConsoleService.initChatService(): ChatService? {
+    val chatService = ChatService.createIfConfigExist() ?: return null
+
+    McpServerHelper.startMcpServer(8081)
+
+    val translationResult = getTranslationResult()?.analysisResult?.translationResult
+    if (translationResult != null) {
+        McpServerHelper.setGlobalAnalysisResult(translationResult)
+    }
+    chatService.connect()
+    log.info("MCP client connected")
+    return chatService
 }
 
 /**
@@ -109,8 +108,12 @@ fun Application.configureWebconsole(
  */
 fun Application.configureRouting(service: ConsoleService, chatService: ChatService? = null) {
     routing {
-        // We'll add routes here
-        apiRoutes(service, chatService)
+        apiRoutes(service)
+        // If the cpg-mcp module is enabled, chatService won't be null, so the endpoints will be
+        // reachable
+        if (chatService != null) {
+            chatRoutes(chatService)
+        }
         frontendRoutes()
     }
 }

@@ -71,7 +71,6 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.PassInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toSchema
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toSummary
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
 import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
@@ -223,7 +222,6 @@ fun runCpgAnalyze(
         functions = functions.size,
         variables = variables.size,
         callExpressions = callExpressions.size,
-        functionSummaries = functions.map { it.toSummary() },
     )
 }
 
