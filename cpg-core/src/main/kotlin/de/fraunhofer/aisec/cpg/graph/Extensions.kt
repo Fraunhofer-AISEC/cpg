@@ -1512,11 +1512,13 @@ private fun Node.eogDistanceTo(to: Node): Int {
  * When called on the right-hand side of this assignment, this function will return `a`.
  */
 fun Expression?.unwrapReference(): Reference? {
-    return when {
-        this is Reference -> this
-        this is PointerReference -> this
-        this is PointerDereference -> this
-        this is Cast -> this.expression.unwrapReference()
+    return when (this) {
+        is PointerReference -> this
+        is PointerDereference -> this
+        is Reference -> this
+        is UnaryOperator if (this.operatorCode == "*" || this.operatorCode == "&") ->
+            this.input.unwrapReference()
+        is Cast -> this.expression.unwrapReference()
         else -> null
     }
 }
