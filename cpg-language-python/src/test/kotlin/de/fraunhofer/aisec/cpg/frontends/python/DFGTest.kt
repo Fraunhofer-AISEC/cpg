@@ -208,7 +208,6 @@ class DFGTest {
         checkCallFlowsToTupleElements(body, "returnTuple")
     }
 
-    @Ignore
     @Test
     fun testFollowFunctions() {
         val topLevel = Path.of("src", "test", "resources", "python")
@@ -1003,7 +1002,6 @@ class DFGTest {
         )
     }
 
-    @Ignore
     @Test
     fun testConstructorDFG() {
         val topLevel = Path.of("src", "test", "resources", "python")

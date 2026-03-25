@@ -1070,6 +1070,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertRefersTo(mce, field)
     }
 
+    // TODO for merge
     @Ignore
     @Test
     fun testChainedCall() {

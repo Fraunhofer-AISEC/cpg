@@ -1027,7 +1027,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 is Return -> handleReturn(lattice, currentNode, doubleState)
 
                 is Expression -> {
-                    handleExpression(lattice, currentNode, doubleState)
+                    if (currentNode.usedAsExpression || currentNode is BinaryOperator)
+                        handleExpression(lattice, currentNode, doubleState)
+                    else doubleState
                 }
                 else -> doubleState
             }
@@ -2274,8 +2276,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ): PointsToState.Element {
         var doubleState = doubleState
 
-        // If the expression is global, the DFG-Edges should have already been drawn by the DFGPass
-        if (isGlobal(currentNode)) return doubleState
+        // TODO: If the expression is global, the DFG-Edges should have already been drawn by the
+        // DFGPass. However, we still need to add for example the memoryValues
 
         /* If we have an Expression that is written to, we handle its values later and ignore it now */
         val access =

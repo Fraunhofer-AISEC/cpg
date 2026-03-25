@@ -1478,7 +1478,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         }
     }
 
-    @Ignore
     @Test
     @Throws(Exception::class)
     fun testFunctionPointerToClassMethodSimple() {

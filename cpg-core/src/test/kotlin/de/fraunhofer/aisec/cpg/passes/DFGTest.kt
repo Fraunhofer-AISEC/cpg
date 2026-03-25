@@ -283,7 +283,6 @@ class DFGTest {
      * Tests if the last artificial (implicit) return statement is removed by the [PointsToPass].
      */
     @Test
-    @Ignore
     fun testReturn() {
         val result = GraphExamples.getReturnTest()
 
