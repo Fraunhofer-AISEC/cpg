@@ -605,18 +605,18 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (call.invokes.isEmpty() && inferDfgForUnresolvedSymbols) {
             // Unresolved call expression
             handleUnresolvedCalls(call, call)
-        } /*else if (call.invokes.isNotEmpty()) {
-              call.invokes.forEach {
-                  Util.attachCallParameters(it, call)
-                  call.prevDFGEdges.addContextSensitive(
-                      it,
-                      callingContext = CallingContextOut(mutableListOf(call)),
-                  )
-                  if (it.isInferred) {
-                      callsInferredFunctions.add(call)
-                  }
-              }
-          }*/
+        } else if (call.invokes.isNotEmpty()) {
+            call.invokes.forEach {
+                //                  Util.attachCallParameters(it, call)
+                call.prevDFGEdges.addContextSensitive(
+                    it,
+                    callingContext = CallingContextOut(mutableListOf(call)),
+                )
+                if (it.isInferred) {
+                    callsInferredFunctions.add(call)
+                }
+            }
+        }
     }
 
     /** Adds the DFG edges to a previously unresolved [Call]. */
