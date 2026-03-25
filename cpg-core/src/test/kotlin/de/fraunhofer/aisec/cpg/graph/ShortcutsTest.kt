@@ -483,8 +483,7 @@ class ShortcutsTest {
             castPtrRef.castType = objectType("int64")
             castPtrRef.expression = aPtrRef
 
-            assertNull(cast.unwrapReference())
-            assertNull(op.unwrapReference())
+            assertEquals(a, cast.unwrapReference())
             assertEquals(aPtrRef, aPtrRef.unwrapReference())
             assertEquals(aPtrRef, castPtrRef.unwrapReference())
         }

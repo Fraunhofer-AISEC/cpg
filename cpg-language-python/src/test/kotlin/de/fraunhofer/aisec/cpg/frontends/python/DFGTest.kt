@@ -43,7 +43,6 @@ import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.nio.file.Path
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -738,8 +737,6 @@ class DFGTest {
         )
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testMemberAccess() {
         val topLevel = Path.of("src", "test", "resources", "python")

@@ -115,7 +115,6 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Expressions
             is CollectionComprehension -> handleCollectionComprehension(node)
             is Comprehension -> handleComprehension(node)
-            // Only for handling callExpressions w/o invokes edges
             is Call -> handleCall(node, inferDfgForUnresolvedSymbols)
             is Cast -> handleCast(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
