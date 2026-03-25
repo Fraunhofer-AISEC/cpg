@@ -548,6 +548,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
         val t = recordExpr.path?.let { frontend.typeOf(it.astNode.text) } ?: unknownType()
 
+        // Todo Look if we can replace this with an initializer list as there is no effective constructor call
         val construction = newConstruction(rawNode = raw)
         construction.type = t
 
@@ -557,7 +558,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         recordExpr.spread.firstOrNull()?.let {
             construction.addArgument(
                 newAssign(
-                    lhs = listOf(newReference("null")),
+                    lhs = listOf(newReference(refName)),
                     rhs = listOf(handle(RsAst.RustExpr(it))),
                     rawNode = RsAst.RustExpr(it),
                 )

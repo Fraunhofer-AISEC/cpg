@@ -73,7 +73,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             variable.initializer = frontend.expressionHandler.handle(RsAst.RustExpr(it))
 
             // Here, if we have the classical pattern for initializers we set the base of the
-            // contained member access
+            // contained member access. This part needs to be made more precise.
             val initializingExpressions =
                 when (variable.initializer) {
                     is Construction -> (variable.initializer as Construction).arguments
@@ -82,8 +82,11 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                 }
             initializingExpressions.forEach {
                 (it as? Assign)?.lhs?.forEach {
-                    (it as? MemberAccess)?.let { memberAccess ->
-                        memberAccess.base = newReference(variable.name)
+                    val targetRef = (it as? MemberAccess)?.base ?: it
+                    (targetRef as? Reference)?.let {
+                        if (it.name.toString() == "null") {
+                            it.name = variable.name
+                        }
                     }
                 }
             }
