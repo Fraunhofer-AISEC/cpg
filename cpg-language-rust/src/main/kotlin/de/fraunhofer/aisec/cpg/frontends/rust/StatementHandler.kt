@@ -70,6 +70,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             )
 
         letStmt.initializer?.let {
+            // Todo If this is a tuple struct, rust analyzer will actually make a call out of it
             variable.initializer = frontend.expressionHandler.handle(RsAst.RustExpr(it))
 
             // Here, if we have the classical pattern for initializers we set the base of the

@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
+import kotlin.reflect.typeOf
 import uniffi.cpgrust.RsArrayExpr
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsBinExpr
@@ -54,6 +55,7 @@ import uniffi.cpgrust.RsPrefixExpr
 import uniffi.cpgrust.RsRangeExpr
 import uniffi.cpgrust.RsRecordExpr
 import uniffi.cpgrust.RsRefExpr
+import uniffi.cpgrust.RsTupleExpr
 import uniffi.cpgrust.RsWhileExpr
 
 class ExpressionHandler(frontend: RustLanguageFrontend) :
@@ -89,6 +91,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.IndexExpr -> handleIndexExpr(node.v1)
             is RsExpr.RefExpr -> handleRefExpr(node.v1)
             is RsExpr.ArrayExpr -> handleArrayExpr(node.v1)
+            is RsExpr.TupleExpr -> handleTupleExpr(node.v1)
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -548,7 +551,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
         val t = recordExpr.path?.let { frontend.typeOf(it.astNode.text) } ?: unknownType()
 
-        // Todo Look if we can replace this with an initializer list as there is no effective constructor call
+        // Todo Look if we can replace this with an initializer list as there is no effective
+        // constructor call
         val construction = newConstruction(rawNode = raw)
         construction.type = t
 
@@ -589,5 +593,17 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
 
         return construction
+    }
+
+    fun handleTupleExpr(tupleExpr: RsTupleExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.TupleExpr(tupleExpr))
+
+        val tupleConstruction = newInitializerList(rawNode = raw)
+
+        tupleExpr.exprs.forEach { expr ->
+            tupleConstruction.initializers += handle(RsAst.RustExpr(expr))
+        }
+
+        return tupleConstruction
     }
 }

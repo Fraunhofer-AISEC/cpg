@@ -955,9 +955,14 @@ impl From<TryExpr> for RSTryExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSTupleExpr {pub(crate) ast_node: RSNode}
+pub struct RSTupleExpr {pub(crate) ast_node: RSNode, exprs: Vec<RSExpr>}
 impl From<TupleExpr> for RSTupleExpr {
-    fn from(node:  TupleExpr) -> Self {RSTupleExpr{ast_node: node.syntax().into()}}
+    fn from(node:  TupleExpr) -> Self {
+        RSTupleExpr{
+            ast_node: node.syntax().into(),
+            exprs: node.fields().map(Into::into).into_iter().collect()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
