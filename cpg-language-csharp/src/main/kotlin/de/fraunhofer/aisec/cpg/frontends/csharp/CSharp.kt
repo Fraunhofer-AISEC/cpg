@@ -166,6 +166,11 @@ interface Csharp : Library {
             val body: BlockSyntax by lazy { INSTANCE.GetBaseMethodDeclarationBody(this) }
         }
 
+        /**
+         * Represents the Roslyn
+         * [`BlockSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.blocksyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
         class BlockSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
             val statements: List<StatementSyntax> by lazy {
                 val count = INSTANCE.GetBlockStatementCount(this)
@@ -173,6 +178,11 @@ interface Csharp : Library {
             }
         }
 
+        /**
+         * Represents the Roslyn
+         * [`StatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.statementsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
         open class StatementSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
             override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any {
                 if (nativeValue !is Pointer) {
@@ -187,14 +197,37 @@ interface Csharp : Library {
             }
         }
 
+        /**
+         * Represents the Roslyn
+         * [`ReturnStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.returnstatementsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
         class ReturnStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
             val expression: ExpressionSyntax? by lazy {
                 INSTANCE.GetReturnStatementExpression(this)
             }
         }
 
+        /**
+         * Represents the Roslyn
+         * [`IfStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.ifstatementsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
         class IfStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
             val condition: ExpressionSyntax by lazy { INSTANCE.GetIfStatementSyntaxCondition(this) }
+            /** The statement that is executed when the condition is true. */
+            val statement: StatementSyntax by lazy { INSTANCE.GetIfStatementSyntaxStatement(this) }
+            val elseClause: ElseClauseSyntax? by lazy { INSTANCE.GetElseClauseSyntax(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ElseClauseSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.elseclausesyntax?view=roslyn-dotnet-5.0.0)
+         * class. Note: not a [StatementSyntax] because it cannot appear on its own. It's always
+         * attached to an [IfStatementSyntax].
+         */
+        class ElseClauseSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val statement: StatementSyntax by lazy { INSTANCE.GetElseClauseSyntaxStatement(this) }
         }
 
         /**
@@ -243,13 +276,31 @@ interface Csharp : Library {
             val type: TypeSyntax by lazy { INSTANCE.GetParameterType(this) }
         }
 
+        /**
+         * Represents the Roslyn
+         * [`ExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.expressionsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
         open class ExpressionSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
             override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any? {
                 if (nativeValue !is Pointer) {
                     return super.fromNative(nativeValue, context)
                 }
                 return when (INSTANCE.GetType(nativeValue)) {
-                    "LiteralExpressionSyntax" -> LiteralExpressionSyntax(nativeValue)
+                    // All literals share the same Roslyn type (LiteralExpressionSyntax),
+                    // so we need to use 'GetKind' to get the underlying type.
+                    "LiteralExpressionSyntax" ->
+                        when (INSTANCE.GetKind(nativeValue)) {
+                            "NumericLiteralExpression" ->
+                                NumericLiteralExpressionSyntax(nativeValue)
+                            "StringLiteralExpression" -> StringLiteralExpressionSyntax(nativeValue)
+                            "TrueLiteralExpression",
+                            "FalseLiteralExpression" -> BooleanLiteralExpressionSyntax(nativeValue)
+                            "CharacterLiteralExpression" ->
+                                CharacterLiteralExpressionSyntax(nativeValue)
+                            "NullLiteralExpression" -> NullLiteralExpressionSyntax(nativeValue)
+                            else -> LiteralExpressionSyntax(nativeValue)
+                        }
                     "BinaryExpressionSyntax" -> BinaryExpressionSyntax(nativeValue)
                     "IdentifierNameSyntax" -> IdentifierNameSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
@@ -257,17 +308,45 @@ interface Csharp : Library {
             }
         }
 
-        class LiteralExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+        /**
+         * Represents the Roslyn
+         * [`LiteralExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.literalexpressionsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
+        open class LiteralExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
             val value: String by lazy { INSTANCE.GetLiteralExpressionValue(this) }
-            val kind: String by lazy { INSTANCE.GetLiteralExpressionKind(this) }
         }
 
+        class NumericLiteralExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            LiteralExpressionSyntax(p)
+
+        class StringLiteralExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            LiteralExpressionSyntax(p)
+
+        class BooleanLiteralExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            LiteralExpressionSyntax(p)
+
+        class CharacterLiteralExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            LiteralExpressionSyntax(p)
+
+        class NullLiteralExpressionSyntax(p: Pointer? = Pointer.NULL) : LiteralExpressionSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`BinaryExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.binaryexpressionsyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
         class BinaryExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
             val left: ExpressionSyntax by lazy { INSTANCE.GetBinaryExpressionLeft(this) }
             val operatorToken: String by lazy { INSTANCE.GetBinaryExpressionOperator(this) }
             val right: ExpressionSyntax by lazy { INSTANCE.GetBinaryExpressionRight(this) }
         }
 
+        /**
+         * Represents the Roslyn
+         * [`IdentifierNameSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.identifiernamesyntax?view=roslyn-dotnet-5.0.0)
+         * class.
+         */
         class IdentifierNameSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
             val identifier: String by lazy { INSTANCE.GetIdentifierNameSyntaxIdentifier(this) }
         }
@@ -356,8 +435,6 @@ interface Csharp : Library {
 
     fun GetLiteralExpressionValue(handle: AST.LiteralExpressionSyntax): String
 
-    fun GetLiteralExpressionKind(handle: AST.LiteralExpressionSyntax): String
-
     fun GetReturnStatementExpression(handle: AST.StatementSyntax): AST.ExpressionSyntax?
 
     fun GetIfStatementSyntaxCondition(handle: AST.StatementSyntax): AST.ExpressionSyntax
@@ -379,6 +456,12 @@ interface Csharp : Library {
     fun GetNodeEndColumn(handle: AST.Node): Int
 
     fun GetIdentifierNameSyntaxIdentifier(handle: AST.IdentifierNameSyntax): String
+
+    fun GetIfStatementSyntaxStatement(handle: AST.IfStatementSyntax): AST.StatementSyntax
+
+    fun GetElseClauseSyntax(handle: AST.IfStatementSyntax): AST.ElseClauseSyntax?
+
+    fun GetElseClauseSyntaxStatement(handle: AST.ElseClauseSyntax): AST.StatementSyntax
 
     companion object {
         val INSTANCE: Csharp by lazy {

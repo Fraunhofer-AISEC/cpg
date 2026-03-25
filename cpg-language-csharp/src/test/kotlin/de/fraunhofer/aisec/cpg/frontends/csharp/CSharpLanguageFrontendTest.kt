@@ -27,8 +27,11 @@ package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -266,5 +269,56 @@ class CSharpLanguageFrontendTest : BaseTest() {
 
         val bar = tu.records["Bar"]
         assertNotNull(bar)
+
+        // if without else
+        val doIf = bar.methods["doIf"]
+        assertNotNull(doIf)
+        val doIfBody = doIf.body
+        assertIs<Block>(doIfBody)
+
+        val ifStmt = doIfBody.statements[0]
+        assertIs<IfElse>(ifStmt)
+
+        val condition = ifStmt.condition
+        assertIs<BinaryOperator>(condition)
+        assertEquals("<", condition.operatorCode)
+        assertIs<Reference>(condition.lhs)
+        assertEquals("a", condition.lhs.name.localName)
+        assertIs<Literal<*>>(condition.rhs)
+        assertEquals(10, (condition.rhs as Literal<*>).value)
+
+        val thenBlock = ifStmt.thenStatement
+        assertIs<Block>(thenBlock)
+        assertIs<Return>(thenBlock.statements.firstOrNull())
+
+        assertNull(ifStmt.elseStatement)
+
+        // if-else
+        val doIfElse = bar.methods["doIfElse"]
+        assertNotNull(doIfElse)
+        val doIfElseBody = doIfElse.body
+        assertIs<Block>(doIfElseBody)
+
+        val ifElseStmt = doIfElseBody.statements.firstOrNull()
+        assertIs<IfElse>(ifElseStmt)
+        assertNotNull(ifElseStmt.thenStatement)
+        assertNotNull(ifElseStmt.elseStatement)
+        assertIs<Block>(ifElseStmt.elseStatement)
+
+        // if-else if-else
+        val doIfElseIf = bar.methods["doIfElseIf"]
+        assertNotNull(doIfElseIf)
+        val doIfElseIfBody = doIfElseIf.body
+        assertIs<Block>(doIfElseIfBody)
+
+        val outerIf = doIfElseIfBody.statements.firstOrNull()
+        assertIs<IfElse>(outerIf)
+        assertNotNull(outerIf.thenStatement)
+
+        // else if is modeled as a nested IfElse in the elseStatement
+        val innerIf = outerIf.elseStatement
+        assertIs<IfElse>(innerIf)
+        assertNotNull(innerIf.thenStatement)
+        assertNotNull(innerIf.elseStatement)
     }
 }

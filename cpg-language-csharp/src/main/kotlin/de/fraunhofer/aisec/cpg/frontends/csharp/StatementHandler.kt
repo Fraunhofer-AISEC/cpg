@@ -48,9 +48,16 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
         }
     }
 
+    /**
+     * Translates a C#
+     * [`IfStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.ifstatementsyntax?view=roslyn-dotnet-5.0.0)
+     * into an [IfElse].
+     */
     private fun handleIf(node: Csharp.AST.IfStatementSyntax): IfElse {
         return newIfElse(rawNode = node).apply {
             this.condition = frontend.expressionHandler.handle(node.condition)
+            this.thenStatement = handle(node.statement)
+            node.elseClause?.let { this.elseStatement = handle(it.statement) }
         }
     }
 

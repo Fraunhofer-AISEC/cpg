@@ -51,32 +51,51 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
         }
     }
 
+    /**
+     * Translates a C#
+     * [`IdentifierNameSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.identifiernamesyntax?view=roslyn-dotnet-5.0.0)
+     * into a [Reference].
+     */
     private fun handleIdentifierName(node: Csharp.AST.IdentifierNameSyntax): Reference {
         return newReference(name = node.identifier, rawNode = node)
     }
 
+    /**
+     * Translates a C#
+     * [`BinaryExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.binaryexpressionsyntax?view=roslyn-dotnet-5.0.0)
+     * into a [BinaryOperator].
+     */
     private fun handleBinaryExpression(node: Csharp.AST.BinaryExpressionSyntax): BinaryOperator {
-        val binOp = newBinaryOperator(operatorCode = node.operatorToken, rawNode = node)
-        binOp.lhs = handle(node.left)
-        binOp.rhs = handle(node.right)
-        return binOp
+        return newBinaryOperator(operatorCode = node.operatorToken, rawNode = node).apply {
+            this.lhs = handle(node.left)
+            this.rhs = handle(node.right)
+        }
     }
 
     /**
      * Translates a C#
      * [`LiteralExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.literalexpressionsyntax?view=roslyn-dotnet-5.0.0)
-     * into a [Literal].
+     * into a [Literal]. The concrete literal subclass is determined by the Roslyn SyntaxKind.
+     *
+     * Note: [Csharp.AST.NumericLiteralExpressionSyntax] does not distinguish between numeric types
+     * (e.g. int vs long). Instead, the .NET runtime type of `Token.Value` (e.g. `System.Int32` vs
+     * `System.Int64`) can be used, but this requires an additional mapping from .NET types to C#
+     * keywords.
      */
     private fun handleLiteralExpression(node: Csharp.AST.LiteralExpressionSyntax): Expression {
         val builtInTypes = frontend.language.builtInTypes
-        return when (node.kind) {
-            "int" -> newLiteral(node.value.toInt(), builtInTypes.getValue("int"), rawNode = node)
-            "string" -> newLiteral(node.value, builtInTypes.getValue("string"), rawNode = node)
-            "bool" ->
+        return when (node) {
+            is Csharp.AST.NumericLiteralExpressionSyntax ->
+                newLiteral(node.value.toInt(), builtInTypes.getValue("int"), rawNode = node)
+            is Csharp.AST.StringLiteralExpressionSyntax ->
+                newLiteral(node.value, builtInTypes.getValue("string"), rawNode = node)
+            is Csharp.AST.BooleanLiteralExpressionSyntax ->
                 newLiteral(node.value.toBoolean(), builtInTypes.getValue("bool"), rawNode = node)
-            "char" -> newLiteral(node.value.single(), builtInTypes.getValue("char"), rawNode = node)
-            "null" -> newLiteral(null, objectType("null"), rawNode = node)
-            else -> newProblemExpression("Unknown literal kind: ${node.kind}", rawNode = node)
+            is Csharp.AST.CharacterLiteralExpressionSyntax ->
+                newLiteral(node.value.single(), builtInTypes.getValue("char"), rawNode = node)
+            is Csharp.AST.NullLiteralExpressionSyntax ->
+                newLiteral(null, objectType("null"), rawNode = node)
+            else -> newProblemExpression("Unknown literal type: ${node.csharpType}", rawNode = node)
         }
     }
 }
