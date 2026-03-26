@@ -52,18 +52,21 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
-     * Translates a C#
-     * [`IdentifierNameSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.identifiernamesyntax?view=roslyn-dotnet-5.0.0)
-     * into a [Reference].
+     * Translates an [IdentifierNameSyntax][Csharp.AST.IdentifierNameSyntax] into a [Reference].
+     *
+     * C# spec:
+     * [SimpleNames](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12842-simple-names)
      */
     private fun handleIdentifierName(node: Csharp.AST.IdentifierNameSyntax): Reference {
         return newReference(name = node.identifier, rawNode = node)
     }
 
     /**
-     * Translates a C#
-     * [`BinaryExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.binaryexpressionsyntax?view=roslyn-dotnet-5.0.0)
-     * into a [BinaryOperator].
+     * Translates a [BinaryExpressionSyntax][Csharp.AST.BinaryExpressionSyntax] into a
+     * [BinaryOperator].
+     *
+     * C# spec:
+     * [BinaryOperator](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12104-binary-operators)
      */
     private fun handleBinaryExpression(node: Csharp.AST.BinaryExpressionSyntax): BinaryOperator {
         return newBinaryOperator(operatorCode = node.operatorToken, rawNode = node).apply {
@@ -73,14 +76,16 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
-     * Translates a C#
-     * [`LiteralExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.literalexpressionsyntax?view=roslyn-dotnet-5.0.0)
-     * into a [Literal]. The concrete literal subclass is determined by the Roslyn SyntaxKind.
+     * Translates a [LiteralExpressionSyntax][Csharp.AST.LiteralExpressionSyntax] into a [Literal].
+     * The concrete literal subclass is determined by the Roslyn SyntaxKind.
      *
-     * Note: [Csharp.AST.NumericLiteralExpressionSyntax] does not distinguish between numeric types
-     * (e.g. int vs long). Instead, the .NET runtime type of `Token.Value` (e.g. `System.Int32` vs
-     * `System.Int64`) can be used, but this requires an additional mapping from .NET types to C#
-     * keywords.
+     * Note: [NumericLiteralExpressionSyntax][Csharp.AST.NumericLiteralExpressionSyntax] does not
+     * distinguish between numeric types (e.g. int vs long). Instead, the .NET runtime type of
+     * `Token.Value` (e.g. `System.Int32` vs `System.Int64`) can be used, but this requires an
+     * additional mapping from .NET types to C# keywords.
+     *
+     * C# spec:
+     * [Literals](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/lexical-structure#645-literals)
      */
     private fun handleLiteralExpression(node: Csharp.AST.LiteralExpressionSyntax): Expression {
         val builtInTypes = frontend.language.builtInTypes

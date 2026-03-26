@@ -50,7 +50,7 @@ interface Csharp : Library {
     interface AST {
         /**
          * Base class for all C# syntax nodes. Represents Roslyn's
-         * [`CSharpSyntaxNode`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.csharpsyntaxnode?view=roslyn-dotnet-5.0.0)
+         * [`CSharpSyntaxNode`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.csharpsyntaxnode)
          */
         open class Node(p: Pointer? = Pointer.NULL) : CsharpObject(p) {
             val startLine: Int by lazy { INSTANCE.GetNodeStartLine(this) }
@@ -61,7 +61,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`TypeSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.typesyntax?view=roslyn-dotnet-5.0.0)
+         * [`TypeSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.typesyntax)
          * class.
          */
         class TypeSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
@@ -70,7 +70,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`CompilationUnitSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.compilationunitsyntax?view=roslyn-dotnet-5.0.0)
+         * [`CompilationUnitSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.compilationunitsyntax)
          * class.
          */
         class CompilationUnitSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
@@ -82,7 +82,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [MemberDeclarationSyntax](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.memberdeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * [MemberDeclarationSyntax](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.memberdeclarationsyntax)
          * class.
          */
         open class MemberDeclarationSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
@@ -111,7 +111,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`NamespaceDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.namespacedeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * [`NamespaceDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.namespacedeclarationsyntax)
          * class.
          */
         class NamespaceDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
@@ -124,7 +124,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`ClassDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.classdeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * [`ClassDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.classdeclarationsyntax)
          * class.
          */
         class ClassDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
@@ -137,7 +137,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`BaseMethodDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.basemethoddeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * [`BaseMethodDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.basemethoddeclarationsyntax)
          * class.
          */
         open class BaseMethodDeclarationSyntax(p: Pointer? = Pointer.NULL) :
@@ -154,7 +154,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`MethodDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.methoddeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * [`MethodDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.methoddeclarationsyntax)
          * class.
          */
         class MethodDeclarationSyntax(p: Pointer? = Pointer.NULL) : BaseMethodDeclarationSyntax(p) {
@@ -168,7 +168,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`BlockSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.blocksyntax?view=roslyn-dotnet-5.0.0)
+         * [`BlockSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.blocksyntax)
          * class.
          */
         class BlockSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
@@ -180,7 +180,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`StatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.statementsyntax?view=roslyn-dotnet-5.0.0)
+         * [`StatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.statementsyntax)
          * class.
          */
         open class StatementSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
@@ -192,6 +192,8 @@ interface Csharp : Library {
                     "ReturnStatementSyntax" -> ReturnStatementSyntax(nativeValue)
                     "BlockSyntax" -> BlockSyntax(nativeValue)
                     "IfStatementSyntax" -> IfStatementSyntax(nativeValue)
+                    "LocalDeclarationStatementSyntax" ->
+                        LocalDeclarationStatementSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -199,7 +201,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`ReturnStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.returnstatementsyntax?view=roslyn-dotnet-5.0.0)
+         * [`ReturnStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.returnstatementsyntax)
          * class.
          */
         class ReturnStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
@@ -210,7 +212,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`IfStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.ifstatementsyntax?view=roslyn-dotnet-5.0.0)
+         * [`IfStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.ifstatementsyntax)
          * class.
          */
         class IfStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
@@ -222,7 +224,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`ElseClauseSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.elseclausesyntax?view=roslyn-dotnet-5.0.0)
+         * [`ElseClauseSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.elseclausesyntax)
          * class. Note: not a [StatementSyntax] because it cannot appear on its own. It's always
          * attached to an [IfStatementSyntax].
          */
@@ -232,7 +234,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`ConstructorDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.constructordeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * [`ConstructorDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.constructordeclarationsyntax)
          * class.
          */
         class ConstructorDeclarationSyntax(p: Pointer? = Pointer.NULL) :
@@ -247,7 +249,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`FieldDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.fielddeclarationsyntax?view=roslyn-dotnet-5.0.0)
+         * [`FieldDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.fielddeclarationsyntax)
          * class.
          */
         class FieldDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
@@ -259,16 +261,43 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`VariableDeclaratorSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.variabledeclaratorsyntax?view=roslyn-dotnet-5.0.0)
+         * [`LocalDeclarationStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.localdeclarationstatementsyntax)
          * class.
          */
-        class VariableDeclaratorSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
-            val identifier: String by lazy { INSTANCE.GetVariableDeclaratorIdentifier(this) }
+        class LocalDeclarationStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            val declaration: VariableDeclarationSyntax by lazy {
+                INSTANCE.GetVariableDeclarationSyntax(this)
+            }
         }
 
         /**
          * Represents the Roslyn
-         * [`ParameterSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.parametersyntax?view=roslyn-dotnet-5.0.0)
+         * [`VariableDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.variabledeclarationsyntax)
+         * class.
+         */
+        class VariableDeclarationSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val type: TypeSyntax by lazy { INSTANCE.GetVariableDeclarationType(this) }
+            val variables: List<VariableDeclaratorSyntax> by lazy {
+                val count = INSTANCE.GetLocalVariableCount(this)
+                (0 until count).map { i -> INSTANCE.GetLocalVariable(this, i) }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`VariableDeclaratorSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.variabledeclaratorsyntax)
+         * class.
+         */
+        class VariableDeclaratorSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val identifier: String by lazy { INSTANCE.GetVariableDeclaratorIdentifier(this) }
+            val initializer: ExpressionSyntax? by lazy {
+                INSTANCE.GetVariableDeclaratorInitializer(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ParameterSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.parametersyntax)
          * class.
          */
         class ParameterSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
@@ -278,7 +307,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`ExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.expressionsyntax?view=roslyn-dotnet-5.0.0)
+         * [`ExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.expressionsyntax)
          * class.
          */
         open class ExpressionSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
@@ -310,7 +339,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`LiteralExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.literalexpressionsyntax?view=roslyn-dotnet-5.0.0)
+         * [`LiteralExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.literalexpressionsyntax)
          * class.
          */
         open class LiteralExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
@@ -333,7 +362,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`BinaryExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.binaryexpressionsyntax?view=roslyn-dotnet-5.0.0)
+         * [`BinaryExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.binaryexpressionsyntax)
          * class.
          */
         class BinaryExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
@@ -344,7 +373,7 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`IdentifierNameSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.identifiernamesyntax?view=roslyn-dotnet-5.0.0)
+         * [`IdentifierNameSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.identifiernamesyntax)
          * class.
          */
         class IdentifierNameSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
@@ -462,6 +491,23 @@ interface Csharp : Library {
     fun GetElseClauseSyntax(handle: AST.IfStatementSyntax): AST.ElseClauseSyntax?
 
     fun GetElseClauseSyntaxStatement(handle: AST.ElseClauseSyntax): AST.StatementSyntax
+
+    fun GetLocalVariableCount(handle: AST.VariableDeclarationSyntax): Int
+
+    fun GetLocalVariable(
+        handle: AST.VariableDeclarationSyntax,
+        index: Int,
+    ): AST.VariableDeclaratorSyntax
+
+    fun GetVariableDeclarationSyntax(
+        handle: AST.LocalDeclarationStatementSyntax
+    ): AST.VariableDeclarationSyntax
+
+    fun GetVariableDeclarationType(handle: AST.VariableDeclarationSyntax): AST.TypeSyntax
+
+    fun GetVariableDeclaratorInitializer(
+        handle: AST.VariableDeclaratorSyntax
+    ): AST.ExpressionSyntax?
 
     companion object {
         val INSTANCE: Csharp by lazy {

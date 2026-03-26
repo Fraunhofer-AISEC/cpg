@@ -25,14 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.newBlock
+import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.newIfElse
 import de.fraunhofer.aisec.cpg.graph.newReturn
+import de.fraunhofer.aisec.cpg.graph.newVariable
 
 class StatementHandler(frontend: CSharpLanguageFrontend) :
     CSharpHandler<Expression, Csharp.AST.StatementSyntax>(
@@ -44,14 +48,16 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.BlockSyntax -> handleBlock(node)
             is Csharp.AST.ReturnStatementSyntax -> handleReturn(node)
             is Csharp.AST.IfStatementSyntax -> handleIf(node)
+            is Csharp.AST.LocalDeclarationStatementSyntax -> handleLocalDeclaration(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
     }
 
     /**
-     * Translates a C#
-     * [`IfStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.ifstatementsyntax?view=roslyn-dotnet-5.0.0)
-     * into an [IfElse].
+     * Translates an [IfStatementSyntax][Csharp.AST.IfStatementSyntax] into an [IfElse].
+     *
+     * C# spec:
+     * [IfStatement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1382-the-if-statement)
      */
     private fun handleIf(node: Csharp.AST.IfStatementSyntax): IfElse {
         return newIfElse(rawNode = node).apply {
@@ -62,9 +68,11 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
-     * Translates a C#
-     * [`ReturnStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.returnstatementsyntax?view=roslyn-dotnet-5.0.0)
-     * into a [Return]. The return value expression is optional (e.g. `return;` in void methods).
+     * Translates a [ReturnStatementSyntax][Csharp.AST.ReturnStatementSyntax] into a [Return]. The
+     * return value expression is optional (e.g. `return;` in void methods).
+     *
+     * C# spec:
+     * [ReturnStatement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#13105-the-return-statement)
      */
     private fun handleReturn(node: Csharp.AST.ReturnStatementSyntax): Return {
         val ret = newReturn(rawNode = node)
@@ -73,9 +81,36 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
-     * Translates a C#
-     * [`BlockSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.blocksyntax?view=roslyn-dotnet-5.0.0)
-     * into a [Block].
+     * Translates a [LocalDeclarationStatementSyntax][Csharp.AST.LocalDeclarationStatementSyntax]
+     * into a [DeclarationStatement]. Each
+     * [VariableDeclaratorSyntax][Csharp.AST.VariableDeclaratorSyntax] is translated into a
+     * [Variable] and added to the current scope.
+     *
+     * C# spec:
+     * [LocalVariableDeclaration](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1364-local-variable-declarations)
+     */
+    private fun handleLocalDeclaration(
+        node: Csharp.AST.LocalDeclarationStatementSyntax
+    ): DeclarationStatement {
+        val declStmt = newDeclarationStatement(rawNode = node)
+        val declaration = node.declaration
+        val type = frontend.typeOf(declaration.type)
+
+        for (variable in declaration.variables) {
+            val v = newVariable(name = variable.identifier, type = type, rawNode = variable)
+            variable.initializer?.let { v.initializer = frontend.expressionHandler.handle(it) }
+            frontend.scopeManager.addDeclaration(v)
+            declStmt.declarations += v
+        }
+
+        return declStmt
+    }
+
+    /**
+     * Translates a [BlockSyntax][Csharp.AST.BlockSyntax] into a [Block].
+     *
+     * C# spec:
+     * [Block](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#133-blocks)
      */
     private fun handleBlock(node: Csharp.AST.BlockSyntax): Block {
         val block = newBlock(rawNode = node)

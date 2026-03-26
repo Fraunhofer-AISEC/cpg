@@ -311,4 +311,43 @@ public static class Library
     {
         return Marshal.StringToCoTaskMemUTF8(((IdentifierNameSyntax)Nodes[handlePtr]).Identifier.ToString());
     }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetVariableDeclarationSyntax")]
+    public static IntPtr GetVariableDeclarationSyntax(IntPtr handlePtr)
+    {
+        return Register(((LocalDeclarationStatementSyntax)Nodes[handlePtr]).Declaration);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetVariableDeclarationType")]
+    public static IntPtr GetVariableDeclarationType(IntPtr handlePtr)
+    {
+        return Register(((VariableDeclarationSyntax)Nodes[handlePtr]).Type);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetLocalVariableCount")]
+    public static int GetLocalVariableCount(IntPtr handlePtr)
+    {
+        return ((VariableDeclarationSyntax)Nodes[handlePtr]).Variables.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetLocalVariable")]
+    public static IntPtr GetLocalVariable(IntPtr handlePtr, int index)
+    {
+        return Register(((VariableDeclarationSyntax)Nodes[handlePtr]).Variables[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetVariableDeclaratorInitializer")]
+    public static IntPtr GetVariableDeclaratorInitializer(IntPtr handlePtr)
+    {
+        var initializer = ((VariableDeclaratorSyntax)Nodes[handlePtr]).Initializer;
+        if (initializer != null)
+        {
+            return Register(initializer.Value);
+        }
+        else
+        {
+            return IntPtr.Zero;
+        }
+    }
+
 }
