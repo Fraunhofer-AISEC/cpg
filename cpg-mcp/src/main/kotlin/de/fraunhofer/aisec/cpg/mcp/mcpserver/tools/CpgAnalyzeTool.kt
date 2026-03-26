@@ -472,7 +472,8 @@ data class PassExecutionResult(val success: Boolean, val message: String)
  * provided [TranslationContext] [ctx]. As a [Pass] has to work on one or multiple nodes, one can
  * provide the list of nodes where the pass should start using the [preList]. If [preList] is not
  * provided, it collects nodes of type [T] starting from the given [node] (either the node itself,
- * its first parent of type [T], or all children of type [T]).
+ * its first parent of type [T], or all children of type [T]). We pass [nodeToPass] to allow
+ * extending the server.
  */
 inline fun <reified T : Node> runPassForNode(
     nodeToPass: IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>,
