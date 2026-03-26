@@ -99,15 +99,16 @@ class TranslationProgressCallbackTest {
                 override fun afterFrontends(
                     ctx: TranslationContext,
                     result: TranslationResult,
-                    executedFrontends: Set<de.fraunhofer.aisec.cpg.frontends.LanguageFrontend<*, *>>,
+                    executedFrontends: Set<LanguageFrontend<*, *>>,
                 ) {
                     events += "frontends"
                 }
 
                 override fun afterPass(
-                    pass: kotlin.reflect.KClass<out de.fraunhofer.aisec.cpg.passes.Pass<out Node>>,
+                    pass: KClass<out Pass<out Node>>,
                     ctx: TranslationContext,
                     result: TranslationResult,
+                    nodes: Collection<Node>,
                 ) {
                     events += "pass:${pass.simpleName}"
                 }
@@ -161,6 +162,7 @@ class TranslationProgressCallbackTest {
                     pass: KClass<out Pass<out Node>>,
                     ctx: TranslationContext,
                     result: TranslationResult,
+                    nodes: Collection<Node>,
                 ) {
                     error("pass callback failed")
                 }
