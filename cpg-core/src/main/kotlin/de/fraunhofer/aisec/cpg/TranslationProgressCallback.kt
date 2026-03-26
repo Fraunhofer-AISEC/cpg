@@ -48,5 +48,6 @@ interface TranslationProgressCallback {
         pass: KClass<out Pass<out Node>>,
         ctx: TranslationContext,
         result: TranslationResult,
+        nodes: Collection<Node>,
     ) {}
 }
