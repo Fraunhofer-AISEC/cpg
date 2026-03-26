@@ -60,7 +60,13 @@ class RunPassForNodeUnitTest {
         assertNotNull(functionDecl)
 
         // Use a concrete TU-related pass on the child
-        val result = runPassForNode(functionDecl, ResolveMemberAmbiguityPass::class, ctx)
+        val result =
+            runPassForNode(
+                globalAnalysisResult,
+                functionDecl,
+                ResolveMemberAmbiguityPass::class,
+                ctx,
+            )
         // No error expected
         assertTrue(result.success)
     }
@@ -79,7 +85,13 @@ class RunPassForNodeUnitTest {
         assertNotNull(ctx)
 
         // Use a concrete TU-related pass on the parent
-        val result = runPassForNode(globalAnalysisResult, ResolveMemberAmbiguityPass::class, ctx)
+        val result =
+            runPassForNode(
+                globalAnalysisResult,
+                globalAnalysisResult,
+                ResolveMemberAmbiguityPass::class,
+                ctx,
+            )
         // No error expected
         assertTrue(result.success)
     }
@@ -98,7 +110,13 @@ class RunPassForNodeUnitTest {
         assertNotNull(ctx)
 
         // Use a concrete TU-related pass on the parent
-        val result = runPassForNode(globalAnalysisResult, ResolveMemberAmbiguityPass::class, ctx)
+        val result =
+            runPassForNode(
+                globalAnalysisResult,
+                globalAnalysisResult,
+                ResolveMemberAmbiguityPass::class,
+                ctx,
+            )
         // No error expected
         assertTrue(result.success)
     }
@@ -120,7 +138,7 @@ class RunPassForNodeUnitTest {
         // TranslationUnitPass is abstract; primary constructor call should fail with
         // IllegalArgumentException
         assertFailsWith<IllegalArgumentException> {
-            runPassForNode(someNode, TranslationUnitPass::class, ctx)
+            runPassForNode(globalAnalysisResult, someNode, TranslationUnitPass::class, ctx)
         }
     }
 }
