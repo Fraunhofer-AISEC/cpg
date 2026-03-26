@@ -475,7 +475,7 @@ data class PassExecutionResult(val success: Boolean, val message: String)
  * its first parent of type [T], or all children of type [T]). We pass [nodeToPass] to allow
  * extending the server.
  */
-inline fun <reified T : Node> runPassForNode(
+inline fun <reified T : Node> runPassForNodeInternal(
     nodeToPass: IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>,
     result: TranslationResult,
     node: Node,
@@ -550,13 +550,19 @@ fun runPassForNode(
 
     return when (prototype) {
         is TranslationResultPass -> {
-            runPassForNode<TranslationResult>(nodeToPass, result, node, prototype::class, ctx)
+            runPassForNodeInternal<TranslationResult>(
+                nodeToPass,
+                result,
+                node,
+                prototype::class,
+                ctx,
+            )
         }
         is ComponentPass -> {
-            runPassForNode<Component>(nodeToPass, result, node, prototype::class, ctx)
+            runPassForNodeInternal<Component>(nodeToPass, result, node, prototype::class, ctx)
         }
         is TranslationUnitPass -> {
-            runPassForNode<TranslationUnit>(nodeToPass, result, node, prototype::class, ctx)
+            runPassForNodeInternal<TranslationUnit>(nodeToPass, result, node, prototype::class, ctx)
         }
         is EOGStarterPass -> {
             val eogStarters = listOfNotNull((node as? EOGStarterHolder) as? Node).toMutableList()
@@ -569,7 +575,7 @@ fun runPassForNode(
                             it is EOGStarterHolder && it.prevEOG.isEmpty()
                         }
                 )
-            runPassForNode<Node>(
+            runPassForNodeInternal<Node>(
                 nodeToPass,
                 result,
                 node,
