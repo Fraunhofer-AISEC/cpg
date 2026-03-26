@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runPassForNode
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.passes.ResolveMemberAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
@@ -42,6 +43,36 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class RunPassForNodeUnitTest {
+
+    @Test
+    fun runEOGPass() {
+        // Build a small CPG without passes
+        runCpgAnalyze(
+            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+            runPasses = false,
+            cleanup = true,
+        )
+        val globalAnalysisResult = globalAnalysisResult
+        val ctx = ctx
+        assertNotNull(globalAnalysisResult)
+        assertNotNull(ctx)
+
+        // Pick any node (i.e., the function declaration "hello")
+        val functionDecl = globalAnalysisResult.functions["hello"]
+        assertNotNull(functionDecl)
+
+        // Use a concrete TU-related pass on the child
+        val result =
+            runPassForNode(
+                nodeToPass,
+                globalAnalysisResult,
+                functionDecl,
+                SymbolResolver::class,
+                ctx,
+            )
+        // No error expected
+        assertTrue(result.success)
+    }
 
     @Test
     fun runsPassOnNearestParent() {
