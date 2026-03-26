@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.ctx
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.nodeToPass
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runPassForNode
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
@@ -62,6 +63,7 @@ class RunPassForNodeUnitTest {
         // Use a concrete TU-related pass on the child
         val result =
             runPassForNode(
+                nodeToPass,
                 globalAnalysisResult,
                 functionDecl,
                 ResolveMemberAmbiguityPass::class,
@@ -87,6 +89,7 @@ class RunPassForNodeUnitTest {
         // Use a concrete TU-related pass on the parent
         val result =
             runPassForNode(
+                nodeToPass,
                 globalAnalysisResult,
                 globalAnalysisResult,
                 ResolveMemberAmbiguityPass::class,
@@ -112,6 +115,7 @@ class RunPassForNodeUnitTest {
         // Use a concrete TU-related pass on the parent
         val result =
             runPassForNode(
+                nodeToPass,
                 globalAnalysisResult,
                 globalAnalysisResult,
                 ResolveMemberAmbiguityPass::class,
@@ -138,7 +142,13 @@ class RunPassForNodeUnitTest {
         // TranslationUnitPass is abstract; primary constructor call should fail with
         // IllegalArgumentException
         assertFailsWith<IllegalArgumentException> {
-            runPassForNode(globalAnalysisResult, someNode, TranslationUnitPass::class, ctx)
+            runPassForNode(
+                nodeToPass,
+                globalAnalysisResult,
+                someNode,
+                TranslationUnitPass::class,
+                ctx,
+            )
         }
     }
 }

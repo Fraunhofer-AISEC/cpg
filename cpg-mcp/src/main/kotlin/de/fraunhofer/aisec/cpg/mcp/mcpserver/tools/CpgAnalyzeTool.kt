@@ -428,7 +428,8 @@ fun Server.addRunPass() {
                 if (passToExecute !in nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
                     // Execute the pass for the node
                     ctx?.let { ctx ->
-                        val passResult = runPassForNode(result, node, passToExecute, ctx)
+                        val passResult =
+                            runPassForNode(nodeToPass, result, node, passToExecute, ctx)
                         if (passResult.success) {
                             executedPasses.add(TextContent(passResult.message))
                         } else {
@@ -474,6 +475,7 @@ data class PassExecutionResult(val success: Boolean, val message: String)
  * its first parent of type [T], or all children of type [T]).
  */
 inline fun <reified T : Node> runPassForNode(
+    nodeToPass: IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>,
     result: TranslationResult,
     node: Node,
     passClass: KClass<out Pass<T>>,
@@ -532,6 +534,7 @@ inline fun <reified T : Node> runPassForNode(
  * Returns a [CallToolResult] if there was an error during execution, otherwise returns null.
  */
 fun runPassForNode(
+    nodeToPass: IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>,
     result: TranslationResult,
     node: Node,
     passClass: KClass<out Pass<*>>,
@@ -546,13 +549,13 @@ fun runPassForNode(
 
     return when (prototype) {
         is TranslationResultPass -> {
-            runPassForNode<TranslationResult>(result, node, prototype::class, ctx)
+            runPassForNode<TranslationResult>(nodeToPass, result, node, prototype::class, ctx)
         }
         is ComponentPass -> {
-            runPassForNode<Component>(result, node, prototype::class, ctx)
+            runPassForNode<Component>(nodeToPass, result, node, prototype::class, ctx)
         }
         is TranslationUnitPass -> {
-            runPassForNode<TranslationUnit>(result, node, prototype::class, ctx)
+            runPassForNode<TranslationUnit>(nodeToPass, result, node, prototype::class, ctx)
         }
         is EOGStarterPass -> {
             val eogStarters = listOfNotNull((node as? EOGStarterHolder) as? Node).toMutableList()
@@ -565,7 +568,14 @@ fun runPassForNode(
                             it is EOGStarterHolder && it.prevEOG.isEmpty()
                         }
                 )
-            runPassForNode<Node>(result, node, prototype::class, ctx, preList = eogStarters)
+            runPassForNode<Node>(
+                nodeToPass,
+                result,
+                node,
+                prototype::class,
+                ctx,
+                preList = eogStarters,
+            )
         }
     }
 }
