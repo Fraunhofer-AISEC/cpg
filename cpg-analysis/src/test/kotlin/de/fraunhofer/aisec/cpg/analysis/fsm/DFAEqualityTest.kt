@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
-import de.fraunhofer.aisec.cpg.graph.statements.Empty
+import de.fraunhofer.aisec.cpg.graph.expressions.Empty
 import kotlin.test.*
 
 /**

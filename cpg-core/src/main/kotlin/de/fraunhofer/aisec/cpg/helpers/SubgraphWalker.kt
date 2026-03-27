@@ -35,7 +35,12 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.fieldCache
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass

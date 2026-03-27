@@ -38,9 +38,9 @@ import de.fraunhofer.aisec.cpg.graph.builder.problemDecl
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.problems
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import kotlin.test.Test

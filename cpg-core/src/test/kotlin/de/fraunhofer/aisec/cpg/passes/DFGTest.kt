@@ -27,8 +27,15 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.statements.Return
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Conditional
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.test.*
 import de.fraunhofer.aisec.cpg.test.GraphExamples
@@ -501,5 +508,103 @@ class DFGTest {
         assertEquals(1, variable.prevDFG.size)
         val initializer = variable.prevDFG.first()
         assertEquals(1, initializer.prevDFG.size)
+    }
+
+    @Test
+    fun testDFGForEachAsExpression() {
+        val result = GraphExamples.getStatementsAsExpressions()
+        val forEach = result.forEachLoops.firstOrNull()
+        assertNotNull(forEach)
+        val body = forEach.statement
+        assertNotNull(body)
+        assertContains(forEach.prevDFG, body)
+        val elseE = forEach.elseStatement
+        assertNotNull(elseE)
+        assertContains(forEach.prevDFG, elseE)
+    }
+
+    @Test
+    fun testDFGForAsExpression() {
+        val result = GraphExamples.getStatementsAsExpressions()
+        val forL = result.forLoops.firstOrNull()
+        assertNotNull(forL)
+        val body = forL.statement
+        assertNotNull(body)
+        assertContains(forL.prevDFG, body)
+        val elseE = forL.elseStatement
+        assertNotNull(elseE)
+        assertContains(forL.prevDFG, elseE)
+    }
+
+    @Test
+    fun testDFGDOAsExpression() {
+        val result = GraphExamples.getStatementsAsExpressions()
+        val loop = result.doLoops.firstOrNull()
+        assertNotNull(loop)
+        val body = loop.statement
+        assertNotNull(body)
+        assertContains(loop.prevDFG, body)
+        val elseE = loop.elseStatement
+        assertNotNull(elseE)
+        assertContains(loop.prevDFG, elseE)
+    }
+
+    @Test
+    fun testDFGWhileAsExpression() {
+        val result = GraphExamples.getStatementsAsExpressions()
+        val loop = result.whileLoops.firstOrNull()
+        assertNotNull(loop)
+        val body = loop.statement
+        assertNotNull(body)
+        assertContains(loop.prevDFG, body)
+        val elseE = loop.elseStatement
+        assertNotNull(elseE)
+        assertContains(loop.prevDFG, elseE)
+    }
+
+    @Test
+    fun testDFGIfElseAsExpression() {
+        val result = GraphExamples.getStatementsAsExpressions()
+        val ifElse = result.ifs.firstOrNull()
+        assertNotNull(ifElse)
+        val body = ifElse.thenStatement
+        assertNotNull(body)
+        assertContains(ifElse.prevDFG, body)
+        val elseE = ifElse.elseStatement
+        assertNotNull(elseE)
+        assertContains(ifElse.prevDFG, elseE)
+    }
+
+    @Test
+    fun testDFGLabelAsExpression() {
+        val result = GraphExamples.getStatementsAsExpressions()
+        val label = result.labels.firstOrNull()
+        assertNotNull(label)
+        val body = label.subStatement
+        assertNotNull(body)
+        assertContains(label.prevDFG, body)
+    }
+
+    @Test
+    fun testDFGSwitchAsExpression() {
+        val result = GraphExamples.getStatementsAsExpressions()
+        val switch = result.switches.firstOrNull()
+        assertNotNull(switch)
+        val body = switch.statement
+        assertNotNull(body)
+        assertContains(switch.prevDFG, body)
+
+        switch.breaks.forEach { assertContains(switch.prevDFG, it) }
+    }
+
+    @Test
+    fun testDFGDeclareAsExpression() {
+        val result = GraphExamples.getStatementsAsExpressions()
+        val func = result.functions["func"]
+        assertNotNull(func)
+        val declarationS: DeclarationStatement? =
+            func.body?.astChildren?.filterIsInstance<DeclarationStatement>()?.last()
+        assertNotNull(declarationS)
+        assertContains(declarationS.prevDFG, declarationS.literals.first())
     }
 }

@@ -34,104 +34,29 @@ import io.ktor.utils.io.*
 import io.modelcontextprotocol.kotlin.sdk.types.Tool
 import kotlinx.serialization.json.*
 
-/** OpenAI-compatible API client (Ollama, vLLM, LMStudio) */
+/** OpenAI-compatible API client (Ollama, vLLM, MLX) */
 class OpenAiClient(
     private val httpClient: HttpClient,
     private val model: String,
     private val baseUrl: String,
 ) : LlmClient {
     override val modelName: String = model
-    private val usesThinkTags = model.contains("glm", ignoreCase = true)
 
     override suspend fun sendPrompt(
         userMessage: String,
         conversationHistory: List<ChatMessageJSON>,
         tools: List<Tool>,
-        maxAgentSteps: List<List<ToolCallWithResult>>?,
+        toolCallHistory: List<List<ToolCallWithResult>>?,
         onText: suspend (String) -> Unit,
         onReasoning: suspend (String) -> Unit,
     ): List<ToolCall> {
-        val collectedToolCalls = mutableListOf<ToolCall>()
-        val accumulatedToolCalls = mutableListOf<JsonObject>()
-
-        var callIdCounter = 0
-
-        val messages = buildList {
-            add(OpenAiMessage(role = "system", content = JsonPrimitive(SYSTEM_PROMPT)))
-
-            conversationHistory.dropLast(1).forEach { msg ->
-                if (msg.content.isNotBlank()) {
-                    add(OpenAiMessage(role = msg.role, content = JsonPrimitive(msg.content)))
-                }
-            }
-
-            add(OpenAiMessage(role = "user", content = JsonPrimitive(userMessage)))
-
-            if (maxAgentSteps != null) {
-                for (agentStep in maxAgentSteps) {
-                    val startId = callIdCounter
-                    add(
-                        OpenAiMessage(
-                            role = "assistant",
-                            content = JsonPrimitive(""),
-                            toolCalls =
-                                agentStep.mapIndexed { index, tr ->
-                                    OpenAiToolCall(
-                                        id = "call_${startId + index}",
-                                        type = "function",
-                                        function =
-                                            OpenAiFunctionCall(
-                                                name = tr.call.name,
-                                                arguments = tr.call.arguments,
-                                            ),
-                                    )
-                                },
-                        )
-                    )
-                    agentStep.forEachIndexed { index, tr ->
-                        add(
-                            OpenAiMessage(
-                                role = "tool",
-                                toolCallId = "call_${startId + index}",
-                                content = JsonPrimitive(tr.result),
-                            )
-                        )
-                    }
-                    callIdCounter += agentStep.size
-                }
-            }
-        }
-
-        val openAiTools =
-            if (tools.isNotEmpty()) {
-                tools.map { tool ->
-                    OpenAiTool(
-                        type = "function",
-                        function =
-                            OpenAiFunctionDef(
-                                name = tool.name,
-                                description = tool.description ?: "",
-                                parameters =
-                                    buildJsonObject {
-                                        put("type", "object")
-                                        put(
-                                            "properties",
-                                            tool.inputSchema.properties ?: buildJsonObject {},
-                                        )
-                                        tool.inputSchema.required?.let { required ->
-                                            put(
-                                                "required",
-                                                JsonArray(required.map { r -> JsonPrimitive(r) }),
-                                            )
-                                        }
-                                    },
-                            ),
-                    )
-                }
-            } else null
+        val messages = buildMessages(userMessage, conversationHistory, toolCallHistory)
+        val openAiTools = convertToolDefinitions(tools)
 
         val request =
             OpenAiRequest(model = model, messages = messages, tools = openAiTools, stream = true)
+
+        val pendingToolCalls = mutableMapOf<Int, ToolCall>()
 
         httpClient
             .preparePost("$baseUrl/v1/chat/completions") {
@@ -145,32 +70,155 @@ class OpenAiClient(
                     return@execute
                 }
                 val channel = response.body<ByteReadChannel>()
-                streamMessages(channel, onText, onReasoning, accumulatedToolCalls)
+                handleStreamingResponse(channel, onText, onReasoning, pendingToolCalls)
             }
 
-        for (tcObj in accumulatedToolCalls) {
-            val function = tcObj["function"]?.jsonObject
-            val name = function?.get("name")?.jsonPrimitive?.contentOrNull
-            val args = function?.get("arguments")?.jsonPrimitive?.contentOrNull ?: "{}"
-            if (name != null) {
-                collectedToolCalls.add(ToolCall(name, args))
+        return pendingToolCalls.values.filter { it.name.isNotEmpty() }.toList()
+    }
+
+    /**
+     * Builds the OpenAI messages.
+     *
+     * ```json
+     * [
+     *   { "role": "system", "content": "..." },
+     *   { "role": "user", "content": "..." },
+     *   { "role": "assistant", "content": "",
+     *     "tool_calls": [{
+     *       "id": "call_0",
+     *       "type": "function",
+     *       "function": { "name": "...", "arguments": "..." }
+     *     }]
+     *   },
+     *   { "role": "tool", "tool_call_id": "call_0", "content": "..." }
+     * ]
+     * ```
+     *
+     * See
+     * [OpenAI Chat Completions](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)
+     */
+    private fun buildMessages(
+        userMessage: String,
+        conversationHistory: List<ChatMessageJSON>,
+        toolCallHistory: List<List<ToolCallWithResult>>?,
+    ): List<OpenAiMessage> {
+        val messages = mutableListOf<OpenAiMessage>()
+        messages += OpenAiMessage(role = "system", content = JsonPrimitive(SYSTEM_PROMPT))
+        conversationHistory.dropLast(1).forEach { msg ->
+            if (msg.content.isNotBlank()) {
+                messages += OpenAiMessage(role = msg.role, content = JsonPrimitive(msg.content))
             }
         }
 
-        return collectedToolCalls
+        messages += OpenAiMessage(role = "user", content = JsonPrimitive(userMessage))
+
+        if (toolCallHistory != null) {
+            var callIdCounter = 0
+            for (agentStep in toolCallHistory) {
+                val startId = callIdCounter
+                messages +=
+                    OpenAiMessage(
+                        role = "assistant",
+                        content = JsonPrimitive(""),
+                        toolCalls =
+                            agentStep.mapIndexed { index, toolCallWithResult ->
+                                OpenAiToolCall(
+                                    id = "call_${startId + index}",
+                                    type = "function",
+                                    function =
+                                        OpenAiFunctionCall(
+                                            name = toolCallWithResult.call.name,
+                                            arguments = toolCallWithResult.call.arguments,
+                                        ),
+                                )
+                            },
+                    )
+                agentStep.forEachIndexed { index, toolCallWithResult ->
+                    messages +=
+                        OpenAiMessage(
+                            role = "tool",
+                            toolCallId = "call_${startId + index}",
+                            content = JsonPrimitive(toolCallWithResult.result),
+                        )
+                }
+                callIdCounter += agentStep.size
+            }
+        }
+        return messages
     }
 
-    private suspend fun streamMessages(
+    /**
+     * Converts MCP tools to the OpenAI tools (functions) format.
+     *
+     * ```json
+     * [{
+     *   "type": "function",
+     *   "function": {
+     *     "name": "...",
+     *     "description": "...",
+     *     "parameters": {
+     *       "type": "object",
+     *       "properties": { ... },
+     *       "required": ["..."]
+     *     }
+     *   }
+     * }]
+     * ```
+     *
+     * See [OpenAI function calling](https://developers.openai.com/api/docs/guides/function-calling)
+     */
+    private fun convertToolDefinitions(tools: List<Tool>): List<OpenAiTool>? {
+        if (tools.isEmpty()) return null
+
+        return tools.map { tool ->
+            OpenAiTool(
+                type = "function",
+                function =
+                    OpenAiFunctionDef(
+                        name = tool.name,
+                        description = tool.description ?: "",
+                        parameters =
+                            buildJsonObject {
+                                put("type", "object")
+                                put("properties", tool.inputSchema.properties ?: buildJsonObject {})
+                                tool.inputSchema.required?.let { required ->
+                                    put("required", JsonArray(required.map { JsonPrimitive(it) }))
+                                }
+                            },
+                    ),
+            )
+        }
+    }
+
+    /**
+     * Handles streaming events from OpenAI. Tool call results will be received in multiple chunks
+     * and will be then concatenated.
+     *
+     * ```json
+     * {
+     *   "choices": [{
+     *     "delta": {
+     *       "content": "...",
+     *       "tool_calls": [{
+     *         "index": 0,
+     *         "id": "call_0",
+     *         "function": { "name": "...", "arguments": "partial..." }
+     *       }]
+     *     }
+     *   }]
+     * }
+     * ```
+     *
+     * See
+     * [OpenAI streaming events]https://developers.openai.com/api/reference/resources/chat/subresources/completions/streaming-events"></a>
+     * See [OpenAI Streaming API](https://developers.openai.com/api/docs/guides/streaming-responses)
+     */
+    private suspend fun handleStreamingResponse(
         channel: ByteReadChannel,
         onText: suspend (String) -> Unit,
         onReasoning: suspend (String) -> Unit,
-        accumulatedToolCalls: MutableList<JsonObject>,
+        pendingToolCalls: MutableMap<Int, ToolCall>,
     ) {
-        val toolCallsMap = mutableMapOf<Int, MutableMap<String, Any?>>()
-        val reasoningBuffer = StringBuilder()
-        var seenThinkClose = false
-        var totalOutputChars = 0
-
         readSseStream(channel) { jsonStr ->
             val chunk = Json.parseToJsonElement(jsonStr).jsonObject
             val delta =
@@ -183,72 +231,28 @@ class OpenAiClient(
                         ?: delta["thinking"]?.jsonPrimitive?.contentOrNull
 
                 if (reasoningContent?.isNotEmpty() == true) {
-                    totalOutputChars += reasoningContent.length
                     onReasoning(reasoningContent)
                 }
 
                 delta["content"]?.jsonPrimitive?.contentOrNull?.let { content ->
-                    totalOutputChars += content.length
                     if (content.isNotEmpty()) {
-                        if (usesThinkTags) {
-                            seenThinkClose =
-                                thinkTagsStreaming(
-                                    content,
-                                    reasoningBuffer,
-                                    seenThinkClose,
-                                    onText,
-                                    onReasoning,
-                                )
-                        } else {
-                            onText(content)
-                        }
+                        onText(content)
                     }
                 }
 
-                delta["tool_calls"]?.jsonArray?.forEach { tool ->
-                    val toolJSON = tool.jsonObject
-                    val index = toolJSON["index"]?.jsonPrimitive?.intOrNull ?: 0
-                    val toolCall =
-                        toolCallsMap.getOrPut(index) {
-                            mutableMapOf(
-                                "id" to null,
-                                "type" to "function",
-                                "name" to null,
-                                "arguments" to "",
-                            )
-                        }
+                delta["tool_calls"]?.jsonArray?.forEach { toolElement ->
+                    val toolJson = toolElement.jsonObject
+                    val index = toolJson["index"]?.jsonPrimitive?.intOrNull ?: 0
+                    val entry = pendingToolCalls.getOrPut(index) { ToolCall() }
 
-                    toolJSON["id"]?.jsonPrimitive?.contentOrNull?.let { toolCall["id"] = it }
-                    toolJSON["type"]?.jsonPrimitive?.contentOrNull?.let { toolCall["type"] = it }
-                    toolJSON["function"]?.jsonObject?.let { func ->
-                        func["name"]?.jsonPrimitive?.contentOrNull?.let {
-                            toolCall["name"] = it
-                            totalOutputChars += it.length
-                        }
-                        func["arguments"]?.jsonPrimitive?.contentOrNull?.let { args ->
-                            toolCall["arguments"] = (toolCall["arguments"] as String) + args
-                            totalOutputChars += args.length
+                    toolJson["id"]?.jsonPrimitive?.contentOrNull?.let { entry.id = it }
+                    toolJson["function"]?.jsonObject?.let { function ->
+                        function["name"]?.jsonPrimitive?.contentOrNull?.let { entry.name = it }
+                        function["arguments"]?.jsonPrimitive?.contentOrNull?.let {
+                            entry.arguments += it
                         }
                     }
                 }
-            }
-        }
-
-        toolCallsMap.values.forEach { toolCall ->
-            if (toolCall["name"] != null) {
-                accumulatedToolCalls.add(
-                    buildJsonObject {
-                        toolCall["id"]?.let { put("id", it as String) }
-                        put("type", toolCall["type"] as String)
-                        put(
-                            "function",
-                            buildJsonObject {
-                                put("name", toolCall["name"] as String)
-                                put("arguments", toolCall["arguments"] as String)
-                            },
-                        )
-                    }
-                )
             }
         }
     }

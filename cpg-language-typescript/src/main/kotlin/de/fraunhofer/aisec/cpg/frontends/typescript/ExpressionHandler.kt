@@ -28,8 +28,15 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.statements.Return
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.ExpressionList
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 
 class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Expression, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {

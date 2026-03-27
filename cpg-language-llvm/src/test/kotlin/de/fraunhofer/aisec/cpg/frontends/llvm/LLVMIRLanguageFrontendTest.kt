@@ -30,8 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path

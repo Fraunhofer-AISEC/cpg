@@ -27,7 +27,7 @@ package example
 
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.query.and
 
 include {

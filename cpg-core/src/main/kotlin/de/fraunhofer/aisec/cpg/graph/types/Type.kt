@@ -140,6 +140,7 @@ abstract class Type : Node {
     }
 
     @get:JsonIgnore
+    @DoNotPersist
     var root: Type
         /**
          * Obtain the root Type Element for a Type Chain (follows Pointer and ReferenceTypes until a

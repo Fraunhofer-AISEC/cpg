@@ -79,11 +79,18 @@ dependencies {
     // parsing YAML files
     implementation(libs.jacksonyml)
 
+    integrationTestImplementation(libs.ktor.server.cio)
+    integrationTestImplementation(libs.ktor.server.test.host)
+    integrationTestImplementation(libs.mcp.client)
+    integrationTestImplementation(libs.ktor.client.cio)
+    integrationTestImplementation(libs.ktor.client.content.negotiation)
     integrationTestImplementation(libs.kotlin.reflect)
     implementation(libs.reflections)
     integrationTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     integrationTestImplementation(libs.mcp)
+    integrationTestImplementation(libs.mcp.testing)
     integrationTestImplementation(libs.ktor.serialization.kotlinx.json)
+    integrationTestImplementation(project(":cpg-serialization"))
     // We depend on the Python frontend for the integration tests, but the frontend is only
     // available if enabled.
     // If it's not available, the integration tests fail (which is ok). But if we would directly

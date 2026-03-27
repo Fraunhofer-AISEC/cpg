@@ -38,8 +38,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Import
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.newNamespace
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util

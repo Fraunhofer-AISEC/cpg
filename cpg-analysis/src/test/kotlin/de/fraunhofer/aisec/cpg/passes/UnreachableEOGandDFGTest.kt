@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
-import de.fraunhofer.aisec.cpg.graph.statements.IfElse
+import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.testcases.Passes
 import kotlin.test.Ignore
 import kotlin.test.assertEquals

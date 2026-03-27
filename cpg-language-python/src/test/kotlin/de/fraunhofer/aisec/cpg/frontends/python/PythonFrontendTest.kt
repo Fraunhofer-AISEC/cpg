@@ -37,8 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.DynamicType
 import de.fraunhofer.aisec.cpg.graph.types.ListType
 import de.fraunhofer.aisec.cpg.graph.types.MapType

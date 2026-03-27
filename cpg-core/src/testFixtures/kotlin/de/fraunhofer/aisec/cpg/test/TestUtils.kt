@@ -35,8 +35,12 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.test.TestUtils.ENFORCE_MEMBER_EXPRESSION
 import de.fraunhofer.aisec.cpg.test.TestUtils.ENFORCE_REFERENCES

@@ -1,17 +1,20 @@
 <script lang="ts">
   import MessageInput from './MessageInput.svelte';
+  import type { McpCapabilities } from '$lib/types';
 
   interface Props {
     onWelcomeMessage: (message: string) => void;
+    mcpCapabilities?: McpCapabilities | null;
+    onOpenMcpModal?: () => void;
+    onPromptSelect?: (name: string, args: Record<string, string>) => void;
   }
 
-  let { onWelcomeMessage }: Props = $props();
+  let { onWelcomeMessage, mcpCapabilities, onOpenMcpModal, onPromptSelect }: Props = $props();
 
   let messageInput = $state('');
 
-  // Suggested questions - project-wide
   const suggestedQuestions = [
-    'List all functions and their parameters',
+    'List all functions',
     'What classes are defined?',
     'Which function implements AES encryption?',
     'What functions are called by the main entry point?'
@@ -29,9 +32,8 @@
   <!-- Welcome Header -->
   <div class="mb-8 text-center">
     <div class="mb-4 flex items-center justify-center gap-3">
-      <span class="text-3xl sm:text-4xl">👋</span>
       <h1 class="text-3xl font-bold text-gray-900 sm:text-4xl">
-        Hi, I'm your <span
+        <span
           class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
           >CodAIze Agent</span
         >
@@ -48,11 +50,6 @@
         </div>
       </h1>
     </div>
-
-    <p class="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-gray-600 sm:text-xl">
-      I help you find security vulnerabilities, understand data flows, and analyze code dependencies
-      using graph-based analysis.
-    </p>
   </div>
 
   <!-- Suggestions -->
@@ -88,6 +85,20 @@
       onSend={handleSendMessage}
       onValueChange={(value) => messageInput = value}
       placeholder="Ask me anything about your codebase..."
+      prompts={mcpCapabilities?.prompts}
+      onPromptSelect={onPromptSelect}
     />
+    {#if mcpCapabilities && onOpenMcpModal}
+      <div class="mt-2 flex items-center">
+        <button
+          class="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700"
+          onclick={onOpenMcpModal}
+          title="MCP Server"
+        >
+          <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+          {mcpCapabilities.serverName}
+        </button>
+      </div>
+    {/if}
   </div>
 </div>

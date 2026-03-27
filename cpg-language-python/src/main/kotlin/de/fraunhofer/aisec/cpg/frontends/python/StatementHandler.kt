@@ -30,23 +30,22 @@ import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
+import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Assert
+import de.fraunhofer.aisec.cpg.graph.expressions.CatchClause
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
+import de.fraunhofer.aisec.cpg.graph.expressions.Try
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.Assert
-import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForEach
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.Try
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Statement, Python.AST.BaseStmt>(::ProblemExpression, frontend) {
+    PythonHandler<Expression, Python.AST.BaseStmt>(::ProblemExpression, frontend) {
 
-    override fun handleNode(node: Python.AST.BaseStmt): Statement {
+    override fun handleNode(node: Python.AST.BaseStmt): Expression {
         return when (node) {
             is Python.AST.Pass -> return newEmpty(rawNode = node)
             is Python.AST.ImportFrom -> handleImportFrom(node)
@@ -144,8 +143,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * [Case.caseExpression]. Its `lhs` is the normal pattern and the `rhs` is the guard. This is in
      * line with [PEP 634](https://peps.python.org/pep-0634/).
      */
-    private fun handleMatchCase(node: Python.AST.match_case, subject: String): List<Statement> {
-        val statements = mutableListOf<Statement>()
+    private fun handleMatchCase(node: Python.AST.match_case, subject: String): List<Expression> {
+        val statements = mutableListOf<Expression>()
         // First, we add the Case. A `MatchAs` without a `pattern` implies
         // it's a default statement.
         // We have to handle this here since we do not want to generate the Case in this case.
@@ -524,7 +523,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`Import`](https://docs.python.org/3/library/ast.html#ast.Import) into a
-     * [Statement].
+     * [Expression].
      *
      * For each import, it handles two cases:
      * - If an alias is present (e.g., `import foo.bar.baz as fbb`), only the final module is bound
@@ -536,7 +535,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      *   [`Python specification`](https://docs.python.org/3/reference/simple_stmts.html#the-import-statement)
      *   for details:
      */
-    private fun handleImport(node: Python.AST.Import): Statement {
+    private fun handleImport(node: Python.AST.Import): Expression {
         val declStmt = newDeclarationStatement(rawNode = node)
         for (imp in node.names) {
             val alias = imp.asname
@@ -570,7 +569,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return declStmt
     }
 
-    private fun handleImportFrom(node: Python.AST.ImportFrom): Statement {
+    private fun handleImportFrom(node: Python.AST.ImportFrom): Expression {
         val declStmt = newDeclarationStatement(rawNode = node)
         val level = node.level
         var module = parseName(node.module ?: "")
@@ -680,7 +679,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
             ?.path
             ?.endsWith(PythonLanguage.IDENTIFIER_INIT) == true
 
-    private fun handleWhile(node: Python.AST.While): Statement {
+    private fun handleWhile(node: Python.AST.While): Expression {
         val ret = newWhile(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.statement = makeBlock(node.body, parentNode = node)
@@ -768,7 +767,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return Pair(tempRef, assign)
     }
 
-    private fun handleExpressionStatement(node: Python.AST.Expr): Statement {
+    private fun handleExpressionStatement(node: Python.AST.Expr): Expression {
         return frontend.expressionHandler.handle(node.value)
     }
 
@@ -783,7 +782,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return newAssign(lhs = listOf(lhs), rhs = rhs, rawNode = node)
     }
 
-    private fun handleIf(node: Python.AST.If): Statement {
+    private fun handleIf(node: Python.AST.If): Expression {
         val ret = newIfElse(rawNode = node)
         ret.condition = frontend.expressionHandler.handle(node.test)
         ret.thenStatement =
@@ -801,7 +800,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return ret
     }
 
-    private fun handleReturn(node: Python.AST.Return): Statement {
+    private fun handleReturn(node: Python.AST.Return): Expression {
         val ret = newReturn(rawNode = node)
         node.value?.let { ret.returnValue = frontend.expressionHandler.handle(it) }
         return ret
@@ -834,7 +833,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         return newAssign(lhs = lhs, rhs = listOf(rhs), rawNode = node)
     }
 
-    private fun handleAugAssign(node: Python.AST.AugAssign): Statement {
+    private fun handleAugAssign(node: Python.AST.AugAssign): Expression {
         val lhs = frontend.expressionHandler.handle(node.target)
         val rhs = frontend.expressionHandler.handle(node.value)
         val op = frontend.operatorToString(node.op) + "="

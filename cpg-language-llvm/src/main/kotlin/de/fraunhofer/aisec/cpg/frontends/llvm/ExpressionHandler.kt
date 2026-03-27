@@ -29,7 +29,11 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type

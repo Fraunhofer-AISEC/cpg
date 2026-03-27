@@ -34,8 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.operatorCallFromDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util

@@ -38,7 +38,7 @@ fun configureServer(
         this.addListPasses()
         this.addRunPass()
         this.addCpgAnalyzeTool()
-        // this.addCpgApplyConceptsTool()
+        this.addCpgApplyConceptsTool()
         this.addCpgDataflowTool()
         this.listFunctions()
         this.listRecords()
@@ -76,6 +76,9 @@ fun configureServer(
 
     return Server(info, options).configure()
 }
+
+/** Default configureServer constructor call to use via reflection (e.g. from codyze-console). */
+fun configureDefaultServer(): Server = configureServer()
 
 const val cpgDescription =
     """

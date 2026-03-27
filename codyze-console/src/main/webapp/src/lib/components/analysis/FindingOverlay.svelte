@@ -11,7 +11,7 @@
 
   let { finding, kind, line, lineHeight, offsetTop }: Props = $props();
 
-  let { backgroundColor, borderColor, color } = getFindingStyle(kind);
+  const { backgroundColor, borderColor, color } = $derived(getFindingStyle(kind));
 </script>
 
 <div

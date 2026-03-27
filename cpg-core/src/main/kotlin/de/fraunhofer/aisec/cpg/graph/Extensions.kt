@@ -35,9 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
@@ -235,7 +234,7 @@ operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
  *
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
-inline fun <reified T : Statement> Function.bodyOrNull(n: Int = 0): T? {
+inline fun <reified T : Expression> Function.bodyOrNull(n: Int = 0): T? {
     val body = this.body
     return if (body is Block) {
         val statements = body.statements
@@ -257,16 +256,16 @@ inline fun <reified T : Statement> Function.bodyOrNull(n: Int = 0): T? {
 
 /**
  * This inline function returns the `n`-th body statement (in AST order) as specified in T. It
- * throws a [StatementNotFound] exception if it does not exist or match the type.
+ * throws a [ExpressionNotFound] exception if it does not exist or match the type.
  *
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
-@Throws(StatementNotFound::class)
-inline fun <reified T : Statement> Function.body(n: Int = 0): T {
-    return bodyOrNull(n) ?: throw StatementNotFound()
+@Throws(ExpressionNotFound::class)
+inline fun <reified T : Expression> Function.body(n: Int = 0): T {
+    return bodyOrNull(n) ?: throw ExpressionNotFound()
 }
 
-class StatementNotFound : Exception()
+class ExpressionNotFound : Exception()
 
 class DeclarationNotFound(message: String) : Exception(message)
 
@@ -1189,8 +1188,8 @@ val AstNode?.refs: List<Reference>
 val AstNode?.memberExpressions: List<MemberAccess>
     get() = this.allChildren()
 
-/** Returns all [Statement] child edges in this graph, starting with this [Node]. */
-val AstNode?.statements: List<Statement>
+/** Returns all [Expression] child edges in this graph, starting with this [Node]. */
+val AstNode?.statements: List<Expression>
     get() = this.allChildren()
 
 /** Returns all [For] child edges in this graph, starting with this [Node]. */
@@ -1374,7 +1373,7 @@ val Function.callees: Set<Function>
     }
 
 /** Retrieves the n-th statement of the body of this function declaration. */
-operator fun Function.get(n: Int): Statement? {
+operator fun Function.get(n: Int): Expression? {
     val body = this.body
 
     if (body is Block) {

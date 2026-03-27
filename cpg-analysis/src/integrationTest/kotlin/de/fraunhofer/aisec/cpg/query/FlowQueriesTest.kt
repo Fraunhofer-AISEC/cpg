@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.query
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.analyze
 import kotlin.io.path.Path
 import kotlin.test.*

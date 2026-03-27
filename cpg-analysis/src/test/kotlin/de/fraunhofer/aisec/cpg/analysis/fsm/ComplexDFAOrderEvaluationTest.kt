@@ -27,10 +27,10 @@ package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.testcases.GraphExamples
 import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll

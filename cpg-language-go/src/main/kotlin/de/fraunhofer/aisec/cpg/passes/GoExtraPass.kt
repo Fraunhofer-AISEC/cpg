@@ -30,10 +30,13 @@ import de.fraunhofer.aisec.cpg.frontends.golang.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForEach
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
