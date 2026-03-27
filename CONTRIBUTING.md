@@ -73,19 +73,18 @@ Most of our code is written in Kotlin and if you develop new nodes, one should f
 
 ### Property Edges
 
-On some edges, we want to store additional information (e.g., if a `EOG` node is "unreachable"). In this case, a simple list of nodes for a `@Relationship` is not enough and instead a list of `PropertyEdge` objects is needed. To have a consistent naming, the property holding the edges should be named the singular of the property name + "Edges", e.g. `parameterEdges`. To make it more convenient for users to also access the connected nodes without property edges, the Kotlin delegation feature, with a `PropertyEdgeDelegate` can be used. This property should then be named after the property (plural), e.g. `parameters`.
+On some edges, we want to store additional information (e.g., if a `EOG` node is "unreachable"). In this case, a simple list of nodes for a `@Relationship` is not enough and instead a list of `Edge` objects is needed. To have a consistent naming, the property holding the edges should be named the singular of the property name + "Edges", e.g. `parameterEdges`. To make it more convenient for users to also access the connected nodes without property edges, the Kotlin delegation feature, with `unwrapping` can be used. This property should then be named after the property (plural), e.g. `parameters`.
 
 ```kotlin
 /** The list of function parameters. */
 @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
-@field:SubGraph("AST")
-var parameterEdges = mutableListOf<PropertyEdge<ParameterDeclaration>>()
+var parameterEdges = astEdgesOf<Parameter>()
 
 /** Virtual property for accessing [parameterEdges] without property edges. */
-var parameters by PropertyEdgeDelegate(FunctionDeclaration::parameterEdges)
+var parameters by unwrapping(Function::parameterEdges)
 ```
 
-Note: We actually want list property to be immutable so that they can only be modified by the node class itself. However, it is currently not possible to have them immutable on the public getter, but mutable for the class itself. There is a Kotlin issue tracking this feature request. Once https://youtrack.jetbrains.com/issue/KT-14663 is resolved, we should set the public type for all those lists to `List` instead of `MutableList`. Properties delegated by `PropertyEdgeDelegate` are already immutable.
+Note: We actually want list property to be immutable so that they can only be modified by the node class itself. However, it is currently not possible to have them immutable on the public getter, but mutable for the class itself. There is a Kotlin issue tracking this feature request. Once https://youtrack.jetbrains.com/issue/KT-14663 is resolved, we should set the public type for all those lists to `List` instead of `MutableList`. Properties delegated by `unwrapping` are already immutable.
 
 ### Required Properties
 
