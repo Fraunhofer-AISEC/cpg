@@ -153,7 +153,7 @@ private constructor(
      * * is `true`.
      */
     @Throws(TranslationException::class)
-    private fun runFrontends(
+    fun runFrontends(
         ctx: TranslationContext,
         result: TranslationResult,
     ): Set<LanguageFrontend<*, *>> {
