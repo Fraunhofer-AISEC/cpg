@@ -48,11 +48,9 @@ fun configureServer(
         // this.listAvailableOperations()
         this.getAllArgs()
         this.getArgByIndexOrName()
-        //        this.listConceptsAndOperations()
+        // this.listConceptsAndOperations()
         this.getNode()
         this.addDfgBackwardTool()
-        // PROMPTS
-        this.addSuggestConceptsPrompt()
 
         this.persistGraphToNeo4jTool()
         this.getPersistedConceptsOperations()
