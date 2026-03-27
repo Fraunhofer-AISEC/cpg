@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.newTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.objectType
@@ -69,6 +70,7 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
 
     override fun typeOf(type: Csharp.AST.Node): Type {
         return when (type) {
+            is Csharp.AST.ArrayTypeSyntax -> typeOf(type.elementType).array()
             is Csharp.AST.TypeSyntax -> objectType(type.name)
             else -> unknownType()
         }

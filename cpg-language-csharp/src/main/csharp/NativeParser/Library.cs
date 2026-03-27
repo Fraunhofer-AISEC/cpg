@@ -217,6 +217,12 @@ public static class Library
         );
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetArrayTypeElementType")]
+    public static IntPtr GetArrayTypeElementType(IntPtr handlePtr)
+    {
+        return Register(((ArrayTypeSyntax)Nodes[handlePtr]).ElementType);
+    }
+
     // We use `BaseMethodDeclarationSyntax` to get the body for Methods and Constructors.
     [UnmanagedCallersOnly(EntryPoint = "GetBaseMethodDeclarationBody")]
     public static IntPtr GetBaseMethodDeclarationBody(IntPtr handlePtr)
@@ -372,5 +378,97 @@ public static class Library
     public static IntPtr GetAssignmentExpressionOperator(IntPtr handlePtr)
     {
         return Marshal.StringToCoTaskMemUTF8(((AssignmentExpressionSyntax)Nodes[handlePtr]).OperatorToken.Text);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetWhileStatementCondition")]
+    public static IntPtr GetWhileStatementCondition(IntPtr handlePtr)
+    {
+        return Register(((WhileStatementSyntax)Nodes[handlePtr]).Condition);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetWhileStatementStatement")]
+    public static IntPtr GetWhileStatementStatement(IntPtr handlePtr)
+    {
+        return Register(((WhileStatementSyntax)Nodes[handlePtr]).Statement);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetDoStatementCondition")]
+    public static IntPtr GetDoStatementCondition(IntPtr handlePtr)
+    {
+        return Register(((DoStatementSyntax)Nodes[handlePtr]).Condition);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetDoStatementStatement")]
+    public static IntPtr GetDoStatementStatement(IntPtr handlePtr)
+    {
+        return Register(((DoStatementSyntax)Nodes[handlePtr]).Statement);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetForStatementDeclaration")]
+    public static IntPtr GetForStatementDeclaration(IntPtr handlePtr)
+    {
+        var declaration = ((ForStatementSyntax)Nodes[handlePtr]).Declaration;
+        return declaration != null ? Register(declaration) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetForStatementInitializerExpressionCount")]
+    public static int GetForStatementInitializerExpressionCount(IntPtr handlePtr)
+    {
+        return ((ForStatementSyntax)Nodes[handlePtr]).Initializers.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetForStatementInitializerExpression")]
+    public static IntPtr GetForStatementInitializerExpression(IntPtr handlePtr, int index)
+    {
+        return Register(((ForStatementSyntax)Nodes[handlePtr]).Initializers[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetForStatementCondition")]
+    public static IntPtr GetForStatementCondition(IntPtr handlePtr)
+    {
+        var condition = ((ForStatementSyntax)Nodes[handlePtr]).Condition;
+        return condition != null ? Register(condition) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetForStatementIncrementorCount")]
+    public static int GetForStatementIncrementorCount(IntPtr handlePtr)
+    {
+        return ((ForStatementSyntax)Nodes[handlePtr]).Incrementors.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetForStatementIncrementor")]
+    public static IntPtr GetForStatementIncrementor(IntPtr handlePtr, int index)
+    {
+        return Register(((ForStatementSyntax)Nodes[handlePtr]).Incrementors[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetForStatementStatement")]
+    public static IntPtr GetForStatementStatement(IntPtr handlePtr)
+    {
+        return Register(((ForStatementSyntax)Nodes[handlePtr]).Statement);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetForEachStatementIdentifier")]
+    public static IntPtr GetForEachStatementIdentifier(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((ForEachStatementSyntax)Nodes[handlePtr]).Identifier.ToString());
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetForEachStatementType")]
+    public static IntPtr GetForEachStatementType(IntPtr handlePtr)
+    {
+        return Register(((ForEachStatementSyntax)Nodes[handlePtr]).Type);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetForEachStatementExpression")]
+    public static IntPtr GetForEachStatementExpression(IntPtr handlePtr)
+    {
+        return Register(((ForEachStatementSyntax)Nodes[handlePtr]).Expression);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetForEachStatementStatement")]
+    public static IntPtr GetForEachStatementStatement(IntPtr handlePtr)
+    {
+        return Register(((ForEachStatementSyntax)Nodes[handlePtr]).Statement);
     }
 }

@@ -64,8 +64,27 @@ interface Csharp : Library {
          * [`TypeSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.typesyntax)
          * class.
          */
-        class TypeSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+        open class TypeSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
             val name: String by lazy { INSTANCE.GetTypeName(this) }
+
+            override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any {
+                if (nativeValue !is Pointer) {
+                    return super.fromNative(nativeValue, context)
+                }
+                return when (INSTANCE.GetType(nativeValue)) {
+                    "ArrayTypeSyntax" -> ArrayTypeSyntax(nativeValue)
+                    else -> TypeSyntax(nativeValue)
+                }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ArrayTypeSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.arraytypesyntax)
+         * class.
+         */
+        class ArrayTypeSyntax(p: Pointer? = Pointer.NULL) : TypeSyntax(p) {
+            val elementType: TypeSyntax by lazy { INSTANCE.GetArrayTypeElementType(this) }
         }
 
         /**
@@ -195,6 +214,10 @@ interface Csharp : Library {
                     "LocalDeclarationStatementSyntax" ->
                         LocalDeclarationStatementSyntax(nativeValue)
                     "ExpressionStatementSyntax" -> ExpressionStatementSyntax(nativeValue)
+                    "WhileStatementSyntax" -> WhileStatementSyntax(nativeValue)
+                    "DoStatementSyntax" -> DoStatementSyntax(nativeValue)
+                    "ForStatementSyntax" -> ForStatementSyntax(nativeValue)
+                    "ForEachStatementSyntax" -> ForEachStatementSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -231,6 +254,64 @@ interface Csharp : Library {
          */
         class ElseClauseSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
             val statement: StatementSyntax by lazy { INSTANCE.GetElseClauseSyntaxStatement(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`WhileStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.whilestatementsyntax)
+         * class.
+         */
+        class WhileStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            val condition: ExpressionSyntax by lazy { INSTANCE.GetWhileStatementCondition(this) }
+            val statement: StatementSyntax by lazy { INSTANCE.GetWhileStatementStatement(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`DoStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.dostatementsyntax)
+         * class.
+         */
+        class DoStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            val condition: ExpressionSyntax by lazy { INSTANCE.GetDoStatementCondition(this) }
+            val statement: StatementSyntax by lazy { INSTANCE.GetDoStatementStatement(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ForStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.forstatementsyntax)
+         * class.
+         */
+        class ForStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            /** Variable declaration in the initializer (e.g. `int i = 0`) */
+            val declaration: VariableDeclarationSyntax? by lazy {
+                INSTANCE.GetForStatementDeclaration(this)
+            }
+            /** Expression initializers (e.g. `i = 0`), used when there is no declaration */
+            val initializerExpressions: List<ExpressionSyntax> by lazy {
+                val count = INSTANCE.GetForStatementInitializerExpressionCount(this)
+                (0 until count).map { i -> INSTANCE.GetForStatementInitializerExpression(this, i) }
+            }
+            val condition: ExpressionSyntax? by lazy { INSTANCE.GetForStatementCondition(this) }
+            /** The incrementors (e.g. `i++, j--`) */
+            val incrementors: List<ExpressionSyntax> by lazy {
+                val count = INSTANCE.GetForStatementIncrementorCount(this)
+                (0 until count).map { i -> INSTANCE.GetForStatementIncrementor(this, i) }
+            }
+            val statement: StatementSyntax by lazy { INSTANCE.GetForStatementStatement(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ForEachStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.foreachstatementsyntax)
+         * class.
+         */
+        class ForEachStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            val identifier: String by lazy { INSTANCE.GetForEachStatementIdentifier(this) }
+            val type: TypeSyntax by lazy { INSTANCE.GetForEachStatementType(this) }
+            val expression: ExpressionSyntax by lazy {
+                INSTANCE.GetForEachStatementExpression(this)
+            }
+            val statement: StatementSyntax by lazy { INSTANCE.GetForEachStatementStatement(this) }
         }
 
         /**
@@ -471,6 +552,8 @@ interface Csharp : Library {
 
     fun GetTypeName(handle: AST.TypeSyntax): String
 
+    fun GetArrayTypeElementType(handle: AST.ArrayTypeSyntax): AST.TypeSyntax
+
     fun GetConstructorDeclarationIdentifier(handle: AST.ConstructorDeclarationSyntax): String
 
     fun GetConstructorDeclarationParameterCount(handle: AST.ConstructorDeclarationSyntax): Int
@@ -542,6 +625,39 @@ interface Csharp : Library {
     fun GetAssignmentExpressionRight(handle: AST.AssignmentExpressionSyntax): AST.ExpressionSyntax
 
     fun GetAssignmentExpressionOperator(handle: AST.AssignmentExpressionSyntax): String
+
+    fun GetWhileStatementCondition(handle: AST.WhileStatementSyntax): AST.ExpressionSyntax
+
+    fun GetWhileStatementStatement(handle: AST.WhileStatementSyntax): AST.StatementSyntax
+
+    fun GetDoStatementCondition(handle: AST.DoStatementSyntax): AST.ExpressionSyntax
+
+    fun GetDoStatementStatement(handle: AST.DoStatementSyntax): AST.StatementSyntax
+
+    fun GetForStatementDeclaration(handle: AST.ForStatementSyntax): AST.VariableDeclarationSyntax?
+
+    fun GetForStatementInitializerExpressionCount(handle: AST.ForStatementSyntax): Int
+
+    fun GetForStatementInitializerExpression(
+        handle: AST.ForStatementSyntax,
+        index: Int,
+    ): AST.ExpressionSyntax
+
+    fun GetForStatementCondition(handle: AST.ForStatementSyntax): AST.ExpressionSyntax?
+
+    fun GetForStatementIncrementorCount(handle: AST.ForStatementSyntax): Int
+
+    fun GetForStatementIncrementor(handle: AST.ForStatementSyntax, index: Int): AST.ExpressionSyntax
+
+    fun GetForStatementStatement(handle: AST.ForStatementSyntax): AST.StatementSyntax
+
+    fun GetForEachStatementIdentifier(handle: AST.ForEachStatementSyntax): String
+
+    fun GetForEachStatementType(handle: AST.ForEachStatementSyntax): AST.TypeSyntax
+
+    fun GetForEachStatementExpression(handle: AST.ForEachStatementSyntax): AST.ExpressionSyntax
+
+    fun GetForEachStatementStatement(handle: AST.ForEachStatementSyntax): AST.StatementSyntax
 
     companion object {
         val INSTANCE: Csharp by lazy {
