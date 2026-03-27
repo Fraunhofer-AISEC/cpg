@@ -999,6 +999,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             )
         doubleState =
             when (currentNode) {
+                is Comprehension,
                 is ForEach -> handleForEach(lattice, currentNode, doubleState)
                 is Function -> initializeParameters(lattice, currentNode, doubleState)
                 is Literal<*> -> {
@@ -1038,49 +1039,88 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     protected suspend fun handleForEach(
         lattice: PointsToState,
-        currentNode: ForEach,
+        currentNode: Expression,
         doubleState: PointsToState.Element,
     ): PointsToState.Element {
         var doubleState = doubleState
         // All we do for now is update the state of the loop variable
-        val iterable = currentNode.iterable as? Node
-        val writtenTo: Node? =
-            when (val variable = currentNode.variable) {
-                is DeclarationStatement -> {
-                    if (variable.isSingleDeclaration()) {
-                        variable.singleDeclaration
-                    } else if (variable.variables.size == 2) {
-                        // If there are two variables, we just blindly assume that the order is
-                        // (key, value), so we return the second one
-                        variable.declarations[1]
-                    } else {
-                        null
+        val iterable =
+            when (currentNode) {
+                is ForEach -> currentNode.iterable as? Node
+                is Comprehension -> currentNode.iterable as? Node
+                else -> null
+            }
+        val variable =
+            when (currentNode) {
+                is ForEach -> currentNode.variable
+                is Comprehension -> currentNode.variable
+                else -> null
+            }
+        if (variable == null || iterable == null) {
+            log.error("Unable to identify variable or log for $currentNode")
+            return doubleState
+        }
+        val writtenTo: List<Node> =
+            // Code from the ControlFlowSensitiveDFGPass suggests we should treat ForEach and
+            // Comprehensions slightly different, so let's to this for now
+            when (currentNode) {
+                is ForEach -> {
+                    when (variable) {
+                        is DeclarationStatement -> {
+                            if (variable.isSingleDeclaration()) {
+                                listOf(variable.singleDeclaration as Node)
+                            } else if (variable.variables.size == 2) {
+                                // If there are two variables, we just blindly assume that the order
+                                // is
+                                // (key, value), so we return the second one
+                                listOf(variable.declarations[1])
+                            } else {
+                                listOf() // null
+                            }
+                        }
+
+                        else -> listOf(variable)
                     }
                 }
-                else -> currentNode.variable
+
+                is Comprehension -> {
+                    when (variable) {
+                        is DeclarationStatement -> {
+                            variable.declarations
+                        }
+                        is Reference -> listOf(variable)
+                        is InitializerList -> variable.initializers
+                        else -> {
+                            log.error(
+                                "The type ${variable.javaClass} is not yet supported as Comprehension::variable"
+                            )
+                            listOf()
+                        }
+                    }
+                }
+
+                else -> listOf()
             }
-        if (writtenTo != null && iterable != null) {
+        writtenTo.forEach { wT ->
             // The new sources are the values of the iterable plus the already existing ones (since
             // the loop may not get executed)
-            val newVals =
-                doubleState.getValues(writtenTo, writtenTo) +
-                    doubleState.getValues(iterable, iterable)
+            val newVals = doubleState.getValues(wT, wT) + doubleState.getValues(iterable, iterable)
             val sources =
                 newVals.mapTo(PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>()) {
                     Triple(it.first, it.second, false)
                 }
             val destinations: ConcurrentIdentitySet<Node> = concurrentIdentitySetOf()
-            if (writtenTo is InitializerList) destinations.addAll(writtenTo.initializers)
-            else destinations.add(writtenTo)
+            if (wT is InitializerList) destinations.addAll(wT.initializers)
+            else destinations.add(wT)
             val destinationsAddresses =
                 destinations.flatMapTo(ConcurrentIdentitySet()) { doubleState.getAddresses(it, it) }
-            // Also for the new lastWrites, we need the lastWrite from the writtenTo as well as the
+            // Also for the new lastWrites, we need the lastWrite from the wT as well as the
             // existing ones (in case the loop is not executed)
             val lastWrites: MutableSet<NodeWithPropertiesKey> =
                 destinations.mapTo(ConcurrentHashMap.newKeySet()) {
                     NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>(false))
                 }
-            lastWrites.addAll(doubleState.getLastWrites(writtenTo))
+            lastWrites.addAll(doubleState.getLastWrites(wT))
             doubleState =
                 doubleState.updateValues(
                     lattice,

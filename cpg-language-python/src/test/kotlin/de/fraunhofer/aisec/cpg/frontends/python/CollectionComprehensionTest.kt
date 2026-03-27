@@ -91,8 +91,6 @@ class CollectionComprehensionTest {
         assertNotNull(result)
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testComprehensionTuple() {
         // Get the function tuple_comp
