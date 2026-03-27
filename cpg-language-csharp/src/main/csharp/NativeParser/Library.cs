@@ -350,4 +350,27 @@ public static class Library
         }
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetExpressionStatementExpression")]
+    public static IntPtr GetExpressionStatementExpression(IntPtr handlePtr)
+    {
+        return Register(((ExpressionStatementSyntax)Nodes[handlePtr]).Expression);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAssignmentExpressionLeft")]
+    public static IntPtr GetAssignmentExpressionLeft(IntPtr handlePtr)
+    {
+        return Register(((AssignmentExpressionSyntax)Nodes[handlePtr]).Left);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAssignmentExpressionRight")]
+    public static IntPtr GetAssignmentExpressionRight(IntPtr handlePtr)
+    {
+        return Register(((AssignmentExpressionSyntax)Nodes[handlePtr]).Right);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAssignmentExpressionOperator")]
+    public static IntPtr GetAssignmentExpressionOperator(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((AssignmentExpressionSyntax)Nodes[handlePtr]).OperatorToken.Text);
+    }
 }

@@ -25,11 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.newAssign
 import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
@@ -43,6 +45,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.IdentifierNameSyntax -> handleIdentifierName(node)
             is Csharp.AST.LiteralExpressionSyntax -> handleLiteralExpression(node)
             is Csharp.AST.BinaryExpressionSyntax -> handleBinaryExpression(node)
+            is Csharp.AST.AssignmentExpressionSyntax -> handleAssignmentExpression(node)
             else ->
                 newProblemExpression(
                     "The expression of class ${node.javaClass} is not supported yet",
@@ -73,6 +76,22 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             this.lhs = handle(node.left)
             this.rhs = handle(node.right)
         }
+    }
+
+    /**
+     * Translates an [AssignmentExpressionSyntax][Csharp.AST.AssignmentExpressionSyntax] into an
+     * [Assign].
+     *
+     * C# spec:
+     * [AssignmentOperators](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12214-assignment-operators)
+     */
+    private fun handleAssignmentExpression(node: Csharp.AST.AssignmentExpressionSyntax): Assign {
+        return newAssign(
+            operatorCode = node.operatorToken,
+            lhs = listOf(handle(node.left)),
+            rhs = listOf(handle(node.right)),
+            rawNode = node,
+        )
     }
 
     /**

@@ -194,6 +194,7 @@ interface Csharp : Library {
                     "IfStatementSyntax" -> IfStatementSyntax(nativeValue)
                     "LocalDeclarationStatementSyntax" ->
                         LocalDeclarationStatementSyntax(nativeValue)
+                    "ExpressionStatementSyntax" -> ExpressionStatementSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -272,6 +273,17 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
+         * [`ExpressionStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.expressionstatementsyntax)
+         * class.
+         */
+        class ExpressionStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            val expression: ExpressionSyntax by lazy {
+                INSTANCE.GetExpressionStatementExpression(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
          * [`VariableDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.variabledeclarationsyntax)
          * class.
          */
@@ -332,6 +344,7 @@ interface Csharp : Library {
                         }
                     "BinaryExpressionSyntax" -> BinaryExpressionSyntax(nativeValue)
                     "IdentifierNameSyntax" -> IdentifierNameSyntax(nativeValue)
+                    "AssignmentExpressionSyntax" -> AssignmentExpressionSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -369,6 +382,17 @@ interface Csharp : Library {
             val left: ExpressionSyntax by lazy { INSTANCE.GetBinaryExpressionLeft(this) }
             val operatorToken: String by lazy { INSTANCE.GetBinaryExpressionOperator(this) }
             val right: ExpressionSyntax by lazy { INSTANCE.GetBinaryExpressionRight(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`AssignmentExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.assignmentexpressionsyntax)
+         * class.
+         */
+        class AssignmentExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val left: ExpressionSyntax by lazy { INSTANCE.GetAssignmentExpressionLeft(this) }
+            val operatorToken: String by lazy { INSTANCE.GetAssignmentExpressionOperator(this) }
+            val right: ExpressionSyntax by lazy { INSTANCE.GetAssignmentExpressionRight(this) }
         }
 
         /**
@@ -508,6 +532,16 @@ interface Csharp : Library {
     fun GetVariableDeclaratorInitializer(
         handle: AST.VariableDeclaratorSyntax
     ): AST.ExpressionSyntax?
+
+    fun GetExpressionStatementExpression(
+        handle: AST.ExpressionStatementSyntax
+    ): AST.ExpressionSyntax
+
+    fun GetAssignmentExpressionLeft(handle: AST.AssignmentExpressionSyntax): AST.ExpressionSyntax
+
+    fun GetAssignmentExpressionRight(handle: AST.AssignmentExpressionSyntax): AST.ExpressionSyntax
+
+    fun GetAssignmentExpressionOperator(handle: AST.AssignmentExpressionSyntax): String
 
     companion object {
         val INSTANCE: Csharp by lazy {

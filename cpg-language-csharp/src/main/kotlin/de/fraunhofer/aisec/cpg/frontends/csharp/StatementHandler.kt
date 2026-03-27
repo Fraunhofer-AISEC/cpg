@@ -49,6 +49,7 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.ReturnStatementSyntax -> handleReturn(node)
             is Csharp.AST.IfStatementSyntax -> handleIf(node)
             is Csharp.AST.LocalDeclarationStatementSyntax -> handleLocalDeclaration(node)
+            is Csharp.AST.ExpressionStatementSyntax -> handleExpressionStatement(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
     }
@@ -104,6 +105,17 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
         }
 
         return declStmt
+    }
+
+    /**
+     * Translates an [ExpressionStatementSyntax][Csharp.AST.ExpressionStatementSyntax] into an
+     * [Expression].
+     *
+     * C# spec:
+     * [ExpressionStatement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1372-expression-statements)
+     */
+    private fun handleExpressionStatement(node: Csharp.AST.ExpressionStatementSyntax): Expression {
+        return frontend.expressionHandler.handle(node.expression)
     }
 
     /**

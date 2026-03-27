@@ -43,7 +43,12 @@ class CSharpLanguage : Language<CSharpLanguageFrontend>() {
     @Transient
     override val frontend: KClass<out CSharpLanguageFrontend> = CSharpLanguageFrontend::class
 
-    override val compoundAssignmentOperators = setOf<String>()
+    /**
+     * See
+     * [Documentation](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12214-assignment-operators).
+     */
+    override val compoundAssignmentOperators =
+        setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", ">>>=", "&=", "|=", "^=", "??=")
 
     /**
      * See
