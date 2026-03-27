@@ -60,9 +60,10 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         for (tu in component.translationUnits) {
             walker.iterate(tu)
         }
-        if (config.registeredPasses.all { ControlFlowSensitiveDFGPass::class !in it }) {
+        // The PointsToPass should do this now
+        /*        if (config.registeredPasses.all { ControlFlowSensitiveDFGPass::class !in it }) {
             connectInferredCallArguments(config.functionSummaries)
-        }
+        }*/
     }
 
     /**

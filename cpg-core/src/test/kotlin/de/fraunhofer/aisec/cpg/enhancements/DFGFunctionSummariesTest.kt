@@ -230,8 +230,6 @@ class DFGFunctionSummariesTest {
         )
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testPropagateArguments() {
         val dfgTest = getDfgInferredCall() { defaultPasses() }
@@ -255,10 +253,11 @@ class DFGFunctionSummariesTest {
         assertNotNull(argA)
         /*
         The flows should be as follows:
-        Variable["a"] -> Reference["a" (argument of call)] -CallingContextIn-> Parameter -CallingContextOut-> Reference["a" (return)]
+        Variable["a"] -> PointerReference["a" (argument of call)] -CallingContextIn-> Parameter -CallingContextOut-> Reference["a" (return)]
          */
 
         assertEquals(1, argA.nextDFG.size)
+        // The MemoryAddress a
         assertEquals(1, argA.prevFullDFG.size)
         assertEquals(
             1,
@@ -290,13 +289,29 @@ class DFGFunctionSummariesTest {
         val literal5 = main.literals.first { it.value?.equals(5) == true }
         assertNotNull(literal5)
 
-        // Check that also the CallingContext property is set correctly
-        val nextDfgOfParam0 =
-            param0.nextDFGEdges.singleOrNull {
+        // Check that also the CallingContext property (in and out) is set correctly
+        val valA = dfgTest.variables["a"]
+        assertNotNull(valA)
+        val memcpySrcDerefPMV =
+            dfgTest.functions("memcpy").single().parameters.first().memoryValues.singleOrNull {
+                it.name.localName == "derefvalue"
+            }
+        assertNotNull(memcpySrcDerefPMV)
+
+        val nextDfgOfValA =
+            valA.nextDFGEdges?.singleOrNull {
+                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.calls ==
+                    listOf(call)
+            }
+        assertEquals(memcpySrcDerefPMV, nextDfgOfValA?.end)
+
+        val nextDFGOfPMV =
+            memcpySrcDerefPMV.nextDFGEdges.singleOrNull() {
                 ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.calls ==
                     listOf(call)
             }
-        assertEquals(returnA, nextDfgOfParam0?.end)
+        val returnedA = dfgTest.returns.single().returnValues.single()
+        assertEquals(returnedA, nextDFGOfPMV?.end)
     }
 
     // TODO for merge
