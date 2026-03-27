@@ -288,8 +288,8 @@ fun resolveMemberAccess(node: MemberAccess): Pair<Node, Name> {
     var base: Node = node
     var newLocalname = ""
     while (base is MemberAccess) {
-        val b = base.name.split("::")
-        val tmp = if (b.size > 1) b[1] else ""
+        val b = base.name.split("::", ".")
+        val tmp = if (b.size > 1) b.last() else ""
         newLocalname = if (newLocalname.isEmpty()) tmp else "$tmp.$newLocalname"
         base = base.base
     }
