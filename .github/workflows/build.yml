@@ -76,7 +76,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
       - name: Build ${{ env.version }}
         run: |
-          # The distZip/distTar and shadowJar/shadowDistZip/shadowDistTar slow down the build and are not needed in CI
           ./gradlew --parallel spotlessCheck -x spotlessApply build -x distZip -x distTar -x shadowJar -x shadowDistZip -x shadowDistTar koverXmlReport koverHtmlReport performanceTest integrationTest
         id: build
         env:

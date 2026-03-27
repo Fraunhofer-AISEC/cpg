@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.CatchClause
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
+import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
@@ -303,6 +304,7 @@ fun executePassesSequentially(
     ctx: TranslationContext,
     result: TranslationResult,
     executedFrontends: Set<LanguageFrontend<*, *>>,
+    callbacks: Collection<TranslationProgressCallback>? = null,
 ) {
     // Execute all passes in sequence. First convert the list of passes to a queue
     val queue = ArrayDeque<KClass<out Pass<out Node>>>()
@@ -327,7 +329,7 @@ fun executePassesSequentially(
         }
 
         // Execute it
-        executePass(pass, ctx, result, executedFrontends)
+        executePass(pass, ctx, result, executedFrontends, callbacks)
 
         // Increment executions
         executions[pass] = numExec + 1
@@ -366,6 +368,7 @@ fun executePass(
     ctx: TranslationContext,
     result: TranslationResult,
     executedFrontends: Collection<LanguageFrontend<*, *>>,
+    callbacks: Collection<TranslationProgressCallback>? = null,
 ) {
     val bench = Benchmark(cls.java, "Executing Pass", false, result)
 
@@ -384,14 +387,18 @@ fun executePass(
                 (prototype as TranslationResultPass)::class,
                 ctx,
                 prototype.sort(result),
+                result,
                 executedFrontends,
+                callbacks,
             )
         is ComponentPass ->
             consumeTargets(
                 (prototype as ComponentPass)::class,
                 ctx,
                 prototype.sort(result),
+                result,
                 executedFrontends,
+                callbacks,
             )
         is TranslationUnitPass ->
             consumeTargets(
@@ -399,14 +406,18 @@ fun executePass(
                 ctx,
                 // Execute them in the "sorted" order (if available)
                 prototype.sort(result),
+                result,
                 executedFrontends,
+                callbacks,
             )
         is EOGStarterPass -> {
             consumeTargets(
                 (prototype as EOGStarterPass)::class,
                 ctx,
                 prototype.sort(result),
+                result,
                 executedFrontends,
+                callbacks,
             )
         }
     }
@@ -425,9 +436,22 @@ inline fun <reified T : Node> consumeTargets(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     targets: Collection<T>,
+    result: TranslationResult,
     executedFrontends: Collection<LanguageFrontend<*, *>>,
+    callbacks: Collection<TranslationProgressCallback>? = null,
 ) {
     targets.forEach { consumeTarget(cls, ctx, it, executedFrontends) }
+    callbacks?.forEach { callback ->
+        runCatching { callback.afterPass(cls, ctx, result, targets) }
+            .onFailure {
+                log.warn(
+                    "Progress callback {} failed after pass {}",
+                    callback::class.simpleName ?: callback.javaClass.simpleName,
+                    cls.simpleName,
+                    it,
+                )
+            }
+    }
 }
 
 /**
