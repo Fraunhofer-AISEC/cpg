@@ -39,7 +39,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
 class CodyzeExecutorTest {
-
     @Test
     fun testEvaluate() {
         val project =

@@ -45,7 +45,6 @@ import kotlin.test.*
  * integration test. This might be replaced with a language-neutral test at some point.
  */
 class LoggingConceptTest : BaseTest() {
-
     @Test
     fun testSimpleLog() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "logging")

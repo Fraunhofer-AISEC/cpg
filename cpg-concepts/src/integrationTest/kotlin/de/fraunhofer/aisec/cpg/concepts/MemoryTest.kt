@@ -52,7 +52,6 @@ import java.io.File
 import kotlin.test.*
 
 class MemoryTest {
-
     @Test
     fun testMemoryDeleteFunction() {
         val topLevel = File("src/integrationTest/resources/python")

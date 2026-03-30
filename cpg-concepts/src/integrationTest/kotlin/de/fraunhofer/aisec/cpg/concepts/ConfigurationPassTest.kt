@@ -51,7 +51,6 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class ConfigurationPassTest {
-
     @Test
     fun testPythonLoadIni() {
         val topLevel = File("src/integrationTest/resources/python")

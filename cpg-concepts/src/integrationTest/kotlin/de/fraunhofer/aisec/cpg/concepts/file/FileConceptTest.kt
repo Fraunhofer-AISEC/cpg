@@ -42,7 +42,6 @@ import kotlin.test.*
  * integration test. This might be replaced with a language-neutral test at some point.
  */
 class FileConceptTest : BaseTest() {
-
     @Test
     fun testRead() {
         val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
