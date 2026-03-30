@@ -2244,29 +2244,39 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (currentNode.isCompoundAssignment)
                 currentNode.lhs.map { Pair(it, doubleState.getLastWrites(it)) }
             else null
-        /* If the lhs is a MemberAccess or a Subscription, we additionally set the last write to the base/arrayExpression here */
-        destinations
-            .mapNotNullTo(ConcurrentIdentitySet()) {
-                when (it) {
-                    is MemberAccess -> it.base
-                    is Subscription -> it.arrayExpression
-                    else -> null
+        /* If the lhs is a MemberAccess or a Subscription, we additionally set the last write to the base/arrayExpression here
+         *  Make sure to catch nested MemberAccesses/Subscriptions too */
+        val bases = identitySetOf<Node>()
+        destinations.forEach { dest ->
+            var d: Node? = dest
+            while (d != null) {
+                when (d) {
+                    is MemberAccess -> {
+                        d = d.base
+                        bases.add(d)
+                    }
+                    is Subscription -> {
+                        d = d.arrayExpression
+                        bases.add(d)
+                    }
+                    else -> break
                 }
             }
-            .forEach { expression ->
-                doubleState.getAddresses(expression, expression).forEach { baseAddress ->
-                    val entry =
-                        doubleState.declarationsState.computeIfAbsent(baseAddress) {
-                            TripleLattice.Element(
-                                PowersetLattice.Element(baseAddress),
-                                PowersetLattice.Element(),
-                                PowersetLattice.Element(),
-                            )
-                        }
-                    entry.third.clear()
-                    entry.third.add(NodeWithPropertiesKey(expression, equalLinkedHashSetOf(false)))
-                }
+        }
+        bases.forEach { base ->
+            doubleState.getAddresses(base, base).forEach { baseAddress ->
+                val entry =
+                    doubleState.declarationsState.computeIfAbsent(baseAddress) {
+                        TripleLattice.Element(
+                            PowersetLattice.Element(baseAddress),
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(),
+                        )
+                    }
+                entry.third.clear()
+                entry.third.add(NodeWithPropertiesKey(base, equalLinkedHashSetOf(false)))
             }
+        }
 
         doubleState =
             doubleState.updateValues(

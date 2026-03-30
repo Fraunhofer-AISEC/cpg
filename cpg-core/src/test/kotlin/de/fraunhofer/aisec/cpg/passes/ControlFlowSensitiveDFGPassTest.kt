@@ -192,8 +192,6 @@ class ControlFlowSensitiveDFGPassTest {
         }
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testNestedFieldFlow() {
         val test = GraphExamples.getNestedFieldDataflow()
