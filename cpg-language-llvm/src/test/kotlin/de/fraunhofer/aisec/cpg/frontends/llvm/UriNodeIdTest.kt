@@ -34,11 +34,40 @@ import kotlin.io.path.Path
 import kotlin.io.path.walk
 import kotlin.streams.asStream
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
 class UriNodeIdTest : BaseTest() {
+
+    @ParameterizedTest
+    @MethodSource("getTestFilePaths")
+    fun testAstNodeUniqueness(path: Path) {
+        val file = path.toFile()
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<LLVMIRLanguage>()
+            }
+        assertNotNull(result)
+
+        val astNodes = mutableListOf<AstNode>()
+
+        val workQueue = ArrayDeque<AstNode>()
+        workQueue.add(result)
+
+        while (workQueue.isNotEmpty()) {
+            val node = workQueue.removeFirst()
+            astNodes.add(node)
+            workQueue.addAll(node.astChildren)
+        }
+        kotlin.test.assertNotNull(astNodes)
+        assertTrue(astNodes.isNotEmpty())
+
+        astNodes
+            .associateWith { node -> astNodes.count { it === node } }
+            .forEach { (node, i) -> assertEquals(i, 1, "$node -> $i") }
+    }
 
     @ParameterizedTest
     @MethodSource("getTestFilePaths")
