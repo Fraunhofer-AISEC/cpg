@@ -29,11 +29,13 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.newAssign
 import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.newLiteral
+import de.fraunhofer.aisec.cpg.graph.newMemberAccess
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.objectType
@@ -46,6 +48,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.LiteralExpressionSyntax -> handleLiteralExpression(node)
             is Csharp.AST.BinaryExpressionSyntax -> handleBinaryExpression(node)
             is Csharp.AST.AssignmentExpressionSyntax -> handleAssignmentExpression(node)
+            is Csharp.AST.MemberAccessExpressionSyntax -> handleMemberAccessExpression(node)
             else ->
                 newProblemExpression(
                     "The expression of class ${node.javaClass} is not supported yet",
@@ -121,5 +124,24 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
                 newLiteral(null, objectType("null"), rawNode = node)
             else -> newProblemExpression("Unknown literal type: ${node.csharpType}", rawNode = node)
         }
+    }
+
+    /**
+     * Translates a [MemberAccessExpressionSyntax][Csharp.AST.MemberAccessExpressionSyntax] into a
+     * [MemberAccess].
+     *
+     * C# spec:
+     * [MemberAccess](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12813-member-access)
+     */
+    private fun handleMemberAccessExpression(
+        node: Csharp.AST.MemberAccessExpressionSyntax
+    ): MemberAccess {
+        val base = handle(node.expression)
+        return newMemberAccess(
+            name = node.name,
+            base = base,
+            operatorCode = node.operatorToken,
+            rawNode = node,
+        )
     }
 }

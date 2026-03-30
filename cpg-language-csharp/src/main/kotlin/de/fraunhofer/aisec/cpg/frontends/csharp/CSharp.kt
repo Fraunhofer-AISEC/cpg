@@ -426,6 +426,7 @@ interface Csharp : Library {
                     "BinaryExpressionSyntax" -> BinaryExpressionSyntax(nativeValue)
                     "IdentifierNameSyntax" -> IdentifierNameSyntax(nativeValue)
                     "AssignmentExpressionSyntax" -> AssignmentExpressionSyntax(nativeValue)
+                    "MemberAccessExpressionSyntax" -> MemberAccessExpressionSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -483,6 +484,21 @@ interface Csharp : Library {
          */
         class IdentifierNameSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
             val identifier: String by lazy { INSTANCE.GetIdentifierNameSyntaxIdentifier(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`MemberAccessExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.memberaccessexpressionsyntax)
+         * class.
+         */
+        class MemberAccessExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val expression: ExpressionSyntax by lazy {
+                INSTANCE.GetMemberAccessExpressionExpression(this)
+            }
+            val name: String by lazy { INSTANCE.GetMemberAccessExpressionName(this) }
+            val operatorToken: String by lazy {
+                INSTANCE.GetMemberAccessExpressionOperatorToken(this)
+            }
         }
     }
 
@@ -658,6 +674,14 @@ interface Csharp : Library {
     fun GetForEachStatementExpression(handle: AST.ForEachStatementSyntax): AST.ExpressionSyntax
 
     fun GetForEachStatementStatement(handle: AST.ForEachStatementSyntax): AST.StatementSyntax
+
+    fun GetMemberAccessExpressionExpression(
+        handle: AST.MemberAccessExpressionSyntax
+    ): AST.ExpressionSyntax
+
+    fun GetMemberAccessExpressionName(handle: AST.MemberAccessExpressionSyntax): String
+
+    fun GetMemberAccessExpressionOperatorToken(handle: AST.MemberAccessExpressionSyntax): String
 
     companion object {
         val INSTANCE: Csharp by lazy {

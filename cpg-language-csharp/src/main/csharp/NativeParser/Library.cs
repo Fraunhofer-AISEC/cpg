@@ -471,4 +471,22 @@ public static class Library
     {
         return Register(((ForEachStatementSyntax)Nodes[handlePtr]).Statement);
     }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetMemberAccessExpressionExpression")]
+    public static IntPtr GetMemberAccessExpressionExpression(IntPtr handlePtr)
+    {
+        return Register(((MemberAccessExpressionSyntax)Nodes[handlePtr]).Expression);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetMemberAccessExpressionName")]
+    public static IntPtr GetMemberAccessExpressionName(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((MemberAccessExpressionSyntax)Nodes[handlePtr]).Name.Identifier.ToString());
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetMemberAccessExpressionOperatorToken")]
+    public static IntPtr GetMemberAccessExpressionOperatorToken(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((MemberAccessExpressionSyntax)Nodes[handlePtr]).OperatorToken.Text);
+    }
 }
