@@ -45,6 +45,7 @@ fun RsAst.astNode(): RsNode {
         is RsAst.RustType -> this.v1.astNode()
         is RsAst.RustAbi -> this.v1.astNode
         is RsAst.RustProblem -> this.v1.astNode
+        is RsAst.RustUseTree -> this.v1.astNode
     }
 }
 

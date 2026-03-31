@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import uniffi.cpgrust.RsAssocItem
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsConst
@@ -38,9 +39,12 @@ import uniffi.cpgrust.RsItem
 import uniffi.cpgrust.RsModule
 import uniffi.cpgrust.RsParam
 import uniffi.cpgrust.RsPat
+import uniffi.cpgrust.RsPath
 import uniffi.cpgrust.RsStruct
 import uniffi.cpgrust.RsTrait
 import uniffi.cpgrust.RsType
+import uniffi.cpgrust.RsUse
+import uniffi.cpgrust.RsUseTree
 
 class DeclarationHandler(frontend: RustLanguageFrontend) :
     RustHandler<Declaration, RsAst.RustItem>(::ProblemDeclaration, frontend) {
@@ -54,6 +58,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             is RsItem.Impl -> handleImpl(item.v1)
             is RsItem.Trait -> handleTrait(item.v1)
             is RsItem.Const -> handleConst(item.v1)
+            is RsItem.Use -> handleUse(item.v1)
             else -> handleNotSupported(node, item::class.simpleName ?: "")
         }
     }
@@ -119,8 +124,11 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         for (item in module.items) {
             val declaration = handle(RsAst.RustItem(item))
-            frontend.scopeManager.addDeclaration(declaration)
-            namespace.declarations += declaration
+            ((declaration as? DeclarationSequence)?.declarations ?: listOf(declaration)).forEach { declItem ->
+                frontend.scopeManager.addDeclaration(declItem)
+                namespace.declarations += declItem
+            }
+
         }
 
         frontend.scopeManager.leaveScope(namespace)
@@ -192,9 +200,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                         frontend.declarationHandler.handleNode(
                             RsAst.RustItem(RsItem.Const(item.v1))
                         )
+                    // Todo Add Consts
                 }
-                is RsAssocItem.TypeAlias -> {}
-                is RsAssocItem.MacroCall -> {}
+                is RsAssocItem.TypeAlias -> {} // Todo handle Type Alias
+                is RsAssocItem.MacroCall -> { } // Todo handle Macro Calls
             }
         }
 
@@ -254,8 +263,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     extensionDeclaration.addDeclaration(const)
                     frontend.scopeManager.addDeclaration(const)
                 }
-                is RsAssocItem.TypeAlias -> {}
-                is RsAssocItem.MacroCall -> {}
+                is RsAssocItem.TypeAlias -> {} // Todo handle type alias
+                is RsAssocItem.MacroCall -> {} // Todo handle macro call
             }
         }
 
@@ -267,6 +276,105 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         frontend.scopeManager.leaveScope(extensionDeclaration)
 
         return extensionDeclaration
+    }
+
+    private fun handleUse(use: RsUse): Declaration {
+        val raw = RsAst.RustItem(RsItem.Use(use))
+
+        val imports = use.useTree?.let { flattenUseTree(rsUseTree = it) }
+
+        imports?.forEach { import ->
+            // After Flattening we must check if the first part of the import name starts with
+            // crate, self or super
+            // If they do we replace them with the concrete name they represent in the context
+            import.name = handleKeywordPrefixes(import.name) ?: Name("")
+        }
+
+        val declarations = DeclarationSequence()
+
+        for (import in imports ?: listOf()) {
+            declarations += import
+            frontend.scopeManager.addDeclaration(import)
+        }
+
+        return if (declarations.isSingle) declarations.first() else declarations
+    }
+
+    /**
+     * This function replaces the keyword prefixes of a path in a name with the concrete value that
+     * is defined by the current scope.
+     */
+    private fun handleKeywordPrefixes(name: Name): Name? {
+        name.parent?.let { parent ->
+            return newName(name.localName, namespace = handleKeywordPrefixes(parent))
+        }
+
+        val current = frontend.scopeManager.currentNamespace
+
+        return when (name.localName) {
+            "self" -> current
+            "super" -> current?.parent
+            "crate" -> null
+            else -> name
+        }
+    }
+
+    private fun flattenUseTree(
+        prefixName: Name? = null,
+        rsUseTree: RsUseTree,
+    ): MutableList<Import> {
+        val imports = mutableListOf<Import>()
+
+        var importName = rsUseTree.path?.let { handlePathForImport(it) } ?: newName("")
+
+        importName = newName(importName, namespace = prefixName)
+
+        rsUseTree.useTrees.forEach {
+            flattenUseTree(prefixName = importName, it).let { imports += it }
+        }
+
+        if (rsUseTree.useTrees.isEmpty()) {
+            // Todo Consider how we have to handle _
+            val alias = rsUseTree.rename?.let { language.parseName(it) }
+            imports +=
+                when (importName.localName) {
+                    "*" ->
+                        newImport(
+                            importName.parent ?: newName(""),
+                            alias = alias,
+                            style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                            rawNode = RsAst.RustUseTree(rsUseTree),
+                        )
+                    "self" ->
+                        newImport(
+                            importName.parent ?: newName(""),
+                            alias = alias,
+                            style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                            rawNode = RsAst.RustUseTree(rsUseTree),
+                        )
+                    else ->
+                        newImport(
+                            importName,
+                            alias = alias,
+                            style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                            rawNode = RsAst.RustUseTree(rsUseTree),
+                        )
+                }
+        }
+
+        return imports
+    }
+
+    private fun handlePathForImport(rsPath: RsPath): Name? {
+        // In the case of imports we do not have to handle return type, type args, type anchor and
+        // type args
+
+        val qualifierName =
+            rsPath.qualifier.firstOrNull()?.let { qualifier -> handlePathForImport(qualifier) }
+
+        return rsPath.segment?.nameRef?.text?.let { text ->
+            newName(text, namespace = qualifierName)
+        }
     }
 
     private fun handleConst(const: RsConst): Declaration {
