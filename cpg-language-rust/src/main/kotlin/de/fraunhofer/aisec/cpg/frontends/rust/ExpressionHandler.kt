@@ -50,6 +50,7 @@ import uniffi.cpgrust.RsLoopExpr
 import uniffi.cpgrust.RsMacroExpr
 import uniffi.cpgrust.RsMethodCallExpr
 import uniffi.cpgrust.RsPat
+import uniffi.cpgrust.RsPath
 import uniffi.cpgrust.RsPathExpr
 import uniffi.cpgrust.RsPrefixExpr
 import uniffi.cpgrust.RsRangeExpr
@@ -215,15 +216,32 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     fun handlePathExpr(pathExpr: RsPathExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.PathExpr(pathExpr))
+        // In the case of imports we do not have to handle return type, type args, type anchor and
+        // type args
 
-        pathExpr.segment?.nameRef?.let {
-            return newReference(it.text, rawNode = raw)
+        pathExpr.path?.let { rsPath ->
+            return newReference(
+                frontend.handleKeywordsInNames(handlePathForRef(rsPath) ?: newName("")),
+                rawNode = raw,
+            )
         }
 
         return newProblemExpression(
             problem = "PathExpression does not contain reference to a name",
             rawNode = raw,
         )
+    }
+
+    private fun handlePathForRef(rsPath: RsPath): Name? {
+        // In the case of imports we do not have to handle return type, type args, type anchor and
+        // type args
+
+        val qualifierName =
+            rsPath.qualifier.firstOrNull()?.let { qualifier -> handlePathForRef(qualifier) }
+
+        return rsPath.segment?.nameRef?.text?.let { text ->
+            newName(text, namespace = qualifierName)
+        }
     }
 
     fun handleRefExpr(refExpr: RsRefExpr): Expression {

@@ -172,6 +172,28 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         )
     }
 
+    /**
+     * This function replaces the keyword prefixes of a path in a name with the concrete value that
+     * is defined by the current scope.
+     */
+    fun handleKeywordsInNames(name: Name): Name? {
+        name.parent?.let { parent ->
+            return when (name.localName) {
+                "super" -> handleKeywordsInNames(parent)?.parent
+                else -> newName(name.localName, namespace = handleKeywordsInNames(parent))
+            }
+        }
+
+        val current = scopeManager.currentNamespace
+
+        return when (name.localName) {
+            "self" -> current
+            "super" -> current?.parent
+            "crate" -> null
+            else -> name
+        }
+    }
+
     override fun setComment(node: Node, astNode: RsAst) {
         node.comment = astNode.astNode().comments
     }

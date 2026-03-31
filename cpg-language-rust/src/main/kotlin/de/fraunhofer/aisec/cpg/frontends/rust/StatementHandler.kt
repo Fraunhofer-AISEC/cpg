@@ -120,7 +120,8 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         val declarationStatement = newDeclarationStatement(rawNode = RsAst.RustItem(item))
 
         val declaration = frontend.declarationHandler.handle(RsAst.RustItem(item))
-        ((declaration as? DeclarationSequence)?.declarations ?: listOf(declaration)).forEach { declItem ->
+        ((declaration as? DeclarationSequence)?.declarations ?: listOf(declaration)).forEach {
+            declItem ->
             declarationStatement.declarations += declItem
             frontend.scopeManager.addDeclaration(declItem)
         }

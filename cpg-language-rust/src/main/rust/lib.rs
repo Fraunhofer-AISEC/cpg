@@ -879,9 +879,9 @@ impl From<ParenExpr> for RSParenExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSPathExpr {pub(crate) ast_node: RSNode, pub segment: Option<RSPathSegment>}
+pub struct RSPathExpr {pub(crate) ast_node: RSNode, pub path: Option<RSPath>}
 impl From<PathExpr> for RSPathExpr {
-    fn from(node:  PathExpr) -> Self {RSPathExpr{ast_node: node.syntax().into(), segment: node.path().map(|p|p.segment()).flatten().map(Into::into)}}
+    fn from(node:  PathExpr) -> Self {RSPathExpr{ast_node: node.syntax().into(), path: node.path().map(Into::into)}}
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1203,9 +1203,14 @@ impl From<ParenPat> for RSParenPat {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSPathPat {pub(crate) ast_node: RSNode}
+pub struct RSPathPat {pub(crate) ast_node: RSNode, path: Option<RSPath>}
 impl From<PathPat> for RSPathPat {
-    fn from(node: PathPat ) -> Self {RSPathPat{ast_node: node.syntax().into()}}
+    fn from(node: PathPat ) -> Self {
+        RSPathPat{
+            ast_node: node.syntax().into(),
+            path: node.path().map(Into::into)
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

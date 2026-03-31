@@ -124,11 +124,11 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         for (item in module.items) {
             val declaration = handle(RsAst.RustItem(item))
-            ((declaration as? DeclarationSequence)?.declarations ?: listOf(declaration)).forEach { declItem ->
+            ((declaration as? DeclarationSequence)?.declarations ?: listOf(declaration)).forEach {
+                declItem ->
                 frontend.scopeManager.addDeclaration(declItem)
                 namespace.declarations += declItem
             }
-
         }
 
         frontend.scopeManager.leaveScope(namespace)
@@ -203,7 +203,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     // Todo Add Consts
                 }
                 is RsAssocItem.TypeAlias -> {} // Todo handle Type Alias
-                is RsAssocItem.MacroCall -> { } // Todo handle Macro Calls
+                is RsAssocItem.MacroCall -> {} // Todo handle Macro Calls
             }
         }
 
@@ -281,13 +281,13 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     private fun handleUse(use: RsUse): Declaration {
         val raw = RsAst.RustItem(RsItem.Use(use))
 
-        val imports = use.useTree?.let { flattenUseTree(rsUseTree = it) }
+        var imports = use.useTree?.let { flattenUseTree(rsUseTree = it) }
 
-        imports?.forEach { import ->
+        imports?.map { import ->
             // After Flattening we must check if the first part of the import name starts with
             // crate, self or super
             // If they do we replace them with the concrete name they represent in the context
-            import.name = handleKeywordPrefixes(import.name) ?: Name("")
+            import.import = frontend.handleKeywordsInNames(import.name) ?: Name("")
         }
 
         val declarations = DeclarationSequence()
@@ -298,25 +298,6 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
 
         return if (declarations.isSingle) declarations.first() else declarations
-    }
-
-    /**
-     * This function replaces the keyword prefixes of a path in a name with the concrete value that
-     * is defined by the current scope.
-     */
-    private fun handleKeywordPrefixes(name: Name): Name? {
-        name.parent?.let { parent ->
-            return newName(name.localName, namespace = handleKeywordPrefixes(parent))
-        }
-
-        val current = frontend.scopeManager.currentNamespace
-
-        return when (name.localName) {
-            "self" -> current
-            "super" -> current?.parent
-            "crate" -> null
-            else -> name
-        }
     }
 
     private fun flattenUseTree(
