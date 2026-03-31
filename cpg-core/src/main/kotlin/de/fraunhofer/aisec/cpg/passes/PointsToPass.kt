@@ -568,20 +568,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private suspend fun handleEmptyFunction(
         lattice: PointsToState,
         startState: PointsToState.Element,
-        Function: Function,
+        function: Function,
     ): PointsToState.Element {
         var doubleState = startState
 
-        if (Function.functionSummary.isEmpty()) {
+        if (function.functionSummary.isEmpty()) {
             // Add a dummy function summary so that we don't try this every time
             // In this dummy, all parameters point to the return
             // TODO: Also add possible dereference values to the input?
             val prevDFGs = PowersetLattice.Element<NodeWithPropertiesKey>()
             val newEntries =
                 ConcurrentHashMap.newKeySet<FSEntry>().apply {
-                    add(FSEntry(0, Function, 1, "", isDummy = true))
+                    add(FSEntry(0, function, 1, "", isDummy = true))
                 }
-            Function.parameters.forEach { param ->
+            function.parameters.forEach { param ->
                 // The short FS
                 newEntries.add(
                     FSEntry(
@@ -600,18 +600,18 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 prevDFGs.add(NodeWithPropertiesKey(param, equalLinkedHashSetOf<Any>()))
             }
             // For Methods, we also add an edge to the receiver
-            if (Function is Method)
-                Function.receiver?.let {
+            if (function is Method)
+                function.receiver?.let {
                     prevDFGs.add(NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>()))
                 }
             val rets = identitySetOf<Node>()
-            if (Function.returns.isNotEmpty()) rets.addAll(Function.returns) else rets.add(Function)
-            rets.forEach { ret -> Function.functionSummary.put(ret, newEntries) }
+            if (function.returns.isNotEmpty()) rets.addAll(function.returns) else rets.add(function)
+            rets.forEach { ret -> function.functionSummary.put(ret, newEntries) }
             // draw a DFG-Edge from all parameters to the Function
             doubleState =
                 lattice.push(
                     doubleState,
-                    Function,
+                    function,
                     GeneralStateEntryElement(
                         PowersetLattice.Element(),
                         PowersetLattice.Element(),
@@ -621,30 +621,44 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             return doubleState
         }
 
-        for ((param, fsEntries) in Function.functionSummary) {
+        for ((param, fsEntries) in function.functionSummary) {
             fsEntries.forEach { entry ->
-                if (param is Parameter && entry.srcNode is Parameter) {
+                if (param is Parameter) { // && entry.srcNode is Parameter) {
                     val dst =
                         doubleState
                             .getNestedValues(param, entry.destValueDepth, false, true, true)
                             .map { it.first }
                             .singleOrNull()
                     val src =
-                        doubleState
-                            .getNestedValues(entry.srcNode, entry.srcValueDepth, false, true, true)
-                            .map { it.first }
-                            .singleOrNull()
+                        when (entry.srcNode) {
+                            is Parameter -> {
+                                doubleState
+                                    .getNestedValues(
+                                        entry.srcNode,
+                                        entry.srcValueDepth,
+                                        false,
+                                        true,
+                                        true,
+                                    )
+                                    .map { it.first }
+                                    .singleOrNull()
+                            }
+                            is Node -> entry.srcNode
+                            else -> null
+                        }
                     if (src != null && dst != null) {
                         // We couldn't set the lastWrites when creating the functionSummary
                         // (which
                         // has to be hardcoded b/c we don't have a body), so we replace that
                         // now
                         entry.lastWrites.forEach {
-                            Function.functionSummary[param]?.singleOrNull { it == entry }
+                            function.functionSummary[param]
+                                ?.singleOrNull { it == entry }
                                 ?.lastWrites
                                 ?.remove(it)
                         }
-                        Function.functionSummary[param]?.singleOrNull { it == entry }
+                        function.functionSummary[param]
+                            ?.singleOrNull { it == entry }
                             ?.lastWrites
                             ?.add(NodeWithPropertiesKey(dst, equalLinkedHashSetOf()))
                         val propertySet = equalLinkedHashSetOf<Any>()
