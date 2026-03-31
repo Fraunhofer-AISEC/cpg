@@ -472,6 +472,30 @@ public static class Library
         return Register(((ForEachStatementSyntax)Nodes[handlePtr]).Statement);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetInvocationExpressionExpression")]
+    public static IntPtr GetInvocationExpressionExpression(IntPtr handlePtr)
+    {
+        return Register(((InvocationExpressionSyntax)Nodes[handlePtr]).Expression);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetInvocationExpressionArgumentCount")]
+    public static int GetInvocationExpressionArgumentCount(IntPtr handlePtr)
+    {
+        return ((InvocationExpressionSyntax)Nodes[handlePtr]).ArgumentList.Arguments.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetInvocationExpressionArgument")]
+    public static IntPtr GetInvocationExpressionArgument(IntPtr handlePtr, int index)
+    {
+        return Register(((InvocationExpressionSyntax)Nodes[handlePtr]).ArgumentList.Arguments[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetArgumentExpression")]
+    public static IntPtr GetArgumentExpression(IntPtr handlePtr)
+    {
+        return Register(((ArgumentSyntax)Nodes[handlePtr]).Expression);
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetMemberAccessExpressionExpression")]
     public static IntPtr GetMemberAccessExpressionExpression(IntPtr handlePtr)
     {

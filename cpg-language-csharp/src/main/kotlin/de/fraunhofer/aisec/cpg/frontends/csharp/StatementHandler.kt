@@ -86,7 +86,7 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
      * return value expression is optional (e.g. `return;` in void methods).
      *
      * C# spec:
-     * [ReturnStatement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#13105-the-return-statement)
+     * [Return statement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#13105-the-return-statement)
      */
     private fun handleReturn(node: Csharp.AST.ReturnStatementSyntax): Return {
         val ret = newReturn(rawNode = node)
@@ -101,7 +101,7 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
      * [Variable] and added to the current scope.
      *
      * C# spec:
-     * [LocalVariableDeclaration](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1364-local-variable-declarations)
+     * [Local variable declarations](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1362-local-variable-declarations)
      */
     private fun handleLocalDeclaration(
         node: Csharp.AST.LocalDeclarationStatementSyntax
@@ -125,7 +125,7 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
      * [Expression].
      *
      * C# spec:
-     * [ExpressionStatement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1372-expression-statements)
+     * [Expression statements](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#137-expression-statements)
      */
     private fun handleExpressionStatement(node: Csharp.AST.ExpressionStatementSyntax): Expression {
         return frontend.expressionHandler.handle(node.expression)

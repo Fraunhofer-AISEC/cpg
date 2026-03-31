@@ -427,6 +427,7 @@ interface Csharp : Library {
                     "IdentifierNameSyntax" -> IdentifierNameSyntax(nativeValue)
                     "AssignmentExpressionSyntax" -> AssignmentExpressionSyntax(nativeValue)
                     "MemberAccessExpressionSyntax" -> MemberAccessExpressionSyntax(nativeValue)
+                    "InvocationExpressionSyntax" -> InvocationExpressionSyntax(nativeValue)
                     "ThisExpressionSyntax" -> ThisExpressionSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
@@ -493,6 +494,30 @@ interface Csharp : Library {
          * class.
          */
         class ThisExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`InvocationExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.invocationexpressionsyntax)
+         * class.
+         */
+        class InvocationExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val expression: ExpressionSyntax by lazy {
+                INSTANCE.GetInvocationExpressionExpression(this)
+            }
+            val arguments: List<ArgumentSyntax> by lazy {
+                val count = INSTANCE.GetInvocationExpressionArgumentCount(this)
+                (0 until count).map { i -> INSTANCE.GetInvocationExpressionArgument(this, i) }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ArgumentSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.argumentsyntax)
+         * class.
+         */
+        class ArgumentSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val expression: ExpressionSyntax by lazy { INSTANCE.GetArgumentExpression(this) }
+        }
 
         /**
          * Represents the Roslyn
@@ -682,6 +707,19 @@ interface Csharp : Library {
     fun GetForEachStatementExpression(handle: AST.ForEachStatementSyntax): AST.ExpressionSyntax
 
     fun GetForEachStatementStatement(handle: AST.ForEachStatementSyntax): AST.StatementSyntax
+
+    fun GetInvocationExpressionExpression(
+        handle: AST.InvocationExpressionSyntax
+    ): AST.ExpressionSyntax
+
+    fun GetInvocationExpressionArgumentCount(handle: AST.InvocationExpressionSyntax): Int
+
+    fun GetInvocationExpressionArgument(
+        handle: AST.InvocationExpressionSyntax,
+        index: Int,
+    ): AST.ArgumentSyntax
+
+    fun GetArgumentExpression(handle: AST.ArgumentSyntax): AST.ExpressionSyntax
 
     fun GetMemberAccessExpressionExpression(
         handle: AST.MemberAccessExpressionSyntax

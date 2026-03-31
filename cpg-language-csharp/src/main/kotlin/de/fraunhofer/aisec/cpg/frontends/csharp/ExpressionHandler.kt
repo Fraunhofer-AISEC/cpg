@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
@@ -34,8 +35,10 @@ import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.newAssign
 import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
+import de.fraunhofer.aisec.cpg.graph.newCall
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newMemberAccess
+import de.fraunhofer.aisec.cpg.graph.newMemberCall
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.objectType
@@ -49,13 +52,10 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.LiteralExpressionSyntax -> handleLiteralExpression(node)
             is Csharp.AST.BinaryExpressionSyntax -> handleBinaryExpression(node)
             is Csharp.AST.AssignmentExpressionSyntax -> handleAssignmentExpression(node)
+            is Csharp.AST.InvocationExpressionSyntax -> handleInvocationExpression(node)
             is Csharp.AST.MemberAccessExpressionSyntax -> handleMemberAccessExpression(node)
             is Csharp.AST.ThisExpressionSyntax -> handleThisExpression(node)
-            else ->
-                newProblemExpression(
-                    "The expression of class ${node.javaClass} is not supported yet",
-                    rawNode = node,
-                )
+            else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
     }
 
@@ -63,7 +63,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      * Translates an [IdentifierNameSyntax][Csharp.AST.IdentifierNameSyntax] into a [Reference].
      *
      * C# spec:
-     * [SimpleNames](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12842-simple-names)
+     * [Simple names](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1284-simple-names)
      */
     private fun handleIdentifierName(node: Csharp.AST.IdentifierNameSyntax): Reference {
         return newReference(name = node.identifier, rawNode = node)
@@ -74,7 +74,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      * [BinaryOperator].
      *
      * C# spec:
-     * [BinaryOperator](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12104-binary-operators)
+     * [Binary operator](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1245-binary-operator-overload-resolution)
      */
     private fun handleBinaryExpression(node: Csharp.AST.BinaryExpressionSyntax): BinaryOperator {
         return newBinaryOperator(operatorCode = node.operatorToken, rawNode = node).apply {
@@ -88,7 +88,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      * [Assign].
      *
      * C# spec:
-     * [AssignmentOperators](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12214-assignment-operators)
+     * [Assignment operators](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1223-assignment-operators)
      */
     private fun handleAssignmentExpression(node: Csharp.AST.AssignmentExpressionSyntax): Assign {
         return newAssign(
@@ -124,8 +124,31 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
                 newLiteral(node.value.single(), builtInTypes.getValue("char"), rawNode = node)
             is Csharp.AST.NullLiteralExpressionSyntax ->
                 newLiteral(null, objectType("null"), rawNode = node)
+            // TODO: Return unknownType()?
             else -> newProblemExpression("Unknown literal type: ${node.csharpType}", rawNode = node)
         }
+    }
+
+    /**
+     * Translates an [InvocationExpressionSyntax][Csharp.AST.InvocationExpressionSyntax] into a
+     * [Call]. If the callee is a [MemberAccess] (e.g. `obj.Method()`), a `MemberCall` is created.
+     * Otherwise (e.g. `Foo()`), a plain [Call] is created.
+     *
+     * C# spec:
+     * [Invocation expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12810-invocation-expressions)
+     */
+    private fun handleInvocationExpression(node: Csharp.AST.InvocationExpressionSyntax): Call {
+        val callee = handle(node.expression)
+        val call =
+            if (callee is MemberAccess) {
+                newMemberCall(callee, rawNode = node)
+            } else {
+                newCall(callee, rawNode = node)
+            }
+        for (arg in node.arguments) {
+            call.addArgument(handle(arg.expression))
+        }
+        return call
     }
 
     /**
@@ -133,7 +156,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      * [MemberAccess].
      *
      * C# spec:
-     * [MemberAccess](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12813-member-access)
+     * [Member access](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1287-member-access)
      */
     private fun handleMemberAccessExpression(
         node: Csharp.AST.MemberAccessExpressionSyntax
@@ -152,7 +175,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      * the name `this`.
      *
      * C# spec:
-     * [ThisAccess](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12822-this-access)
+     * [This access](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12814-this-access)
      */
     private fun handleThisExpression(node: Csharp.AST.ThisExpressionSyntax): Reference {
         val type = frontend.scopeManager.currentRecord?.toType() ?: unknownType()

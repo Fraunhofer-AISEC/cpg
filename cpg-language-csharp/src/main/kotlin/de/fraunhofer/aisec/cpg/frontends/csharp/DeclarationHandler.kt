@@ -49,9 +49,11 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
-     * Translates a C#
-     * [`NamespaceDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.namespacedeclarationsyntax?view=roslyn-dotnet-5.0.0)
-     * into a [Namespace].
+     * Translates a [NamespaceDeclarationSyntax][Csharp.AST.NamespaceDeclarationSyntax] into a
+     * [Namespace].
+     *
+     * C# spec:
+     * [Namespace declarations](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/namespaces#143-namespace-declarations)
      */
     private fun handleNamespaceDeclaration(
         node: Csharp.AST.NamespaceDeclarationSyntax
@@ -70,9 +72,10 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
-     * Translates a C#
-     * [`ClassDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.classdeclarationsyntax?view=roslyn-dotnet-5.0.0)
-     * into a [Record].
+     * Translates a [ClassDeclarationSyntax][Csharp.AST.ClassDeclarationSyntax] into a [Record].
+     *
+     * C# spec:
+     * [Class declarations](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#1522-class-declarations)
      */
     private fun handleClassDeclaration(node: Csharp.AST.ClassDeclarationSyntax): Declaration {
         val record = newRecord(node.identifier, "class", rawNode = node)
@@ -100,9 +103,10 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
-     * Translates a C#
-     * [`MethodDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.methoddeclarationsyntax?view=roslyn-dotnet-5.0.0)
-     * into a [Method].
+     * Translates a [MethodDeclarationSyntax][Csharp.AST.MethodDeclarationSyntax] into a [Method].
+     *
+     * C# spec:
+     * [Methods](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#156-methods)
      */
     private fun handleMethodDeclaration(node: Csharp.AST.MethodDeclarationSyntax): Declaration {
         val method = newMethod(node.identifier, rawNode = node)
@@ -126,9 +130,11 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
-     * Translates a C#
-     * [`ConstructorDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.constructordeclarationsyntax?view=roslyn-dotnet-5.0.0)
-     * into a [Constructor].
+     * Translates a [ConstructorDeclarationSyntax][Csharp.AST.ConstructorDeclarationSyntax] into a
+     * [Constructor].
+     *
+     * C# spec:
+     * [Instance constructors](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#1511-instance-constructors)
      */
     private fun handleConstructorDeclaration(
         node: Csharp.AST.ConstructorDeclarationSyntax
