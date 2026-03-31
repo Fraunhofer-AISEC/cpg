@@ -427,6 +427,7 @@ interface Csharp : Library {
                     "IdentifierNameSyntax" -> IdentifierNameSyntax(nativeValue)
                     "AssignmentExpressionSyntax" -> AssignmentExpressionSyntax(nativeValue)
                     "MemberAccessExpressionSyntax" -> MemberAccessExpressionSyntax(nativeValue)
+                    "ThisExpressionSyntax" -> ThisExpressionSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -485,6 +486,13 @@ interface Csharp : Library {
         class IdentifierNameSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
             val identifier: String by lazy { INSTANCE.GetIdentifierNameSyntaxIdentifier(this) }
         }
+
+        /**
+         * Represents the Roslyn
+         * [`ThisExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.thisexpressionsyntax)
+         * class.
+         */
+        class ThisExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p)
 
         /**
          * Represents the Roslyn

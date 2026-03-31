@@ -26,12 +26,15 @@
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.implicit
 import de.fraunhofer.aisec.cpg.graph.newConstructor
 import de.fraunhofer.aisec.cpg.graph.newField
 import de.fraunhofer.aisec.cpg.graph.newMethod
 import de.fraunhofer.aisec.cpg.graph.newNamespace
 import de.fraunhofer.aisec.cpg.graph.newParameter
 import de.fraunhofer.aisec.cpg.graph.newRecord
+import de.fraunhofer.aisec.cpg.graph.newVariable
+import de.fraunhofer.aisec.cpg.graph.unknownType
 
 class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     CSharpHandler<Declaration, Csharp.AST.MemberDeclarationSyntax>(::ProblemDeclaration, frontend) {
@@ -105,6 +108,8 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         val method = newMethod(node.identifier, rawNode = node)
         frontend.scopeManager.enterScope(method)
 
+        createMethodReceiver(method)
+
         for (parameter in node.parameters) {
             val param =
                 newParameter(
@@ -146,5 +151,13 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
 
         frontend.scopeManager.leaveScope(constructor)
         return constructor
+    }
+
+    /** Creates an implicit `this` receiver variable for the given [method]. */
+    private fun createMethodReceiver(method: Method) {
+        val record = frontend.scopeManager.currentRecord
+        val receiver = newVariable("this", record?.toType() ?: unknownType()).implicit("this")
+        frontend.scopeManager.addDeclaration(receiver)
+        method.receiver = receiver
     }
 }

@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.newMemberAccess
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.objectType
+import de.fraunhofer.aisec.cpg.graph.unknownType
 
 class ExpressionHandler(frontend: CSharpLanguageFrontend) :
     CSharpHandler<Expression, Csharp.AST.ExpressionSyntax>(::ProblemExpression, frontend) {
@@ -49,6 +50,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.BinaryExpressionSyntax -> handleBinaryExpression(node)
             is Csharp.AST.AssignmentExpressionSyntax -> handleAssignmentExpression(node)
             is Csharp.AST.MemberAccessExpressionSyntax -> handleMemberAccessExpression(node)
+            is Csharp.AST.ThisExpressionSyntax -> handleThisExpression(node)
             else ->
                 newProblemExpression(
                     "The expression of class ${node.javaClass} is not supported yet",
@@ -143,5 +145,17 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             operatorCode = node.operatorToken,
             rawNode = node,
         )
+    }
+
+    /**
+     * Translates a [ThisExpressionSyntax][Csharp.AST.ThisExpressionSyntax] into a [Reference] with
+     * the name `this`.
+     *
+     * C# spec:
+     * [ThisAccess](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12822-this-access)
+     */
+    private fun handleThisExpression(node: Csharp.AST.ThisExpressionSyntax): Reference {
+        val type = frontend.scopeManager.currentRecord?.toType() ?: unknownType()
+        return newReference(name = "this", type = type, rawNode = node)
     }
 }
