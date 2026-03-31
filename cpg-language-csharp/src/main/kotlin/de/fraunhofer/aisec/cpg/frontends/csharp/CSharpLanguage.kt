@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
+import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.BooleanType
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
@@ -36,7 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
-class CSharpLanguage : Language<CSharpLanguageFrontend>() {
+class CSharpLanguage : Language<CSharpLanguageFrontend>(), HasImplicitReceiver {
+    override val receiverName = "this"
     override val fileExtensions = listOf("cs")
     override val namespaceDelimiter = "."
 
