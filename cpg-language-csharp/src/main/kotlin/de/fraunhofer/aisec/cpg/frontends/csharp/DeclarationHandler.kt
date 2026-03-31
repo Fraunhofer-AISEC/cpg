@@ -114,7 +114,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
 
         createMethodReceiver(method)
 
-        for (parameter in node.parameters) {
+        for (parameter in node.parameterList.parameters) {
             val param =
                 newParameter(
                     name = parameter.identifier,
@@ -143,7 +143,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         val constructor = newConstructor(node.identifier, record, rawNode = node)
         frontend.scopeManager.enterScope(constructor)
 
-        for (parameter in node.parameters) {
+        for (parameter in node.parameterList.parameters) {
             val param =
                 newParameter(
                     name = parameter.identifier,

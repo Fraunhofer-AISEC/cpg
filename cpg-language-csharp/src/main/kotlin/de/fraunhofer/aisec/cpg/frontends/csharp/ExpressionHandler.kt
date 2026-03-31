@@ -31,14 +31,17 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.New
 import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.newAssign
 import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.newCall
+import de.fraunhofer.aisec.cpg.graph.newConstruction
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newMemberAccess
 import de.fraunhofer.aisec.cpg.graph.newMemberCall
+import de.fraunhofer.aisec.cpg.graph.newNew
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.objectType
@@ -55,6 +58,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.InvocationExpressionSyntax -> handleInvocationExpression(node)
             is Csharp.AST.MemberAccessExpressionSyntax -> handleMemberAccessExpression(node)
             is Csharp.AST.ThisExpressionSyntax -> handleThisExpression(node)
+            is Csharp.AST.ObjectCreationExpressionSyntax -> handleObjectCreationExpression(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
     }
@@ -145,7 +149,7 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             } else {
                 newCall(callee, rawNode = node)
             }
-        for (arg in node.arguments) {
+        for (arg in node.argumentList.arguments) {
             call.addArgument(handle(arg.expression))
         }
         return call
@@ -180,5 +184,30 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
     private fun handleThisExpression(node: Csharp.AST.ThisExpressionSyntax): Reference {
         val type = frontend.scopeManager.currentRecord?.toType() ?: unknownType()
         return newReference(name = "this", type = type, rawNode = node)
+    }
+
+    /**
+     * Translates an [ObjectCreationExpressionSyntax][Csharp.AST.ObjectCreationExpressionSyntax]
+     * into a [New] with a [Construction][de.fraunhofer.aisec.cpg.graph.expressions.Construction]
+     * initializer.
+     *
+     * C# spec:
+     * [Object creation expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#128172-object-creation-expressions)
+     */
+    private fun handleObjectCreationExpression(
+        node: Csharp.AST.ObjectCreationExpressionSyntax
+    ): New {
+        val type = frontend.typeOf(node.type)
+        val newExpression = newNew(type, rawNode = node)
+        val ctor = newConstruction(type.name.localName, rawNode = node)
+        ctor.type = type
+        val argumentList = node.argumentList
+        argumentList?.let {
+            for (arg in it.arguments) {
+                ctor.addArgument(handle(arg.expression))
+            }
+        }
+        newExpression.initializer = ctor
+        return newExpression
     }
 }

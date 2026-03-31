@@ -161,6 +161,10 @@ interface Csharp : Library {
          */
         open class BaseMethodDeclarationSyntax(p: Pointer? = Pointer.NULL) :
             MemberDeclarationSyntax(p) {
+            val parameterList: ParameterListSyntax by lazy {
+                INSTANCE.GetBaseMethodDeclarationParameterList(this)
+            }
+
             override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any {
                 if (nativeValue !is Pointer) {
                     return super.fromNative(nativeValue, context)
@@ -178,10 +182,6 @@ interface Csharp : Library {
          */
         class MethodDeclarationSyntax(p: Pointer? = Pointer.NULL) : BaseMethodDeclarationSyntax(p) {
             val identifier: String by lazy { INSTANCE.GetMethodDeclarationIdentifier(this) }
-            val parameters: List<ParameterSyntax> by lazy {
-                val count = INSTANCE.GetMethodDeclarationParameterCount(this)
-                (0 until count).map { i -> INSTANCE.GetMethodDeclarationParameter(this, i) }
-            }
             val body: BlockSyntax by lazy { INSTANCE.GetBaseMethodDeclarationBody(this) }
         }
 
@@ -322,11 +322,6 @@ interface Csharp : Library {
         class ConstructorDeclarationSyntax(p: Pointer? = Pointer.NULL) :
             BaseMethodDeclarationSyntax(p) {
             val identifier: String by lazy { INSTANCE.GetConstructorDeclarationIdentifier(this) }
-            val parameters: List<ParameterSyntax> by lazy {
-                val count = INSTANCE.GetConstructorDeclarationParameterCount(this)
-                (0 until count).map { i -> INSTANCE.GetConstructorDeclarationParameter(this, i) }
-            }
-            //            val body: StatementSyntax by lazy { StatementSyntax(p) }
         }
 
         /**
@@ -390,16 +385,6 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`ParameterSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.parametersyntax)
-         * class.
-         */
-        class ParameterSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
-            val identifier: String by lazy { INSTANCE.GetParameterIdentifier(this) }
-            val type: TypeSyntax by lazy { INSTANCE.GetParameterType(this) }
-        }
-
-        /**
-         * Represents the Roslyn
          * [`ExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.expressionsyntax)
          * class.
          */
@@ -429,6 +414,7 @@ interface Csharp : Library {
                     "MemberAccessExpressionSyntax" -> MemberAccessExpressionSyntax(nativeValue)
                     "InvocationExpressionSyntax" -> InvocationExpressionSyntax(nativeValue)
                     "ThisExpressionSyntax" -> ThisExpressionSyntax(nativeValue)
+                    "ObjectCreationExpressionSyntax" -> ObjectCreationExpressionSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -504,9 +490,20 @@ interface Csharp : Library {
             val expression: ExpressionSyntax by lazy {
                 INSTANCE.GetInvocationExpressionExpression(this)
             }
+            val argumentList: ArgumentListSyntax by lazy {
+                INSTANCE.GetInvocationExpressionArgumentList(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ArgumentListSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.argumentlistsyntax)
+         * class.
+         */
+        class ArgumentListSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
             val arguments: List<ArgumentSyntax> by lazy {
-                val count = INSTANCE.GetInvocationExpressionArgumentCount(this)
-                (0 until count).map { i -> INSTANCE.GetInvocationExpressionArgument(this, i) }
+                val count = INSTANCE.GetArgumentListCount(this)
+                (0 until count).map { i -> INSTANCE.GetArgumentListArgument(this, i) }
             }
         }
 
@@ -517,6 +514,28 @@ interface Csharp : Library {
          */
         class ArgumentSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
             val expression: ExpressionSyntax by lazy { INSTANCE.GetArgumentExpression(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ParameterListSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.parameterlistsyntax)
+         * class.
+         */
+        class ParameterListSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val parameters: List<ParameterSyntax> by lazy {
+                val count = INSTANCE.GetParameterListCount(this)
+                (0 until count).map { i -> INSTANCE.GetParameterListParameter(this, i) }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ParameterSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.parametersyntax)
+         * class.
+         */
+        class ParameterSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val identifier: String by lazy { INSTANCE.GetParameterIdentifier(this) }
+            val type: TypeSyntax by lazy { INSTANCE.GetParameterType(this) }
         }
 
         /**
@@ -532,6 +551,30 @@ interface Csharp : Library {
             val operatorToken: String by lazy {
                 INSTANCE.GetMemberAccessExpressionOperatorToken(this)
             }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`BaseObjectCreationExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.baseobjectcreationexpressionsyntax)
+         * class. This is the common base for [ObjectCreationExpressionSyntax] (explicit type, e.g.
+         * `new Foo(42)`) and `ImplicitObjectCreationExpressionSyntax` (target-typed, e.g.
+         * `new(42)`).
+         */
+        open class BaseObjectCreationExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            ExpressionSyntax(p) {
+            val argumentList: ArgumentListSyntax? by lazy {
+                INSTANCE.GetBaseObjectCreationExpressionArgumentList(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`ObjectCreationExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.objectcreationexpressionsyntax)
+         * class.
+         */
+        class ObjectCreationExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            BaseObjectCreationExpressionSyntax(p) {
+            val type: TypeSyntax by lazy { INSTANCE.GetObjectCreationExpressionType(this) }
         }
     }
 
@@ -588,12 +631,13 @@ interface Csharp : Library {
 
     fun GetMethodDeclarationIdentifier(handle: AST.MethodDeclarationSyntax): String
 
-    fun GetMethodDeclarationParameterCount(handle: AST.MethodDeclarationSyntax): Int
+    fun GetBaseMethodDeclarationParameterList(
+        handle: AST.BaseMethodDeclarationSyntax
+    ): AST.ParameterListSyntax
 
-    fun GetMethodDeclarationParameter(
-        handle: AST.MethodDeclarationSyntax,
-        index: Int,
-    ): AST.ParameterSyntax
+    fun GetParameterListCount(handle: AST.ParameterListSyntax): Int
+
+    fun GetParameterListParameter(handle: AST.ParameterListSyntax, index: Int): AST.ParameterSyntax
 
     fun GetParameterIdentifier(handle: AST.ParameterSyntax): String
 
@@ -604,13 +648,6 @@ interface Csharp : Library {
     fun GetArrayTypeElementType(handle: AST.ArrayTypeSyntax): AST.TypeSyntax
 
     fun GetConstructorDeclarationIdentifier(handle: AST.ConstructorDeclarationSyntax): String
-
-    fun GetConstructorDeclarationParameterCount(handle: AST.ConstructorDeclarationSyntax): Int
-
-    fun GetConstructorDeclarationParameter(
-        handle: AST.ConstructorDeclarationSyntax,
-        index: Int,
-    ): AST.ParameterSyntax
 
     fun GetBaseMethodDeclarationBody(handle: AST.MethodDeclarationSyntax): AST.BlockSyntax
 
@@ -712,12 +749,13 @@ interface Csharp : Library {
         handle: AST.InvocationExpressionSyntax
     ): AST.ExpressionSyntax
 
-    fun GetInvocationExpressionArgumentCount(handle: AST.InvocationExpressionSyntax): Int
+    fun GetInvocationExpressionArgumentList(
+        handle: AST.InvocationExpressionSyntax
+    ): AST.ArgumentListSyntax
 
-    fun GetInvocationExpressionArgument(
-        handle: AST.InvocationExpressionSyntax,
-        index: Int,
-    ): AST.ArgumentSyntax
+    fun GetArgumentListCount(handle: AST.ArgumentListSyntax): Int
+
+    fun GetArgumentListArgument(handle: AST.ArgumentListSyntax, index: Int): AST.ArgumentSyntax
 
     fun GetArgumentExpression(handle: AST.ArgumentSyntax): AST.ExpressionSyntax
 
@@ -728,6 +766,12 @@ interface Csharp : Library {
     fun GetMemberAccessExpressionName(handle: AST.MemberAccessExpressionSyntax): String
 
     fun GetMemberAccessExpressionOperatorToken(handle: AST.MemberAccessExpressionSyntax): String
+
+    fun GetObjectCreationExpressionType(handle: AST.ObjectCreationExpressionSyntax): AST.TypeSyntax
+
+    fun GetBaseObjectCreationExpressionArgumentList(
+        handle: AST.BaseObjectCreationExpressionSyntax
+    ): AST.ArgumentListSyntax?
 
     companion object {
         val INSTANCE: Csharp by lazy {

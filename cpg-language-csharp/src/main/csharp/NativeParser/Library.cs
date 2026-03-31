@@ -160,16 +160,10 @@ public static class Library
         );
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "GetMethodDeclarationParameterCount")]
-    public static int GetMethodDeclarationParameterCount(IntPtr handlePtr)
+    [UnmanagedCallersOnly(EntryPoint = "GetBaseMethodDeclarationParameterList")]
+    public static IntPtr GetBaseMethodDeclarationParameterList(IntPtr handlePtr)
     {
-        return ((MethodDeclarationSyntax)Nodes[handlePtr]).ParameterList.Parameters.Count;
-    }
-
-    [UnmanagedCallersOnly(EntryPoint = "GetMethodDeclarationParameter")]
-    public static IntPtr GetMethodDeclarationParameter(IntPtr handlePtr, int index)
-    {
-        return Register(((MethodDeclarationSyntax)Nodes[handlePtr]).ParameterList.Parameters[index]);
+        return Register(((BaseMethodDeclarationSyntax)Nodes[handlePtr]).ParameterList);
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetParameterIdentifier")]
@@ -194,16 +188,28 @@ public static class Library
         );
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "GetConstructorDeclarationParameterCount")]
-    public static int GetConstructorDeclarationParameterCount(IntPtr handlePtr)
+    [UnmanagedCallersOnly(EntryPoint = "GetParameterListCount")]
+    public static int GetParameterListCount(IntPtr handlePtr)
     {
-        return ((ConstructorDeclarationSyntax)Nodes[handlePtr]).ParameterList.Parameters.Count;
+        return ((ParameterListSyntax)Nodes[handlePtr]).Parameters.Count;
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "GetConstructorDeclarationParameter")]
-    public static IntPtr GetConstructorDeclarationParameter(IntPtr handlePtr, int index)
+    [UnmanagedCallersOnly(EntryPoint = "GetParameterListParameter")]
+    public static IntPtr GetParameterListParameter(IntPtr handlePtr, int index)
     {
-        return Register(((ConstructorDeclarationSyntax)Nodes[handlePtr]).ParameterList.Parameters[index]);
+        return Register(((ParameterListSyntax)Nodes[handlePtr]).Parameters[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetArgumentListCount")]
+    public static int GetArgumentListCount(IntPtr handlePtr)
+    {
+        return ((ArgumentListSyntax)Nodes[handlePtr]).Arguments.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetArgumentListArgument")]
+    public static IntPtr GetArgumentListArgument(IntPtr handlePtr, int index)
+    {
+        return Register(((ArgumentListSyntax)Nodes[handlePtr]).Arguments[index]);
     }
 
     // We need to call ToString() on the TypeSyntax node to get the actual type name
@@ -478,16 +484,10 @@ public static class Library
         return Register(((InvocationExpressionSyntax)Nodes[handlePtr]).Expression);
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "GetInvocationExpressionArgumentCount")]
-    public static int GetInvocationExpressionArgumentCount(IntPtr handlePtr)
+    [UnmanagedCallersOnly(EntryPoint = "GetInvocationExpressionArgumentList")]
+    public static IntPtr GetInvocationExpressionArgumentList(IntPtr handlePtr)
     {
-        return ((InvocationExpressionSyntax)Nodes[handlePtr]).ArgumentList.Arguments.Count;
-    }
-
-    [UnmanagedCallersOnly(EntryPoint = "GetInvocationExpressionArgument")]
-    public static IntPtr GetInvocationExpressionArgument(IntPtr handlePtr, int index)
-    {
-        return Register(((InvocationExpressionSyntax)Nodes[handlePtr]).ArgumentList.Arguments[index]);
+        return Register(((InvocationExpressionSyntax)Nodes[handlePtr]).ArgumentList);
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetArgumentExpression")]
@@ -512,5 +512,18 @@ public static class Library
     public static IntPtr GetMemberAccessExpressionOperatorToken(IntPtr handlePtr)
     {
         return Marshal.StringToCoTaskMemUTF8(((MemberAccessExpressionSyntax)Nodes[handlePtr]).OperatorToken.Text);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetObjectCreationExpressionType")]
+    public static IntPtr GetObjectCreationExpressionType(IntPtr handlePtr)
+    {
+        return Register(((ObjectCreationExpressionSyntax)Nodes[handlePtr]).Type);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetBaseObjectCreationExpressionArgumentList")]
+    public static IntPtr GetBaseObjectCreationExpressionArgumentList(IntPtr handlePtr)
+    {
+        var argumentList = ((BaseObjectCreationExpressionSyntax)Nodes[handlePtr]).ArgumentList;
+        return argumentList != null ? Register(argumentList) : IntPtr.Zero;
     }
 }
