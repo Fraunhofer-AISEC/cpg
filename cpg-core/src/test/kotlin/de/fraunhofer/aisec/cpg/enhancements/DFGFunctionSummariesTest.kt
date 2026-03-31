@@ -244,7 +244,11 @@ class DFGFunctionSummariesTest {
         val param0PMV =
             param0.fullMemoryValues.filterIsInstance<ParameterMemoryValue>().singleOrNull()
         assertNotNull(param0PMV)
+        val param0DerefPMV = param0.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(param0DerefPMV)
         val param1 = memcpy.parameters[1]
+        val param1DerefPMV = param1.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(param1DerefPMV)
 
         val call = main.calls["memcpy"]
         assertNotNull(call)
@@ -253,7 +257,7 @@ class DFGFunctionSummariesTest {
         assertNotNull(argA)
         /*
         The flows should be as follows:
-        Variable["a"] -> PointerReference["a" (argument of call)] -CallingContextIn-> Parameter -CallingContextOut-> Reference["a" (return)]
+        Variable["a"] -CallingContextIn-> ParameterMemoryvalue["memcpy.param0.derefvalue"] -CallingContextOut-> Reference["a" (return)]
          */
 
         assertEquals(1, argA.nextDFG.size)
@@ -279,9 +283,10 @@ class DFGFunctionSummariesTest {
             argA.prevFullDFG.toMutableSet(),
         )
 
-        val prevDfgOfParam0 = param0.prevDFGEdges.singleOrNull { it !is ContextSensitiveDataflow }
-        assertNotNull(prevDfgOfParam0)
-        assertEquals(param1, prevDfgOfParam0.start)
+        val prevDfgOfParam0Deref =
+            param0DerefPMV.prevDFGEdges.singleOrNull { it !is ContextSensitiveDataflow }
+        assertNotNull(prevDfgOfParam0Deref)
+        assertEquals(param1DerefPMV, prevDfgOfParam0Deref.start)
 
         val returnA = main.allChildren<Return>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)

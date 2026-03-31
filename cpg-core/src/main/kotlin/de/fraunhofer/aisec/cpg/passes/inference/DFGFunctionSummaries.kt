@@ -382,14 +382,15 @@ class DFGFunctionSummaries {
 
             // TODO: It would make sense to model properties here. Could be the index of a return
             // value, full vs. partial flow or whatever comes to our minds in the future
-            // TODO: Unsure if we still need this. We currently draw the edges between the
-            // ParameterMemoryValues. We can't do this here because we don't yet have them, so we do
+            // We can't currently draw the edges between ParameterMemoryValues here because we don't
+            // yet have them, so we do
             // this in handleCallExpression in the pointsToPass
             // Note: When we have a Name for a memoryAddress that does not yet exist, we need to
             // draw the DFG edge later in writeEntry()
-            to?.let {
-                (from as? Node)?.nextDFGEdges += Dataflow(from, it, granularity = granularity)
-            }
+            if (destValueDepth == 1 && srcValueDepth == 1)
+                to?.let {
+                    (from as? Node)?.nextDFGEdges += Dataflow(from, it, granularity = granularity)
+                }
         }
     }
 
