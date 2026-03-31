@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+
   interface Props {
     variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
     size?: 'sm' | 'md' | 'lg';
@@ -7,6 +9,7 @@
     type?: 'button' | 'submit' | 'reset';
     href?: string;
     onclick?: (event: MouseEvent) => void;
+    children: Snippet;
     [key: string]: any;
   }
 
@@ -18,6 +21,7 @@
     type = 'button',
     href,
     onclick,
+    children,
     ...restProps
   }: Props = $props();
 
@@ -39,8 +43,8 @@
     lg: 'px-6 py-3 text-base'
   };
 
-  const combinedClasses = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]}`;
-  const isDisabled = disabled || loading;
+  const combinedClasses = $derived(`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]}`);
+  const isDisabled = $derived(disabled || loading);
 </script>
 
 {#if href && !isDisabled}
@@ -56,7 +60,7 @@
         ></path>
       </svg>
     {/if}
-    <slot />
+    {@render children()}
   </a>
 {:else}
   <button
@@ -77,6 +81,6 @@
         ></path>
       </svg>
     {/if}
-    <slot />
+    {@render children()}
   </button>
 {/if}
