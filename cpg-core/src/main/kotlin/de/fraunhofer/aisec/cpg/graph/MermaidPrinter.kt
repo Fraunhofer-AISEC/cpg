@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -321,6 +322,8 @@ private fun Edge<out Node>.label(): String {
         val granularity = this.granularity
         if (granularity is FieldDataflowGranularity) {
             builder.append(" (partial, ${granularity.partialTarget?.name})")
+        } else if (granularity is PartialDataflowGranularity<*>) {
+            builder.append(" (partial, ${granularity.partialTarget})")
         } else if (granularity is PointerDataflowGranularity) {
             builder.append(" (pointer, ${granularity.pointerTarget.name})")
         } else {
