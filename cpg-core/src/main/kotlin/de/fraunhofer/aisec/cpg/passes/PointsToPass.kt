@@ -405,9 +405,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 (node.functionSummary.isNotEmpty() && node.body != null) &&
                     node.functionSummary.keys.any { it in node.parameters || it in node.returns }
             ) {
-                log.info(
-                    "Skipping function ${node.name} because we already have a function Summary. (Function $analyzedFunctionCount / $totalFunctionCount)"
-                )
+                if (log.isTraceEnabled) {
+                    log.trace(
+                        "Skipping function ${node.name} because we already have a function Summary. (Function $analyzedFunctionCount / $totalFunctionCount)"
+                    )
+                }
                 return
             }
 
@@ -416,11 +418,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val max = passConfig<Configuration>()?.maxComplexity
             val c = node.body?.cyclomaticComplexity() ?: 0
             if (max != null && c > max) {
-                log.info(
-                    "Ignoring function ${node.name} because its complexity (${
-                            NumberFormat.getNumberInstance(Locale.US).format(c)
-                        }) is greater than the configured maximum (${max})"
-                )
+                if (log.isTraceEnabled) {
+                    log.trace(
+                        "Ignoring function ${node.name} because its complexity (${
+                                NumberFormat.getNumberInstance(Locale.US).format(c)
+                            }) is greater than the configured maximum (${max})"
+                    )
+                }
                 // Add an empty function Summary so that we don't try again
                 node.functionSummary.computeIfAbsent(Return()) {
                     ConcurrentHashMap.newKeySet<FSEntry>()
@@ -428,13 +432,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 return
             }
 
-            log.info(
-                "Analyzing function ${node.name}. Complexity: ${
-                        NumberFormat.getNumberInstance(Locale.US).format(c)
-                    }. (Function $analyzedFunctionCount / $totalFunctionCount)"
-            )
+            if (log.isTraceEnabled) {
+                log.trace(
+                    "Analyzing function ${node.name}. Complexity: ${
+                            NumberFormat.getNumberInstance(Locale.US).format(c)
+                        }. (Function $analyzedFunctionCount / $totalFunctionCount)"
+                )
+            }
         } else {
-            log.info("Analyzing EOGStarterHolder ${node.name}. Complexity unknown")
+            if (log.isTraceEnabled) {
+                log.trace("Analyzing EOGStarterHolder ${node.name}. Complexity unknown")
+            }
         }
 
         val lattice =
@@ -483,9 +491,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
 
         if (nodeVisitedCounterMap.isNotEmpty()) {
-            log.info(
-                "Finished EOGIteration. One of the most visited nodes ( ${nodeVisitedCounterMap.values.max()} visits): ${nodeVisitedCounterMap.filter { it.value == nodeVisitedCounterMap.values.max() }.entries.first().key} "
-            )
+            if (log.isTraceEnabled) {
+                log.trace(
+                    "Finished EOGIteration. One of the most visited nodes ( ${nodeVisitedCounterMap.values.max()} visits): ${nodeVisitedCounterMap.filter { it.value == nodeVisitedCounterMap.values.max() }.entries.first().key} "
+                )
+            }
             nodeVisitedCounterMap.clear()
         }
 
@@ -546,7 +556,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
         }
 
-        log.info("Finished drawing DFG Edges")
+        if (log.isTraceEnabled) {
+            log.trace("Finished drawing DFG Edges")
+        }
 
         if (node is Function) {
             /* Store function summary for this Function. */
@@ -558,7 +570,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     "finished analyzing $node, which is not at the end of the functionSummaryAnalysis chain, which is surprising"
                 )
         }
-        log.info("Finished with acceptInternal for ${node.name.localName}")
+        if (log.isTraceEnabled) {
+            log.trace("Finished with acceptInternal for ${node.name.localName}")
+        }
     }
 
     /**
@@ -1581,7 +1595,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         }
                     }
                 }
-            } else log.info("inv is null, skipping")
+            } else if (log.isTraceEnabled) {
+                log.trace("inv is null, skipping")
+            }
         }
 
         val callingContextOut = CallingContextOut(mutableListOf(currentNode))
@@ -1704,10 +1720,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private suspend fun calculateFunctionSummaries(invoke: Function): Function? {
         if (invoke.functionSummary.isEmpty()) {
             if (invoke.hasBody()) {
-                log.debug(
-                    "functionSummaryAnalysisChain: {}",
-                    functionSummaryAnalysisChain.map { it.name.localName },
-                )
+                if (log.isTraceEnabled) {
+                    log.trace(
+                        "functionSummaryAnalysisChain: {}",
+                        functionSummaryAnalysisChain.map { it.name.localName },
+                    )
+                }
                 if (invoke !in functionSummaryAnalysisChain) {
                     // If the node has a body and a functionSummary, we have visited it before, no
                     // need to analyze it again.
@@ -1718,22 +1736,32 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 it in invoke.parameters || it in invoke.returns
                             }
                     ) {
-                        log.info(
-                            "Not calling acceptInternal on ${invoke.name} because we already have a functionSummary."
-                        )
+                        if (log.isTraceEnabled) {
+                            log.trace(
+                                "Not calling acceptInternal on ${invoke.name} because we already have a functionSummary."
+                            )
+                        }
                     } else {
-                        log.info("Calling acceptInternal(${invoke.name.localName})")
+                        if (log.isTraceEnabled) {
+                            log.trace("Calling acceptInternal(${invoke.name.localName})")
+                        }
                         val startTime = TimeSource.Monotonic.markNow()
                         acceptInternal(invoke)
-                        log.info("Finished with acceptInternal(${invoke.name.localName})")
+                        if (log.isTraceEnabled) {
+                            log.trace("Finished with acceptInternal(${invoke.name.localName})")
+                        }
                         if (timeouts.isNotEmpty()) {
-                            log.info("Old last timeout: ${timeouts.last()}")
+                            if (log.isTraceEnabled) {
+                                log.trace("Old last timeout: ${timeouts.last()}")
+                            }
                             timeouts[timeouts.size - 1] =
                                 timeouts.last() +
                                     startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS)
-                            log.info(
-                                "Increased last timeout to consider time spent in acceptInternal. New timeout: ${timeouts.last()}"
-                            )
+                            if (log.isTraceEnabled) {
+                                log.trace(
+                                    "Increased last timeout to consider time spent in acceptInternal. New timeout: ${timeouts.last()}"
+                                )
+                            }
                         }
                     }
                 } else {
@@ -1750,14 +1778,18 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // Add a dummy function summary so that we don't try this every time
                 // In this dummy, all parameters point either to returns if we have any, or the
                 // Function itself
-                log.info("Creating dummy function summary")
+                if (log.isTraceEnabled) {
+                    log.trace("Creating dummy function summary")
+                }
                 val newValues = ConcurrentHashMap.newKeySet<FSEntry>()
                 invoke.parameters.map { newValues.add(FSEntry(0, it, 1, "")) }
                 val entries = identitySetOf<Node>()
                 if (invoke.returns.isNotEmpty()) entries.addAll(invoke.returns)
                 else entries.add(invoke)
                 entries.forEach { entry -> invoke.functionSummary.put(entry, newValues) }
-                log.info("Finished creating dummy function summary")
+                if (log.isTraceEnabled) {
+                    log.trace("Finished creating dummy function summary")
+                }
             }
         }
         return invoke

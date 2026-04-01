@@ -164,5 +164,8 @@ fun orderEOGStartersBasedOnDependencies(eogStarters: Iterable<Node>): List<Node>
     // We add all things which are not a function declaration to the end because they won't be
     // called at a specific point in time (we hope)
     orderedList.addAll(noFunction)
+
+    log.info("Ordered ${functions.size} functions")
+
     return orderedList
 }
