@@ -60,8 +60,20 @@ open class ConcurrentIdentityHashMap<K, V : Any>(expectedMaxSize: Int = 32) : Ma
 
     private val backing = ConcurrentHashMap<PointsToPass.IdKey<K>, V>(expectedMaxSize)
 
+    /**
+     * Associates the specified [value] with the specified [key] in this map.
+     *
+     * @param key the key with which the specified value is to be associated.
+     * @param value the value to be associated with the specified key.
+     * @return the previous value associated with [key], or `null` if there was no mapping for
+     *   [key].
+     */
     open fun put(key: K, value: V): V? = backing.put(PointsToPass.IdKey(key), value)
 
+    /**
+     * Returns the value to which the specified [key] is mapped, or `null` if this map contains no
+     * mapping for the [key].
+     */
     @Suppress("UNCHECKED_CAST")
     override operator fun get(key: K): V? {
         val lk = Pass.currentPass.get()?.let { if (it is PointsToPass) it.getIdKey(key) else null }
@@ -72,6 +84,13 @@ open class ConcurrentIdentityHashMap<K, V : Any>(expectedMaxSize: Int = 32) : Ma
         }
     }
 
+    /**
+     * Removes the mapping for a [key] from this map if it is present.
+     *
+     * @param key key whose mapping is to be removed from the map.
+     * @return the previous value associated with [key], or `null` if there was no mapping for
+     *   [key].
+     */
     @Suppress("UNCHECKED_CAST")
     fun remove(key: K): V? {
         val lk = Pass.currentPass.get()?.let { if (it is PointsToPass) it.getIdKey(key) else null }
@@ -82,6 +101,12 @@ open class ConcurrentIdentityHashMap<K, V : Any>(expectedMaxSize: Int = 32) : Ma
         }
     }
 
+    /**
+     * Removes all keys that satisfy the given [filter].
+     *
+     * @param filter a predicate which returns `true` for elements to be removed.
+     * @return `true` if any elements were removed.
+     */
     fun removeKeyIf(filter: Predicate<in K>): Boolean {
         var removed = false
         val each: MutableIterator<PointsToPass.IdKey<K>> = this.backing.keys.iterator()
@@ -131,9 +156,14 @@ open class ConcurrentIdentityHashMap<K, V : Any>(expectedMaxSize: Int = 32) : Ma
         return backing.isEmpty()
     }
 
+    /**
+     * If the specified [key] is not already associated with a value, attempts to compute its value
+     * using the given [mappingFunction] and enters it into this map.
+     */
     fun computeIfAbsent(key: K, mappingFunction: (K) -> V): V =
         backing.computeIfAbsent(PointsToPass.IdKey(key)) { mappingFunction(it.ref) }
 
+    /** Copies all of the mappings from the specified [map] to this map. */
     fun putAll(map: Map<out K, V>) {
         val wrapped = HashMap<PointsToPass.IdKey<K>, V>(map.size)
         for ((k, v) in map) {
@@ -154,10 +184,16 @@ open class ConcurrentIdentityHashMap<K, V : Any>(expectedMaxSize: Int = 32) : Ma
         backing.putAll(wrapped)
     }
 
+    /**
+     * If the specified [key] is not already associated with a value or is associated with null,
+     * associates it with the given non-null [value]. Otherwise, replaces the associated value with
+     * the results of the given [remappingFunction], or removes if the result is `null`.
+     */
     fun merge(key: K, value: V, remappingFunction: (V, V) -> V?): V? {
         return backing.merge(PointsToPass.IdKey(key), value, remappingFunction)
     }
 
+    /** Removes all of the mappings from this map. */
     fun clear() = backing.clear()
 
     override fun hashCode() = backing.hashCode()
@@ -165,6 +201,7 @@ open class ConcurrentIdentityHashMap<K, V : Any>(expectedMaxSize: Int = 32) : Ma
     override fun equals(other: Any?) = backing == other
 }
 
+/** A [LinkedHashSet] where elements are compared by [equals], not by reference. */
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
         return other is LinkedHashSet<*> &&
@@ -177,6 +214,7 @@ class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     }
 }
 
+/** Returns a new [EqualLinkedHashSet] with the given [elements]. */
 fun <T> equalLinkedHashSetOf(vararg elements: T): EqualLinkedHashSet<T> {
     val set = EqualLinkedHashSet<T>()
     set.addAll(elements)
@@ -374,6 +412,17 @@ interface Lattice<T : Lattice.Element> {
         }
     }
 
+    /**
+     * Internal implementation of the fixpoint iteration over the EOG.
+     *
+     * @param startEdges the edges where the analysis starts.
+     * @param startState the initial state at the start edges.
+     * @param transformation the transformation function to apply to each edge.
+     * @param strategy the strategy to use for the analysis (e.g., widening).
+     * @param timeout the maximum time allowed for the analysis in milliseconds.
+     * @return a pair containing the final state and a boolean indicating if the fixpoint was
+     *   reached before the timeout.
+     */
     suspend fun iterateEogInternal(
         startEdges: List<EvaluationOrder>,
         startState: T,
@@ -639,16 +688,18 @@ interface Lattice<T : Lattice.Element> {
 class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     override lateinit var elements: ConcurrentIdentitySet<Element<T>>
 
+    /** An element of a [PowersetLattice]. */
     class Element<T>(expectedMaxSize: Int) :
         ConcurrentIdentitySet<T>(expectedMaxSize), Lattice.Element {
-        // We make the new element a big bigger than the current size to avoid resizing
+        /** Creates a new [Element] from a [Set]. */
         constructor(set: Set<T>) : this(ceil(set.size * 1.5).toInt()) {
             addAllWithoutCheck(set as? ConcurrentIdentitySet<T> ?: set.toConcurrentIdentitySet())
         }
 
+        /** Creates a new empty [Element]. */
         constructor() : this(16)
 
-        // We make the new element a big bigger than the current size to avoid resizing
+        /** Creates a new [Element] from a list of [entries]. */
         constructor(vararg entries: T) : this(ceil(entries.size * 1.5).toInt()) {
             addAll(entries)
         }
@@ -825,18 +876,23 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
         }
     }
 
+    /** An element of a [ConcurrentMapLattice]. */
     open class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
         ConcurrentIdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
+        /** Creates a new empty [Element]. */
         constructor() : this(32)
 
+        /** Creates a new [Element] from a [Map]. */
         constructor(m: Map<K, V>) : this(m.size) {
             putAll(m)
         }
 
+        /** Creates a new [Element] from a [Collection] of [Pair]s. */
         constructor(entries: Collection<Pair<K, V>>) : this(entries.size) {
             putAll(entries)
         }
 
+        /** Creates a new [Element] from a list of [entries]. */
         constructor(vararg entries: Pair<K, V>) : this(entries.size) {
             putAll(entries)
         }
@@ -1186,18 +1242,23 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         }
     }
 
+    /** An element of a [MapLattice]. */
     open class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
         IdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
+        /** Creates a new empty [Element]. */
         constructor() : this(32)
 
+        /** Creates a new [Element] from a [Map]. */
         constructor(m: Map<K, V>) : this(m.size) {
             putAll(m)
         }
 
+        /** Creates a new [Element] from a [Collection] of [Pair]s. */
         constructor(entries: Collection<Pair<K, V>>) : this(entries.size) {
             putAll(entries)
         }
 
+        /** Creates a new [Element] from a list of [entries]. */
         constructor(vararg entries: Pair<K, V>) : this(entries.size) {
             putAll(entries)
         }
@@ -1522,6 +1583,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
 ) : Lattice<TupleLattice.Element<S, T>> {
     override lateinit var elements: ConcurrentIdentitySet<Element<S, T>>
 
+    /** An element of a [TupleLattice]. */
     open class Element<S : Lattice.Element, T : Lattice.Element>(val first: S, val second: T) :
         Serializable, Lattice.Element {
         override fun toString(): String = "($first, $second)"
@@ -1638,6 +1700,7 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
 ) : Lattice<TripleLattice.Element<R, S, T>> {
     override lateinit var elements: ConcurrentIdentitySet<Element<R, S, T>>
 
+    /** An element of a [TripleLattice]. */
     open class Element<R : Lattice.Element, S : Lattice.Element, T : Lattice.Element>(
         val first: R,
         val second: S,
