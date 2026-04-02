@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
@@ -42,7 +43,7 @@ import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
-import de.fraunhofer.aisec.cpg.passes.configuration.RequiredLanguage
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
@@ -54,7 +55,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @ExecuteBefore(ResolveCallAmbiguityPass::class)
 @DependsOn(TypeResolver::class)
-@RequiredLanguage(CLanguage::class)
+@RequiresLanguage(CLanguage::class)
 @Description(
     "This Pass executes certain C/C++ specific conversions on initializers, that are only possible once we know all the types."
 )

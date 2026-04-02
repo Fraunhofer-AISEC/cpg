@@ -29,44 +29,39 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.expressions.Assign
-import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.expressions.Comprehension
-import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
-import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
-import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
-import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
-import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 @ExecuteBefore(ImportResolver::class)
 @ExecuteBefore(SymbolResolver::class)
-@RequiredFrontend(PythonLanguageFrontend::class)
+@RequiresLanguage(PythonLanguage::class)
 @Description("Adds declarations for python's variables as the CPG requires them.")
-class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), LanguageProvider {
+class PythonAddDeclarationsPass(ctx: TranslationContext) :
+    TranslationUnitPass(ctx), LanguageProvider {
 
-    lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
+    var walker: SubgraphWalker.ScopedWalker<AstNode> =
+        SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
 
     override fun cleanup() {
         // nothing to do
     }
 
-    override fun accept(p0: Component) {
-        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
+    init {
         walker.registerHandler { node -> handle(node) }
+    }
 
-        for (tu in p0.translationUnits) {
-            walker.iterate(tu)
-        }
+    override fun accept(tu: TranslationUnit) {
+        walker.iterate(tu)
     }
 
     /**

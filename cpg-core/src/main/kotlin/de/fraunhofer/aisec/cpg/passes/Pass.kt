@@ -30,28 +30,17 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
-import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.LanguageTrait
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.expressions.CatchClause
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
-import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
-import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
-import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLast
-import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
-import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
-import de.fraunhofer.aisec.cpg.passes.configuration.RequiredLanguage
-import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
+import de.fraunhofer.aisec.cpg.passes.configuration.*
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.function.Consumer
 import kotlin.reflect.KClass
-import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.isSubclassOf
@@ -209,21 +198,6 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort
     open fun finalCleanup() {}
 
     /**
-     * Check if the pass requires a specific language frontend and if that frontend has been
-     * executed.
-     *
-     * @return true, if the pass does not require a specific language frontend or if it matches the
-     *   [RequiredFrontend]
-     */
-    fun runsWithCurrentFrontend(usedFrontends: Collection<LanguageFrontend<*, *>>): Boolean {
-        val requiredFrontend = this::class.findAnnotation<RequiredFrontend>() ?: return true
-        for (used in usedFrontends) {
-            if (used::class == requiredFrontend.value) return true
-        }
-        return false
-    }
-
-    /**
      * Checks, if the pass requires a specific [LanguageTrait] and if the current target of the pass
      * has this trait.
      *
@@ -247,15 +221,15 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort
 
     /**
      * Checks, if the pass requires a specific [Language] and if the current target of the pass has
-     * that language. If multiple [RequiredLanguage] annotations are present, the pass will run if
+     * that language. If multiple [RequiresLanguage] annotations are present, the pass will run if
      * the target's language matches *any* of them (OR logic).
      *
      * @return true, if the pass does not require a specific language or if the target's language
-     *   matches any of the [RequiredLanguage] annotations.
+     *   matches any of the [RequiresLanguage] annotations.
      */
     fun runsWithTargetLanguage(language: Language<*>?): Boolean {
-        val requiredLanguages = this::class.findAnnotations<RequiredLanguage>()
-        if (requiredLanguages.isEmpty()) {
+        val requiresLanguages = this::class.findAnnotations<RequiresLanguage>()
+        if (requiresLanguages.isEmpty()) {
             return true
         }
 
@@ -263,7 +237,13 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort
             return false
         }
 
-        return requiredLanguages.any { language::class.isSubclassOf(it.value) }
+        // Return true if the language is one of the required languages - or if it is one of the
+        // multiple languages
+        return if (language is MultipleLanguages) {
+            requiresLanguages.any { language::class.isSubclassOf(it.value) }
+        } else {
+            requiresLanguages.any { language::class.isSubclassOf(it.value) }
+        }
     }
 
     companion object {
@@ -449,7 +429,7 @@ inline fun <reified T : Node> consumeTargets(
     targets: Collection<T>,
     executedFrontends: Collection<LanguageFrontend<*, *>>,
 ) {
-    targets.forEach { consumeTarget(cls, ctx, it, executedFrontends) }
+    targets.forEach { consumeTarget(cls, ctx, it) }
 }
 
 /**
@@ -462,7 +442,6 @@ inline fun <reified T : Node> consumeTarget(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     target: T,
-    executedFrontends: Collection<LanguageFrontend<*, *>>,
 ): Pass<T>? {
     val language = target.language
 
@@ -470,7 +449,7 @@ inline fun <reified T : Node> consumeTarget(
 
     val pass = realClass.primaryConstructor?.call(ctx)
     if (
-        pass?.runsWithCurrentFrontend(executedFrontends) == true &&
+        pass != null &&
             pass.runsWithLanguageTrait(language) &&
             pass.runsWithTargetLanguage(language)
     ) {
