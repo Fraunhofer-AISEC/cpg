@@ -90,7 +90,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleCASTArrayModifier(node: CASTArrayModifier): Expression {
-        return handleNode(node.constantExpression)
+        return if (node.constantExpression != null) handleNode(node.constantExpression)
+        else ProblemExpression("constantExpression is null")
     }
 
     /**
