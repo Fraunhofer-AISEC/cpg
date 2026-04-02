@@ -87,6 +87,12 @@ data class ConceptAssignment(
     val reasoning: String? = null,
     @Description("A description if this concept could have security implications (optional)")
     val securityImpact: String? = null,
+    val name: String? = null,
+    val type: String? = null,
+    val code: String? = null,
+    val fileName: String? = null,
+    val startLine: Int? = null,
+    val endLine: Int? = null,
 )
 
 /**
