@@ -657,24 +657,29 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     .map { it.first }
                                     .singleOrNull()
                             }
-                            is Node -> entry.srcNode
+                            // Probably a custom defined UnknownMemoryValue from the hardcoded
+                            // FunctionSummaries
+                            is UnknownMemoryValue -> entry.srcNode
                             else -> null
                         }
                     if (src != null && dst != null) {
-                        // We couldn't set the lastWrites when creating the functionSummary
-                        // (which
-                        // has to be hardcoded b/c we don't have a body), so we replace that
-                        // now
-                        entry.lastWrites.forEach {
+                        // In cases where the lastWrites refers to a ParameterMemoryValue, we
+                        // couldn't set the lastWrites when creating the functionSummary and set a
+                        // Parameter as placeholder (but we know it's not the Parameter itself when
+                        // the destValueDepth is != 1, meaning it has to refer to something deferred
+                        // Now let's replace that
+                        if (entry.srcNode is Parameter && entry.destValueDepth != 1) {
+                            entry.lastWrites.forEach {
+                                function.functionSummary[param]
+                                    ?.singleOrNull { it == entry }
+                                    ?.lastWrites
+                                    ?.remove(it)
+                            }
                             function.functionSummary[param]
                                 ?.singleOrNull { it == entry }
                                 ?.lastWrites
-                                ?.remove(it)
+                                ?.add(NodeWithPropertiesKey(dst, equalLinkedHashSetOf()))
                         }
-                        function.functionSummary[param]
-                            ?.singleOrNull { it == entry }
-                            ?.lastWrites
-                            ?.add(NodeWithPropertiesKey(dst, equalLinkedHashSetOf()))
                         val propertySet = equalLinkedHashSetOf<Any>()
                         if (entry.subAccessName != "")
                             propertySet.add(Field().apply { name = Name(entry.subAccessName) })
