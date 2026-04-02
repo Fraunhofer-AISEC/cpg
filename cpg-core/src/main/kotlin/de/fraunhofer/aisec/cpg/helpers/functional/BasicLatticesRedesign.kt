@@ -832,8 +832,9 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
     override lateinit var elements: ConcurrentIdentitySet<Element<K, V>>
 
     /**
-     * Splits a MapLattice.Element<K,V> into at most [maxParts] smaller MapLattice.Element<K,V>
-     * objects, each containing **at least [minPartSize] entries**.
+     * Splits a ConcurrentMapLattice.Element<K,V> into at most [maxParts] smaller
+     * ConcurrentMapLattice.Element<K,V> objects, each containing **at least [minPartSize]
+     * entries**.
      *
      * Rules
      * 1. Empty map ➜ empty list.
@@ -863,7 +864,6 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
             Element<K, V>(partSize).apply {
                 repeat(partSize) {
                     val (key, value) = entriesList[index++]
-                    //                    this[key] = value
                     put(key, value)
                 }
             }
@@ -872,39 +872,31 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
 
     open class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
         ConcurrentIdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
-        @Suppress("KotlinConstantConditions") constructor() : this(32)
+        constructor() : this(32)
 
-        @Suppress("KotlinConstantConditions")
         constructor(m: Map<K, V>) : this(m.size) {
             putAll(m)
         }
 
-        @Suppress("KotlinConstantConditions")
         constructor(entries: Collection<Pair<K, V>>) : this(entries.size) {
             putAll(entries)
         }
 
-        @Suppress("KotlinConstantConditions")
         constructor(vararg entries: Pair<K, V>) : this(entries.size) {
             putAll(entries)
         }
 
-        @Suppress("KotlinConstantConditions")
         override fun equals(other: Any?): Boolean {
             return other is Element<K, V> && this@Element.compare(other) == Order.EQUAL
         }
 
-        @Suppress("KotlinConstantConditions")
         override fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
-            @Suppress("KotlinConstantConditions")
             if (other !is Element<K, V>)
                 throw IllegalArgumentException(
                     "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
-            @Suppress("KotlinConstantConditions")
             val otherKeySetIsBigger = other.keys.any { it !in this.keys }
-            @Suppress("KotlinConstantConditions")
             // We can check if the entries are equal, greater or lesser
             var someGreater = false
             var someLesser = otherKeySetIsBigger
@@ -938,7 +930,6 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                     someGreater = true // key is missing in other, so this is greater
                 }
             }
-            @Suppress("KotlinConstantConditions")
             return if (!someGreater && !someLesser) {
                 // All entries are the same, so the maps are equal
                 Order.EQUAL
@@ -956,20 +947,16 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
             }
         }
 
-        @Suppress("KotlinConstantConditions")
         @OptIn(ExperimentalAtomicApi::class)
         suspend fun parallelCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
-            @Suppress("KotlinConstantConditions")
             if (other !is Element<K, V>)
                 throw IllegalArgumentException(
                     "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
-            @Suppress("KotlinConstantConditions")
             if (this.size < MIN_CHUNK_SIZE) {
                 return compare(other)
             }
-            @Suppress("KotlinConstantConditions")
             val otherKeySetIsBigger = other.keys.any { it !in this.keys }
 
             // We can check if the entries are equal, greater or lesser
@@ -1237,7 +1224,6 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             Element<K, V>(partSize).apply {
                 repeat(partSize) {
                     val (key, value) = entriesList[index++]
-                    //                    this[key] = value
                     put(key, value)
                 }
             }
@@ -1246,39 +1232,31 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
 
     open class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
         IdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
-        @Suppress("KotlinConstantConditions") constructor() : this(32)
+        constructor() : this(32)
 
-        @Suppress("KotlinConstantConditions")
         constructor(m: Map<K, V>) : this(m.size) {
             putAll(m)
         }
 
-        @Suppress("KotlinConstantConditions")
         constructor(entries: Collection<Pair<K, V>>) : this(entries.size) {
             putAll(entries)
         }
 
-        @Suppress("KotlinConstantConditions")
         constructor(vararg entries: Pair<K, V>) : this(entries.size) {
             putAll(entries)
         }
 
-        @Suppress("KotlinConstantConditions")
         override fun equals(other: Any?): Boolean {
             return other is Element<K, V> && this@Element.compare(other) == Order.EQUAL
         }
 
-        @Suppress("KotlinConstantConditions")
         override fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
-            @Suppress("KotlinConstantConditions")
             if (other !is Element<K, V>)
                 throw IllegalArgumentException(
                     "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
-            @Suppress("KotlinConstantConditions")
             val otherKeySetIsBigger = other.keys.any { it !in this.keys }
-            @Suppress("KotlinConstantConditions")
             // We can check if the entries are equal, greater or lesser
             var someGreater = false
             var someLesser = otherKeySetIsBigger
@@ -1312,7 +1290,6 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                     someGreater = true // key is missing in other, so this is greater
                 }
             }
-            @Suppress("KotlinConstantConditions")
             return if (!someGreater && !someLesser) {
                 // All entries are the same, so the maps are equal
                 Order.EQUAL
@@ -1330,20 +1307,16 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             }
         }
 
-        @Suppress("KotlinConstantConditions")
         @OptIn(ExperimentalAtomicApi::class)
         suspend fun parallelCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
-            @Suppress("KotlinConstantConditions")
             if (other !is Element<K, V>)
                 throw IllegalArgumentException(
                     "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
-            @Suppress("KotlinConstantConditions")
             if (this.size < MIN_CHUNK_SIZE) {
                 return compare(other)
             }
-            @Suppress("KotlinConstantConditions")
             val otherKeySetIsBigger = other.keys.any { it !in this.keys }
 
             // We can check if the entries are equal, greater or lesser

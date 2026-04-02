@@ -1489,7 +1489,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var doubleState = doubleState
         val mapDstToSrc = ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>()
 
-        // The toIdentitySet avoids having the same elements multiple times
+        // The filter avoids having the same elements multiple times
         val invokes =
             currentNode.invokes.filter { inv ->
                 if (
@@ -1753,7 +1753,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     private val lookupKey = ThreadLocal.withInitial { IdKey<Any?>(null) }
 
-    // Internal wrapper that delegates equality / hash to object identity
+    /**
+     * Internal wrapper that delegates equality / hash to object identity. This is used as a lookup
+     * key in [ConcurrentIdentityHashMap] to avoid allocating a new wrapper object for every map
+     * access.
+     */
     class IdKey<T>(var ref: T) {
         override fun equals(other: Any?): Boolean {
             return other is IdKey<*> && other.ref === this.ref
