@@ -248,6 +248,8 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort
 
     companion object {
         val log: Logger = LoggerFactory.getLogger(Pass::class.java)
+
+        val currentPass = ThreadLocal<Pass<*>>()
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -457,7 +459,12 @@ inline fun <reified T : Node> consumeTarget(
         pass?.runsWithCurrentFrontend(executedFrontends) == true &&
             pass.runsWithLanguageTrait(language)
     ) {
-        pass.accept(target)
+        try {
+            Pass.currentPass.set(pass)
+            pass.accept(target)
+        } finally {
+            Pass.currentPass.remove()
+        }
         pass.cleanup()
         return pass
     }

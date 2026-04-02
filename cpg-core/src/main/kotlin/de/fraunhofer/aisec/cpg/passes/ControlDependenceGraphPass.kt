@@ -104,17 +104,23 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         val max = passConfig<Configuration>()?.maxComplexity
         val c = startNode.body?.cyclomaticComplexity() ?: 0
         if (max != null && c > max) {
-            log.info(
-                "Ignoring function ${startNode.name} because its complexity (${NumberFormat.getNumberInstance(Locale.US).format(c)}) is greater than the configured maximum (${max})"
-            )
+            if (log.isTraceEnabled) {
+                log.trace(
+                    "Ignoring function ${startNode.name} because its complexity (${NumberFormat.getNumberInstance(Locale.US).format(c)}) is greater than the configured maximum (${max})"
+                )
+            }
             return
         }
 
-        log.info(
-            "[CDG] Analyzing function ${startNode.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}"
-        )
+        if (log.isTraceEnabled) {
+            log.trace(
+                "[CDG] Analyzing function ${startNode.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}"
+            )
+        }
 
-        log.info("Creating CDG for {} with complexity {}", startNode.name, c)
+        if (log.isTraceEnabled) {
+            log.trace("Creating CDG for {} with complexity {}", startNode.name, c)
+        }
 
         val firstBasicBlock =
             (startNode as? EOGStarterHolder)?.firstBasicBlock
@@ -161,7 +167,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         }
 
         if (passConfig<Configuration>()?.drawIncompleteCDG == false && timeouted) {
-            log.info("Skipping CDG generation for {} due to timeout.", startNode.name)
+            if (log.isTraceEnabled) {
+                log.trace("Skipping CDG generation for {} due to timeout.", startNode.name)
+            }
             return
         }
 
@@ -267,7 +275,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             }
         }
 
-        log.info("Done creating CDG for function ${startNode.name}. Complexity: $c")
+        if (log.isTraceEnabled) {
+            log.trace("Done creating CDG for function ${startNode.name}. Complexity: $c")
+        }
     }
 
     /*

@@ -89,9 +89,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         val max = passConfig<Configuration>()?.maxComplexity
         val c = (node as? Function)?.body?.cyclomaticComplexity() ?: 0
         if (max != null && c > max) {
-            log.info(
-                "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
-            )
+            if (log.isTraceEnabled) {
+                log.trace(
+                    "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
+                )
+            }
             return
         }
 
@@ -258,7 +260,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         state: State<Node, Set<Node>>,
         worklist: Worklist<Edge<Node>, Node, Set<Node>>,
     ): State<Node, Set<Node>> {
-        log.debug("In transfer")
+        if (log.isTraceEnabled) {
+            log.trace("In transfer")
+        }
         // We will set this if we write to a variable
         val writtenDeclaration: Declaration?
         val currentNode = currentEdge.end

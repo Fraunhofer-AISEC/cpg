@@ -1008,23 +1008,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ): PointsToState.Element {
         var doubleState = doubleState
         // DEBUG: Update node visited count
-        nodeVisitedCounterMap.put(
-            currentNode,
-            nodeVisitedCounterMap.getOrElse(currentNode, { 0 }) + 1,
-        )
+        nodeVisitedCounterMap.merge(currentNode, 1) { old, new -> old + new }
 
         // Used to keep iterating for steps which do not modify the alias-state otherwise
-        doubleState =
-            lattice.pushToDeclarationsState(
-                doubleState,
-                currentNode,
-                doubleState.getFromDecl(currentNode)
-                    ?: DeclarationStateEntryElement(
+        val existingEntry = doubleState.getFromDecl(currentNode)
+        if (existingEntry == null) {
+            doubleState =
+                lattice.pushToDeclarationsState(
+                    doubleState,
+                    currentNode,
+                    DeclarationStateEntryElement(
                         PowersetLattice.Element(),
                         PowersetLattice.Element(),
                         PowersetLattice.Element(),
                     ),
-            )
+                )
+        }
         doubleState =
             when (currentNode) {
                 is Comprehension,
@@ -1267,7 +1266,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             CallingContextIn(
                 mutableListOf(call)
             ) // TODO: Indicate somehow if this has already been done?
-        val innerConcurrencyCounter = calculateInnerConcurrencyCounter(call.arguments.size)
 
         if (call is MemberCall && function is Method) {
             val base = call.base
@@ -1298,179 +1296,161 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val paramArgMatching = matchArgumentsToCallParameters(function, call)
 
         call.arguments.forEach { arg ->
-            launch(Dispatchers.Default) {
-                if (arg.argumentIndex < function.parameters.size) {
-                    // In C(++), the reference to an array is a
-                    // pointer, leading to the
-                    // situation that handing "arg" or "&arg" as
-                    // argument is the same
-                    // We deal with this by drawing a DFG-Edge from
-                    // the arg to the
-                    // derefPMV in case of an array pointerType.
-                    val argVals = async {
+            if (arg.argumentIndex < function.parameters.size) {
+                // In C(++), the reference to an array is a
+                // pointer, leading to the
+                // situation that handing "arg" or "&arg" as
+                // argument is the same
+                // We deal with this by drawing a DFG-Edge from
+                // the arg to the
+                // derefPMV in case of an array pointerType.
+                val argVals =
+                    if (
+                        (arg.type as? PointerType)?.pointerOrigin == PointerType.PointerOrigin.ARRAY
+                    )
+                        PowersetLattice.Element(Pair(arg, true))
+                    else doubleState.getCachedNestedValues(getNestedValuesCache, arg, 1, false)
+
+                // Create a DFG-Edge from the argument to the Parameter or its
+                // ParameterMemoryValue
+                val p = paramArgMatching[arg]
+                if (p == null) {
+                    log.warn(
+                        "Did not find a matching parameter for argument $arg of call $call and function $function"
+                    )
+                    return@forEach
+                }
+                val derefPMVs =
+                    p.memoryValueEdges
+                        .filter {
+                            (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                                "derefvalue"
+                        }
+                        .map { it.start }
+                val derefderefPMVs =
+                    p.memoryValueEdges
+                        .filter {
+                            (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                                "derefderefvalue"
+                        }
+                        .map { it.start }
+
+                argVals.forEach { (argVal, _) ->
+                    val argDerefVals =
                         if (
                             (arg.type as? PointerType)?.pointerOrigin ==
                                 PointerType.PointerOrigin.ARRAY
                         )
-                            PowersetLattice.Element(Pair(arg, true))
-                        else doubleState.getCachedNestedValues(getNestedValuesCache, arg, 1, false)
-                    }
-                    // Create a DFG-Edge from the argument to the Parameter or its
-                    // ParameterMemoryValue
-                    val p = paramArgMatching[arg]
-                    if (p == null) {
-                        log.warn(
-                            "Did not find a matching parameter for argument $arg of call $call and function $function"
+                            equalLinkedHashSetOf<Node>(arg)
+                        else {
+                            doubleState
+                                .getCachedNestedValues(
+                                    getNestedValuesCache,
+                                    argVal,
+                                    1,
+                                    fetchFields = false,
+                                )
+                                .mapTo(equalLinkedHashSetOf()) { it.first }
+                        }
+                    val lastDerefWrites =
+                        if (
+                            (arg.type as? PointerType)?.pointerOrigin ==
+                                PointerType.PointerOrigin.ARRAY
                         )
-                        return@launch
-                    }
-                    val derefPMVs = async {
-                        p.memoryValueEdges
-                            .filter {
-                                (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                                    "derefvalue"
-                            }
-                            .map { it.start }
-                    }
-                    val derefderefPMVs = async {
-                        p.memoryValueEdges
-                            .filter {
-                                (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                                    "derefderefvalue"
-                            }
-                            .map { it.start }
-                    }
-                    argVals.await().splitInto(maxParts = innerConcurrencyCounter).forEach { chunk ->
-                        launch(Dispatchers.Default) {
-                            for ((argVal, _) in chunk) {
-                                val argDerefVals =
-                                    if (
-                                        (arg.type as? PointerType)?.pointerOrigin ==
-                                            PointerType.PointerOrigin.ARRAY
-                                    )
-                                        equalLinkedHashSetOf<Node>(arg)
-                                    else {
-                                        doubleState
-                                            .getCachedNestedValues(
-                                                getNestedValuesCache,
-                                                argVal,
-                                                1,
-                                                fetchFields = false,
-                                            )
-                                            .mapTo(equalLinkedHashSetOf()) { it.first }
-                                    }
-                                val lastDerefWrites =
-                                    if (
-                                        (arg.type as? PointerType)?.pointerOrigin ==
-                                            PointerType.PointerOrigin.ARRAY
-                                    )
-                                        PowersetLattice.Element(
-                                            NodeWithPropertiesKey(
-                                                arg,
-                                                equalLinkedHashSetOf(callingContext, false),
-                                            )
-                                        )
-                                    else {
-                                        argDerefVals
-                                            .flatMapTo(PowersetLattice.Element()) {
-                                                doubleState.getCachedLastWrites(
-                                                    getLastWritesCache,
-                                                    it,
-                                                )
-                                            }
-                                            .mapTo(PowersetLattice.Element()) {
-                                                NodeWithPropertiesKey(
-                                                    it.node,
-                                                    equalLinkedHashSetOf(
-                                                        callingContext,
-                                                        true in it.properties,
-                                                    ),
-                                                )
-                                            }
-                                    }
-                                // Also draw the edges for the (deref)derefvalues if we have
-                                // any and are dealing with a pointer parameter (AKA memoryValue is
-                                // not
-                                // null)
-                                val argDerefValsElement =
-                                    PowersetLattice.Element(
-                                        argDerefVals.mapTo(PowersetLattice.Element()) {
-                                            NodeWithPropertiesKey(it, equalLinkedHashSetOf())
-                                        }
-                                    )
-                                val argDerefDerefVals =
-                                    argDerefVals
-                                        .flatMap {
-                                            doubleState.getCachedNestedValues(
-                                                getNestedValuesCache,
-                                                it,
-                                                1,
-                                                fetchFields = false,
-                                            )
-                                        }
-                                        .mapTo(equalLinkedHashSetOf()) { it.first }
-                                val derefderefElement =
-                                    argDerefDerefVals.mapTo(PowersetLattice.Element()) {
-                                        derefderefValue ->
-                                        NodeWithPropertiesKey(
-                                            derefderefValue,
-                                            equalLinkedHashSetOf(),
-                                        )
-                                    }
-                                val lastDerefDerefWrites =
-                                    argDerefDerefVals
-                                        .flatMapTo(PowersetLattice.Element()) {
-                                            doubleState.getCachedLastWrites(getLastWritesCache, it)
-                                        }
-                                        .mapTo(PowersetLattice.Element()) {
-                                            NodeWithPropertiesKey(
-                                                it.node,
-                                                equalLinkedHashSetOf<Any>(callingContext),
-                                            )
-                                        }
-                                derefPMVs.await().forEach { derefPMV ->
-                                    doubleState =
-                                        lattice.push(
-                                            doubleState,
-                                            derefPMV,
-                                            GeneralStateEntryElement(
-                                                PowersetLattice.Element(),
-                                                argDerefValsElement,
-                                                lastDerefWrites,
-                                            ),
-                                        )
-                                    // The same for the derefderef values
-                                    derefderefPMVs.await().forEach { derefderefPMV ->
-                                        doubleState =
-                                            lattice.push(
-                                                doubleState,
-                                                derefderefPMV,
-                                                GeneralStateEntryElement(
-                                                    PowersetLattice.Element(derefPMV),
-                                                    derefderefElement,
-                                                    PowersetLattice.Element(lastDerefDerefWrites),
-                                                ),
-                                            )
-                                    }
+                            PowersetLattice.Element(
+                                NodeWithPropertiesKey(
+                                    arg,
+                                    equalLinkedHashSetOf(callingContext, false),
+                                )
+                            )
+                        else {
+                            argDerefVals
+                                .flatMapTo(PowersetLattice.Element()) {
+                                    doubleState.getCachedLastWrites(getLastWritesCache, it)
                                 }
+                                .mapTo(PowersetLattice.Element()) {
+                                    NodeWithPropertiesKey(
+                                        it.node,
+                                        equalLinkedHashSetOf(callingContext, true in it.properties),
+                                    )
+                                }
+                        }
+                    // Also draw the edges for the (deref)derefvalues if we have
+                    // any and are dealing with a pointer parameter (AKA memoryValue is
+                    // not
+                    // null)
+                    val argDerefValsElement =
+                        PowersetLattice.Element(
+                            argDerefVals.mapTo(PowersetLattice.Element()) {
+                                NodeWithPropertiesKey(it, equalLinkedHashSetOf())
                             }
+                        )
+                    val argDerefDerefVals =
+                        argDerefVals
+                            .flatMap {
+                                doubleState.getCachedNestedValues(
+                                    getNestedValuesCache,
+                                    it,
+                                    1,
+                                    fetchFields = false,
+                                )
+                            }
+                            .mapTo(equalLinkedHashSetOf()) { it.first }
+                    val derefderefElement =
+                        argDerefDerefVals.mapTo(PowersetLattice.Element()) { derefderefValue ->
+                            NodeWithPropertiesKey(derefderefValue, equalLinkedHashSetOf())
+                        }
+                    val lastDerefDerefWrites =
+                        argDerefDerefVals
+                            .flatMapTo(PowersetLattice.Element()) {
+                                doubleState.getCachedLastWrites(getLastWritesCache, it)
+                            }
+                            .mapTo(PowersetLattice.Element()) {
+                                NodeWithPropertiesKey(
+                                    it.node,
+                                    equalLinkedHashSetOf<Any>(callingContext),
+                                )
+                            }
+                    derefPMVs.forEach { derefPMV ->
+                        doubleState =
+                            lattice.push(
+                                doubleState,
+                                derefPMV,
+                                GeneralStateEntryElement(
+                                    PowersetLattice.Element(),
+                                    argDerefValsElement,
+                                    lastDerefWrites,
+                                ),
+                            )
+                        // The same for the derefderef values
+                        derefderefPMVs.forEach { derefderefPMV ->
+                            doubleState =
+                                lattice.push(
+                                    doubleState,
+                                    derefderefPMV,
+                                    GeneralStateEntryElement(
+                                        PowersetLattice.Element(derefPMV),
+                                        derefderefElement,
+                                        PowersetLattice.Element(lastDerefDerefWrites),
+                                    ),
+                                )
                         }
                     }
-                    doubleState =
-                        lattice.push(
-                            doubleState,
-                            p,
-                            GeneralStateEntryElement(
-                                PowersetLattice.Element(),
-                                PowersetLattice.Element(
-                                    NodeWithPropertiesKey(arg, equalLinkedHashSetOf())
-                                ),
-                                PowersetLattice.Element(
-                                    NodeWithPropertiesKey(arg, equalLinkedHashSetOf(callingContext))
-                                ),
-                            ),
-                        )
                 }
+                doubleState =
+                    lattice.push(
+                        doubleState,
+                        p,
+                        GeneralStateEntryElement(
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(
+                                NodeWithPropertiesKey(arg, equalLinkedHashSetOf())
+                            ),
+                            PowersetLattice.Element(
+                                NodeWithPropertiesKey(arg, equalLinkedHashSetOf(callingContext))
+                            ),
+                        ),
+                    )
             }
         }
         return@coroutineScope doubleState
@@ -1510,19 +1490,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val mapDstToSrc = ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>()
 
         // The toIdentitySet avoids having the same elements multiple times
-        var invokes = currentNode.invokes.toConcurrentIdentitySet()
-        // If we have multiple functions with the same name and the same signature and one has an
-        // empty body, we assume that this is from the header so we ignore it
-        invokes =
-            invokes.mapNotNullTo(ConcurrentIdentitySet()) { inv ->
+        val invokes =
+            currentNode.invokes.filter { inv ->
                 if (
                     inv.body == null &&
-                        // If the body is empty, check if we have the "real" Function
-                        // somewhere in our list
-                        invokes.any { it != inv && it.name == inv.name && it.type == inv.type }
+                        currentNode.invokes.any {
+                            it != inv && it.name == inv.name && it.type == inv.type
+                        }
                 )
-                    null
-                else inv
+                    false
+                else true
             }
         invokes.forEach { invoke ->
             val inv = calculateFunctionSummaries(invoke)
@@ -1535,61 +1512,40 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // We can't go through all levels at once as a change at a lower level may
                 // affect a higher level. So let's do this step by step
                 for (depth in 0..3) {
-                    coroutineScope {
-                        // We use coroutines in coroutines. So, in order not to launch way too
-                        // many of them, we calculate the amount of inner coroutines that we can
-                        // reasonably launch
-                        val innerConcurrencyCounter =
-                            calculateInnerConcurrencyCounter(inv.functionSummary.size)
-                        for ((param, fsEntries) in inv.functionSummary) {
-                            launch(Dispatchers.Default) {
-                                val argument =
-                                    when (param) {
-                                        is Parameter -> {
-                                            // Dereference the parameter
-                                            if (param.argumentIndex < currentNode.arguments.size) {
-                                                currentNode.arguments[param.argumentIndex]
-                                            } else null
-                                        }
+                    for ((param, fsEntries) in inv.functionSummary) {
+                        val argument =
+                            when (param) {
+                                is Parameter -> {
+                                    // Dereference the parameter
+                                    if (param.argumentIndex < currentNode.arguments.size) {
+                                        currentNode.arguments[param.argumentIndex]
+                                    } else null
+                                }
 
-                                        is Return,
-                                        is Function -> {
-                                            currentNode
-                                        }
+                                is Return,
+                                is Function -> {
+                                    currentNode
+                                }
 
-                                        else -> null
-                                    }
-                                if (argument != null) {
-                                    fsEntries
-                                        .filter { it.destValueDepth == depth }
-                                        .splitInto(maxParts = innerConcurrencyCounter)
-                                        .map { chunk ->
-                                            launch(Dispatchers.Default) {
-                                                for ((
-                                                    dstValueDepth,
-                                                    srcNode,
-                                                    srcValueDepth,
-                                                    subAccessName,
-                                                    lastWrites,
-                                                    properties,
-                                                ) in chunk) {
-                                                    writeEntry(
-                                                        doubleState,
-                                                        mapDstToSrc,
-                                                        dstValueDepth,
-                                                        subAccessName,
-                                                        argument,
-                                                        properties,
-                                                        lastWrites,
-                                                        currentNode,
-                                                        inv,
-                                                        srcNode,
-                                                        srcValueDepth,
-                                                        param,
-                                                    )
-                                                }
-                                            }
-                                        }
+                                else -> null
+                            }
+                        if (argument != null) {
+                            for (entry in fsEntries) {
+                                if (entry.destValueDepth == depth) {
+                                    writeEntry(
+                                        doubleState,
+                                        mapDstToSrc,
+                                        entry.destValueDepth,
+                                        entry.subAccessName,
+                                        argument,
+                                        entry.properties,
+                                        entry.lastWrites,
+                                        currentNode,
+                                        inv,
+                                        entry.srcNode,
+                                        entry.srcValueDepth,
+                                        param,
+                                    )
                                 }
                             }
                         }
@@ -1795,11 +1751,24 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return invoke
     }
 
-    // Internal wrapper that delegates equality / hash to object identity
-    data class IdKey<T>(val ref: T) {
-        override fun equals(other: Any?) = (other as? IdKey<*>)?.ref === ref // reference equality
+    private val lookupKey = ThreadLocal.withInitial { IdKey<Any?>(null) }
 
-        override fun hashCode(): Int = System.identityHashCode(ref) // identity hash
+    // Internal wrapper that delegates equality / hash to object identity
+    class IdKey<T>(var ref: T) {
+        override fun equals(other: Any?): Boolean {
+            return other is IdKey<*> && other.ref === this.ref
+        }
+
+        override fun hashCode(): Int {
+            return System.identityHashCode(ref)
+        }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun <K> getIdKey(key: K): IdKey<K> {
+        val lk = lookupKey.get()
+        lk.ref = key
+        return lk as IdKey<K>
     }
 
     data class NodeWithPropertiesKey(val node: Node, val properties: Set<Any> = emptySet<Any>()) {
@@ -1840,55 +1809,48 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 }
             )
 
-        val lastWrites: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet()
-        val destinations: MutableSet<IdKey<Node>> = ConcurrentHashMap.newKeySet()
+        val lastWrites: MutableSet<NodeWithPropertiesKey> = identitySetOf()
+        val destinations: MutableSet<Node> = identitySetOf()
 
-        values
-            .splitInto(minPartSize = 1)
-            .map { chunk ->
-                launch(Dispatchers.Default) {
-                    for (value in chunk) {
-                        value.lastWrites.forEach { (lw, lwProps) ->
-                            // For short FunctionSummaries (AKA one of the lastWrite
-                            // properties set to 'true',
-                            // we don't add the callingContext
-                            val lwPropertySet = EqualLinkedHashSet<Any>()
-                            lwPropertySet.addAll(value.propertySet)
-                            // If this is not a shortFS edge, we add the new callingcontext
-                            // and have to check if
-                            // we already have a list of callingcontexts in the properties
-                            if (value.propertySet.none { it == true }) {
-                                val existingCallingContext =
-                                    lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
-                                if (existingCallingContext != null) {
-                                    if (
-                                        callingContext.calls.any { call ->
-                                            call !in existingCallingContext.calls
-                                        }
-                                    ) {
-                                        val cpy = existingCallingContext.calls.toMutableList()
-                                        cpy.addAll(callingContext.calls)
-                                        lwPropertySet.add(CallingContextOut(cpy))
-                                    }
-                                } else lwPropertySet.add(callingContext)
+        for (value in values) {
+            value.lastWrites.forEach { (lw, lwProps) ->
+                // For short FunctionSummaries (AKA one of the lastWrite
+                // properties set to 'true',
+                // we don't add the callingContext
+                val lwPropertySet = EqualLinkedHashSet<Any>()
+                lwPropertySet.addAll(value.propertySet)
+                // If this is not a shortFS edge, we add the new callingcontext
+                // and have to check if
+                // we already have a list of callingcontexts in the properties
+                if (value.propertySet.none { it == true }) {
+                    val existingCallingContext =
+                        lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
+                    if (existingCallingContext != null) {
+                        if (
+                            callingContext.calls.any { call ->
+                                call !in existingCallingContext.calls
                             }
-                            // Add all other previous properties
-                            lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
-                            // Add them to the set of lastWrites if there is no same element
-                            // in there yet
-                            lastWrites.add(NodeWithPropertiesKey(lw, lwPropertySet))
+                        ) {
+                            val cpy = existingCallingContext.calls.toMutableList()
+                            cpy.addAll(callingContext.calls)
+                            lwPropertySet.add(CallingContextOut(cpy))
                         }
-                        value.dst.forEach { destinations.add(IdKey(it)) }
-                    }
+                    } else lwPropertySet.add(callingContext)
                 }
+                // Add all other previous properties
+                lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
+                // Add them to the set of lastWrites if there is no same element
+                // in there yet
+                lastWrites.add(NodeWithPropertiesKey(lw, lwPropertySet))
             }
-            .joinAll()
+            destinations.addAll(value.dst)
+        }
 
         return@coroutineScope doubleState.updateValues(
             lattice,
             doubleState,
             sources,
-            destinations.mapTo(ConcurrentIdentitySet()) { it.ref },
+            destinations.toConcurrentIdentitySet(),
             concurrentIdentitySetOf(dstAddr),
             lastWrites,
         )

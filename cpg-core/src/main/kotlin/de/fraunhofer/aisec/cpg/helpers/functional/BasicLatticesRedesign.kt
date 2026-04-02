@@ -54,18 +54,34 @@ import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
 val CPU_CORES = Runtime.getRuntime().availableProcessors()
-val MIN_CHUNK_SIZE = 10
+val MIN_CHUNK_SIZE = 100
 
 /** Thread-safe map whose keys are compared by reference (===), not by equals(). */
 open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V> {
 
     private val backing = ConcurrentHashMap<PointsToPass.IdKey<K>, V>(expectedMaxSize)
 
-    override operator fun get(key: K): V? = backing[PointsToPass.IdKey(key)]
-
     open fun put(key: K, value: V): V? = backing.put(PointsToPass.IdKey(key), value)
 
-    fun remove(key: K): V? = backing.remove(PointsToPass.IdKey(key))
+    @Suppress("UNCHECKED_CAST")
+    override operator fun get(key: K): V? {
+        val lk = Pass.currentPass.get()?.let { if (it is PointsToPass) it.getIdKey(key) else null }
+        return if (lk != null) {
+            backing[lk as PointsToPass.IdKey<K>]
+        } else {
+            backing[PointsToPass.IdKey(key)]
+        }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun remove(key: K): V? {
+        val lk = Pass.currentPass.get()?.let { if (it is PointsToPass) it.getIdKey(key) else null }
+        return if (lk != null) {
+            backing.remove(lk as PointsToPass.IdKey<K>)
+        } else {
+            backing.remove(PointsToPass.IdKey(key))
+        }
+    }
 
     fun removeKeyIf(filter: Predicate<in K>): Boolean {
         var removed = false
@@ -79,7 +95,15 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
         return removed
     }
 
-    override fun containsKey(key: K): Boolean = backing.containsKey(PointsToPass.IdKey(key))
+    @Suppress("UNCHECKED_CAST")
+    override fun containsKey(key: K): Boolean {
+        val lk = Pass.currentPass.get()?.let { if (it is PointsToPass) it.getIdKey(key) else null }
+        return if (lk != null) {
+            backing.containsKey(lk as PointsToPass.IdKey<K>)
+        } else {
+            backing.containsKey(PointsToPass.IdKey(key))
+        }
+    }
 
     override fun containsValue(value: V): Boolean = backing.containsValue(value)
 
@@ -133,6 +157,14 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
 
     /** Inserts all entries from the given [Sequence] of pairs. */
     fun putAll(pairs: Sequence<Pair<K, V>>) = putAll(pairs.asIterable())
+
+    fun getOrElse(key: K, defaultValue: () -> V): V {
+        return backing.get(PointsToPass.IdKey(key)) ?: defaultValue()
+    }
+
+    fun merge(key: K, value: V & Any, remappingFunction: (V & Any, V & Any) -> V?): V? {
+        return backing.merge(PointsToPass.IdKey(key), value, remappingFunction)
+    }
 
     fun clear() = backing.clear()
 
@@ -840,35 +872,39 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
 
     open class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
         ConcurrentIdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
+        @Suppress("KotlinConstantConditions") constructor() : this(32)
 
-        constructor() : this(32)
-
+        @Suppress("KotlinConstantConditions")
         constructor(m: Map<K, V>) : this(m.size) {
             putAll(m)
         }
 
+        @Suppress("KotlinConstantConditions")
         constructor(entries: Collection<Pair<K, V>>) : this(entries.size) {
             putAll(entries)
         }
 
+        @Suppress("KotlinConstantConditions")
         constructor(vararg entries: Pair<K, V>) : this(entries.size) {
             putAll(entries)
         }
 
+        @Suppress("KotlinConstantConditions")
         override fun equals(other: Any?): Boolean {
             return other is Element<K, V> && this@Element.compare(other) == Order.EQUAL
         }
 
+        @Suppress("KotlinConstantConditions")
         override fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
-
+            @Suppress("KotlinConstantConditions")
             if (other !is Element<K, V>)
                 throw IllegalArgumentException(
                     "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
-
+            @Suppress("KotlinConstantConditions")
             val otherKeySetIsBigger = other.keys.any { it !in this.keys }
-
+            @Suppress("KotlinConstantConditions")
             // We can check if the entries are equal, greater or lesser
             var someGreater = false
             var someLesser = otherKeySetIsBigger
@@ -920,15 +956,20 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
             }
         }
 
+        @Suppress("KotlinConstantConditions")
         @OptIn(ExperimentalAtomicApi::class)
         suspend fun parallelCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
-
+            @Suppress("KotlinConstantConditions")
             if (other !is Element<K, V>)
                 throw IllegalArgumentException(
                     "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
-
+            @Suppress("KotlinConstantConditions")
+            if (this.size < MIN_CHUNK_SIZE) {
+                return compare(other)
+            }
+            @Suppress("KotlinConstantConditions")
             val otherKeySetIsBigger = other.keys.any { it !in this.keys }
 
             // We can check if the entries are equal, greater or lesser
@@ -1026,7 +1067,7 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
         concurrencyCounter: Int,
     ): Element<K, V> = coroutineScope {
         var result: Element<K, V>
-        coroutineScope {
+        if (concurrencyCounter > 1 && (one.size >= MIN_CHUNK_SIZE || two.size >= MIN_CHUNK_SIZE)) {
             if (allowModify) {
                 two.splitInto(concurrencyCounter)
                     .map { chunk ->
@@ -1089,6 +1130,35 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                             newValue?.let { result.put(key, it) }
                         }
                     }
+                }
+            }
+        } else {
+            // Sequential implementation
+            if (allowModify) {
+                for ((k, v) in two.entries) {
+                    val entry = one[k]
+                    if (entry == null) {
+                        one.put(k, v)
+                    } else if (entry.compare(v) != Order.EQUAL) {
+                        innerLattice.lub(entry, v, allowModify = true, widen = widen, 1)
+                    }
+                }
+                result = one
+            } else {
+                val allKeys =
+                    IdentitySet<K>(one.keys.size + two.keys.size).apply {
+                        addAll(one.keys)
+                        addAll(two.keys)
+                    }
+                result = Element()
+                for (key in allKeys) {
+                    val otherValue = two[key]
+                    val thisValue = one[key]
+                    val newValue =
+                        if (thisValue != null && otherValue != null) {
+                            innerLattice.lub(thisValue, otherValue, false, widen, 1)
+                        } else thisValue ?: otherValue
+                    newValue?.let { result.put(key, it) }
                 }
             }
         }
@@ -1176,35 +1246,39 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
 
     open class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
         IdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
+        @Suppress("KotlinConstantConditions") constructor() : this(32)
 
-        constructor() : this(32)
-
+        @Suppress("KotlinConstantConditions")
         constructor(m: Map<K, V>) : this(m.size) {
             putAll(m)
         }
 
+        @Suppress("KotlinConstantConditions")
         constructor(entries: Collection<Pair<K, V>>) : this(entries.size) {
             putAll(entries)
         }
 
+        @Suppress("KotlinConstantConditions")
         constructor(vararg entries: Pair<K, V>) : this(entries.size) {
             putAll(entries)
         }
 
+        @Suppress("KotlinConstantConditions")
         override fun equals(other: Any?): Boolean {
             return other is Element<K, V> && this@Element.compare(other) == Order.EQUAL
         }
 
+        @Suppress("KotlinConstantConditions")
         override fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
-
+            @Suppress("KotlinConstantConditions")
             if (other !is Element<K, V>)
                 throw IllegalArgumentException(
                     "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
-
+            @Suppress("KotlinConstantConditions")
             val otherKeySetIsBigger = other.keys.any { it !in this.keys }
-
+            @Suppress("KotlinConstantConditions")
             // We can check if the entries are equal, greater or lesser
             var someGreater = false
             var someLesser = otherKeySetIsBigger
@@ -1256,15 +1330,20 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             }
         }
 
+        @Suppress("KotlinConstantConditions")
         @OptIn(ExperimentalAtomicApi::class)
         suspend fun parallelCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
-
+            @Suppress("KotlinConstantConditions")
             if (other !is Element<K, V>)
                 throw IllegalArgumentException(
                     "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
-
+            @Suppress("KotlinConstantConditions")
+            if (this.size < MIN_CHUNK_SIZE) {
+                return compare(other)
+            }
+            @Suppress("KotlinConstantConditions")
             val otherKeySetIsBigger = other.keys.any { it !in this.keys }
 
             // We can check if the entries are equal, greater or lesser
@@ -1363,70 +1442,106 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         concurrencyCounter: Int,
     ): Element<K, V> = coroutineScope {
         var result: Element<K, V>
-        if (allowModify) {
-            two.splitInto(concurrencyCounter)
-                .map { chunk ->
-                    launch(Dispatchers.Default) {
-                        for ((k, v) in chunk) {
-                            val entry = one[k]
-                            if (entry == null) {
-                                // This key is not in "one", so we add the value from "two"
-                                // to "one"
-                                one.put(k, v)
-                            } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
-                                // This key already exists in "one" and the values in one and
-                                // two are different,
-                                // so we have to compute the lub of the values
-                                one[k]?.let { oneValue ->
-                                    innerLattice.lub(
-                                        oneValue,
-                                        v,
-                                        allowModify = true,
-                                        widen = widen,
-                                        // We already run on $CPU_CORES coroutines, so we don't
-                                        // need any additional ones
-                                        1,
-                                    )
+        if (concurrencyCounter > 1 && (one.size >= MIN_CHUNK_SIZE || two.size >= MIN_CHUNK_SIZE)) {
+            if (allowModify) {
+                two.splitInto(concurrencyCounter)
+                    .map { chunk ->
+                        launch(Dispatchers.Default) {
+                            for ((k, v) in chunk) {
+                                val entry = one[k]
+                                if (entry == null) {
+                                    // This key is not in "one", so we add the value from "two"
+                                    // to "one"
+                                    one.put(k, v)
+                                } else if (
+                                    two[k] != null && entry.compare(two[k]!!) != Order.EQUAL
+                                ) {
+                                    // This key already exists in "one" and the values in one
+                                    // and
+                                    // two are different,
+                                    // so we have to compute the lub of the values
+                                    one[k]?.let { oneValue ->
+                                        innerLattice.lub(
+                                            oneValue,
+                                            v,
+                                            allowModify = true,
+                                            widen = widen,
+                                            // We already run on $CPU_CORES coroutines, so we
+                                            // don't
+                                            // need any additional ones
+                                            1,
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                .joinAll()
-            result = one
-        } else {
-            val allKeys =
-                IdentitySet<K>(one.keys.size + two.keys.size).apply {
-                    addAll(one.keys)
-                    addAll(two.keys)
-                }
-            val newMap = ConcurrentIdentityHashMap<K, V>(allKeys.size)
-            allKeys
-                .splitInto(concurrencyCounter)
-                .map { chunk ->
-                    launch(Dispatchers.Default) {
-                        for (key in chunk) {
-                            val otherValue = two[key]
-                            val thisValue = one[key]
-                            val newValue =
-                                if (thisValue != null && otherValue != null) {
-                                    innerLattice.lub(
-                                        one = thisValue,
-                                        two = otherValue,
-                                        allowModify = false,
-                                        widen = widen,
-                                        // We already run on $CPU_CORES coroutines, so we
-                                        // don't
-                                        // need any additional ones
-                                        1,
-                                    )
-                                } else thisValue ?: otherValue
-                            newValue?.let { newMap.put(key, it) }
+                    .joinAll()
+                result = one
+            } else {
+                val allKeys =
+                    IdentitySet<K>(one.keys.size + two.keys.size).apply {
+                        addAll(one.keys)
+                        addAll(two.keys)
+                    }
+                val newMap = ConcurrentIdentityHashMap<K, V>(allKeys.size)
+                allKeys
+                    .splitInto(concurrencyCounter)
+                    .map { chunk ->
+                        launch(Dispatchers.Default) {
+                            for (key in chunk) {
+                                val otherValue = two[key]
+                                val thisValue = one[key]
+                                val newValue =
+                                    if (thisValue != null && otherValue != null) {
+                                        innerLattice.lub(
+                                            one = thisValue,
+                                            two = otherValue,
+                                            allowModify = false,
+                                            widen = widen,
+                                            // We already run on $CPU_CORES coroutines, so we
+                                            // don't
+                                            // need any additional ones
+                                            1,
+                                        )
+                                    } else thisValue ?: otherValue
+                                newValue?.let { newMap.put(key, it) }
+                            }
                         }
                     }
+                    .joinAll()
+                result = Element(newMap)
+            }
+        } else {
+            // Sequential implementation
+            if (allowModify) {
+                for ((k, v) in two.entries) {
+                    val entry = one[k]
+                    if (entry == null) {
+                        one.put(k, v)
+                    } else if (entry.compare(v) != Order.EQUAL) {
+                        innerLattice.lub(entry, v, allowModify = true, widen = widen, 1)
+                    }
                 }
-                .joinAll()
-            result = Element(newMap)
+                result = one
+            } else {
+                val allKeys =
+                    IdentitySet<K>(one.keys.size + two.keys.size).apply {
+                        addAll(one.keys)
+                        addAll(two.keys)
+                    }
+                val newMap = ConcurrentIdentityHashMap<K, V>(allKeys.size)
+                for (key in allKeys) {
+                    val otherValue = two[key]
+                    val thisValue = one[key]
+                    val newValue =
+                        if (thisValue != null && otherValue != null) {
+                            innerLattice.lub(thisValue, otherValue, false, widen, 1)
+                        } else thisValue ?: otherValue
+                    newValue?.let { newMap.put(key, it) }
+                }
+                result = Element(newMap)
+            }
         }
         return@coroutineScope result
     }
