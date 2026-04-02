@@ -42,10 +42,11 @@ import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiredLanguage
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
- * This [Pass] executes certain C++ specific conversions on initializers, that are only possible
+ * This [Pass] executes certain C/C++ specific conversions on initializers, that are only possible
  * once we know all the types. It may be extended in the future with other things that we currently
  * still do in the frontend, but might be more accurate to do once we parsed all files and have all
  * type information.
@@ -53,14 +54,15 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @ExecuteBefore(ResolveCallAmbiguityPass::class)
 @DependsOn(TypeResolver::class)
+@RequiredLanguage(CLanguage::class)
 @Description(
-    "This Pass executes certain C++ specific conversions on initializers, that are only possible once we know all the types."
+    "This Pass executes certain C/C++ specific conversions on initializers, that are only possible once we know all the types."
 )
-class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
+class CXXExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
     private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
-    override fun accept(component: Component) {
+    override fun accept(tu: TranslationUnit) {
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
 
         walker.registerHandler(::fixInitializers)
@@ -72,9 +74,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
         walker.registerHandler(::connectDefinitions)
 
-        for (tu in component.translationUnits) {
-            walker.iterate(tu)
-        }
+        walker.iterate(tu)
     }
 
     /**
@@ -203,7 +203,8 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * declarations of the same function (has [Function.isDefinition] set to false) pointing to it
      * by setting the field [Function.definition].
      *
-     * This works across the whole [Component].
+     * Because the [scopeManager] is shared across all [TranslationUnit]s in a [Component],
+     * declarations from other translation units (e.g., headers) are also considered.
      */
     private fun connectDefinitions(declaration: Node) {
         if (declaration !is Function) {
