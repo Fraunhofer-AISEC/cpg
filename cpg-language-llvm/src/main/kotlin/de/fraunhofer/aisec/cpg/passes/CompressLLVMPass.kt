@@ -26,25 +26,24 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.expressions.*
-import de.fraunhofer.aisec.cpg.graph.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
-import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
 import java.util.*
 
 @ExecuteFirst
-@RequiredFrontend(LLVMIRLanguageFrontend::class)
+@RequiresLanguage(LLVMIRLanguage::class)
 @Description(
     "Re-organizes some nodes in the CPG if they originate from LLVM IR code, removing redundant nodes and edges to optimize the graph structure for analysis."
 )
-class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
-    override fun accept(component: Component) {
-        val flatAST = SubgraphWalker.flattenAST(component)
+class CompressLLVMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
+    override fun accept(tu: TranslationUnit) {
+        val flatAST = SubgraphWalker.flattenAST(tu)
         // Get all goto statements
         val allGotos = flatAST.filterIsInstance<Goto>()
         // Get all Labels which are only referenced from a single Goto
@@ -58,8 +57,8 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Enforce the order: First Ifs, then Switchs, then the rest. This
         // prevents to treat the final goto in the case or default statement as a normal
-        // compound
-        // statement which would lead to inlining the instructions BB, but we want to keep the BB
+        // compound statement which would lead to inlining the instructions BB, but we want to keep
+        // the BB
         // inside a Block.
         for (node in
             flatAST.sortedBy { n ->
