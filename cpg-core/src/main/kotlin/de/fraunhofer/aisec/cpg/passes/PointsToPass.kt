@@ -344,7 +344,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     class Configuration(
         /**
          * This specifies the maximum complexity (as calculated per
-         * [Statement.cyclomaticComplexity]) a [Function] must have in order to be considered.
+         * [Expression.cyclomaticComplexity]) a [Function] must have to be considered.
          */
         var maxComplexity: Int? = null,
 
@@ -737,7 +737,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         .filterTo(concurrentIdentitySetOf()) {
                             doubleState.hasDeclarationStateEntry(it)
                         }
-                        .map { indexes.add(IndexKey(it, 2)) }
+                        .forEach { indexes.add(IndexKey(it, 2)) }
                     // Additionally, we can check out the "dereference" itself to look for
                     // "derefdereferences"
                     values
@@ -988,10 +988,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     protected suspend fun transfer(
-        lattice:
-            Lattice<TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>>,
+        lattice: Lattice<Element<SingleGeneralStateElement, SingleDeclarationStateElement>>,
         currentEdge: EvaluationOrder,
-        state: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
+        state: Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
     ): PointsToState.Element {
         var doubleState =
             state as? PointsToState.Element
@@ -1899,7 +1898,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         currentNode: Call,
         lastWrites: MutableSet<NodeWithPropertiesKey>,
     ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
-        var doubleState = doubleState
+        val doubleState = doubleState
         when (srcNode) {
             is Parameter -> {
                 // Add the (dereferenced) value of the respective argument

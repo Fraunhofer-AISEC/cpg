@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.Loop
-import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toConcurrentIdentitySet
@@ -57,7 +56,7 @@ val CPU_CORES = Runtime.getRuntime().availableProcessors()
 val MIN_CHUNK_SIZE = 100
 
 /** Thread-safe map whose keys are compared by reference (===), not by equals(). */
-open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V> {
+open class ConcurrentIdentityHashMap<K, V : Any>(expectedMaxSize: Int = 32) : Map<K, V> {
 
     private val backing = ConcurrentHashMap<PointsToPass.IdKey<K>, V>(expectedMaxSize)
 
@@ -155,20 +154,28 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
         backing.putAll(wrapped)
     }
 
-    /** Inserts all entries from the given [Sequence] of pairs. */
-    fun putAll(pairs: Sequence<Pair<K, V>>) = putAll(pairs.asIterable())
-
-    fun getOrElse(key: K, defaultValue: () -> V): V {
-        return backing.get(PointsToPass.IdKey(key)) ?: defaultValue()
-    }
-
-    fun merge(key: K, value: V & Any, remappingFunction: (V & Any, V & Any) -> V?): V? {
+    fun merge(key: K, value: V, remappingFunction: (V, V) -> V?): V? {
         return backing.merge(PointsToPass.IdKey(key), value, remappingFunction)
     }
 
     fun clear() = backing.clear()
 
     override fun hashCode() = backing.hashCode()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ConcurrentIdentityHashMap<*, *>
+
+        if (backing != other.backing) return false
+        if (size != other.size) return false
+        if (keys != other.keys) return false
+        if (values != other.values) return false
+        if (entries != other.entries) return false
+
+        return true
+    }
 }
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
@@ -679,45 +686,6 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             return true
         }
 
-        suspend fun parallelEquals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other !is Element<*> || this.size != other.size) return false
-
-            var ret = true
-            coroutineScope {
-                try {
-                    this@Element.splitInto(CPU_CORES).forEach { chunk ->
-                        launch(Dispatchers.Default) {
-                            for (t in chunk) {
-                                ensureActive()
-                                val isEqual =
-                                    if (t is Pair<*, *>)
-                                        other.any {
-                                            it is Pair<*, *> &&
-                                                it.first === t.first &&
-                                                it.second == t.second
-                                        }
-                                    else if (t is PointsToPass.NodeWithPropertiesKey)
-                                        other.any {
-                                            it is PointsToPass.NodeWithPropertiesKey && it == t
-                                        }
-                                    else t in other
-
-                                if (!isEqual) {
-                                    ret = false
-                                    // cancel all coroutines
-                                    cancel()
-                                }
-                            }
-                        }
-                    }
-                } catch (_: CancellationException) {
-                    ret = false
-                }
-            }
-            return ret
-        }
-
         override fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
@@ -1034,8 +1002,9 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
             }
         }
 
+        @Suppress("UNCHECKED_CAST")
         override fun duplicate(): Element<K, V> {
-            return Element(this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) })
+            return Element(this.map { (k, v) -> Pair(k, v.duplicate() as V) })
         }
 
         override fun hashCode(): Int {
