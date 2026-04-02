@@ -78,8 +78,8 @@ class NameConverter : CpgCompositeConverter<Name?> {
 
     override fun toEntityAttribute(value: Map<String, *>?): Name {
         return parseName(
-            value?.get(FIELD_FULL_NAME).toString(),
-            value?.get(FIELD_NAME_DELIMITER).toString(),
+            value?.get(FIELD_FULL_NAME)?.toString() ?: "",
+            value?.get(FIELD_NAME_DELIMITER)?.toString() ?: ".",
         )
     }
 }

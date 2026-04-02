@@ -57,7 +57,7 @@ class TranslationStatsConverter : CpgCompositeConverter<TranslationStats?> {
 
     override fun toEntityAttribute(value: Map<String, *>?): TranslationStats {
         return TranslationStats().also {
-            it.totalLinesOfCode = Integer.parseInt(value?.get(FIELD_TOTAL_LINES_OF_CODE) as String)
+            it.totalLinesOfCode = (value?.get(FIELD_TOTAL_LINES_OF_CODE) as? String)?.let { Integer.parseInt(it) } ?: 0
         }
     }
 }
