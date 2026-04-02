@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLast
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiredLanguage
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.function.Consumer
@@ -242,6 +243,27 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort
         }
 
         return true
+    }
+
+    /**
+     * Checks, if the pass requires a specific [Language] and if the current target of the pass has
+     * that language. If multiple [RequiredLanguage] annotations are present, the pass will run if
+     * the target's language matches *any* of them (OR logic).
+     *
+     * @return true, if the pass does not require a specific language or if the target's language
+     *   matches any of the [RequiredLanguage] annotations.
+     */
+    fun runsWithTargetLanguage(language: Language<*>?): Boolean {
+        val requiredLanguages = this::class.findAnnotations<RequiredLanguage>()
+        if (requiredLanguages.isEmpty()) {
+            return true
+        }
+
+        if (language == null) {
+            return false
+        }
+
+        return requiredLanguages.any { language::class.isSubclassOf(it.value) }
     }
 
     companion object {
@@ -449,7 +471,8 @@ inline fun <reified T : Node> consumeTarget(
     val pass = realClass.primaryConstructor?.call(ctx)
     if (
         pass?.runsWithCurrentFrontend(executedFrontends) == true &&
-            pass.runsWithLanguageTrait(language)
+            pass.runsWithLanguageTrait(language) &&
+            pass.runsWithTargetLanguage(language)
     ) {
         pass.accept(target)
         pass.cleanup()

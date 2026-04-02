@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
@@ -41,7 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
-import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiredLanguage
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
@@ -52,7 +51,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  */
 @DependsOn(TypeResolver::class)
 @ExecuteBefore(SymbolResolver::class)
-@RequiredFrontend(JavaLanguageFrontend::class)
+@RequiredLanguage(JavaLanguage::class)
 @Description(
     "This pass is responsible for handling Java-specific cases that are not covered by the general CPG logic. For example, Java has static member access, which is not modeled as a member expression, but as a reference with an FQN. This pass will convert such member expressions to references with FQNs."
 )
@@ -60,10 +59,6 @@ class JavaExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
     override fun accept(tu: TranslationUnit) {
-        if (tu.language !is JavaLanguage) {
-            return
-        }
-
         // Loop through all member expressions
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node ->
