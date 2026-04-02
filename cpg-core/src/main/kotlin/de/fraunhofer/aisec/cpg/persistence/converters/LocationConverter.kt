@@ -44,7 +44,7 @@ interface CpgCompositeConverter<A> : CompositeAttributeConverter<A> {
  * a node into a Neo4J graph database.
  */
 class LocationConverter : CpgCompositeConverter<PhysicalLocation?> {
-    override fun toGraphProperties(value: PhysicalLocation?): Map<String, *> {
+    override fun toGraphProperty(value: PhysicalLocation?): Map<String, *> {
         val properties: MutableMap<String, Any> = HashMap()
         if (value != null) {
             properties[ARTIFACT] = value.artifactLocation.uri.toString()

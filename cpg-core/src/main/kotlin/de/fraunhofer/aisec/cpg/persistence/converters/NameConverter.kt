@@ -45,7 +45,7 @@ class NameConverter : CpgCompositeConverter<Name?> {
         const val FIELD_NAME_DELIMITER = "nameDelimiter"
     }
 
-    override fun toGraphProperties(value: Name?): MutableMap<String, *> {
+    override fun toGraphProperty(value: Name?): MutableMap<String, *> {
         val map = mutableMapOf<String, String>()
 
         if (value != null) {

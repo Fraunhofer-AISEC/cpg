@@ -41,7 +41,7 @@ class TranslationStatsConverter : CpgCompositeConverter<TranslationStats?> {
         const val FIELD_TOTAL_LINES_OF_CODE = "totalLinesOfCode"
     }
 
-    override fun toGraphProperties(value: TranslationStats?): MutableMap<String, *> {
+    override fun toGraphProperty(value: TranslationStats?): MutableMap<String, *> {
         val map = mutableMapOf<String, String>()
 
         if (value != null) {
@@ -57,7 +57,9 @@ class TranslationStatsConverter : CpgCompositeConverter<TranslationStats?> {
 
     override fun toEntityAttribute(value: Map<String, *>?): TranslationStats {
         return TranslationStats().also {
-            it.totalLinesOfCode = (value?.get(FIELD_TOTAL_LINES_OF_CODE) as? String)?.let { Integer.parseInt(it) } ?: 0
+            it.totalLinesOfCode =
+                (value?.get(FIELD_TOTAL_LINES_OF_CODE) as? String)?.let { Integer.parseInt(it) }
+                    ?: 0
         }
     }
 }

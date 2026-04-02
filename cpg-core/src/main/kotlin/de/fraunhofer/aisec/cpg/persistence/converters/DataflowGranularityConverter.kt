@@ -37,7 +37,7 @@ class DataflowGranularityConverter : CpgCompositeConverter<Granularity> {
         const val PARTIAL_TARGET_TYPE = "partialTargetType"
     }
 
-    override fun toGraphProperties(value: Granularity): MutableMap<String, *> {
+    override fun toGraphProperty(value: Granularity): MutableMap<String, *> {
         val map = mutableMapOf<String, String>()
 
         val type = value::class.simpleName?.substringBefore("DataflowGranularity")?.uppercase()

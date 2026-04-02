@@ -73,13 +73,7 @@ interface AttributeConverter<T, G> {
  *
  * @param T The object property type
  */
-interface CompositeAttributeConverter<T> {
-    /** Converts a property value to a map of graph database properties. */
-    fun toGraphProperties(value: T): Map<String, *>
-
-    /** Converts a map of graph database properties back to a property value. */
-    fun toEntityAttribute(value: Map<String, *>?): T
-}
+interface CompositeAttributeConverter<T> : AttributeConverter<T, Map<String, *>>
 
 /**
  * Annotation to mark a property as a relationship in the persistence schema and is used to specify
@@ -109,7 +103,7 @@ annotation class Relationship(
  */
 @Target(AnnotationTarget.FIELD, AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class Convert(val value: KClass<out Any>)
+annotation class Convert(val value: KClass<out AttributeConverter<*, *>>)
 
 /**
  * A cache used to store and retrieve sets of labels associated with specific Kotlin class types.
@@ -177,15 +171,14 @@ fun Any.convert(
             val converter = converterClass.createInstance()
             // Check for converter interfaces
             if (converter is CompositeAttributeConverter<*>) {
-                properties +=
-                    (converter as CompositeAttributeConverter<Any>).toGraphProperties(this)
+                properties += (converter as CompositeAttributeConverter<Any>).toGraphProperty(this)
             } else if (converter is AttributeConverter<*, *>) {
                 properties[originalKey] =
                     (converter as AttributeConverter<Any, Any>).toGraphProperty(this)
             }
         }
         this is Name && originalKey == "name" -> {
-            properties += NameConverter().toGraphProperties(this)
+            properties += NameConverter().toGraphProperty(this)
         }
         this is Enum<*> -> {
             properties[originalKey] = this.name

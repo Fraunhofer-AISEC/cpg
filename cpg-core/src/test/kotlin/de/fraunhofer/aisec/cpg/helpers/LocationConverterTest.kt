@@ -91,7 +91,7 @@ internal class LocationConverterTest : BaseTest() {
     @Test
     fun toEntityAttributeWithNullGraph() {
         val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
-        val have = sut.toGraphProperties(null)
+        val have = sut.toGraphProperty(null)
         assertEquals(mapOf<String, Any?>(), have)
     }
 
@@ -112,7 +112,7 @@ internal class LocationConverterTest : BaseTest() {
         val region = Region(startLineValue, startColumnValue, endLineValue, endColumnValue)
         val want = PhysicalLocation(URI_TO_TEST, region)
         // act
-        val have = sut.toGraphProperties(want)
+        val have = sut.toGraphProperty(want)
         // assert
         assertEquals(value, have)
     }
