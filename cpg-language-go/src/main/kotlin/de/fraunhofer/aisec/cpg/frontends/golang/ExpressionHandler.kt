@@ -114,6 +114,8 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
                 type = primitiveType("int")
             }
             FLOAT -> {
+                // Get rid of all underscores
+                rawValue = rawValue.replace("_", "")
                 value = rawValue.toDouble()
                 type = primitiveType("float64")
             }
