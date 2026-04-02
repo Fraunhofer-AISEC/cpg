@@ -283,11 +283,11 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         var imports = use.useTree?.let { flattenUseTree(rsUseTree = it) }
 
-        imports?.map { import ->
+        imports?.forEach { import ->
             // After Flattening we must check if the first part of the import name starts with
             // crate, self or super
             // If they do we replace them with the concrete name they represent in the context
-            import.import = frontend.handleKeywordsInNames(import.name) ?: Name("")
+            import.import = frontend.handleKeywordsInNames(import.import) ?: Name("")
         }
 
         val declarations = DeclarationSequence()
@@ -319,13 +319,6 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             val alias = rsUseTree.rename?.let { language.parseName(it) }
             imports +=
                 when (importName.localName) {
-                    "*" ->
-                        newImport(
-                            importName.parent ?: newName(""),
-                            alias = alias,
-                            style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
-                            rawNode = RsAst.RustUseTree(rsUseTree),
-                        )
                     "self" ->
                         newImport(
                             importName.parent ?: newName(""),
@@ -337,7 +330,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                         newImport(
                             importName,
                             alias = alias,
-                            style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
+                            style =
+                                if (rsUseTree.star) ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE
+                                else ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                             rawNode = RsAst.RustUseTree(rsUseTree),
                         )
                 }

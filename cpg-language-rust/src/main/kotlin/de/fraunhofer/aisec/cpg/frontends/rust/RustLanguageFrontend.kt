@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -92,8 +93,11 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
             when (rsItem) {
                 is RsAst.RustItem -> {
                     val decl = declarationHandler.handle(rsItem)
-                    scopeManager.addDeclaration(decl)
-                    tud.addDeclaration(decl)
+                    ((decl as? DeclarationSequence)?.declarations ?: listOf(decl)).forEach {
+                        declItem ->
+                        scopeManager.addDeclaration(declItem)
+                        tud.addDeclaration(declItem)
+                    }
                 }
                 else -> log.warn("Not handling ${rsItem.javaClass.simpleName}.")
             }

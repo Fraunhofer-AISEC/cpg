@@ -492,7 +492,7 @@ impl From<Use> for RSUse {
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSUseTree {pub(crate) ast_node: RSNode, path: Option<RSPath>, rename: Option<String>, use_trees: Vec<RSUseTree>}
+pub struct RSUseTree {pub(crate) ast_node: RSNode, path: Option<RSPath>, rename: Option<String>, use_trees: Vec<RSUseTree>, star: bool}
 impl From<UseTree> for RSUseTree {
     fn from(node:  UseTree) -> Self {
         RSUseTree{
@@ -500,7 +500,7 @@ impl From<UseTree> for RSUseTree {
             path: node.path().map(Into::into),
             rename: node.rename().map(|rn|rn.name().map(|n|n.to_string())).unwrap_or_default(),
             use_trees: node.use_tree_list().map(|utl|utl.use_trees().map(Into::into).collect::<Vec<_>>()).unwrap_or_default(),
-
+            star: node.star_token().is_some()
         }
     }
 }
