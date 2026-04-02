@@ -162,20 +162,7 @@ open class ConcurrentIdentityHashMap<K, V : Any>(expectedMaxSize: Int = 32) : Ma
 
     override fun hashCode() = backing.hashCode()
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as ConcurrentIdentityHashMap<*, *>
-
-        if (backing != other.backing) return false
-        if (size != other.size) return false
-        if (keys != other.keys) return false
-        if (values != other.values) return false
-        if (entries != other.entries) return false
-
-        return true
-    }
+    override fun equals(other: Any?) = backing == other
 }
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
