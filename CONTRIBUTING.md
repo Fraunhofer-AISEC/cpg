@@ -38,7 +38,7 @@ This project requires Java 21. If Java 21 is not your default Java version, make
 This project has the convention of including a license notice header in all source files:
 ```java
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ Note: We actually want list property to be immutable so that they can only be mo
 
 Properties which can be considered as a required part of an expression, should be non-nullable and be initialized to a `ProblemNode`. In this case we can represent parsing problems in the graph and still avoid too many null checks. For example in the `MemberAccess`:
 ```kotlin
-var base: Expression = newProblem("could not parse base expression")
+var base: Expression = newProblemExpression("could not parse base expression")
 ```
 
 There might be cases, where either one or the other property might be required, e.g., if a property can either be an `Expression` or a `Declaration`. In this case we need to resort of having both properties nullable.
