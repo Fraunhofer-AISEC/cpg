@@ -140,16 +140,10 @@ public static class Library
     {
         return Nodes[handlePtr].GetLocation().GetLineSpan().EndLinePosition.Character + 1;
     }
-    [UnmanagedCallersOnly(EntryPoint = "GetFieldVariableCount")]
-    public static int GetFieldVariableCount(IntPtr handlePtr)
+    [UnmanagedCallersOnly(EntryPoint = "GetFieldDeclaration")]
+    public static IntPtr GetFieldDeclaration(IntPtr handlePtr)
     {
-        return ((FieldDeclarationSyntax)Nodes[handlePtr]).Declaration.Variables.Count;
-    }
-
-    [UnmanagedCallersOnly(EntryPoint = "GetFieldVariable")]
-    public static IntPtr GetFieldVariable(IntPtr handlePtr, int index)
-    {
-        return Register(((FieldDeclarationSyntax)Nodes[handlePtr]).Declaration.Variables[index]);
+        return Register(((FieldDeclarationSyntax)Nodes[handlePtr]).Declaration);
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetVariableDeclaratorIdentifier")]
@@ -525,5 +519,24 @@ public static class Library
     {
         var argumentList = ((BaseObjectCreationExpressionSyntax)Nodes[handlePtr]).ArgumentList;
         return argumentList != null ? Register(argumentList) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetBaseObjectCreationExpressionInitializer")]
+    public static IntPtr GetBaseObjectCreationExpressionInitializer(IntPtr handlePtr)
+    {
+        var initializer = ((BaseObjectCreationExpressionSyntax)Nodes[handlePtr]).Initializer;
+        return initializer != null ? Register(initializer) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetInitializerExpressionExpressionsCount")]
+    public static int GetInitializerExpressionExpressionsCount(IntPtr handlePtr)
+    {
+        return ((InitializerExpressionSyntax)Nodes[handlePtr]).Expressions.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetInitializerExpressionExpression")]
+    public static IntPtr GetInitializerExpressionExpression(IntPtr handlePtr, int index)
+    {
+        return Register(((InitializerExpressionSyntax)Nodes[handlePtr]).Expressions[index]);
     }
 }

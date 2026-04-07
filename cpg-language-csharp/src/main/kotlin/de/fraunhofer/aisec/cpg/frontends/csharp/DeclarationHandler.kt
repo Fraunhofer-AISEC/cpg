@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.New
 import de.fraunhofer.aisec.cpg.graph.implicit
 import de.fraunhofer.aisec.cpg.graph.newConstructor
 import de.fraunhofer.aisec.cpg.graph.newField
@@ -34,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.newNamespace
 import de.fraunhofer.aisec.cpg.graph.newParameter
 import de.fraunhofer.aisec.cpg.graph.newRecord
 import de.fraunhofer.aisec.cpg.graph.newVariable
+import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
 class DeclarationHandler(frontend: CSharpLanguageFrontend) :
@@ -84,8 +87,26 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         for (member in node.members) {
             when (member) {
                 is Csharp.AST.FieldDeclarationSyntax -> {
-                    for (variable in member.variables) {
+                    val declaration = member.declaration
+                    val fieldType = frontend.typeOf(declaration.type)
+                    for (variable in declaration.variables) {
                         val field = newField(variable.identifier, rawNode = member)
+                        field.type = fieldType
+                        variable.initializer?.let {
+                            field.initializer = frontend.expressionHandler.handle(it)
+                        }
+                        // TODO: Not sure if this is correct: For implicit constructor calls (e.g.
+                        // new()), we need to
+                        //  propagate the field type to the "New" and "Construction" nodes
+                        val newExpr = field.initializer as? New
+                        if (newExpr != null) {
+                            newExpr.type = fieldType
+                            val construction = newExpr.initializer as? Construction
+                            if (construction != null) {
+                                construction.type = fieldType
+                                construction.name = parseName(fieldType.name.localName)
+                            }
+                        }
                         frontend.scopeManager.addDeclaration(field)
                         record.addDeclaration(field)
                     }

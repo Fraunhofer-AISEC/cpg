@@ -62,7 +62,7 @@ class ObjectCreationTest : BaseTest() {
         val body = createFooMethod.body
         assertIs<Block>(body)
 
-        // Foo f = new Foo(42);
+        // Foo f = new Foo(1);
         val fVariable = body.variables["f"]
         assertNotNull(fVariable)
         assertEquals("Foo", fVariable.type.name.localName)
@@ -85,6 +85,86 @@ class ObjectCreationTest : BaseTest() {
         assertNotNull(firstArg)
         assertIs<IntegerType>(firstArg.type)
         assertIs<Literal<*>>(firstArg)
-        assertEquals(42, firstArg.value)
+        assertEquals(1, firstArg.value)
+    }
+
+    @Test
+    fun implicitObjectCreationTest() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("ObjectCreation.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        // class Baz { Foo foo = new(1); }
+        val baz = tu.records["Baz"]
+        assertNotNull(baz)
+
+        val fooClass = tu.records["Foo"]
+        assertNotNull(fooClass)
+
+        val fooField = baz.fields["foo"]
+        assertNotNull(fooField)
+
+        val newNode = fooField.initializer
+        assertNotNull(newNode)
+        assertIs<New>(newNode)
+        val constructCall = newNode.initializer
+        assertNotNull(constructCall)
+        assertIs<Construction>(constructCall)
+        val constructor = constructCall.constructor
+        assertNotNull(constructor)
+        assertEquals("Foo", constructor.name.localName)
+        val instantiates = constructCall.instantiates
+        assertNotNull(instantiates)
+        assertEquals(fooClass, instantiates)
+
+        val args = constructCall.arguments
+        assertEquals(1, args.size)
+        val firstArg = args.firstOrNull()
+        assertNotNull(firstArg)
+        assertIs<Literal<*>>(firstArg)
+        assertEquals(1, firstArg.value)
+    }
+
+    @Test
+    fun objectCreationWithInitializerTest() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("ObjectCreation.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        // Foo f = new Foo(1) { x = 2 };
+        val fooBarClass = tu.records["FooBar"]
+        assertNotNull(fooBarClass)
+
+        val fVariable = tu.variables["f"]
+        assertNotNull(fVariable)
+
+        val newNode = fVariable.initializer
+        assertNotNull(newNode)
+        assertIs<New>(newNode)
+
+        val constructCall = newNode.initializer
+        assertNotNull(constructCall)
+        assertIs<Construction>(constructCall)
+
+        val args = constructCall.arguments
+        assertEquals(1, args.size)
+        val firstArg = args.firstOrNull()
+        assertNotNull(firstArg)
+        assertIs<Literal<*>>(firstArg)
+        assertEquals(1, firstArg.value)
     }
 }

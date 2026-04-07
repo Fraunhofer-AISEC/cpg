@@ -330,9 +330,8 @@ interface Csharp : Library {
          * class.
          */
         class FieldDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
-            val variables: List<VariableDeclaratorSyntax> by lazy {
-                val count = INSTANCE.GetFieldVariableCount(this)
-                (0 until count).map { i -> INSTANCE.GetFieldVariable(this, i) }
+            val declaration: VariableDeclarationSyntax by lazy {
+                INSTANCE.GetFieldDeclaration(this)
             }
         }
 
@@ -415,6 +414,9 @@ interface Csharp : Library {
                     "InvocationExpressionSyntax" -> InvocationExpressionSyntax(nativeValue)
                     "ThisExpressionSyntax" -> ThisExpressionSyntax(nativeValue)
                     "ObjectCreationExpressionSyntax" -> ObjectCreationExpressionSyntax(nativeValue)
+                    "ImplicitObjectCreationExpressionSyntax" ->
+                        ImplicitObjectCreationExpressionSyntax(nativeValue)
+                    "InitializerExpressionSyntax" -> InitializerExpressionSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -557,13 +559,15 @@ interface Csharp : Library {
          * Represents the Roslyn
          * [`BaseObjectCreationExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.baseobjectcreationexpressionsyntax)
          * class. This is the common base for [ObjectCreationExpressionSyntax] (explicit type, e.g.
-         * `new Foo(42)`) and `ImplicitObjectCreationExpressionSyntax` (target-typed, e.g.
-         * `new(42)`).
+         * `new Foo()`) and [ImplicitObjectCreationExpressionSyntax] (target-typed, e.g. `new()`).
          */
         open class BaseObjectCreationExpressionSyntax(p: Pointer? = Pointer.NULL) :
             ExpressionSyntax(p) {
             val argumentList: ArgumentListSyntax? by lazy {
                 INSTANCE.GetBaseObjectCreationExpressionArgumentList(this)
+            }
+            val initializer: InitializerExpressionSyntax? by lazy {
+                INSTANCE.GetBaseObjectCreationExpressionInitializer(this)
             }
         }
 
@@ -575,6 +579,21 @@ interface Csharp : Library {
         class ObjectCreationExpressionSyntax(p: Pointer? = Pointer.NULL) :
             BaseObjectCreationExpressionSyntax(p) {
             val type: TypeSyntax by lazy { INSTANCE.GetObjectCreationExpressionType(this) }
+        }
+
+        class ImplicitObjectCreationExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            BaseObjectCreationExpressionSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`InitializerExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.initializerexpressionsyntax)
+         * class.
+         */
+        class InitializerExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val expressions: List<ExpressionSyntax> by lazy {
+                val count = INSTANCE.GetInitializerExpressionExpressionsCount(this)
+                (0 until count).map { i -> INSTANCE.GetInitializerExpressionExpression(this, i) }
+            }
         }
     }
 
@@ -620,12 +639,7 @@ interface Csharp : Library {
         index: Int,
     ): AST.MemberDeclarationSyntax
 
-    fun GetFieldVariableCount(handle: AST.FieldDeclarationSyntax): Int
-
-    fun GetFieldVariable(
-        handle: AST.FieldDeclarationSyntax,
-        index: Int,
-    ): AST.VariableDeclaratorSyntax
+    fun GetFieldDeclaration(handle: AST.FieldDeclarationSyntax): AST.VariableDeclarationSyntax
 
     fun GetVariableDeclaratorIdentifier(handle: AST.VariableDeclaratorSyntax): String
 
@@ -772,6 +786,17 @@ interface Csharp : Library {
     fun GetBaseObjectCreationExpressionArgumentList(
         handle: AST.BaseObjectCreationExpressionSyntax
     ): AST.ArgumentListSyntax?
+
+    fun GetBaseObjectCreationExpressionInitializer(
+        handle: AST.BaseObjectCreationExpressionSyntax
+    ): AST.InitializerExpressionSyntax?
+
+    fun GetInitializerExpressionExpressionsCount(handle: AST.InitializerExpressionSyntax): Int
+
+    fun GetInitializerExpressionExpression(
+        handle: AST.InitializerExpressionSyntax,
+        index: Int,
+    ): AST.ExpressionSyntax
 
     companion object {
         val INSTANCE: Csharp by lazy {

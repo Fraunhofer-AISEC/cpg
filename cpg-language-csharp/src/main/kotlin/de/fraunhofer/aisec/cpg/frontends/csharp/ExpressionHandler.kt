@@ -25,19 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
-import de.fraunhofer.aisec.cpg.graph.expressions.Assign
-import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
-import de.fraunhofer.aisec.cpg.graph.expressions.New
-import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.newAssign
 import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.newCall
 import de.fraunhofer.aisec.cpg.graph.newConstruction
+import de.fraunhofer.aisec.cpg.graph.newInitializerList
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newMemberAccess
 import de.fraunhofer.aisec.cpg.graph.newMemberCall
@@ -58,7 +51,8 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.InvocationExpressionSyntax -> handleInvocationExpression(node)
             is Csharp.AST.MemberAccessExpressionSyntax -> handleMemberAccessExpression(node)
             is Csharp.AST.ThisExpressionSyntax -> handleThisExpression(node)
-            is Csharp.AST.ObjectCreationExpressionSyntax -> handleObjectCreationExpression(node)
+            is Csharp.AST.BaseObjectCreationExpressionSyntax -> handleObjectCreationExpression(node)
+            is Csharp.AST.InitializerExpressionSyntax -> handleInitializerExpression(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
     }
@@ -187,27 +181,56 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
-     * Translates an [ObjectCreationExpressionSyntax][Csharp.AST.ObjectCreationExpressionSyntax]
-     * into a [New] with a [Construction][de.fraunhofer.aisec.cpg.graph.expressions.Construction]
-     * initializer.
+     * Translates a
+     * [BaseObjectCreationExpressionSyntax][Csharp.AST.BaseObjectCreationExpressionSyntax] into a
+     * [New] with a [Construction][Construction] initializer. Handles both explicit (`new Foo()`)
+     * and implicit (`new()`) object creations. For implicit cases, the type is [unknownType] and
+     * will be resolved later.
      *
      * C# spec:
      * [Object creation expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#128172-object-creation-expressions)
      */
     private fun handleObjectCreationExpression(
-        node: Csharp.AST.ObjectCreationExpressionSyntax
+        node: Csharp.AST.BaseObjectCreationExpressionSyntax
     ): New {
-        val type = frontend.typeOf(node.type)
+        val type =
+            if (node is Csharp.AST.ObjectCreationExpressionSyntax) {
+                frontend.typeOf(node.type)
+            } else {
+                unknownType()
+            }
         val newExpression = newNew(type, rawNode = node)
-        val ctor = newConstruction(type.name.localName, rawNode = node)
-        ctor.type = type
+        val construction = newConstruction(type.name.localName, rawNode = node)
+        construction.type = type
         val argumentList = node.argumentList
-        argumentList?.let {
-            for (arg in it.arguments) {
-                ctor.addArgument(handle(arg.expression))
+        if (argumentList != null) {
+            for (arg in argumentList.arguments) {
+                construction.addArgument(handle(arg.expression))
             }
         }
-        newExpression.initializer = ctor
+        newExpression.initializer = construction
+        val objectInitializer = node.initializer
+        if (objectInitializer != null) {
+            handle(objectInitializer)
+        }
         return newExpression
+    }
+
+    /**
+     * Translates an [InitializerExpressionSyntax][Csharp.AST.InitializerExpressionSyntax] into an
+     * [InitializerList].
+     *
+     * C# spec:
+     * [Object initializers](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1281722-object-initializers)
+     */
+    // For arrays
+    private fun handleInitializerExpression(
+        node: Csharp.AST.InitializerExpressionSyntax
+    ): InitializerList {
+        val initializerList = newInitializerList(rawNode = node)
+        for (expr in node.expressions) {
+            initializerList.addArgument(handle(expr))
+        }
+        return initializerList
     }
 }
