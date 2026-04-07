@@ -25,18 +25,22 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.implicit
 import de.fraunhofer.aisec.cpg.graph.newAssign
 import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.newCall
 import de.fraunhofer.aisec.cpg.graph.newConstruction
-import de.fraunhofer.aisec.cpg.graph.newInitializerList
+import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.newExpressionList
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newMemberAccess
 import de.fraunhofer.aisec.cpg.graph.newMemberCall
 import de.fraunhofer.aisec.cpg.graph.newNew
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newReference
+import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
@@ -52,7 +56,6 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.MemberAccessExpressionSyntax -> handleMemberAccessExpression(node)
             is Csharp.AST.ThisExpressionSyntax -> handleThisExpression(node)
             is Csharp.AST.BaseObjectCreationExpressionSyntax -> handleObjectCreationExpression(node)
-            is Csharp.AST.InitializerExpressionSyntax -> handleInitializerExpression(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
     }
@@ -187,12 +190,15 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
      * and implicit (`new()`) object creations. For implicit cases, the type is [unknownType] and
      * will be resolved later.
      *
+     * If the expression has an object initializer (e.g. `new Foo(1) { X = 2, Y = 3 }`), the result
+     * is wrapped in an [ExpressionList] via [handleObjectInitializer].
+     *
      * C# spec:
      * [Object creation expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#128172-object-creation-expressions)
      */
     private fun handleObjectCreationExpression(
         node: Csharp.AST.BaseObjectCreationExpressionSyntax
-    ): New {
+    ): Expression {
         val type =
             if (node is Csharp.AST.ObjectCreationExpressionSyntax) {
                 frontend.typeOf(node.type)
@@ -209,28 +215,97 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             }
         }
         newExpression.initializer = construction
-        val objectInitializer = node.initializer
-        if (objectInitializer != null) {
-            handle(objectInitializer)
+
+        val initializer = node.initializer
+        if (initializer != null) {
+            return handleObjectInitializer(initializer, newExpression, type)
         }
         return newExpression
     }
 
     /**
-     * Translates an [InitializerExpressionSyntax][Csharp.AST.InitializerExpressionSyntax] into an
-     * [InitializerList].
+     * Handles an object initializer by wrapping the expressions in an [ExpressionList]. Since we do
+     * not have a direct representation for object initializers, we destructure them into an
+     * equivalent form. For example:
+     * ```csharp
+     * var p = new Point(1) { X = 0, Y = 1 };
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * Point __tmp = new Point(1);
+     * __tmp.X = 0;
+     * __tmp.Y = 1;
+     * var p = __tmp;
+     * ```
+     *
+     * The [ExpressionList] contains:
+     * 1. A [DeclarationStatement] with an implicit temporary variable: `__tmp = new Point(1)`
+     * 2. Implicit [Assign] statements for each member: `__tmp.X = 0`, `__tmp.Y = 1`
+     * 3. A [Reference] to the temporary variable
      *
      * C# spec:
      * [Object initializers](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1281722-object-initializers)
      */
-    // For arrays
-    private fun handleInitializerExpression(
-        node: Csharp.AST.InitializerExpressionSyntax
-    ): InitializerList {
-        val initializerList = newInitializerList(rawNode = node)
-        for (expr in node.expressions) {
-            initializerList.addArgument(handle(expr))
+    private fun handleObjectInitializer(
+        initializer: Csharp.AST.InitializerExpressionSyntax,
+        newExpression: New,
+        type: de.fraunhofer.aisec.cpg.graph.types.Type,
+    ): ExpressionList {
+        val exprList = newExpressionList()
+        // Create an implicit temporary variable to hold the new object
+        val tmpName = Name.temporary(prefix = type.name.localName, separatorChar = '_', exprList)
+        val tmpVar = newVariable(name = tmpName, type = type).implicit()
+        tmpVar.initializer = newExpression
+        frontend.scopeManager.addDeclaration(tmpVar)
+        val declStmt = newDeclarationStatement().implicit()
+        declStmt.addDeclaration(tmpVar)
+        exprList.expressions += declStmt
+
+        // Each assignment in the initializer is translated to a member access on the tmp variable
+        for (expr in initializer.expressions) {
+            if (expr is Csharp.AST.AssignmentExpressionSyntax) {
+                val memberAccess =
+                    newMemberAccess(
+                            name =
+                                (expr.left as? Csharp.AST.IdentifierNameSyntax)?.identifier
+                                    ?: "obj",
+                            base = newReference(name = tmpName).implicit(),
+                        )
+                        .implicit(code = newExpression.code, location = newExpression.location)
+                val assign =
+                    newAssign(
+                            operatorCode = "=",
+                            lhs = listOf(memberAccess),
+                            rhs = listOf(handle(expr.right)),
+                        )
+                        .implicit(code = newExpression.code, location = newExpression.location)
+                exprList.expressions += assign
+            }
         }
-        return initializerList
+
+        // Add a reference to the temporary variable
+        exprList.expressions += newReference(name = tmpName).implicit()
+        return exprList
     }
+
+    //    /**
+    //     * Translates an [InitializerExpressionSyntax][Csharp.AST.InitializerExpressionSyntax]
+    // into an
+    //     * [InitializerList].
+    //     *
+    //     * C# spec:
+    //     * [Object
+    // initializers](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1281722-object-initializers)
+    //     */
+    //    // For arrays
+    //    private fun handleInitializerExpression(
+    //        node: Csharp.AST.InitializerExpressionSyntax
+    //    ): InitializerList {
+    //        val initializerList = newInitializerList(rawNode = node)
+    //        for (expr in node.expressions) {
+    //            initializerList.addArgument(handle(expr))
+    //        }
+    //        return initializerList
+    //    }
 }
