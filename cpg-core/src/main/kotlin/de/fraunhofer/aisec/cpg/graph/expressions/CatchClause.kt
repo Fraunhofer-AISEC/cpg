@@ -33,8 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
-import org.neo4j.ogm.annotation.Relationship
 
 class CatchClause : Expression(false), BranchingNode, EOGStarterHolder {
 

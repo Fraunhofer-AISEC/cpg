@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a statement that returns out of the current function. */
 class Return : Expression(false), ArgumentHolder {

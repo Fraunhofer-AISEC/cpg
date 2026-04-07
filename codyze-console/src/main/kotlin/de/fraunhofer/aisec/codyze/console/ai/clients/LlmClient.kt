@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,25 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.persistence
+package de.fraunhofer.aisec.codyze.console.ai.clients
 
-/** This annotation is used to denote that this property or class should not be persisted */
-@Target(AnnotationTarget.PROPERTY, AnnotationTarget.CLASS) annotation class DoNotPersist()
+import de.fraunhofer.aisec.codyze.console.ai.ChatMessageJSON
+import io.modelcontextprotocol.kotlin.sdk.types.Tool
+
+/** Interface abstracting the underlying LLM provider (Gemini, OpenAI, Ollama, etc.). */
+interface LlmClient {
+    val modelName: String
+
+    /**
+     * Streaming prompt execution for the chat. Calls [onText] for normal content and [onReasoning]
+     * for thoughts/reasoning.
+     */
+    suspend fun sendPrompt(
+        userMessage: String,
+        conversationHistory: List<ChatMessageJSON> = emptyList(),
+        tools: List<Tool> = emptyList(),
+        toolCallHistory: List<List<ToolCallWithResult>>? = null,
+        onText: suspend (String) -> Unit,
+        onReasoning: suspend (String) -> Unit = {},
+    ): List<ToolCall>
+}

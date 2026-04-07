@@ -10,67 +10,47 @@
   }
 
   let { title, nodes, highlightedNode = $bindable(), nodeClick }: Props = $props();
+
+  function typeColor(type: string): string {
+    if (/Decl/i.test(type)) return 'bg-blue-100 text-blue-700';
+    if (/Call/i.test(type)) return 'bg-purple-100 text-purple-700';
+    if (/Expr|Lit/i.test(type)) return 'bg-green-100 text-green-700';
+    if (/Stmt|Block/i.test(type)) return 'bg-orange-100 text-orange-700';
+    if (/Ref|Member/i.test(type)) return 'bg-teal-100 text-teal-700';
+    return 'bg-gray-100 text-gray-600';
+  }
 </script>
 
-<div class="rounded bg-white p-6 shadow-md">
-  <h2 class="mb-4 text-lg font-semibold">
-    {title} ({nodes.length})
-  </h2>
-  <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-gray-200">
-      <thead class="bg-gray-50">
-        <tr>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-          >
-            Type
-          </th>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-          >
-            Name
-          </th>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-          >
-            Location
-          </th>
-          <th
-            class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-          >
-            Code
-          </th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-gray-200 bg-white">
-        {#each nodes as node (node.id)}
-          <tr
-            class={`${
-              highlightedNode?.id === node.id ? 'bg-gray-100' : ''
-            } cursor-pointer hover:bg-gray-50`}
+<div class="flex flex-col h-full text-xs">
+  <!-- Header -->
+  <div class="sticky top-0 z-10 flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
+    <span class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{title}</span>
+    <span class="rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-semibold text-gray-500">{nodes.length}</span>
+  </div>
+
+  {#if nodes.length === 0}
+    <p class="p-4 text-center text-gray-400 italic">No nodes</p>
+  {:else}
+    <ul class="flex-1 overflow-y-auto py-1">
+      {#each nodes as node (node.id)}
+        <li>
+          <button
+            class="flex w-full items-center gap-1.5 py-1.5 pr-3 mx-1 rounded cursor-pointer transition-colors min-w-0 text-left
+              {highlightedNode?.id === node.id ? 'bg-blue-50' : 'hover:bg-gray-100'}"
+            style="padding-left: {node.depth * 10 + 8}px"
             onmouseenter={() => (highlightedNode = node)}
             onmouseleave={() => (highlightedNode = null)}
             onclick={() => nodeClick(node)}
+            type="button"
           >
-            <td
-              class="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900"
-              style:padding-left={`${node.depth * 10}px`}
-            >
+            <span class="shrink-0 rounded px-1 py-0.5 font-mono text-[10px] font-semibold {typeColor(node.type)}">
               {node.type}
-            </td>
-            <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
-              {node.name}
-            </td>
-            <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
-              L{node.startLine}:C{node.startColumn} - L{node.endLine}:C
-              {node.endColumn}
-            </td>
-            <td class="max-w-xs truncate px-6 py-4 text-sm whitespace-nowrap text-gray-500">
-              {node.code}
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  </div>
+            </span>
+            <span class="flex-1 truncate text-gray-900">{node.name || '—'}</span>
+            <span class="shrink-0 font-mono text-[10px] text-gray-400">L{node.startLine}</span>
+          </button>
+        </li>
+      {/each}
+    </ul>
+  {/if}
 </div>
