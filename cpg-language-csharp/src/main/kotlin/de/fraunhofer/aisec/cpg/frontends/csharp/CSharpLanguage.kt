@@ -34,15 +34,15 @@ import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.StringType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
-import org.neo4j.ogm.annotation.Transient
 
 class CSharpLanguage : Language<CSharpLanguageFrontend>(), HasImplicitReceiver {
     override val receiverName = "this"
     override val fileExtensions = listOf("cs")
     override val namespaceDelimiter = "."
 
-    @Transient
+    @DoNotPersist
     override val frontend: KClass<out CSharpLanguageFrontend> = CSharpLanguageFrontend::class
 
     /**
