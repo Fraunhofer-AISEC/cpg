@@ -41,10 +41,10 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.Switch
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import kotlin.math.max
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * This is the base class for all AST nodes in the CPG. It is used to represent any node in the
@@ -60,8 +60,8 @@ abstract class AstNode : Node() {
      * Note: This only returns the *direct* children of this node. If you want to have *all*
      * children, e.g., a flattened AST, you need to call [AstNode.allChildren].
      *
-     * For Neo4J OGM, this relationship will be automatically filled by a pre-save event before OGM
-     * persistence. Therefore, this property is a `var` and not a `val`.
+     * For the persistence layer, this relationship will be automatically filled by a pre-save event
+     * before persistence. Therefore, this property is a `var` and not a `val`.
      */
     @Relationship("AST")
     @JsonIgnore

@@ -34,8 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 
 /** A unary operator expression, involving one expression and an operator, such as `a++`. */
 class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {

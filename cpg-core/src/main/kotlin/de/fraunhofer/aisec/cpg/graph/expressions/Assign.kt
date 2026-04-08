@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import org.neo4j.ogm.annotation.Relationship
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 

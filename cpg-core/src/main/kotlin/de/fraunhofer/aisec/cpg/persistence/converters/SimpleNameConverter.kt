@@ -23,7 +23,29 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.persistence
+package de.fraunhofer.aisec.cpg.persistence.converters
 
-/** This annotation is used to denote that this property or class should not be persisted */
-@Target(AnnotationTarget.PROPERTY, AnnotationTarget.CLASS) annotation class DoNotPersist()
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.persistence.AttributeConverter
+
+/**
+ * This converter converts a [Name] into a single [String] (in contrast to the [NameConverter],
+ * which splits it up into several properties).
+ */
+class SimpleNameConverter : AttributeConverter<Name, String> {
+    override fun toGraphProperty(value: Name): String {
+        return value.toString()
+    }
+
+    override fun toEntityAttribute(value: String?): Name {
+        if (value == null) {
+            // Return an empty name if value is null
+            return Name("")
+        }
+
+        // We cannot really know what the actual delimiter was, so we need to supply some delimiters
+        // and hope for the best. Unfortunately, we do not get access to the "language" node here...
+        return parseName(value, ".", ",", "::")
+    }
+}
