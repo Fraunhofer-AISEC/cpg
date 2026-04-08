@@ -26,10 +26,13 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.New
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
 class CXXExpressionTest {
@@ -50,5 +53,25 @@ class CXXExpressionTest {
         val cast = tu.casts.firstOrNull()
         assertNotNull(cast)
         assertEquals(cast, cast.expression.astParent)
+    }
+
+    @Test
+    fun testNewWithTemplateAndInitializerList() {
+        val file = File("src/test/resources/cxx/new_initializer_list.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(tu)
+
+        // The variable 'f' should be initialized with a New expression
+        val f = tu.variables["f"]
+        assertNotNull(f)
+
+        val newExpr = f.initializer
+        assertIs<New>(newExpr)
+
+        // The initializer of the New expression should be an InitializerList (brace-init)
+        assertIs<InitializerList>(newExpr.initializer)
     }
 }

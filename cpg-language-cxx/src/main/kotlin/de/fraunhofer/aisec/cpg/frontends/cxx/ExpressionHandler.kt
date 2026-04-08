@@ -260,11 +260,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
             // we also need to "forward" our template parameters (if we have any) to the construct
             // expression since the construct expression will do the actual template instantiation
-            if (newExpression.templateParameters.isNotEmpty()) {
-                addImplicitTemplateParametersToCall(
-                    newExpression.templateParameters,
-                    initializer as Construction,
-                )
+            if (newExpression.templateParameters.isNotEmpty() && initializer is Construction) {
+                addImplicitTemplateParametersToCall(newExpression.templateParameters, initializer)
             }
 
             // our initializer, such as a construct expression, will have the non-pointer type
