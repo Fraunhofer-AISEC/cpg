@@ -45,7 +45,7 @@ dependencies {
 tasks {
     val downloadLibGoAST by
         registering(Download::class) {
-            val version = "v0.0.6"
+            val version = "v0.0.7"
 
             src(
                 listOf(
