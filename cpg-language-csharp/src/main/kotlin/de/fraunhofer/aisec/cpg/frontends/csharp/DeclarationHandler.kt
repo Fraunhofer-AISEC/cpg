@@ -174,7 +174,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
             frontend.scopeManager.addDeclaration(param)
             constructor.parameters += param
         }
-        //        constructor.body = frontend.statementHandler.handle(node.body)
+        constructor.body = frontend.statementHandler.handle(node.body)
 
         frontend.scopeManager.leaveScope(constructor)
         return constructor

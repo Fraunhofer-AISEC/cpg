@@ -27,10 +27,14 @@ package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.test.*
@@ -143,15 +147,41 @@ class CSharpLanguageFrontendTest : BaseTest() {
         val constructors = foo.constructors
         assertEquals(2, constructors.size)
 
-        val noParameter = constructors.single { it.parameters.isEmpty() }
-        assertNotNull(noParameter)
-        assertIs<Constructor>(noParameter)
+        val defaultConstructor = constructors.single { it.parameters.isEmpty() }
+        assertNotNull(defaultConstructor)
+        assertIs<Constructor>(defaultConstructor)
 
-        val twoParameters = constructors.single { it.parameters.size == 2 }
-        assertNotNull(twoParameters)
-        assertIs<Constructor>(twoParameters)
-        assertEquals("x", twoParameters.parameters[0].name.localName)
-        assertEquals("y", twoParameters.parameters[1].name.localName)
+        val emptyBody = defaultConstructor.body
+        assertIs<Block>(emptyBody)
+        assertEquals(0, emptyBody.statements.size)
+
+        val constructorWithParams = constructors.single { it.parameters.size == 2 }
+        assertNotNull(constructorWithParams)
+        assertIs<Constructor>(constructorWithParams)
+
+        val body = constructorWithParams.body
+        assertIs<Block>(body)
+        assertEquals(1, body.statements.size)
+
+        val assignment = body.statements[0]
+        assertIs<Assign>(assignment)
+        assertEquals("=", assignment.operatorCode)
+
+        // lhs: this.x
+        val lhs = assignment.lhs.firstOrNull()
+        assertIs<MemberAccess>(lhs)
+        val fieldX = foo.fields["x"]
+        assertNotNull(fieldX)
+        assertIs<Field>(lhs.refersTo)
+        assertEquals(fieldX, lhs.refersTo)
+
+        // rhs: x
+        val rhs = assignment.rhs.firstOrNull()
+        assertIs<Reference>(rhs)
+        assertIs<Parameter>(rhs.refersTo)
+        val refersTo = rhs.refersTo
+        assertNotNull(refersTo)
+        assertEquals(constructorWithParams.parameters.first(), refersTo)
     }
 
     @Test
