@@ -416,7 +416,16 @@ interface Csharp : Library {
                     "ObjectCreationExpressionSyntax" -> ObjectCreationExpressionSyntax(nativeValue)
                     "ImplicitObjectCreationExpressionSyntax" ->
                         ImplicitObjectCreationExpressionSyntax(nativeValue)
-                    "InitializerExpressionSyntax" -> InitializerExpressionSyntax(nativeValue)
+                    "InitializerExpressionSyntax" ->
+                        when (INSTANCE.GetKind(nativeValue)) {
+                            "ObjectInitializerExpression" ->
+                                ObjectInitializerExpressionSyntax(nativeValue)
+                            "CollectionInitializerExpression" ->
+                                CollectionInitializerExpressionSyntax(nativeValue)
+                            "ComplexElementInitializerExpression" ->
+                                ComplexElementInitializerExpressionSyntax(nativeValue)
+                            else -> InitializerExpressionSyntax(nativeValue)
+                        }
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -589,12 +598,24 @@ interface Csharp : Library {
          * [`InitializerExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.initializerexpressionsyntax)
          * class.
          */
-        class InitializerExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+        open class InitializerExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
             val expressions: List<ExpressionSyntax> by lazy {
                 val count = INSTANCE.GetInitializerExpressionExpressionsCount(this)
                 (0 until count).map { i -> INSTANCE.GetInitializerExpressionExpression(this, i) }
             }
         }
+
+        /** An object initializer, e.g. `{ X = 0, Y = 1 }`. */
+        class ObjectInitializerExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            InitializerExpressionSyntax(p)
+
+        /** A collection initializer, e.g. `{ 0, 1, 2 }`. */
+        class CollectionInitializerExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            InitializerExpressionSyntax(p)
+
+        /** A complex element initializer, e.g. `{ "A", 1 }`. */
+        class ComplexElementInitializerExpressionSyntax(p: Pointer? = Pointer.NULL) :
+            InitializerExpressionSyntax(p)
     }
 
     /**

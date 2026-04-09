@@ -117,12 +117,16 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
         return when (node) {
             is Csharp.AST.NumericLiteralExpressionSyntax ->
                 newLiteral(node.value.toInt(), builtInTypes.getValue("int"), rawNode = node)
+
             is Csharp.AST.StringLiteralExpressionSyntax ->
                 newLiteral(node.value, builtInTypes.getValue("string"), rawNode = node)
+
             is Csharp.AST.BooleanLiteralExpressionSyntax ->
                 newLiteral(node.value.toBoolean(), builtInTypes.getValue("bool"), rawNode = node)
+
             is Csharp.AST.CharacterLiteralExpressionSyntax ->
                 newLiteral(node.value.single(), builtInTypes.getValue("char"), rawNode = node)
+
             is Csharp.AST.NullLiteralExpressionSyntax ->
                 newLiteral(null, objectType("null"), rawNode = node)
             // TODO: Return unknownType()?
@@ -132,8 +136,8 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
 
     /**
      * Translates an [InvocationExpressionSyntax][Csharp.AST.InvocationExpressionSyntax] into a
-     * [Call]. If the callee is a [MemberAccess] (e.g. `obj.Method()`), a `MemberCall` is created.
-     * Otherwise (e.g. `Foo()`), a plain [Call] is created.
+     * [Call]. If the callee is a [MemberAccess] (e.g. `member.Method()`), a `MemberCall` is
+     * created. Otherwise (e.g. `Foo()`), a [Call] is created.
      *
      * C# spec:
      * [Invocation expressions](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12810-invocation-expressions)
@@ -218,7 +222,13 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
 
         val initializer = node.initializer
         if (initializer != null) {
-            return handleObjectInitializer(initializer, newExpression, type)
+            return when (initializer) {
+                is Csharp.AST.ObjectInitializerExpressionSyntax ->
+                    handleObjectInitializer(initializer, newExpression, type)
+                is Csharp.AST.CollectionInitializerExpressionSyntax ->
+                    handleCollectionInitializer(initializer, newExpression, type)
+                else -> newExpression
+            }
         }
         return newExpression
     }
@@ -257,55 +267,211 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
         val tmpName = Name.temporary(prefix = type.name.localName, separatorChar = '_', exprList)
         val tmpVar = newVariable(name = tmpName, type = type).implicit()
         tmpVar.initializer = newExpression
-        frontend.scopeManager.addDeclaration(tmpVar)
         val declStmt = newDeclarationStatement().implicit()
         declStmt.addDeclaration(tmpVar)
         exprList.expressions += declStmt
 
-        // Each assignment in the initializer is translated to a member access on the tmp variable
         for (expr in initializer.expressions) {
             if (expr is Csharp.AST.AssignmentExpressionSyntax) {
+                val memberName = (expr.left as? Csharp.AST.IdentifierNameSyntax)?.identifier
+                val baseRef = newReference(name = tmpName).implicit()
+                baseRef.refersTo = tmpVar
                 val memberAccess =
-                    newMemberAccess(
-                            name =
-                                (expr.left as? Csharp.AST.IdentifierNameSyntax)?.identifier
-                                    ?: "obj",
-                            base = newReference(name = tmpName).implicit(),
-                        )
+                    newMemberAccess(name = memberName, base = baseRef)
                         .implicit(code = newExpression.code, location = newExpression.location)
-                val assign =
-                    newAssign(
-                            operatorCode = "=",
-                            lhs = listOf(memberAccess),
-                            rhs = listOf(handle(expr.right)),
+
+                if (expr.right is Csharp.AST.ObjectInitializerExpressionSyntax) {
+                    // Nested object initializer: member = { X = 0, Y = 1 }
+                    // -> __tmp.member.X = 0, __tmp.member.Y = 1
+                    exprList.expressions +=
+                        handleNestedObjectInitializer(
+                            expr.right as Csharp.AST.ObjectInitializerExpressionSyntax,
+                            memberAccess,
+                            newExpression,
                         )
-                        .implicit(code = newExpression.code, location = newExpression.location)
-                exprList.expressions += assign
+                } else if (expr.right is Csharp.AST.CollectionInitializerExpressionSyntax) {
+                    // Nested collection initializer: member = { "a", "b" }
+                    // -> __tmp.member.Add("a"), __tmp.member.Add("b")
+                    exprList.expressions +=
+                        handleNestedCollectionInitializer(
+                            expr.right as Csharp.AST.CollectionInitializerExpressionSyntax,
+                            memberAccess,
+                            newExpression,
+                        )
+                } else {
+                    val assign =
+                        newAssign(
+                                operatorCode = "=",
+                                lhs = listOf(memberAccess),
+                                rhs = listOf(handle(expr.right)),
+                            )
+                            .implicit(code = newExpression.code, location = newExpression.location)
+                    exprList.expressions += assign
+                }
             }
         }
 
         // Add a reference to the temporary variable
-        exprList.expressions += newReference(name = tmpName).implicit()
+        exprList.expressions +=
+            newReference(name = tmpName).implicit().apply { this.refersTo = tmpVar }
         return exprList
     }
 
-    //    /**
-    //     * Translates an [InitializerExpressionSyntax][Csharp.AST.InitializerExpressionSyntax]
-    // into an
-    //     * [InitializerList].
-    //     *
-    //     * C# spec:
-    //     * [Object
-    // initializers](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1281722-object-initializers)
-    //     */
-    //    // For arrays
-    //    private fun handleInitializerExpression(
-    //        node: Csharp.AST.InitializerExpressionSyntax
-    //    ): InitializerList {
-    //        val initializerList = newInitializerList(rawNode = node)
-    //        for (expr in node.expressions) {
-    //            initializerList.addArgument(handle(expr))
-    //        }
-    //        return initializerList
-    //    }
+    /**
+     * Handles a nested object initializer where no new object is created. Instead, the members are
+     * only initialized. For example:
+     * ```csharp
+     * Rectangle r = new Rectangle { P1 = { X = 0, Y = 1 } };
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * Rectangle __tmp = new Rectangle();
+     * __tmp.P1.X = 0;
+     * __tmp.P1.Y = 1;
+     * Rectangle r = __tmp;
+     * ```
+     *
+     * C# spec:
+     * [Object initializers](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1281722-object-initializers)
+     */
+    private fun handleNestedObjectInitializer(
+        initializer: Csharp.AST.ObjectInitializerExpressionSyntax,
+        memberAccess: MemberAccess,
+        newExpression: New,
+    ): List<Assign> {
+        val assigns = mutableListOf<Assign>()
+        for (innerExpr in initializer.expressions) {
+            if (innerExpr is Csharp.AST.AssignmentExpressionSyntax) {
+                val innerName = (innerExpr.left as? Csharp.AST.IdentifierNameSyntax)?.identifier
+                val innerAccess =
+                    newMemberAccess(name = innerName, base = memberAccess)
+                        .implicit(code = newExpression.code, location = newExpression.location)
+                val assign =
+                    newAssign(
+                            operatorCode = "=",
+                            lhs = listOf(innerAccess),
+                            rhs = listOf(handle(innerExpr.right)),
+                        )
+                        .implicit(code = newExpression.code, location = newExpression.location)
+                assigns += assign
+            }
+        }
+        return assigns
+    }
+
+    /**
+     * Handles a [Csharp.AST.CollectionInitializerExpressionSyntax] by wrapping the expressions in
+     * an [ExpressionList]. Each element in the initializer is translated into an implicit `Add`
+     * call on a temporary variable. For example:
+     * ```csharp
+     * var list = new List<int> { 0, 1, 2 };
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * List<int> __tmp = new List<int>();
+     * __tmp.Add(0);
+     * __tmp.Add(1);
+     * __tmp.Add(2);
+     * var list = __tmp;
+     * ```
+     *
+     * For [Csharp.AST.ComplexElementInitializerExpressionSyntax], each `{ key, value }` element is
+     * translated into an `Add(key, value)` call:
+     * ```csharp
+     * var map = new Map<string, int> { { "a", 1 }, { "b", 2 } };
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * Map<string, int> __tmp = new Map<string, int>();
+     * __tmp.Add("a", 1);
+     * __tmp.Add("b", 2);
+     * var map = __tmp;
+     * ```
+     *
+     * C# spec:
+     * [Collection initializers](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1281723-collection-initializers)
+     */
+    private fun handleCollectionInitializer(
+        initializer: Csharp.AST.CollectionInitializerExpressionSyntax,
+        newExpression: New,
+        type: de.fraunhofer.aisec.cpg.graph.types.Type,
+    ): ExpressionList {
+        val exprList = newExpressionList()
+        val tmpName = Name.temporary(prefix = type.name.localName, separatorChar = '_', exprList)
+        val tmpVar = newVariable(name = tmpName, type = type).implicit()
+        tmpVar.initializer = newExpression
+        val declStmt = newDeclarationStatement().implicit()
+        declStmt.addDeclaration(tmpVar)
+        exprList.expressions += declStmt
+
+        for (expr in initializer.expressions) {
+            val baseRef = newReference(name = tmpName).implicit()
+            baseRef.refersTo = tmpVar
+            val addCall =
+                newMemberCall(
+                        newMemberAccess(name = "Add", base = baseRef)
+                            .implicit(code = newExpression.code, location = newExpression.location)
+                    )
+                    .implicit(code = newExpression.code, location = newExpression.location)
+            if (expr is Csharp.AST.ComplexElementInitializerExpressionSyntax) {
+                // For example { "a", 1 } -> Add("a", 1)
+                for (arg in expr.expressions) {
+                    addCall.addArgument(handle(arg))
+                }
+            } else {
+                // Simple element, e.g. 0 -> Add(0)
+                addCall.addArgument(handle(expr))
+            }
+            exprList.expressions += addCall
+        }
+
+        exprList.expressions +=
+            newReference(name = tmpName).implicit().apply { this.refersTo = tmpVar }
+        return exprList
+    }
+
+    /**
+     * Handles a nested collection initializer where elements are added to an already existing
+     * member via implicit `Add` calls. For example:
+     * ```csharp
+     * new Foo { Items = { 0, 1, 2 } }
+     * ```
+     *
+     * is equivalent to:
+     * ```csharp
+     * __tmp.Items.Add(0);
+     * __tmp.Items.Add(1);
+     * __tmp.Items.Add(2);
+     * ```
+     *
+     * C# spec:
+     * [Collection initializers](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#1281723-collection-initializers)
+     */
+    private fun handleNestedCollectionInitializer(
+        initializer: Csharp.AST.CollectionInitializerExpressionSyntax,
+        memberAccess: MemberAccess,
+        newExpression: New,
+    ): List<MemberCall> {
+        val calls = mutableListOf<MemberCall>()
+        for (expr in initializer.expressions) {
+            val addCall =
+                newMemberCall(
+                        newMemberAccess(name = "Add", base = memberAccess)
+                            .implicit(code = newExpression.code, location = newExpression.location)
+                    )
+                    .implicit(code = newExpression.code, location = newExpression.location)
+            if (expr is Csharp.AST.ComplexElementInitializerExpressionSyntax) {
+                for (arg in expr.expressions) {
+                    addCall.addArgument(handle(arg))
+                }
+            } else {
+                addCall.addArgument(handle(expr))
+            }
+            calls += addCall
+        }
+        return calls
+    }
 }

@@ -159,13 +159,12 @@ class ObjectCreationTest : BaseTest() {
         val fVariable = fooBarClass.fields["f"]
         assertNotNull(fVariable)
 
-        // The initializer as an ExpressionList
         val exprList = fVariable.initializer
         assertNotNull(exprList)
         assertIs<ExpressionList>(exprList)
         assertEquals(3, exprList.expressions.size)
 
-        // 1. DeclarationStatement with implicit tmp variable: __tmp = new Foo(1)
+        // DeclarationStatement with implicit tmp variable: __tmp = new Foo(1)
         val declStmt = exprList.expressions[0]
         assertIs<DeclarationStatement>(declStmt)
         assertTrue(declStmt.isImplicit)
@@ -188,7 +187,7 @@ class ObjectCreationTest : BaseTest() {
         assertIs<Literal<*>>(constructArg)
         assertEquals(1, constructArg.value)
 
-        // 2. Implicit assign: __tmp.x = 2
+        // Implicit assign: __tmp.x = 2
         val assign = exprList.expressions[1]
         assertIs<Assign>(assign)
         assertTrue(assign.isImplicit)
@@ -207,10 +206,210 @@ class ObjectCreationTest : BaseTest() {
         assertIs<Literal<*>>(rhs)
         assertEquals(2, rhs.value)
 
-        // 3. Reference to the tmp variable
-        val finalRef = exprList.expressions[2]
-        assertIs<Reference>(finalRef)
-        assertTrue(finalRef.isImplicit)
-        assertRefersTo(finalRef, tmpVar)
+        // Reference to tmp variable
+        val ref = exprList.expressions[2]
+        assertIs<Reference>(ref)
+        assertTrue(ref.isImplicit)
+        assertRefersTo(ref, tmpVar)
+    }
+
+    @Test
+    fun nestedObjectCreationWithInitializerTest() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("ObjectCreation.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        /**
+         * Rectangle r = new Rectangle { P1 = new Point { X = 0, Y = 1 }, P2 = new Point { X = 2, Y
+         * = 3 } } };
+         */
+        val rectangleClass = tu.records["Rectangle"]
+        assertNotNull(rectangleClass)
+
+        val rVariable = tu.variables["r"]
+        assertNotNull(rVariable)
+
+        val exprList = rVariable.initializer
+        assertNotNull(exprList)
+        assertIs<ExpressionList>(exprList)
+        assertEquals(4, exprList.expressions.size)
+
+        // DeclarationStatement: tmpRectangle = new Rectangle()
+        val outerDeclStmt = exprList.expressions[0]
+        assertIs<DeclarationStatement>(outerDeclStmt)
+        val outerTmpVar = outerDeclStmt.declarations.firstOrNull()
+        assertNotNull(outerTmpVar)
+        assertIs<Variable>(outerTmpVar)
+        val outerNew = outerTmpVar.initializer
+        assertNotNull(outerNew)
+        assertIs<New>(outerNew)
+
+        // Assign: tmpRectangle.P1 = ExpressionList(tmpPoint = new Point(), tmpPoint.X = 0,
+        // tmpPoint.Y = 1, tmpPoint)
+        val p1Assign = exprList.expressions[1]
+        assertIs<Assign>(p1Assign)
+        val p1MemberAccess = p1Assign.lhs.firstOrNull()
+        assertIs<MemberAccess>(p1MemberAccess)
+        assertRefersTo(p1MemberAccess.base, outerTmpVar)
+
+        val p1Rhs = p1Assign.rhs.firstOrNull()
+        assertNotNull(p1Rhs)
+        assertIs<ExpressionList>(p1Rhs)
+        assertEquals(4, p1Rhs.expressions.size)
+
+        // Nested: tmpPoint = new Point()
+        val p1DeclStmt = p1Rhs.expressions[0]
+        assertIs<DeclarationStatement>(p1DeclStmt)
+        val p1TmpVar = p1DeclStmt.declarations.firstOrNull()
+        assertNotNull(p1TmpVar)
+        assertIs<Variable>(p1TmpVar)
+        val p1New = p1TmpVar.initializer
+        assertNotNull(p1New)
+        assertIs<New>(p1New)
+
+        // Nested: tmpPoint.X = 0
+        val xAssign = p1Rhs.expressions[1]
+        assertIs<Assign>(xAssign)
+        val xMemberAccess = xAssign.lhs.firstOrNull()
+        assertIs<MemberAccess>(xMemberAccess)
+        assertEquals("X", xMemberAccess.name.localName)
+        val xRhs = xAssign.rhs.firstOrNull()
+        assertIs<Literal<*>>(xRhs)
+        assertEquals(0, xRhs.value)
+
+        // Nested: tmpPoint.Y = 1
+        val yAssign = p1Rhs.expressions[2]
+        assertIs<Assign>(yAssign)
+        val yMemberAccess = yAssign.lhs.firstOrNull()
+        assertIs<MemberAccess>(yMemberAccess)
+        assertEquals("Y", yMemberAccess.name.localName)
+        val yRhs = yAssign.rhs.firstOrNull()
+        assertIs<Literal<*>>(yRhs)
+        assertEquals(1, yRhs.value)
+
+        val p1Ref = p1Rhs.expressions[3]
+        assertIs<Reference>(p1Ref)
+        assertRefersTo(p1Ref, p1TmpVar)
+
+        // Assign: tmpRectangle.P2 = ExpressionList()
+        val p2Assign = exprList.expressions[2]
+        assertIs<Assign>(p2Assign)
+        val p2MemberAccess = p2Assign.lhs.firstOrNull()
+        assertIs<MemberAccess>(p2MemberAccess)
+        assertEquals("P2", p2MemberAccess.name.localName)
+        assertRefersTo(p2MemberAccess.base, outerTmpVar)
+
+        val p2Rhs = p2Assign.rhs.firstOrNull()
+        assertNotNull(p2Rhs)
+        assertIs<ExpressionList>(p2Rhs)
+        assertEquals(4, p2Rhs.expressions.size)
+
+        // Reference to tmpRectangle
+        val outerRef = exprList.expressions[3]
+        assertIs<Reference>(outerRef)
+        assertRefersTo(outerRef, outerTmpVar)
+    }
+
+    @Test
+    fun nestedObjectInitializerWithoutNewTest() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("ObjectCreation.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        /**
+         * Rectangle2 r = new Rectangle2 { P1 = { X = 0, Y = 1 }, P2 = { X = 2, Y = 3 } };
+         *
+         * translated into: Rectangle2 __tmp = new Rectangle2(); __tmp.P1.X = 0; __tmp.P1.Y = 1;
+         * __tmp.P2.X = 2; __tmp.P2.Y = 3; Rectangle2 r = __tmp;
+         */
+        val rectangle2Class = tu.records["Rectangle2"]
+        assertNotNull(rectangle2Class)
+
+        val r2Variable = tu.variables["r2"]
+        assertNotNull(r2Variable)
+
+        val exprList = r2Variable.initializer
+        assertNotNull(exprList)
+        assertIs<ExpressionList>(exprList)
+        assertEquals(6, exprList.expressions.size)
+
+        // DeclarationStatement: __tmp = new Rectangle2()
+        val declStmt = exprList.expressions[0]
+        assertIs<DeclarationStatement>(declStmt)
+        assertTrue(declStmt.isImplicit)
+        val tmpVar = declStmt.declarations.firstOrNull()
+        assertNotNull(tmpVar)
+        assertIs<Variable>(tmpVar)
+        val newNode = tmpVar.initializer
+        assertNotNull(newNode)
+        assertIs<New>(newNode)
+
+        // __tmp.P1.X = 0
+        val p1xAssign = exprList.expressions[1]
+        assertIs<Assign>(p1xAssign)
+        assertTrue(p1xAssign.isImplicit)
+        val p1xAccess = p1xAssign.lhs.firstOrNull()
+        assertIs<MemberAccess>(p1xAccess)
+        assertEquals("X", p1xAccess.name.localName)
+        val p1Access = p1xAccess.base
+        assertIs<MemberAccess>(p1Access)
+        assertEquals("P1", p1Access.name.localName)
+        assertRefersTo(p1Access.base, tmpVar)
+        val p1xRhs = p1xAssign.rhs.firstOrNull()
+        assertIs<Literal<*>>(p1xRhs)
+        assertEquals(0, p1xRhs.value)
+
+        // __tmp.P1.Y = 1
+        val p1yAssign = exprList.expressions[2]
+        assertIs<Assign>(p1yAssign)
+        val p1yAccess = p1yAssign.lhs.firstOrNull()
+        assertIs<MemberAccess>(p1yAccess)
+        assertEquals("Y", p1yAccess.name.localName)
+        val p1yRhs = p1yAssign.rhs.firstOrNull()
+        assertIs<Literal<*>>(p1yRhs)
+        assertEquals(1, p1yRhs.value)
+
+        // __tmp.P2.X = 2
+        val p2xAssign = exprList.expressions[3]
+        assertIs<Assign>(p2xAssign)
+        val p2xAccess = p2xAssign.lhs.firstOrNull()
+        assertIs<MemberAccess>(p2xAccess)
+        assertEquals("X", p2xAccess.name.localName)
+        val p2Access = p2xAccess.base
+        assertIs<MemberAccess>(p2Access)
+        assertEquals("P2", p2Access.name.localName)
+        assertRefersTo(p2Access.base, tmpVar)
+        val p2xRhs = p2xAssign.rhs.firstOrNull()
+        assertIs<Literal<*>>(p2xRhs)
+        assertEquals(2, p2xRhs.value)
+
+        // __tmp.P2.Y = 3
+        val p2yAssign = exprList.expressions[4]
+        assertIs<Assign>(p2yAssign)
+        val p2yAccess = p2yAssign.lhs.firstOrNull()
+        assertIs<MemberAccess>(p2yAccess)
+        assertEquals("Y", p2yAccess.name.localName)
+        val p2yRhs = p2yAssign.rhs.firstOrNull()
+        assertIs<Literal<*>>(p2yRhs)
+        assertEquals(3, p2yRhs.value)
+
+        // Reference to __tmp
+        val ref = exprList.expressions[5]
+        assertIs<Reference>(ref)
+        assertRefersTo(ref, tmpVar)
     }
 }
