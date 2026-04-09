@@ -23,28 +23,17 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.helpers.neo4j
+package de.fraunhofer.aisec.cpg.passes.configuration
 
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.parseName
-import org.neo4j.ogm.typeconversion.AttributeConverter
+import de.fraunhofer.aisec.cpg.frontends.Language
+import kotlin.reflect.KClass
 
 /**
- * This converter converts a [Name] into a single [String] (in contrast to the [NameConverter],
- * which splits it up into several properties).
+ * This annotation restricts a pass to only execute on targets whose [Language] matches the
+ * specified language class. The pass's accept function will not be executed when the target's
+ * language does not match.
+ *
+ * This annotation is [Repeatable]. In this case, the pass will run if the target's language matches
+ * *any* of the specified languages (OR logic).
  */
-class SimpleNameConverter : AttributeConverter<Name, String> {
-    override fun toGraphProperty(value: Name?): String {
-        return value.toString()
-    }
-
-    override fun toEntityAttribute(value: String?): Name? {
-        if (value == null) {
-            return null
-        }
-
-        // We cannot really know what the actual delimiter was, so we need to supply some delimiters
-        // and hope for the best. Unfortunately, we do not get access to the "language" node here...
-        return parseName(value, ".", ",", "::")
-    }
-}
+@Repeatable annotation class RequiresLanguage(val value: KClass<out Language<*>>)

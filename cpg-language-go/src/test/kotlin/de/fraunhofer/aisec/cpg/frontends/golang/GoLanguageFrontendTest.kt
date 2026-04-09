@@ -308,6 +308,14 @@ class GoLanguageFrontendTest : BaseTest() {
         zero = result.variables["submodule.Zero"]
         assertNotNull(zero)
         assertRefersTo(key, zero)
+
+        val floatUnderscore = p.variables["floatUnderscore"]
+        assertNotNull(floatUnderscore)
+        assertLiteralValue(224_617.445_991_228, floatUnderscore.initializer)
+
+        val intUnderscore = p.variables["intUnderscore"]
+        assertNotNull(intUnderscore)
+        assertLiteralValue(1_000_000, intUnderscore.initializer)
     }
 
     @Test
