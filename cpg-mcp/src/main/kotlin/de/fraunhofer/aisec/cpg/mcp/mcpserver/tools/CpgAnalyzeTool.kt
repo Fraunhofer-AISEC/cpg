@@ -103,6 +103,8 @@ import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.io.File
+import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.IdentityHashMap
 import kotlin.String
 import kotlin.reflect.KClass
@@ -162,33 +164,50 @@ fun runCpgAnalyze(
     runPasses: Boolean,
     cleanup: Boolean,
 ): CpgAnalysisResult {
-    val file =
-        when {
-            payload?.content != null -> {
-                val extension =
-                    if (payload.extension != null) {
-                        if (payload.extension.startsWith(".")) payload.extension
-                        else ".${payload.extension}"
-                    } else {
-                        throw IllegalArgumentException(
-                            "Extension is required when providing content"
-                        )
-                    }
+    val file: File
+    val sourceFiles: List<String>
+    val includePaths: List<Path>
 
-                val tempFile = File.createTempFile("cpg_analysis", extension)
-                tempFile.writeText(payload.content)
-                tempFile.deleteOnExit()
-                tempFile
+    when {
+        payload?.path != null -> {
+            file = File(payload.path).absoluteFile
+            if (!file.exists()) {
+                throw IllegalArgumentException("Path does not exist: ${file.absolutePath}")
             }
-
-            else -> throw IllegalArgumentException("Must provide content")
+            sourceFiles =
+                if (file.isDirectory) {
+                    file.walkTopDown().filter { it.isFile }.map { it.absolutePath }.toList()
+                } else {
+                    listOf(file.absolutePath)
+                }
+            includePaths =
+                payload.includePaths?.map { Paths.get(it).toAbsolutePath().normalize() }
+                    ?: emptyList()
         }
+        payload?.content != null -> {
+            val extension =
+                if (payload.extension != null) {
+                    if (payload.extension.startsWith(".")) payload.extension
+                    else ".${payload.extension}"
+                } else {
+                    throw IllegalArgumentException("Extension is required when providing content")
+                }
+
+            val tempFile = File.createTempFile("cpg_analysis", extension)
+            tempFile.writeText(payload.content)
+            tempFile.deleteOnExit()
+            file = tempFile
+            sourceFiles = listOf(file.absolutePath)
+            includePaths = emptyList()
+        }
+        else -> throw IllegalArgumentException("Must provide either 'path' or 'content'")
+    }
 
     val config =
         setupTranslationConfiguration(
             topLevel = file,
-            files = listOf(file.absolutePath),
-            includePaths = emptyList(),
+            files = sourceFiles,
+            includePaths = includePaths,
             runPasses = runPasses,
         )
     config.disableCleanup = !cleanup

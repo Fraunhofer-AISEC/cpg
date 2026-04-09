@@ -48,7 +48,8 @@ fun configureServer(
         // this.listAvailableOperations()
         this.getAllArgs()
         this.getArgByIndexOrName()
-        // this.listConceptsAndOperations()
+        //        this.listConceptsAndOperations()
+        this.getFunctionsByName()
         this.getNode()
         this.addDfgBackwardTool()
 

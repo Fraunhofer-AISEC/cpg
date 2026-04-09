@@ -1,0 +1,3 @@
+functions:
+  - name: <function_name>
+    file: <file_name>
