@@ -196,20 +196,15 @@ fun Server.getFunctionsByName() {
         name = "cpg_get_functions_by_name",
         description = toolDescription,
     ) { result: TranslationResult, payload: CpgFunctionsByNamePayload ->
-        val nameSet = payload.names.toSet()
-        val matched = result.functions.filter { func -> func.name.localName in nameSet }
-        val found = matched.map { FunctionInfo(it) }
-        val notFound = nameSet - matched.map { it.name.localName }.toSet()
+        val found = result.functions.filter { it.name.localName in payload.names }
+        val notFound = payload.names.filter { name -> found.none { it.name.localName == name } }
 
-        val content = found.map { TextContent(Json.encodeToString(it)) }
-        val footer =
-            if (notFound.isNotEmpty()) {
-                listOf(TextContent("Not found: ${notFound.joinToString(", ")}"))
-            } else {
-                emptyList()
-            }
-
-        CallToolResult(content = content + footer)
+        val content =
+            found.map { TextContent(Json.encodeToString(FunctionInfo(it))) }.toMutableList()
+        if (notFound.isNotEmpty()) {
+            content += TextContent("Not found: ${notFound.joinToString(", ")}")
+        }
+        CallToolResult(content = content)
     }
 }
 
