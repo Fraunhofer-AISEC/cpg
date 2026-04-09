@@ -64,7 +64,7 @@ class CollectionInitializerTest : BaseTest() {
          * translated into: List<int> __tmp = new List<int>(); __tmp.Add(0); __tmp.Add(1);
          * __tmp.Add(2); List<int> numbers = __tmp;
          */
-        val simpleClass = tu.records["CollectionInitializer,"]
+        val simpleClass = tu.records["CollectionInitializer"]
         assertNotNull(simpleClass)
 
         val numbersField = simpleClass.fields["numbers"]
