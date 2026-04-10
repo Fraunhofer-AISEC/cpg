@@ -353,12 +353,27 @@ fun Node.collectAllPrevFullDFGPaths(): List<NodePath> {
  * Iterates the prev DFG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllPrevDFGPaths(): List<NodePath> {
+fun Node.collectAllPrevDFGPaths(
+    interproceduralAnalysis: Boolean = true,
+    contextSensitive: Boolean = true,
+): List<NodePath> {
     // We make everything fail to reach the end of the DFG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followDFGEdgesUntilHit(
             collectFailedPaths = true,
             findAllPossiblePaths = true,
+            sensitivities =
+                if (contextSensitive) {
+                    FieldSensitive + ContextSensitive
+                } else {
+                    arrayOf(FieldSensitive)
+                },
+            scope =
+                if (interproceduralAnalysis) {
+                    Interprocedural()
+                } else {
+                    Intraprocedural()
+                },
             direction = Backward(GraphToFollow.DFG),
         ) {
             false
