@@ -37,29 +37,31 @@ import de.fraunhofer.aisec.cpg.graph.newParameter
 import de.fraunhofer.aisec.cpg.graph.newRecord
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
 class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     CSharpHandler<Declaration, Csharp.AST.MemberDeclarationSyntax>(::ProblemDeclaration, frontend) {
     override fun handleNode(node: Csharp.AST.MemberDeclarationSyntax): Declaration {
         return when (node) {
-            is Csharp.AST.NamespaceDeclarationSyntax -> handleNamespaceDeclaration(node)
+            is Csharp.AST.BaseNamespaceDeclarationSyntax -> handleNamespaceDeclaration(node)
             is Csharp.AST.ClassDeclarationSyntax -> handleClassDeclaration(node)
             is Csharp.AST.MethodDeclarationSyntax -> handleMethodDeclaration(node)
             is Csharp.AST.ConstructorDeclarationSyntax -> handleConstructorDeclaration(node)
+            is Csharp.AST.InterfaceDeclarationSyntax -> handleInterfaceDeclaration(node)
             else -> ProblemDeclaration("Not supported: ${node.csharpType}")
         }
     }
 
     /**
-     * Translates a [NamespaceDeclarationSyntax][Csharp.AST.NamespaceDeclarationSyntax] into a
-     * [Namespace].
+     * Translates a [BaseNamespaceDeclarationSyntax][Csharp.AST.BaseNamespaceDeclarationSyntax] into
+     * a [Namespace]. Handles both block-scoped and file-scoped namespaces.
      *
      * C# spec:
      * [Namespace declarations](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/namespaces#143-namespace-declarations)
      */
     private fun handleNamespaceDeclaration(
-        node: Csharp.AST.NamespaceDeclarationSyntax
+        node: Csharp.AST.BaseNamespaceDeclarationSyntax
     ): Declaration {
         val namespace = newNamespace(node.name, rawNode = node)
         frontend.scopeManager.enterScope(namespace)
@@ -82,7 +84,21 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
      */
     private fun handleClassDeclaration(node: Csharp.AST.ClassDeclarationSyntax): Declaration {
         val record = newRecord(node.identifier, "class", rawNode = node)
+        record.modifiers = node.modifiers.toSet()
         frontend.scopeManager.enterScope(record)
+
+        node.baseList?.let {
+            for (baseType in it.types) {
+                record.superClasses += frontend.typeOf(baseType)
+            }
+        }
+
+        node.typeParameterList?.let {
+            frontend.typeManager.addTypeParameter(
+                record,
+                it.parameters.map { name -> ParameterizedType(name, language) },
+            )
+        }
 
         for (member in node.members) {
             when (member) {
@@ -124,6 +140,43 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
+     * Translates an [InterfaceDeclarationSyntax][Csharp.AST.InterfaceDeclarationSyntax] into a
+     * [Record].
+     *
+     * C# spec:
+     * [Interface declarations](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/interfaces#182-interface-declarations)
+     */
+    private fun handleInterfaceDeclaration(
+        node: Csharp.AST.InterfaceDeclarationSyntax
+    ): Declaration {
+        val record = newRecord(node.identifier, "interface", rawNode = node)
+        record.modifiers = node.modifiers.toSet()
+        frontend.scopeManager.enterScope(record)
+
+        node.baseList?.let {
+            for (baseType in it.types) {
+                record.superClasses += frontend.typeOf(baseType)
+            }
+        }
+
+        node.typeParameterList?.let {
+            frontend.typeManager.addTypeParameter(
+                record,
+                it.parameters.map { name -> ParameterizedType(name, language) },
+            )
+        }
+
+        for (member in node.members) {
+            val decl = handle(member)
+            frontend.scopeManager.addDeclaration(decl)
+            record.addDeclaration(decl)
+        }
+
+        frontend.scopeManager.leaveScope(record)
+        return record
+    }
+
+    /**
      * Translates a [MethodDeclarationSyntax][Csharp.AST.MethodDeclarationSyntax] into a [Method].
      *
      * C# spec:
@@ -131,6 +184,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
      */
     private fun handleMethodDeclaration(node: Csharp.AST.MethodDeclarationSyntax): Declaration {
         val method = newMethod(node.identifier, rawNode = node)
+        method.modifiers = node.modifiers.toSet()
         frontend.scopeManager.enterScope(method)
 
         createMethodReceiver(method)
@@ -162,6 +216,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     ): Declaration {
         val record = frontend.scopeManager.currentRecord
         val constructor = newConstructor(node.identifier, record, rawNode = node)
+        constructor.modifiers = node.modifiers.toSet()
         frontend.scopeManager.enterScope(constructor)
 
         for (parameter in node.parameterList.parameters) {

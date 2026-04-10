@@ -49,6 +49,18 @@ public static class Library
         return Marshal.StringToCoTaskMemUTF8(Nodes[handlePtr].GetType().Name);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetCompilationUnitUsingsCount")]
+    public static int GetCompilationUnitUsingsCount(IntPtr handlePtr)
+    {
+        return ((CompilationUnitSyntax)Nodes[handlePtr]).Usings.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetCompilationUnitUsing")]
+    public static IntPtr GetCompilationUnitUsing(IntPtr handlePtr, int index)
+    {
+        return Register(((CompilationUnitSyntax)Nodes[handlePtr]).Usings[index]);
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetCompilationUnitMembersCount")]
     public static int GetCompilationUnitMembersCount(IntPtr handlePtr)
     {
@@ -83,25 +95,163 @@ public static class Library
         return Register(((BaseNamespaceDeclarationSyntax)Nodes[handlePtr]).Members[index]);
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "GetClassDeclarationIdentifier")]
-    public static IntPtr GetClassDeclarationIdentifier(IntPtr handlePtr)
+    [UnmanagedCallersOnly(EntryPoint = "GetNamespaceDeclarationUsingsCount")]
+    public static int GetNamespaceDeclarationUsingsCount(IntPtr handlePtr)
+    {
+        return ((BaseNamespaceDeclarationSyntax)Nodes[handlePtr]).Usings.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetNamespaceDeclarationUsing")]
+    public static IntPtr GetNamespaceDeclarationUsing(IntPtr handlePtr, int index)
+    {
+        return Register(((BaseNamespaceDeclarationSyntax)Nodes[handlePtr]).Usings[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetUsingDirectiveName")]
+    public static IntPtr GetUsingDirectiveName(IntPtr handlePtr)
     {
         return Marshal.StringToCoTaskMemUTF8(
-            ((ClassDeclarationSyntax)Nodes[handlePtr]).Identifier.ToString()
+            ((UsingDirectiveSyntax)Nodes[handlePtr]).Name.ToString()
         );
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "GetClassDeclarationMembersCount")]
-    public static int GetClassDeclarationMembersCount(IntPtr handlePtr)
+    [UnmanagedCallersOnly(EntryPoint = "GetUsingDirectiveAlias")]
+    public static IntPtr GetUsingDirectiveAlias(IntPtr handlePtr)
     {
-        return ((ClassDeclarationSyntax)Nodes[handlePtr]).Members.Count;
+        var alias = ((UsingDirectiveSyntax)Nodes[handlePtr]).Alias;
+        return alias != null ? Register(alias) : IntPtr.Zero;
     }
 
-    [UnmanagedCallersOnly(EntryPoint = "GetClassDeclarationMember")]
-    public static IntPtr GetClassDeclarationMember(IntPtr handlePtr, int index)
+    [UnmanagedCallersOnly(EntryPoint = "GetUsingDirectiveStaticKeyword")]
+    public static IntPtr GetUsingDirectiveStaticKeyword(IntPtr handlePtr)
     {
-        return Register(((ClassDeclarationSyntax)Nodes[handlePtr]).Members[index]);
+        return Marshal.StringToCoTaskMemUTF8(
+            ((UsingDirectiveSyntax)Nodes[handlePtr]).StaticKeyword.Text
+        );
     }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetUsingDirectiveGlobalKeyword")]
+    public static IntPtr GetUsingDirectiveGlobalKeyword(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((UsingDirectiveSyntax)Nodes[handlePtr]).GlobalKeyword.Text
+        );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetNameEqualsSyntaxName")]
+    public static IntPtr GetNameEqualsSyntaxName(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((NameEqualsSyntax)Nodes[handlePtr]).Name.Identifier.Text
+        );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetEnumDeclarationIdentifier")]
+    public static IntPtr GetEnumDeclarationIdentifier(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((EnumDeclarationSyntax)Nodes[handlePtr]).Identifier.ToString()
+        );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetEnumDeclarationMembersCount")]
+    public static int GetEnumDeclarationMembersCount(IntPtr handlePtr)
+    {
+        return ((EnumDeclarationSyntax)Nodes[handlePtr]).Members.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetEnumDeclarationMember")]
+    public static IntPtr GetEnumDeclarationMember(IntPtr handlePtr, int index)
+    {
+        return Register(((EnumDeclarationSyntax)Nodes[handlePtr]).Members[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetEnumMemberDeclarationIdentifier")]
+    public static IntPtr GetEnumMemberDeclarationIdentifier(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((EnumMemberDeclarationSyntax)Nodes[handlePtr]).Identifier.ToString()
+        );
+    }
+
+    // Identifier for Class, Interface, Struct, Record, Enum.
+    [UnmanagedCallersOnly(EntryPoint = "GetBaseTypeDeclarationIdentifier")]
+    public static IntPtr GetBaseTypeDeclarationIdentifier(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((BaseTypeDeclarationSyntax)Nodes[handlePtr]).Identifier.ToString()
+        );
+    }
+
+    // Members for Class, Interface, Struct, Record.
+    [UnmanagedCallersOnly(EntryPoint = "GetTypeDeclarationMembersCount")]
+    public static int GetTypeDeclarationMembersCount(IntPtr handlePtr)
+    {
+        return ((TypeDeclarationSyntax)Nodes[handlePtr]).Members.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetTypeDeclarationMember")]
+    public static IntPtr GetTypeDeclarationMember(IntPtr handlePtr, int index)
+    {
+        return Register(((TypeDeclarationSyntax)Nodes[handlePtr]).Members[index]);
+    }
+
+    // BaseList can be null if the class has no base types (e.g. `class Foo { }`).
+    // We use TypeDeclarationSyntax to support both ClassDeclarationSyntax and InterfaceDeclarationSyntax.
+    [UnmanagedCallersOnly(EntryPoint = "GetTypeDeclarationBaseList")]
+    public static IntPtr GetTypeDeclarationBaseList(IntPtr handlePtr)
+    {
+        var baseList = ((TypeDeclarationSyntax)Nodes[handlePtr]).BaseList;
+        return baseList != null ? Register(baseList) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetBaseListTypeCount")]
+    public static int GetBaseListTypeCount(IntPtr handlePtr)
+    {
+        return ((BaseListSyntax)Nodes[handlePtr]).Types.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetBaseListType")]
+    public static IntPtr GetBaseListType(IntPtr handlePtr, int index)
+    {
+        return Register(((BaseListSyntax)Nodes[handlePtr]).Types[index].Type);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetMemberDeclarationModifierCount")]
+    public static int GetMemberDeclarationModifierCount(IntPtr handlePtr)
+    {
+        return ((MemberDeclarationSyntax)Nodes[handlePtr]).Modifiers.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetMemberDeclarationModifier")]
+    public static IntPtr GetMemberDeclarationModifier(IntPtr handlePtr, int index)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((MemberDeclarationSyntax)Nodes[handlePtr]).Modifiers[index].Text
+        );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetTypeParameterList")]
+    public static IntPtr GetTypeParameterList(IntPtr handlePtr)
+    {
+        var typeParamList = ((TypeDeclarationSyntax)Nodes[handlePtr]).TypeParameterList;
+        return typeParamList != null ? Register(typeParamList) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetTypeParameterListCount")]
+    public static int GetTypeParameterListCount(IntPtr handlePtr)
+    {
+        return ((TypeParameterListSyntax)Nodes[handlePtr]).Parameters.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetTypeParameterListParameter")]
+    public static IntPtr GetTypeParameterListParameter(IntPtr handlePtr, int index)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((TypeParameterListSyntax)Nodes[handlePtr]).Parameters[index].Identifier.Text
+        );
+    }
+
 
     [UnmanagedCallersOnly(EntryPoint = "GetMethodDeclarationIdentifier")]
     public static IntPtr GetMethodDeclarationIdentifier(IntPtr handlePtr)

@@ -97,6 +97,10 @@ interface Csharp : Library {
                 val count = INSTANCE.GetCompilationUnitMembersCount(this)
                 (0 until count).map { i -> INSTANCE.GetCompilationUnitMember(this, i) }
             }
+            val usings: List<UsingDirectiveSyntax> by lazy {
+                val count = INSTANCE.GetCompilationUnitUsingsCount(this)
+                (0 until count).map { i -> INSTANCE.GetCompilationUnitUsing(this, i) }
+            }
         }
 
         /**
@@ -105,6 +109,11 @@ interface Csharp : Library {
          * class.
          */
         open class MemberDeclarationSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val modifiers: List<String> by lazy {
+                val count = INSTANCE.GetMemberDeclarationModifierCount(this)
+                (0 until count).map { i -> INSTANCE.GetMemberDeclarationModifier(this, i) }
+            }
+
             /**
              * JNA calls this method automatically when converting a native pointer which is
              * returned by a JNA function into a [MemberDeclarationSyntax] object. We override it to
@@ -116,10 +125,11 @@ interface Csharp : Library {
                     return super.fromNative(nativeValue, context)
                 }
                 return when (INSTANCE.GetType(nativeValue)) {
-                    "NamespaceDeclarationSyntax",
+                    "NamespaceDeclarationSyntax" -> NamespaceDeclarationSyntax(nativeValue)
                     "FileScopedNamespaceDeclarationSyntax" ->
-                        NamespaceDeclarationSyntax(nativeValue)
+                        FileScopedNamespaceDeclarationSyntax(nativeValue)
                     "ClassDeclarationSyntax" -> ClassDeclarationSyntax(nativeValue)
+                    "InterfaceDeclarationSyntax" -> InterfaceDeclarationSyntax(nativeValue)
                     "FieldDeclarationSyntax" -> FieldDeclarationSyntax(nativeValue)
                     "MethodDeclarationSyntax" -> MethodDeclarationSyntax(nativeValue)
                     "ConstructorDeclarationSyntax" -> ConstructorDeclarationSyntax(nativeValue)
@@ -130,14 +140,62 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
-         * [`NamespaceDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.namespacedeclarationsyntax)
+         * [`BaseNamespaceDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.basenamespacedeclarationsyntax)
          * class.
          */
-        class NamespaceDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
+        open class BaseNamespaceDeclarationSyntax(p: Pointer? = Pointer.NULL) :
+            MemberDeclarationSyntax(p) {
             val name: String by lazy { INSTANCE.GetNamespaceDeclarationName(this) }
             val members: List<MemberDeclarationSyntax> by lazy {
                 val count = INSTANCE.GetNamespaceDeclarationMembersCount(this)
                 (0 until count).map { i -> INSTANCE.GetNamespaceDeclarationMember(this, i) }
+            }
+            val usings: List<UsingDirectiveSyntax> by lazy {
+                val count = INSTANCE.GetNamespaceDeclarationUsingsCount(this)
+                (0 until count).map { i -> INSTANCE.GetNamespaceDeclarationUsing(this, i) }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`NamespaceDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.namespacedeclarationsyntax)
+         * class.
+         */
+        class NamespaceDeclarationSyntax(p: Pointer? = Pointer.NULL) :
+            BaseNamespaceDeclarationSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`FileScopedNamespaceDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.filescopednamespacedeclarationsyntax)
+         * class.
+         */
+        class FileScopedNamespaceDeclarationSyntax(p: Pointer? = Pointer.NULL) :
+            BaseNamespaceDeclarationSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`BaseTypeDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.basetypedeclarationsyntax)
+         * class.
+         */
+        open class BaseTypeDeclarationSyntax(p: Pointer? = Pointer.NULL) :
+            MemberDeclarationSyntax(p) {
+            val identifier: String by lazy { INSTANCE.GetBaseTypeDeclarationIdentifier(this) }
+            val baseList: BaseListSyntax? by lazy { INSTANCE.GetTypeDeclarationBaseList(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`TypeDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.typedeclarationsyntax)
+         * class.
+         */
+        open class TypeDeclarationSyntax(p: Pointer? = Pointer.NULL) :
+            BaseTypeDeclarationSyntax(p) {
+            val members: List<MemberDeclarationSyntax> by lazy {
+                val count = INSTANCE.GetTypeDeclarationMembersCount(this)
+                (0 until count).map { i -> INSTANCE.GetTypeDeclarationMember(this, i) }
+            }
+            val typeParameterList: TypeParameterListSyntax? by lazy {
+                INSTANCE.GetTypeParameterList(this)
             }
         }
 
@@ -146,12 +204,58 @@ interface Csharp : Library {
          * [`ClassDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.classdeclarationsyntax)
          * class.
          */
-        class ClassDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
-            val identifier: String by lazy { INSTANCE.GetClassDeclarationIdentifier(this) }
-            val members: List<MemberDeclarationSyntax> by lazy {
-                val count = INSTANCE.GetClassDeclarationMembersCount(this)
-                (0 until count).map { i -> INSTANCE.GetClassDeclarationMember(this, i) }
+        class ClassDeclarationSyntax(p: Pointer? = Pointer.NULL) : TypeDeclarationSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`InterfaceDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.interfacedeclarationsyntax)
+         * class.
+         */
+        class InterfaceDeclarationSyntax(p: Pointer? = Pointer.NULL) : TypeDeclarationSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`BaseListSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.baselistsyntax)
+         * class.
+         */
+        class BaseListSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val types: List<TypeSyntax> by lazy {
+                val count = INSTANCE.GetBaseListTypeCount(this)
+                (0 until count).map { i -> INSTANCE.GetBaseListType(this, i) }
             }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`TypeParameterListSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.typeparameterlistsyntax)
+         * class.
+         */
+        class TypeParameterListSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val parameters: List<String> by lazy {
+                val count = INSTANCE.GetTypeParameterListCount(this)
+                (0 until count).map { i -> INSTANCE.GetTypeParameterListParameter(this, i) }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`NameEqualsSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.nameequalssyntax)
+         * class.
+         */
+        class NameEqualsSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val name: String by lazy { INSTANCE.GetNameEqualsSyntaxName(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`UsingDirectiveSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.usingdirectivesyntax)
+         * class.
+         */
+        class UsingDirectiveSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val name: String by lazy { INSTANCE.GetUsingDirectiveName(this) }
+            val alias: NameEqualsSyntax? by lazy { INSTANCE.GetUsingDirectiveAlias(this) }
+            val staticKeyword: String by lazy { INSTANCE.GetUsingDirectiveStaticKeyword(this) }
+            val globalKeyword: String by lazy { INSTANCE.GetUsingDirectiveGlobalKeyword(this) }
         }
 
         /**
@@ -241,7 +345,6 @@ interface Csharp : Library {
          */
         class IfStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
             val condition: ExpressionSyntax by lazy { INSTANCE.GetIfStatementSyntaxCondition(this) }
-            /** The statement that is executed when the condition is true. */
             val statement: StatementSyntax by lazy { INSTANCE.GetIfStatementSyntaxStatement(this) }
             val elseClause: ElseClauseSyntax? by lazy { INSTANCE.GetElseClauseSyntax(this) }
         }
@@ -249,8 +352,7 @@ interface Csharp : Library {
         /**
          * Represents the Roslyn
          * [`ElseClauseSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.elseclausesyntax)
-         * class. Note: not a [StatementSyntax] because it cannot appear on its own. It's always
-         * attached to an [IfStatementSyntax].
+         * class.
          */
         class ElseClauseSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
             val statement: StatementSyntax by lazy { INSTANCE.GetElseClauseSyntaxStatement(this) }
@@ -642,23 +744,63 @@ interface Csharp : Library {
         index: Int,
     ): AST.MemberDeclarationSyntax
 
-    fun GetNamespaceDeclarationName(handle: AST.NamespaceDeclarationSyntax): String
+    fun GetCompilationUnitUsingsCount(handle: AST.CompilationUnitSyntax): Int
 
-    fun GetNamespaceDeclarationMembersCount(handle: AST.NamespaceDeclarationSyntax): Int
+    fun GetCompilationUnitUsing(
+        handle: AST.CompilationUnitSyntax,
+        index: Int,
+    ): AST.UsingDirectiveSyntax
+
+    fun GetNamespaceDeclarationName(handle: AST.BaseNamespaceDeclarationSyntax): String
+
+    fun GetNamespaceDeclarationMembersCount(handle: AST.BaseNamespaceDeclarationSyntax): Int
 
     fun GetNamespaceDeclarationMember(
-        handle: AST.NamespaceDeclarationSyntax,
+        handle: AST.BaseNamespaceDeclarationSyntax,
         index: Int,
     ): AST.MemberDeclarationSyntax
 
-    fun GetClassDeclarationIdentifier(handle: AST.ClassDeclarationSyntax): String
+    fun GetNamespaceDeclarationUsingsCount(handle: AST.BaseNamespaceDeclarationSyntax): Int
 
-    fun GetClassDeclarationMembersCount(handle: AST.ClassDeclarationSyntax): Int
+    fun GetNamespaceDeclarationUsing(
+        handle: AST.BaseNamespaceDeclarationSyntax,
+        index: Int,
+    ): AST.UsingDirectiveSyntax
 
-    fun GetClassDeclarationMember(
-        handle: AST.ClassDeclarationSyntax,
+    fun GetUsingDirectiveName(handle: AST.UsingDirectiveSyntax): String
+
+    fun GetUsingDirectiveAlias(handle: AST.UsingDirectiveSyntax): AST.NameEqualsSyntax?
+
+    fun GetUsingDirectiveStaticKeyword(handle: AST.UsingDirectiveSyntax): String
+
+    fun GetUsingDirectiveGlobalKeyword(handle: AST.UsingDirectiveSyntax): String
+
+    fun GetNameEqualsSyntaxName(handle: AST.NameEqualsSyntax): String
+
+    fun GetBaseTypeDeclarationIdentifier(handle: AST.BaseTypeDeclarationSyntax): String
+
+    fun GetTypeDeclarationMembersCount(handle: AST.TypeDeclarationSyntax): Int
+
+    fun GetTypeDeclarationMember(
+        handle: AST.TypeDeclarationSyntax,
         index: Int,
     ): AST.MemberDeclarationSyntax
+
+    fun GetTypeDeclarationBaseList(handle: AST.BaseTypeDeclarationSyntax): AST.BaseListSyntax?
+
+    fun GetBaseListTypeCount(handle: AST.BaseListSyntax): Int
+
+    fun GetBaseListType(handle: AST.BaseListSyntax, index: Int): AST.TypeSyntax
+
+    fun GetMemberDeclarationModifierCount(handle: AST.MemberDeclarationSyntax): Int
+
+    fun GetMemberDeclarationModifier(handle: AST.MemberDeclarationSyntax, index: Int): String
+
+    fun GetTypeParameterList(handle: AST.MemberDeclarationSyntax): AST.TypeParameterListSyntax?
+
+    fun GetTypeParameterListCount(handle: AST.TypeParameterListSyntax): Int
+
+    fun GetTypeParameterListParameter(handle: AST.TypeParameterListSyntax, index: Int): String
 
     fun GetFieldDeclaration(handle: AST.FieldDeclarationSyntax): AST.VariableDeclarationSyntax
 

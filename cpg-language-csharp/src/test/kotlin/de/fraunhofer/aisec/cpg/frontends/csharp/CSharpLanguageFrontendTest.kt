@@ -35,11 +35,15 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
+import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -350,5 +354,86 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertIs<IfElse>(innerIf)
         assertNotNull(innerIf.thenStatement)
         assertNotNull(innerIf.elseStatement)
+    }
+
+    @Test
+    fun testInheritance() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Inheritance.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val iBase = tu.records["IBase"]
+        assertNotNull(iBase)
+        assertEquals("interface", iBase.kind)
+        assertEquals(0, iBase.superClasses.size)
+        assertContains(iBase.modifiers, "public")
+
+        val foo = tu.records["Foo"]
+        assertNotNull(foo)
+        assertEquals("class", foo.kind)
+        assertEquals(1, foo.superClasses.size)
+        assertEquals(iBase, foo.superClasses.first().recordDeclaration)
+        assertEquals(foo.modifiers.size, 2)
+        assertContains(foo.modifiers, "public")
+        assertContains(foo.modifiers, "abstract")
+
+        val bar = tu.records["Bar"]
+        assertNotNull(bar)
+        assertEquals(1, bar.superClasses.size)
+        assertEquals(foo, bar.superClasses.first().recordDeclaration)
+
+        val accessMethod = bar.methods["AccessField"]
+        assertNotNull(accessMethod)
+        val accessBody = accessMethod.body
+        assertIs<Block>(accessBody)
+        val returnStmt = accessBody.statements.firstOrNull()
+        assertNotNull(returnStmt)
+        assertIs<Return>(returnStmt)
+        val memberAccess = returnStmt.returnValue
+        assertIs<MemberAccess>(memberAccess)
+        assertEquals("x", memberAccess.name.localName)
+        val fieldX = foo.fields["x"]
+        assertNotNull(fieldX)
+        assertEquals(fieldX, memberAccess.refersTo)
+
+        val callMethod = bar.methods["CallInheritedMethod"]
+        assertNotNull(callMethod)
+        val callBody = callMethod.body
+        assertIs<Block>(callBody)
+        val callReturn = callBody.statements.firstOrNull()
+        assertNotNull(callReturn)
+        assertIs<Return>(callReturn)
+        val memberCall = callReturn.returnValue
+        assertIs<MemberCall>(memberCall)
+        val doSomething = foo.methods["DoSomething"]
+        assertNotNull(doSomething)
+        assertEquals(doSomething, memberCall.invokes.firstOrNull())
+        assertContains(doSomething.modifiers, "public")
+    }
+
+    @Test
+    fun testGenericType() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val result =
+            analyze(listOf(topLevel.resolve("Inheritance.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        val tu = result.components.firstOrNull()?.translationUnits?.firstOrNull()
+        assertNotNull(tu)
+
+        val container = tu.records["GenericClass"]
+        assertNotNull(container)
+        assertContains(container.modifiers, "public")
+
+        val typeT = result.finalCtx.typeManager.getTypeParameter(container, "T")
+        assertNotNull(typeT)
+        assertIs<ParameterizedType>(typeT)
     }
 }
