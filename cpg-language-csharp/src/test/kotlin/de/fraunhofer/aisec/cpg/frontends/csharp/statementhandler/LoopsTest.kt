@@ -76,6 +76,29 @@ class LoopsTest : BaseTest() {
     }
 
     @Test
+    fun testWhileLoopWithBreak() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("Loops.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val method = tu.methods["whileLoopWithBreak"]
+        assertNotNull(method)
+        val body = method.body
+        assertIs<Block>(body)
+
+        val whileStmt = body.statements.getOrNull(0)
+        assertIs<While>(whileStmt)
+        val loopBody = whileStmt.statement
+        assertIs<Block>(loopBody)
+
+        val breakStmt = loopBody.statements.getOrNull(0)
+        assertIs<Break>(breakStmt)
+    }
+
+    @Test
     fun testDoWhileLoop() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =

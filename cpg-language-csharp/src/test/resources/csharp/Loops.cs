@@ -11,6 +11,14 @@ class Foo
         }
     }
 
+    void whileLoopWithBreak()
+    {
+        while (true)
+        {
+            break;
+        }
+    }
+
     void doWhileLoop()
     {
         int i = 0;

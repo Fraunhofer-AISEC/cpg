@@ -622,6 +622,88 @@ public static class Library
         return Register(((ForEachStatementSyntax)Nodes[handlePtr]).Statement);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetSwitchStatementExpression")]
+    public static IntPtr GetSwitchStatementExpression(IntPtr handlePtr)
+    {
+        return Register(((SwitchStatementSyntax)Nodes[handlePtr]).Expression);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetSwitchStatementSectionCount")]
+    public static int GetSwitchStatementSectionCount(IntPtr handlePtr)
+    {
+        return ((SwitchStatementSyntax)Nodes[handlePtr]).Sections.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetSwitchStatementSection")]
+    public static IntPtr GetSwitchStatementSection(IntPtr handlePtr, int index)
+    {
+        return Register(((SwitchStatementSyntax)Nodes[handlePtr]).Sections[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetSwitchSectionLabelCount")]
+    public static int GetSwitchSectionLabelCount(IntPtr handlePtr)
+    {
+        return ((SwitchSectionSyntax)Nodes[handlePtr]).Labels.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetSwitchSectionLabel")]
+    public static IntPtr GetSwitchSectionLabel(IntPtr handlePtr, int index)
+    {
+        return Register(((SwitchSectionSyntax)Nodes[handlePtr]).Labels[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetSwitchSectionStatementCount")]
+    public static int GetSwitchSectionStatementCount(IntPtr handlePtr)
+    {
+        return ((SwitchSectionSyntax)Nodes[handlePtr]).Statements.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetSwitchSectionStatement")]
+    public static IntPtr GetSwitchSectionStatement(IntPtr handlePtr, int index)
+    {
+        return Register(((SwitchSectionSyntax)Nodes[handlePtr]).Statements[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetCaseSwitchLabelValue")]
+    public static IntPtr GetCaseSwitchLabelValue(IntPtr handlePtr)
+    {
+        return Register(((CaseSwitchLabelSyntax)Nodes[handlePtr]).Value);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetCasePatternSwitchLabelPattern")]
+    public static IntPtr GetCasePatternSwitchLabelPattern(IntPtr handlePtr)
+    {
+        return Register(((CasePatternSwitchLabelSyntax)Nodes[handlePtr]).Pattern);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetCasePatternSwitchLabelWhenClause")]
+    public static IntPtr GetCasePatternSwitchLabelWhenClause(IntPtr handlePtr)
+    {
+        var whenClause = ((CasePatternSwitchLabelSyntax)Nodes[handlePtr]).WhenClause;
+        return whenClause != null ? Register(whenClause) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetWhenClauseCondition")]
+    public static IntPtr GetWhenClauseCondition(IntPtr handlePtr)
+    {
+        return Register(((WhenClauseSyntax)Nodes[handlePtr]).Condition);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetVarPatternDesignation")]
+    public static IntPtr GetVarPatternDesignation(IntPtr handlePtr)
+    {
+        var varPattern = (VarPatternSyntax)Nodes[handlePtr];
+        return Register(varPattern.Designation);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetSingleVariableDesignationIdentifier")]
+    public static IntPtr GetSingleVariableDesignationIdentifier(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((SingleVariableDesignationSyntax)Nodes[handlePtr]).Identifier.ToString()
+        );
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetInvocationExpressionExpression")]
     public static IntPtr GetInvocationExpressionExpression(IntPtr handlePtr)
     {

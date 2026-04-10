@@ -26,24 +26,21 @@
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.expressions.DoWhile
-import de.fraunhofer.aisec.cpg.graph.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.expressions.For
-import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
-import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
-import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.expressions.Return
-import de.fraunhofer.aisec.cpg.graph.expressions.While
+import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.implicit
+import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.newBlock
+import de.fraunhofer.aisec.cpg.graph.newBreak
+import de.fraunhofer.aisec.cpg.graph.newCase
 import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.newDefault
 import de.fraunhofer.aisec.cpg.graph.newDoWhile
 import de.fraunhofer.aisec.cpg.graph.newExpressionList
 import de.fraunhofer.aisec.cpg.graph.newFor
 import de.fraunhofer.aisec.cpg.graph.newForEach
 import de.fraunhofer.aisec.cpg.graph.newIfElse
 import de.fraunhofer.aisec.cpg.graph.newReturn
+import de.fraunhofer.aisec.cpg.graph.newSwitch
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.newWhile
 
@@ -63,6 +60,8 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.DoStatementSyntax -> handleDoWhile(node)
             is Csharp.AST.ForStatementSyntax -> handleFor(node)
             is Csharp.AST.ForEachStatementSyntax -> handleForEach(node)
+            is Csharp.AST.SwitchStatementSyntax -> handleSwitch(node)
+            is Csharp.AST.BreakStatementSyntax -> handleBreak(node)
             else -> ProblemExpression("Not supported: ${node.csharpType}")
         }
     }
@@ -231,6 +230,107 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
         forEachStmt.statement = handle(node.statement)
         frontend.scopeManager.leaveScope(forEachStmt)
         return forEachStmt
+    }
+
+    /**
+     * Translates a [SwitchStatementSyntax][Csharp.AST.SwitchStatementSyntax] into a [Switch].
+     *
+     * C# spec:
+     * [SwitchStatement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#1383-the-switch-statement)
+     */
+    private fun handleSwitch(node: Csharp.AST.SwitchStatementSyntax): Switch {
+        val switchStmt = newSwitch(rawNode = node)
+        frontend.scopeManager.enterScope(switchStmt)
+        switchStmt.selector = frontend.expressionHandler.handle(node.expression)
+
+        val block = newBlock()
+        for (section in node.sections) {
+            for (label in section.labels) {
+                when (label) {
+                    is Csharp.AST.CaseSwitchLabelSyntax -> {
+                        val caseStmt = newCase(rawNode = label)
+                        caseStmt.caseExpression = frontend.expressionHandler.handle(label.value)
+                        block.statements += caseStmt
+                    }
+                    is Csharp.AST.CasePatternSwitchLabelSyntax -> {
+                        block.statements += handleCasePattern(label)
+                    }
+                    is Csharp.AST.DefaultSwitchLabelSyntax -> {
+                        block.statements += newDefault(rawNode = label)
+                    }
+                }
+            }
+            for (stmt in section.statements) {
+                block.statements += handle(stmt)
+            }
+        }
+        switchStmt.statement = block
+
+        frontend.scopeManager.leaveScope(switchStmt)
+        return switchStmt
+    }
+
+    /**
+     * Handles a [CasePatternSwitchLabelSyntax][Csharp.AST.CasePatternSwitchLabelSyntax], which
+     * represents C# pattern matching in switch statements, e.g. `case var a when condition:`.
+     *
+     * This is modeled as follows:
+     * - A [VarPatternSyntax][Csharp.AST.VarPatternSyntax] is translated into a variable declaration
+     *   based on its [VariableDesignationSyntax][Csharp.AST.VariableDesignationSyntax] (e.g.
+     *   `SingleVariableDesignationSyntax` for a single variable like `a` in `case var a`).
+     * - If a `when` clause is present, the case expression is wrapped in an implicit `and`
+     *   [BinaryOperator] with lhs as a declaration and rhs with a condition.
+     */
+    private fun handleCasePattern(node: Csharp.AST.CasePatternSwitchLabelSyntax): Expression {
+        val caseStmt = newCase(rawNode = node)
+        val pattern = node.pattern
+        val whenClause = node.whenClause
+
+        var patternExpr =
+            when (pattern) {
+                is Csharp.AST.VarPatternSyntax -> {
+                    val identifier =
+                        when (val designation = pattern.designation) {
+                            is Csharp.AST.SingleVariableDesignationSyntax -> designation.identifier
+                            else ->
+                                return ProblemExpression(
+                                    "Variable designation type not yet supported: ${designation.csharpType}"
+                                )
+                        }
+                    val variable = newVariable(name = identifier, rawNode = pattern)
+                    frontend.scopeManager.addDeclaration(variable)
+                    val declStmt = newDeclarationStatement(rawNode = pattern)
+                    declStmt.declarations += variable
+                    declStmt
+                }
+                else -> {
+                    ProblemExpression("Pattern type not yet supported: ${pattern.csharpType}")
+                }
+            }
+
+        // If a `when` clause is present, translate the pattern and the condition into an implicit
+        // 'and' BinaryOperator.
+        if (whenClause != null) {
+            val whenCondition = frontend.expressionHandler.handle(whenClause.condition)
+            patternExpr =
+                newBinaryOperator(operatorCode = "and").implicit().apply {
+                    this.lhs = patternExpr
+                    this.rhs = whenCondition
+                }
+        }
+
+        caseStmt.caseExpression = patternExpr
+        return caseStmt
+    }
+
+    /**
+     * Translates a [BreakStatementSyntax][Csharp.AST.BreakStatementSyntax] into a [Break].
+     *
+     * C# spec:
+     * [Break statement](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/statements#13101-the-break-statement)
+     */
+    private fun handleBreak(node: Csharp.AST.BreakStatementSyntax): Break {
+        return newBreak(rawNode = node)
     }
 
     /**

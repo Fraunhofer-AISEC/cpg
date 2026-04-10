@@ -322,6 +322,8 @@ interface Csharp : Library {
                     "DoStatementSyntax" -> DoStatementSyntax(nativeValue)
                     "ForStatementSyntax" -> ForStatementSyntax(nativeValue)
                     "ForEachStatementSyntax" -> ForEachStatementSyntax(nativeValue)
+                    "SwitchStatementSyntax" -> SwitchStatementSyntax(nativeValue)
+                    "BreakStatementSyntax" -> BreakStatementSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
                 }
             }
@@ -418,6 +420,89 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
+         * [`SwitchStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.switchstatementsyntax)
+         * class.
+         */
+        class SwitchStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p) {
+            val expression: ExpressionSyntax by lazy { INSTANCE.GetSwitchStatementExpression(this) }
+            val sections: List<SwitchSectionSyntax> by lazy {
+                val count = INSTANCE.GetSwitchStatementSectionCount(this)
+                (0 until count).map { i -> INSTANCE.GetSwitchStatementSection(this, i) }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`SwitchSectionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.switchsectionsyntax)
+         * class.
+         */
+        class SwitchSectionSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val labels: List<SwitchLabelSyntax> by lazy {
+                val count = INSTANCE.GetSwitchSectionLabelCount(this)
+                (0 until count).map { i -> INSTANCE.GetSwitchSectionLabel(this, i) }
+            }
+            val statements: List<StatementSyntax> by lazy {
+                val count = INSTANCE.GetSwitchSectionStatementCount(this)
+                (0 until count).map { i -> INSTANCE.GetSwitchSectionStatement(this, i) }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`SwitchLabelSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.switchlabelsyntax)
+         * class.
+         */
+        open class SwitchLabelSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any {
+                if (nativeValue !is Pointer) {
+                    return super.fromNative(nativeValue, context)
+                }
+                return when (INSTANCE.GetType(nativeValue)) {
+                    "CaseSwitchLabelSyntax" -> CaseSwitchLabelSyntax(nativeValue)
+                    "CasePatternSwitchLabelSyntax" -> CasePatternSwitchLabelSyntax(nativeValue)
+                    "DefaultSwitchLabelSyntax" -> DefaultSwitchLabelSyntax(nativeValue)
+                    else -> super.fromNative(nativeValue, context)
+                }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`CaseSwitchLabelSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.caseswitchlabelsyntax)
+         * class.
+         */
+        class CaseSwitchLabelSyntax(p: Pointer? = Pointer.NULL) : SwitchLabelSyntax(p) {
+            val value: ExpressionSyntax by lazy { INSTANCE.GetCaseSwitchLabelValue(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`DefaultSwitchLabelSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.defaultswitchlabelsyntax)
+         * class.
+         */
+        class DefaultSwitchLabelSyntax(p: Pointer? = Pointer.NULL) : SwitchLabelSyntax(p)
+
+        /**
+         * Represents the Roslyn
+         * [`CasePatternSwitchLabelSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.casepatternswitchlabelsyntax)
+         * class. Used for pattern matching in switch statements, e.g. `case var o when condition:`.
+         */
+        class CasePatternSwitchLabelSyntax(p: Pointer? = Pointer.NULL) : SwitchLabelSyntax(p) {
+            val pattern: PatternSyntax by lazy { INSTANCE.GetCasePatternSwitchLabelPattern(this) }
+            val whenClause: WhenClauseSyntax? by lazy {
+                INSTANCE.GetCasePatternSwitchLabelWhenClause(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`BreakStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.breakstatementsyntax)
+         * class.
+         */
+        class BreakStatementSyntax(p: Pointer? = Pointer.NULL) : StatementSyntax(p)
+
+        /**
+         * Represents the Roslyn
          * [`ConstructorDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.constructordeclarationsyntax)
          * class.
          */
@@ -486,10 +571,82 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
+         * [`ExpressionOrPatternSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.expressiororpatternsyntax)
+         * base class. Common base for [ExpressionSyntax] and [PatternSyntax].
+         */
+        open class ExpressionOrPatternSyntax(p: Pointer? = Pointer.NULL) : Node(p)
+
+        /**
+         * Represents the Roslyn
+         * [`PatternSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.patternsyntax)
+         * base class.
+         */
+        open class PatternSyntax(p: Pointer? = Pointer.NULL) : ExpressionOrPatternSyntax(p) {
+            override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any {
+                if (nativeValue !is Pointer) {
+                    return super.fromNative(nativeValue, context)
+                }
+                return when (INSTANCE.GetType(nativeValue)) {
+                    "VarPatternSyntax" -> VarPatternSyntax(nativeValue)
+                    else -> super.fromNative(nativeValue, context)
+                }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`VariableDesignationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.variabledesignationsyntax)
+         * base class.
+         */
+        open class VariableDesignationSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any {
+                if (nativeValue !is Pointer) {
+                    return super.fromNative(nativeValue, context)
+                }
+                return when (INSTANCE.GetType(nativeValue)) {
+                    "SingleVariableDesignationSyntax" ->
+                        SingleVariableDesignationSyntax(nativeValue)
+                    else -> super.fromNative(nativeValue, context)
+                }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`SingleVariableDesignationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.singlevariabledesignationsyntax)
+         * class.
+         */
+        class SingleVariableDesignationSyntax(p: Pointer? = Pointer.NULL) :
+            VariableDesignationSyntax(p) {
+            val identifier: String by lazy { INSTANCE.GetSingleVariableDesignationIdentifier(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`VarPatternSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.varpatternsyntax)
+         * class. Used for `case var o:` patterns where the type is inferred.
+         */
+        class VarPatternSyntax(p: Pointer? = Pointer.NULL) : PatternSyntax(p) {
+            val designation: VariableDesignationSyntax by lazy {
+                INSTANCE.GetVarPatternDesignation(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`WhenClauseSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.whenclausesyntax)
+         * class. Contains the guard condition for pattern-matching case labels.
+         */
+        class WhenClauseSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val condition: ExpressionSyntax by lazy { INSTANCE.GetWhenClauseCondition(this) }
+        }
+
+        /**
+         * Represents the Roslyn
          * [`ExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.expressionsyntax)
          * class.
          */
-        open class ExpressionSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+        open class ExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionOrPatternSyntax(p) {
             override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any? {
                 if (nativeValue !is Pointer) {
                     return super.fromNative(nativeValue, context)
@@ -921,6 +1078,39 @@ interface Csharp : Library {
     fun GetForEachStatementExpression(handle: AST.ForEachStatementSyntax): AST.ExpressionSyntax
 
     fun GetForEachStatementStatement(handle: AST.ForEachStatementSyntax): AST.StatementSyntax
+
+    fun GetSwitchStatementExpression(handle: AST.SwitchStatementSyntax): AST.ExpressionSyntax
+
+    fun GetSwitchStatementSectionCount(handle: AST.SwitchStatementSyntax): Int
+
+    fun GetSwitchStatementSection(
+        handle: AST.SwitchStatementSyntax,
+        index: Int,
+    ): AST.SwitchSectionSyntax
+
+    fun GetSwitchSectionLabelCount(handle: AST.SwitchSectionSyntax): Int
+
+    fun GetSwitchSectionLabel(handle: AST.SwitchSectionSyntax, index: Int): AST.SwitchLabelSyntax
+
+    fun GetSwitchSectionStatementCount(handle: AST.SwitchSectionSyntax): Int
+
+    fun GetSwitchSectionStatement(handle: AST.SwitchSectionSyntax, index: Int): AST.StatementSyntax
+
+    fun GetCaseSwitchLabelValue(handle: AST.CaseSwitchLabelSyntax): AST.ExpressionSyntax
+
+    fun GetCasePatternSwitchLabelPattern(
+        handle: AST.CasePatternSwitchLabelSyntax
+    ): AST.PatternSyntax
+
+    fun GetCasePatternSwitchLabelWhenClause(
+        handle: AST.CasePatternSwitchLabelSyntax
+    ): AST.WhenClauseSyntax?
+
+    fun GetWhenClauseCondition(handle: AST.WhenClauseSyntax): AST.ExpressionSyntax
+
+    fun GetVarPatternDesignation(handle: AST.VarPatternSyntax): AST.VariableDesignationSyntax
+
+    fun GetSingleVariableDesignationIdentifier(handle: AST.SingleVariableDesignationSyntax): String
 
     fun GetInvocationExpressionExpression(
         handle: AST.InvocationExpressionSyntax
