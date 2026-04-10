@@ -308,8 +308,6 @@ class StatementHandler(frontend: CSharpLanguageFrontend) :
                 }
             }
 
-        // If a `when` clause is present, translate the pattern and the condition into an implicit
-        // 'and' BinaryOperator.
         if (whenClause != null) {
             val whenCondition = frontend.expressionHandler.handle(whenClause.condition)
             patternExpr =
