@@ -668,7 +668,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // Parameter as placeholder (but we know it's not the Parameter itself when
                         // the destValueDepth is != 1, meaning it has to refer to something deferred
                         // Now let's replace that
-                        if (entry.srcNode is Parameter && entry.destValueDepth != 1) {
+                        if (entry.destValueDepth != 1) {
                             entry.lastWrites.forEach {
                                 function.functionSummary[param]
                                     ?.singleOrNull { it == entry }
@@ -735,14 +735,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // changes on the dereferences
                     values
                         .filterTo(concurrentIdentitySetOf()) {
-                            doubleState.hasDeclarationStateEntry(it)
+                            doubleState.hasDeclarationStateValueEntry(it)
                         }
                         .map { indexes.add(IndexKey(it, 2)) }
                     // Additionally, we can check out the "dereference" itself to look for
                     // "derefdereferences"
                     values
                         .filterTo(concurrentIdentitySetOf()) {
-                            doubleState.hasDeclarationStateEntry(it)
+                            doubleState.hasDeclarationStateValueEntry(it)
                         }
                         .flatMap {
                             doubleState.getValues(it, it).mapTo(PowersetLattice.Element()) {
@@ -755,7 +755,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         .map { chunk ->
                             launch(Dispatchers.Default) {
                                 for (value in chunk) {
-                                    if (doubleState.hasDeclarationStateEntry(value))
+                                    if (doubleState.hasDeclarationStateValueEntry(value))
                                         indexes.add(IndexKey(value, 3))
                                 }
                             }
@@ -1376,22 +1376,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             )
                                         )
                                     else {
-                                        argDerefVals
-                                            .flatMapTo(PowersetLattice.Element()) {
-                                                doubleState.getCachedLastWrites(
-                                                    getLastWritesCache,
-                                                    it,
-                                                )
-                                            }
-                                            .mapTo(PowersetLattice.Element()) {
-                                                NodeWithPropertiesKey(
-                                                    it.node,
-                                                    equalLinkedHashSetOf(
-                                                        callingContext,
-                                                        true in it.properties,
-                                                    ),
-                                                )
-                                            }
+                                        // Since we already have the argVal, AKA the memoryAddress of the
+                                        // argDerefVal, we simply fetch the last write for the argVal from the
+                                        // declarationState and add the properties
+                                        doubleState.declarationsState[argVal]?.third?.mapTo(
+                                            PowersetLattice.Element()
+                                        ) {
+                                            NodeWithPropertiesKey(
+                                                it.node,
+                                                equalLinkedHashSetOf(callingContext, true in it.properties),
+                                            )
+                                        } ?: PowersetLattice.Element()
                                     }
                                 // Also draw the edges for the (deref)derefvalues if we have
                                 // any and are dealing with a pointer parameter (AKA memoryValue is
@@ -1678,7 +1673,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             srcNode,
             shortFS,
             srcValueDepth,
-            param,
             propertySet,
             currentNode,
             prev,
@@ -1915,7 +1909,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      * @param shortFS A flag indicating if this is a short function summary.
      * @param argument The argument expression related to the source node.
      * @param srcValueDepth The depth of the source value.
-     * @param param The parameter node related to the source node.
      * @param propertySet The set of properties associated with the source node.
      * @param currentNode The current call expression being analyzed.
      * @return The updated map that tracks the source nodes for each destination node.
@@ -1928,7 +1921,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         srcNode: Node?,
         shortFS: Boolean,
         srcValueDepth: Int,
-        param: Node,
         propertySet: EqualLinkedHashSet<Any>,
         currentNode: Call,
         lastWrites: MutableSet<NodeWithPropertiesKey>,
@@ -2277,6 +2269,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
 
         /* For literals, we store the address and the lastWrite as "theirs" in the DeclarationState so that we know from where we have to draw DFGEdges in the future */
+        // TODO: would this make sense for everything in the lhs?
         val l = currentNode.rhs.singleOrNull() as? Literal<*>
         l?.let {
             doubleState =
@@ -2405,7 +2398,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             ) {
                 values
                     .filterTo(concurrentIdentitySetOf()) {
-                        doubleState.hasDeclarationStateEntry(it, true)
+                        doubleState.hasDeclarationStateValueEntry(it, true)
                     }
                     .forEach { value ->
                         // draw the DFG Edges
@@ -2438,7 +2431,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             )
                             .map { it.value }
                             .filter { derefValue ->
-                                doubleState.hasDeclarationStateEntry(derefValue)
+                                doubleState.hasDeclarationStateValueEntry(derefValue)
                             }
                             .forEach { derefValue ->
                                 doubleState
@@ -2482,7 +2475,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     ),
                 )
         } else {
-            // We write to this node, but maybe we probably want to store the memory address which
+            // We write to this node, but we probably want to store the memory address which
             // it has right now
             doubleState =
                 lattice.push(
@@ -2851,8 +2844,8 @@ suspend fun PointsToState.pushToDeclarationsState(
     return@coroutineScope currentState
 }
 
-/** Check if `node` has an entry in the DeclarationState */
-fun PointsToState.Element.hasDeclarationStateEntry(
+/** Check if `node` has an entry for its value in the DeclarationState */
+fun PointsToState.Element.hasDeclarationStateValueEntry(
     node: Node,
     excludeShortFSValues: Boolean = true,
 ): Boolean {
@@ -3249,7 +3242,7 @@ fun PointsToState.Element.getValues(
             if (fieldAddresses.isNotEmpty()) {
                 val retVal = PowersetLattice.Element<Pair<Node, Boolean>>()
                 fieldAddresses.forEach { fa ->
-                    if (hasDeclarationStateEntry(fa)) {
+                    if (hasDeclarationStateValueEntry(fa)) {
                         fetchValueFromDeclarationState(fa).map {
                             retVal.add(Pair(it.value, it.shortFS))
                         }
@@ -3315,7 +3308,19 @@ fun PointsToState.Element.getValues(
                 this.getValues(it, it)
             }
         }
-        else -> PowersetLattice.Element(Pair(node, false))
+        // For BinaryOperators, UnaryOperators, Literals etc. we'll end up here
+        // For those, we define that they are the values of themselves
+        // However, if we have a DeclarationState entry, we will return this one.
+        // This can be for example the can when a Literal depicts and address and the
+        // program writes something to this address
+        else ->
+            if (hasDeclarationStateValueEntry(node)) {
+                this.fetchValueFromDeclarationState(node).mapTo(PowersetLattice.Element()) {
+                    Pair(it.value, it.shortFS)
+                }
+            } else {
+                PowersetLattice.Element(Pair(node, false))
+            }
     }
 }
 
@@ -3465,7 +3470,7 @@ fun PointsToState.Element.getNestedValues(
             node !is PointerReference &&
                 onlyFetchExistingEntries &&
                 this.getAddresses(node, node).none { addr ->
-                    this.hasDeclarationStateEntry(addr, excludeShortFSValues)
+                    this.hasDeclarationStateValueEntry(addr, excludeShortFSValues)
                 }
         )
             PowersetLattice.Element()
@@ -3477,7 +3482,7 @@ fun PointsToState.Element.getNestedValues(
         ret =
             ret.filterTo(PowersetLattice.Element()) {
                     if (onlyFetchExistingEntries)
-                        this.hasDeclarationStateEntry(it.first, excludeShortFSValues)
+                        this.hasDeclarationStateValueEntry(it.first, excludeShortFSValues)
                     else true
                 }
                 .flatMap {

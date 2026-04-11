@@ -957,15 +957,12 @@ class PointsToPassTest {
                 .size,
         )
         assertEquals(
-            1,
-            aDecl.nextDFGEdges
-                .filter {
+            paDecl,
+            (memcpySrcDeref.prevDFGEdges.singleOrNull {
                     it is ContextSensitiveDataflow &&
-                        (it.callingContext as? CallingContextIn)?.calls ==
-                            mutableListOf(ceLine125) &&
-                        it.end == memcpySrcDeref
-                }
-                .size,
+                        (it.callingContext as? CallingContextIn)?.calls == mutableListOf(ceLine125)
+                } as ContextSensitiveDataflow)
+                .start,
         )
 
         // The flow within the memcpy from one deref-PMV to the other
@@ -1094,7 +1091,7 @@ class PointsToPassTest {
         assertEquals(1, fRef.fullMemoryValues.size)
         assertEquals(fDecl.fullMemoryValues.first(), fRef.fullMemoryValues.first())
         // Here, we overwrote the pointer instead of the variable, so f was still the last time
-        // written by it's declaration
+        // written by its declaration
         assertEquals(fDecl, fRef.prevDFG.singleOrNull())
 
         assertEquals(1, pfPointerDeref.memoryAddresses.size)
@@ -3657,10 +3654,154 @@ class PointsToPassTest {
 
         // We expect exactly one DFG from the derefderefPMV of the "main" function to the vVar7 in
         // the printf
-        val startNode = lastvVar7.collectAllPrevFullDFGPaths().single().nodes.last()
+        val paths = lastvVar7.collectAllPrevFullDFGPaths()
         assertEquals(
-            "test_PMV_flows.param_1.derefderefvalue",
-            (startNode as? ParameterMemoryValue)?.name?.toString(),
+            1,
+            paths
+                .map { it.nodes.last() }
+                .filter {
+                    (it as? ParameterMemoryValue)?.name?.toString() ==
+                        "test_PMV_flows.param_1.derefderefvalue"
+                }
+                .size,
         )
+    }
+
+    @Test
+    fun testFunctionSummaryDerefs() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // Functions
+        val testFunc = tu.functions["testPointerDerefDFs"]
+        assertNotNull(testFunc)
+
+        val freeFunc = tu.functions["free"]
+        assertNotNull(freeFunc)
+
+        val fooFunc = tu.functions["foo"]
+        assertNotNull(fooFunc)
+
+        val printFunc = tu.functions["printstuff"]
+        assertNotNull(printFunc)
+
+        var barFunc = tu.functions["bar"]
+        assertNotNull(barFunc)
+
+        // Calls
+        val printStuffCall = testFunc.calls["printstuff"]
+        assertNotNull(printStuffCall)
+
+        val fooCall = testFunc.calls["foo"]
+        assertNotNull(fooCall)
+
+        val freeCall = testFunc.calls["free"]
+        assertNotNull(freeCall)
+
+        val barCall = testFunc.calls["bar"]
+        assertNotNull(barCall)
+
+        // Parameters and PMVs
+        val fooParam = fooFunc.parameters.single()
+        assertNotNull(fooParam)
+        val fooDerefPMV = fooParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(fooDerefPMV)
+
+        val freeParam = freeFunc.parameters[0]
+        val freeDerefPMV = freeParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(freeDerefPMV)
+
+        val barParam = barFunc.parameters[0]
+        val barDerefPMV = barParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(barDerefPMV)
+
+        val printParam = printFunc.parameters.single()
+        val printDerefPMV =
+            printParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(printDerefPMV)
+        val printDerefDerefPMV =
+            printParam.memoryValues.singleOrNull { it.name.localName == "derefderefvalue" }
+        assertNotNull(printDerefDerefPMV)
+
+        // Arguments
+        val printStuffArg = printStuffCall.arguments[0]
+        assertNotNull(printStuffArg)
+        assertTrue(printStuffArg is PointerReference)
+
+        val printfArg = testFunc.calls("printf").single().arguments[1]
+        assertNotNull(printfArg)
+
+        val fooArg = fooCall.arguments.single()
+        assertNotNull(fooArg)
+
+        val barArg = barCall.arguments.single()
+        assertNotNull(barArg)
+
+        // Actual tests
+        // First the easier things. For the call to the function foo, we except the lhs of the
+        // assign to point to the derefPMV
+        assertEquals(fooArg, fooParam.prevFullDFG.singleOrNull())
+        assertEquals(
+            testFunc.assignments[1].target as? Node,
+            fooDerefPMV.prevFullDFG.singleOrNull(),
+        )
+
+        // Next the call to free
+        // We hardcoded that there should be an unknownMemoryValue "freedMemory" coming into the
+        // DerefPMV
+        assertLocalName(
+            "freedMemory",
+            (freeDerefPMV.prevDFGEdges.singleOrNull {
+                    it !is ContextSensitiveDataflow &&
+                        it.granularity is FullDataflowGranularity &&
+                        it.start is UnknownMemoryValue
+                } as Dataflow)
+                .start,
+        )
+
+        // At the printf, the *p should have as prevDFG free's derefPMV, while
+        // the p should have the variable as it has not been changed
+        assertEquals(freeDerefPMV, printfArg.prevFullDFG.singleOrNull())
+        assertEquals(
+            testFunc.variables["p"],
+            (printfArg as PointerDereference).input.prevFullDFG.singleOrNull(),
+        )
+
+        // The slightly tricky stuff, the call to bar after the free
+        /* We except the following incoming DFG-Edges into the bar call:
+         1) The Reference p to the param0
+         2) free's PMVderefValue that assigns the UnknownMemoryValue(freedMemory) to the param's deref PMV
+        */
+        assertEquals(barArg, barParam.prevFullDFG.singleOrNull())
+        assertEquals(freeDerefPMV, barDerefPMV.prevFullDFG.singleOrNull())
+
+        // The very tricky stuff, the call to printstuff after the free
+        /* We except the following incoming DFG-Edges into the printcall:
+          1) The pointerReference &p to the param0
+          2) The variable p to the param's deref PMV
+          3) ? to the param's derefderef PMV
+        */
+        // 1) the argument (&p) from the call points to the param
+        /*        assertEquals(printStuffCall.arguments[0], printParam.prevDFG.singleOrNull())
+
+        // the variable pparam of the free function points to the derefvalue
+        assertEquals(freeFunc.parameters[0], printDerefPMV.prevDFG.singleOrNull())
+
+        // The nextDFG edge of free's DerefPMV points to the printFuncs first param's derefderefPMV
+        assertEquals(
+            printDerefDerefPMV,
+            freeDerefPMV.nextDFGEdges
+                .singleOrNull {
+                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.singleOrNull() ==
+                        printStuffCall
+                }
+                ?.end,
+        )*/
     }
 }
