@@ -1376,15 +1376,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             )
                                         )
                                     else {
-                                        // Since we already have the argVal, AKA the memoryAddress of the
-                                        // argDerefVal, we simply fetch the last write for the argVal from the
+                                        // Since we already have the argVal, AKA the memoryAddress
+                                        // of the
+                                        // argDerefVal, we simply fetch the last write for the
+                                        // argVal from the
                                         // declarationState and add the properties
                                         doubleState.declarationsState[argVal]?.third?.mapTo(
                                             PowersetLattice.Element()
                                         ) {
                                             NodeWithPropertiesKey(
                                                 it.node,
-                                                equalLinkedHashSetOf(callingContext, true in it.properties),
+                                                equalLinkedHashSetOf(
+                                                    callingContext,
+                                                    true in it.properties,
+                                                ),
                                             )
                                         } ?: PowersetLattice.Element()
                                     }
@@ -1418,16 +1423,29 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         )
                                     }
                                 val lastDerefDerefWrites =
-                                    argDerefDerefVals
-                                        .flatMapTo(PowersetLattice.Element()) {
-                                            doubleState.getCachedLastWrites(getLastWritesCache, it)
-                                        }
-                                        .mapTo(PowersetLattice.Element()) {
+                                    if (
+                                        (arg.type as? PointerType)?.pointerOrigin ==
+                                            PointerType.PointerOrigin.ARRAY
+                                    )
+                                        argDerefVals.mapTo(PowersetLattice.Element()) { argDerefVal
+                                            ->
                                             NodeWithPropertiesKey(
-                                                it.node,
-                                                equalLinkedHashSetOf<Any>(callingContext),
+                                                argDerefVal,
+                                                equalLinkedHashSetOf(callingContext, false),
                                             )
                                         }
+                                    else {
+                                        // As for the lastDerefWrites, we already have the
+                                        // ArgDerefVals which we
+                                        // treat as the addresses, so we directly look up the
+                                        // lastWrites for
+                                        // those addresses in the declarationState
+                                        argDerefVals.flatMapTo(PowersetLattice.Element()) {
+                                            argDerefVal ->
+                                            doubleState.declarationsState[argDerefVal]?.third
+                                                ?: PowersetLattice.Element()
+                                        }
+                                    }
                                 derefPMVs.await().forEach { derefPMV ->
                                     doubleState =
                                         lattice.push(
