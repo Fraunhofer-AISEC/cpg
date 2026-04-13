@@ -286,7 +286,9 @@ class DFGFunctionSummaries {
                 else default()
             val destNodes: MutableSet<Node> = mutableSetOf()
             val from: Any? =
-                if (entry.from.startsWith("param")) {
+                if (entry.from == "function") {
+                    functionDeclaration
+                } else if (entry.from.startsWith("param")) {
                     try {
                         val e = entry.from.split(".")
                         val paramIndex = e.getOrNull(0)?.removePrefix("param")?.toInt()
