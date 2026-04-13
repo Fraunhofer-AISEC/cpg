@@ -26,7 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.New
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
@@ -64,14 +65,32 @@ class CXXExpressionTest {
             }
         assertNotNull(tu)
 
-        // The variable 'f' should be initialized with a New expression
+        // Template brace-init: `new Foo<int>{42}` – initializer must be a Construction
         val f = tu.variables["f"]
         assertNotNull(f)
 
-        val newExpr = f.initializer
-        assertIs<New>(newExpr)
+        val fNew = f.initializer
+        assertIs<New>(fNew)
 
-        // The initializer of the New expression should be an InitializerList (brace-init)
-        assertIs<InitializerList>(newExpr.initializer)
+        val fConstruct = fNew.initializer
+        assertIs<Construction>(fConstruct)
+        assertEquals(1, fConstruct.arguments.size)
+        val fArg = fConstruct.arguments[0]
+        assertIs<Literal<*>>(fArg)
+        assertEquals(42, (fArg.value as Number).toInt())
+
+        // Non-template brace-init: `new Bar{7}` – initializer must also be a Construction
+        val g = tu.variables["g"]
+        assertNotNull(g)
+
+        val gNew = g.initializer
+        assertIs<New>(gNew)
+
+        val gConstruct = gNew.initializer
+        assertIs<Construction>(gConstruct)
+        assertEquals(1, gConstruct.arguments.size)
+        val gArg = gConstruct.arguments[0]
+        assertIs<Literal<*>>(gArg)
+        assertEquals(7, (gArg.value as Number).toInt())
     }
 }

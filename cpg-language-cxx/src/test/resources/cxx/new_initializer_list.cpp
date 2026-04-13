@@ -4,8 +4,14 @@ public:
     T value;
 };
 
+class Bar {
+public:
+    int value;
+};
+
 void test() {
-    // This triggers an InitializerList (brace-init) for a template new expression.
-    // Previously this caused a ClassCastException in handleNew.
+    // Brace-init with a template new expression (previously caused a ClassCastException).
     auto* f = new Foo<int>{42};
+    // Brace-init with a non-template new expression.
+    auto* g = new Bar{7};
 }

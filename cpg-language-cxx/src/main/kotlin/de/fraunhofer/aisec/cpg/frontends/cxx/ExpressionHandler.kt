@@ -247,7 +247,19 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
             val initializer: Expression?
             if (init != null) {
-                initializer = frontend.initializerHandler.handle(init)
+                val handled = frontend.initializerHandler.handle(init)
+                // Brace-initialization (e.g. `new Foo{42}`) produces an InitializerList. Wrap it
+                // in a Construction so that the New node always carries a Construction initializer,
+                // matching the behaviour of `new Foo()` and enabling proper constructor resolution.
+                if (handled is InitializerList) {
+                    val construct =
+                        newConstruction(t.name.localName).implicit(code = init.rawSignature)
+                    construct.arguments = handled.initializers
+                    construct.type = t
+                    initializer = construct
+                } else {
+                    initializer = handled
+                }
             } else {
                 // in C++, it is possible to omit the `()` part, when creating an object, such as
                 // `new A`.
