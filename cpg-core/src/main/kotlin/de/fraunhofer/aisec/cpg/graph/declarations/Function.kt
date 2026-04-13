@@ -48,10 +48,10 @@ import de.fraunhofer.aisec.cpg.helpers.functional.EqualLinkedHashSet
 import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
 import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
 open class Function :

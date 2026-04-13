@@ -41,7 +41,15 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+
+/**
+ * This constant defines the name of the built-in Go translation unit. It is used to check or
+ * reference the presence of the Go-specific built-in functions and definitions within the
+ * translation context.
+ */
+private const val BUILTIN_GO = "builtin.go"
 
 /**
  * This pass takes care of several things that we need to clean up, once all translation units are
@@ -100,25 +108,19 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @DependsOn(ImportResolver::class)
 @DependsOn(TypeResolver::class)
+@RequiresLanguage(GoLanguage::class)
 @Description(
     "This pass takes care of several things that we need to clean up, once all translation units are successfully parsed, but before any of the remaining CPG passes, such as call resolving occurs. Adds Type Listeners for Key/Value Variables in For-Each Statements, Infers NamespaceDeclarations for Import Packages, Declares Variables in Short Assignments, Adjust Names of Keys in Key Value Expressions to FQN, and Adds Methods of Embedded Structs to the Record's Scope."
 )
-class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
+class GoExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
-    private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
+    private var walker: SubgraphWalker.ScopedWalker<AstNode> =
+        SubgraphWalker.ScopedWalker(scopeManager, Strategy::AST_FORWARD)
 
-    // Note: Code analysis suggests that this property is non-nullable, but there is a complex
-    // reason, why it has to be nullable.
-    override val scope: Scope?
+    override val scope: Scope
         get() = scopeManager.currentScope
 
-    override fun accept(component: Component) {
-        // Add built-in functions, but only if one of the components contains a GoLanguage
-        if (component.translationUnits.any { it.language is GoLanguage }) {
-            component.translationUnits += addBuiltIn()
-        }
-
-        walker = SubgraphWalker.ScopedWalker(scopeManager, Strategy::AST_FORWARD)
+    init {
         walker.registerHandler { node ->
             when (node) {
                 is Record -> handleRecord(node)
@@ -127,10 +129,16 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 is InitializerList -> handleInitializerList(node)
             }
         }
+    }
 
-        for (tu in component.translationUnits) {
-            walker.iterate(tu)
+    override fun accept(tu: TranslationUnit) {
+        // Add built-in translation unit, if it does not exist yet
+        val component = tu.component
+        if (component?.translationUnits?.none { it.name.toString() == BUILTIN_GO } == true) {
+            component.translationUnits += addBuiltIn()
         }
+
+        walker.iterate(tu)
     }
 
     /**
@@ -170,7 +178,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     private fun addBuiltIn(): TranslationUnit {
-        val builtin = newTranslationUnit("builtin.go")
+        val builtin = newTranslationUnit(BUILTIN_GO)
         builtin.language = GoLanguage()
         scopeManager.resetToGlobal(builtin)
 

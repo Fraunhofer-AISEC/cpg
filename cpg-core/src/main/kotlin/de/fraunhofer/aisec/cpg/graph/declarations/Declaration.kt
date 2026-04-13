@@ -39,8 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
-import org.neo4j.ogm.annotation.NodeEntity
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents a single declaration or definition, i.e. of a variable ([Variable]) or function
@@ -51,7 +49,6 @@ import org.neo4j.ogm.annotation.Relationship
  * currently have two [Function] nodes. This is very similar to the behaviour of clang, however
  * clang does establish a connection between those nodes, we currently do not.
  */
-@NodeEntity
 abstract class Declaration : AstNode(), HasModifiers, HasMemoryAddress, HasMemoryValue {
     @DoNotPersist
     val symbol: Symbol

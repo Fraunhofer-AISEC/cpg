@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
@@ -39,6 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
@@ -49,6 +51,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  */
 @DependsOn(TypeResolver::class)
 @ExecuteBefore(SymbolResolver::class)
+@RequiresLanguage(JavaLanguage::class)
 @Description(
     "This pass is responsible for handling Java-specific cases that are not covered by the general CPG logic. For example, Java has static member access, which is not modeled as a member expression, but as a reference with an FQN. This pass will convert such member expressions to references with FQNs."
 )
