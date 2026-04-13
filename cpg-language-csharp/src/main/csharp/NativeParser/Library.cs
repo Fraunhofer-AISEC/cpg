@@ -174,6 +174,13 @@ public static class Library
         );
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetEnumMemberDeclarationEqualsValue")]
+    public static IntPtr GetEnumMemberDeclarationEqualsValue(IntPtr handlePtr)
+    {
+        var equalsValue = ((EnumMemberDeclarationSyntax)Nodes[handlePtr]).EqualsValue;
+        return equalsValue != null ? Register(equalsValue.Value) : IntPtr.Zero;
+    }
+
     // Identifier for Class, Interface, Struct, Record, Enum.
     [UnmanagedCallersOnly(EntryPoint = "GetBaseTypeDeclarationIdentifier")]
     public static IntPtr GetBaseTypeDeclarationIdentifier(IntPtr handlePtr)
@@ -259,6 +266,12 @@ public static class Library
         return Marshal.StringToCoTaskMemUTF8(
             ((MethodDeclarationSyntax)Nodes[handlePtr]).Identifier.ToString()
         );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetMethodDeclarationReturnType")]
+    public static IntPtr GetMethodDeclarationReturnType(IntPtr handlePtr)
+    {
+        return Register(((MethodDeclarationSyntax)Nodes[handlePtr]).ReturnType);
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetCode")]

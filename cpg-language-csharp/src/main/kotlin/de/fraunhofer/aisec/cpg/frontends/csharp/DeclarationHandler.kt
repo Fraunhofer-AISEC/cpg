@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.New
 import de.fraunhofer.aisec.cpg.graph.implicit
 import de.fraunhofer.aisec.cpg.graph.newConstructor
+import de.fraunhofer.aisec.cpg.graph.newEnumConstant
+import de.fraunhofer.aisec.cpg.graph.newEnumeration
 import de.fraunhofer.aisec.cpg.graph.newField
 import de.fraunhofer.aisec.cpg.graph.newMethod
 import de.fraunhofer.aisec.cpg.graph.newNamespace
@@ -46,6 +48,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         return when (node) {
             is Csharp.AST.BaseNamespaceDeclarationSyntax -> handleNamespaceDeclaration(node)
             is Csharp.AST.ClassDeclarationSyntax -> handleClassDeclaration(node)
+            is Csharp.AST.EnumDeclarationSyntax -> handleEnumDeclaration(node)
             is Csharp.AST.MethodDeclarationSyntax -> handleMethodDeclaration(node)
             is Csharp.AST.ConstructorDeclarationSyntax -> handleConstructorDeclaration(node)
             is Csharp.AST.InterfaceDeclarationSyntax -> handleInterfaceDeclaration(node)
@@ -177,6 +180,37 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
+     * Translates an [EnumDeclarationSyntax][Csharp.AST.EnumDeclarationSyntax] into an
+     * [Enumeration].
+     *
+     * C# spec:
+     * [Enum declarations](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/enums)
+     */
+    private fun handleEnumDeclaration(node: Csharp.AST.EnumDeclarationSyntax): Declaration {
+        val enumeration = newEnumeration(node.identifier, rawNode = node)
+        enumeration.kind = "enum"
+        enumeration.modifiers = node.modifiers.toSet()
+        frontend.scopeManager.enterScope(enumeration)
+
+        val enumType = enumeration.toType()
+        enumeration.entries =
+            node.members
+                .map { member ->
+                    val enumConstant = newEnumConstant(member.identifier, rawNode = member)
+                    enumConstant.type = enumType
+                    member.equalsValue?.let {
+                        enumConstant.initializer = frontend.expressionHandler.handle(it)
+                    }
+                    frontend.scopeManager.addDeclaration(enumConstant)
+                    enumConstant
+                }
+                .toMutableList()
+
+        frontend.scopeManager.leaveScope(enumeration)
+        return enumeration
+    }
+
+    /**
      * Translates a [MethodDeclarationSyntax][Csharp.AST.MethodDeclarationSyntax] into a [Method].
      *
      * C# spec:
@@ -199,6 +233,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
             frontend.scopeManager.addDeclaration(param)
             method.parameters += param
         }
+        method.returnTypes = listOf(frontend.typeOf(node.returnType))
         method.body = frontend.statementHandler.handle(node.body)
         frontend.scopeManager.leaveScope(method)
         return method

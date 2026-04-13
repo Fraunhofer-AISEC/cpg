@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
+import de.fraunhofer.aisec.cpg.graph.declarations.Enumeration
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.expressions.Assign
@@ -435,5 +436,42 @@ class CSharpLanguageFrontendTest : BaseTest() {
         val typeT = result.finalCtx.typeManager.getTypeParameter(container, "T")
         assertNotNull(typeT)
         assertIs<ParameterizedType>(typeT)
+    }
+
+    @Test
+    fun testEnums() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("Enums.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val enumsEnum = tu.records["Enums"]
+        assertIs<Enumeration>(enumsEnum)
+        assertEquals("enum", enumsEnum.kind)
+        assertEquals(listOf("A", "B", "C"), enumsEnum.entries.map { it.name.localName })
+
+        val b = enumsEnum.entries.single { it.name.localName == "B" }
+        assertEquals(enumsEnum, b.type.recordDeclaration)
+        val equalsValueExpression = b.initializer
+        assertIs<Literal<*>>(equalsValueExpression)
+        assertEquals(5, equalsValueExpression.value)
+
+        val foo = tu.records["Foo"]
+        assertNotNull(foo)
+        val bar = foo.methods["Bar"]
+        assertNotNull(bar)
+        assertEquals(enumsEnum, bar.returnTypes.singleOrNull()?.recordDeclaration)
+
+        val body = bar.body
+        assertIs<Block>(body)
+        val returnStmt = body.statements.singleOrNull()
+        assertIs<Return>(returnStmt)
+        val returnValue = returnStmt.returnValue
+        assertIs<MemberAccess>(returnValue)
+        val base = returnValue.base
+        assertIs<Reference>(base)
+        assertEquals(enumsEnum, base.refersTo)
     }
 }

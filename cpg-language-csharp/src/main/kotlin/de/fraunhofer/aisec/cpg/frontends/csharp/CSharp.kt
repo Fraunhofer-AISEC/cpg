@@ -130,6 +130,7 @@ interface Csharp : Library {
                         FileScopedNamespaceDeclarationSyntax(nativeValue)
                     "ClassDeclarationSyntax" -> ClassDeclarationSyntax(nativeValue)
                     "InterfaceDeclarationSyntax" -> InterfaceDeclarationSyntax(nativeValue)
+                    "EnumDeclarationSyntax" -> EnumDeclarationSyntax(nativeValue)
                     "FieldDeclarationSyntax" -> FieldDeclarationSyntax(nativeValue)
                     "MethodDeclarationSyntax" -> MethodDeclarationSyntax(nativeValue)
                     "ConstructorDeclarationSyntax" -> ConstructorDeclarationSyntax(nativeValue)
@@ -215,6 +216,30 @@ interface Csharp : Library {
 
         /**
          * Represents the Roslyn
+         * [`EnumDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.enumdeclarationsyntax)
+         * class.
+         */
+        class EnumDeclarationSyntax(p: Pointer? = Pointer.NULL) : BaseTypeDeclarationSyntax(p) {
+            val members: List<EnumMemberDeclarationSyntax> by lazy {
+                val count = INSTANCE.GetEnumDeclarationMembersCount(this)
+                (0 until count).map { i -> INSTANCE.GetEnumDeclarationMember(this, i) }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`EnumMemberDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.enummemberdeclarationsyntax)
+         * class.
+         */
+        class EnumMemberDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
+            val identifier: String by lazy { INSTANCE.GetEnumMemberDeclarationIdentifier(this) }
+            val equalsValue: ExpressionSyntax? by lazy {
+                INSTANCE.GetEnumMemberDeclarationEqualsValue(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
          * [`BaseListSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.baselistsyntax)
          * class.
          */
@@ -287,6 +312,7 @@ interface Csharp : Library {
          */
         class MethodDeclarationSyntax(p: Pointer? = Pointer.NULL) : BaseMethodDeclarationSyntax(p) {
             val identifier: String by lazy { INSTANCE.GetMethodDeclarationIdentifier(this) }
+            val returnType: TypeSyntax by lazy { INSTANCE.GetMethodDeclarationReturnType(this) }
         }
 
         /**
@@ -934,6 +960,19 @@ interface Csharp : Library {
 
     fun GetNameEqualsSyntaxName(handle: AST.NameEqualsSyntax): String
 
+    fun GetEnumDeclarationMembersCount(handle: AST.EnumDeclarationSyntax): Int
+
+    fun GetEnumDeclarationMember(
+        handle: AST.EnumDeclarationSyntax,
+        index: Int,
+    ): AST.EnumMemberDeclarationSyntax
+
+    fun GetEnumMemberDeclarationIdentifier(handle: AST.EnumMemberDeclarationSyntax): String
+
+    fun GetEnumMemberDeclarationEqualsValue(
+        handle: AST.EnumMemberDeclarationSyntax
+    ): AST.ExpressionSyntax?
+
     fun GetBaseTypeDeclarationIdentifier(handle: AST.BaseTypeDeclarationSyntax): String
 
     fun GetTypeDeclarationMembersCount(handle: AST.TypeDeclarationSyntax): Int
@@ -964,6 +1003,8 @@ interface Csharp : Library {
     fun GetVariableDeclaratorIdentifier(handle: AST.VariableDeclaratorSyntax): String
 
     fun GetMethodDeclarationIdentifier(handle: AST.MethodDeclarationSyntax): String
+
+    fun GetMethodDeclarationReturnType(handle: AST.MethodDeclarationSyntax): AST.TypeSyntax
 
     fun GetBaseMethodDeclarationParameterList(
         handle: AST.BaseMethodDeclarationSyntax
