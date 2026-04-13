@@ -660,8 +660,8 @@ int testGlobalWrite() {
   key = 1;
 }
 
-int printstuff(char** s){
-  char* str = *s;
+int printstuff(void** s){
+  void* str = *s;
   printf("%s", *str);
 }
 

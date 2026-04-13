@@ -3688,10 +3688,10 @@ class PointsToPassTest {
         val fooFunc = tu.functions["foo"]
         assertNotNull(fooFunc)
 
-        val printFunc = tu.functions["printstuff"]
-        assertNotNull(printFunc)
+        val printStuffFunc = tu.functions["printstuff"]
+        assertNotNull(printStuffFunc)
 
-        var barFunc = tu.functions["bar"]
+        val barFunc = tu.functions["bar"]
         assertNotNull(barFunc)
 
         // Calls
@@ -3707,6 +3707,10 @@ class PointsToPassTest {
         val barCall = testFunc.calls["bar"]
         assertNotNull(barCall)
 
+        // The printf in printstuff
+        val innerprintfCall = printStuffFunc.calls["printf"]
+        assertNotNull(innerprintfCall)
+
         // Parameters and PMVs
         val fooParam = fooFunc.parameters.single()
         assertNotNull(fooParam)
@@ -3721,13 +3725,13 @@ class PointsToPassTest {
         val barDerefPMV = barParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
         assertNotNull(barDerefPMV)
 
-        val printParam = printFunc.parameters.single()
-        val printDerefPMV =
-            printParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
-        assertNotNull(printDerefPMV)
-        val printDerefDerefPMV =
-            printParam.memoryValues.singleOrNull { it.name.localName == "derefderefvalue" }
-        assertNotNull(printDerefDerefPMV)
+        val printStuffParam = printStuffFunc.parameters.single()
+        val printStuffDerefPMV =
+            printStuffParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(printStuffDerefPMV)
+        val printStuffDerefDerefPMV =
+            printStuffParam.memoryValues.singleOrNull { it.name.localName == "derefderefvalue" }
+        assertNotNull(printStuffDerefDerefPMV)
 
         // Arguments
         val printStuffArg = printStuffCall.arguments[0]
@@ -3742,6 +3746,9 @@ class PointsToPassTest {
 
         val barArg = barCall.arguments.single()
         assertNotNull(barArg)
+
+        val innerprintfArg = innerprintfCall.arguments[1]
+        assertNotNull(innerprintfArg)
 
         // Actual tests
         // First the easier things. For the call to the function foo, we except the lhs of the
@@ -3788,20 +3795,20 @@ class PointsToPassTest {
           3) ? to the param's derefderef PMV
         */
         // 1) the argument (&p) from the call points to the param
-        /*        assertEquals(printStuffCall.arguments[0], printParam.prevDFG.singleOrNull())
+        assertEquals(printStuffCall.arguments[0], printStuffParam.prevDFG.singleOrNull())
 
-        // the variable pparam of the free function points to the derefvalue
-        assertEquals(freeFunc.parameters[0], printDerefPMV.prevDFG.singleOrNull())
+        // the variable param of the free function points to the derefvalue
+        assertEquals(testFunc.variables["p"], printStuffDerefPMV.prevDFG.singleOrNull())
 
         // The nextDFG edge of free's DerefPMV points to the printFuncs first param's derefderefPMV
-        assertEquals(
-            printDerefDerefPMV,
-            freeDerefPMV.nextDFGEdges
-                .singleOrNull {
-                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.singleOrNull() ==
-                        printStuffCall
-                }
-                ?.end,
-        )*/
+        assertEquals(freeDerefPMV, printStuffDerefDerefPMV.prevDFG.singleOrNull())
+
+        // Now we are in the printstuff function
+        // The *s in the rhs of the assignment
+        val sPointerDerefence = printStuffFunc.assignments.single().value
+        assertNotNull(sPointerDerefence)
+
+        assertEquals(printStuffDerefPMV, sPointerDerefence.prevFullDFG.single())
+        assertEquals(printStuffDerefDerefPMV, innerprintfArg.prevFullDFG.singleOrNull())
     }
 }

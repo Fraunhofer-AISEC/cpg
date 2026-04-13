@@ -376,7 +376,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     override fun accept(node: Node) {
         functionSummaryAnalysisChain.clear()
-        if (node !is EOGStarterHolder || node.eogStarters.isEmpty()) {
+        if (node !is EOGStarterHolder || node.eogStarters.isEmpty() || node is TranslationUnit) {
             return
         }
 
@@ -403,7 +403,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // return here.
             if (
                 (node.functionSummary.isNotEmpty() && node.body != null) &&
-                    node.functionSummary.keys.any { it in node.parameters || it in node.returns }
+                    node.functionSummary.keys.any {
+                        it in node.parameters ||
+                            it in node.returns ||
+                            // We already analyzed the function, but it doesn't affect any
+                            // parameters or return values
+                            (it as? Literal<*>)?.value == "dummy"
+                    }
             ) {
                 if (log.isTraceEnabled) {
                     log.trace(
@@ -432,13 +438,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 return
             }
 
-            if (log.isTraceEnabled) {
-                log.trace(
-                    "Analyzing function ${node.name}. Complexity: ${
+            //            if (log.isTraceEnabled) {
+            log.info(
+                "Analyzing function ${node.name}. Complexity: ${
                             NumberFormat.getNumberInstance(Locale.US).format(c)
                         }. (Function $analyzedFunctionCount / $totalFunctionCount)"
-                )
-            }
+            )
+            //            }
         } else {
             if (log.isTraceEnabled) {
                 log.trace("Analyzing EOGStarterHolder ${node.name}. Complexity unknown")
@@ -2416,6 +2422,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             ) {
                 values
                     .filterTo(concurrentIdentitySetOf()) {
+                        // If all we have here as a PMV value, we can skip it
+                        // Note: This only applies to the value, the deref and derefderefvalues
+                        // might be from different functions, so we leave those
+                        /* (it as? ParameterMemoryValue)?.name?.localName != "value" &&*/
                         doubleState.hasDeclarationStateValueEntry(it, true)
                     }
                     .forEach { value ->
@@ -3155,14 +3165,11 @@ fun PointsToState.Element.getLastWrites(
         is ParameterMemoryValue -> {
             // For parameterMemoryValues, we have to check if there was a write within the function.
             // If not, it's the deref value itself.
-            val entries = identitySetOf<NodeWithPropertiesKey>()
-            this.getAddresses(node, node).forEach { addr ->
-                this.declarationsState[addr]?.third?.forEach { entries.add(it) }
-            }
-            if (entries.isNotEmpty())
-                entries.mapTo(PowersetLattice.Element()) {
-                    NodeWithPropertiesKey(it.node, equalLinkedHashSetOf())
-                }
+            // For PMVs, we store this information directly for the PMV itself, so no need to fetch
+            // its addresses
+            // TODO: Unsure if this is consistent?
+            val entries = this.declarationsState[node]?.third
+            if (!entries.isNullOrEmpty()) entries
             else
                 node.memoryValues
                     .filter { it.name.localName == "deref" + node.name.localName }
