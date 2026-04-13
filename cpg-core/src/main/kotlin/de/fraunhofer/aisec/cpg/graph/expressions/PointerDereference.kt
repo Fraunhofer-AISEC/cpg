@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import org.neo4j.ogm.annotation.Relationship
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 
 /** A c-style dereference, such as *i->f. */
 open class PointerDereference : Reference() {

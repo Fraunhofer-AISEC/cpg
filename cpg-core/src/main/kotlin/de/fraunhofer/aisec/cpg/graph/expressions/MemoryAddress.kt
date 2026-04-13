@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
 import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import org.neo4j.ogm.annotation.Relationship
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 
 open class MemoryAddress(override var name: Name, open var isGlobal: Boolean = false) :
     Node(), HasMemoryValue {
