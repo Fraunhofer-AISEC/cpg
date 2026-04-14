@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import type { TranslationUnitJSON, NodeJSON } from '$lib/types';
+  import type { TranslationUnitJSON, NodeJSON, ConceptSuggestionItem } from '$lib/types';
   import { TabNavigation } from '$lib/components/navigation';
-  import { NodeTable, NodeOverlays, FindingOverlay } from '$lib/components/analysis';
+  import { NodeTable, NodeOverlays, FindingOverlay, ConceptChecklist } from '$lib/components/analysis';
   import { flattenNodes } from '$lib/flatten';
   import Highlight, { LineNumbers } from 'svelte-highlight';
   import python from 'svelte-highlight/languages/python';
@@ -54,9 +54,11 @@
     nodePanelCollapsed?: boolean;
     onClose?: () => void;
     hideControls?: boolean;
+    suggestions?: ConceptSuggestionItem[];
+    onApplySuggestions?: (accepted: ConceptSuggestionItem[]) => void;
   }
 
-  let { translationUnit, astNodes, overlayNodes, conceptGroups, highlightLine, finding, findingKind, headerActions, nodePanelCollapsed = $bindable(false), onClose, hideControls = false }: Props = $props();
+  let { translationUnit, astNodes, overlayNodes, conceptGroups, highlightLine, finding, findingKind, headerActions, nodePanelCollapsed = $bindable(false), onClose, hideControls = false, suggestions = $bindable([]), onApplySuggestions }: Props = $props();
 
   let activeTab = $state('overlayNodes');
   let nodes = $derived(
@@ -72,7 +74,10 @@
 
   const tabs = $derived([
     { id: 'overlayNodes', label: 'Overlay Nodes', count: overlayNodes?.length || 0 },
-    { id: 'astNodes', label: 'AST Nodes', count: astNodes?.length || 0 }
+    { id: 'astNodes', label: 'AST Nodes', count: astNodes?.length || 0 },
+    ...(suggestions.length > 0
+      ? [{ id: 'suggestions', label: 'Suggestions', count: suggestions.length }]
+      : [])
   ]);
 
   const lineHeight = 1.5;
@@ -204,12 +209,19 @@
           <TabNavigation {tabs} {activeTab} onTabChange={(id) => (activeTab = id)} />
         </div>
         <div class="flex-1 overflow-auto p-4">
-          <NodeTable
-            title={tableTitle}
-            {nodes}
-            bind:highlightedNode
-            nodeClick={(node) => console.log('Node clicked:', node)}
-          />
+          {#if activeTab === 'suggestions'}
+            <ConceptChecklist
+              bind:items={suggestions}
+              {onApplySuggestions}
+            />
+          {:else}
+            <NodeTable
+              title={tableTitle}
+              {nodes}
+              bind:highlightedNode
+              nodeClick={(node) => console.log('Node clicked:', node)}
+            />
+          {/if}
         </div>
       </div>
     {/if}
@@ -220,12 +232,19 @@
           <TabNavigation {tabs} {activeTab} onTabChange={(id) => (activeTab = id)} />
         </div>
         <div class="h-full overflow-auto p-4">
-          <NodeTable
-            title={tableTitle}
-            {nodes}
-            bind:highlightedNode
-            nodeClick={(node) => console.log('Node clicked:', node)}
-          />
+          {#if activeTab === 'suggestions'}
+            <ConceptChecklist
+              bind:items={suggestions}
+              {onApplySuggestions}
+            />
+          {:else}
+            <NodeTable
+              title={tableTitle}
+              {nodes}
+              bind:highlightedNode
+              nodeClick={(node) => console.log('Node clicked:', node)}
+            />
+          {/if}
         </div>
       </div>
     {/if}
