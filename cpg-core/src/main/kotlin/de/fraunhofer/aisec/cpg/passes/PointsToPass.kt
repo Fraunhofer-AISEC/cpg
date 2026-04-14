@@ -376,15 +376,25 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     override fun accept(node: Node) {
         functionSummaryAnalysisChain.clear()
-        if (node !is EOGStarterHolder || node.eogStarters.isEmpty() || node is TranslationUnit) {
+        if (node !is EOGStarterHolder || node.eogStarters.isEmpty()) {
             return
         }
 
         return runBlocking {
-            node.eogStarters
-                // To avoid analyzing starters multiple times, we only take the ones w/o prevEOG
-                .filter { starter -> starter.prevEOG.isEmpty() == true }
-                .forEach { starter -> acceptInternal(starter) }
+            val starters =
+                if (node is TranslationUnit)
+                // We already analyzed the functions when we got them handed directly as node, so
+                // skip them now
+                node.eogStarters.filter { starter ->
+                        starter !is Function && starter.prevEOG.isEmpty()
+                    }
+                else
+                    node.eogStarters
+                        // To avoid analyzing starters multiple times, we only take the ones w/o
+                        // prevEOG
+                        .filter { starter -> starter.prevEOG.isEmpty() }
+
+            starters.forEach { starter -> acceptInternal(starter) }
         }
     }
 
