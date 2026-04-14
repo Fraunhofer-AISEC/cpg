@@ -51,6 +51,11 @@ fun configureServer(
         this.listConceptsAndOperations()
         this.getNode()
         this.addDfgBackwardTool()
+        this.persistGraphToNeo4jTool()
+        this.getPersistedConceptsOperations()
+        this.addOrUpdateConcept()
+        this.suggestLLMConceptsAndOperations()
+        this.addLLMConceptAndOperations()
         // PROMPTS
         this.addSuggestConceptsPrompt()
         this

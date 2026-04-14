@@ -43,6 +43,7 @@ import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import java.io.File
+import kotlinx.serialization.json.Json
 
 private const val fileName = "concepts.yaml"
 
@@ -154,6 +155,47 @@ fun Server.addOrUpdateConcept() {
         CallToolResult(
             content = listOf(TextContent("Saved concept '${payload.name}' to ${file.path}."))
         )
+    }
+}
+
+fun Server.suggestLLMConceptsAndOperations() {
+    val toolDescription =
+        """
+        This tool suggests concept and operation.
+        It validates that referenced CPG nodes exist but does not apply anything to the graph.
+        Once the user accepts the suggestions, use cpg_add_llm_concept_and_operations to apply them.
+        """
+            .trimIndent()
+
+    this.addTool<LLMConcept>(
+        name = "cpg_suggest_llm_concepts_and_operations",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: LLMConcept ->
+        val conceptNode = result.nodes.find { it.id.toString() == payload.nodeId }
+        if (conceptNode == null) {
+            return@addTool CallToolResult(
+                content =
+                    listOf(
+                        TextContent("Node ${payload.nodeId} not found for concept ${payload.name}.")
+                    )
+            )
+        }
+
+        payload.operations.forEach { operation ->
+            val opNode = result.nodes.find { it.id.toString() == operation.nodeId }
+            if (opNode == null) {
+                return@addTool CallToolResult(
+                    content =
+                        listOf(
+                            TextContent(
+                                "Node ${operation.nodeId} not found for operation ${operation.name}."
+                            )
+                        )
+                )
+            }
+        }
+
+        CallToolResult(content = listOf(TextContent(Json.encodeToString(payload))))
     }
 }
 
