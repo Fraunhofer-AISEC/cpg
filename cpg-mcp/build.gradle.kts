@@ -84,6 +84,9 @@ dependencies {
     integrationTestImplementation(libs.kotlin.reflect)
     implementation(libs.reflections)
     integrationTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    // parsing YAML files
+    implementation(libs.jacksonyml)
+
     integrationTestImplementation(libs.mcp)
     integrationTestImplementation(libs.mcp.testing)
     integrationTestImplementation(libs.ktor.serialization.kotlinx.json)
@@ -98,4 +101,6 @@ dependencies {
     implementation(project(":cpg-concepts"))
     implementation(project(":cpg-analysis"))
     implementation(project(":cpg-serialization"))
+
+    implementation(project(":cpg-neo4j"))
 }
