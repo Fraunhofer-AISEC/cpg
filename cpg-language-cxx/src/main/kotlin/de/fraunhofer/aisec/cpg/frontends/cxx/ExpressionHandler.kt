@@ -249,11 +249,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             if (init != null) {
                 val handled = frontend.initializerHandler.handle(init)
                 // Brace-initialization (e.g. `new Foo{42}`) produces an InitializerList. Wrap it
-                // in a Construction so that the New node always carries a Construction initializer,
-                // matching the behaviour of `new Foo()` and enabling proper constructor resolution.
+                // in a Construction so that this case matches the behaviour of `new Foo()` and
+                // enables proper constructor resolution.
                 if (handled is InitializerList) {
                     val construct =
-                        newConstruction(t.name.localName).implicit(code = init.rawSignature)
+                        newConstruction(t.name.localName)
+                            .implicit(
+                                code = init.rawSignature,
+                                location = frontend.locationOf(init),
+                            )
                     construct.arguments = handled.initializers
                     construct.type = t
                     initializer = construct
