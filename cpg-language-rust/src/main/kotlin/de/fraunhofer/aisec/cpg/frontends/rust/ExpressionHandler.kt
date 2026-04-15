@@ -633,11 +633,12 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         frontend.scopeManager.enterScope(switchStatement)
 
         // Create a block to hold all case statements
-        val caseBlock = newBlock()
+        val caseBlock = newBlock(raw)
+        caseBlock.usedAsExpression = true
 
         // Process each match arm
         for (arm in matchExpr.arms) {
-            caseBlock.statements += handleMatchArm(arm, raw)
+            caseBlock.statements += handleMatchArm(arm)
         }
 
         switchStatement.statement = caseBlock
@@ -649,7 +650,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return switchStatement
     }
 
-    private fun handleMatchArm(arm: RsMatchArm, raw: RsAst.RustExpr): List<Expression> {
+    private fun handleMatchArm(arm: RsMatchArm): List<Expression> {
+        val raw = RsAst.RustExpr(RsExpr.MatchArm(arm))
         // Deconstruct the pattern and create a case statement
         val pattern =
             arm.pat.firstOrNull()?.let { frontend.patternHandler.handleNode(it) }
@@ -660,7 +662,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                     )
                 )
 
-        val caseStatement = newCase(rawNode = raw)
+        val caseStatement =
+            newCase(rawNode = arm.pat.firstOrNull()?.let { RsAst.RustPat(it) } ?: raw)
         caseStatement.caseExpression = pattern
 
         var caseExpressions = mutableListOf<Expression>(caseStatement)
@@ -674,6 +677,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                         rawNode = raw,
                     )
                 )
+        val wrappedRawExpr = arm.expr.firstOrNull()?.let { RsAst.RustExpr(it) } ?: raw
 
         // If there's a guard, wrap the break statement in an if
         if (arm.guard.isNotEmpty()) {
@@ -689,18 +693,18 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             val ifElse = newIfElse(raw)
             ifElse.condition = guard
 
-            val breakStatement = newBreak(raw)
+            val breakStatement = newBreak(wrappedRawExpr)
             breakStatement.expr = armExpr
             breakStatement.usedAsExpression = true
 
-            val ifBlock = newBlock()
+            val ifBlock = newBlock(raw)
             ifBlock.statements += breakStatement
             ifElse.thenStatement = ifBlock
 
             caseExpressions += ifElse
         } else {
             // No guard, directly create break statement
-            val breakStatement = newBreak(raw)
+            val breakStatement = newBreak(wrappedRawExpr)
             breakStatement.expr = armExpr
             breakStatement.usedAsExpression = true
 

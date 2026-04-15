@@ -532,6 +532,7 @@ pub enum RSExpr {
     LoopExpr(RSLoopExpr),
     MacroExpr(RSMacroExpr),
     MatchExpr(RSMatchExpr),
+    MatchArm(RSMatchArm),
     MethodCallExpr(RSMethodCallExpr),
     OffsetOfExpr(RSOffsetOfExpr),
     ParenExpr(RSParenExpr),
