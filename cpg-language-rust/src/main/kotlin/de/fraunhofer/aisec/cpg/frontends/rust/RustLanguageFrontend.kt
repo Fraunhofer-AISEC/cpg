@@ -43,6 +43,7 @@ import kotlin.collections.plusAssign
 import kotlin.math.min
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsItem
+import uniffi.cpgrust.RsPath
 import uniffi.cpgrust.RsType
 import uniffi.cpgrust.parseRustCode
 
@@ -56,6 +57,7 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
     internal val declarationHandler = DeclarationHandler(this)
     internal var statementHandler = StatementHandler(this)
     internal var expressionHandler = ExpressionHandler(this)
+    internal var patternHandler = PatternHandler(this)
 
     private lateinit var fileContent: String
     private lateinit var uri: URI
@@ -174,6 +176,16 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
                 upToIncluding.last().length + 1,
             ),
         )
+    }
+
+    fun handlePathForRef(rsPath: RsPath): Name? {
+
+        val qualifierName =
+            rsPath.qualifier.firstOrNull()?.let { qualifier -> handlePathForRef(qualifier) }
+
+        return rsPath.segment?.nameRef?.text?.let { text ->
+            newName(text, namespace = qualifierName)
+        }
     }
 
     /**

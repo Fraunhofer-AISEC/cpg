@@ -29,7 +29,8 @@ import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
-import kotlin.reflect.typeOf
+import de.fraunhofer.aisec.cpg.graph.newBreak
+import de.fraunhofer.aisec.cpg.graph.newCase
 import uniffi.cpgrust.RsArrayExpr
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsBinExpr
@@ -48,9 +49,10 @@ import uniffi.cpgrust.RsLiteral
 import uniffi.cpgrust.RsLiteralType
 import uniffi.cpgrust.RsLoopExpr
 import uniffi.cpgrust.RsMacroExpr
+import uniffi.cpgrust.RsMatchArm
+import uniffi.cpgrust.RsMatchExpr
 import uniffi.cpgrust.RsMethodCallExpr
 import uniffi.cpgrust.RsPat
-import uniffi.cpgrust.RsPath
 import uniffi.cpgrust.RsPathExpr
 import uniffi.cpgrust.RsPrefixExpr
 import uniffi.cpgrust.RsRangeExpr
@@ -93,6 +95,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.RefExpr -> handleRefExpr(node.v1)
             is RsExpr.ArrayExpr -> handleArrayExpr(node.v1)
             is RsExpr.TupleExpr -> handleTupleExpr(node.v1)
+            is RsExpr.MatchExpr -> handleMatchExpr(node.v1)
+
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -216,12 +220,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     fun handlePathExpr(pathExpr: RsPathExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.PathExpr(pathExpr))
-        // In the case of imports we do not have to handle return type, type args, type anchor and
-        // type args
 
         pathExpr.path?.let { rsPath ->
             return newReference(
-                frontend.handleKeywordsInNames(handlePathForRef(rsPath) ?: newName("")),
+                frontend.handleKeywordsInNames(frontend.handlePathForRef(rsPath) ?: newName("")),
                 rawNode = raw,
             )
         }
@@ -230,18 +232,6 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             problem = "PathExpression does not contain reference to a name",
             rawNode = raw,
         )
-    }
-
-    private fun handlePathForRef(rsPath: RsPath): Name? {
-        // In the case of imports we do not have to handle return type, type args, type anchor and
-        // type args
-
-        val qualifierName =
-            rsPath.qualifier.firstOrNull()?.let { qualifier -> handlePathForRef(qualifier) }
-
-        return rsPath.segment?.nameRef?.text?.let { text ->
-            newName(text, namespace = qualifierName)
-        }
     }
 
     fun handleRefExpr(refExpr: RsRefExpr): Expression {
@@ -623,5 +613,100 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
 
         return tupleConstruction
+    }
+
+    fun handleMatchExpr(matchExpr: RsMatchExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.MatchExpr(matchExpr))
+
+        // Get the scrutinee (the value being matched)
+        val scrutinee =
+            matchExpr.expr.firstOrNull()?.let { handleNode(it) }
+                ?: return newProblemExpression(
+                    problem = "Match expression does not contain a scrutinee",
+                    rawNode = raw,
+                )
+
+        // Create the switch statement
+        val switchStatement = newSwitch(rawNode = raw)
+        switchStatement.selector = scrutinee
+
+        frontend.scopeManager.enterScope(switchStatement)
+
+        // Create a block to hold all case statements
+        val caseBlock = newBlock()
+
+        // Process each match arm
+        for (arm in matchExpr.arms) {
+            caseBlock.statements += handleMatchArm(arm, raw)
+        }
+
+        switchStatement.statement = caseBlock
+
+        frontend.scopeManager.leaveScope(switchStatement)
+
+        switchStatement.usedAsExpression = true
+
+        return switchStatement
+    }
+
+    private fun handleMatchArm(arm: RsMatchArm, raw: RsAst.RustExpr): List<Expression> {
+        // Deconstruct the pattern and create a case statement
+        val pattern =
+            arm.pat.firstOrNull()?.let { frontend.patternHandler.handleNode(it) }
+                ?: return listOf(
+                    newProblemExpression(
+                        problem = "Match arm does not contain a pattern",
+                        rawNode = raw,
+                    )
+                )
+
+        val caseStatement = newCase(rawNode = raw)
+        caseStatement.caseExpression = pattern
+
+        var caseExpressions = mutableListOf<Expression>(caseStatement)
+
+        // Get the match arm expression
+        val armExpr =
+            arm.expr.firstOrNull()?.let { handleNode(it) }
+                ?: return listOf(
+                    newProblemExpression(
+                        problem = "Match arm does not contain an expression",
+                        rawNode = raw,
+                    )
+                )
+
+        // If there's a guard, wrap the break statement in an if
+        if (arm.guard.isNotEmpty()) {
+            val guard =
+                arm.guard.firstOrNull()?.let { handleNode(it) }
+                    ?: return listOf(
+                        newProblemExpression(
+                            problem = "Match arm guard could not be parsed",
+                            rawNode = raw,
+                        )
+                    )
+
+            val ifElse = newIfElse(raw)
+            ifElse.condition = guard
+
+            val breakStatement = newBreak(raw)
+            breakStatement.expr = armExpr
+            breakStatement.usedAsExpression = true
+
+            val ifBlock = newBlock()
+            ifBlock.statements += breakStatement
+            ifElse.thenStatement = ifBlock
+
+            caseExpressions += ifElse
+        } else {
+            // No guard, directly create break statement
+            val breakStatement = newBreak(raw)
+            breakStatement.expr = armExpr
+            breakStatement.usedAsExpression = true
+
+            caseExpressions += breakStatement
+        }
+
+        return caseExpressions
     }
 }

@@ -29,6 +29,7 @@ import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsExpr
 import uniffi.cpgrust.RsItem
 import uniffi.cpgrust.RsNode
+import uniffi.cpgrust.RsPat
 import uniffi.cpgrust.RsStmt
 import uniffi.cpgrust.RsType
 
@@ -46,6 +47,7 @@ fun RsAst.astNode(): RsNode {
         is RsAst.RustAbi -> this.v1.astNode
         is RsAst.RustProblem -> this.v1.astNode
         is RsAst.RustUseTree -> this.v1.astNode
+        is RsAst.RustPat -> this.v1.astNode()
     }
 }
 
@@ -142,5 +144,27 @@ fun RsType.astNode(): RsNode {
         is RsType.RefType -> this.v1.astNode
         is RsType.SliceType -> this.v1.astNode
         is RsType.TupleType -> this.v1.astNode
+    }
+}
+
+fun RsPat.astNode(): RsNode {
+    return when (this) {
+        is RsPat.BoxPat -> this.v1.astNode
+        is RsPat.ConstBlockPat -> this.v1.astNode
+        is RsPat.IdentPat -> this.v1.astNode
+        is RsPat.LiteralPat -> this.v1.astNode
+        is RsPat.MacroPat -> this.v1.astNode
+        is RsPat.OrPat -> this.v1.astNode
+        is RsPat.ParenPat -> this.v1.astNode
+        is RsPat.PathPat -> this.v1.astNode
+        is RsPat.RangePat -> this.v1.astNode
+        is RsPat.RecordPat -> this.v1.astNode
+        is RsPat.RefPat -> this.v1.astNode
+        is RsPat.RestPat -> this.v1.astNode
+        is RsPat.SlicePat -> this.v1.astNode
+        is RsPat.TuplePat -> this.v1.astNode
+        is RsPat.TupleStructPat -> this.v1.astNode
+        is RsPat.WildcardPat -> this.v1.astNode
+        is RsPat.RecordPatField -> this.v1.astNode
     }
 }

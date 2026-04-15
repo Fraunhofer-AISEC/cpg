@@ -150,6 +150,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is Function -> handleFunction(node, functionSummaries)
             is Tuple -> handleTuple(node)
             is Variable -> handleVariable(node)
+            is ObjectDeconstruction -> handleObjectDeconstruction(node)
+            is AlternativeDeconstruction -> handleAlternativeDeconstruction(node)
+            is NamedDeconstruction -> handleNamedDeconstruction(node)
         }
     }
 
@@ -699,6 +702,29 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             }
 
             breaksOfNode.forEach { node.prevDFGEdges += it }
+        }
+    }
+
+    protected fun handleObjectDeconstruction(node: ObjectDeconstruction) {
+        node.components.forEach {
+
+            // Todo Partial positional or named dfgs
+            node.nextDFGEdges += it
+        }
+    }
+
+    protected fun handleAlternativeDeconstruction(node: AlternativeDeconstruction) {
+        node.alternatives.forEach {
+
+            // Todo Full DFGs
+            node.nextDFGEdges += it
+        }
+    }
+
+    protected fun handleNamedDeconstruction(node: NamedDeconstruction) {
+        node.value.let {
+            // Todo Partials to their name
+            node.nextDFGEdges += it
         }
     }
 }
