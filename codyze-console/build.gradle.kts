@@ -32,6 +32,8 @@ dependencies {
         // MCP SDK only available at compile time so the files in `/ai` compile,
         compileOnly(libs.mcp)
         compileOnly(libs.mcp.client)
+        testImplementation(libs.mcp)
+        testImplementation(libs.mcp.client)
     }
 
     // Ktor server dependencies
