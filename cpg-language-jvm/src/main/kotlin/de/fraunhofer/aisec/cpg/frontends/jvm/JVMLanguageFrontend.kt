@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
@@ -91,13 +91,13 @@ class JVMLanguageFrontend(
      * Because of a limitation in SootUp, we can only specify the whole classpath for soot to parse.
      * But in the CPG we need to specify one file. In this case, we take the
      * [TranslationConfiguration.topLevel] and hand it over to soot, which parses all appropriate
-     * files within this folder/classpath. This means that the returned [TranslationUnitDeclaration]
-     * will contain not just the content of one file but the whole directory.
+     * files within this folder/classpath. This means that the returned [TranslationUnit] will
+     * contain not just the content of one file but the whole directory.
      */
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         val view =
-            when (file.extension) {
-                "class" -> {
+            when {
+                file.extension == "class" -> {
                     JavaView(
                         JavaClassPathAnalysisInputLocation(
                             ctx.currentComponent?.topLevel()?.path!!,
@@ -106,23 +106,7 @@ class JVMLanguageFrontend(
                         )
                     )
                 }
-                "jar" -> {
-                    JavaView(
-                        JavaClassPathAnalysisInputLocation(
-                            file.path,
-                            SourceType.Library,
-                            bodyInterceptors,
-                        )
-                    )
-                }
-                "java" -> {
-                    JavaView(
-                        JavaSourcePathAnalysisInputLocation(
-                            ctx.currentComponent?.topLevel()?.path!!
-                        )
-                    )
-                }
-                "apk" -> {
+                file.isApk() -> {
                     val apkAnalysis =
                         ApkAnalysisInputLocation(
                             file.toPath(),
@@ -132,7 +116,23 @@ class JVMLanguageFrontend(
 
                     JavaView(listOf(apkAnalysis), LRUCacheProvider(2))
                 }
-                "jimple" -> {
+                file.isJar() -> {
+                    JavaView(
+                        JavaClassPathAnalysisInputLocation(
+                            file.path,
+                            SourceType.Library,
+                            bodyInterceptors,
+                        )
+                    )
+                }
+                file.extension == "java" -> {
+                    JavaView(
+                        JavaSourcePathAnalysisInputLocation(
+                            ctx.currentComponent?.topLevel()?.path!!
+                        )
+                    )
+                }
+                file.extension == "jimple" -> {
                     JimpleView(
                         JimpleAnalysisInputLocation(ctx.currentComponent?.topLevel()?.toPath()!!)
                     )
@@ -142,30 +142,40 @@ class JVMLanguageFrontend(
                 }
             }
         // This contains the whole directory
-        val tu = newTranslationUnitDeclaration(file.parent)
+        val tu = newTranslationUnit(file.parent)
         scopeManager.resetToGlobal(tu)
 
-        val packages = mutableMapOf<String, NamespaceDeclaration>()
+        val packages = mutableMapOf<String, Namespace>()
 
         for (sootClass in view.classes) {
             // Create an appropriate namespace, if it does not already exist
-            val pkg =
-                packages.computeIfAbsent(sootClass.type.packageName.name) {
-                    val pkg = newNamespaceDeclaration(it)
-                    scopeManager.addDeclaration(pkg)
-                    tu.addDeclaration(pkg)
-                    pkg
+            var pkg =
+                sootClass.type.packageName?.name?.split(language.namespaceDelimiter)?.fold(null) {
+                    previous: Namespace?,
+                    path ->
+                    val fqn = previous?.name.fqn(path)
+                    val innerPkg =
+                        packages.computeIfAbsent(fqn.toString()) {
+                            val pkg = newNamespace(it)
+                            scopeManager.addDeclaration(pkg)
+                            val holder = previous ?: tu
+                            holder.addDeclaration(pkg)
+                            pkg
+                        }
+                    // Enter namespace scope
+                    scopeManager.enterScope(innerPkg)
+                    innerPkg
                 }
-
-            // Enter namespace scope
-            scopeManager.enterScope(pkg)
 
             val decl = declarationHandler.handle(sootClass)
             scopeManager.addDeclaration(decl)
-            pkg.addDeclaration(decl)
+            pkg?.addDeclaration(decl)
 
             // Leave namespace scope
-            scopeManager.leaveScope(pkg)
+            while (pkg is Namespace) {
+                scopeManager.leaveScope(pkg)
+                pkg = pkg.astParent as? Namespace
+            }
 
             // We need to clear the processed because they need to be per-file and we only have one
             // frontend for all files

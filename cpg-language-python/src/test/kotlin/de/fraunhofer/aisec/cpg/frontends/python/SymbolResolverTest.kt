@@ -26,13 +26,15 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertFullName
+import de.fraunhofer.aisec.cpg.test.assertInvokes
 import de.fraunhofer.aisec.cpg.test.assertNotRefersTo
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import java.io.File
@@ -48,8 +50,7 @@ class SymbolResolverTest {
             }
 
         val globalA =
-            result.namespaces["fields"]
-                .variables[{ it.name.localName == "a" && it !is FieldDeclaration }]
+            result.namespaces["fields"].variables[{ it.name.localName == "a" && it !is Field }]
         assertNotNull(globalA)
 
         // Make sure, we only have one (!) field a
@@ -58,34 +59,34 @@ class SymbolResolverTest {
         assertNotNull(fieldA)
 
         val aRefs = result.refs("a")
-        aRefs.filterIsInstance<MemberExpression>().forEach { assertRefersTo(it, fieldA) }
-        aRefs.filter { it !is MemberExpression }.forEach { assertRefersTo(it, globalA) }
+        aRefs.filterIsInstance<MemberAccess>().forEach { assertRefersTo(it, fieldA) }
+        aRefs.filter { it !is MemberAccess }.forEach { assertRefersTo(it, globalA) }
 
         // We should only have one reference to "os" -> the member expression "self.os"
         val osRefs = result.refs("os")
         assertEquals(1, osRefs.size)
-        assertIs<MemberExpression>(osRefs.singleOrNull())
+        assertIs<MemberAccess>(osRefs.singleOrNull())
 
         // "os.name" is not a member expression but a reference to the field "name" of the "os"
         // module, therefore it is a reference
         val osNameRefs = result.refs("os.name")
         assertEquals(1, osNameRefs.size)
-        assertIsNot<MemberExpression>(osNameRefs.singleOrNull())
+        assertIsNot<MemberAccess>(osNameRefs.singleOrNull())
 
         // Same tests but for fields declared at the record level.
         // A variable "declared" inside a class is considered a field in Python.
         val fieldCopyA = result.records["MyClass"]?.fields["copyA"]
-        assertIs<FieldDeclaration>(fieldCopyA)
+        assertIs<Field>(fieldCopyA)
         val baz = result.records["MyClass"]?.methods["baz"]
-        assertIs<MethodDeclaration>(baz)
+        assertIs<Method>(baz)
         val bazPrint = baz.calls("print").singleOrNull()
-        assertIs<CallExpression>(bazPrint)
+        assertIs<Call>(bazPrint)
         val bazPrintArgument = bazPrint.arguments.firstOrNull()
         assertRefersTo(bazPrintArgument, fieldCopyA)
 
         // make sure, that this does not work without the receiver
         val bazDoesNotWork = baz.calls("doesNotWork").singleOrNull()
-        assertIs<CallExpression>(bazDoesNotWork)
+        assertIs<Call>(bazDoesNotWork)
         val bazDoesNotWorkArgument = bazDoesNotWork.arguments.firstOrNull()
         assertNotNull(bazDoesNotWorkArgument)
         assertNotRefersTo(bazDoesNotWorkArgument, fieldCopyA)
@@ -124,6 +125,70 @@ class SymbolResolverTest {
 
         val doSomething = result.calls("do_something").singleOrNull()
         assertNotNull(doSomething, "Expected to find a single call to 'do_something'")
-        assertIs<MemberCallExpression>(doSomething, "'do_something' should be a member call")
+        assertIs<MemberCall>(doSomething, "'do_something' should be a member call")
+    }
+
+    @Test
+    fun testFieldCallResolution() {
+        val topLevel = File("src/test/resources/python/field_call.py")
+        val result =
+            analyze(listOf(topLevel), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val clientClass = result.records["Client"]
+        assertNotNull(clientClass)
+
+        val serviceClass = result.records["Service"]
+        assertNotNull(serviceClass)
+
+        val clientField = serviceClass.fields["client"]
+        assertIs<Field>(clientField)
+
+        val fieldType = clientField.type
+        assertIs<ObjectType>(fieldType)
+        assertEquals("Client", fieldType.name.localName)
+
+        val sendMethod = clientClass.methods["send"]
+        assertNotNull(sendMethod)
+
+        val sendCall = result.calls["send"]
+        assertNotNull(sendCall)
+        assertIs<MemberCall>(sendCall)
+        assertInvokes(sendCall, sendMethod)
+    }
+
+    @Test
+    fun testFieldCallResolutionWithOrOperator() {
+        val topLevel = File("src/test/resources/python/field_call.py")
+        val result =
+            analyze(listOf(topLevel), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val clientClass = result.records["Client"]
+        assertNotNull(clientClass)
+
+        val serviceClass = result.records["Service2"]
+        assertNotNull(serviceClass)
+
+        val clientField = serviceClass.fields["client"]
+        assertIs<Field>(clientField)
+
+        val clientType =
+            clientField.assignedTypes.filterIsInstance<ObjectType>().firstOrNull {
+                it.name.localName == "Client"
+            }
+        assertNotNull(clientType)
+
+        val sendMethod = clientClass.methods["send"]
+        assertNotNull(sendMethod)
+
+        val sendCall = result.calls["send"]
+        assertNotNull(sendCall)
+        assertIs<MemberCall>(sendCall)
+        assertInvokes(sendCall, sendMethod)
     }
 }

@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
 import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
 import de.fraunhofer.aisec.cpg.sarif.toLocation
 import java.io.File
@@ -50,6 +49,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.absolute
 import kotlin.io.path.name
 import kotlin.io.path.readText
+import kotlin.math.max
 import kotlin.reflect.full.findAnnotation
 import kotlin.time.DurationUnit
 import org.slf4j.LoggerFactory
@@ -98,17 +98,7 @@ private constructor(
             ctx.executedFrontends.addAll(executedFrontends)
             bench.addMeasurement()
 
-            if (config.useParallelPasses) {
-                // Execute list of parallel passes together in parallel
-                for (list in config.registeredPasses) {
-                    executePassesInParallel(list, ctx, result, executedFrontends)
-                    if (result.isCancelled) {
-                        log.warn("Analysis interrupted, stopping Pass evaluation")
-                    }
-                }
-            } else {
-                executePassesSequentially(ctx, result, executedFrontends)
-            }
+            executePassesSequentially(ctx, result, executedFrontends)
         } catch (ex: TranslationException) {
             throw CompletionException(ex)
         } finally {
@@ -120,10 +110,11 @@ private constructor(
             }
         }
 
+        // ensure LoC is non-zero for division in average time per LoC
         log.info(
             "Translated {} LoC in total ({} / LoC)",
             result.stats.totalLinesOfCode,
-            (outerBench.duration / result.stats.totalLinesOfCode).toString(
+            (outerBench.duration / max(result.stats.totalLinesOfCode, 1)).toString(
                 DurationUnit.MILLISECONDS,
                 decimals = 3,
             ),

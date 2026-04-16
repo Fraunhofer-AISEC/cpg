@@ -28,35 +28,42 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
- * This [Pass] executes certain C++ specific conversions on initializers, that are only possible
+ * This [Pass] executes certain C/C++ specific conversions on initializers, that are only possible
  * once we know all the types. It may be extended in the future with other things that we currently
  * still do in the frontend, but might be more accurate to do once we parsed all files and have all
  * type information.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
-@ExecuteBefore(ResolveCallExpressionAmbiguityPass::class)
+@ExecuteBefore(ResolveCallAmbiguityPass::class)
 @DependsOn(TypeResolver::class)
+@RequiresLanguage(CLanguage::class)
 @Description(
-    "This Pass executes certain C++ specific conversions on initializers, that are only possible once we know all the types."
+    "This Pass executes certain C/C++ specific conversions on initializers, that are only possible once we know all the types."
 )
-class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
+class CXXExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
     private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
-    override fun accept(component: Component) {
+    override fun accept(tu: TranslationUnit) {
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
 
         walker.registerHandler(::fixInitializers)
@@ -68,17 +75,15 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
         walker.registerHandler(::connectDefinitions)
 
-        for (tu in component.translationUnits) {
-            walker.iterate(tu)
-        }
+        walker.iterate(tu)
     }
 
     /**
      * In the frontend, we keep parenthesis around some expressions, so we can decide whether they
-     * are [CastExpression] nodes or just simply brackets with no syntactic value. The
-     * [CastExpression] conversion is done in [convertOperators], but in this function we are trying
-     * to get rid of those ()-unary operators that are meaningless, in order to reduce clutter to
-     * the graph.
+     * are [de.fraunhofer.aisec.cpg.graph.expressions.Cast] nodes or just simply brackets with no
+     * syntactic value. The [de.fraunhofer.aisec.cpg.graph.expressions.Cast] conversion is done in
+     * [convertOperators], but in this function we are trying to get rid of those ()-unary operators
+     * that are meaningless, in order to reduce clutter to the graph.
      */
     private fun removeBracketOperators(node: UnaryOperator) {
         val input = node.input
@@ -98,10 +103,9 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * operator where some arguments are wrapped in parentheses. This function tries to resolve
      * this.
      *
-     * Note: This is done especially for the C++ frontend.
-     * [ResolveCallExpressionAmbiguityPass.handleCall] handles the more general case (which also
-     * applies to C++), in which a cast and a call are indistinguishable and need to be resolved
-     * once all types are known.
+     * Note: This is done especially for the C++ frontend. [ResolveCallAmbiguityPass.handleCall]
+     * handles the more general case (which also applies to C++), in which a cast and a call are
+     * indistinguishable and need to be resolved once all types are known.
      */
     private fun convertOperators(binOp: BinaryOperator) {
         val fakeUnaryOp = binOp.lhs
@@ -122,7 +126,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // We need to perform the following steps:
             // * create a cast expression out of the ()-unary operator, with the type that is
             //   referred to in the op.
-            val cast = newCastExpression().codeAndLocationFrom(fakeUnaryOp)
+            val cast = newCast().codeAndLocationFrom(fakeUnaryOp)
             cast.language = language
             cast.castType = type
 
@@ -156,7 +160,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     private fun fixInitializers(node: Node) {
-        if (node is VariableDeclaration) {
+        if (node is Variable) {
             // check if we have the corresponding class for this type
             val record = node.type.root.recordDeclaration
             val typeString = node.type.root.name
@@ -164,7 +168,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
                     val initializer =
-                        newConstructExpression(typeString)
+                        newConstruction(typeString)
                             .codeAndLocationFrom(node)
                             .implicit(code = "$typeString()")
                     initializer.language = node.language
@@ -175,8 +179,8 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         initializer,
                     )
                 } else if (
-                    currInitializer !is ConstructExpression &&
-                        currInitializer is CallExpression &&
+                    currInitializer !is Construction &&
+                        currInitializer is Call &&
                         currInitializer.name.localName == node.type.root.name.localName
                 ) {
                     // This should actually be a construct expression, not a call!
@@ -184,8 +188,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     // Note: Cannot simplify call chain due to nullable `Node::code`
                     val signature = arguments.map(Node::code).joinToString(", ")
                     val initializer =
-                        newConstructExpression(typeString)
-                            .implicit(code = "$typeString($signature)")
+                        newConstruction(typeString).implicit(code = "$typeString($signature)")
                     initializer.language = node.language
                     initializer.type = node.type
                     initializer.arguments = mutableListOf(*arguments.toTypedArray())
@@ -197,14 +200,15 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This function connects a [FunctionDeclaration] that is a definition (i.e., has a body) to
-     * possible declarations of the same function (has [FunctionDeclaration.isDefinition] set to
-     * false) pointing to it by setting the field [FunctionDeclaration.definition].
+     * This function connects a [Function] that is a definition (i.e., has a body) to possible
+     * declarations of the same function (has [Function.isDefinition] set to false) pointing to it
+     * by setting the field [Function.definition].
      *
-     * This works across the whole [Component].
+     * Because the [scopeManager] is shared across all [TranslationUnit]s in a [Component],
+     * declarations from other translation units (e.g., headers) are also considered.
      */
     private fun connectDefinitions(declaration: Node) {
-        if (declaration !is FunctionDeclaration) {
+        if (declaration !is Function) {
             return
         }
 
@@ -222,7 +226,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // Note: scope is not null.
         // Update the definition
         val candidates =
-            scope.symbols[declaration.symbol]?.filterIsInstance<FunctionDeclaration>()?.filter {
+            scope.symbols[declaration.symbol]?.filterIsInstance<Function>()?.filter {
                 // We should only connect methods to methods, functions to functions and
                 // constructors to constructors.
                 it::class == declaration::class &&

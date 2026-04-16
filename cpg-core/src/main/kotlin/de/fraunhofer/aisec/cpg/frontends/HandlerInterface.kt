@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 
 /**
  * This functional interface specifies how a handler class should translate raw AST nodes into CPG
@@ -39,7 +39,7 @@ fun interface HandlerInterface<S, T> {
     /**
      * The returned CPG node type [S] should be as specific as possible to make it easier for the
      * caller. For example, if a handler parses functions and methods, it should at least return a
-     * [FunctionDeclaration] and not just a [Declaration].
+     * [Function] and not just a [Declaration].
      *
      * Furthermore, this function *can* return `null`, even though it should be avoided. A valid
      * use-case is that some nodes might be not relevant to be directly into CPG nodes at this

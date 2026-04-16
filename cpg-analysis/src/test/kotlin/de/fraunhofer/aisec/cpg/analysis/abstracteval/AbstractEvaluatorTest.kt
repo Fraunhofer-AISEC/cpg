@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.IntegerIntervalEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.testcases.AbstractEvaluationTests
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -37,7 +37,7 @@ import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AbstractEvaluatorTest {
-    private lateinit var tu: TranslationUnitDeclaration
+    private lateinit var tu: TranslationUnit
 
     @BeforeAll
     fun beforeAll() {

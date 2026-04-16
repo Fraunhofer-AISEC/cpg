@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -48,7 +48,7 @@ abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
     lateinit var walker: SubgraphWalker.ScopedWalker<Node>
 
-    override fun accept(tu: TranslationUnitDeclaration) {
+    override fun accept(tu: TranslationUnit) {
         ctx.currentComponent = tu.component
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::EOG_FORWARD)
         walker.registerHandler { node -> handleNode(node, tu) }
@@ -64,13 +64,13 @@ abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
      * This function is called for each node in the graph. It needs to be overridden by subclasses
      * to handle the specific node.
      */
-    abstract fun handleNode(node: Node, tu: TranslationUnitDeclaration)
+    abstract fun handleNode(node: Node, tu: TranslationUnit)
 
     /**
-     * Gets concept of type [T] for this [TranslationUnitDeclaration] or creates a new one if it
-     * does not exist.
+     * Gets concept of type [T] for this [TranslationUnit] or creates a new one if it does not
+     * exist.
      */
-    internal inline fun <reified T : Concept> TranslationUnitDeclaration.getConceptOrCreate(
+    internal inline fun <reified T : Concept> TranslationUnit.getConceptOrCreate(
         noinline init: ((T) -> Unit)? = null
     ): T {
         var concept = this.conceptNodes.filterIsInstance<T>().singleOrNull()

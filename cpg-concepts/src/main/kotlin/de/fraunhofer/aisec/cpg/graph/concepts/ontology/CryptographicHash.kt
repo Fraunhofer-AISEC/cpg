@@ -26,23 +26,31 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.manualExtensions.HashFunction
+import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInDFGPath
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public open class CryptographicHash(
-    public val algorithm: String?,
-    public val usesSalt: Boolean?,
+open class CryptographicHash(
+    val algorithm: String?,
+    val hashFunction: HashFunction,
+    val usesSalt: Boolean?,
     linkedConcept: Confidentiality,
     underlyingNode: Node? = null,
 ) : CryptographicOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is CryptographicHash &&
             super.equals(other) &&
+            other.hashFunction == this.hashFunction &&
             other.algorithm == this.algorithm &&
             other.usesSalt == this.usesSalt
 
     override fun hashCode(): Int = Objects.hash(super.hashCode(), algorithm, usesSalt)
+
+    override fun setDFG() {
+        underlyingNode?.insertNodeAfterwardInDFGPath(this)
+    }
 }

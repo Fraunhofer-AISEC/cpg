@@ -27,14 +27,15 @@ package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import java.time.Duration
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
+import kotlin.time.Duration
 
 public open class ActivityLogging(
+    logLevelThreshold: LogLevel?,
     enabled: Boolean?,
     monitoringEnabled: Boolean?,
     name: String?,
@@ -44,6 +45,7 @@ public open class ActivityLogging(
     underlyingNode: Node? = null,
 ) :
     Logging(
+        logLevelThreshold,
         enabled,
         monitoringEnabled,
         name,

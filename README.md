@@ -94,22 +94,20 @@ configuration is set through a builder pattern.
 #### InferenceConfiguration
 
 The class `InferenceConfiguration` can be used to affect the behavior or the passes if they identify missing nodes.
-Currently, there are three flags which can be enabled:
+Currently, there are flags which can be enabled, the most important ones are:
 
-* `guessCastExpression` enables guessing if a CPP expression is a cast or a call expression if it is not clear.
 * `inferRecords` enables the inference of missing record declarations (i.e., classes and structs)
-* `inferDfgForUnresolvedSymbols` adds DFG edges to method calls represent all potential data flows if the called function
+* `inferDfgForUnresolvedCalls` adds DFG edges to method calls represent all potential data flows if the called function
   is not present in the source code under analysis.
 
-Only `inferDfgForUnresolvedSymbols` is turned on by default.
+Only `inferDfgForUnresolvedCalls` is turned on by default.
 
 The configuration can be made through a builder pattern and is set in the `TranslationConfiguration` as follows:
 ```kt
 val inferenceConfig = InferenceConfiguration
     .builder()
-    .guessCastExpression(true)
     .inferRecords(true)
-    .inferDfgForUnresolvedSymbols(true)
+    .inferDfgForUnresolvedCalls(true)
     .build()
 
 val translationConfig = TranslationConfiguration

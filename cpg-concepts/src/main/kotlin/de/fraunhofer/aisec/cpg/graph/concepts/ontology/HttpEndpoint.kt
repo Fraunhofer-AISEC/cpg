@@ -36,16 +36,19 @@ import kotlin.String
  * An HTTP endpoint can set the "proxyTarget" property, in case that is routed through a (reverse)
  * proxy, e.g. a load balancer.
  */
-public open class HttpEndpoint(
-    public val handler: String?,
-    public val method: String?,
-    public val path: String?,
-    public val url: String?,
-    public val authenticity: Authenticity?,
-    public val authorization: Authorization?,
-    public val httpRequestContext: HttpRequestContext?,
-    public val proxyTarget: HttpEndpoint?,
-    public val transportEncryption: TransportEncryption?,
+open class HttpEndpoint(
+    var rateLimiting: RateLimiting?,
+    var maxInputSize: Int?,
+    var userInput: MutableList<Node>,
+    var handler: String?,
+    var method: HttpMethod,
+    var path: String?,
+    var url: String?,
+    var authenticity: Authenticity?,
+    var authorization: Authorization?,
+    var httpRequestContext: HttpRequestContext?,
+    var proxyTarget: HttpEndpoint?,
+    var transportEncryption: TransportEncryption?,
     underlyingNode: Node? = null,
 ) : RemoteEntryPoint(underlyingNode) {
     override fun equals(other: Any?): Boolean =
@@ -59,7 +62,10 @@ public open class HttpEndpoint(
             other.authorization == this.authorization &&
             other.httpRequestContext == this.httpRequestContext &&
             other.proxyTarget == this.proxyTarget &&
-            other.transportEncryption == this.transportEncryption
+            other.transportEncryption == this.transportEncryption &&
+            other.rateLimiting == this.rateLimiting &&
+            other.maxInputSize == this.maxInputSize &&
+            other.userInput == this.userInput
 
     override fun hashCode(): Int =
         Objects.hash(
@@ -73,5 +79,21 @@ public open class HttpEndpoint(
             httpRequestContext,
             proxyTarget,
             transportEncryption,
+            rateLimiting,
+            maxInputSize,
+            userInput,
         )
+}
+
+enum class HttpMethod {
+    GET,
+    POST,
+    PUT,
+    HEAD,
+    PATCH,
+    OPTIONS,
+    CONNECT,
+    TRACE,
+    DELETE,
+    UNKNOWN,
 }

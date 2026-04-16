@@ -31,17 +31,15 @@ import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Usages
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.NodeEntity
-import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration who has a type. */
-@NodeEntity
 abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
 
     @DoNotPersist override var observerEnabled: Boolean = true
@@ -98,6 +96,12 @@ abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
 
     /** All usages of the variable/field. */
     @PopulatedByPass(SymbolResolver::class) var usages by unwrapping(ValueDeclaration::usageEdges)
+
+    /**
+     * Defines, whether this declaration is static or not. Commonly used to declare static
+     * [FieldDeclaration]s or [MethodDeclaration]s in classes (see [RecordDeclaration]).
+     */
+    var isStatic = false
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE).appendSuper(super.toString()).toString()

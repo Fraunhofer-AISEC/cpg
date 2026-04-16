@@ -27,9 +27,16 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.ExpressionList
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 
 class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Expression, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemExpression, lang) {
@@ -39,7 +46,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handleNode(node: TypeScriptNode): Expression {
         when (node.type) {
-            "CallExpression" -> return handleCallExpression(node)
+            "CallExpression" -> return handleCall(node)
             "PropertyAccessExpression" -> return handlePropertyAccessExpression(node)
             "Identifier" -> return handleIdentifier(node)
             "FirstTemplateToken" -> return handleStringLiteral(node)
@@ -61,13 +68,13 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         return ProblemExpression("No handler was implemented for nodes of type " + node.type)
     }
 
-    private fun handleJsxAttribute(node: TypeScriptNode): KeyValueExpression {
+    private fun handleJsxAttribute(node: TypeScriptNode): KeyValue {
         val key =
             node.children?.first()?.let { this.handle(it) } ?: newProblemExpression("missing key")
         val value =
             node.children?.last()?.let { this.handle(it) } ?: newProblemExpression("missing value")
 
-        return newKeyValueExpression(key, value, rawNode = node)
+        return newKeyValue(key, value, rawNode = node)
     }
 
     private fun handleJsxClosingElement(node: TypeScriptNode): Expression {
@@ -115,12 +122,12 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
     private fun handleArrowFunction(node: TypeScriptNode): Expression {
         // parse as a function
-        val func = frontend.declarationHandler.handle(node) as? FunctionDeclaration
+        val func = frontend.declarationHandler.handle(node) as? Function
 
         // the function will (probably) not have a defined return type, so we try to deduce this
         // from a return statement
         if (func?.type == unknownType()) {
-            val returnValue = func.bodyOrNull<ReturnStatement>()?.returnValue
+            val returnValue = func.bodyOrNull<Return>()?.returnValue
 
             /*if (returnValue == null) {
                 // we have a void function
@@ -135,23 +142,23 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         // we cannot directly return a function declaration as an expression, so we
         // wrap it into a lambda expression
-        val lambda = newLambdaExpression(rawNode = node)
+        val lambda = newLambda(rawNode = node)
         lambda.function = func
 
         return lambda
     }
 
-    private fun handlePropertyAssignment(node: TypeScriptNode): KeyValueExpression {
+    private fun handlePropertyAssignment(node: TypeScriptNode): KeyValue {
         val key =
             node.children?.first()?.let { this.handle(it) } ?: newProblemExpression("missing key")
         val value =
             node.children?.last()?.let { this.handle(it) } ?: newProblemExpression("missing value")
 
-        return newKeyValueExpression(key, value, rawNode = node)
+        return newKeyValue(key, value, rawNode = node)
     }
 
-    private fun handleObjectLiteralExpression(node: TypeScriptNode): InitializerListExpression {
-        val ile = newInitializerListExpression(unknownType(), rawNode = node)
+    private fun handleObjectLiteralExpression(node: TypeScriptNode): InitializerList {
+        val ile = newInitializerList(unknownType(), rawNode = node)
 
         ile.initializers =
             node.children?.mapNotNull { this.handle(it) }?.toMutableList() ?: mutableListOf()
@@ -187,11 +194,11 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         val name = node.children?.last()?.let { this.frontend.codeOf(it) } ?: ""
 
-        return newMemberExpression(name, base, unknownType(), ".", rawNode = node)
+        return newMemberAccess(name, base, unknownType(), ".", rawNode = node)
     }
 
-    private fun handleCallExpression(node: TypeScriptNode): Expression {
-        val call: CallExpression
+    private fun handleCall(node: TypeScriptNode): Expression {
+        val call: Call
 
         // peek at the children, to check whether it is a call expression or member call expression
         val propertyAccess = node.firstChild("PropertyAccessExpression")
@@ -199,10 +206,10 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         call =
             if (propertyAccess != null) {
                 val memberExpressionExpression =
-                    this.handle(propertyAccess) as? MemberExpression
+                    this.handle(propertyAccess) as? MemberAccess
                         ?: return ProblemExpression("node is not a member expression")
 
-                newMemberCallExpression(memberExpressionExpression, rawNode = node)
+                newMemberCall(memberExpressionExpression, rawNode = node)
             } else {
                 // TODO: fqn - how?
                 val fqn = this.frontend.getIdentifierName(node)
@@ -210,7 +217,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
                 val ref = newReference(fqn)
 
-                newCallExpression(ref, fqn, false, rawNode = node)
+                newCall(ref, fqn, false, rawNode = node)
             }
 
         // parse the arguments. the first node is the identifier, so we skip that

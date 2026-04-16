@@ -32,10 +32,8 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public open class CryptographicOperation(
-    linkedConcept: Confidentiality,
-    underlyingNode: Node? = null,
-) : Operation(linkedConcept, underlyingNode) {
+open class CryptographicOperation(linkedConcept: Confidentiality, underlyingNode: Node? = null) :
+    Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is CryptographicOperation && super.equals(other)
 

@@ -27,15 +27,13 @@ package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import java.util.List
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
-import kotlin.String
 
 public open class DatabaseOperation(
-    public val calls: List<String>?,
+    public val calls: List<Node>?,
     public val databaseService: DatabaseService?,
     public val storage: DatabaseStorage?,
     linkedConcept: DatabaseStorage,

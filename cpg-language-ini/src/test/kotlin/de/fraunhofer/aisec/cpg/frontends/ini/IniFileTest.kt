@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.ini
 
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.test.BaseTest
@@ -49,7 +49,7 @@ class IniFileTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(topLevel.resolve("config.ini").toFile()), topLevel, true) {
                 it.registerLanguage<IniFileLanguage>()
             }
-        assertIs<TranslationUnitDeclaration>(tu)
+        assertIs<TranslationUnit>(tu)
 
         val namespace = tu.namespaces.firstOrNull()
         assertNotNull(namespace)
@@ -62,31 +62,31 @@ class IniFileTest : BaseTest() {
         assertEquals(2, tu.records.size, "Expected two records")
 
         val sectionA = tu.records["SectionA"]
-        assertIs<RecordDeclaration>(sectionA)
+        assertIs<Record>(sectionA)
         assertEquals(2, sectionA.fields.size, "Expected two fields")
 
         val sectionAEntry1 = sectionA.fields["key1"]
-        assertIs<FieldDeclaration>(sectionAEntry1)
+        assertIs<Field>(sectionAEntry1)
         assertLiteralValue("value1", sectionAEntry1.initializer)
 
         val sectionAEntry2 = sectionA.fields["key2"]
-        assertIs<FieldDeclaration>(sectionAEntry2)
+        assertIs<Field>(sectionAEntry2)
         assertLiteralValue("value2", sectionAEntry2.initializer)
 
         val sectionB = tu.records["SectionB"]
-        assertIs<RecordDeclaration>(sectionB)
+        assertIs<Record>(sectionB)
         assertEquals(3, sectionB.fields.size, "Expected three fields")
 
         val sectionBEntry1 = sectionB.fields["key1"]
-        assertIs<FieldDeclaration>(sectionBEntry1)
+        assertIs<Field>(sectionBEntry1)
         assertLiteralValue("123", sectionBEntry1.initializer)
 
         val sectionBEntry2 = sectionB.fields["key2"]
-        assertIs<FieldDeclaration>(sectionBEntry2)
+        assertIs<Field>(sectionBEntry2)
         assertLiteralValue("1.2.3.4", sectionBEntry2.initializer)
 
         val sectionBEntry3 = sectionB.fields["key3"]
-        assertIs<FieldDeclaration>(sectionBEntry3)
+        assertIs<Field>(sectionBEntry3)
         assertLiteralValue("\"abc\"", sectionBEntry3.initializer)
     }
 }

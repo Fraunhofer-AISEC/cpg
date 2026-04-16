@@ -26,7 +26,12 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Cast
+import de.fraunhofer.aisec.cpg.graph.expressions.Range
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
@@ -34,7 +39,7 @@ import kotlin.test.*
 class ExpressionTest {
 
     @Test
-    fun testCastExpression() {
+    fun testCast() {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val tu =
             analyzeAndGetFirstTU(
@@ -58,13 +63,13 @@ class ExpressionTest {
         val s = mainFunc.variables["s"]
         assertNotNull(s)
 
-        val cast = s.initializer as? CastExpression
+        val cast = s.initializer as? Cast
         assertNotNull(cast)
         assertFullName("main.MyStruct", cast.castType)
         assertSame(f, (cast.expression as? Reference)?.refersTo)
 
         val ignored = main.variables("_")
-        ignored.forEach { assertIs<CastExpression>(it.initializer) }
+        ignored.forEach { assertIs<Cast>(it.initializer) }
     }
 
     @Test
@@ -85,10 +90,7 @@ class ExpressionTest {
         assertLocalName("int[]", b.type)
 
         // [:1]
-        var slice =
-            assertIs<RangeExpression>(
-                assertIs<SubscriptExpression>(b.firstAssignment).subscriptExpression
-            )
+        var slice = assertIs<Range>(assertIs<Subscription>(b.firstAssignment).subscriptExpression)
         assertNull(slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
@@ -98,7 +100,7 @@ class ExpressionTest {
         assertLocalName("int[]", c.type)
 
         // [1:]
-        slice = assertIs(assertIs<SubscriptExpression>(c.firstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<Subscription>(c.firstAssignment).subscriptExpression)
         assertLiteralValue(1, slice.floor)
         assertNull(slice.ceiling)
         assertNull(slice.third)
@@ -108,7 +110,7 @@ class ExpressionTest {
         assertLocalName("int[]", d.type)
 
         // [0:1]
-        slice = assertIs(assertIs<SubscriptExpression>(d.firstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<Subscription>(d.firstAssignment).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
@@ -118,7 +120,7 @@ class ExpressionTest {
         assertLocalName("int[]", e.type)
 
         // [0:1:1]
-        slice = assertIs(assertIs<SubscriptExpression>(e.firstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<Subscription>(e.firstAssignment).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertLiteralValue(1, slice.third)

@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.BRACKET_LEFT
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.BRACKET_RIGHT
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.COMMA
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.WHITESPACE
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Function.Companion.BRACKET_LEFT
+import de.fraunhofer.aisec.cpg.graph.declarations.Function.Companion.BRACKET_RIGHT
+import de.fraunhofer.aisec.cpg.graph.declarations.Function.Companion.COMMA
+import de.fraunhofer.aisec.cpg.graph.declarations.Function.Companion.WHITESPACE
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**
@@ -66,12 +66,10 @@ constructor(
         get() = parameters + returnTypes
 
     companion object {
-        /**
-         * This helper function computes a [FunctionType] out of an existing [FunctionDeclaration].
-         */
+        /** This helper function computes a [FunctionType] out of an existing [Function]. */
         @JvmStatic
         fun computeType(
-            func: FunctionDeclaration,
+            func: Function,
             returnTypes: List<Type> = func.returnTypes.toList(),
         ): FunctionType {
             val type =
@@ -86,14 +84,14 @@ constructor(
         }
 
         /**
-         * This helper function builds a function signature out of an existing [FunctionDeclaration]
-         * and potential return types.
+         * This helper function builds a function signature out of an existing [Function] and
+         * potential return types.
          *
          * Its main use-case is to have a human-readable representation of the function type. For
          * example `foo(Bar)string` for a function `foo` with parameter types `Bar` and return type
          * `string`.
          */
-        fun buildSignature(func: FunctionDeclaration, returnTypes: List<Type>): String =
+        fun buildSignature(func: Function, returnTypes: List<Type>): String =
             func.name.localName +
                 func.parameters.joinToString(COMMA + WHITESPACE, BRACKET_LEFT, BRACKET_RIGHT) {
                     it.type.typeName

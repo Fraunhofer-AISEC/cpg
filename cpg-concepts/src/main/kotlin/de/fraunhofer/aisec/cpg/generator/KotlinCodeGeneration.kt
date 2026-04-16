@@ -517,8 +517,8 @@ private val dataPropertyTypeMap: Map<String, TypeName> =
         put("float", FLOAT)
         put("boolean", BOOLEAN)
         put(
-            "de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration",
-            ClassName("de.fraunhofer.aisec.cpg.graph.declarations", "FunctionDeclaration"),
+            "de.fraunhofer.aisec.cpg.graph.declarations.Function",
+            ClassName("de.fraunhofer.aisec.cpg.graph.declarations", "Function"),
         )
         put(
             "de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression",
@@ -529,27 +529,21 @@ private val dataPropertyTypeMap: Map<String, TypeName> =
             ClassName("de.fraunhofer.aisec.cpg.graph", "Node"),
         )
         put(
-            "de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression",
-            ClassName("de.fraunhofer.aisec.cpg.graph.statements.expressions", "CallExpression"),
+            "de.fraunhofer.aisec.cpg.graph.statements.expressions.Call",
+            ClassName("de.fraunhofer.aisec.cpg.graph.statements.expressions", "Call"),
         )
         put(
-            "java.util.List<de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration>",
+            "java.util.List<de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit>",
             ClassName("java.util", "List")
                 .parameterizedBy(
-                    ClassName(
-                        "de.fraunhofer.aisec.cpg.graph.declarations",
-                        "TranslationUnitDeclaration",
-                    )
+                    ClassName("de.fraunhofer.aisec.cpg.graph.declarations", "TranslationUnit")
                 ),
         )
         put(
-            "java.util.List<de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression>",
+            "java.util.List<de.fraunhofer.aisec.cpg.graph.statements.expressions.Call>",
             ClassName("java.util", "List")
                 .parameterizedBy(
-                    ClassName(
-                        "de.fraunhofer.aisec.cpg.graph.statements.expressions",
-                        "CallExpression",
-                    )
+                    ClassName("de.fraunhofer.aisec.cpg.graph.statements.expressions", "Call")
                 ),
         )
         put("java.util.Map<String, String>", MUTABLE_MAP.parameterizedBy(STRING, STRING))

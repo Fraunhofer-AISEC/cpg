@@ -35,8 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
@@ -245,7 +245,7 @@ class DFGFunctionSummariesTest {
         assertNotNull(argA)
         /*
         The flows should be as follows:
-        VariableDeclaration["a"] -> Reference["a" (argument of call)] -CallingContextIn-> ParameterDeclaration -CallingContextOut-> Reference["a" (return)]
+        Variable["a"] -> Reference["a" (argument of call)] -CallingContextIn-> Parameter -CallingContextOut-> Reference["a" (return)]
          */
 
         assertEquals(1, argA.nextDFG.size)
@@ -266,7 +266,7 @@ class DFGFunctionSummariesTest {
         assertNotNull(prevDfgOfParam0)
         assertEquals(param1, prevDfgOfParam0.start)
 
-        val returnA = main.allChildren<ReturnStatement>().singleOrNull()?.returnValue as? Reference
+        val returnA = main.allChildren<Return>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)
 
         assertEquals(mutableSetOf<Node>(returnA), param0.nextDFG)
@@ -309,8 +309,8 @@ class DFGFunctionSummariesTest {
         assertNotNull(argA)
         /*
         The flows should be as follows:
-        VariableDeclaration["a"] -> { Reference["a" (argument of call)], Reference["a" (return)] }
-        Reference["a" (argument of call)] -CallingContextIn-> ParameterDeclaration -CallingContextOut-> Reference["a" (argument of call)] -> VariableDeclaration["a"]
+        Variable["a"] -> { Reference["a" (argument of call)], Reference["a" (return)] }
+        Reference["a" (argument of call)] -CallingContextIn-> Parameter -CallingContextOut-> Reference["a" (argument of call)] -> Variable["a"]
          */
 
         assertEquals(2, argA.nextDFG.size)
@@ -332,7 +332,7 @@ class DFGFunctionSummariesTest {
         assertNotNull(prevDfgOfParam0)
         assertEquals(param1, prevDfgOfParam0.start)
 
-        val returnA = main.allChildren<ReturnStatement>().singleOrNull()?.returnValue as? Reference
+        val returnA = main.allChildren<Return>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)
 
         assertEquals(mutableSetOf<Node>(argA), param0.nextDFG)

@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 
 /**
  * The [Value] interface is used by the AbstractEvaluator to store the behaviour of different
@@ -53,7 +53,7 @@ interface Value<T> {
             return when (node) {
                 null -> null
                 is Reference -> getInitializer(node.refersTo)
-                is VariableDeclaration -> node
+                is Variable -> node
                 else -> getInitializer(node.prevDFG.firstOrNull())
             }
         }

@@ -30,16 +30,19 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
+import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.serialization.NodeJSON
+import de.fraunhofer.aisec.cpg.serialization.toJSON
 import java.io.File
 import java.nio.file.Path
 import kotlin.uuid.Uuid
@@ -124,6 +127,9 @@ class ConsoleService {
         lastProject = project
 
         val result = project.analyze()
+
+        // Update the global analysis result in the MCP server
+        McpServerHelper.setGlobalAnalysisResult(result.translationResult)
 
         // Populate QueryTree cache for lazy loading
         populateQueryTreeCache(result.requirementsResults)
@@ -241,9 +247,8 @@ class ConsoleService {
     }
 
     /**
-     * Adds a new [Concept] node as an [de.fraunhofer.aisec.cpg.graph.OverlayNode] to an existing
-     * node in the analysis result. The DFG edges can be configured to connect the new concept node
-     * to the existing node.
+     * Adds a new [Concept] node as an [OverlayNode] to an existing node in the analysis result. The
+     * DFG edges can be configured to connect the new concept node to the existing node.
      *
      * @param request The request containing node ID, concept name and configuration parameters
      *   (connect DFG)
@@ -295,10 +300,7 @@ class ConsoleService {
      * Extracts the nodes from the given translation unit. If [overlayNodes] is true, it extracts
      * the overlay nodes, otherwise it extracts the AST nodes.
      */
-    private fun extractNodes(
-        tu: TranslationUnitDeclaration,
-        overlayNodes: Boolean,
-    ): List<NodeJSON> {
+    private fun extractNodes(tu: TranslationUnit, overlayNodes: Boolean): List<NodeJSON> {
         return if (overlayNodes) {
             tu.nodes.flatMap { it.overlays }.map { it.toJSON() }
         } else {

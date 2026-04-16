@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
-import java.util.List
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean

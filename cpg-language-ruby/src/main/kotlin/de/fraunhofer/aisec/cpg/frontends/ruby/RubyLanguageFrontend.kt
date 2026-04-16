@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsNewParse
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
@@ -47,11 +47,11 @@ class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
     val expressionHandler: ExpressionHandler = ExpressionHandler(this)
     val statementHandler: StatementHandler = StatementHandler(this)
 
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         return parse(file.readText(Charsets.UTF_8), file.toPath())
     }
 
-    override fun parse(content: String, path: Path?): TranslationUnitDeclaration {
+    override fun parse(content: String, path: Path?): TranslationUnit {
         val ruby = Ruby.getGlobalRuntime()
         val parser = Parser(ruby)
 
@@ -70,8 +70,8 @@ class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
         return handleRootNode(node)
     }
 
-    private fun handleRootNode(node: RootNode): TranslationUnitDeclaration {
-        val tu = newTranslationUnitDeclaration(node.file, rawNode = node)
+    private fun handleRootNode(node: RootNode): TranslationUnit {
+        val tu = newTranslationUnit(node.file, rawNode = node)
 
         scopeManager.resetToGlobal(tu)
 

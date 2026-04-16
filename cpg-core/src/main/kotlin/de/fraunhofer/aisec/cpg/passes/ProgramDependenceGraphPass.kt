@@ -27,11 +27,11 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
@@ -128,7 +128,7 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
         return true
     }
 
-    override fun accept(tu: TranslationUnitDeclaration) {
+    override fun accept(tu: TranslationUnit) {
         tu.statements.forEach(::handle)
         tu.namespaces.forEach(::handle)
         tu.declarations.forEach(::handle)

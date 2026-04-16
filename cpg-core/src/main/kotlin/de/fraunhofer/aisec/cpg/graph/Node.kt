@@ -35,9 +35,9 @@ import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.Overlays
@@ -46,21 +46,18 @@ import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
-import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
+import de.fraunhofer.aisec.cpg.persistence.converters.LocationConverter
+import de.fraunhofer.aisec.cpg.persistence.converters.NameConverter
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import kotlin.uuid.Uuid
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
-import org.neo4j.ogm.annotation.GeneratedValue
-import org.neo4j.ogm.annotation.Id
-import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.Transient
-import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -95,10 +92,10 @@ abstract class Node() :
      * The scope this node "lives" in / in which it is defined. This property is set in
      * [Node.applyMetadata] by a [ScopeProvider] at the time when the node is created.
      *
-     * For example, if a [RecordDeclaration] is defined in a [TranslationUnitDeclaration] (without
-     * any namespaces), the scope of the [RecordDeclaration] is most likely a [GlobalScope]. Since
-     * the declaration itself creates a [RecordScope], the scope of a [MethodDeclaration] within the
-     * class would be a [RecordScope] pointing to the [RecordDeclaration].
+     * For example, if a [Record] is defined in a [TranslationUnit] (without any namespaces), the
+     * scope of the [Record] is most likely a [GlobalScope]. Since the declaration itself creates a
+     * [RecordScope], the scope of a [Method] within the class would be a [RecordScope] pointing to
+     * the [Record].
      */
     @Relationship(value = "SCOPE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference
@@ -157,7 +154,7 @@ abstract class Node() :
 
     var prevCDG by unwrapping(Node::prevCDGEdges)
 
-    @DoNotPersist @Transient @JsonIgnore var astParent: AstNode? = null
+    @DoNotPersist @JsonIgnore var astParent: AstNode? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
@@ -176,10 +173,7 @@ abstract class Node() :
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     var prevDFG by unwrapping(Node::prevDFGEdges)
 
-    /**
-     * Virtual property for accessing [nextDFGEdges] that have a
-     * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
-     */
+    /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
     @DoNotPersist
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     val prevFullDFG: List<Node>
@@ -200,10 +194,7 @@ abstract class Node() :
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     var nextDFG by unwrapping(Node::nextDFGEdges)
 
-    /**
-     * Virtual property for accessing [nextDFGEdges] that have a
-     * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
-     */
+    /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
     @DoNotPersist
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     val nextFullDFG: List<Node>
@@ -247,7 +238,7 @@ abstract class Node() :
     var isImplicit = false
 
     /** Required field for persistence. It contains the node ID. */
-    @DoNotPersist @Id @GeneratedValue var legacyId: Long = NodeIdGenerator.next()
+    @DoNotPersist var legacyId: Long = NodeIdGenerator.next()
 
     /**
      * A (more or less) unique identifier for this node. It is a [Uuid] derived from

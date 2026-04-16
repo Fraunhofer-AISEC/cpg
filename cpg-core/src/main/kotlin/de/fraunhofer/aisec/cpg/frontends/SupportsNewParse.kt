@@ -25,14 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import java.nio.file.Path
 
 interface SupportsNewParse {
     /**
-     * Parses the given [content] with the language frontend into a [TranslationUnitDeclaration]. If
-     * known, a [path] should be specified, so that the language frontend can potentially use more
-     * advanced features like module resolution.
+     * Parses the given [content] with the language frontend into a [TranslationUnit]. If known, a
+     * [path] should be specified, so that the language frontend can potentially use more advanced
+     * features like module resolution.
      */
-    fun parse(content: String, path: Path? = null): TranslationUnitDeclaration
+    fun parse(content: String, path: Path? = null): TranslationUnit
 }

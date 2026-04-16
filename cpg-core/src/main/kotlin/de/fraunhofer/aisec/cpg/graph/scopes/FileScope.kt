@@ -25,12 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 
 /**
  * Represents a scope that is only visible in the current file. This is usually used in programming
  * languages for file-level imports.
  *
- * The only supported AST node is a [TranslationUnitDeclaration].
+ * The only supported AST node is a [TranslationUnit].
  */
-class FileScope(astNode: TranslationUnitDeclaration) : Scope(astNode)
+class FileScope(astNode: TranslationUnit) : Scope(astNode)

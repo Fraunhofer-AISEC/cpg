@@ -30,13 +30,14 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
-import de.fraunhofer.aisec.cpg.helpers.neo4j.DataflowGranularityConverter
+import de.fraunhofer.aisec.cpg.persistence.Convert
+import de.fraunhofer.aisec.cpg.persistence.converters.DataflowGranularityConverter
 import java.util.Objects
 import kotlin.reflect.KProperty
-import org.neo4j.ogm.annotation.*
-import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /**
  * The granularity of the data-flow, e.g., whether the flow contains the whole object, or just a
@@ -55,7 +56,7 @@ data object FullDataflowGranularity : Granularity
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
- * [Dataflow.end] but only parts of it. Common examples include [MemberExpression]s, array or tuple
+ * [Dataflow.end] but only parts of it. Common examples include [MemberAccess]s, array or tuple
  * accesses. This class should allow
  */
 open class PartialDataflowGranularity<T>(
@@ -73,12 +74,12 @@ open class PartialDataflowGranularity<T>(
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
- * [Dataflow.end] but only parts of it, where the part is identified by a (known)
- * [FieldDeclaration]. Common examples include [MemberExpression] nodes, where we model a dataflow
- * to the base, but only partially scoped to a particular field.
+ * [Dataflow.end] but only parts of it, where the part is identified by a (known) [Field]. Common
+ * examples include [MemberAccess] nodes, where we model a dataflow to the base, but only partially
+ * scoped to a particular field.
  */
-class FieldDataflowGranularity(partialTarget: FieldDeclaration) :
-    PartialDataflowGranularity<FieldDeclaration>(partialTarget)
+class FieldDataflowGranularity(partialTarget: Field) :
+    PartialDataflowGranularity<Field>(partialTarget)
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
@@ -110,9 +111,9 @@ fun default() = full()
 
 /**
  * Creates a new [FieldDataflowGranularity]. The [target] is the [Declaration] that is affected by
- * the partial dataflow. Examples include a [FieldDeclaration] for a [MemberExpression].
+ * the partial dataflow. Examples include a [Field] for a [MemberAccess].
  */
-fun field(target: FieldDeclaration): FieldDataflowGranularity {
+fun field(target: Field): FieldDataflowGranularity {
     return FieldDataflowGranularity(target)
 }
 
@@ -126,8 +127,7 @@ fun <T> partial(identifier: T): PartialDataflowGranularity<T> {
 
 /**
  * Creates a new [IndexedDataflowGranularity]. The [idx] is the index that is used for the partial
- * dataflow. An example is the access to an array or tuple element, or a [VariableDeclaration] for a
- * [TupleDeclaration].
+ * dataflow. An example is the access to an array or tuple element, or a [Variable] for a [Tuple].
  */
 fun indexed(idx: Number): IndexedDataflowGranularity {
     return IndexedDataflowGranularity(idx)
@@ -145,7 +145,6 @@ fun indexed(idx: String): StringIndexedDataflowGranularity {
  * This edge class defines a flow of data between [start] and [end]. The flow can have a certain
  * [granularity].
  */
-@RelationshipEntity
 open class Dataflow(
     start: Node,
     end: Node,
@@ -171,14 +170,14 @@ open class Dataflow(
 
 sealed interface CallingContext {
     /** The call expression that affects this dataflow edge. */
-    val call: CallExpression
+    val call: Call
 }
 
-class CallingContextIn(override val call: CallExpression) : CallingContext
+class CallingContextIn(override val call: Call) : CallingContext
 
 class CallingContextOut(
     /** The call expression that affects this dataflow edge. */
-    override val call: CallExpression
+    override val call: Call
 ) : CallingContext
 
 /**
@@ -186,7 +185,6 @@ class CallingContextOut(
  * [callingContext] which allows for a context-sensitive dataflow analysis. This edge can also have
  * a certain [granularity].
  */
-@RelationshipEntity
 class ContextSensitiveDataflow(
     start: Node,
     end: Node,

@@ -28,7 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import java.io.File
 import kotlin.test.*
@@ -54,7 +55,7 @@ class CPPLambdaTest {
         assertNotNull(lambdaVar)
         assertIs<FunctionPointerType>(lambdaVar.type)
 
-        val lambda = lambdaVar.initializer as? LambdaExpression
+        val lambda = lambdaVar.initializer as? Lambda
         assertNotNull(lambda)
         assertTrue(lambda in lambdaVar.nextEOG)
 
@@ -84,7 +85,7 @@ class CPPLambdaTest {
 
         val lambdaVar = function.variables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
-        val lambda = lambdaVar.initializer as? LambdaExpression
+        val lambda = lambdaVar.initializer as? Lambda
         assertNotNull(lambda)
 
         // Check the type of the parameter
@@ -118,7 +119,7 @@ class CPPLambdaTest {
 
         val lambdaVar = function.variables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
-        val lambda = lambdaVar.initializer as? LambdaExpression
+        val lambda = lambdaVar.initializer as? Lambda
         assertNotNull(lambda)
 
         assertEquals(1, lambda.function.parameters.size)
@@ -148,7 +149,7 @@ class CPPLambdaTest {
 
         val lambdaVar = function.variables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
-        val lambda = lambdaVar.initializer as? LambdaExpression
+        val lambda = lambdaVar.initializer as? Lambda
         assertNotNull(lambda)
 
         // Check that the ref is resolved to the decl outside the lambda
@@ -184,7 +185,7 @@ class CPPLambdaTest {
 
         val lambdaVar = function.variables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
-        val lambda = lambdaVar.initializer as? LambdaExpression
+        val lambda = lambdaVar.initializer as? Lambda
         assertNotNull(lambda)
 
         // Check that the ref is resolved to the decl outside the lambda
@@ -221,7 +222,7 @@ class CPPLambdaTest {
 
         val lambdaVar = function.variables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
-        val lambda = lambdaVar.initializer as? LambdaExpression
+        val lambda = lambdaVar.initializer as? Lambda
         assertNotNull(lambda)
 
         // Check that the ref is resolved to the decl outside the lambda
@@ -257,7 +258,7 @@ class CPPLambdaTest {
 
         val lambdaVar = function.variables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
-        val lambda = lambdaVar.initializer as? LambdaExpression
+        val lambda = lambdaVar.initializer as? Lambda
         assertNotNull(lambda)
 
         // Check that the ref is resolved to the decl outside the lambda
@@ -291,7 +292,7 @@ class CPPLambdaTest {
 
         val lambdaVar = function.variables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
-        val lambda = lambdaVar.initializer as? LambdaExpression
+        val lambda = lambdaVar.initializer as? Lambda
         assertNotNull(lambda)
 
         // Check that the ref is resolved to the decl outside the lambda
@@ -322,7 +323,7 @@ class CPPLambdaTest {
         val function = result.functions["lambda9"]
         assertNotNull(function)
 
-        val lambda = function.calls["for_each"]?.arguments?.get(2) as? LambdaExpression
+        val lambda = function.calls["for_each"]?.arguments?.get(2) as? Lambda
         assertNotNull(lambda)
 
         // Check the type of the parameter
@@ -351,7 +352,7 @@ class CPPLambdaTest {
 
         val lambdaVar = function.variables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
-        val lambda = (lambdaVar.initializer as? CallExpression)?.callee as? LambdaExpression
+        val lambda = (lambdaVar.initializer as? Call)?.callee as? Lambda
         assertNotNull(lambda)
     }
 
@@ -372,7 +373,7 @@ class CPPLambdaTest {
 
         val lambdaVar = function.variables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
-        assertNotNull(lambdaVar.initializer as? LambdaExpression)
-        assertNotNull((lambdaVar.initializer as? LambdaExpression)?.function)
+        assertNotNull(lambdaVar.initializer as? Lambda)
+        assertNotNull((lambdaVar.initializer as? Lambda)?.function)
     }
 }

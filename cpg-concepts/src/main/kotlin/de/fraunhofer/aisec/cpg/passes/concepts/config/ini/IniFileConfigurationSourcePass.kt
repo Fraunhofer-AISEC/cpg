@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.config.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
@@ -50,7 +50,7 @@ import kotlin.collections.singleOrNull
     "This pass is responsible for creating ConfigurationSource nodes based on the INI file frontend."
 )
 class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx) {
-    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+    override fun handleNode(node: Node, tu: TranslationUnit) {
         // Since we cannot directly depend on the ini frontend, we have to check the language here
         // based on the node's language.
         if (node.language.name.localName != "IniFileLanguage") {
@@ -58,26 +58,23 @@ class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx)
         }
 
         when (node) {
-            is TranslationUnitDeclaration -> handleTranslationUnit(node)
-            is RecordDeclaration -> handleRecordDeclaration(node, tu)
-            is FieldDeclaration -> handleFieldDeclaration(node)
+            is TranslationUnit -> handleTranslationUnit(node)
+            is Record -> handleRecord(node, tu)
+            is Field -> handleField(node)
         }
     }
 
-    private fun handleTranslationUnit(tu: TranslationUnitDeclaration): ConfigurationSource {
+    private fun handleTranslationUnit(tu: TranslationUnit): ConfigurationSource {
         return newConfigurationSource(underlyingNode = tu, connect = true).also {
             it.name = tu.name
         }
     }
 
     /**
-     * Translates a [RecordDeclaration], which represents a section in an INI file, into a
+     * Translates a [Record], which represents a section in an INI file, into a
      * [ConfigurationGroupSource] node.
      */
-    private fun handleRecordDeclaration(
-        record: RecordDeclaration,
-        tu: TranslationUnitDeclaration,
-    ): ConfigurationGroupSource? {
+    private fun handleRecord(record: Record, tu: TranslationUnit): ConfigurationGroupSource? {
         val conf = tu.conceptNodes.filterIsInstance<ConfigurationSource>().singleOrNull()
         if (conf == null) {
             warnWithFileLocation(
@@ -100,10 +97,10 @@ class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx)
     }
 
     /**
-     * Translates a [FieldDeclaration], which represents an option in an INI file, into a
+     * Translates a [Field], which represents an option in an INI file, into a
      * [ConfigurationOptionSource] node.
      */
-    private fun handleFieldDeclaration(field: FieldDeclaration): ConfigurationOptionSource? {
+    private fun handleField(field: Field): ConfigurationOptionSource? {
         val group =
             field.astParent
                 ?.conceptNodes

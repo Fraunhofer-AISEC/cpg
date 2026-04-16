@@ -28,17 +28,17 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
-import org.neo4j.ogm.annotation.Transient
 
 /** The Java language. */
 open class JavaLanguage :
@@ -53,7 +53,8 @@ open class JavaLanguage :
     HasImplicitReceiver {
     override val fileExtensions = listOf("java")
     override val namespaceDelimiter = "."
-    @Transient override val frontend: KClass<out JavaLanguageFrontend> = JavaLanguageFrontend::class
+    @DoNotPersist
+    override val frontend: KClass<out JavaLanguageFrontend> = JavaLanguageFrontend::class
     override val superClassKeyword = "super"
 
     override val qualifiers = listOf("final", "volatile")
@@ -72,7 +73,7 @@ open class JavaLanguage :
      * See
      * [Java Language Specification](https://docs.oracle.com/javase/specs/jls/se19/html/jls-4.html).
      */
-    @Transient
+    @DoNotPersist
     @JsonIgnore
     override val builtInTypes =
         mapOf(
@@ -119,8 +120,8 @@ open class JavaLanguage :
     }
 
     override fun SymbolResolver.handleSuperExpression(
-        memberExpression: MemberExpression,
-        curClass: RecordDeclaration,
+        memberExpression: MemberAccess,
+        curClass: Record,
     ) = handleSuperExpressionHelper(memberExpression, curClass)
 
     /**
@@ -132,10 +133,10 @@ open class JavaLanguage :
         // Therefore, it can be that we both import a field and a method with the same name. We
         // therefore do some additional filtering of the candidates here, before handling it.
         if (ref.candidates.size > 1) {
-            if (ref.resolutionHelper is CallExpression) {
-                ref.candidates = ref.candidates.filter { it is FunctionDeclaration }.toSet()
+            if (ref.resolutionHelper is Call) {
+                ref.candidates = ref.candidates.filter { it is Function }.toSet()
             } else {
-                ref.candidates = ref.candidates.filter { it is VariableDeclaration }.toSet()
+                ref.candidates = ref.candidates.filter { it is Variable }.toSet()
             }
         }
 

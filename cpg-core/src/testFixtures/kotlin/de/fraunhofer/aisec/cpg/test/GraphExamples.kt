@@ -33,8 +33,8 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.newInitializerList
+import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -57,7 +57,7 @@ class GraphExamples {
                             body {
                                 declare {
                                     variable("i", t("int")) {
-                                        val initList = newInitializerListExpression()
+                                        val initList = newInitializerList()
                                         initList.initializers = mutableListOf(call("foo"))
                                         initializer = initList
                                     }
@@ -251,7 +251,95 @@ class GraphExamples {
                 }
             }
 
-        fun getNestedComprehensionExpressions(
+        fun getStatementsAsExpressions(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage<TestLanguage>()
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("statementsAsExpressions.py") {
+                        record("someRecord") {
+                            method("func") {
+                                body {
+                                    forEachStmt {
+                                        usedAsExpression = true
+                                        iterable { call("listOf") }
+                                        variable { declare { variable("a") } }
+                                        loopBody { call("inBody") }
+                                        loopElseStmt { call("inElse") }
+                                    }
+                                    declare {
+                                        variable("a") {
+                                            literal(1, t("int"))
+                                                .plus(
+                                                    forStmt {
+                                                        usedAsExpression = true
+                                                        loopBody { call("bodyCall") }
+                                                        forInitializer {
+                                                            declareVar("a", t("int")) {
+                                                                literal(0, t("int"))
+                                                            }
+                                                        }
+                                                        forCondition { literal(true, t("bool")) }
+                                                        forIteration { ref("a").inc() }
+                                                        loopElseStmt { call("elseCall") }
+                                                    }
+                                                )
+                                        }
+                                    }
+                                    doStmt {
+                                        usedAsExpression = true
+                                        doCondition { literal(true, t("bool")) }
+                                        loopBody { call("bodyCall") }
+                                        loopElseStmt { call("elseCall") }
+                                    }
+                                    label("lab") {
+                                        usedAsExpression = true
+                                        whileStmt {
+                                            usedAsExpression = true
+                                            whileCondition { literal(true, t("bool")) }
+                                            loopBody { call("bodyCall") }
+                                            loopElseStmt { call("elseCall") }
+                                        }
+                                    }
+
+                                    ifStmt {
+                                        usedAsExpression = true
+                                        condition { ref("param") gt literal(7, t("int")) }
+                                        thenStmt { call("thenCall") }
+                                        elseStmt { call("elseCall") }
+                                    }
+
+                                    switchStmt(ref("someref")) {
+                                        usedAsExpression = true
+                                        switchBody {
+                                            case(ref("True"))
+                                            ref("a") assign { ref("a") * literal(2, t("int")) }
+                                            ref("c") assign literal(-2, t("int"))
+                                            breakStmt()
+                                            case(ref("False"))
+                                            ref("a") assign literal(290, t("int"))
+                                            ref("d") assign literal(-2, t("int"))
+                                            ref("b") assign literal(-2, t("int"))
+                                            breakStmt()
+                                        }
+                                    }
+                                    declare {
+                                        usedAsExpression = true
+                                        variable("a") { literal(42, t("int")) }
+                                    }
+                                    // Todo
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getNestedComprehensions(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
@@ -462,11 +550,11 @@ class GraphExamples {
                                 modifiers = setOf("private")
                             }
                             method("getField", t("int")) {
-                                receiver = newVariableDeclaration("this", t("Variables"))
+                                receiver = newVariable("this", t("Variables"))
                                 body { returnStmt { member("field") } }
                             }
                             method("getLocal", t("int")) {
-                                receiver = newVariableDeclaration("this", t("Variables"))
+                                receiver = newVariable("this", t("Variables"))
                                 body {
                                     declare {
                                         variable("local", t("int")) { literal(42, t("int")) }
@@ -475,7 +563,7 @@ class GraphExamples {
                                 }
                             }
                             method("getShadow", t("int")) {
-                                receiver = newVariableDeclaration("this", t("Variables"))
+                                receiver = newVariable("this", t("Variables"))
                                 body {
                                     declare {
                                         variable("field", t("int")) { literal(43, t("int")) }
@@ -484,7 +572,7 @@ class GraphExamples {
                                 }
                             }
                             method("getNoShadow", t("int")) {
-                                receiver = newVariableDeclaration("this", t("Variables"))
+                                receiver = newVariable("this", t("Variables"))
                                 body {
                                     declare {
                                         variable("field", t("int")) { literal(43, t("int")) }
@@ -541,7 +629,7 @@ class GraphExamples {
                 }
             }
 
-        fun getConditionalExpression(
+        fun getConditional(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
@@ -717,19 +805,11 @@ class GraphExamples {
                             field("bla", t("int")) {}
                             constructor {
                                 isImplicit = true
-                                receiver =
-                                    newVariableDeclaration(
-                                        "this",
-                                        t("ControlFlowSensitiveDFGIfMerge"),
-                                    )
+                                receiver = newVariable("this", t("ControlFlowSensitiveDFGIfMerge"))
                                 body { returnStmt { isImplicit = true } }
                             }
                             method("func") {
-                                receiver =
-                                    newVariableDeclaration(
-                                        "this",
-                                        t("ControlFlowSensitiveDFGIfMerge"),
-                                    )
+                                receiver = newVariable("this", t("ControlFlowSensitiveDFGIfMerge"))
                                 param("args", t("int[]"))
                                 body {
                                     declare { variable("a", t("int")) { literal(1, t("int")) } }
@@ -788,11 +868,7 @@ class GraphExamples {
                         record("ControlFlowSesitiveDFGSwitch") {
                             // The main method
                             method("func3") {
-                                receiver =
-                                    newVariableDeclaration(
-                                        "this",
-                                        t("ControlFlowSesitiveDFGSwitch"),
-                                    )
+                                receiver = newVariable("this", t("ControlFlowSesitiveDFGSwitch"))
                                 body {
                                     declare {
                                         variable("switchVal", t("int")) { literal(3, t("int")) }
@@ -863,10 +939,7 @@ class GraphExamples {
                             // The main method
                             method("func2") {
                                 receiver =
-                                    newVariableDeclaration(
-                                        "this",
-                                        t("ControlFlowSensitiveDFGIfNoMerge"),
-                                    )
+                                    newVariable("this", t("ControlFlowSensitiveDFGIfNoMerge"))
                                 body {
                                     declare { variable("a", t("int")) { literal(1, t("int")) } }
                                     ifStmt {
@@ -900,7 +973,7 @@ class GraphExamples {
                         record("LoopDFGs") {
                             // The main method
                             method("labeledBreakContinue") {
-                                receiver = newVariableDeclaration("this", t("LoopDFGs"))
+                                receiver = newVariable("this", t("LoopDFGs"))
                                 param("param", t("int"))
                                 body {
                                     declare { variable("a", t("int")) { literal(0, t("int")) } }
@@ -981,7 +1054,7 @@ class GraphExamples {
                         record("LoopDFGs") {
                             // The main method
                             method("looping") {
-                                receiver = newVariableDeclaration("this", t("LoopDFGs"))
+                                receiver = newVariable("this", t("LoopDFGs"))
                                 param("param", t("int"))
                                 body {
                                     declare { variable("a", t("int")) { literal(0, t("int")) } }
@@ -1057,7 +1130,7 @@ class GraphExamples {
                     translationUnit("ReturnTest.java") {
                         record("ReturnTest", "class") {
                             method("testReturn", t("int")) {
-                                receiver = newVariableDeclaration("this", t("ReturnTest"))
+                                receiver = newVariable("this", t("ReturnTest"))
                                 body {
                                     declare { variable("a", t("int")) { literal(1, t("int")) } }
                                     ifStmt {
@@ -1100,16 +1173,16 @@ class GraphExamples {
         ) =
             testFrontend(config).build {
                 translationResult {
-                    translationUnit("RecordDeclaration.java") {
+                    translationUnit("Record.java") {
                         namespace("compiling") {
                             record("SimpleClass", "class") {
                                 field("field", t("int")) {}
                                 constructor {
-                                    receiver = newVariableDeclaration("this", t("SimpleClass"))
+                                    receiver = newVariable("this", t("SimpleClass"))
                                     body { returnStmt { isImplicit = true } }
                                 }
                                 method("method", t("Integer")) {
-                                    receiver = newVariableDeclaration("this", t("SimpleClass"))
+                                    receiver = newVariable("this", t("SimpleClass"))
                                     body {
                                         memberCall(
                                             "println",
@@ -1141,7 +1214,6 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .useParallelPasses(true)
                     .registerLanguage<TestLanguage>()
                     .build()
         ) =
@@ -1152,23 +1224,23 @@ class GraphExamples {
                             field("attr", t("String")) { literal("", t("String")) }
                             constructor {
                                 isImplicit = true
-                                receiver = newVariableDeclaration("this", t("Dataflow"))
+                                receiver = newVariable("this", t("Dataflow"))
                                 body { returnStmt { isImplicit = true } }
                             }
                             method("toString", t("String")) {
-                                receiver = newVariableDeclaration("this", t("Dataflow"))
+                                receiver = newVariable("this", t("Dataflow"))
                                 body {
                                     returnStmt { literal("ShortcutClass: attr=") + member("attr") }
                                 }
                             }
 
                             method("test", t("String")) {
-                                receiver = newVariableDeclaration("this", t("Dataflow"))
+                                receiver = newVariable("this", t("Dataflow"))
                                 body { returnStmt { literal("abcd") } }
                             }
 
                             method("print", t("int")) {
-                                receiver = newVariableDeclaration("this", t("Dataflow"))
+                                receiver = newVariable("this", t("Dataflow"))
                                 param("s", t("String"))
                                 body {
                                     memberCall(
@@ -1214,19 +1286,19 @@ class GraphExamples {
                         record("ShortcutClass") {
                             field("attr", t("int")) { literal(0, t("int")) }
                             constructor {
-                                receiver = newVariableDeclaration("this", t("ShortcutClass"))
+                                receiver = newVariable("this", t("ShortcutClass"))
                                 isImplicit = true
                                 body { returnStmt { isImplicit = true } }
                             }
                             method("toString", t("String")) {
-                                receiver = newVariableDeclaration("this", t("ShortcutClass"))
+                                receiver = newVariable("this", t("ShortcutClass"))
                                 body {
                                     returnStmt { literal("ShortcutClass: attr=") + member("attr") }
                                 }
                             }
 
                             method("print", t("int")) {
-                                receiver = newVariableDeclaration("this", t("ShortcutClass"))
+                                receiver = newVariable("this", t("ShortcutClass"))
                                 body {
                                     memberCall(
                                         "println",
@@ -1238,7 +1310,7 @@ class GraphExamples {
                             }
 
                             method("magic") {
-                                receiver = newVariableDeclaration("this", t("ShortcutClass"))
+                                receiver = newVariable("this", t("ShortcutClass"))
                                 param("b", t("int"))
                                 body {
                                     ifStmt {

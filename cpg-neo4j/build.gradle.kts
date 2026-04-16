@@ -68,6 +68,9 @@ dependencies {
     // Neo4J Driver
     api(libs.neo4j.driver)
 
+    // ClassGraph for runtime class scanning
+    implementation(libs.classgraph)
+
     // Command line interface support
     api(libs.picocli)
     annotationProcessor(libs.picocli.codegen)

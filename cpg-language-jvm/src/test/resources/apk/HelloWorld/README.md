@@ -19,7 +19,7 @@ To rebuild the APK after modifying `MainActivity.java`:
 The script will:
 1. Clean previous build artifacts
 2. Compile `MainActivity.java` using `javac`
-3. Package the `.class` file into `app-debug.apk` using `jar`
+3. Package the `.class` file and `AndroidManifest.xml` into `app-debug.apk` using `jar`
 4. Display the APK contents and size
 
 ## What is this APK?

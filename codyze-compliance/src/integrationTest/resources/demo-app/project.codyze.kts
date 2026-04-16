@@ -24,9 +24,9 @@
  *
  */
 import de.fraunhofer.aisec.cpg.graph.edges.get
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Delete
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 
 project {
     name = "Demo Project"
@@ -63,7 +63,7 @@ project {
 context(tr: TranslationResult)
 fun properHandlingOfKeyMaterial(): QueryTree<Boolean> {
     val result =
-        tr.allExtended<CallExpression>(
+        tr.allExtended<Call>(
             sel = {
                 it.name.toString() == "execute" &&
                     it.arguments[0].evaluate() in listOf("encrypt", "decrypt")
@@ -74,7 +74,7 @@ fun properHandlingOfKeyMaterial(): QueryTree<Boolean> {
                 QueryTree(true, operator = GenericQueryOperators.EVALUATE)
             } else {
                 executionPath(k) { to ->
-                    to is DeleteExpression &&
+                    to is Delete &&
                         to.operands.any {
                             it is Reference && it.refersTo == (k as? Reference)?.refersTo
                         }

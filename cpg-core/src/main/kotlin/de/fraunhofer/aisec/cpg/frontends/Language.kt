@@ -41,19 +41,21 @@ import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.builder.assign
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -64,7 +66,6 @@ import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
-import org.neo4j.ogm.annotation.Transient
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -132,7 +133,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     open val simpleAssignmentOperators: Set<String> = setOf("=")
 
     /** The standard evaluator to be used with this language. */
-    @Transient @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
+    @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
 
     init {
         this.language = this
@@ -153,10 +154,10 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * [builtInTypes] map, it returns null. The [typeString] must precisely match the key in the
      * map.
      */
-    fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString.toString()]
+    open fun getSimpleTypeOf(typeString: CharSequence) = builtInTypes[typeString.toString()]
 
     /** Returns true if the [file] can be handled by the frontend of this language. */
-    fun handlesFile(file: File): Boolean {
+    open fun handlesFile(file: File): Boolean {
         return file.extension in fileExtensions
     }
 
@@ -265,6 +266,38 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
                 }
             else -> unknownType() // We don't know what is this thing
         }
+    }
+
+    /**
+     * Determines how to propagate [HasType.assignedTypes] across binary operations. Returns a
+     * merged set of types if the operator requires special handling (e.g., operators where the left
+     * or the right operand can be the result at runtime), or an empty set if no special handling is
+     * needed.
+     *
+     * If both [lhs] and [rhs] have only one assigned type, the type will be determined through
+     * [propagateTypeOfBinaryOperation].
+     *
+     * Languages can override this to handle language-specific operators.
+     */
+    open fun propagateAssignedTypesOfBinaryOperation(
+        operatorCode: String?,
+        lhs: Expression,
+        rhs: Expression,
+    ): Set<Type> {
+        val lhsAssigned = lhs.assignedTypes
+        val rhsAssigned = rhs.assignedTypes
+        if (lhsAssigned.size == 1 && rhsAssigned.size == 1) {
+            val typeResult =
+                propagateTypeOfBinaryOperation(
+                    operatorCode,
+                    lhsAssigned.single(),
+                    rhsAssigned.single(),
+                )
+            if (typeResult !is UnknownType) {
+                return setOf(typeResult)
+            }
+        }
+        return emptySet()
     }
 
     /**
@@ -380,7 +413,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     context(provider: ContextProvider)
     open fun bestViableResolution(
         result: CallResolutionResult
-    ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
+    ): Pair<Set<Function>, CallResolutionResult.SuccessKind> {
         // Check for direct matches. Let's hope there is only one, otherwise we have an ambiguous
         // result
         val directMatches = result.signatureResults.entries.filter { it.value.isDirectMatch }
@@ -405,7 +438,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         // case, we need to check, whether a template matches directly after we have no direct
         // matches
         val source = result.source
-        if (this is HasTemplates && source is CallExpression) {
+        if (this is HasTemplates && source is Call) {
             source.templateArgumentEdges = TemplateArguments(source)
             val (ok, candidates) =
                 this.handleTemplateFunctionCalls(
@@ -471,24 +504,23 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
     /**
      * There are some cases where our [Inference] system needs to place declarations, e.g., a
-     * [NamespaceDeclaration] in the [GlobalScope]. The issue with that is that the [Scope.astNode]
-     * of the global scope is always the last parsed [TranslationUnitDeclaration] and we might end
-     * up adding the declaration to some random translation unit, where it does not really belong.
+     * [Namespace] in the [GlobalScope]. The issue with that is that the [Scope.astNode] of the
+     * global scope is always the last parsed [TranslationUnit] and we might end up adding the
+     * declaration to some random translation unit, where it does not really belong.
      *
-     * Therefore, we give the language a chance to return a [TranslationUnitDeclaration] where the
-     * declaration should be placed. If the language does not override this function, the default
-     * implementation will return the first [TranslationUnitDeclaration] in the [Component] of
-     * [source].
+     * Therefore, we give the language a chance to return a [TranslationUnit] where the declaration
+     * should be placed. If the language does not override this function, the default implementation
+     * will return the first [TranslationUnit] in the [Component] of [source].
      *
      * But languages might choose to take the information of [TypeToInfer] and [source] and create a
-     * specific [TranslationUnitDeclaration], e.g., for each namespace that is inferred globally or
-     * try to put all inferred declarations into one specific (inferred) new translation unit.
+     * specific [TranslationUnit], e.g., for each namespace that is inferred globally or try to put
+     * all inferred declarations into one specific (inferred) new translation unit.
      *
      * @param TypeToInfer the type of the node that should be inferred
      * @param source the source that was responsible for the inference
      */
     context(provider: ContextProvider)
-    fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
+    open fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnit {
         // The easiest way to identify the current component would be traversing the AST, but that
         // does not work for types. But types have a scope and the scope (should) have the
         // connection to the AST. We add several fallbacks here to make sure that we have a

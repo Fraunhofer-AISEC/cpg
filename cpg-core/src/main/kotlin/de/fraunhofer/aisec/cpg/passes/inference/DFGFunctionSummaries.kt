@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -49,8 +50,7 @@ import org.slf4j.LoggerFactory
 /**
  * If the user of the library registers one or multiple DFG-function summary files (via
  * [TranslationConfiguration.Builder.registerFunctionSummaries]), this class is responsible for
- * parsing the files, caching the result and adding the respective DFG summaries to the
- * [FunctionDeclaration].
+ * parsing the files, caching the result and adding the respective DFG summaries to the [Function].
  */
 class DFGFunctionSummaries {
     private constructor()
@@ -61,17 +61,16 @@ class DFGFunctionSummaries {
     /**
      * Saves the information on which parameter(s) of a function are modified by the function. This
      * is interesting since we need to add DFG edges between the modified parameter and the
-     * respective argument(s). For each [ParameterDeclaration] as well as the
-     * [MethodDeclaration.receiver] that has some incoming DFG-edge within this
-     * [FunctionDeclaration], we store all previous DFG nodes.
+     * respective argument(s). For each [Parameter] as well as the [Method.receiver] that has some
+     * incoming DFG-edge within this [Function], we store all previous DFG nodes.
      */
     val functionToChangedParameters =
-        mutableMapOf<FunctionDeclaration, MutableMap<ValueDeclaration, MutableSet<Node>>>()
+        mutableMapOf<Function, MutableMap<ValueDeclaration, MutableSet<Node>>>()
 
-    fun hasSummary(functionDeclaration: FunctionDeclaration) =
+    fun hasSummary(functionDeclaration: Function) =
         functionDeclaration in functionToChangedParameters
 
-    fun getLastWrites(functionDeclaration: FunctionDeclaration): Map<ValueDeclaration, Set<Node>> =
+    fun getLastWrites(functionDeclaration: Function): Map<ValueDeclaration, Set<Node>> =
         functionToChangedParameters[functionDeclaration] ?: mapOf()
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
@@ -94,7 +93,7 @@ class DFGFunctionSummaries {
      * Adds the DFG edges to the [functionDeclaration] depending on the function summaries which are
      * kept in this object. If no suitable entry was found, this method returns `false`.
      */
-    fun DFGPass.addFlowsToFunctionDeclaration(functionDeclaration: FunctionDeclaration): Boolean {
+    fun DFGPass.addFlowsToFunctionDeclaration(functionDeclaration: Function): Boolean {
         val dfgEntries = findFunctionDeclarationEntry(functionDeclaration) ?: return false
         applyDfgEntryToFunctionDeclaration(functionDeclaration, dfgEntries)
         return true
@@ -114,9 +113,7 @@ class DFGFunctionSummaries {
      * This method returns the list of [DFGEntry] for the "best match" or `null` if no entry
      * matches.
      */
-    private fun DFGPass.findFunctionDeclarationEntry(
-        functionDecl: FunctionDeclaration
-    ): List<DFGEntry>? {
+    private fun DFGPass.findFunctionDeclarationEntry(functionDecl: Function): List<DFGEntry>? {
         if (functionToDFGEntryMap.isEmpty()) return null
 
         val language = functionDecl.language
@@ -124,7 +121,7 @@ class DFGFunctionSummaries {
         val methodName = functionDecl.name
 
         // The language and the method name have to match. If a signature is specified, it also has
-        // to match to the one of the FunctionDeclaration, null indicates that we accept everything.
+        // to match to the one of the Function, null indicates that we accept everything.
         val matchingEntries =
             functionToDFGEntryMap.keys.filter {
                 // The language has to match otherwise the remaining comparison is useless
@@ -146,7 +143,7 @@ class DFGFunctionSummaries {
                         // name's parent and generate a type from it. We then check if this type is
                         // a supertype
                         (entryRecord == null ||
-                            (functionDecl as? MethodDeclaration)
+                            (functionDecl as? Method)
                                 ?.recordDeclaration
                                 ?.toType()
                                 ?.tryCast(entryRecord) != CastNotPossible) &&
@@ -247,7 +244,7 @@ class DFGFunctionSummaries {
      * between the parameters, receiver and potentially the [functionDeclaration] itself.
      */
     private fun applyDfgEntryToFunctionDeclaration(
-        functionDeclaration: FunctionDeclaration,
+        functionDeclaration: Function,
         dfgEntries: List<DFGEntry>,
     ) {
         for (entry in dfgEntries) {
@@ -260,7 +257,7 @@ class DFGFunctionSummaries {
                         null
                     }
                 } else if (entry.from == "base") {
-                    (functionDeclaration as? MethodDeclaration)?.receiver
+                    (functionDeclaration as? Method)?.receiver
                 } else {
                     null
                 }
@@ -280,7 +277,7 @@ class DFGFunctionSummaries {
                         null
                     }
                 } else if (entry.to == "base") {
-                    val receiver = (functionDeclaration as? MethodDeclaration)?.receiver
+                    val receiver = (functionDeclaration as? Method)?.receiver
                     if (from != null) {
                         if (receiver != null) {
                             functionToChangedParameters
@@ -314,18 +311,16 @@ class DFGFunctionSummaries {
         val dataFlows: List<DFGEntry>,
     )
 
-    /**
-     * This class is used to identify the [FunctionDeclaration] of interest for the specified flows.
-     */
+    /** This class is used to identify the [Function] of interest for the specified flows. */
     data class FunctionDeclarationEntry(
         /** The FQN of the [Language] for which this flow is relevant. */
         val language: String,
-        /** The FQN of the [FunctionDeclaration] or [MethodDeclaration]. */
+        /** The FQN of the [Function] or [Method]. */
         val methodName: String,
         /**
-         * The signature of the [FunctionDeclaration]. We use a list of the FQN of the [Type]s of
-         * parameter. This is optional and if not specified, we perform the matching only based on
-         * the [methodName].
+         * The signature of the [Function]. We use a list of the FQN of the [Type]s of parameter.
+         * This is optional and if not specified, we perform the matching only based on the
+         * [methodName].
          */
         val signature: List<String>? = null,
     )
