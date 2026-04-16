@@ -989,10 +989,9 @@ fun Node.followPrevCDGUntilHit(
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest data flow paths (with [x] specifying how to fetch more nodes)
- * between the starting node [this] and the end node fulfilling [predicate]. The paths are
- * represented as lists of nodes. Paths which do not end at such a node are included in
- * [FulfilledAndFailedPaths.failed].
+ * contains all possible paths (with [x] specifying how to fetch more nodes) between the starting
+ * node [this] and the end node fulfilling [predicate]. The paths are represented as lists of nodes.
+ * Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
  *
  * Hence, if "fulfilled" is a non-empty list, a path from [this] to such a node is **possible but
  * not mandatory**. If the list "failed" is empty, the path is mandatory.

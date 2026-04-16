@@ -211,7 +211,7 @@ val allNextFullDFG:  List<NodePath>  = myNode.collectAllNextFullDFGPaths()
 val allPrevFullDFG:  List<NodePath>  = myNode.collectAllPrevFullDFGPaths()
 val allNextEOG:      List<NodePath>  = myNode.collectAllNextEOGPaths(interproceduralAnalysis = true)
 val allPrevEOG:      List<NodePath>  = myNode.collectAllPrevEOGPaths(interproceduralAnalysis = false)
-val allNextPDG:      List<NodePath>  = myNode.collectAllNextPDGGPaths()
+val allNextPDG:      List<NodePath>  = myNode.collectAllNextPDGPaths()
 val allPrevPDG:      List<NodePath>  = myNode.collectAllPrevPDGPaths(interproceduralAnalysis = false)
 val allNextCDG:      List<NodePath>  = myNode.collectAllNextCDGPaths(interproceduralAnalysis = false)
 val allPrevCDG:      List<NodePath>  = myNode.collectAllPrevCDGPaths(interproceduralAnalysis = false)
@@ -225,7 +225,7 @@ val allPrevCDG:      List<NodePath>  = myNode.collectAllPrevCDGPaths(interproced
 | `collectAllPrevFullDFGPaths` | DFG (full edges only) | Backward |
 | `collectAllNextEOGPaths(interproceduralAnalysis)` | EOG | Forward |
 | `collectAllPrevEOGPaths(interproceduralAnalysis)` | EOG | Backward |
-| `collectAllNextPDGGPaths` | PDG | Forward |
+| `collectAllNextPDGPaths` | PDG | Forward |
 | `collectAllPrevPDGPaths(interproceduralAnalysis)` | PDG | Backward |
 | `collectAllNextCDGPaths(interproceduralAnalysis)` | CDG | Forward |
 | `collectAllPrevCDGPaths(interproceduralAnalysis)` | CDG | Backward |
