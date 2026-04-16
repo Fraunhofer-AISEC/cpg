@@ -161,8 +161,15 @@ fun Server.addOrUpdateConcept() {
 fun Server.suggestLLMConceptsAndOperations() {
     val toolDescription =
         """
-        This tool suggests concept and operation.
-        It validates that referenced CPG nodes exist but does not apply anything to the graph.
+        Use this tool when the user asks you to suggest, propose, or identify concepts and operations for the analyzed code.
+
+        A "concept" is a high-level semantic label (e.g. "Authentication", "Encryption", "Logging", etc.) that you attach to a CPG node
+        to describe what it does. Each concept can have properties and operations (specific actions within that concept, each tied to their own CPG node).
+
+        You decide the concept names, operation names, and properties yourself based on your analysis of the code.
+        The node IDs can be obtained from other CPG tools (e.g. cpg_list_functions, cpg_get_node).
+
+        This tool only validates that the referenced CPG nodes exist and it does not apply anything to the graph yet.
         Once the user accepts the suggestions, use cpg_add_llm_concept_and_operations to apply them.
         """
             .trimIndent()
@@ -205,80 +212,80 @@ fun Server.suggestLLMConceptsAndOperations() {
 fun Server.addLLMConceptAndOperations() {
     val toolDescription =
         """
-        This tool applies a concept and all its operations to the graph. It creates and attaches a concept node and all operation nodes using their nodeId to specific nodes in the graph.
-        Description of the concepts and their corresponding operations can be obtained from the "cpg_list_llm_concepts_operations" tool.
+        This tool applies a concept and all its operations to the graph. 
+        It creates and attaches a concept node and all operation nodes using their nodeId to specific nodes in the graph.
         """
             .trimIndent()
-    this.addTool<LLMConcept>(
+    this.addTool<LLMConceptList>(
         name = "cpg_add_llm_concept_and_operations",
         description = toolDescription,
-    ) { result: TranslationResult, payload: LLMConcept ->
+    ) { result: TranslationResult, payload: LLMConceptList ->
         val applied = mutableListOf<String>()
         val failed = mutableListOf<String>()
 
-        val cpgConceptNode = result.nodes.find { it.id.toString() == payload.nodeId }
-        if (cpgConceptNode == null) {
-            return@addTool CallToolResult(
-                content =
-                    listOf(
-                        TextContent(
-                            "Node ${payload.nodeId} not found for concept ${payload.name}. Cannot add anything to the graph."
-                        )
-                    )
-            )
-        }
-
-        // TODO: check concept/operation and properties actually exist
-        val conceptNode =
-            GenericLLMConcept(
-                    underlyingNode = cpgConceptNode,
-                    conceptName = payload.name,
-                    properties =
-                        GenericProperties(payload.properties.associate { it.name to it.value }),
-                )
-                .apply {
-                    this.codeAndLocationFrom(cpgConceptNode)
-                    this.name =
-                        Name(
-                            "${GenericLLMConcept::class.simpleName}[$conceptName]",
-                            cpgConceptNode.name,
-                        )
-                    NodeBuilder.log(this)
-                    applied.add("Concept node \"${payload.name}\" added to the graph.")
-                }
-
-        payload.operations.forEach { operation ->
-            val cpgOperationNode = result.nodes.find { it.id.toString() == operation.nodeId }
-            if (cpgOperationNode == null) {
-                failed.add(
-                    "Node \"${operation.nodeId}\" not found for operation \"${operation.name}\"."
-                )
+        payload.concepts.forEach { concept ->
+            val cpgConceptNode = result.nodes.find { it.id.toString() == concept.nodeId }
+            if (cpgConceptNode == null) {
+                failed.add("Node ${concept.nodeId} not found for concept ${concept.name}.")
                 return@forEach
             }
-            GenericLLMOperation(
-                    underlyingNode = cpgOperationNode,
-                    operationName = operation.name,
-                    genericLLMConcept = conceptNode,
-                    properties =
-                        GenericProperties(operation.properties.associate { it.name to it.value }),
-                )
-                .apply {
-                    this.codeAndLocationFrom(cpgOperationNode)
-                    this.name =
-                        Name(
-                            "${GenericLLMOperation::class.simpleName}[$operationName]",
-                            cpgOperationNode.name,
-                        )
-                    NodeBuilder.log(this)
-                    applied.add("Operation node \"${operation.name}\" added to the graph.")
+
+            val conceptNode =
+                GenericLLMConcept(
+                        underlyingNode = cpgConceptNode,
+                        conceptName = concept.name,
+                        properties =
+                            GenericProperties(concept.properties.associate { it.name to it.value }),
+                    )
+                    .apply {
+                        this.codeAndLocationFrom(cpgConceptNode)
+                        this.name =
+                            Name(
+                                "${GenericLLMConcept::class.simpleName}[$conceptName]",
+                                cpgConceptNode.name,
+                            )
+                        NodeBuilder.log(this)
+                        applied.add("Concept node \"${concept.name}\" added to the graph.")
+                    }
+
+            concept.operations.forEach { operation ->
+                val cpgOperationNode = result.nodes.find { it.id.toString() == operation.nodeId }
+                if (cpgOperationNode == null) {
+                    failed.add(
+                        "Node \"${operation.nodeId}\" not found for operation \"${operation.name}\"."
+                    )
+                    return@forEach
                 }
+                GenericLLMOperation(
+                        underlyingNode = cpgOperationNode,
+                        operationName = operation.name,
+                        genericLLMConcept = conceptNode,
+                        properties =
+                            GenericProperties(
+                                operation.properties.associate { it.name to it.value }
+                            ),
+                    )
+                    .apply {
+                        this.codeAndLocationFrom(cpgOperationNode)
+                        this.name =
+                            Name(
+                                "${GenericLLMOperation::class.simpleName}[$operationName]",
+                                cpgOperationNode.name,
+                            )
+                        NodeBuilder.log(this)
+                        applied.add("Operation node \"${operation.name}\" added to the graph.")
+                    }
+            }
         }
 
         val summary =
             "Applied ${applied.size} nodes:\n" +
-                applied.joinToString(
-                    "\n" + "Failed to apply ${failed.size} nodes:\n" + failed.joinToString("\n")
-                )
+                applied.joinToString("\n") +
+                if (failed.isNotEmpty()) {
+                    "\nFailed to apply ${failed.size} nodes:\n" + failed.joinToString("\n")
+                } else {
+                    ""
+                }
 
         CallToolResult(content = listOf(TextContent(summary)))
     }

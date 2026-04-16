@@ -34,11 +34,12 @@ import io.ktor.utils.io.*
 import io.modelcontextprotocol.kotlin.sdk.types.Tool
 import kotlinx.serialization.json.*
 
-/** OpenAI-compatible API client (Ollama, vLLM, MLX) */
+/** OpenAI-compatible API client (Ollama, vLLM, MLX, etc.) */
 class OpenAiClient(
     private val httpClient: HttpClient,
     private val model: String,
     private val baseUrl: String,
+    private val apiKey: String? = null,
 ) : LlmClient {
     override val modelName: String = model
 
@@ -61,6 +62,7 @@ class OpenAiClient(
         httpClient
             .preparePost("$baseUrl/v1/chat/completions") {
                 contentType(ContentType.Application.Json)
+                apiKey?.let { bearerAuth(it) }
                 setBody(request)
             }
             .execute { response ->

@@ -1,17 +1,15 @@
 <script lang="ts">
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
-  import CodeItemList, { isCodeItemContent } from './widgets/CodeItemList.svelte';
-  import DfgFlowWidget from './widgets/DfgFlowWidget.svelte';
+  import ToolResultBlock from './widgets/ToolResultBlock.svelte';
   import { CodeViewer, FileTree } from '$lib/components/analysis';
-  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, McpCapabilities, ComponentJSON } from '$lib/types';
+  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, McpCapabilities, ComponentJSON, ConceptSuggestionItem } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
   let selectedTranslationUnit = $state<TranslationUnitJSON | null>(null);
   let selectedComponentName = $state<string | null>(null);
   let overlayNodes = $state<NodeJSON[]>([]);
   let astNodes = $state<NodeJSON[]>([]);
-  let showCodePanel = $derived(selectedTranslationUnit !== null);
   let fileTreeCollapsed = $state(false);
   let nodesPanelCollapsed = $state(false);
 
@@ -60,7 +58,12 @@
     selectedNode = null;
     const comp = findComponentForTu(unit.id);
     selectedComponentName = comp?.name ?? null;
-    if (comp) loadNodes(comp.name, unit.id);
+    if (comp) {
+      loadNodes(comp.name, unit.id);
+    } else {
+      overlayNodes = [];
+      astNodes = [];
+    }
   }
 
   function closeCodePanel() {
@@ -78,7 +81,7 @@
     ) ?? null;
   }
 
-  const selectedComponent = $derived((): ComponentJSON | null => {
+  const selectedComponent = $derived.by(() => {
     if (!selectedTranslationUnit || !analysisResult) return null;
     return findComponentForTu(selectedTranslationUnit.id);
   });
@@ -91,6 +94,8 @@
     isThinking: boolean;
     analysisResult?: AnalysisResultJSON | null;
     mcpCapabilities?: McpCapabilities | null;
+    suggestions?: ConceptSuggestionItem[];
+    onApplySuggestions?: (accepted: ConceptSuggestionItem[]) => void;
     onSendMessage: () => void;
     onReset: () => void;
     onMessageChange: (message: string) => void;
@@ -106,6 +111,8 @@
     isThinking,
     analysisResult,
     mcpCapabilities,
+    suggestions = $bindable([]),
+    onApplySuggestions,
     onSendMessage,
     onReset,
     onMessageChange,
@@ -113,7 +120,55 @@
     onOpenMcpModal
   }: Props = $props();
 
+  let showCodePanel = $derived(selectedTranslationUnit !== null || suggestions.length > 0);
   let displayContent = $derived(streamingContent.trim().length > 0 ? streamingContent : '');
+  let tusWithSuggestions = $state<Set<string>>(new Set());
+
+
+  // When suggestions arrive, resolve which TUs contain the referenced nodes
+  $effect(() => {
+    if (suggestions.length === 0 || !analysisResult) {
+      tusWithSuggestions = new Set();
+      return;
+    }
+
+    const nodeIds = new Set(
+      suggestions.flatMap(s => [
+        s.suggestion.nodeId,
+        ...s.operations.map(o => o.operation.nodeId)
+      ])
+    );
+
+    resolveTusForNodeIds(nodeIds);
+  });
+
+  async function resolveTusForNodeIds(nodeIds: Set<string>) {
+    const result = new Set<string>();
+    for (const comp of analysisResult?.components ?? []) {
+      for (const tu of comp.translationUnits) {
+        const nodes: NodeJSON[] = await fetch(
+          `/api/component/${comp.name}/translation-unit/${tu.id}/ast-nodes`
+        ).then(r => r.json()).catch(() => []);
+        if (nodes.some(n => nodeIds.has(n.id))) {
+          result.add(tu.id);
+        }
+      }
+    }
+    tusWithSuggestions = result;
+  }
+
+  // Auto-select the first translation unit with suggestions when resolved
+  $effect(() => {
+    if (tusWithSuggestions.size > 0 && !selectedTranslationUnit && analysisResult) {
+      for (const comp of analysisResult.components) {
+        const tu = comp.translationUnits.find(tu => tusWithSuggestions.has(tu.id));
+        if (tu) {
+          handleFileSelect(tu);
+          return;
+        }
+      }
+    }
+  });
 
   let messagesContainer: HTMLDivElement;
   let shouldAutoScroll = $state(true);
@@ -172,7 +227,7 @@
               </div>
             </div>
           {:else}
-            <div class="px-6 py-6">
+            <div class="{message.contentType === 'tool-result' ? 'px-6 py-1' : 'px-6 py-6'}">
               {#if message.reasoning}
                 <div class="mb-2 inline-block">
                   <button
@@ -198,23 +253,10 @@
                 </div>
               {/if}
               {#if message.contentType === 'tool-result' && message.toolResult}
-                {#if message.toolResult.toolName === 'cpg_dfg_backward'}
-                  <DfgFlowWidget content={message.toolResult.content} />
-                {:else if isCodeItemContent(message.toolResult.content)}
-                  <CodeItemList data={message.toolResult} onItemClick={handleNodeClick} />
-                {:else}
-                  <div class="my-2 overflow-hidden rounded-lg border border-gray-200 bg-white">
-                    <div class="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-3">
-                      {#if message.toolResult.toolName}
-                        <span class="font-mono text-sm font-semibold text-gray-700">{message.toolResult.toolName}</span>
-                      {/if}
-                      {#if message.toolResult.isError}
-                        <span class="rounded bg-red-100 px-2 py-1 text-xs font-semibold uppercase text-red-800">Error</span>
-                      {/if}
-                    </div>
-                    <pre class="m-0 overflow-x-auto whitespace-pre-wrap wrap-break-word p-4 font-mono text-sm text-gray-700">{typeof message.toolResult.content === 'string' ? message.toolResult.content : JSON.stringify(message.toolResult.content, null, 2)}</pre>
-                  </div>
-                {/if}
+                <ToolResultBlock
+                  toolResult={message.toolResult}
+                  onItemClick={handleNodeClick}
+                />
               {:else if message.content}
                 <div class="prose prose-sm max-w-4xl text-gray-800">
                   <MarkdownRenderer content={message.content} />
@@ -277,13 +319,13 @@
   {#if showCodePanel && selectedTranslationUnit}
     <div class="flex flex-1 overflow-hidden rounded-xl shadow-lg mx-2 my-2 border border-gray-200 bg-white" style="animation: slideIn 0.3s ease-out">
 
-      {#if selectedComponent()}
+      {#if selectedComponent}
         <FileTree
-          component={selectedComponent()!}
+          component={selectedComponent}
           currentUnitId={selectedTranslationUnit.id}
           onFileSelect={handleFileSelect}
           bind:collapsed={fileTreeCollapsed}
-          hideHeader={true}
+          conceptSuggestions={tusWithSuggestions}
         />
       {/if}
 
@@ -294,7 +336,8 @@
         highlightLine={selectedNode?.startLine ?? undefined}
         bind:nodePanelCollapsed={nodesPanelCollapsed}
         onClose={closeCodePanel}
-        hideControls={true}
+        bind:suggestions
+        {onApplySuggestions}
       />
 
     </div>

@@ -2,6 +2,7 @@
   import type { Snippet } from 'svelte';
   import type { TranslationUnitJSON, NodeJSON, ConceptSuggestionItem } from '$lib/types';
   import { TabNavigation } from '$lib/components/navigation';
+  import { CollapsiblePanel } from '$lib/components/ui';
   import { NodeTable, NodeOverlays, FindingOverlay, ConceptChecklist } from '$lib/components/analysis';
   import { flattenNodes } from '$lib/flatten';
   import Highlight, { LineNumbers } from 'svelte-highlight';
@@ -53,14 +54,13 @@
     headerActions?: Snippet;
     nodePanelCollapsed?: boolean;
     onClose?: () => void;
-    hideControls?: boolean;
     suggestions?: ConceptSuggestionItem[];
     onApplySuggestions?: (accepted: ConceptSuggestionItem[]) => void;
   }
 
-  let { translationUnit, astNodes, overlayNodes, conceptGroups, highlightLine, finding, findingKind, headerActions, nodePanelCollapsed = $bindable(false), onClose, hideControls = false, suggestions = $bindable([]), onApplySuggestions }: Props = $props();
+  let { translationUnit, astNodes, overlayNodes, conceptGroups, highlightLine, finding, findingKind, headerActions, nodePanelCollapsed = $bindable(false), onClose, suggestions = $bindable([]), onApplySuggestions }: Props = $props();
 
-  let activeTab = $state('overlayNodes');
+  let activeTab = $state('astNodes');
   let nodes = $derived(
     flattenNodes(
       activeTab === 'overlayNodes' ? overlayNodes : astNodes,
@@ -68,17 +68,59 @@
       translationUnit.id
     )
   );
-  let tableTitle = $derived(activeTab === 'overlayNodes' ? 'Overlay Nodes' : 'AST Nodes');
   let highlightedNode = $state<NodeJSON | null>(null);
   let codeContainerElement = $state<HTMLDivElement>();
 
   const tabs = $derived([
-    { id: 'overlayNodes', label: 'Overlay Nodes', count: overlayNodes?.length || 0 },
     { id: 'astNodes', label: 'AST Nodes', count: astNodes?.length || 0 },
+    { id: 'overlayNodes', label: 'Overlay Nodes', count: overlayNodes?.length || 0 },
     ...(suggestions.length > 0
       ? [{ id: 'suggestions', label: 'Suggestions', count: suggestions.length }]
       : [])
   ]);
+
+  let hoveredSuggestionNodeId = $state<string | null>(null);
+
+  // Resolve a nodeId to its line range via astNodes
+  function linesForNodeId(nodeId: string): number[] {
+    const node = astNodes.find(n => n.id === nodeId);
+    if (!node) return [];
+    const lines: number[] = [];
+    for (let l = node.startLine; l <= node.endLine; l++) lines.push(l - 1); // 0-based
+    return lines;
+  }
+
+  const suggestionHighlightLines = $derived.by(() => {
+    if (activeTab !== 'suggestions' || suggestions.length === 0 || astNodes.length === 0) return [];
+    const nodeIds = new Set(
+      suggestions.flatMap(s => [
+        s.suggestion.nodeId,
+        ...s.operations.map(o => o.operation.nodeId)
+      ])
+    );
+    const lines = new Set<number>();
+    for (const node of astNodes) {
+      if (nodeIds.has(node.id)) {
+        for (let l = node.startLine; l <= node.endLine; l++) lines.add(l - 1);
+      }
+    }
+    return [...lines];
+  });
+
+  // Lines to highlight when hovering a specific suggestion node
+  const hoveredLines = $derived.by(() => {
+    if (!hoveredSuggestionNodeId) return [];
+    return linesForNodeId(hoveredSuggestionNodeId);
+  });
+
+  // Combined highlight lines for the code viewer
+  const allHighlightLines = $derived.by(() => {
+    if (activeTab === 'suggestions') {
+      const lines = new Set([...suggestionHighlightLines, ...hoveredLines]);
+      return [...lines];
+    }
+    return highlightLine ? [highlightLine - 1] : [];
+  });
 
   const lineHeight = 1.5;
   const charWidth = 0.60015625;
@@ -88,6 +130,18 @@
   const totalLines = $derived(translationUnit.code.split('\n').length);
   const lineNumberWidth = $derived(Math.ceil(Math.log10(totalLines + 1)));
   const offsetLeft = $derived(baseOffsetLeft + lineNumberWidth * charWidth);
+
+  // Scroll to hovered suggestion node
+  $effect(() => {
+    if (hoveredSuggestionNodeId && codeContainerElement) {
+      const node = astNodes.find(n => n.id === hoveredSuggestionNodeId);
+      if (node) {
+        const computedStyle = window.getComputedStyle(codeContainerElement);
+        const lh = parseFloat(computedStyle.lineHeight) || parseFloat(computedStyle.fontSize) * 1.5 || 20;
+        codeContainerElement.scrollTo({ top: Math.max(0, (node.startLine - 3) * lh), behavior: 'smooth' });
+      }
+    }
+  });
 
   $effect(() => {
     if (highlightLine && codeContainerElement && typeof window !== 'undefined') {
@@ -122,24 +176,6 @@
             </svg>
           </button>
         {/if}
-        {#if !hideControls}
-          <!-- Toggle button for panel -->
-          <button
-            onclick={() => (nodePanelCollapsed = !nodePanelCollapsed)}
-            class="flex items-center justify-center w-8 h-8 rounded-md text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700"
-            type="button"
-            aria-label={nodePanelCollapsed ? 'Show nodes panel' : 'Hide nodes panel'}
-          >
-            <svg
-              class="w-5 h-5 transition-transform duration-300 {nodePanelCollapsed ? 'rotate-180' : ''}"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-            </svg>
-          </button>
-        {/if}
       </div>
     </div>
 
@@ -148,7 +184,7 @@
         <Highlight language={getLanguage(translationUnit.name)} code={translationUnit.code} let:highlighted>
           <LineNumbers
             {highlighted}
-            highlightedLines={highlightLine ? [highlightLine - 1] : []}
+            highlightedLines={allHighlightLines}
             --line-number-color="gray"
             --padding-right={0}
             hideBorder
@@ -160,100 +196,41 @@
         <FindingOverlay {finding} kind={findingKind} line={highlightLine} {lineHeight} {offsetTop} />
       {/if}
 
-      <NodeOverlays
-        {nodes}
-        codeLines={translationUnit.code.split('\n')}
-        bind:highlightedNode
-        {lineHeight}
-        {charWidth}
-        {offsetTop}
-        {offsetLeft}
-        conceptGroups={conceptGroups || []}
-      />
+      {#if activeTab !== 'suggestions'}
+        <NodeOverlays
+          {nodes}
+          codeLines={translationUnit.code.split('\n')}
+          bind:highlightedNode
+          {lineHeight}
+          {charWidth}
+          {offsetTop}
+          {offsetLeft}
+          conceptGroups={conceptGroups || []}
+        />
+      {/if}
     </div>
 
   </div>
 
   <!-- Node information panel -->
-  {#if hideControls}
-    <!-- Side-tab mode: header IS the toggle -->
-    {#if nodePanelCollapsed}
-      <!-- Collapsed: narrow strip with vertical label -->
-      <button
-        onclick={() => (nodePanelCollapsed = false)}
-        class="group flex h-full w-8 shrink-0 flex-col items-center justify-start gap-2 border-l border-gray-200 bg-white pt-4 text-gray-400 transition-all rounded-r-xl hover:bg-blue-50 hover:text-blue-600"
-        aria-label="Show nodes panel"
-      >
-        <svg class="w-3 h-3 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-        </svg>
-        <span class="text-[10px] font-semibold tracking-widest uppercase group-hover:text-blue-500" style="writing-mode: vertical-rl;">Nodes</span>
-      </button>
-    {:else}
-      <!-- Expanded: right panel with clickable header + blue right accent bar -->
-      <div class="flex h-full w-96 shrink-0 flex-col border-l border-gray-200 bg-white rounded-r-xl overflow-hidden">
-        <button
-          onclick={() => (nodePanelCollapsed = true)}
-          class="group flex w-full shrink-0 items-center justify-between border-b border-gray-200 px-3 py-2 text-left transition-colors hover:bg-gray-50"
-          aria-label="Collapse nodes panel"
-        >
-          <svg class="h-3.5 w-3.5 text-gray-300 transition-transform group-hover:text-gray-500 group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-          <div class="flex items-center gap-2">
-            <span class="text-[11px] font-semibold uppercase tracking-widest text-gray-500 group-hover:text-gray-700">Nodes</span>
-            <div class="h-3.5 w-0.5 rounded-full bg-blue-500"></div>
-          </div>
-        </button>
-        <div class="bg-white">
-          <TabNavigation {tabs} {activeTab} onTabChange={(id) => (activeTab = id)} />
-        </div>
-        <div class="flex-1 overflow-auto p-4">
-          {#if activeTab === 'suggestions'}
-            <ConceptChecklist
-              bind:items={suggestions}
-              {onApplySuggestions}
-            />
-          {:else}
-            <NodeTable
-              title={tableTitle}
-              {nodes}
-              bind:highlightedNode
-              nodeClick={(node) => console.log('Node clicked:', node)}
-            />
-          {/if}
-        </div>
-      </div>
-    {/if}
-  {:else}
-    {#if !nodePanelCollapsed}
-      <div class="w-96 border-l border-gray-200 bg-gray-50" style="animation: slideInPanel 0.3s ease-out">
-        <div class="bg-white">
-          <TabNavigation {tabs} {activeTab} onTabChange={(id) => (activeTab = id)} />
-        </div>
-        <div class="h-full overflow-auto p-4">
-          {#if activeTab === 'suggestions'}
-            <ConceptChecklist
-              bind:items={suggestions}
-              {onApplySuggestions}
-            />
-          {:else}
-            <NodeTable
-              title={tableTitle}
-              {nodes}
-              bind:highlightedNode
-              nodeClick={(node) => console.log('Node clicked:', node)}
-            />
-          {/if}
-        </div>
-      </div>
-    {/if}
-  {/if}
+  <CollapsiblePanel title="Nodes" side="right" bind:collapsed={nodePanelCollapsed}>
+    <div class="bg-white">
+      <TabNavigation {tabs} {activeTab} onTabChange={(id) => (activeTab = id)} />
+    </div>
+    <div class="flex-1 overflow-auto p-4">
+      {#if activeTab === 'suggestions'}
+        <ConceptChecklist
+          bind:items={suggestions}
+          {onApplySuggestions}
+          onHighlightNode={(nodeId) => hoveredSuggestionNodeId = nodeId}
+        />
+      {:else}
+        <NodeTable
+          {nodes}
+          bind:highlightedNode
+          nodeClick={(node) => console.log('Node clicked:', node)}
+        />
+      {/if}
+    </div>
+  </CollapsiblePanel>
 </div>
-
-<style>
-  @keyframes slideInPanel {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-</style>

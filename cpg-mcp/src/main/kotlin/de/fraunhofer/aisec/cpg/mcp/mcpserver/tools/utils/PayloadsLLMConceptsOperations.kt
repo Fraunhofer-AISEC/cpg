@@ -83,9 +83,6 @@ data class LLMOperation(
         "The name of the operation to apply. It must match the name of an operation defined in the concept."
     )
     val name: String,
-    @Description(
-        "The parameters for the operation. The keys should match the names of the parameters defined in the operation description, and the values should be the corresponding values for this specific application of the operation."
-    )
     @Description("The CPG id of the node to which the operation should be applied.")
     val nodeId: String,
     @Description(
@@ -98,15 +95,18 @@ data class LLMOperation(
 data class LLMConcept(
     @Description("The name of the concept to apply. It must match the name of a concept.")
     val name: String,
-    @Description(
-        "The parameters for the concept. The keys should match the names of the parameters defined in the concept description, and the values should be the corresponding values for this specific application of the concept."
-    )
     @Description("The CPG id of the node to which the concept should be applied.")
     val nodeId: String,
     @Description(
-        "The properties to set for the concept. Each property should have a name and a value. The name should match the name of a parameter defined in the concept description, and the value should be the corresponding value for this specific application of the concept."
+        "The properties to set for the concept. Each property should have a name and a value. The name should match the name of a property defined in the concept description, and the value should be the corresponding value for this specific application of the concept."
     )
     val properties: List<LLMProperty>,
     @Description("A list of operations to apply to this concept.")
     val operations: List<LLMOperation>,
+)
+
+@Serializable
+data class LLMConceptList(
+    @Description("A list of concepts with their operations to apply to the graph.")
+    val concepts: List<LLMConcept>
 )

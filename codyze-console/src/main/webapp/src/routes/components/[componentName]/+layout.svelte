@@ -59,6 +59,7 @@
       currentUnitId={currentUnitId()}
       fileHref={(unit) => `/components/${data.component.name}/translation-unit/${unit.id}`}
       componentHref={(name) => `/components/${name}`}
+      width="w-64"
     />
 
     <!-- Main content area -->

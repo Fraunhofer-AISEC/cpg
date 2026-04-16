@@ -154,15 +154,9 @@ class ChatService(
                     onText = { text -> send(Events.text(text)) },
                     onReasoning = { thought -> send(Events.reasoning(thought)) },
                 )
-            log.info(
-                "Initial prompt returned {} tool calls: {}",
-                toolCalls.size,
-                toolCalls.map { it.name },
-            )
 
             while (toolCalls.isNotEmpty() && iteration < maxToolIterations) {
                 iteration++
-                log.info("Agent: Round {}: executing {}", iteration, toolCalls.map { it.name })
                 val roundtripResults =
                     toolCalls.map { toolCall ->
                         val result = executeToolCall(toolCall) { jsonEvent -> send(jsonEvent) }
@@ -231,6 +225,13 @@ class ChatService(
         }
     }
 
+    /** Call an MCP tool directly and return the result as a parsed JSON element. */
+    suspend fun callTool(name: String, arguments: JsonObject): JsonElement {
+        val result = mcp.callTool(name = name, arguments = arguments)
+        val contentTexts = result.content.mapNotNull { (it as? TextContent)?.text }
+        return parseToolResultContent(contentTexts)
+    }
+
     fun close() {
         httpClient.close()
     }
@@ -278,11 +279,14 @@ class ChatService(
                 when (llmProvider) {
                     "gemini" -> {
                         val apiKey =
-                            System.getenv("GEMINI_API_KEY")
-                                ?: throw IllegalStateException("GEMINI_API_KEY not set")
+                            System.getenv("CODYZE_GEMINI_API_KEY")
+                                ?: throw IllegalStateException("CODYZE_GEMINI_API_KEY not set")
                         GeminiClient(httpClient, llmModel, apiKey, llmBaseUrl)
                     }
-                    else -> OpenAiClient(httpClient, llmModel, llmBaseUrl)
+                    else -> {
+                        val apiKey = System.getenv("CODYZE_OPENAI_API_KEY")
+                        OpenAiClient(httpClient, llmModel, llmBaseUrl, apiKey)
+                    }
                 }
 
             return ChatService(
