@@ -706,7 +706,7 @@ fun Node.collectAllPrevEOGPaths(interproceduralAnalysis: Boolean): List<NodePath
  * Iterates the next PDG edges until there are no more edges available (or until a loop is
  * detected). Returns a list of possible paths (each path is represented by a list of nodes).
  */
-fun Node.collectAllNextPDGGPaths(): List<NodePath> {
+fun Node.collectAllNextPDGPaths(): List<NodePath> {
     // We make everything fail to reach the end of the CDG. Then, we use the stuff collected in the
     // failed paths (everything)
     return this.followNextPDGUntilHit(collectFailedPaths = true, findAllPossiblePaths = true) {

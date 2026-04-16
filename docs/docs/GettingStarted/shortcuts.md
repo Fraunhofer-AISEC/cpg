@@ -122,6 +122,6 @@ stable than the information from above!
   `Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean)`,
   `Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean)`,
   `Node.collectAllPrevPDGPaths(interproceduralAnalysis: Boolean)`,
-  `Node.collectAllNextPDGGPaths(interproceduralAnalysis: Boolean)`
+  `Node.collectAllNextPDGPaths(interproceduralAnalysis: Boolean)`
   can be used.
 
