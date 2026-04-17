@@ -56,7 +56,7 @@ inline fun <reified EdgeType : Edge<out Node>> Node.edges(
 
         // Gather all edges
         if (obj is EdgeCollection<*, *>) {
-            for (edge in obj.toList()) {
+            for (edge in obj) {
                 if (edge is EdgeType && predicate.invoke(edge)) {
                     edges += edge
                 }
