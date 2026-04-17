@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -42,6 +43,9 @@ import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy.AST_FORWARD
 import de.fraunhofer.aisec.cpg.test.TestUtils.ENFORCE_MEMBER_EXPRESSION
 import de.fraunhofer.aisec.cpg.test.TestUtils.ENFORCE_REFERENCES
 import java.io.File
@@ -335,4 +339,16 @@ fun ContextProvider.assertResolvedType(fqn: String): Type {
     val type =
         ctx.typeManager.lookupResolvedType(fqn, language = (this as? LanguageProvider)?.language)
     return assertNotNull(type)
+}
+
+fun <T : AstNode> assertAstInvariants(root: T?) {
+    if (root != null) {
+        val walker = SubgraphWalker.IterativeGraphWalker(Strategy::AST_FORWARD)
+        walker.registerOnNodeVisit { node, parent ->
+            if (parent != null) {
+                assertTrue("$parent <> ${node.astParent}") { parent === node.astParent }
+            }
+        }
+        walker.iterate(root)
+    }
 }
