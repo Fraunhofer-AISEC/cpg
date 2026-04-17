@@ -79,7 +79,23 @@
       : [])
   ]);
 
-  let hoveredSuggestionNodeId = $state<string | null>(null);
+  let activeSuggestionNodeId = $state<string | null>(null);
+
+  $effect(() => {
+    if (!tabs.some(t => t.id === activeTab)) {
+      activeTab = tabs[0]?.id ?? 'astNodes';
+    }
+  });
+
+  // Auto-switch to suggestions tab on transition from 0 -> >0 suggestions
+  let prevSuggestionCount = 0;
+  $effect(() => {
+    const count = suggestions.length;
+    if (prevSuggestionCount === 0 && count > 0) {
+      activeTab = 'suggestions';
+    }
+    prevSuggestionCount = count;
+  });
 
   // Resolve a nodeId to its line range via astNodes
   function linesForNodeId(nodeId: string): number[] {
@@ -107,16 +123,16 @@
     return [...lines];
   });
 
-  // Lines to highlight when hovering a specific suggestion node
-  const hoveredLines = $derived.by(() => {
-    if (!hoveredSuggestionNodeId) return [];
-    return linesForNodeId(hoveredSuggestionNodeId);
+  // Lines to highlight for the currently active suggestion node (click-focused)
+  const activeNodeLines = $derived.by(() => {
+    if (!activeSuggestionNodeId) return [];
+    return linesForNodeId(activeSuggestionNodeId);
   });
 
   // Combined highlight lines for the code viewer
   const allHighlightLines = $derived.by(() => {
     if (activeTab === 'suggestions') {
-      const lines = new Set([...suggestionHighlightLines, ...hoveredLines]);
+      const lines = new Set([...suggestionHighlightLines, ...activeNodeLines]);
       return [...lines];
     }
     return highlightLine ? [highlightLine - 1] : [];
@@ -127,14 +143,15 @@
   const offsetTop = 1;
   const baseOffsetLeft = 2.4;
 
-  const totalLines = $derived(translationUnit.code.split('\n').length);
+  const codeLines = $derived(translationUnit.code.split('\n'));
+  const totalLines = $derived(codeLines.length);
   const lineNumberWidth = $derived(Math.ceil(Math.log10(totalLines + 1)));
   const offsetLeft = $derived(baseOffsetLeft + lineNumberWidth * charWidth);
 
   // Scroll to hovered suggestion node
   $effect(() => {
-    if (hoveredSuggestionNodeId && codeContainerElement) {
-      const node = astNodes.find(n => n.id === hoveredSuggestionNodeId);
+    if (activeSuggestionNodeId && codeContainerElement) {
+      const node = astNodes.find(n => n.id === activeSuggestionNodeId);
       if (node) {
         const computedStyle = window.getComputedStyle(codeContainerElement);
         const lh = parseFloat(computedStyle.lineHeight) || parseFloat(computedStyle.fontSize) * 1.5 || 20;
@@ -149,7 +166,7 @@
         if (!codeContainerElement) return;
         const computedStyle = window.getComputedStyle(codeContainerElement);
         const lineHeight = parseFloat(computedStyle.lineHeight) || parseFloat(computedStyle.fontSize) * 1.5 || 20;
-        codeContainerElement.scrollTo({ top: Math.max(0, (highlightLine - 3) * lineHeight), behavior: 'smooth' });
+        codeContainerElement.scrollTo({ top: Math.max(0, (highlightLine - 3) * lineHeight), behavior: 'auto' });
       }, 300);
     }
   });
@@ -157,8 +174,8 @@
 
 <div class="flex h-full w-full overflow-hidden rounded-[inherit]">
   <!-- Code display -->
-  <div class="relative flex-1 overflow-auto" bind:this={codeContainerElement}>
-    <div class="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-2">
+  <div class="relative flex-1 overflow-auto" style="transform: translateZ(0);" bind:this={codeContainerElement}>
+    <div class="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-2">
       <div class="font-mono text-xs text-gray-500">{translationUnit.name}</div>
       <div class="flex items-center gap-2">
         {#if headerActions}
@@ -199,7 +216,7 @@
       {#if activeTab !== 'suggestions'}
         <NodeOverlays
           {nodes}
-          codeLines={translationUnit.code.split('\n')}
+          {codeLines}
           bind:highlightedNode
           {lineHeight}
           {charWidth}
@@ -222,7 +239,7 @@
         <ConceptChecklist
           bind:items={suggestions}
           {onApplySuggestions}
-          onHighlightNode={(nodeId) => hoveredSuggestionNodeId = nodeId}
+          onHighlightNode={(nodeId) => (activeSuggestionNodeId = nodeId)}
         />
       {:else}
         <NodeTable

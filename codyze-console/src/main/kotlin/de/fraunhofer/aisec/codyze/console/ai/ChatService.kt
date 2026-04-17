@@ -132,7 +132,7 @@ class ChatService(
     }
 
     /** Maximum number of tool call iterations before responding a text message. */
-    private val maxToolIterations = 8
+    private val maxToolIterations = 30
 
     /** Process a chat query using the LLM with MCP tool support */
     fun chat(request: ChatRequestJSON): Flow<String> = channelFlow {

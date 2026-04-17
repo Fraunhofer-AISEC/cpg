@@ -136,17 +136,21 @@ export interface ConceptInfo {
 // LLM Concept
 export interface LLMProperty {
   name: string;
+  type: string;
+  description?: string;
   value: string;
 }
 
 export interface LLMOperation {
   name: string;
+  description: string;
   nodeId: string;
   properties: LLMProperty[];
 }
 
 export interface LLMConcept {
   name: string;
+  description: string;
   nodeId: string;
   properties: LLMProperty[];
   operations: LLMOperation[];

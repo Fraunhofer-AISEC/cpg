@@ -37,7 +37,7 @@
   // Get current unit ID from the URL using page store
   const currentUnitId = $derived(() => {
     const match = $page.url.pathname.match(/\/translation-unit\/([^\/]+)/);
-    return match ? match[1] : null;
+    return match ? match[1] : undefined;
   });
 </script>
 

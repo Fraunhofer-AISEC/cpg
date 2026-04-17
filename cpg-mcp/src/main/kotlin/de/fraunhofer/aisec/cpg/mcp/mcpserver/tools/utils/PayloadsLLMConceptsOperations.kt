@@ -67,12 +67,15 @@ data class LLMConceptDescription(
 
 @Serializable
 data class LLMProperty(
-    @Description(
-        "The name of the property to set. It must match the name of a property defined in the concept / operation."
-    )
+    @Description("The name of the property. It should be short and precises, preferably one word.")
     val name: String,
     @Description(
-        "The value to set for the property (as string representation). The type of the value should match the type defined in the concept / operation description for this property."
+        "The type of the property. It should be a simple Kotlin data type (e.g. string, integer, boolean)."
+    )
+    val type: String,
+    @Description("A short description of the property.") val description: String? = null,
+    @Description(
+        "The value to set for the property (as string representation). The type of the value should match the `type` field."
     )
     val value: String,
 )
@@ -83,6 +86,10 @@ data class LLMOperation(
         "The name of the operation to apply. It must match the name of an operation defined in the concept."
     )
     val name: String,
+    @Description(
+        "The description of the operation. It should explain what the operation does and provide guidance on when to apply it."
+    )
+    val description: String,
     @Description("The CPG id of the node to which the operation should be applied.")
     val nodeId: String,
     @Description(
@@ -95,18 +102,58 @@ data class LLMOperation(
 data class LLMConcept(
     @Description("The name of the concept to apply. It must match the name of a concept.")
     val name: String,
+    @Description(
+        "The description of the concept. It should explain the concept in more detail and provide guidance on when to apply it."
+    )
+    val description: String,
     @Description("The CPG id of the node to which the concept should be applied.")
     val nodeId: String,
     @Description(
-        "The properties to set for the concept. Each property should have a name and a value. The name should match the name of a property defined in the concept description, and the value should be the corresponding value for this specific application of the concept."
+        "The properties to set for the concept. Each property should have a name and a value. The name should match the name of a parameter defined in the concept description, and the value should be the corresponding value for this specific application of the concept."
     )
     val properties: List<LLMProperty>,
     @Description("A list of operations to apply to this concept.")
     val operations: List<LLMOperation>,
 )
 
+/** Convert an [LLMConcept] instance to its schema representation for YAML. */
+fun LLMConcept.toDescription() =
+    LLMConceptDescription(
+        name = name,
+        description = description,
+        properties = properties.map { it.toDescription() },
+        operations = operations.map { it.toDescription() },
+    )
+
+fun LLMOperation.toDescription() =
+    LLMOperationDescription(
+        name = name,
+        description = description,
+        properties = properties.map { it.toDescription() },
+    )
+
+fun LLMProperty.toDescription() =
+    LLMPropertyDescription(name = name, type = type, description = description)
+
 @Serializable
 data class LLMConceptList(
     @Description("A list of concepts with their operations to apply to the graph.")
     val concepts: List<LLMConcept>
 )
+
+@Serializable data class AppliedOperation(val operation: LLMOperation, val overlayNodeId: String)
+
+@Serializable data class FailedOperation(val operation: LLMOperation, val reason: String)
+
+@Serializable
+data class AppliedConcept(
+    val concept: LLMConcept,
+    val overlayNodeId: String,
+    val appliedOperations: List<AppliedOperation>,
+    val failedOperations: List<FailedOperation>,
+)
+
+@Serializable data class FailedConcept(val concept: LLMConcept, val reason: String)
+
+@Serializable
+data class AddConceptsResult(val applied: List<AppliedConcept>, val failed: List<FailedConcept>)

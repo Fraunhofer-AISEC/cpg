@@ -95,7 +95,7 @@
     analysisResult?: AnalysisResultJSON | null;
     mcpCapabilities?: McpCapabilities | null;
     suggestions?: ConceptSuggestionItem[];
-    onApplySuggestions?: (accepted: ConceptSuggestionItem[]) => void;
+    onApplySuggestions?: (accepted: ConceptSuggestionItem[]) => Promise<void> | void;
     onSendMessage: () => void;
     onReset: () => void;
     onMessageChange: (message: string) => void;
@@ -119,6 +119,13 @@
     onPromptSelect,
     onOpenMcpModal
   }: Props = $props();
+
+  async function handleApplyAndReload(accepted: ConceptSuggestionItem[]) {
+    await onApplySuggestions?.(accepted);
+    if (selectedComponentName && selectedTranslationUnit) {
+      await loadNodes(selectedComponentName, selectedTranslationUnit.id);
+    }
+  }
 
   let showCodePanel = $derived(selectedTranslationUnit !== null || suggestions.length > 0);
   let displayContent = $derived(streamingContent.trim().length > 0 ? streamingContent : '');
@@ -213,9 +220,9 @@
 
 <div class="flex h-full bg-gray-50">
   <!-- Chat Container -->
-  <div class="flex flex-col transition-all duration-300 {showCodePanel ? 'w-[45%]' : 'w-full'}">
+  <div class="flex flex-col min-w-0 min-h-0 transition-[width] duration-300 {showCodePanel ? 'w-[45%]' : 'w-full'}">
     <!-- Messages Container -->
-    <div class="flex-1 overflow-y-auto" bind:this={messagesContainer} onscroll={handleScroll}>
+    <div class="flex-1 overflow-y-auto" style="transform: translateZ(0);" bind:this={messagesContainer} onscroll={handleScroll}>
       <div class="mx-auto max-w-6xl">
         {#each messages as message}
           {#if message.role === 'user'}
@@ -317,7 +324,7 @@
 
   <!-- Code Panel: FileTree + CodeViewer -->
   {#if showCodePanel && selectedTranslationUnit}
-    <div class="flex flex-1 overflow-hidden rounded-xl shadow-lg mx-2 my-2 border border-gray-200 bg-white" style="animation: slideIn 0.3s ease-out">
+    <div class="flex flex-1 min-w-0 min-h-0 overflow-hidden rounded-xl shadow-lg mx-2 my-2 border border-gray-200 bg-white">
 
       {#if selectedComponent}
         <FileTree
@@ -337,7 +344,7 @@
         bind:nodePanelCollapsed={nodesPanelCollapsed}
         onClose={closeCodePanel}
         bind:suggestions
-        {onApplySuggestions}
+        onApplySuggestions={handleApplyAndReload}
       />
 
     </div>

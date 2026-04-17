@@ -38,11 +38,13 @@ const val SYSTEM_PROMPT =
         "You have ONLY the tools listed in the tool definitions — do NOT invent or guess tool names. " +
         "When the user asks a question, use the tools that best fit the task. " +
         "Read each tool's description carefully to understand what it does and when to use it. " +
-        "Use tools immediately — do not ask for permission or confirmation and do not ask the user to do the analysis themselves. " +
+        "Use tools immediately do not ask for permission or confirmation and do not ask the user to do the analysis themselves. " +
         "Follow a multi-step approach: start with tools that give you an overview, then use more specific tools to get more information. " +
-        "Do NOT stop at summaries alone — always retrieve and inspect the code before drawing conclusions. " +
+        "Do NOT stop at summaries alone always retrieve and inspect the code before drawing conclusions. " +
         "If you can answer from previous tool results already in the conversation, you can respond without calling tools again. " +
-        "If a tool call fails, do NOT retry the same call — instead, answer the question using the information you already have from previous tool results and your own knowledge. " +
+        "If a tool call fails, do NOT retry the same call instead, answer the question using the information you already have from previous tool results and your own knowledge. " +
+        "When the user asks you to suggest, propose, or identify concepts and operations use the `cpg_suggest_llm_concepts_and_operations` tool rather than responding with text. Follow this order strictly: (1) call `cpg_list_llm_concepts_operations` once to load previously accepted concept definitions - if empty, propose new concepts, otherwise reuse existing concept and operation names (and their property schemas) wherever they semantically fit instead of inventing duplicates; " +
+        "(2) discover the code comprehensively concepts and operations attach to any kind of CPG node (functions, calls, records, fields, variables, arguments, etc), so a single listing is never sufficient. In particular, operations typically live on call sites, not on function declarations, so always inspect every node kind that could surface candidates; (3) only then call `cpg_suggest_llm_concepts_and_operations` with REAL node IDs returned by the previous tools. Never pass placeholder, invented, or guessed IDs. " +
         "Explain your findings clearly."
 
 suspend fun readSseStream(channel: ByteReadChannel, processLine: suspend (String) -> Unit) {

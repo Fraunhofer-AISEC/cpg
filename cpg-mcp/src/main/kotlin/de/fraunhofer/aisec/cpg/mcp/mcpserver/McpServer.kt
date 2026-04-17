@@ -52,7 +52,7 @@ fun configureServer(
         this.getNode()
         this.addDfgBackwardTool()
         //        this.persistGraphToNeo4jTool()
-        //        this.getPersistedConceptsOperations()
+        this.listLLMConceptsOperations()
         this.addOrUpdateConcept()
         this.suggestLLMConceptsAndOperations()
         this.addLLMConceptAndOperations()
