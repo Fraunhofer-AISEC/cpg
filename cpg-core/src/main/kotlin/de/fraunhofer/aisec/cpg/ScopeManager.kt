@@ -151,6 +151,17 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     // also update the AST node of the existing scope to the "latest" we have seen
                     existing.astNode = entry.value.astNode
 
+                    // Re-parent the children of the duplicate scope (entry.value) to the surviving
+                    // scope (existing). Without this, inner scopes such as FunctionScopes whose
+                    // parent still points to the stale duplicate scope would miss symbols that are
+                    // only declared in the surviving scope when walking the parent chain during
+                    // symbol resolution.
+                    for (child in entry.value.children) {
+                        child.parent = existing
+                        existing.children.add(child)
+                    }
+                    entry.value.children.clear()
+
                     // now it gets more tricky. we also need to "redirect" the AST nodes in the sub
                     // scope manager to our existing NameScope (currently, they point to their own,
                     // invalid copy of the NameScope).
