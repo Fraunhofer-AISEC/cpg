@@ -55,7 +55,7 @@ interface StepSelector {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
         interproceduralEdgesExist: Boolean = false,
@@ -77,7 +77,7 @@ class Intraprocedural(maxSteps: Int? = null) : AnalysisScope(maxSteps) {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
         interproceduralEdgesExist: Boolean,
@@ -101,7 +101,7 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
         interproceduralEdgesExist: Boolean,
@@ -128,8 +128,11 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
             // a loop (recursion).
             if (currentNode in ctx.callStack) {
                 loopingPaths.add(
-                    NodePath(path.map { it.first } + currentNode)
-                        .addAssumptionDependence(path.map { it.second } + ctx)
+                    NodePath(
+                            path.map { it.first } + currentNode,
+                            path.mapNotNull { it.second } + edge,
+                        )
+                        .addAssumptionDependence(path.map { it.third } + ctx)
                 )
                 return false
             }
@@ -155,7 +158,7 @@ class InterproceduralWithDfgTermination(
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
         interproceduralEdgesExist: Boolean,
@@ -218,10 +221,10 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
         currentNode: Node,
         scope: AnalysisScope,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
-    ): Collection<Pair<Node, Context>>
+    ): Collection<Triple<Node, Edge<Node>, Context>>
 
     /**
      * Considering the [edge], it determines which node (start or end of the edge) will be used as
@@ -237,9 +240,10 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
     fun <T : HasAssumptions> unwrapNextStepFromEdge(
         edge: Edge<Node>,
         hasAssumptions: T,
-    ): Pair<Node, T> {
-        return Pair(
+    ): Triple<Node, Edge<Node>, T> {
+        return Triple(
             unwrapNextStepFromEdge(edge),
+            edge,
             hasAssumptions.addAssumptionDependence(hasAssumptions),
         )
     }
@@ -263,7 +267,7 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
         edges: Collection<Edge<Node>>,
         ctx: Context,
         scope: AnalysisScope,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
     ): Collection<Pair<Edge<Node>, Context>> {
@@ -309,12 +313,12 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
         edges: Collection<Edge<Node>>,
         ctx: Context,
         scope: AnalysisScope,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
         nextStep: (Node) -> Collection<Edge<Node>>,
         nodeStart: (Edge<Node>) -> Node,
-    ): List<Pair<Node, Context>> {
+    ): List<Triple<Node, Edge<Node>, Context>> {
         val filteredToJump =
             filterEdges(
                 currentNode = currentNode,
@@ -350,10 +354,10 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
         currentNode: Node,
         scope: AnalysisScope,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
-    ): Collection<Pair<Node, Context>> {
+    ): Collection<Triple<Node, Edge<Node>, Context>> {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
 
@@ -468,10 +472,10 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
         currentNode: Node,
         scope: AnalysisScope,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
-    ): Collection<Pair<Node, Context>> {
+    ): Collection<Triple<Node, Edge<Node>, Context>> {
         return when (graphToFollow) {
             GraphToFollow.DFG -> {
                 filterEdges(
@@ -587,10 +591,10 @@ class Bidirectional(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFol
         currentNode: Node,
         scope: AnalysisScope,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
-    ): Collection<Pair<Node, Context>> {
+    ): Collection<Triple<Node, Edge<Node>, Context>> {
         TODO("Not yet implemented")
     }
 
@@ -628,7 +632,7 @@ object FilterUnreachableEOG : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
         interproceduralEdgesExist: Boolean,
@@ -643,7 +647,7 @@ object OnlyFullDFG : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
         interproceduralEdgesExist: Boolean,
@@ -658,7 +662,7 @@ object ContextSensitive : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
         interproceduralEdgesExist: Boolean,
@@ -701,7 +705,7 @@ object FieldSensitive : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
         interproceduralEdgesExist: Boolean,
@@ -745,7 +749,7 @@ object Implicit : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
-        path: List<Pair<Node, Context>>,
+        path: List<Triple<Node, Edge<Node>?, Context>>,
         loopingPaths: MutableSet<NodePath>,
         analysisDirection: AnalysisDirection,
         interproceduralEdgesExist: Boolean,

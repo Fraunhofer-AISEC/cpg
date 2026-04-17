@@ -298,6 +298,7 @@ enum class FailureReason {
  */
 data class NodePath(
     val nodes: List<Node>,
+    val edges: List<Edge<Node>>,
     override val assumptions: MutableSet<Assumption> = mutableSetOf(),
 ) : HasAssumptions {
 
@@ -763,11 +764,14 @@ fun Node.followNextPDGUntilHit(
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode, ctx, _, _ ->
-            val nextNodes = currentNode.nextPDG.toMutableList()
+            val nextEdges = currentNode.nextPDGEdges.toMutableList()
             if (interproceduralAnalysis) {
-                nextNodes.addAll((currentNode as? Call)?.calls ?: listOf())
+                (currentNode as? Call)?.invokeEdges?.forEach {
+                    @Suppress("UNCHECKED_CAST")
+                    (it as? Edge<Node>)?.let { element -> nextEdges.add(element) }
+                }
             }
-            nextNodes.map { it to ctx }
+            nextEdges.map { Triple(it.end, it, ctx) }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -794,11 +798,14 @@ fun Node.followNextCDGUntilHit(
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode, ctx, _, _ ->
-            val nextNodes = currentNode.nextCDG.toMutableList()
+            val nextEdges: MutableList<Edge<Node>> = currentNode.nextCDGEdges.toMutableList()
             if (interproceduralAnalysis) {
-                nextNodes.addAll((currentNode as? Call)?.calls ?: listOf())
+                (currentNode as? Call)?.invokeEdges?.forEach {
+                    @Suppress("UNCHECKED_CAST")
+                    (it as? Edge<Node>)?.let { element -> nextEdges.add(element) }
+                }
             }
-            nextNodes.map { it to ctx }
+            nextEdges.map { Triple(it.end, it, ctx) }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -827,20 +834,23 @@ fun Node.followPrevPDGUntilHit(
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode, ctx, _, _ ->
-            val nextNodes = currentNode.prevPDG.toMutableList()
+            val nextEdges = currentNode.prevPDGEdges.toMutableList()
             if (interproceduralAnalysis) {
-                nextNodes.addAll(
-                    (currentNode as? Function)?.usages?.mapNotNull {
-                        val result =
-                            if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true)
-                                it.astParent as? Call
-                            else null
-                        result?.let { ctx.callStack.push(it) }
-                        result
+                nextEdges.addAll(
+                    (currentNode as? Function)?.usageEdges?.mapNotNull { edge ->
+                        val node = edge.end
+                        if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true) {
+                            val call = node.astParent as? Call
+                            call?.let {
+                                ctx.callStack.push(it)
+                                @Suppress("UNCHECKED_CAST")
+                                edge as? Edge<Node>
+                            }
+                        } else null
                     } ?: listOf()
                 )
             }
-            nextNodes.map { it to ctx }
+            nextEdges.map { Triple(it.end, it, ctx) }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -869,20 +879,23 @@ fun Node.followPrevCDGUntilHit(
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode, ctx, _, _ ->
-            val nextNodes = currentNode.prevCDG.toMutableList()
+            val nextEdges: MutableList<Edge<Node>> = currentNode.prevCDGEdges.toMutableList()
             if (interproceduralAnalysis) {
-                nextNodes.addAll(
-                    (currentNode as? Function)?.usages?.mapNotNull {
-                        val result =
-                            if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true)
-                                it.astParent as? Call
-                            else null
-                        result?.let { ctx.callStack.push(it) }
-                        result
+                nextEdges.addAll(
+                    (currentNode as? Function)?.usageEdges?.mapNotNull { edge ->
+                        val node = edge.end
+                        if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true) {
+                            val call = node.astParent as? Call
+                            call?.let {
+                                ctx.callStack.push(it)
+                                @Suppress("UNCHECKED_CAST")
+                                edge as? Edge<Node>
+                            }
+                        } else null
                     } ?: listOf()
                 )
             }
-            nextNodes.map { it to ctx }
+            nextEdges.map { edge -> Triple(edge.end, edge, ctx) }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -903,9 +916,9 @@ fun Node.followPrevCDGUntilHit(
  */
 fun Node.followXUntilHit(
     x:
-        (Node, Context, List<Pair<Node, Context>>, MutableSet<NodePath>) -> Collection<
-                Pair<Node, Context>
-            >,
+        (
+            Node, Context, List<Triple<Node, Edge<Node>?, Context>>, MutableSet<NodePath>,
+        ) -> Collection<Triple<Node, Edge<Node>, Context>>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     continueAfterHit: Boolean = false,
@@ -920,23 +933,25 @@ fun Node.followXUntilHit(
     val failedPaths = mutableListOf<Pair<FailureReason, NodePath>>()
     val loopingPaths: MutableSet<NodePath> = ConcurrentHashMap.newKeySet()
     // The list of paths where we're not done yet.
-    val worklist = identitySetOf<List<Pair<Node, Context>>>()
-    worklist.add(listOf(this to ctx)) // We start only with the "from" node (=this)
+    val worklist = identitySetOf<List<Triple<Node, Edge<Node>?, Context>>>()
+    worklist.add(listOf(Triple(this, null, ctx))) // We start only with the "from" node (=this)
 
-    val alreadySeenNodes = mutableSetOf<Pair<Node, Context>>()
+    val alreadySeenNodes = mutableSetOf<Triple<Node, Edge<Node>?, Context>>()
     // First check if the current node satisfies the predicate.
     // If it does, we consider this path fulfilled and skip further traversal.
     if (predicate(this)) {
-        fulfilledPaths.add(NodePath(mutableListOf(this)).addAssumptionDependence(this))
+        fulfilledPaths.add(NodePath(mutableListOf(this), emptyList()).addAssumptionDependence(this))
         return FulfilledAndFailedPaths(fulfilledPaths.toSet().toList(), failedPaths)
     }
     while (worklist.isNotEmpty()) {
         val currentPath = worklist.maxBy { it.size }
         worklist.remove(currentPath)
         val currentNode = currentPath.last().first
-        val currentContext = currentPath.last().second
-        alreadySeenNodes.add(currentNode to currentContext)
+        val currentEdge = currentPath.last().second
+        val currentContext = currentPath.last().third
+        alreadySeenNodes.add(Triple(currentNode, currentEdge, currentContext))
         val currentPathNodes = currentPath.map { it.first }
+        val currentPathEdges = currentPath.mapNotNull { it.second }
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
         // follow them
         val nextNodes = x(currentNode, currentContext, currentPath, loopingPaths)
@@ -947,53 +962,53 @@ fun Node.followXUntilHit(
             // of steps?
             failedPaths.add(
                 FailureReason.PATH_ENDED to
-                    NodePath(currentPath.map { it.first })
-                        .addAssumptionDependence(currentPath.map { it.second }.toList())
+                    NodePath(currentPathNodes, currentPathEdges)
+                        .addAssumptionDependence(currentPath.map { it.third }.toList())
             )
         }
 
-        for ((next, newContext) in nextNodes) {
+        for ((nextNode, edge, newContext) in nextNodes) {
             // Copy the path for each outgoing edge and add the next node
-            if (predicate(next)) {
+            if (predicate(nextNode)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
                 // the path to the results.
                 fulfilledPaths.add(
-                    NodePath(currentPathNodes.toMutableList() + next)
-                        .addAssumptionDependence(currentPath.map { it.second } + newContext)
+                    NodePath(currentPathNodes + nextNode, currentPathEdges + edge)
+                        .addAssumptionDependence(currentPath.map { it.third } + newContext)
                 )
                 continue // Don't add this path anymore. The requirement is satisfied.
             }
-            if (earlyTermination(next, currentContext)) {
+            if (earlyTermination(nextNode, currentContext)) {
                 failedPaths.add(
                     FailureReason.HIT_EARLY_TERMINATION to
-                        NodePath(currentPath.map { it.first } + next)
-                            .addAssumptionDependence(currentPath.map { it.second } + newContext)
+                        NodePath(currentPathNodes + nextNode, currentPathEdges + edge)
+                            .addAssumptionDependence(currentPath.map { it.third } + newContext)
                 )
                 continue // Don't add this path anymore. We already failed.
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
             if (
-                !isNodeWithCallStackInPath(next, newContext, currentPath) &&
+                !isNodeWithCallStackInPath(nextNode, newContext, currentPath) &&
                     // A hack that tries to ensure that we are not running in circles: Watch out if
                     // the top of the newContext and the currentPath callStack are the same and not
                     // null, this could indicate a loop
                     // However, if the newContext and the currentPath last's callStack are the same,
                     // it should be fine I guess
                     !newContext.callStack.clone().isLoop() &&
-                    (newContext.callStack.top != currentPath.last().second.callStack.top ||
+                    (newContext.callStack.top != currentPath.last().third.callStack.top ||
                         newContext.callStack.top == null ||
-                        newContext.callStack == currentPath.last().second.callStack) &&
+                        newContext.callStack == currentPath.last().third.callStack) &&
                     (findAllPossiblePaths ||
-                        (!isNodeWithCallStackInPath(next, newContext, alreadySeenNodes) &&
-                            worklist.none { isNodeWithCallStackInPath(next, newContext, it) }))
+                        (!isNodeWithCallStackInPath(nextNode, newContext, alreadySeenNodes) &&
+                            worklist.none { isNodeWithCallStackInPath(nextNode, newContext, it) }))
             ) {
-                worklist.add(currentPath.toMutableList() + (next to newContext.inc()))
+                worklist.add(currentPath.toMutableList() + Triple(nextNode, edge, newContext.inc()))
             } else {
                 // There's a loop.
                 loopingPaths.add(
-                    NodePath(currentPathNodes + next)
-                        .addAssumptionDependence(currentPath.map { it.second } + newContext)
+                    NodePath(currentPathNodes + nextNode, currentPathEdges + edge)
+                        .addAssumptionDependence(currentPath.map { it.third } + newContext)
                 )
             }
         }
@@ -1028,9 +1043,9 @@ fun Node.followXUntilHit(
 fun isNodeWithCallStackInPath(
     node: Node,
     context: Context,
-    path: Collection<Pair<Node, Context>>,
+    path: Collection<Triple<Node, Edge<Node>?, Context>>,
 ): Boolean {
-    return path.any { it.first == node && context.callStack == it.second.callStack }
+    return path.any { it.first == node && context.callStack == it.third.callStack }
 }
 
 /**
@@ -1410,6 +1425,7 @@ inline operator fun <reified T> List<Node>.invoke(i: Int = 0): T? {
 }
 
 operator fun <N : Expression> Expression?.invoke(): N? {
+    @Suppress("UNCHECKED_CAST")
     return this as? N
 }
 
