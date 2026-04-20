@@ -44,23 +44,21 @@ class SkillRegistry(private val skillsDirs: List<Path>) {
      * [Parse SKILL.md files](https://agentskills.io/client-implementation/adding-skills-support#step-2-parse-skill-md-files)
      */
     fun discoverSkills(): List<Skill> {
-        val discovered = mutableListOf<Skill>()
-        for (skillsDir in skillsDirs) {
-            if (!Files.isDirectory(skillsDir)) {
-                log.debug("Skills directory does not exist: {}", skillsDir)
-                continue
-            }
-            Files.list(skillsDir).use { stream ->
-                stream
-                    .filter { Files.isDirectory(it) }
-                    .map { it.resolve("SKILL.md") }
-                    .filter { Files.isRegularFile(it) }
-                    .map { parseSkill(it) }
-                    .toList()
-                    .filterNotNull()
-                    .forEach { discovered.add(it) }
-            }
-        }
+        val discovered =
+            skillsDirs
+                .filter { dir ->
+                    Files.isDirectory(dir).also {
+                        if (!it) {
+                            log.debug("Skills directory does not exist: {}", dir)
+                        }
+                    }
+                }
+                .flatMap { dir -> Files.list(dir).use { it.toList() } }
+                .filter { Files.isDirectory(it) }
+                .map { it.resolve("SKILL.md") }
+                .filter { Files.isRegularFile(it) }
+                .mapNotNull { parseSkill(it) }
+
         skills = discovered.associateBy { it.name }
         return discovered
     }
