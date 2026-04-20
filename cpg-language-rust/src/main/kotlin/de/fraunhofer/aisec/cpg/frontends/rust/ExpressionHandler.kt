@@ -627,7 +627,12 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 )
 
         // Create the switch statement
-        val switchStatement = newSwitch(rawNode = raw)
+        val switchStatement =
+            newSwitch(rawNode = raw)
+                .assume(
+                    assumptionType = AssumptionType.ControlFlowAssumption,
+                    "Modeling match as a switch leads to an overapproximation of EOG paths as switch fallthrough can lead to guards being evaluated that would fail at the pattern matching, i.e. case expression.",
+                )
         switchStatement.selector = scrutinee
 
         frontend.scopeManager.enterScope(switchStatement)

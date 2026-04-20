@@ -162,7 +162,13 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
 
     override fun locationOf(astNode: RsAst): PhysicalLocation? {
         val metaAstNode = astNode.astNode()
-        val contentBefore = fileContent.substring(0, metaAstNode.startOffset.toInt())
+        val contentBefore =
+            fileContent.substring(
+                0,
+                if (metaAstNode.startOffset.toInt() < fileContent.length)
+                    metaAstNode.startOffset.toInt()
+                else fileContent.length,
+            )
         val upTo = contentBefore.split(lineSeparator)
         val contentBeforeAndIn =
             fileContent.substring(0, min(metaAstNode.endOffset.toInt(), fileContent.length))

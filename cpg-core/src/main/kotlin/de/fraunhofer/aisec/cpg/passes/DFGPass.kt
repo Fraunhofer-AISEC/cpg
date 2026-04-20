@@ -651,10 +651,40 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleDeclarationStatement(node: DeclarationStatement) {
         if (node.usedAsExpression) {
+
+            val inDeconstruction =
+                node.astParent?.let { parent -> node.prevDFG.contains(parent) } ?: false
+
             node.declarations.forEach {
-                if (it is ValueDeclaration) {
-                    it.astChildren.filterIsInstance<Expression>().lastOrNull()?.let {
-                        node.prevDFGEdges += it
+                if (it is Variable) {
+                    // Expression case:
+                    // [parent: Expression] -> [DeclarationStatement] <- [Initializer] -> [Variable]
+                    //                                                               ^-- [children:
+                    // Expression]
+                    // If the parent of the declaration Statement is a Deconstruction, the dfg needs
+                    // to go from the
+                    // declaration statement to the initializer of the variable, because the
+                    // initializer potentially
+                    // deconstructs the variable further. The DFG handling for variables should
+                    // naturally draw a DFG
+                    // edge from the initializer to the variable, creating a path to properly bind
+                    // the value to the
+                    // variable that goes over the deconstruction that may hold type information.
+                    // [parent: Deconstruction] -> [DeclarationStatement] -> [Initializer] ->
+                    // [Variable]
+                    //                                                                   '-->
+                    // [children: Deconstruction]
+                    // Todo: what happens if there are nested bindings that i would depict as
+                    // declaration statements with
+                    // variables and their initializers are declarations statements?
+
+                    // The default for the dfg targets are the initializers
+                    val dfgTarget = it.initializer ?: it
+                    // If there is no initializer, the variable is the target
+                    if (inDeconstruction) {
+                        node.nextDFGEdges += dfgTarget
+                    } else {
+                        node.prevDFGEdges += dfgTarget
                     }
                 }
             }
@@ -669,7 +699,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun handleBreak(node: Break) {
         if (node.usedAsExpression) {
-            node.expr?.let { node.prevDFGEdges += it }
+            node.expr.let { node.prevDFGEdges += it }
         }
     }
 
@@ -706,6 +736,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     protected fun handleObjectDeconstruction(node: ObjectDeconstruction) {
+        // If this Deconstruction has no incoming DFG, the data comes from the previously evaluated
+        // node, e.g. the switch or initializer
+        if (node.prevDFG.isEmpty()) {
+            node.prevEOG.forEach { node.prevDFGEdges += it }
+        }
+
         node.components.forEach {
 
             // Todo Partial positional or named dfgs
@@ -714,6 +750,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     protected fun handleAlternativeDeconstruction(node: AlternativeDeconstruction) {
+        // If this Deconstruction has no incoming DFG, the data comes from the previously evaluated
+        // node, e.g. the switch or initializer
+        if (node.prevDFG.isEmpty()) {
+            node.prevEOG.forEach { node.prevDFGEdges += it }
+        }
         node.alternatives.forEach {
 
             // Todo Full DFGs
@@ -722,6 +763,11 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     protected fun handleNamedDeconstruction(node: NamedDeconstruction) {
+        // If this Deconstruction has no incoming DFG, the data comes from the previously evaluated
+        // node, e.g. the switch or initializer
+        if (node.prevDFG.isEmpty()) {
+            node.prevEOG.forEach { node.prevDFGEdges += it }
+        }
         node.value.let {
             // Todo Partials to their name
             node.nextDFGEdges += it

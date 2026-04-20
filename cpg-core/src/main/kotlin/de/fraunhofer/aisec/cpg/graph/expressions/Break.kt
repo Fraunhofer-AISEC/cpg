@@ -26,19 +26,31 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.Objects
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Expression used to interrupt further execution of a loop body and exit the respective loop
  * context. Can have a loop label, e.g. in Java, to specify which of the nested loops should be
  * broken out of.
  */
-class Break : Expression(false) {
+class Break : Expression(false), HasType.TypeObserver {
 
     /** Specifies the label of the loop in a nested structure that this statement will 'break' */
     var label: String? = null
 
-    var expr: Expression? = null
+    @Relationship("EXPR")
+    var exprEdge =
+        astEdgeOf<Expression>(
+            of = ProblemExpression("could not parse break Expression"),
+            onChanged = { old, new -> exchangeTypeObserverWithAccessPropagation(old, new) },
+        )
+    /** The expression on which the operation is applied. */
+    var expr by unwrapping(Break::exprEdge)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -50,5 +62,23 @@ class Break : Expression(false) {
 
     override fun getStartingPrevEOG(): Collection<Node> {
         return this.prevEOG
+    }
+
+    override fun typeChanged(newType: Type, src: HasType) {
+        if (src != expr) {
+            return
+        }
+
+        this.type = newType
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // Only accept type changes from out input
+        if (src != expr) {
+            return
+        }
+
+        // Apply our operator to all assigned types and forward them to us
+        this.addAssignedTypes(assignedTypes)
     }
 }

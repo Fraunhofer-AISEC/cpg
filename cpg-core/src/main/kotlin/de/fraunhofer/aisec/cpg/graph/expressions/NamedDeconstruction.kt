@@ -33,13 +33,6 @@ import org.neo4j.ogm.annotation.Relationship
 
 class NamedDeconstruction : Deconstruction(), ArgumentHolder {
 
-    @Relationship("MEMBER") var memberEdge = astEdgeOf<Expression>(ProblemExpression("missing key"))
-
-    /**
-     * A member of the object, that is identified by `member` is decomposed from the main object.
-     */
-    var member by unwrapping(NamedDeconstruction::memberEdge)
-
     @Relationship("VALUE") var valueEdge = astEdgeOf<Expression>(ProblemExpression("missing value"))
 
     /**
@@ -49,18 +42,13 @@ class NamedDeconstruction : Deconstruction(), ArgumentHolder {
     var value by unwrapping(NamedDeconstruction::valueEdge)
 
     override fun addArgument(expression: Expression) {
-        if (member is ProblemExpression) {
-            member = expression
-        } else if (value is ProblemExpression) {
+        if (value is ProblemExpression) {
             value = expression
         }
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        if (member == old) {
-            member = new
-            return true
-        } else if (value == old) {
+        if (value == old) {
             value = new
             return true
         }
@@ -69,14 +57,14 @@ class NamedDeconstruction : Deconstruction(), ArgumentHolder {
     }
 
     override fun hasArgument(expression: Expression): Boolean {
-        return member == expression || value == expression
+        return value == expression
     }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is KeyValue) return false
-        return super.equals(other) && member == other.key && value == other.value
+        return super.equals(other) && value == other.value
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), member, value)
+    override fun hashCode() = Objects.hash(super.hashCode(), value)
 }

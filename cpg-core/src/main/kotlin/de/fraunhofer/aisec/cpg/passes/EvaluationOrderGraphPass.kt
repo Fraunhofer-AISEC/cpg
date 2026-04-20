@@ -1294,7 +1294,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      */
     protected fun handleNamedDeconstruction(node: NamedDeconstruction) {
         attachToEOG(node)
-        handleEOG(node.member)
         handleEOG(node.value)
     }
 

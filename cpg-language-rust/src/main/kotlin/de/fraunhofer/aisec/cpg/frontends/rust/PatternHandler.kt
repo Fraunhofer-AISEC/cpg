@@ -25,14 +25,21 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.rust
 
+import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newAlternativeDeconstruction
+import de.fraunhofer.aisec.cpg.graph.newAssign
+import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.newEmpty
 import de.fraunhofer.aisec.cpg.graph.newName
+import de.fraunhofer.aisec.cpg.graph.newNamedDeconstruction
 import de.fraunhofer.aisec.cpg.graph.newObjectDeconstruction
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newRange
 import de.fraunhofer.aisec.cpg.graph.newReference
+import de.fraunhofer.aisec.cpg.graph.newVariable
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsBoxPat
 import uniffi.cpgrust.RsConstBlockPat
@@ -87,13 +94,38 @@ class PatternHandler(frontend: RustLanguageFrontend) :
     fun handleIdentPat(identPat: RsIdentPat): Expression {
         val raw = RsAst.RustPat(RsPat.IdentPat(identPat))
 
-        return newProblemExpression("IdentPat is not supported yet")
+        val variable =
+            frontend.scopeManager.currentScope.symbols[identPat.name]
+                ?.filterIsInstance<Variable>()
+                ?.firstOrNull()
+
+        variable?.let {
+            val lhsRef =
+                newReference(identPat.name, rawNode = raw).also { it.access = AccessValues.WRITE }
+            // If identPat has a nested pattern, translate it as an assignment
+            identPat.pat.firstOrNull()?.let { nestedPat ->
+                val rhs = handleNode(nestedPat)
+                return newAssign("=", listOf(lhsRef), listOf(rhs), rawNode = raw)
+            }
+
+            return lhsRef
+        }
+
+        return newDeclarationStatement(rawNode = raw).also { declaration ->
+            declaration.usedAsExpression = true
+            val variable = newVariable(rawNode = raw, name = identPat.name)
+            declaration.declarations += variable
+            identPat.pat.firstOrNull()?.let { variable.initializer = handleNode(it) }
+            frontend.scopeManager.addDeclaration(variable)
+        }
     }
 
     fun handleBoxPat(boxPat: RsBoxPat): Expression {
         val raw = RsAst.RustPat(RsPat.BoxPat(boxPat))
 
         val box = newObjectDeconstruction(raw)
+
+        // Todo add type according to box pattern
 
         boxPat.pat.firstOrNull()?.let { box.components += handleNode(it) }
 
@@ -164,9 +196,13 @@ class PatternHandler(frontend: RustLanguageFrontend) :
 
         val range = newRange(rawNode = raw)
 
-        rangePat.patterns.getOrNull(0)?.let { range.floor = frontend.patternHandler.handle(raw) }
+        rangePat.patterns.getOrNull(0)?.let {
+            range.floor = frontend.patternHandler.handle(RsAst.RustPat(it))
+        }
 
-        rangePat.patterns.getOrNull(1)?.let { range.ceiling = frontend.patternHandler.handle(raw) }
+        rangePat.patterns.getOrNull(1)?.let {
+            range.ceiling = frontend.patternHandler.handle(RsAst.RustPat(it))
+        }
 
         range.operatorCode = rangePat.operator
 
@@ -188,7 +224,9 @@ class PatternHandler(frontend: RustLanguageFrontend) :
                 )
         }
 
-        recordPat.fields.forEach { field -> }
+        recordPat.fields.forEach { field ->
+            objectDeconstruction.components += handleRecordPatField(field)
+        }
 
         return objectDeconstruction
     }
@@ -196,42 +234,67 @@ class PatternHandler(frontend: RustLanguageFrontend) :
     fun handleRefPat(refPat: RsRefPat): Expression {
         val raw = RsAst.RustPat(RsPat.RefPat(refPat))
 
+        refPat.pat.firstOrNull()?.let {
+            val contained = handleNode(it)
+            if (refPat.isRef) {
+                val objectDeconstruction = newObjectDeconstruction(raw)
+                objectDeconstruction.components += contained
+                // Todo handle type as this behaves like a deref
+                return objectDeconstruction
+            } else {
+                return contained
+            }
+        }
+
         return newProblemExpression("RefPat is not supported yet")
     }
 
     fun handleRestPat(restPat: RsRestPat): Expression {
         val raw = RsAst.RustPat(RsPat.RestPat(restPat))
-
-        return newProblemExpression("RestPat is not supported yet")
+        return newEmpty(rawNode = raw)
     }
 
     fun handleSlicePat(slicePat: RsSlicePat): Expression {
         val raw = RsAst.RustPat(RsPat.SlicePat(slicePat))
 
-        return newProblemExpression("SlicePat is not supported yet")
+        return newObjectDeconstruction(raw).also { oDec ->
+            slicePat.pats.forEach { oDec.components += handleNode(it) }
+        }
     }
 
     fun handleTuplePat(tuplePat: RsTuplePat): Expression {
         val raw = RsAst.RustPat(RsPat.TuplePat(tuplePat))
 
-        return newProblemExpression("TuplePat is not supported yet")
+        return newObjectDeconstruction(raw).also { oDec ->
+            tuplePat.fields.forEach { oDec.components += handleNode(it) }
+        }
     }
 
     fun handleTupleStructPat(tupleStructPat: RsTupleStructPat): Expression {
         val raw = RsAst.RustPat(RsPat.TupleStructPat(tupleStructPat))
 
-        return newProblemExpression("TupleStructPat is not supported yet")
+        return newObjectDeconstruction(raw).also { oDec ->
+            tupleStructPat.fields.forEach { oDec.components += handleNode(it) }
+        }
     }
 
     fun handleWildcardPat(wildcardPat: RsWildcardPat): Expression {
         val raw = RsAst.RustPat(RsPat.WildcardPat(wildcardPat))
-
-        return newProblemExpression("WildcardPat is not supported yet")
+        return newEmpty(rawNode = raw)
     }
 
     fun handleRecordPatField(recordPatField: RsRecordPatField): Expression {
         val raw = RsAst.RustPat(RsPat.RecordPatField(recordPatField))
 
-        return newProblemExpression("RecordPatField is not supported yet")
+        recordPatField.pat.firstOrNull()?.let {
+            return newNamedDeconstruction(raw).also { namedDec ->
+                namedDec.value = handleNode(it)
+
+                namedDec.name =
+                    recordPatField.name?.let { name -> newName(name.text) } ?: namedDec.value.name
+            }
+        }
+
+        return newProblemExpression("RecordPatField does not contain a valid pattern")
     }
 }
