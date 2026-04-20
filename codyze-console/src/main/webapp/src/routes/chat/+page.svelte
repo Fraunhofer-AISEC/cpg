@@ -1,15 +1,17 @@
 <script lang="ts">
   import type { PageProps } from './$types';
   import type { ChatMessage, LLMMessage } from '$lib/types';
-  import { WelcomeScreen, ChatInterface, McpCapabilitiesModal, NotConfigured } from '$lib/components/ai-agent';
+  import { WelcomeScreen, ChatInterface, McpCapabilitiesModal, SkillsModal, NotConfigured } from '$lib/components/ai-agent';
   import { PageHeader } from '$lib/components/navigation';
   import { llmAgent, type StreamingCallbacks } from '$lib/services/llmAgent';
+  import { agentSession } from '$lib/stores/agentSession.svelte';
 
   let { data }: PageProps = $props();
   const analysisResult = $derived(data?.result);
-  const mcpCapabilities = $derived(data?.mcpCapabilities ?? null);
 
-  let showMcpModal = $state(false);
+  $effect(() => {
+    agentSession.init(data?.mcpCapabilities ?? null, data?.skills ?? []);
+  });
 
   // Load persisted state from sessionStorage
   function loadPersistedState() {
@@ -211,14 +213,12 @@
 />
 
 <div class="-mx-6 -mb-6 flex flex-1 flex-col">
-  {#if mcpCapabilities === null}
+  {#if agentSession.mcpCapabilities === null}
     <NotConfigured />
   {:else if showWelcome}
     <div class="flex-1 overflow-hidden">
       <WelcomeScreen
         onWelcomeMessage={handleWelcomeMessage}
-        {mcpCapabilities}
-        onOpenMcpModal={() => (showMcpModal = true)}
         onPromptSelect={handlePromptSelect}
       />
     </div>
@@ -230,19 +230,24 @@
       {streamingContent}
       isThinking={streamingReasoning.length > 0}
       {analysisResult}
-      {mcpCapabilities}
       onSendMessage={sendMessage}
       onReset={resetChat}
       onMessageChange={(message) => (currentMessage = message)}
       onPromptSelect={handlePromptSelect}
-      onOpenMcpModal={() => (showMcpModal = true)}
     />
   {/if}
 </div>
 
-{#if showMcpModal && mcpCapabilities}
+{#if agentSession.showMcpModal && agentSession.mcpCapabilities}
   <McpCapabilitiesModal
-    capabilities={mcpCapabilities}
-    onClose={() => (showMcpModal = false)}
+    capabilities={agentSession.mcpCapabilities}
+    onClose={agentSession.closeMcpModal}
+  />
+{/if}
+
+{#if agentSession.showSkillsModal}
+  <SkillsModal
+    skills={agentSession.skills}
+    onClose={agentSession.closeSkillsModal}
   />
 {/if}

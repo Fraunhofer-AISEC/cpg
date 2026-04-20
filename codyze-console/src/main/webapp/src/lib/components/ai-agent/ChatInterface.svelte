@@ -1,10 +1,12 @@
 <script lang="ts">
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
+  import SessionBar from './SessionBar.svelte';
   import CodeItemList, { isCodeItemContent } from './widgets/CodeItemList.svelte';
   import DfgFlowWidget from './widgets/DfgFlowWidget.svelte';
   import { CodeViewer, FileTree } from '$lib/components/analysis';
-  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, McpCapabilities, ComponentJSON } from '$lib/types';
+  import { agentSession } from '$lib/stores/agentSession.svelte';
+  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, ComponentJSON } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
   let selectedTranslationUnit = $state<TranslationUnitJSON | null>(null);
@@ -78,7 +80,7 @@
     ) ?? null;
   }
 
-  const selectedComponent = $derived((): ComponentJSON | null => {
+  const selectedComponent: ComponentJSON | null = $derived.by(() => {
     if (!selectedTranslationUnit || !analysisResult) return null;
     return findComponentForTu(selectedTranslationUnit.id);
   });
@@ -90,12 +92,10 @@
     streamingContent: string;
     isThinking: boolean;
     analysisResult?: AnalysisResultJSON | null;
-    mcpCapabilities?: McpCapabilities | null;
     onSendMessage: () => void;
     onReset: () => void;
     onMessageChange: (message: string) => void;
     onPromptSelect?: (name: string, args: Record<string, string>) => void;
-    onOpenMcpModal?: () => void;
   }
 
   let {
@@ -105,12 +105,10 @@
     streamingContent,
     isThinking,
     analysisResult,
-    mcpCapabilities,
     onSendMessage,
     onReset,
     onMessageChange,
     onPromptSelect,
-    onOpenMcpModal
   }: Props = $props();
 
   let displayContent = $derived(streamingContent.trim().length > 0 ? streamingContent : '');
@@ -251,24 +249,14 @@
           value={currentMessage}
           onSend={onSendMessage}
           onValueChange={onMessageChange}
-          placeholder="Ask me about your codebase..."
           disabled={isLoading}
-          prompts={mcpCapabilities?.prompts}
+          prompts={agentSession.mcpCapabilities?.prompts}
           onPromptSelect={onPromptSelect}
           onNewChat={onReset}
         />
-        {#if mcpCapabilities && onOpenMcpModal}
-          <div class="mt-1.5 flex items-center gap-1.5">
-            <button
-              class="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700"
-              onclick={onOpenMcpModal}
-              title="MCP Server"
-            >
-              <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-              {mcpCapabilities.serverName}
-            </button>
-          </div>
-        {/if}
+        <div class="mt-1.5">
+          <SessionBar />
+        </div>
       </div>
     </div>
   </div>
@@ -277,9 +265,9 @@
   {#if showCodePanel && selectedTranslationUnit}
     <div class="flex flex-1 overflow-hidden rounded-xl shadow-lg mx-2 my-2 border border-gray-200 bg-white" style="animation: slideIn 0.3s ease-out">
 
-      {#if selectedComponent()}
+      {#if selectedComponent}
         <FileTree
-          component={selectedComponent()!}
+          component={selectedComponent}
           currentUnitId={selectedTranslationUnit.id}
           onFileSelect={handleFileSelect}
           bind:collapsed={fileTreeCollapsed}
