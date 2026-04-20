@@ -27,22 +27,30 @@ package de.fraunhofer.aisec.codyze.console.ai.skills
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import org.slf4j.LoggerFactory
 
 data class Skill(val name: String, val description: String, val body: String, val location: Path)
 
-class SkillRegistry(private val skillsDir: Path) {
+class SkillRegistry(private val skillsDirs: List<Path>) {
     private val log = LoggerFactory.getLogger(SkillRegistry::class.java)
 
     private var skills: Map<String, Skill> = emptyMap()
 
+    /**
+     * Scan the configured skills directory and parse each `<skill>/SKILL.md` it finds. Missing
+     * directories are skipped.
+     *
+     * See
+     * [Parse SKILL.md files](https://agentskills.io/client-implementation/adding-skills-support#step-2-parse-skill-md-files)
+     */
     fun discoverSkills(): List<Skill> {
-        // The skills directory doesn't exist or is not a directory
-        if (!Files.isDirectory(skillsDir)) {
-            log.debug("Skills directory does not exist: {}", skillsDir)
-            return emptyList()
-        }
-        val discovered =
+        val discovered = mutableListOf<Skill>()
+        for (skillsDir in skillsDirs) {
+            if (!Files.isDirectory(skillsDir)) {
+                log.debug("Skills directory does not exist: {}", skillsDir)
+                continue
+            }
             Files.list(skillsDir).use { stream ->
                 stream
                     .filter { Files.isDirectory(it) }
@@ -51,20 +59,32 @@ class SkillRegistry(private val skillsDir: Path) {
                     .map { parseSkill(it) }
                     .toList()
                     .filterNotNull()
+                    .forEach { discovered.add(it) }
             }
+        }
         skills = discovered.associateBy { it.name }
         return discovered
     }
 
+    /**
+     * Parse a single `SKILL.md` file. Expected layout:
+     * ```
+     * ---
+     * <frontmatter>
+     * ---
+     * <body>
+     * ```
+     *
+     * Returns `null` if the file does not start with `---` or is missing required fields (`name`,
+     * `description`).
+     *
+     * See
+     * [Frontmatter exctraction](https://agentskills.io/client-implementation/adding-skills-support#frontmatter-extraction)
+     */
     fun parseSkill(skillMd: Path): Skill? {
         val content = Files.readString(skillMd).trim()
         if (!content.startsWith("---")) return null
 
-        // Expected layout:
-        //   ---
-        //   <frontmatter>
-        //   ---
-        //   <body>
         // limit = 3 so that any `---` inside the body (in markdown) stays in parts[2].
         val parts = content.split("---", limit = 3)
         if (parts.size < 3) return null
@@ -92,7 +112,16 @@ class SkillRegistry(private val skillsDir: Path) {
         return Skill(name = name, description = description, body = body, location = skillMd)
     }
 
-    fun getSkill(name: String): Skill? = skills[name]
-
-    fun allSkills(): List<Skill> = skills.values.toList()
+    companion object {
+        /**
+         * Directories to scan for skills. By default, we look in `.agents/skills`, which is the
+         * recommended location for project-specific skills. However, in the future we might also
+         * scan client-specific locations used by other clients (e.g. `~/.claude/skills or Gemini
+         * equivalents)
+         *
+         * See
+         * [Where to scan](https://agentskills.io/client-implementation/adding-skills-support#where-to-scan)
+         */
+        fun skillDirectories(): List<Path> = listOf(Paths.get(".agents", "skills"))
+    }
 }
