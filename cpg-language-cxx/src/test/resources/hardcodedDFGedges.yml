@@ -152,6 +152,14 @@
       to: param0.deref
       dfgType: full
 
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: strlcpy
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+
 
 - functionDeclaration:
     language: CPPLanguage

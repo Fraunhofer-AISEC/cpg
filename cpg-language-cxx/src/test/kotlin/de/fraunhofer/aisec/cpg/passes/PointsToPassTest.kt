@@ -3811,4 +3811,98 @@ class PointsToPassTest {
         assertEquals(printStuffDerefPMV, sPointerDerefence.prevFullDFG.single())
         assertEquals(printStuffDerefDerefPMV, innerprintfArg.prevFullDFG.singleOrNull())
     }
+
+    @Test
+    fun testMemberArguments() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // Functions
+        val testFunc = tu.functions["testMemberArg"]
+        assertNotNull(testFunc)
+
+        // Calls
+        val printfCall1 = testFunc.calls("printf")[0]
+        assertNotNull(printfCall1)
+
+        val printfCall2 = testFunc.calls("printf")[1]
+        assertNotNull(printfCall2)
+
+        val strlcpyCall = testFunc.calls["strlcpy"]
+        assertNotNull(strlcpyCall)
+
+        val memsetCall = testFunc.calls["memset"]
+        assertNotNull(memsetCall)
+
+        // Args
+        val printf1Arg = printfCall1.arguments[1]
+        assertNotNull(printf1Arg)
+
+        val printf2Arg1 = printfCall2.arguments[1]
+        assertNotNull(printf2Arg1)
+
+        val printf2Arg2 = printfCall2.arguments[2]
+        assertNotNull(printf2Arg2)
+
+        val strlcpySrcArg = strlcpyCall.arguments[1]
+        assertNotNull(strlcpySrcArg)
+
+        val strlcpyDstArg = strlcpyCall.arguments[0]
+        assertNotNull(strlcpyDstArg)
+
+        val strlcpyDstArgBase = (removePossibleCasts(strlcpyDstArg) as? MemberAccess)?.base
+        assertNotNull(strlcpyDstArgBase)
+
+        val strlcpyDstArgBaseBase = (strlcpyDstArgBase as? MemberAccess)?.base
+        assertNotNull(strlcpyDstArgBaseBase)
+
+        val memsetDstArg = memsetCall.arguments[0]
+        assertNotNull(memsetDstArg)
+
+        // Params and PMVs
+        val testFuncParam = testFunc.parameters.single()
+
+        val testFuncDerefPMV =
+            testFuncParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(testFuncDerefPMV)
+
+        // The returned PointerReference
+        val finalConfDeref = testFunc.returns.single().returnValue
+        assertNotNull(finalConfDeref)
+
+        // Actual tests
+        // For the arg of the printf, we except the prevDFG to point to the memset arg's base's base
+        assertEquals(
+            ((memsetDstArg as? MemberAccess)?.base as? MemberAccess)?.base,
+            printf1Arg.prevFullDFG.singleOrNull(),
+        )
+
+        // The 2nd argument to strlcpy should have a prevDFG with FieldGranularity to its base. From
+        // there, we expect a Full DFG to the PMV derefvalue of parameter c
+        assertEquals(
+            testFuncDerefPMV,
+            (strlcpySrcArg.prevDFGEdges.singleOrNull { it.granularity is FieldDataflowGranularity }
+                    as Dataflow)
+                .start
+                .prevFullDFG
+                .single(),
+        )
+
+        // For the 2nd printf, we except the prevDFG of the `conf` to point to the base-base of the
+        // strlcpy dst argument
+        // And for conf.st, we expect the prevFullDFG to point to the base of the strcpy dst
+        // argument
+
+        assertEquals(strlcpyDstArgBaseBase, printf2Arg1.prevFullDFG.singleOrNull())
+        assertEquals(strlcpyDstArgBase, printf2Arg2.prevFullDFG.singleOrNull())
+
+        // TODO: what do we want to check about the return value?
+        // assertEquals(null, finalConfDeref.prevDFG.singleOrNull())
+    }
 }

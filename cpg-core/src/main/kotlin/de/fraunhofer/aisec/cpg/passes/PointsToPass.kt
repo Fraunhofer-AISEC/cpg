@@ -333,6 +333,30 @@ fun isGlobal(node: Node): Boolean {
     }
 }
 
+/* Recursively collect the bases from MemberAccesses and SubscriptExpressions */
+fun collectBases(node: Node): ConcurrentIdentitySet<Node> {
+    val ret = concurrentIdentitySetOf<Node>()
+
+    var n: Node? = node
+    while (n != null) {
+        when (n) {
+            is MemberAccess -> {
+                n = n.base
+                ret.add(n)
+            }
+            is Subscription -> {
+                n = n.arrayExpression
+                ret.add(n)
+            }
+            is Cast -> {
+                n = n.expression
+            }
+            else -> break
+        }
+    }
+    return ret
+}
+
 // We also need a place to store the derefs of global variables. The Boolean indicates if this is a
 // value stored for a short function Summary
 var globalDerefs = ConcurrentIdentityHashMap<Node, PowersetLattice.Element<Pair<Node, Boolean>>>()
@@ -434,13 +458,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val max = passConfig<Configuration>()?.maxComplexity
             val c = node.body?.cyclomaticComplexity() ?: 0
             if (max != null && c > max) {
-                if (log.isTraceEnabled) {
-                    log.trace(
-                        "Ignoring function ${node.name} because its complexity (${
+                //                if (log.isTraceEnabled) {
+                log.info(
+                    "Ignoring function ${node.name} because its complexity (${
                                 NumberFormat.getNumberInstance(Locale.US).format(c)
                             }) is greater than the configured maximum (${max})"
-                    )
-                }
+                )
+                //                }
                 // Add an empty function Summary so that we don't try again
                 node.functionSummary.computeIfAbsent(Return()) {
                     ConcurrentHashMap.newKeySet<FSEntry>()
@@ -1594,10 +1618,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         else -> null
                                     }
                                 if (argument != null) {
+                                    /* If the argument is a MemberAccess or a Subscription, we additionally set the last write to the base/arrayExpression here */
+                                    doubleState =
+                                        updateBaseLastWrites(
+                                            doubleState,
+                                            concurrentIdentitySetOf(argument),
+                                        )
                                     fsEntries
                                         .filter { it.destValueDepth == depth }
                                         .splitInto(maxParts = innerConcurrencyCounter)
-                                        .map { chunk ->
+                                        .forEach { chunk ->
                                             launch(Dispatchers.Default) {
                                                 for ((
                                                     dstValueDepth,
@@ -1619,7 +1649,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                         inv,
                                                         srcNode,
                                                         srcValueDepth,
-                                                        param,
                                                     )
                                                 }
                                             }
@@ -1655,7 +1684,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         inv: Function,
         srcNode: Any?,
         srcValueDepth: Int,
-        param: Node,
     ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
         val shortFS = properties.any { it == true }
         val (destinationAddresses, destinations) =
@@ -1667,6 +1695,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 argument,
                 properties,
             )
+
         // Collect the properties for the
         // DeclarationStateEntry
         val propertySet = equalLinkedHashSetOf<Any>()
@@ -1693,10 +1722,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 memoryAddress.nextDFGEdges += Dataflow(memoryAddress, inv)
                 memoryAddress
             } else srcNode as? Node
-        // Especially for shortFS, we need to update the
-        // prevDFGs with
-        // information we didn't have when creating the
-        // functionSummary.
+        // Especially for shortFS, we need to update the prevDFGs with
+        // information we didn't have when creating the functionSummary.
         // calculatePrev does this for us
         val prev = calculatePrevDFGs(lastWrites, shortFS, currentNode, inv)
         return addEntryToMap(
@@ -2322,39 +2349,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (currentNode.isCompoundAssignment)
                 currentNode.lhs.map { Pair(it, doubleState.getLastWrites(it)) }
             else null
-        /* If the lhs is a MemberAccess or a Subscription, we additionally set the last write to the base/arrayExpression here
-         *  Make sure to catch nested MemberAccesses/Subscriptions too */
-        val bases = identitySetOf<Node>()
-        destinations.forEach { dest ->
-            var d: Node? = dest
-            while (d != null) {
-                when (d) {
-                    is MemberAccess -> {
-                        d = d.base
-                        bases.add(d)
-                    }
-                    is Subscription -> {
-                        d = d.arrayExpression
-                        bases.add(d)
-                    }
-                    else -> break
-                }
-            }
-        }
-        bases.forEach { base ->
-            doubleState.getAddresses(base, base).forEach { baseAddress ->
-                val entry =
-                    doubleState.declarationsState.computeIfAbsent(baseAddress) {
-                        TripleLattice.Element(
-                            PowersetLattice.Element(baseAddress),
-                            PowersetLattice.Element(),
-                            PowersetLattice.Element(),
-                        )
-                    }
-                entry.third.clear()
-                entry.third.add(NodeWithPropertiesKey(base, equalLinkedHashSetOf(false)))
-            }
-        }
+        /* If the lhs is a MemberAccess or a Subscription, we additionally set the last write to the base/arrayExpression here */
+        doubleState = updateBaseLastWrites(doubleState, destinations)
 
         doubleState =
             doubleState.updateValues(
@@ -2392,6 +2388,31 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             PowersetLattice.Element(NodeWithPropertiesKey(rhs)),
                         ),
                     )
+            }
+        }
+        return doubleState
+    }
+
+    /* Update MemberAccess or a Subscription listed in [destinations] to set the last write to the base/arrayExpression here
+     *  Make sure to catch nested MemberAccesses/Subscriptions too */
+    private fun updateBaseLastWrites(
+        doubleState: PointsToState.Element,
+        destinations: ConcurrentIdentitySet<Node>,
+    ): PointsToState.Element {
+        var doubleState = doubleState
+        val bases = destinations.flatMap { destination -> collectBases(destination) }
+        bases.forEach { base ->
+            doubleState.getAddresses(base, base).forEach { baseAddress ->
+                val entry =
+                    doubleState.declarationsState.computeIfAbsent(baseAddress) {
+                        TripleLattice.Element(
+                            PowersetLattice.Element(baseAddress),
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(),
+                        )
+                    }
+                entry.third.clear()
+                entry.third.add(NodeWithPropertiesKey(base, equalLinkedHashSetOf(false)))
             }
         }
         return doubleState
@@ -3507,6 +3528,11 @@ fun PointsToState.Element.getNestedValues(
                 this.getAddresses(node, node).none { addr ->
                     this.hasDeclarationStateValueEntry(addr, excludeShortFSValues)
                 }
+                // If we have a MemberAccess, also check for the addresses of the bases
+                &&
+                collectBases(node)
+                    .flatMap { base -> this.getAddresses(base, base) }
+                    .none { addr -> this.hasDeclarationStateValueEntry(addr, excludeShortFSValues) }
         )
             PowersetLattice.Element()
         else

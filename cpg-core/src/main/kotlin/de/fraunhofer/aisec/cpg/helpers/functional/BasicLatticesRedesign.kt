@@ -429,7 +429,7 @@ interface Lattice<T : Lattice.Element> {
             debugCounter++
 
             if (debugCounter % 100 == 0L && timeouts.isNotEmpty()) {
-                TranslationManager.Companion.log.info(
+                TranslationManager.Companion.log.trace(
                     "Looping. debugCounter: $debugCounter, timeout: $timeout, startTime: ${startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS)}, timeouts.last: ${timeouts.last()}"
                 )
             }
