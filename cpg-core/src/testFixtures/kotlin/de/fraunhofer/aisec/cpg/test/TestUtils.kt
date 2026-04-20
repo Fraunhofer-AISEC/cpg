@@ -113,6 +113,7 @@ fun analyze(
     fileExtension: String?,
     topLevel: Path,
     usePasses: Boolean,
+    checkGraphInvariants: Boolean = false,
     configModifier: Consumer<TranslationConfiguration.Builder>? = null,
 ): TranslationResult {
     val files =
@@ -121,7 +122,7 @@ fun analyze(
             .filter { it.isFile && (fileExtension == null || it.name.endsWith(fileExtension)) }
             .sorted()
             .collect(Collectors.toList())
-    return analyze(files, topLevel, usePasses, configModifier)
+    return analyze(files, topLevel, usePasses, checkGraphInvariants, configModifier)
 }
 
 /**
@@ -139,6 +140,7 @@ fun analyze(
     files: List<File>,
     topLevel: Path,
     usePasses: Boolean,
+    checkGraphInvariants: Boolean = false,
     configModifier: Consumer<TranslationConfiguration.Builder>? = null,
 ): TranslationResult {
     val builder =
@@ -156,7 +158,12 @@ fun analyze(
     configModifier?.accept(builder)
     val config = builder.build()
     val analyzer = TranslationManager.builder().config(config).build()
-    return analyzer.analyze().get()
+
+    val result = analyzer.analyze().get()
+    if (checkGraphInvariants) {
+        assertAstInvariants(result)
+    }
+    return result
 }
 
 /**
@@ -181,9 +188,10 @@ fun analyzeAndGetFirstTU(
     files: List<File>,
     topLevel: Path,
     usePasses: Boolean,
+    checkGraphInvariants: Boolean = false,
     configModifier: Consumer<TranslationConfiguration.Builder>? = null,
 ): TranslationUnit {
-    val result = analyze(files, topLevel, usePasses, configModifier)
+    val result = analyze(files, topLevel, usePasses, checkGraphInvariants, configModifier)
     return result.components.flatMap { it.translationUnits }.first()
 }
 
@@ -191,11 +199,12 @@ fun analyzeAndGetFirstTU(
 fun analyzeWithCompilationDatabase(
     jsonCompilationDatabase: File,
     usePasses: Boolean,
+    checkGraphInvariants: Boolean = false,
     filterComponents: List<String>? = null,
     configModifier: Consumer<TranslationConfiguration.Builder>? = null,
 ): TranslationResult {
     val top = jsonCompilationDatabase.parentFile.toPath().toAbsolutePath()
-    return analyze(listOf(), top, usePasses) {
+    return analyze(listOf(), top, usePasses, checkGraphInvariants) {
         val db = CompilationDatabase.fromFile(jsonCompilationDatabase, filterComponents)
         if (db.isNotEmpty()) {
             it.useCompilationDatabase(db)
