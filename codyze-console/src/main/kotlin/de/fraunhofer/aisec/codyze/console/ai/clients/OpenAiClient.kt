@@ -47,10 +47,12 @@ class OpenAiClient(
         conversationHistory: List<ChatMessageJSON>,
         tools: List<Tool>,
         toolCallHistory: List<List<ToolCallWithResult>>?,
+        systemPromptExtension: String?,
         onText: suspend (String) -> Unit,
         onReasoning: suspend (String) -> Unit,
     ): List<ToolCall> {
-        val messages = buildMessages(userMessage, conversationHistory, toolCallHistory)
+        val messages =
+            buildMessages(userMessage, conversationHistory, toolCallHistory, systemPromptExtension)
         val openAiTools = convertToolDefinitions(tools)
 
         val request =
@@ -101,9 +103,13 @@ class OpenAiClient(
         userMessage: String,
         conversationHistory: List<ChatMessageJSON>,
         toolCallHistory: List<List<ToolCallWithResult>>?,
+        systemPromptExtension: String?,
     ): List<OpenAiMessage> {
         val messages = mutableListOf<OpenAiMessage>()
-        messages += OpenAiMessage(role = "system", content = JsonPrimitive(SYSTEM_PROMPT))
+        val systemPrompt =
+            if (systemPromptExtension.isNullOrBlank()) SYSTEM_PROMPT
+            else "$SYSTEM_PROMPT\n\n$systemPromptExtension"
+        messages += OpenAiMessage(role = "system", content = JsonPrimitive(systemPrompt))
         conversationHistory.dropLast(1).forEach { msg ->
             if (msg.content.isNotBlank()) {
                 messages += OpenAiMessage(role = msg.role, content = JsonPrimitive(msg.content))

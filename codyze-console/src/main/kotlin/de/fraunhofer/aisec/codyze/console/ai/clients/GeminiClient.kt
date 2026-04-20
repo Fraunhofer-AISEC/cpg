@@ -53,9 +53,13 @@ class GeminiClient(
         conversationHistory: List<ChatMessageJSON>,
         tools: List<Tool>,
         toolCallHistory: List<List<ToolCallWithResult>>?,
+        systemPromptExtension: String?,
         onText: suspend (String) -> Unit,
         onReasoning: suspend (String) -> Unit,
     ): List<ToolCall> {
+        val systemPrompt =
+            if (systemPromptExtension.isNullOrBlank()) SYSTEM_PROMPT
+            else "$SYSTEM_PROMPT\n\n$systemPromptExtension"
         val toolCalls = mutableListOf<ToolCall>()
 
         /*
@@ -169,7 +173,7 @@ class GeminiClient(
 
         val request =
             GeminiRequest(
-                systemInstruction = GeminiContent(parts = listOf(GeminiPart(text = SYSTEM_PROMPT))),
+                systemInstruction = GeminiContent(parts = listOf(GeminiPart(text = systemPrompt))),
                 contents = contents,
                 tools = geminiTools,
             )

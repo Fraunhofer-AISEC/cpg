@@ -28,6 +28,12 @@ package de.fraunhofer.aisec.codyze.console.ai
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import de.fraunhofer.aisec.codyze.console.ai.clients.*
+import de.fraunhofer.aisec.codyze.console.ai.skills.ACTIVATE_SKILL_TOOL_NAME
+import de.fraunhofer.aisec.codyze.console.ai.skills.Skill
+import de.fraunhofer.aisec.codyze.console.ai.skills.SkillRegistry
+import de.fraunhofer.aisec.codyze.console.ai.skills.buildActivateSkillTool
+import de.fraunhofer.aisec.codyze.console.ai.skills.buildSkillCatalog
+import de.fraunhofer.aisec.codyze.console.ai.skills.wrapActivatedSkill
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
@@ -56,9 +62,12 @@ class ChatService(
             options = ClientOptions(),
         )
 
+    private val skillRegistry = SkillRegistry(SkillRegistry.skillDirectories())
+
     private var tools: List<Tool> = emptyList()
     private var prompts: List<Prompt> = emptyList()
     private var resources: List<Resource> = emptyList()
+    private var skills: List<Skill> = emptyList()
 
     /** Connect to the MCP server via streamable HTTP. */
     suspend fun connect() {
@@ -67,6 +76,7 @@ class ChatService(
         tools = mcp.listTools().tools
         prompts = mcp.listPrompts().prompts
         resources = mcp.listResources().resources
+        skills = skillRegistry.discoverSkills()
     }
 
     /** Return the MCP capabilities: tools, prompts, and resources. */
@@ -146,11 +156,15 @@ class ChatService(
             val toolCallHistory = mutableListOf<List<ToolCallWithResult>>()
             var iteration = 0
 
+            val allTools = tools + listOfNotNull(buildActivateSkillTool(skills))
+            val skillCatalog = buildSkillCatalog(skills)
+
             var toolCalls =
                 llm.sendPrompt(
                     userMessage = userMessage,
                     conversationHistory = conversationHistory,
-                    tools = tools,
+                    tools = allTools,
+                    systemPromptExtension = skillCatalog,
                     onText = { text -> send(Events.text(text)) },
                     onReasoning = { thought -> send(Events.reasoning(thought)) },
                 )
@@ -175,7 +189,8 @@ class ChatService(
                         userMessage = userMessage,
                         conversationHistory = conversationHistory,
                         toolCallHistory = toolCallHistory,
-                        tools = tools,
+                        tools = allTools,
+                        systemPromptExtension = skillCatalog,
                         onText = { text -> send(Events.text(text)) },
                         onReasoning = { thought -> send(Events.reasoning(thought)) },
                     )
@@ -213,6 +228,15 @@ class ChatService(
     ): String {
         return try {
             val arguments = Json.parseToJsonElement(toolCall.arguments).jsonObject
+
+            if (toolCall.name == ACTIVATE_SKILL_TOOL_NAME) {
+                val skillName = arguments["name"]?.jsonPrimitive?.contentOrNull
+                val skill = skills.find { it.name == skillName }
+                val resultText =
+                    skill?.let { wrapActivatedSkill(it) } ?: "Unknown skill: $skillName"
+                emit(Events.toolResult(toolCall.name, JsonPrimitive(resultText)))
+                return resultText
+            }
 
             val result = mcp.callTool(name = toolCall.name, arguments = arguments)
             val contentTexts = result.content.mapNotNull { (it as? TextContent)?.text }
@@ -282,6 +306,7 @@ class ChatService(
                                 ?: throw IllegalStateException("GEMINI_API_KEY not set")
                         GeminiClient(httpClient, llmModel, apiKey, llmBaseUrl)
                     }
+
                     else -> OpenAiClient(httpClient, llmModel, llmBaseUrl)
                 }
 

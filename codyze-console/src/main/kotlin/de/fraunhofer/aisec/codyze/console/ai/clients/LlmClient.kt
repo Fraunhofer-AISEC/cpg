@@ -41,6 +41,7 @@ interface LlmClient {
         conversationHistory: List<ChatMessageJSON> = emptyList(),
         tools: List<Tool> = emptyList(),
         toolCallHistory: List<List<ToolCallWithResult>>? = null,
+        systemPromptExtension: String? = null,
         onText: suspend (String) -> Unit,
         onReasoning: suspend (String) -> Unit = {},
     ): List<ToolCall>
