@@ -29,7 +29,6 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import de.fraunhofer.aisec.codyze.console.ai.clients.*
 import de.fraunhofer.aisec.codyze.console.ai.skills.ACTIVATE_SKILL_TOOL_NAME
-import de.fraunhofer.aisec.codyze.console.ai.skills.Skill
 import de.fraunhofer.aisec.codyze.console.ai.skills.SkillRegistry
 import de.fraunhofer.aisec.codyze.console.ai.skills.buildActivateSkillTool
 import de.fraunhofer.aisec.codyze.console.ai.skills.buildSkillCatalog
@@ -121,6 +120,9 @@ class ChatService(
                     )
                 },
         )
+
+    /** Return the discovered skills. */
+    fun getSkills(): List<Skill> = skills
 
     /** Resolve an MCP prompt and return its messages as [ChatMessageJSON]. */
     suspend fun getPrompt(

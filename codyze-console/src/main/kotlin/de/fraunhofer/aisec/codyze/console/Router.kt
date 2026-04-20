@@ -308,6 +308,7 @@ fun Route.chatRoutes(chatService: ChatService) {
             val arguments = call.receiveNullable<Map<String, String>>() ?: emptyMap()
             call.respond(chatService.getPrompt(name, arguments))
         }
+        get("/skills") { call.respond(chatService.getSkills()) }
     }
 }
 

@@ -25,12 +25,11 @@
  */
 package de.fraunhofer.aisec.codyze.console.ai.skills
 
+import de.fraunhofer.aisec.codyze.console.ai.Skill
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import org.slf4j.LoggerFactory
-
-data class Skill(val name: String, val description: String, val body: String, val location: Path)
 
 class SkillRegistry(private val skillsDirs: List<Path>) {
     private val log = LoggerFactory.getLogger(SkillRegistry::class.java)

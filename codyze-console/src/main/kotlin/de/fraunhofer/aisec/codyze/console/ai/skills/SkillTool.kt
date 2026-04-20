@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.codyze.console.ai.skills
 
+import de.fraunhofer.aisec.codyze.console.ai.Skill
 import io.modelcontextprotocol.kotlin.sdk.types.Tool
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.json.JsonPrimitive

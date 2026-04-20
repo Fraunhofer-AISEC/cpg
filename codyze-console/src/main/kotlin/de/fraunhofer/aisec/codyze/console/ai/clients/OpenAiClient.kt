@@ -107,8 +107,11 @@ class OpenAiClient(
     ): List<OpenAiMessage> {
         val messages = mutableListOf<OpenAiMessage>()
         val systemPrompt =
-            if (systemPromptExtension.isNullOrBlank()) SYSTEM_PROMPT
-            else "$SYSTEM_PROMPT\n\n$systemPromptExtension"
+            if (systemPromptExtension.isNullOrBlank()) {
+                SYSTEM_PROMPT
+            } else {
+                "$SYSTEM_PROMPT\n\n$systemPromptExtension"
+            }
         messages += OpenAiMessage(role = "system", content = JsonPrimitive(systemPrompt))
         conversationHistory.dropLast(1).forEach { msg ->
             if (msg.content.isNotBlank()) {

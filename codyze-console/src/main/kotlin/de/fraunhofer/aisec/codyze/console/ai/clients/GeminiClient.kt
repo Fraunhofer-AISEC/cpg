@@ -58,8 +58,11 @@ class GeminiClient(
         onReasoning: suspend (String) -> Unit,
     ): List<ToolCall> {
         val systemPrompt =
-            if (systemPromptExtension.isNullOrBlank()) SYSTEM_PROMPT
-            else "$SYSTEM_PROMPT\n\n$systemPromptExtension"
+            if (systemPromptExtension.isNullOrBlank()) {
+                SYSTEM_PROMPT
+            } else {
+                "$SYSTEM_PROMPT\n\n$systemPromptExtension"
+            }
         val toolCalls = mutableListOf<ToolCall>()
 
         /*
