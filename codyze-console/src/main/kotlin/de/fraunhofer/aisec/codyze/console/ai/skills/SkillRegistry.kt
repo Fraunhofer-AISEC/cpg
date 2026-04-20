@@ -79,7 +79,7 @@ class SkillRegistry(private val skillsDirs: List<Path>) {
      * `description`).
      *
      * See
-     * [Frontmatter exctraction](https://agentskills.io/client-implementation/adding-skills-support#frontmatter-extraction)
+     * [Frontmatter extraction](https://agentskills.io/client-implementation/adding-skills-support#frontmatter-extraction)
      */
     fun parseSkill(skillMd: Path): Skill? {
         val content = Files.readString(skillMd).trim()
