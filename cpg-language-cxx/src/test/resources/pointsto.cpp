@@ -688,7 +688,7 @@ static c_t testMemberArg(const creds_t *c) {
   return &conf;
 }
 
-static ee_t uc(const w_t *a)
+static ee_t real_code(const w_t *a)
 {
     conf_t b;
 

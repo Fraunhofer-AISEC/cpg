@@ -3905,4 +3905,122 @@ class PointsToPassTest {
         // TODO: what do we want to check about the return value?
         // assertEquals(null, finalConfDeref.prevDFG.singleOrNull())
     }
+
+    @Test
+    fun realCode() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // Functions
+        val testFunc = tu.functions["real_code"]
+        assertNotNull(testFunc)
+
+        val strlcpyFunc = tu.functions["strlcpy"]
+        assertNotNull(strlcpyFunc)
+
+        // Calls
+        val scCall = testFunc.calls["sc"]
+        assertNotNull(scCall)
+
+        val strlcpy2 = testFunc.calls("strlcpy")[1]
+        assertNotNull(strlcpy2)
+
+        // Call Args
+        val scArg2 = scCall.arguments[1]
+        assertNotNull(scArg2)
+
+        val strlcpy2DstArg = strlcpy2.arguments[0]
+        assertNotNull(strlcpy2DstArg)
+        val strlcpy2DstArgBase = (removePossibleCasts(strlcpy2DstArg) as? MemberAccess)?.base
+        assertNotNull(strlcpy2DstArgBase)
+        val strlcpy2DstArgBaseBase = (strlcpy2DstArgBase as? MemberAccess)?.base
+        assertNotNull(strlcpy2DstArgBaseBase)
+
+        val strlcpy2SrcArg = strlcpy2.arguments[1]
+        assertNotNull(strlcpy2SrcArg)
+
+        // Params and PMVs
+        val testFuncParam = testFunc.parameters.single()
+        val testFuncDerefPMV =
+            testFuncParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+
+        val strlDstParam = strlcpyFunc.parameters[0]
+        val strlDstDerefPMV =
+            strlDstParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(strlDstDerefPMV)
+
+        val strlSrcParam = strlcpyFunc.parameters[1]
+        val strlSrcDerefPMV =
+            strlSrcParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(strlSrcDerefPMV)
+
+        // Other stuff
+        val bdgh1 = testFunc.assignments[2].target as? MemberAccess
+        assertNotNull(bdgh1)
+        val bdg1 = bdgh1.base as? MemberAccess
+        assertNotNull(bdg1)
+        val bd1 = bdg1.base as? MemberAccess
+        assertNotNull(bd1)
+        val b1 = bd1.base
+        assertNotNull(b1)
+
+        // Actual tests
+        // From all MemberAccesses a-><Something>, we except a prevDFG at FieldGranularity to their
+        // base, and from there to the parameter a
+        assertEquals(
+            setOf(testFuncDerefPMV),
+            testFunc
+                .allChildren<MemberAccess> { it.base.name.localName == "a" }
+                .mapNotNull {
+                    it.prevDFGEdges
+                        .singleOrNull { it.granularity is FieldDataflowGranularity }
+                        ?.start
+                        ?.prevFullDFG
+                }
+                .flatten()
+                .toSet(),
+        )
+
+        // Let's analyze the assign after the strlcpy. Here, both the b and the b.d should have 2
+        // partial prevDFGto the strlcpys dstParam
+        // (one from the strlcpy in 701 and one from 706)
+        assertEquals(
+            2,
+            b1.prevDFGEdges
+                .filter {
+                    it.granularity is PartialDataflowGranularity<*> &&
+                        it.start == strlDstDerefPMV &&
+                        (it as ContextSensitiveDataflow)
+                            .callingContext
+                            .calls
+                            .single()
+                            .location
+                            ?.region
+                            ?.startLine in setOf(701, 706)
+                }
+                .size,
+        )
+        assertEquals(
+            2,
+            bd1.prevDFGEdges
+                .filter {
+                    it.granularity is PartialDataflowGranularity<*> &&
+                        it.start == strlDstDerefPMV &&
+                        (it as ContextSensitiveDataflow)
+                            .callingContext
+                            .calls
+                            .single()
+                            .location
+                            ?.region
+                            ?.startLine in setOf(701, 706)
+                }
+                .size,
+        )
+    }
 }
