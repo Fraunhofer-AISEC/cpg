@@ -26,9 +26,7 @@
 package de.fraunhofer.aisec.codyze.console.ai
 
 import de.fraunhofer.aisec.codyze.console.ai.skills.SkillRegistry
-import java.nio.file.Files
-import kotlin.io.path.createDirectories
-import kotlin.io.path.writeText
+import java.nio.file.Paths
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -37,24 +35,8 @@ class SkillRegistrytest {
 
     @Test
     fun discoverSingleSkillTest() {
-        val tmp = Files.createTempDirectory("skills-test")
-        val skillDir = tmp.resolve("tagging").also { it.createDirectories() }
-        skillDir
-            .resolve("SKILL.md")
-            .writeText(
-                """
-                ---
-                name: tagging
-                description: Tag concepts and operations.
-                ---
-
-                # Tagging concepts and operations
-                Use this when the user asks about tagging.
-                """
-                    .trimIndent()
-            )
-
-        val registry = SkillRegistry(skillsDir = tmp)
+        val skillsDir = Paths.get("src/test/resources/skills")
+        val registry = SkillRegistry(listOf(skillsDir))
         val skills = registry.discoverSkills()
 
         assertEquals(1, skills.size)
@@ -66,16 +48,14 @@ class SkillRegistrytest {
 
     @Test
     fun missingDirectoryTest() {
-        val tmp = Files.createTempDirectory("skills-test")
-        val registry = SkillRegistry(tmp.resolve("does-not-exist"))
+        val registry = SkillRegistry(listOf(Paths.get("src/test/resources/does-not-exist")))
         assertEquals(emptyList(), registry.discoverSkills())
     }
 
     @Test
     fun directoryWithoutSkillMdFileTest() {
-        val tmp = Files.createTempDirectory("skills-test")
-        tmp.resolve("no-skill-md").createDirectories()
-        val registry = SkillRegistry(tmp)
+        val skillsDir = Paths.get("src/test/resources/empty-skills")
+        val registry = SkillRegistry(listOf(skillsDir))
         assertEquals(emptyList(), registry.discoverSkills())
     }
 }
