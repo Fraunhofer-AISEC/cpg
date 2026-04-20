@@ -146,6 +146,7 @@ class TestLlmClient(private val responses: MutableList<List<ToolCall>> = mutable
         conversationHistory: List<ChatMessageJSON>,
         tools: List<Tool>,
         toolCallHistory: List<List<ToolCallWithResult>>?,
+        systemPromptExtension: String?,
         onText: suspend (String) -> Unit,
         onReasoning: suspend (String) -> Unit,
     ): List<ToolCall> {
