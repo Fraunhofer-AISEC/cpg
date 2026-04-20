@@ -25,15 +25,71 @@
  */
 package de.fraunhofer.aisec.codyze.console.ai.skills
 
+import java.nio.file.Files
 import java.nio.file.Path
+import org.slf4j.LoggerFactory
 
 data class Skill(val name: String, val description: String, val body: String, val location: Path)
 
 class SkillRegistry(private val skillsDir: Path) {
+    private val log = LoggerFactory.getLogger(SkillRegistry::class.java)
+
     private var skills: Map<String, Skill> = emptyMap()
 
     fun discoverSkills(): List<Skill> {
-        return emptyList()
+        // The skills directory doesn't exist or is not a directory
+        if (!Files.isDirectory(skillsDir)) {
+            log.debug("Skills directory does not exist: {}", skillsDir)
+            return emptyList()
+        }
+        val discovered =
+            Files.list(skillsDir).use { stream ->
+                stream
+                    .filter { Files.isDirectory(it) }
+                    .map { it.resolve("SKILL.md") }
+                    .filter { Files.isRegularFile(it) }
+                    .map { parseSkill(it) }
+                    .toList()
+                    .filterNotNull()
+            }
+        skills = discovered.associateBy { it.name }
+        return discovered
+    }
+
+    fun parseSkill(skillMd: Path): Skill? {
+        val content = Files.readString(skillMd).trim()
+        if (!content.startsWith("---")) return null
+
+        // Expected layout:
+        //   ---
+        //   <frontmatter>
+        //   ---
+        //   <body>
+        // limit = 3 so that any `---` inside the body (in markdown) stays in parts[2].
+        val parts = content.split("---", limit = 3)
+        if (parts.size < 3) return null
+
+        val frontMatter = parts[1].trim()
+        val body = parts[2].trim()
+
+        // Frontmatter is parsed line-by-line as `key: value` pairs.
+        // We split on the first `:` only, so values may
+        // contain further colons (e.g. "description: Use when: ...").
+        // Lines without a `:` are skipped.
+        val fields =
+            frontMatter
+                .lines()
+                .mapNotNull { line ->
+                    val lineIndex = line.indexOf(':')
+                    if (lineIndex < 0) null
+                    else line.substring(0, lineIndex).trim() to line.substring(lineIndex + 1).trim()
+                }
+                .toMap()
+
+        val name = fields["name"] ?: return null
+        val description = fields["description"] ?: return null
+
+        return Skill(name = name, description = description, body = body, location = skillMd)
     }
 
     fun getSkill(name: String): Skill? = skills[name]
