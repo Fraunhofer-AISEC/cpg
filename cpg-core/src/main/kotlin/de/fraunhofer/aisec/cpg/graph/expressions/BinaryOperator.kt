@@ -33,9 +33,9 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
@@ -44,7 +44,7 @@ import org.neo4j.ogm.annotation.Relationship
  * Note: For assignments, i.e., using an `=` or `+=`, etc. the [Assign] MUST be used.
  */
 open class BinaryOperator :
-    Expression(false), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
+    Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
 
     /** The left-hand expression. */
     @Relationship("LHS")

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,13 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.passes.configuration
 
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.Language
 import kotlin.reflect.KClass
 
 /**
- * This annotation can only enable a pass for a given [LanguageFrontend]. The pass's accept function
- * will not be executed when the current language does not match the required language.
+ * This annotation restricts a pass to only execute on targets whose [Language] matches the
+ * specified language class. The pass's accept function will not be executed when the target's
+ * language does not match.
+ *
+ * This annotation is [Repeatable]. In this case, the pass will run if the target's language matches
+ * *any* of the specified languages (OR logic).
  */
-@Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.CLASS)
-annotation class RequiredFrontend(val value: KClass<out LanguageFrontend<*, *>>)
+@Repeatable annotation class RequiresLanguage(val value: KClass<out Language<*>>)

@@ -23,12 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.helpers.neo4j
+package de.fraunhofer.aisec.cpg.persistence.converters
 
+import de.fraunhofer.aisec.cpg.persistence.CompositeAttributeConverter
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
-import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
 
 interface CpgCompositeConverter<A> : CompositeAttributeConverter<A> {
     /**
@@ -44,7 +44,7 @@ interface CpgCompositeConverter<A> : CompositeAttributeConverter<A> {
  * a node into a Neo4J graph database.
  */
 class LocationConverter : CpgCompositeConverter<PhysicalLocation?> {
-    override fun toGraphProperties(value: PhysicalLocation?): Map<String, *> {
+    override fun toGraphProperty(value: PhysicalLocation?): Map<String, *> {
         val properties: MutableMap<String, Any> = HashMap()
         if (value != null) {
             properties[ARTIFACT] = value.artifactLocation.uri.toString()

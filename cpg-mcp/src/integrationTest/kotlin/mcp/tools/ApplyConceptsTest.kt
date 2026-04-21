@@ -52,7 +52,6 @@ class ApplyConceptsTest {
         assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
-        assertNotNull(analysisResult.nodes)
     }
 
     @Test

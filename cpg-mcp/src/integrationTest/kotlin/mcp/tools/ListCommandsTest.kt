@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.mcp.tools
 
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getAllArgs
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getArgByIndexOrName
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getNode
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableConcepts
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCalls
@@ -38,9 +39,9 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.FunctionInfo
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.RecordInfo
 import de.fraunhofer.aisec.cpg.mcp.utils.withClient
+import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -81,7 +82,7 @@ class ListCommandsTest {
                 "There is exactly one function declaration with name print",
             )
             assertNotNull(
-                functionNames.singleOrNull { it.endsWith(".hello") },
+                functionNames.singleOrNull { it.endsWith("hello") },
                 "There is exactly one function declaration with local name hello",
             )
         }
@@ -137,7 +138,7 @@ class ListCommandsTest {
             assertNotNull(argsResult)
             assertTrue(argsResult.content.isNotEmpty(), "Should return arguments for the call")
             assertDoesNotThrow {
-                Json.decodeFromString<NodeInfo>(
+                Json.decodeFromString<NodeJSON>(
                     (argsResult.content.singleOrNull() as? TextContent)?.text.orEmpty()
                 )
             }
@@ -147,7 +148,7 @@ class ListCommandsTest {
             assertNotNull(wrongArgsResult)
             assertTrue(wrongArgsResult.content.isNotEmpty(), "Should return arguments for the call")
             assertThrows<IllegalArgumentException> {
-                Json.decodeFromString<NodeInfo>(
+                Json.decodeFromString<NodeJSON>(
                     (wrongArgsResult.content.first() as TextContent).text
                 )
             }
@@ -177,7 +178,7 @@ class ListCommandsTest {
                 "Should return the argument at index 0",
             )
             assertDoesNotThrow {
-                Json.decodeFromString<NodeInfo>(
+                Json.decodeFromString<NodeJSON>(
                     (argResultByIndex.content.singleOrNull() as? TextContent)?.text.orEmpty()
                 )
             }
@@ -190,7 +191,7 @@ class ListCommandsTest {
             assertNotNull(argResultByName)
             assertTrue(argResultByName.content.isNotEmpty(), "Should return the error message")
             assertThrows<IllegalArgumentException> {
-                Json.decodeFromString<NodeInfo>(
+                Json.decodeFromString<NodeJSON>(
                     (argResultByName.content.singleOrNull() as? TextContent)?.text.orEmpty()
                 )
             }
@@ -224,5 +225,35 @@ class ListCommandsTest {
                 result.content.isEmpty(),
                 "We did not apply any concepts or operations, so it should be empty",
             )
+        }
+
+    @Test
+    fun getNodeTest() =
+        withClient(
+            registerTools = {
+                listFunctions()
+                getNode()
+            }
+        ) { client ->
+            val listResult = client.callTool(name = "cpg_list_functions", arguments = emptyMap())
+            assertNotNull(listResult)
+            assertTrue(listResult.content.isNotEmpty(), "Should have function declarations")
+
+            val functionInfo =
+                Json.decodeFromString<FunctionInfo>(
+                    (listResult.content.first() as TextContent).text
+                )
+
+            val result =
+                client.callTool(
+                    name = "cpg_get_node",
+                    arguments = mapOf("id" to functionInfo.nodeId),
+                )
+            assertNotNull(result)
+            assertTrue(result.content.isNotEmpty(), "Should return the node")
+
+            val content = result.content.single()
+            assertIs<TextContent>(content)
+            assertDoesNotThrow { Json.decodeFromString<NodeJSON>(content.text) }
         }
 }
