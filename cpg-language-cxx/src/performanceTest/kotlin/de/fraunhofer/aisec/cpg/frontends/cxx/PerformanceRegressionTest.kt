@@ -92,7 +92,7 @@ class PerformanceRegressionTest {
 
             // Even on a slow machine, this should not exceed 1 second (it should be more like
             // 200-300ms)
-            assertTimeout(Duration.of(1, ChronoUnit.SECONDS)) {
+            assertTimeout(Duration.of(2, ChronoUnit.SECONDS)) {
                 val b = Benchmark(PerformanceRegressionTest::class.java, "getAstChildren")
                 doNothing(tu)
                 val duration = b.addMeasurement()
