@@ -110,7 +110,7 @@ pub fn handle_deep<S: Sink>(sink: &mut S) {
 
 /// Sequence with constructed inputs inside function
 pub fn process_all<S: Sink>(sink: &mut S) {
-    let items = vec![
+    let items = [
         Wrap::One(10),                    // literal 10
         Wrap::Pair(11, 12),               // literals 11,12
         Wrap::Nested(Some(Ok(13))),       // literal 13

@@ -393,6 +393,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             node.selector,
             node.selectorDeclaration,
         )
+        // Todo KW: We now have an Issue with cf structures as expressions leading to incorrect dfg
+        // cycles.
         if (node.usedAsExpression) {
             node.statement?.let {
                 node.prevDFGEdges += it

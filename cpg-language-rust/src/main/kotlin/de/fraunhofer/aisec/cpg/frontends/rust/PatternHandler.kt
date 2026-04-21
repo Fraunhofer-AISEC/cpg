@@ -115,7 +115,12 @@ class PatternHandler(frontend: RustLanguageFrontend) :
             declaration.usedAsExpression = true
             val variable = newVariable(rawNode = raw, name = identPat.name)
             declaration.declarations += variable
-            identPat.pat.firstOrNull()?.let { variable.initializer = handleNode(it) }
+
+            // If the pattern is empty we use an empty expression as initializer, it forwards dfgs
+            // that are pointing to it
+            // during deconstruction
+            variable.initializer =
+                identPat.pat.firstOrNull()?.let { handleNode(it) } ?: newEmpty(raw)
             frontend.scopeManager.addDeclaration(variable)
         }
     }

@@ -59,6 +59,7 @@ import uniffi.cpgrust.RsRangeExpr
 import uniffi.cpgrust.RsRecordExpr
 import uniffi.cpgrust.RsRefExpr
 import uniffi.cpgrust.RsTupleExpr
+import uniffi.cpgrust.RsUnderscoreExpr
 import uniffi.cpgrust.RsWhileExpr
 
 class ExpressionHandler(frontend: RustLanguageFrontend) :
@@ -96,6 +97,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.ArrayExpr -> handleArrayExpr(node.v1)
             is RsExpr.TupleExpr -> handleTupleExpr(node.v1)
             is RsExpr.MatchExpr -> handleMatchExpr(node.v1)
+            is RsExpr.UnderscoreExpr -> handleUnderscoreExpr(node.v1)
 
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
@@ -416,6 +418,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 type = unknownType(),
                 rawNode = raw,
             )
+        frontend.scopeManager.addDeclaration(variable)
         val declarationStatement = newDeclarationStatement()
         declarationStatement.singleDeclaration = variable
 
@@ -653,6 +656,11 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         switchStatement.usedAsExpression = true
 
         return switchStatement
+    }
+
+    fun handleUnderscoreExpr(underscoreExpr: RsUnderscoreExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.UnderscoreExpr(underscoreExpr))
+        return newEmpty(raw)
     }
 
     private fun handleMatchArm(arm: RsMatchArm): List<Expression> {

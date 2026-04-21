@@ -117,6 +117,11 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         return when (type) {
             is RsType.ArrayType -> typeOf(type.v1.ty.first()).array()
             is RsType.TupleType -> TupleType(type.v1.fields.map { t -> typeOf(t) })
+            is RsType.ParenType -> typeOf(type.v1.ty.first())
+            is RsType.PathType -> typeFromPath(type)
+            is RsType.PtrType -> typeOf(type.v1.ty.first()).pointer()
+            is RsType.RefType -> typeOf(type.v1.ty.first()).ref()
+            is RsType.SliceType -> typeOf(type.v1.ty.first()).array()
             is RsType.FnPtrType -> unknownType()
             is RsType.InferType -> unknownType() // Todo Auto type?
             is RsType.MacroType -> unknownType()
@@ -124,11 +129,6 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
             is RsType.ForType -> unknownType()
             is RsType.ImplTraitType -> unknownType()
             is RsType.NeverType -> unknownType()
-            is RsType.ParenType -> typeOf(type.v1.ty.first())
-            is RsType.PathType -> typeFromPath(type)
-            is RsType.PtrType -> typeOf(type.v1.ty.first()).pointer()
-            is RsType.RefType -> typeOf(type.v1.ty.first()).ref()
-            is RsType.SliceType -> typeOf(type.v1.ty.first()).array()
         }
     }
 

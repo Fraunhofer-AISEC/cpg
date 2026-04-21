@@ -82,13 +82,18 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                                 type = type ?: unknownType(),
                                 rawNode = RsAst.RustItem(RsItem.SelfParam(it)),
                             )
-                        frontend.scopeManager.addDeclaration(this.parameters.last())
                     }
             } ?: newFunction(name, rawNode = raw)
+
+        frontend.scopeManager.addDeclaration(function)
 
         fn.retType?.let { function.type = frontend.typeOf(it) }
 
         frontend.scopeManager.enterScope(function)
+
+        // Adding implicitly created parameters to the scope
+        function.parameters.forEach { frontend.scopeManager.addDeclaration(it) }
+
         for (param in fn.paramList?.params ?: listOf()) {
             function.parameters += handleParameterDeclaration(param) as Parameter
         }
@@ -120,6 +125,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     private fun handleModule(module: RsModule): Declaration {
         val namespace =
             newNamespace(module.name ?: "", rawNode = RsAst.RustItem(RsItem.Module(module)))
+
         frontend.scopeManager.enterScope(namespace)
 
         for (item in module.items) {
@@ -364,6 +370,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             const.expr.firstOrNull()?.let {
                 this.initializer = frontend.expressionHandler.handle(RsAst.RustExpr(it))
             }
+            frontend.scopeManager.addDeclaration(this)
         }
     }
 }
