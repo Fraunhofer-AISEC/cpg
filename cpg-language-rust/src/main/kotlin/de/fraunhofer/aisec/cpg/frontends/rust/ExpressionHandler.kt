@@ -58,6 +58,8 @@ import uniffi.cpgrust.RsPrefixExpr
 import uniffi.cpgrust.RsRangeExpr
 import uniffi.cpgrust.RsRecordExpr
 import uniffi.cpgrust.RsRefExpr
+import uniffi.cpgrust.RsReturnExpr
+import uniffi.cpgrust.RsTryExpr
 import uniffi.cpgrust.RsTupleExpr
 import uniffi.cpgrust.RsUnderscoreExpr
 import uniffi.cpgrust.RsWhileExpr
@@ -98,6 +100,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.TupleExpr -> handleTupleExpr(node.v1)
             is RsExpr.MatchExpr -> handleMatchExpr(node.v1)
             is RsExpr.UnderscoreExpr -> handleUnderscoreExpr(node.v1)
+            is RsExpr.ReturnExpr -> handleReturnExpr(node.v1)
+            is RsExpr.TryExpr -> handleTryExpr(node.v1)
 
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
@@ -618,6 +622,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return tupleConstruction
     }
 
+    fun handleReturnExpr(returnExpr: RsReturnExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ReturnExpr(returnExpr))
+        val ret = newReturn(raw)
+        returnExpr.expr.firstOrNull()?.let {
+            ret.returnValue = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+        return ret
+    }
+
     fun handleMatchExpr(matchExpr: RsMatchExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.MatchExpr(matchExpr))
 
@@ -661,6 +674,75 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     fun handleUnderscoreExpr(underscoreExpr: RsUnderscoreExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.UnderscoreExpr(underscoreExpr))
         return newEmpty(raw)
+    }
+
+    fun handleTryExpr(tryExpr: RsTryExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.TryExpr(tryExpr))
+        tryExpr.expr.firstOrNull()?.let {
+            // Here we translate a try expression to:
+            // match expr { Ok(val) => val, Err(err) => err }
+            // This does not fully depict the structure it is translated to as this depends on the
+            // implementation
+            // of the try trait, but is sufficient to modell the same EOG and DFG
+
+            // We model the try operator as a function call, as it is basically syntactic sugar for
+            // a match on the result
+            return newSwitch(rawNode = raw).also { switch ->
+                switch.selector = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+                frontend.scopeManager.enterScope(switch)
+
+                // Create a block to hold two case statements
+                val caseBlock = newBlock(raw)
+                caseBlock.usedAsExpression = true
+
+                caseBlock.statements +=
+                    newCase(raw).also { value ->
+                        value.caseExpression =
+                            newObjectDeconstruction(raw).also { obj ->
+                                obj.type = frontend.typeOf("Ok")
+                                obj.components +=
+                                    newDeclarationStatement(rawNode = raw).also { declaration ->
+                                        declaration.usedAsExpression = true
+                                        val variable = newVariable(rawNode = raw, name = "val")
+                                        declaration.declarations += variable
+
+                                        variable.initializer = newEmpty(raw)
+                                        frontend.scopeManager.addDeclaration(variable)
+                                    }
+                            }
+                    }
+                caseBlock.statements += newReference("val")
+
+                caseBlock.statements +=
+                    newCase(raw).also { value ->
+                        value.caseExpression =
+                            newObjectDeconstruction(raw).also { obj ->
+                                obj.type = frontend.typeOf("Err")
+                                obj.components +=
+                                    newDeclarationStatement(rawNode = raw).also { declaration ->
+                                        declaration.usedAsExpression = true
+                                        val variable = newVariable(rawNode = raw, name = "err")
+                                        declaration.declarations += variable
+                                        variable.initializer = newEmpty(raw)
+                                        frontend.scopeManager.addDeclaration(variable)
+                                    }
+                            }
+                    }
+                caseBlock.statements +=
+                    newReturn(raw).also { ret -> ret.returnValue = newReference("err") }
+
+                switch.statement = caseBlock
+
+                frontend.scopeManager.leaveScope(switch)
+
+                switch.usedAsExpression = true
+            }
+        }
+
+        return newProblemExpression(
+            problem = "Try expressions are not supported yet",
+            rawNode = raw,
+        )
     }
 
     private fun handleMatchArm(arm: RsMatchArm): List<Expression> {

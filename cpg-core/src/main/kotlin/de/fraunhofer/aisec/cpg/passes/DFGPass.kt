@@ -701,7 +701,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun handleBreak(node: Break) {
         if (node.usedAsExpression) {
-            node.expr.let { node.prevDFGEdges += it }
+            node.expr?.let { node.prevDFGEdges += it }
         }
     }
 

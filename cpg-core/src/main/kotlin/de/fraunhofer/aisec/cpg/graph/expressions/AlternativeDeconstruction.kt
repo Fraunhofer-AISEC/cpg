@@ -30,9 +30,9 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
 import kotlin.collections.plusAssign
-import org.neo4j.ogm.annotation.Relationship
 
 class AlternativeDeconstruction : Deconstruction(), ArgumentHolder, HasType.TypeObserver {
 

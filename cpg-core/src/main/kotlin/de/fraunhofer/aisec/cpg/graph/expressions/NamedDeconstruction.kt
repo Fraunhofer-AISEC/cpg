@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.graph.expressions
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
-import org.neo4j.ogm.annotation.Relationship
 
 class NamedDeconstruction : Deconstruction(), ArgumentHolder {
 

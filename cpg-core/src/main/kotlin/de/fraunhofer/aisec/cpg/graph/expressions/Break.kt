@@ -26,12 +26,12 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.Objects
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Expression used to interrupt further execution of a loop body and exit the respective loop
@@ -45,9 +45,8 @@ class Break : Expression(false), HasType.TypeObserver {
 
     @Relationship("EXPR")
     var exprEdge =
-        astEdgeOf<Expression>(
-            of = ProblemExpression("could not parse break Expression"),
-            onChanged = { old, new -> exchangeTypeObserverWithAccessPropagation(old, new) },
+        astOptionalEdgeOf<Expression>(
+            onChanged = { old, new -> exchangeTypeObserverWithAccessPropagation(old, new) }
         )
     /** The expression on which the operation is applied. */
     var expr by unwrapping(Break::exprEdge)

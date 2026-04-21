@@ -1037,9 +1037,14 @@ impl From<ReturnExpr> for RSReturnExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSTryExpr {pub(crate) ast_node: RSNode}
+pub struct RSTryExpr {pub(crate) ast_node: RSNode, expr: Vec<RSExpr>}
 impl From<TryExpr> for RSTryExpr {
-    fn from(node: TryExpr ) -> Self {RSTryExpr{ast_node: node.syntax().into()}}
+    fn from(node: TryExpr ) -> Self {
+        RSTryExpr{
+            ast_node: node.syntax().into(),
+            expr: node.expr().map(Into::into).into_iter().collect()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
