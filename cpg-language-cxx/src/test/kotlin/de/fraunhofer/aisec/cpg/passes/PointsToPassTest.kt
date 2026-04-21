@@ -4023,7 +4023,7 @@ class PointsToPassTest {
 
     @Test
     fun realCode() {
-        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/realcode.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -4039,25 +4039,37 @@ class PointsToPassTest {
         val strlcpyFunc = tu.functions["strlcpy"]
         assertNotNull(strlcpyFunc)
 
+        val memsetFunc = tu.functions["memset"]
+        assertNotNull(memsetFunc)
+
         // Calls
         val scCall = testFunc.calls["sc"]
         assertNotNull(scCall)
 
-        val strlcpy2 = testFunc.calls("strlcpy")[1]
-        assertNotNull(strlcpy2)
+        val strlcpy1Call = testFunc.calls("strlcpy")[0]
+        assertNotNull(strlcpy1Call)
+
+        val strlcpy2Call = testFunc.calls("strlcpy")[1]
+        assertNotNull(strlcpy2Call)
+
+        val memset1Call = testFunc.calls("memset")[0]
+        assertNotNull(memset1Call)
+
+        val memset2Call = testFunc.calls("memset")[1]
+        assertNotNull(memset2Call)
 
         // Call Args
         val scArg2 = scCall.arguments[1]
         assertNotNull(scArg2)
 
-        val strlcpy2DstArg = strlcpy2.arguments[0]
+        val strlcpy2DstArg = strlcpy2Call.arguments[0]
         assertNotNull(strlcpy2DstArg)
         val strlcpy2DstArgBase = (removePossibleCasts(strlcpy2DstArg) as? MemberAccess)?.base
         assertNotNull(strlcpy2DstArgBase)
         val strlcpy2DstArgBaseBase = (strlcpy2DstArgBase as? MemberAccess)?.base
         assertNotNull(strlcpy2DstArgBaseBase)
 
-        val strlcpy2SrcArg = strlcpy2.arguments[1]
+        val strlcpy2SrcArg = strlcpy2Call.arguments[1]
         assertNotNull(strlcpy2SrcArg)
 
         // Params and PMVs
@@ -4074,6 +4086,10 @@ class PointsToPassTest {
         val strlSrcDerefPMV =
             strlSrcParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
         assertNotNull(strlSrcDerefPMV)
+
+        val memsetDstParam = memsetFunc.parameters[0]
+        val memsetDstDerefPMV =
+            memsetDstParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
 
         // Other stuff
         val bdgh1 = testFunc.assignments[2].target as? MemberAccess
@@ -4104,20 +4120,15 @@ class PointsToPassTest {
 
         // Let's analyze the assign after the strlcpy. Here, both the b and the b.d should have 2
         // partial prevDFGto the strlcpys dstParam
-        // (one from the strlcpy in 701 and one from 706)
+        // (one from each strlcpy)
         assertEquals(
             2,
             b1.prevDFGEdges
                 .filter {
                     (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget == "b" &&
                         it.start == strlDstDerefPMV &&
-                        (it as ContextSensitiveDataflow)
-                            .callingContext
-                            .calls
-                            .single()
-                            .location
-                            ?.region
-                            ?.startLine in setOf(701, 706)
+                        (it as ContextSensitiveDataflow).callingContext.calls.single() in
+                            setOf(strlcpy1Call, strlcpy2Call)
                 }
                 .size,
         )
@@ -4128,13 +4139,33 @@ class PointsToPassTest {
                     (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
                         "conf_t::d" &&
                         it.start == strlDstDerefPMV &&
-                        (it as ContextSensitiveDataflow)
-                            .callingContext
-                            .calls
-                            .single()
-                            .location
-                            ?.region
-                            ?.startLine in setOf(701, 706)
+                        (it as ContextSensitiveDataflow).callingContext.calls.single() in
+                            setOf(strlcpy1Call, strlcpy2Call)
+                }
+                .size,
+        )
+
+        // And we also want to edges like this to the memsets
+        assertEquals(
+            2,
+            b1.prevDFGEdges
+                .filter {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget == "b" &&
+                        it.start == memsetDstDerefPMV &&
+                        (it as ContextSensitiveDataflow).callingContext.calls.single() in
+                            setOf(memset1Call, memset2Call)
+                }
+                .size,
+        )
+        assertEquals(
+            2,
+            bd1.prevDFGEdges
+                .filter {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "conf_t::d" &&
+                        it.start == memsetDstDerefPMV &&
+                        (it as ContextSensitiveDataflow).callingContext.calls.single() in
+                            setOf(memset1Call, memset2Call)
                 }
                 .size,
         )
