@@ -3614,7 +3614,7 @@ class PointsToPassTest {
 
     @Test
     fun testArrayInitializer() {
-        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/arrayinitializer.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3637,7 +3637,7 @@ class PointsToPassTest {
 
     @Test
     fun testPMVDataflows() {
-        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pmvdataflows.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3669,7 +3669,7 @@ class PointsToPassTest {
 
     @Test
     fun testFunctionSummaryDerefs() {
-        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointerderefs.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
