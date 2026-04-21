@@ -28,14 +28,14 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
-import org.neo4j.ogm.annotation.Transient
 
 /** The JavaScript language. */
 open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShortCircuitOperators {
     override val fileExtensions = listOf("js", "jsx")
     override val namespaceDelimiter = "."
-    @Transient
+    @DoNotPersist
     override val frontend: KClass<out TypeScriptLanguageFrontend> =
         TypeScriptLanguageFrontend::class
     override val conjunctiveOperators = listOf("&&", "&&=", "??", "??=")
@@ -68,7 +68,7 @@ open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShort
      * See
      * [Documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_values).
      */
-    @Transient
+    @DoNotPersist
     override val builtInTypes =
         mapOf(
             "boolean" to BooleanType("boolean", language = this),

@@ -247,7 +247,23 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
             val initializer: Expression?
             if (init != null) {
-                initializer = frontend.initializerHandler.handle(init)
+                val handled = frontend.initializerHandler.handle(init)
+                // Brace-initialization (e.g. `new Foo{42}`) produces an InitializerList. Wrap it
+                // in a Construction so that this case matches the behaviour of `new Foo()` and
+                // enables proper constructor resolution.
+                if (handled is InitializerList) {
+                    val construct =
+                        newConstruction(t.name.localName)
+                            .implicit(
+                                code = init.rawSignature,
+                                location = frontend.locationOf(init),
+                            )
+                    construct.arguments = handled.initializers
+                    construct.type = t
+                    initializer = construct
+                } else {
+                    initializer = handled
+                }
             } else {
                 // in C++, it is possible to omit the `()` part, when creating an object, such as
                 // `new A`.
@@ -260,11 +276,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
             // we also need to "forward" our template parameters (if we have any) to the construct
             // expression since the construct expression will do the actual template instantiation
-            if (newExpression.templateParameters.isNotEmpty()) {
-                addImplicitTemplateParametersToCall(
-                    newExpression.templateParameters,
-                    initializer as Construction,
-                )
+            if (newExpression.templateParameters.isNotEmpty() && initializer is Construction) {
+                addImplicitTemplateParametersToCall(newExpression.templateParameters, initializer)
             }
 
             // our initializer, such as a construct expression, will have the non-pointer type

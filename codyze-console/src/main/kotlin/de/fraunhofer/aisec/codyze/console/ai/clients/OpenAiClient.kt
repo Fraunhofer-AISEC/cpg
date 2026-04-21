@@ -210,7 +210,7 @@ class OpenAiClient(
      * ```
      *
      * See
-     * [OpenAI streaming events]https://developers.openai.com/api/reference/resources/chat/subresources/completions/streaming-events"></a>
+     * [OpenAI streaming events](https://developers.openai.com/api/reference/resources/chat/subresources/completions/streaming-events)
      * See [OpenAI Streaming API](https://developers.openai.com/api/docs/guides/streaming-responses)
      */
     private suspend fun handleStreamingResponse(
