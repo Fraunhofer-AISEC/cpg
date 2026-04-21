@@ -26,12 +26,25 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.expressions.Switch
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.persistence.Relationship
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+import kotlin.math.max
 
 /**
  * This is the base class for all AST nodes in the CPG. It is used to represent any node in the
@@ -64,5 +77,75 @@ abstract class AstNode : Node() {
 
         // Disconnect all AST children first
         astChildren.forEach { it.disconnectFromGraph() }
+    }
+
+    val idAst: String by lazy {
+        /*
+         * proposed structure:
+         *     {parent}/{simple class name}/{name | signature | value | index}
+         */
+        val category =
+            when (this) {
+                // define short names if desired
+                is TranslationResult -> "tr"
+                is TranslationUnit -> "tu"
+                else -> this::class.simpleName?.lowercase()
+            }?.let {
+                // simple pluralize with 's'/'es'
+                if (it.last() != 's') it + "s" else it + "es"
+            }
+
+        var value: String =
+            when (this) {
+                // extract suitable descriptors for specific AST nodes
+                is Function -> {
+                    "${name}_${astParent.functions.filter { it.name == name }.indexOfFirst { it === this }}"
+                }
+                is Literal<*> -> {
+                    "${value}_${astParent.literals.filter { it.value == value }.indexOfFirst { it === this }}"
+                }
+                is Block -> {
+                    // only indices
+                    "${astParent.blocks.indexOfFirst { it === this }}"
+                }
+                is IfElse -> {
+                    // only indices
+                    "${astParent.ifs.indexOfFirst { it === this }}"
+                }
+                is Return -> {
+                    // only indices
+                    "${astParent.returns.indexOfFirst { it === this }}"
+                }
+                is Switch -> {
+                    "${astParent.switches.indexOfFirst { it === this }}"
+                }
+                is DeclarationStatement ->
+                    astParent
+                        ?.astChildren
+                        ?.filter { it is DeclarationStatement }
+                        ?.indexOf(this)
+                        ?.or(0)
+                        .toString()
+                is Parameter ->
+                    if (name.isEmpty()) astParent.parameters.indexOf(this).toString()
+                    else name.toString()
+                else -> {
+                    val children = astParent?.astChildren?.filter { it.name == this.name }.orEmpty()
+
+                    when (children.size) {
+                        0 -> ""
+                        1 -> "${name}"
+                        else -> "${name}_${max(children.indexOfFirst { it === this }, 0)}"
+                    }
+                }
+            }
+
+        // use parent's id as base
+        val parentId = astParent?.let { "${it.idAst}/" }.orEmpty()
+
+        // assemble full id
+        parentId +
+            category +
+            if (value.isEmpty()) "" else "/" + URLEncoder.encode(value, StandardCharsets.UTF_8)
     }
 }
