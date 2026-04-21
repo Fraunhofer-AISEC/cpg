@@ -49,7 +49,7 @@ class PointsToPassTest {
 
     @Test
     fun testBasics() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -334,7 +334,7 @@ class PointsToPassTest {
 
     @Test
     fun testConditions() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -416,7 +416,7 @@ class PointsToPassTest {
 
     @Test
     fun testStructs() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -556,7 +556,7 @@ class PointsToPassTest {
 
     @Test
     fun testArrays() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -614,7 +614,7 @@ class PointsToPassTest {
 
     @Test
     fun testMemcpy() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -1114,7 +1114,7 @@ class PointsToPassTest {
 
     @Test
     fun testPointerToPointer() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -1333,7 +1333,7 @@ class PointsToPassTest {
 
     @Test
     fun testGhidraCode() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -2016,7 +2016,7 @@ class PointsToPassTest {
 
     @Test
     fun testFunctionSummaries() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -2400,7 +2400,7 @@ class PointsToPassTest {
 
     @Test
     fun testPointerToPointerFunctionSummaries() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -2590,7 +2590,7 @@ class PointsToPassTest {
 
     @Test
     fun testGlobalVariables() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -2672,7 +2672,7 @@ class PointsToPassTest {
 
     @Test
     fun testCallingContexts() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -2955,7 +2955,7 @@ class PointsToPassTest {
 
     @Test
     fun testUnaryOps() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3008,7 +3008,7 @@ class PointsToPassTest {
 
     @Test
     fun testShortFS() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3148,7 +3148,7 @@ class PointsToPassTest {
 
     @Test
     fun testStrnCopyToDeref() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3177,7 +3177,7 @@ class PointsToPassTest {
 
     @Test
     fun testStackedCallingContexts() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3330,7 +3330,7 @@ class PointsToPassTest {
 
     @Test
     fun testGhidra2() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3495,7 +3495,7 @@ class PointsToPassTest {
 
     @Test
     fun testRecursion() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3507,7 +3507,7 @@ class PointsToPassTest {
 
     @Test
     fun testShortFS2() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3530,7 +3530,7 @@ class PointsToPassTest {
 
     @Test
     fun testCompoundAssignment() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3554,7 +3554,7 @@ class PointsToPassTest {
 
     @Test
     fun testBlockAssignment() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3585,7 +3585,7 @@ class PointsToPassTest {
 
     @Test
     fun testLoopSensitivity() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3614,7 +3614,7 @@ class PointsToPassTest {
 
     @Test
     fun testArrayInitializer() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3637,7 +3637,7 @@ class PointsToPassTest {
 
     @Test
     fun testPMVDataflows() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3669,7 +3669,7 @@ class PointsToPassTest {
 
     @Test
     fun testFunctionSummaryDerefs() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3814,7 +3814,7 @@ class PointsToPassTest {
 
     @Test
     fun testMemberArguments() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/memberarguments.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3826,6 +3826,9 @@ class PointsToPassTest {
         // Functions
         val testFunc = tu.functions["testMemberArg"]
         assertNotNull(testFunc)
+
+        val strlcpyFunc = tu.functions["strlcpy"]
+        assertNotNull(strlcpyFunc)
 
         // Calls
         val printfCall1 = testFunc.calls("printf")[0]
@@ -3839,6 +3842,9 @@ class PointsToPassTest {
 
         val memsetCall = testFunc.calls["memset"]
         assertNotNull(memsetCall)
+
+        val memsetFunc = memsetCall.invokes.single()
+        assertNotNull(memsetFunc)
 
         // Args
         val printf1Arg = printfCall1.arguments[1]
@@ -3873,15 +3879,30 @@ class PointsToPassTest {
         assertNotNull(testFuncDerefPMV)
 
         // The returned PointerReference
-        val finalConfDeref = testFunc.returns.single().returnValue
-        assertNotNull(finalConfDeref)
+        val finalConfPointerReference = testFunc.returns.single().returnValue
+        assertNotNull(finalConfPointerReference)
+
+        val memsetDstParam = memsetFunc.parameters[0]
+        val memsetDstDerefPMV =
+            memsetDstParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+
+        val strlDstParam = strlcpyFunc.parameters[0]
+        val strlDstDerefPMV =
+            strlDstParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(strlDstDerefPMV)
 
         // Actual tests
-        // For the arg of the printf, we except the prevDFG to point to the memset arg's base's base
+        // For the arg of the printf, we except a Full prevDFG to the variable and a partial to the
+        // memset dst deref PMV
         assertEquals(
-            ((memsetDstArg as? MemberAccess)?.base as? MemberAccess)?.base,
-            printf1Arg.prevFullDFG.singleOrNull(),
+            memsetDstDerefPMV,
+            printf1Arg.prevDFGEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget == "conf"
+                }
+                ?.start,
         )
+        assertEquals(testFunc.variables["conf"], printf1Arg.prevFullDFG.singleOrNull())
 
         // The 2nd argument to strlcpy should have a prevDFG with FieldGranularity to its base. From
         // there, we expect a Full DFG to the PMV derefvalue of parameter c
@@ -3894,21 +3915,115 @@ class PointsToPassTest {
                 .single(),
         )
 
-        // For the 2nd printf, we except the prevDFG of the `conf` to point to the base-base of the
-        // strlcpy dst argument
-        // And for conf.st, we expect the prevFullDFG to point to the base of the strcpy dst
-        // argument
+        // For the 2nd printf, we except the prevFullDFG of the `conf` to point to the variable
+        // "conf". Additionally, we except partial prevDFGs to the memset and strlcpy derefvalues
+        // TODO: We could be more precise and delete the partial prevDFG to the memset since strlcpy
+        // also writes to conf.st.s
+        assertEquals(testFunc.variables["conf"], printf2Arg1.prevFullDFG.singleOrNull())
+        assertEquals(
+            memsetDstDerefPMV,
+            printf2Arg1.prevDFGEdges
+                .single {
+                    it.granularity is PartialDataflowGranularity<*> &&
+                        (it as ContextSensitiveDataflow).callingContext.calls.single() == memsetCall
+                }
+                .start,
+        )
+        assertEquals(
+            strlDstDerefPMV,
+            printf2Arg1.prevDFGEdges
+                .single {
+                    it.granularity is PartialDataflowGranularity<*> &&
+                        (it as ContextSensitiveDataflow).callingContext.calls.single() ==
+                            strlcpyCall
+                }
+                .start,
+        )
 
-        assertEquals(strlcpyDstArgBaseBase, printf2Arg1.prevFullDFG.singleOrNull())
-        assertEquals(strlcpyDstArgBase, printf2Arg2.prevFullDFG.singleOrNull())
+        // For conf.st, we don't really have a prevFullDFG
+        // However, we want the same partialDataFlowGranularities as above plus one to the conf
+        // reference
+        assertTrue(printf2Arg2.prevFullDFG.isEmpty())
+        assertEquals(
+            3,
+            printf2Arg2.prevDFGEdges.filter { it.granularity is PartialDataflowGranularity<*> }.size,
+        )
+        assertEquals(
+            memsetDstDerefPMV,
+            printf2Arg2.prevDFGEdges
+                .single {
+                    it.granularity is PartialDataflowGranularity<*> &&
+                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                            memsetCall
+                }
+                .start,
+        )
+        assertEquals(
+            strlDstDerefPMV,
+            printf2Arg2.prevDFGEdges
+                .single {
+                    it.granularity is PartialDataflowGranularity<*> &&
+                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                            strlcpyCall
+                }
+                .start,
+        )
+        assertEquals(
+            (printf2Arg2 as MemberAccess).base,
+            printf2Arg2.prevDFGEdges
+                .single {
+                    it.granularity is PartialDataflowGranularity<*> &&
+                        it !is ContextSensitiveDataflow
+                }
+                .start,
+        )
 
-        // TODO: what do we want to check about the return value?
-        // assertEquals(null, finalConfDeref.prevDFG.singleOrNull())
+        // The same partial edges apply to the PointerReference that is returned
+        assertEquals(
+            3,
+            finalConfPointerReference.prevDFGEdges
+                .filter { it.granularity is PartialDataflowGranularity<*> }
+                .size,
+        )
+        assertEquals(
+            memsetDstDerefPMV,
+            finalConfPointerReference.prevDFGEdges
+                .single {
+                    it.granularity is PartialDataflowGranularity<*> &&
+                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                            memsetCall
+                }
+                .start,
+        )
+        assertEquals(
+            strlDstDerefPMV,
+            finalConfPointerReference.prevDFGEdges
+                .single {
+                    it.granularity is PartialDataflowGranularity<*> &&
+                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                            strlcpyCall
+                }
+                .start,
+        )
+        assertEquals(
+            (finalConfPointerReference as PointerReference).input,
+            finalConfPointerReference.prevDFGEdges
+                .single {
+                    it.granularity is PartialDataflowGranularity<*> &&
+                        it !is ContextSensitiveDataflow
+                }
+                .start,
+        )
+        // The prevFullDFG should be the memoryAddress of conf
+        assertLocalName(
+            "conf",
+            finalConfPointerReference.prevFullDFG.singleOrNull() as MemoryAddress,
+        )
     }
 
     @Test
     fun realCode() {
-        val file = File("src/test/resources/pointsto.cpp")
+        val file = File("src/test/resources/pointsToPass/pointsto.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -3994,7 +4109,7 @@ class PointsToPassTest {
             2,
             b1.prevDFGEdges
                 .filter {
-                    it.granularity is PartialDataflowGranularity<*> &&
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget == "b" &&
                         it.start == strlDstDerefPMV &&
                         (it as ContextSensitiveDataflow)
                             .callingContext
@@ -4010,7 +4125,8 @@ class PointsToPassTest {
             2,
             bd1.prevDFGEdges
                 .filter {
-                    it.granularity is PartialDataflowGranularity<*> &&
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "conf_t::d" &&
                         it.start == strlDstDerefPMV &&
                         (it as ContextSensitiveDataflow)
                             .callingContext

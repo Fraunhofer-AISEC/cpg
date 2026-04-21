@@ -1977,7 +1977,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private suspend fun addEntryToMap(
         doubleState: PointsToState.Element,
         mapDstToSrc: ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>,
-        destinationAddresses: ConcurrentIdentitySet<Pair<Node?, Boolean>>,
+        destinationAddresses: ConcurrentIdentitySet<Pair<Node?, String?>>,
         destinations: ConcurrentIdentitySet<Node>,
         srcNode: Node?,
         shortFS: Boolean,
@@ -2032,10 +2032,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         addAll(propertySet)
                                         add(shortFS)
                                     }
-                                if (partialWrite)
-                                    updatedPropertySet.add(
-                                        PartialDataflowGranularity("MemberAccess")
-                                    )
+                                partialWrite?.let {
+                                    updatedPropertySet.add(PartialDataflowGranularity(it))
+                                }
                                 val currentSet =
                                     mapDstToSrc.computeIfAbsent(d!!) { concurrentIdentitySetOf() }
                                 if (
@@ -2080,6 +2079,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             addAll(propertySet)
                                             add(shortFS)
                                         }
+                                    partialWrite?.let {
+                                        updatedPropertySet.add(PartialDataflowGranularity(it))
+                                    }
                                     val currentSet =
                                         mapDstToSrc.computeIfAbsent(d!!) {
                                             concurrentIdentitySetOf()
@@ -2120,6 +2122,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 addAll(propertySet)
                                 add(shortFS)
                             }
+                        partialWrite?.let { updatedPropertySet.add(PartialDataflowGranularity(it)) }
                         if (
                             currentSet.none {
                                 it.srcNode === srcNode &&
@@ -2168,6 +2171,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         addAll(propertySet)
                                         add(shortFS)
                                     }
+                                partialWrite?.let {
+                                    updatedPropertySet.add(PartialDataflowGranularity(it))
+                                }
                                 currentSet +=
                                     MapDstToSrcEntry(
                                         pair.first,
@@ -2191,7 +2197,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         subAccessName: String,
         argument: Node,
         properties: EqualLinkedHashSet<Any>,
-    ): Pair<ConcurrentIdentitySet<Pair<Node?, Boolean>>, ConcurrentIdentitySet<Node>> {
+    ): Pair<ConcurrentIdentitySet<Pair<Node?, String?>>, ConcurrentIdentitySet<Node>> {
         // If the dstAddr is a Call, the dst is the same. Otherwise, we don't really know,
         // so we leave it empty
         val destination: ConcurrentIdentitySet<Node> =
@@ -2214,7 +2220,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val destAddrDepth = dstValueDepth - 1
         // Is the destAddrDepth > 2? In this case, the DeclarationState
         // might be outdated. So check in the mapDstToSrc for updates
-        val updatedAddresses =
+        val updatedAddresses: ConcurrentIdentitySet<Pair<Node?, String?>> =
             mapDstToSrc.entries
                 .filter {
                     it.key in
@@ -2224,7 +2230,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 }
                 .flatMap { it.value }
                 .filter { it.srcNode != null }
-                .mapTo(ConcurrentIdentitySet()) { it.srcNode to false }
+                .mapTo(ConcurrentIdentitySet()) { it.srcNode to null }
 
         return if (dstValueDepth > 2 && updatedAddresses.isNotEmpty()) {
             Pair(updatedAddresses, destination)
@@ -2232,7 +2238,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val partialAccess =
                 properties.filterIsInstance<PartialDataflowGranularity<*>>().singleOrNull()
             if (subAccessName.isNotEmpty() || partialAccess != null) {
-                val fieldAddresses = concurrentIdentitySetOf<Pair<Node?, Boolean>>()
+                val fieldAddresses = concurrentIdentitySetOf<Pair<Node?, String?>>()
                 // Collect the fieldAddresses for each possible value
                 val argumentValues =
                     doubleState.getNestedValues(argument, destAddrDepth, fetchFields = true)
@@ -2240,7 +2246,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // We over approximate here and also add the main memory Address to the list of
                     // destinations
                     // TODO: Should this be true?
-                    fieldAddresses.add(v to false)
+                    fieldAddresses.add(v to null)
 
                     val parentName = getNodeName(v)
                     val partialString =
@@ -2248,7 +2254,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     val newName = Name(partialString, parentName)
                     fieldAddresses.addAll(
                         doubleState.fetchFieldAddresses(concurrentIdentitySetOf(v), newName).map {
-                            it to false
+                            it to null
                         }
                     )
                 }
@@ -2256,14 +2262,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             } else {
                 val destinationAddresses =
                     doubleState.getNestedValues(argument, destAddrDepth).mapTo(
-                        ConcurrentIdentitySet<Pair<Node?, Boolean>>()
+                        ConcurrentIdentitySet<Pair<Node?, String?>>()
                     ) {
-                        it.first to false
+                        it.first to null
                     }
                 // If the argument is a MemberAccess, we also collect the addresses of the bases
                 collectBases(argument).forEach { base ->
                     doubleState.getAddresses(base, base).forEach { addr ->
-                        destinationAddresses.add(addr to true)
+                        destinationAddresses.add(addr to base.name.toString())
                     }
                 }
 
