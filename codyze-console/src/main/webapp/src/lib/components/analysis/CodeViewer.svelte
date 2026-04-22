@@ -97,31 +97,25 @@
     prevSuggestionCount = count;
   });
 
-  // Resolve a nodeId to its line range via astNodes
+  function scrollToLine(line: number) {
+    if (!codeContainerElement || typeof window === 'undefined') return;
+    const computedStyle = window.getComputedStyle(codeContainerElement);
+    const lh = parseFloat(computedStyle.lineHeight) || parseFloat(computedStyle.fontSize) * 1.5 || 20;
+    codeContainerElement.scrollTo({ top: Math.max(0, (line - 3) * lh), behavior: 'smooth' });
+  }
+
+  // Resolve a nodeId to its line range via astNodes or overlayNodes
+  function findNodeById(nodeId: string): NodeJSON | undefined {
+    return astNodes.find(n => n.id === nodeId) ?? overlayNodes.find(n => n.id === nodeId);
+  }
+
   function linesForNodeId(nodeId: string): number[] {
-    const node = astNodes.find(n => n.id === nodeId);
+    const node = findNodeById(nodeId);
     if (!node) return [];
     const lines: number[] = [];
     for (let l = node.startLine; l <= node.endLine; l++) lines.push(l - 1); // 0-based
     return lines;
   }
-
-  const suggestionHighlightLines = $derived.by(() => {
-    if (activeTab !== 'suggestions' || suggestions.length === 0 || astNodes.length === 0) return [];
-    const nodeIds = new Set(
-      suggestions.flatMap(s => [
-        s.suggestion.nodeId,
-        ...s.operations.map(o => o.operation.nodeId)
-      ])
-    );
-    const lines = new Set<number>();
-    for (const node of astNodes) {
-      if (nodeIds.has(node.id)) {
-        for (let l = node.startLine; l <= node.endLine; l++) lines.add(l - 1);
-      }
-    }
-    return [...lines];
-  });
 
   // Lines to highlight for the currently active suggestion node (click-focused)
   const activeNodeLines = $derived.by(() => {
@@ -132,8 +126,7 @@
   // Combined highlight lines for the code viewer
   const allHighlightLines = $derived.by(() => {
     if (activeTab === 'suggestions') {
-      const lines = new Set([...suggestionHighlightLines, ...activeNodeLines]);
-      return [...lines];
+      return activeNodeLines;
     }
     return highlightLine ? [highlightLine - 1] : [];
   });
@@ -148,15 +141,11 @@
   const lineNumberWidth = $derived(Math.ceil(Math.log10(totalLines + 1)));
   const offsetLeft = $derived(baseOffsetLeft + lineNumberWidth * charWidth);
 
-  // Scroll to hovered suggestion node
+  // Scroll to focused suggestion node
   $effect(() => {
     if (activeSuggestionNodeId && codeContainerElement) {
-      const node = astNodes.find(n => n.id === activeSuggestionNodeId);
-      if (node) {
-        const computedStyle = window.getComputedStyle(codeContainerElement);
-        const lh = parseFloat(computedStyle.lineHeight) || parseFloat(computedStyle.fontSize) * 1.5 || 20;
-        codeContainerElement.scrollTo({ top: Math.max(0, (node.startLine - 3) * lh), behavior: 'smooth' });
-      }
+      const node = findNodeById(activeSuggestionNodeId);
+      if (node) scrollToLine(node.startLine);
     }
   });
 
@@ -174,8 +163,8 @@
 
 <div class="flex h-full w-full overflow-hidden rounded-[inherit]">
   <!-- Code display -->
-  <div class="relative flex-1 overflow-auto" style="transform: translateZ(0);" bind:this={codeContainerElement}>
-    <div class="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-2">
+  <div class="flex flex-1 flex-col overflow-hidden">
+    <div class="flex shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 py-2">
       <div class="font-mono text-xs text-gray-500">{translationUnit.name}</div>
       <div class="flex items-center gap-2">
         {#if headerActions}
@@ -196,58 +185,61 @@
       </div>
     </div>
 
-    <div class="relative">
-      <div class="font-mono">
-        <Highlight language={getLanguage(translationUnit.name)} code={translationUnit.code} let:highlighted>
-          <LineNumbers
-            {highlighted}
-            highlightedLines={allHighlightLines}
-            --line-number-color="gray"
-            --padding-right={0}
-            hideBorder
+    <div class="relative flex-1 overflow-auto" style="transform: translateZ(0);" bind:this={codeContainerElement}>
+      <div class="relative inline-block min-w-full w-max align-top">
+        <div class="font-mono">
+          <Highlight language={getLanguage(translationUnit.name)} code={translationUnit.code} let:highlighted>
+            <LineNumbers
+              {highlighted}
+              highlightedLines={allHighlightLines}
+              --line-number-color="gray"
+              --padding-right={0}
+              hideBorder
+            />
+          </Highlight>
+        </div>
+
+        {#if finding && highlightLine}
+          <FindingOverlay {finding} kind={findingKind} line={highlightLine} {lineHeight} {offsetTop} />
+        {/if}
+
+        {#if activeTab !== 'suggestions'}
+          <NodeOverlays
+            {nodes}
+            {codeLines}
+            bind:highlightedNode
+            {lineHeight}
+            {charWidth}
+            {offsetTop}
+            {offsetLeft}
+            conceptGroups={conceptGroups || []}
           />
-        </Highlight>
+        {/if}
       </div>
-
-      {#if finding && highlightLine}
-        <FindingOverlay {finding} kind={findingKind} line={highlightLine} {lineHeight} {offsetTop} />
-      {/if}
-
-      {#if activeTab !== 'suggestions'}
-        <NodeOverlays
-          {nodes}
-          {codeLines}
-          bind:highlightedNode
-          {lineHeight}
-          {charWidth}
-          {offsetTop}
-          {offsetLeft}
-          conceptGroups={conceptGroups || []}
-        />
-      {/if}
     </div>
-
   </div>
 
   <!-- Node information panel -->
   <CollapsiblePanel title="Nodes" side="right" bind:collapsed={nodePanelCollapsed}>
-    <div class="bg-white">
-      <TabNavigation {tabs} {activeTab} onTabChange={(id) => (activeTab = id)} />
-    </div>
-    <div class="flex-1 overflow-auto p-4">
-      {#if activeTab === 'suggestions'}
-        <ConceptChecklist
-          bind:items={suggestions}
-          {onApplySuggestions}
-          onHighlightNode={(nodeId) => (activeSuggestionNodeId = nodeId)}
-        />
-      {:else}
-        <NodeTable
-          {nodes}
-          bind:highlightedNode
-          nodeClick={(node) => console.log('Node clicked:', node)}
-        />
-      {/if}
+    <div class="flex h-full flex-col overflow-hidden">
+      <div class="shrink-0 bg-white">
+        <TabNavigation {tabs} {activeTab} onTabChange={(id) => (activeTab = id)} />
+      </div>
+      <div class="flex-1 overflow-auto p-4">
+        {#if activeTab === 'suggestions'}
+          <ConceptChecklist
+            bind:items={suggestions}
+            {onApplySuggestions}
+            onHighlightNode={(nodeId) => (activeSuggestionNodeId = nodeId)}
+          />
+        {:else}
+          <NodeTable
+            {nodes}
+            bind:highlightedNode
+            nodeClick={(node) => scrollToLine(node.startLine)}
+          />
+        {/if}
+      </div>
     </div>
   </CollapsiblePanel>
 </div>
