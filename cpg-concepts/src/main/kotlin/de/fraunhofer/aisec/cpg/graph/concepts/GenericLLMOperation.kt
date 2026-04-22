@@ -32,13 +32,16 @@ import java.util.*
  * A generic [Operation] for use when operation details are not yet known at compile time. This can
  * be used to dynamically load and persist operations from/to a file.
  *
+ * @param underlyingNode The CPG node this operation is attached to.
  * @param operationName The name of the operation. This should be unique across all operations.
- *
- * TODO
+ * @param description A human-readable description of the operation.
+ * @param genericLLMConcept The concept this operation belongs to.
+ * @param properties The properties of the operation.
  */
 class GenericLLMOperation(
     underlyingNode: Node? = null,
     val operationName: String,
+    val description: String,
     val genericLLMConcept: GenericLLMConcept,
     val properties: GenericProperties,
 ) : Operation(concept = genericLLMConcept, underlyingNode = underlyingNode) {
@@ -47,10 +50,11 @@ class GenericLLMOperation(
         return other is GenericLLMOperation &&
             super.equals(other) &&
             other.operationName == this.operationName &&
-            other.genericLLMConcept == this.genericLLMConcept && // TODO === ??
+            other.description == this.description &&
+            other.genericLLMConcept == this.genericLLMConcept &&
             other.properties == this.properties
     }
 
     override fun hashCode() =
-        Objects.hash(super.hashCode(), operationName, genericLLMConcept, properties)
+        Objects.hash(super.hashCode(), operationName, description, genericLLMConcept, properties)
 }

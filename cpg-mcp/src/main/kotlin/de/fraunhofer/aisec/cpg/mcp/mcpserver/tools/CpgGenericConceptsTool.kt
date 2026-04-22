@@ -228,6 +228,7 @@ fun Server.addLLMConceptAndOperations() {
                 GenericLLMConcept(
                         underlyingNode = cpgConceptNode,
                         conceptName = concept.name,
+                        description = concept.description,
                         properties =
                             GenericProperties(concept.properties.associate { it.name to it.value }),
                     )
@@ -259,6 +260,7 @@ fun Server.addLLMConceptAndOperations() {
                     GenericLLMOperation(
                             underlyingNode = cpgOperationNode,
                             operationName = operation.name,
+                            description = operation.description,
                             genericLLMConcept = conceptNode,
                             properties =
                                 GenericProperties(

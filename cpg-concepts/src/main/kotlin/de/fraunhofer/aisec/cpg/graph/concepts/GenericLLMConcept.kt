@@ -32,14 +32,15 @@ import java.util.*
  * A generic concept for use when concept details are not yet known at compile time. This can be
  * used to dynamically load and persist concepts from/to a file.
  *
+ * @param underlyingNode The CPG node this concept is attached to.
  * @param conceptName The name of the concept. This should be unique across all concepts.
- *
- * TODO
+ * @param description A description of the concept.
+ * @param properties The properties of the concept.
  */
 class GenericLLMConcept(
     underlyingNode: Node? = null,
     val conceptName: String,
-    // val description: String,
+    val description: String,
     val properties: GenericProperties,
 ) : Concept(underlyingNode = underlyingNode) {
 
@@ -47,8 +48,9 @@ class GenericLLMConcept(
         return other is GenericLLMConcept &&
             super.equals(other) &&
             other.conceptName == this.conceptName &&
+            other.description == this.description &&
             other.properties == this.properties
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), conceptName, properties)
+    override fun hashCode() = Objects.hash(super.hashCode(), conceptName, description, properties)
 }

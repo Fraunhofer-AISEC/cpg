@@ -40,15 +40,25 @@ include {
 project {
     name = "My Project"
 
-    toe {
-        name = "Password Manager"
-        version = "1.0.0"
+    tool {
+        configuration {
+            includePath("src/integrationTest/resources/example/src/third-party/mylib")
+            loadIncludes(true)
+        }
+    }
 
+    toe {
+        name = "My Mock TOE"
         architecture {
             modules {
-                module("test-module") {
-                    directory =
-                        "/Users/leutrimshala/repos/code-analysis/example-project/src/main/resources/toe/vibe-pythonpass"
+                module("module1") {
+                    directory = "src/module1"
+                    includeAll()
+                    exclude("tests")
+                }
+                module("module2") {
+                    directory = "src/module2"
+                    include("pkg")
                 }
             }
         }
