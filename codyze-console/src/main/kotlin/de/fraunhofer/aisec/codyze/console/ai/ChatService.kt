@@ -46,9 +46,12 @@ import org.slf4j.LoggerFactory
 /** ChatService manages LLM client configuration and provides an API for chat interactions. */
 class ChatService(
     private val httpClient: HttpClient,
-    private val llm: LlmClient,
+    private val llmProviderCatalog: LlmProviderCatalog,
     private val mcpServerUrl: String,
 ) {
+
+    suspend fun listAvailableProviders(): List<LlmProviderWithModels> =
+        llmProviderCatalog.listAvailableProviders()
 
     private val mcp: Client =
         Client(
@@ -141,6 +144,13 @@ class ChatService(
 
         val userMessage = request.messages.lastOrNull()?.content ?: ""
         val conversationHistory = request.messages
+
+        val llm =
+            llmProviderCatalog.clientFor(request.client, request.model)
+                ?: run {
+                    send(Events.text("Unknown or unavailable LLM client"))
+                    return@channelFlow
+                }
 
         try {
             val toolCallHistory = mutableListOf<List<ToolCallWithResult>>()
@@ -240,7 +250,7 @@ class ChatService(
 
         fun createIfConfigExist(): ChatService? {
             val config = ConfigFactory.load()
-            if (!config.hasPath("llm.client")) {
+            if (!config.hasPath("llm.clients")) {
                 log.warn(
                     "No application.conf found, AI chat features disabled. " +
                         "Copy application.conf.example to application.conf to enable them."
@@ -251,9 +261,6 @@ class ChatService(
         }
 
         private fun fromConfig(config: Config): ChatService {
-            val llmProvider = config.getString("llm.client")
-            val llmModel = config.getString("llm.$llmProvider.model")
-            val llmBaseUrl = config.getString("llm.$llmProvider.baseUrl")
             val mcpServerUrl = config.getString("mcp.serverUrl")
 
             val httpClient =
@@ -274,20 +281,10 @@ class ChatService(
                     }
                 }
 
-            val llmClient: LlmClient =
-                when (llmProvider) {
-                    "gemini" -> {
-                        val apiKey =
-                            System.getenv("GEMINI_API_KEY")
-                                ?: throw IllegalStateException("GEMINI_API_KEY not set")
-                        GeminiClient(httpClient, llmModel, apiKey, llmBaseUrl)
-                    }
-                    else -> OpenAiClient(httpClient, llmModel, llmBaseUrl)
-                }
-
+            val clients = configuredClients(config)
             return ChatService(
                 httpClient = httpClient,
-                llm = llmClient,
+                llmProviderCatalog = LlmProviderCatalog(httpClient, clients),
                 mcpServerUrl = mcpServerUrl,
             )
         }
