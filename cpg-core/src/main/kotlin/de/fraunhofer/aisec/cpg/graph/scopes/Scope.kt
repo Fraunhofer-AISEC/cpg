@@ -204,8 +204,9 @@ sealed class Scope(
             // Filter according to the language
             if (languageOnly != null) {
                 list.removeIf {
-                    languageOnlyClass?.isInstance(it.language) == false &&
-                        !it.language::class.java.isInstance(languageOnly)
+                    val candidateLanguageClass = it.language::class.java
+                    languageOnlyClass?.isAssignableFrom(candidateLanguageClass) == false &&
+                        !candidateLanguageClass.isAssignableFrom(languageOnlyClass)
                 }
             }
 
