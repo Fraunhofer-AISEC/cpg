@@ -1,15 +1,27 @@
 <script lang="ts">
   import MessageInput from './MessageInput.svelte';
-  import type { McpCapabilities } from '$lib/types';
+  import SessionBar from './SessionBar.svelte';
+  import type { McpCapabilities, Model } from '$lib/types';
 
   interface Props {
     onWelcomeMessage: (message: string) => void;
+    models?: Model[];
+    selectedModel?: Model | null;
+    onModelSelect?: (model: Model) => void;
     mcpCapabilities?: McpCapabilities | null;
     onOpenMcpModal?: () => void;
     onPromptSelect?: (name: string, args: Record<string, string>) => void;
   }
 
-  let { onWelcomeMessage, mcpCapabilities, onOpenMcpModal, onPromptSelect }: Props = $props();
+  let {
+    onWelcomeMessage,
+    models = [],
+    selectedModel = null,
+    onModelSelect,
+    mcpCapabilities,
+    onOpenMcpModal,
+    onPromptSelect
+  }: Props = $props();
 
   let messageInput = $state('');
 
@@ -85,20 +97,18 @@
       onSend={handleSendMessage}
       onValueChange={(value) => messageInput = value}
       placeholder="Ask me anything about your codebase..."
+      disabled={!selectedModel}
       prompts={mcpCapabilities?.prompts}
       onPromptSelect={onPromptSelect}
     />
-    {#if mcpCapabilities && onOpenMcpModal}
-      <div class="mt-2 flex items-center">
-        <button
-          class="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700"
-          onclick={onOpenMcpModal}
-          title="MCP Server"
-        >
-          <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-          {mcpCapabilities.serverName}
-        </button>
-      </div>
-    {/if}
+    <div class="mt-2">
+      <SessionBar
+        {models}
+        {selectedModel}
+        {mcpCapabilities}
+        {onOpenMcpModal}
+        {onModelSelect}
+      />
+    </div>
   </div>
 </div>
