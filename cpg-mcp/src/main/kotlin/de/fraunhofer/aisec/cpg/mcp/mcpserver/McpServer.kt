@@ -44,15 +44,22 @@ fun configureServer(
         this.listRecords()
         this.listCalls()
         this.listCallsTo()
-        this.listAvailableConcepts()
-        this.listAvailableOperations()
+        // this.listAvailableConcepts()
+        // this.listAvailableOperations()
         this.getAllArgs()
         this.getArgByIndexOrName()
-        this.listConceptsAndOperations()
+        //        this.listConceptsAndOperations()
+        this.getFunctionsByName()
         this.getNode()
         this.addDfgBackwardTool()
+
+        this.persistGraphToNeo4jTool()
+        this.getPersistedConceptsOperations()
+        this.addOrUpdateConcept()
+        this.addLLMConceptAndOperations()
+
         // PROMPTS
-        this.addSuggestConceptsPrompt()
+        // this.addSuggestConceptsPrompt()
         this
     }
 ): Server {

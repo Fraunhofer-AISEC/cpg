@@ -35,11 +35,19 @@ data class CpgAnalyzePayload(
         "The file extension. This is required to identify the programming language and should resemble the typical file ending (e.g. '.py' for python, '.c' for C code)."
     )
     val extension: String? = null,
+    @Description("Path to a file or directory to analyze.") val path: String? = null,
+    @Description("List of include paths.") val includePaths: List<String>? = null,
 )
 
 @Serializable
 @Description("The payload to identify a node by its name.")
 data class CpgNamePayload(@Description("The local name of the node to consider.") val name: String)
+
+@Serializable
+@Description("The payload to look up functions by name, with optional file path filter.")
+data class CpgFunctionsByNamePayload(
+    @Description("List of function names to look up.") val names: List<String>
+)
 
 @Serializable
 @Description("The payload to identify a node by its id.")

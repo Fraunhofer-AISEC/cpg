@@ -76,6 +76,9 @@ dependencies {
     // Command line interface support
     implementation(libs.clikt)
 
+    // parsing YAML files
+    implementation(libs.jacksonyml)
+
     integrationTestImplementation(libs.ktor.server.cio)
     integrationTestImplementation(libs.ktor.server.test.host)
     integrationTestImplementation(libs.mcp.client)
@@ -98,4 +101,6 @@ dependencies {
     implementation(project(":cpg-concepts"))
     implementation(project(":cpg-analysis"))
     implementation(project(":cpg-serialization"))
+
+    implementation(project(":cpg-neo4j"))
 }

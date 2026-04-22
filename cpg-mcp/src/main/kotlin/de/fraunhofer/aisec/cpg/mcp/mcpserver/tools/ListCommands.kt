@@ -185,6 +185,29 @@ fun Server.getArgByIndexOrName() {
     }
 }
 
+fun Server.getFunctionsByName() {
+    val toolDescription =
+        """
+        Retrieves functions by their names
+        """
+            .trimIndent()
+
+    this.addTool<CpgFunctionsByNamePayload>(
+        name = "cpg_get_functions_by_name",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgFunctionsByNamePayload ->
+        val found = result.functions.filter { it.name.localName in payload.names }
+        val notFound = payload.names.filter { name -> found.none { it.name.localName == name } }
+
+        val content =
+            found.map { TextContent(Json.encodeToString(FunctionInfo(it))) }.toMutableList()
+        if (notFound.isNotEmpty()) {
+            content += TextContent("Not found: ${notFound.joinToString(", ")}")
+        }
+        CallToolResult(content = content)
+    }
+}
+
 fun Server.getNode() {
     val toolDescription =
         """
