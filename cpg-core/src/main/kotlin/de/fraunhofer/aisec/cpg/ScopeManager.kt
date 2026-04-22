@@ -811,7 +811,43 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                         )
                         ?.toMutableList() ?: mutableListOf()
                 }
-            }
+            }.toMutableList()
+
+        val otherLanguageInterfaces = ctx.languageInterfaces[language]
+        otherLanguageInterfaces?.forEach { otherLanguageInterface ->
+            val otherLanguage = otherLanguageInterface.getTo<Language<*>>()
+            val symbol = otherLanguageInterface.mapSymbol(n.localName)
+
+            val toAdd =
+                when {
+                    scope != null -> {
+                        scope
+                            .lookupSymbol(
+                                symbol,
+                                languageOnly = otherLanguage,
+                                qualifiedLookup = true,
+                                replaceImports = replaceImports,
+                                predicate = predicate,
+                            )
+                            .toMutableList()
+                    }
+                    else -> {
+                        // Otherwise, we can look up the symbol alone (without any FQN) starting
+                        // from
+                        // the startScope
+                        startScope
+                            ?.lookupSymbol(
+                                symbol,
+                                languageOnly = otherLanguage,
+                                replaceImports = replaceImports,
+                                predicate = predicate,
+                            )
+                            ?.toMutableList() ?: mutableListOf()
+                    }
+                }
+
+            list.addAll(toAdd)
+        }
 
         // If we have both the definition and the declaration of a function declaration in our list,
         // we chose only the definition

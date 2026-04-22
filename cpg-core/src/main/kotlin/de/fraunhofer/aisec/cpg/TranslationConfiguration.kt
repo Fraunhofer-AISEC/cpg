@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
 import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.LanguageInterface
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.types.HasType.TypeObserver
@@ -114,6 +115,7 @@ private constructor(
     /** This list contains the files with function summaries which should be considered. */
     val functionSummaries: DFGFunctionSummaries,
     languages: Set<KClass<out Language<*>>>,
+    languageInterfaces: Set<KClass<out LanguageInterface<out Language<*>, out Language<*>>>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
     disableCleanup: Boolean,
@@ -137,6 +139,10 @@ private constructor(
 ) {
     /** This list contains all languages which we want to translate. */
     @JsonIgnore val languages: Set<KClass<out Language<*>>>
+
+    /** This list contains all language interfaces. */
+    @JsonIgnore
+    val languageInterfaces: Set<KClass<out LanguageInterface<out Language<*>, out Language<*>>>>
 
     /**
      * Switch off cleaning up TypeManager memory after analysis.
@@ -207,6 +213,7 @@ private constructor(
     init {
         this.registeredPasses = passes
         this.languages = languages
+        this.languageInterfaces = languageInterfaces
         // Make sure to init this AFTER sourceLocations has been set
         this.codeInNodes = codeInNodes
         this.processAnnotations = processAnnotations
@@ -248,6 +255,8 @@ private constructor(
     class Builder {
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
         private val languages = mutableSetOf<KClass<out Language<*>>>()
+        private val languageInterfaces =
+            mutableSetOf<KClass<out LanguageInterface<out Language<*>, out Language<*>>>>()
         private var topLevels = mutableMapOf<String, File>()
         private var debugParser = false
         private var failOnError = false
@@ -474,6 +483,22 @@ private constructor(
         /** Registers an additional [Language]. */
         inline fun <reified T : Language<*>> registerLanguage(): Builder {
             registerLanguage(T::class)
+            return this
+        }
+
+        /** Registers an additional [LanguageInterface] by its [KClass]. */
+        fun <T : LanguageInterface<out Language<*>, out Language<*>>> registerLanguageInterface(
+            clazz: KClass<T>
+        ): Builder {
+            languageInterfaces.add(clazz)
+            return this
+        }
+
+        /** Registers an additional [LanguageInterface] */
+        inline fun <
+            reified T : LanguageInterface<out Language<*>, out Language<*>>
+        > registerLanguageInterface(): Builder {
+            registerLanguageInterface(T::class)
             return this
         }
 
@@ -742,6 +767,7 @@ private constructor(
                 replacedPasses,
                 DFGFunctionSummaries.fromFiles(functionSummaries),
                 languages,
+                languageInterfaces,
                 codeInNodes,
                 processAnnotations,
                 disableCleanup,
