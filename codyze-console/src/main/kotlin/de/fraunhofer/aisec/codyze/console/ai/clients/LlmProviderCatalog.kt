@@ -34,14 +34,16 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import org.slf4j.LoggerFactory
 
-private val log = LoggerFactory.getLogger("LlmClientRegistry")
+private val log = LoggerFactory.getLogger("LlmProviderCatalog")
 
-/**
- * Registry of LLM clients configured in `llm.clients.*`
- */
-class LlmClientRegistry(private val httpClient: HttpClient, val clients: List<ClientConfig>) {
+/** Catalog of LLM providers configured in `llm.clients.*` */
+class LlmProviderCatalog(private val httpClient: HttpClient, val clients: List<ClientConfig>) {
 
-    fun create(clientName: String, model: String): LlmClient? {
+    /**
+     * Resolves the [ClientProvider] name with the chosen model to a [LlmClient]. Returns `null` if
+     * the provider is unknown, or if a required API key is missing.
+     */
+    fun clientFor(clientName: String, model: String): LlmClient? {
         val config = clients.firstOrNull { it.name == clientName } ?: return null
 
         return when (config.provider) {
@@ -56,23 +58,24 @@ class LlmClientRegistry(private val httpClient: HttpClient, val clients: List<Cl
     }
 
     /**
-     * Returns all configured clients that currently expose at least one model. Clients that need an
-     * API key but don't have one, and clients that are unreachable, are dropped.
+     * Returns all configured providers that currently expose at least one model. Providers that
+     * need an API key but don't have one, and providers that are unreachable, are dropped.
      */
-    suspend fun listAvailableModels(): List<ClientInfo> {
-        val result = mutableListOf<ClientInfo>()
+    suspend fun listAvailableProviders(): List<LlmProviderWithModels> {
+        val result = mutableListOf<LlmProviderWithModels>()
         for (config in clients) {
             if (config.provider == ClientProvider.GEMINI && config.apiKey.isNullOrBlank()) {
                 continue
             }
             val models = fetchModels(config)
             if (models.isNotEmpty()) {
-                result += ClientInfo(name = config.name, models = models)
+                result += LlmProviderWithModels(name = config.name, models = models)
             }
         }
         return result
     }
 
+    /** Fetches the provider-specific models. */
     private suspend fun fetchModels(cfg: ClientConfig): List<String> {
         return try {
             when (cfg.provider) {
@@ -85,6 +88,10 @@ class LlmClientRegistry(private val httpClient: HttpClient, val clients: List<Cl
         }
     }
 
+    /**
+     * Queries an OpenAI-compatible `/v1/models` endpoint. For the official OpenAI provider we
+     * filter the GPT-5 chat models. For local servers (vLLM, mlx, etc.) we return all models.
+     */
     private suspend fun fetchOpenAiModels(clientConf: ClientConfig): List<String> {
         val response: HttpResponse =
             httpClient.get("${clientConf.baseUrl}/v1/models") {
@@ -94,8 +101,10 @@ class LlmClientRegistry(private val httpClient: HttpClient, val clients: List<Cl
         if (!response.status.isSuccess()) return emptyList()
 
         val ids = response.body<OpenAiModelsResponse>().data.map { it.id }
-        // OpenAI returns all models (also image and audio models), so we filter to get only the GPT-5-series models.
-        // Local OpenAI-compatible servers only serve what they loaded, so we show everything they expose.
+        // OpenAI returns all models (also image and audio models), so we filter to get only the
+        // GPT-5-series models.
+        // Local OpenAI-compatible servers only serve what they loaded, so we show everything they
+        // expose.
         return if (clientConf.name == "openai") {
             ids.filter { it.startsWith("gpt-5") }.sorted()
         } else {
@@ -103,6 +112,7 @@ class LlmClientRegistry(private val httpClient: HttpClient, val clients: List<Cl
         }
     }
 
+    /** Queries the Gemini `/models` endpoint and keeps only the `gemini-*` chat models. */
     private suspend fun fetchGeminiModels(cfg: ClientConfig): List<String> {
         val response: HttpResponse =
             httpClient.get("${cfg.baseUrl}/models?key=${cfg.apiKey}") {

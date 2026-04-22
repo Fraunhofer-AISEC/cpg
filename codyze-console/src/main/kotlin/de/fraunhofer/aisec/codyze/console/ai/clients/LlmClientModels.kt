@@ -102,7 +102,7 @@ data class ClientConfig(
     val provider: ClientProvider,
 )
 
-@Serializable data class ClientInfo(val name: String, val models: List<String>)
+@Serializable data class LlmProviderWithModels(val name: String, val models: List<String>)
 
 @Serializable data class OpenAiModelsResponse(val data: List<OpenAiModel> = emptyList())
 
