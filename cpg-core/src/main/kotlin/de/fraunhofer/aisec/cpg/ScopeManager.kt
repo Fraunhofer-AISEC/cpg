@@ -815,7 +815,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
 
         val otherLanguageInterfaces = ctx.languageInterfaces[language]
         otherLanguageInterfaces?.forEach { otherLanguageInterface ->
-            val otherLanguage = otherLanguageInterface.getTo<Language<*>>()
+            val otherLanguage = otherLanguageInterface.to
             val symbol = otherLanguageInterface.mapSymbol(n.localName)
 
             val toAdd =

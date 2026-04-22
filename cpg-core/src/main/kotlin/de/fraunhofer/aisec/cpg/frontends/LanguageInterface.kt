@@ -27,19 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import kotlin.reflect.full.starProjectedType
 
-abstract class LanguageInterface<FROM : Language<*>, TO : Language<*>> {
-    fun getFrom() =
-        lazy {
-                this::class.typeParameters.first().starProjectedType::class
-                    .constructors
-                    .firstOrNull()
-                    ?.call()
-            }
-            .value
-
-    inline fun <reified TO> getTo() = lazy { TO::class.constructors.firstOrNull()?.call() }.value
+abstract class LanguageInterface<FROM : Language<*>, TO : Language<*>>(val from: FROM, val to: TO) {
 
     /**
      * Maps the [Symbol] [from] the [FROM] language to a [Symbol] of the [TO] language. This is

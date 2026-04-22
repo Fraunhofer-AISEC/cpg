@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageInterface
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
-class CToCxxMapper : LanguageInterface<CLanguage, CPPLanguage>() {
+class CToCxxMapper : LanguageInterface<CLanguage, CPPLanguage>(CLanguage(), CPPLanguage()) {
     override fun mapSymbol(from: Symbol): Symbol {
         return from
     }
@@ -39,7 +39,7 @@ class CToCxxMapper : LanguageInterface<CLanguage, CPPLanguage>() {
     }
 }
 
-class CxxToCMapper : LanguageInterface<CPPLanguage, CLanguage>() {
+class CxxToCMapper : LanguageInterface<CPPLanguage, CLanguage>(CPPLanguage(), CLanguage()) {
     override fun mapSymbol(from: Symbol): Symbol {
         return from
     }

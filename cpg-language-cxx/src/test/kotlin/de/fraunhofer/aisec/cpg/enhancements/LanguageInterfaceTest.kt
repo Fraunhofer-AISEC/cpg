@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.enhancements
 
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
-import de.fraunhofer.aisec.cpg.frontends.cxx.CToCxxMapper
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
@@ -36,17 +35,25 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class LanguageInterfaceTest {
-    private val topLevel = Path.of("src", "test", "resources", "constructors")
+    private val topLevel = Path.of("src", "test", "resources", "crossLanguage")
 
     @Test
     @Throws(Exception::class)
     fun testCtoCPP() {
         val result =
-            analyze(files = listOf(topLevel.toFile()), topLevel = topLevel, usePasses = true) {
+            analyze(
+                files =
+                    listOf(
+                        topLevel.resolve("simple.c").toFile(),
+                        topLevel.resolve("simpleCxx.cpp").toFile(),
+                    ),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
                 it.registerLanguage<CLanguage>()
                 it.registerLanguage<CPPLanguage>()
-                it.registerLanguageInterface<CToCxxMapper>()
-                it.registerLanguageInterface<CToCxxMapper>()
+                // it.registerLanguageInterface<CToCxxMapper>()
+                // it.registerLanguageInterface<CToCxxMapper>()
             }
 
         val main = result.functions["main"]

@@ -117,7 +117,7 @@ open class TranslationContext(
         val list =
             config.languageInterfaces.map {
                 val li = it.constructors.firstOrNull()?.call()
-                li?.getFrom() to li
+                li?.from to li
             }
         val m = list.groupBy({ it.first }, { it.second })
         m.map { (k, v) -> k to v.filterNotNull() }.toMap()
