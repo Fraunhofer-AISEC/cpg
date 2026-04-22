@@ -284,8 +284,7 @@ class ChatService(
                         GeminiClient(httpClient, llmModel, apiKey, llmBaseUrl)
                     }
                     else -> {
-                        val apiKey = System.getenv("CODYZE_OPENAI_API_KEY")
-                        OpenAiClient(httpClient, llmModel, llmBaseUrl, apiKey)
+                        OpenAiClient(httpClient, llmModel, llmBaseUrl)
                     }
                 }
 
