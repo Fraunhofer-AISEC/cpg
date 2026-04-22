@@ -300,6 +300,8 @@ fun Route.chatRoutes(chatService: ChatService) {
             }
         }
 
+        get("/clients") { call.respond(chatService.listAvailableClients()) }
+
         get("/mcp/capabilities") { call.respond(chatService.getMcpCapabilities()) }
 
         post("/mcp/prompts/{name}") {
