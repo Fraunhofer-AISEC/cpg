@@ -1,7 +1,9 @@
-<script lang="ts" module>
-  import { getItemsArray, isCodeItemContent } from './CodeItemList.svelte';
+<script lang="ts">
+  import CodeItemList, { getItemsArray, isCodeItemContent } from './CodeItemList.svelte';
+  import DfgFlowWidget from './DfgFlowWidget.svelte';
+  import type { ToolResult } from '$lib/types';
 
-  export function getResultSummary(content: any, isError?: boolean): string {
+  function getResultSummary(content: any, isError?: boolean): string {
     if (isError) return 'Error';
     const items = getItemsArray(content);
     if (items.length > 0) {
@@ -15,12 +17,6 @@
     }
     return 'Done';
   }
-</script>
-
-<script lang="ts">
-  import CodeItemList from './CodeItemList.svelte';
-  import DfgFlowWidget from './DfgFlowWidget.svelte';
-  import type { ToolResult } from '$lib/types';
 
   let {
     toolResult,
