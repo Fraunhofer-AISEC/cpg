@@ -201,7 +201,10 @@ sealed class Scope(
 
             // Filter according to the language
             if (languageOnly != null) {
-                list.removeIf { it.language != languageOnly }
+                list.removeIf {
+                    !languageOnly::class.java.isInstance(it.language) &&
+                            !it.language::class.java.isInstance(languageOnly)
+                }
             }
 
             // Filter the list according to the predicate, if we have any
