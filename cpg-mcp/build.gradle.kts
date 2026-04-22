@@ -101,6 +101,4 @@ dependencies {
     implementation(project(":cpg-concepts"))
     implementation(project(":cpg-analysis"))
     implementation(project(":cpg-serialization"))
-
-    implementation(project(":cpg-neo4j"))
 }

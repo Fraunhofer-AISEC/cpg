@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericProperties
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.*
-import de.fraunhofer.aisec.cpg.persistence.pushToNeo4j
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
@@ -46,43 +45,6 @@ import java.io.File
 import kotlinx.serialization.json.Json
 
 private const val fileName = "concepts.yaml"
-
-// TODO move to other file.
-/** TODO */
-fun Server.persistGraphToNeo4jTool() {
-    val toolDescription =
-        """
-        This tool persists the current CPG graph to a Neo4j database. It can be used to store the graph for further analysis and visualization in Neo4j. Usually, this tool should be used last, after all analyses and concept applications are done, to ensure that the persisted graph contains all the latest annotations and insights.
-        
-        Example prompts:
-        - "Persist the current CPG graph to Neo4j"
-        - "Store the enriched graph in Neo4j for later analysis"
-        """
-            .trimIndent()
-
-    this.addTool(name = "cpg_persist_to_neo4j", description = toolDescription) { request ->
-        request.runOnCpg { result: TranslationResult, _ ->
-            result.pushToNeo4j()
-            CallToolResult(
-                content =
-                    listOf(TextContent("Persisted the current CPG graph to Neo4j successfully."))
-            )
-        }
-    }
-}
-
-/**
- * This function loads persisted concepts and operations from a storage and returns them as a list
- * of [LLMConceptDescription].
- */
-internal fun loadPersistedConceptsAndOperations(): List<LLMConceptDescription> {
-    // TODO load persisted concepts and operations from a storage (e.g. file, database) and populate
-    // the server's internal state with them.
-    val file = File(fileName)
-    if (!file.exists() || file.length() == 0L) return emptyList()
-    val mapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
-    return mapper.readValue<List<LLMConceptDescription>>(file)
-}
 
 /**
  * This is a tool to list all currently known concepts and operations. It should be queried
@@ -125,8 +87,7 @@ fun Server.addOrUpdateConcept() {
         """
             .trimIndent()
 
-    this.addTool( // TODO: cannot use addTool<LLMConceptDescription> here, because it internally
-        // uses runOnCpg
+    this.addTool(
         name = "cpg_add_or_update_llm_concept",
         description = toolDescription,
         inputSchema = LLMConceptDescription::class.toSchema(),
@@ -146,18 +107,20 @@ fun Server.addOrUpdateConcept() {
 fun Server.suggestLLMConceptsAndOperations() {
     val toolDescription =
         """
-        You MUST call this tool whenever the user asks you to suggest, propose, or identify concepts and operations for the analyzed code. Do NOT answer in prose — return your suggestion through this tool.
+        You MUST call this tool whenever the user asks you to suggest, propose, or identify concepts and operations for the analyzed code. Do NOT answer with text, instead return your suggestion through this tool.
 
-        A "concept" is a high-level semantic label (e.g. "Authentication", "Encryption", "Logging", etc.) attached to a CPG node to describe what it does. Each concept can have properties and operations (specific actions within that concept, each tied to their own CPG node).
+        A "concept" is a high-level semantic label (e.g. "Authentication", "Encryption", "Logging", etc.) attached to a CPG node to describe what it does. 
+        Each concept can have properties and operations (specific actions of that concept, e.g. "Logging.log", "Encryption.encrypt()").
 
         REQUIRED WORKFLOW BEFORE CALLING THIS TOOL:
-        1. Call `cpg_list_llm_concepts_operations` once to see concept definitions accepted in earlier runs. If the list is non-empty, reuse existing concept and operation names (and their property schemas) whenever they semantically fit. If empty, propose fresh concepts.
-        2. Discover the code comprehensively before deciding. Concepts and operations can attach to any kind of CPG node not only functions, but also calls, records, fields, variables, arguments, etc. A single listing (e.g. only function declarations) is never sufficient: in particular, operations typically live on the call site of a function, not on its declaration. Inspect every node kind that could surface candidates for the user's request, and read individual nodes as needed.
+        1. Call `cpg_list_llm_concepts_operations` once to see if concepts exist. If the list is non-empty, reuse existing concept and operation names (and their property schemas) whenever they semantically fit. If empty, suggest new ones.
+        2. Discover the code comprehensively before deciding. Concepts and operations can attach to any kind of CPG node not only functions, but also calls, records, fields, etc. A single listing (e.g. only function declarations) is never sufficient. 
         3. Only then call this tool, with REAL node IDs obtained from the previous tools.
 
         RULES:
-        - Never pass placeholder strings like "placeholder", "TODO", "unknown", "node-id", or invented IDs. If you do not yet have a real ID from a prior tool result, call the listing tools first.
-        - The `nodeId` on the concept should point to the node the concept semantically describes (e.g. the function / record that embodies "Authentication"). Each operation's `nodeId` should point to the node where that operation is realized (e.g. a specific call).
+        - Never pass placeholder strings like "placeholder", "unknown", or invented IDs. If you do not yet have a real ID from a prior tool result, call tools to retrieve the information.
+        - The `nodeId` on the concept should point to the node the concept semantically describes. 
+        Each operation's `nodeId` should point to the node where that operation is realized (e.g. a specific call).
         """
             .trimIndent()
 
@@ -299,6 +262,17 @@ fun Server.addLLMConceptAndOperations() {
         val response = AddConceptsResult(applied = applied, failed = failed)
         CallToolResult(content = listOf(TextContent(Json.encodeToString(response))))
     }
+}
+
+/**
+ * This function loads persisted concepts and operations from a storage and returns them as a list
+ * of [LLMConceptDescription].
+ */
+internal fun loadPersistedConceptsAndOperations(): List<LLMConceptDescription> {
+    val file = File(fileName)
+    if (!file.exists() || file.length() == 0L) return emptyList()
+    val mapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
+    return mapper.readValue<List<LLMConceptDescription>>(file)
 }
 
 /**
