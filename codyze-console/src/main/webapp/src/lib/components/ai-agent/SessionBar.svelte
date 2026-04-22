@@ -38,9 +38,18 @@
   });
 </script>
 
-{#if models.length > 0 || mcpCapabilities}
   <div class="flex items-center gap-1.5">
-    {#if models.length > 0}
+    {#if models.length === 0}
+      <div
+        class="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700"
+        title="No LLM provider is configured. Add a provider (e.g. openai, anthropic) to application.conf."
+      >
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-6.75a9 9 0 100 18 9 9 0 000-18zm0 12.75h.008v.008H12v-.008z" />
+        </svg>
+        <span>No LLM provider configured</span>
+      </div>
+    {:else}
       <div class="relative">
         <button
           type="button"
@@ -100,4 +109,3 @@
       </button>
     {/if}
   </div>
-{/if}

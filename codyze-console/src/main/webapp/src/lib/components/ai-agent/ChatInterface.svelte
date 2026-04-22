@@ -258,7 +258,7 @@
           value={currentMessage}
           onSend={onSendMessage}
           onValueChange={onMessageChange}
-          placeholder="Ask me about your codebase..."
+          placeholder={!selectedModel ? 'No LLM provider configured — check application.conf' : 'Ask me about your codebase...'}
           disabled={isLoading || !selectedModel}
           prompts={mcpCapabilities?.prompts}
           onPromptSelect={onPromptSelect}

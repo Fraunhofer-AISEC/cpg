@@ -96,7 +96,7 @@
       value={messageInput}
       onSend={handleSendMessage}
       onValueChange={(value) => messageInput = value}
-      placeholder="Ask me anything about your codebase..."
+      placeholder={!selectedModel ? 'No LLM provider configured — check application.conf' : 'Ask me anything about your codebase...'}
       disabled={!selectedModel}
       prompts={mcpCapabilities?.prompts}
       onPromptSelect={onPromptSelect}
