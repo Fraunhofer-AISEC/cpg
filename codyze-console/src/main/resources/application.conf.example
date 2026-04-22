@@ -1,7 +1,7 @@
 llm {
   clients {
     openai {
-      baseUrl = "https://api.openai.com/v1"
+      baseUrl = "https://api.openai.com"
       apiKeyEnv = "CODYZE_OPENAI_API_KEY"
     }
 
