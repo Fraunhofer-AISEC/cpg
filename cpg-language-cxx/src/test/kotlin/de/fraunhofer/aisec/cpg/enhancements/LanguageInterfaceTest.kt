@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.enhancements
 
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+import de.fraunhofer.aisec.cpg.frontends.cxx.CToCxxMapper
+import de.fraunhofer.aisec.cpg.frontends.cxx.CxxToCMapper
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
@@ -52,8 +54,8 @@ class LanguageInterfaceTest {
             ) {
                 it.registerLanguage<CLanguage>()
                 it.registerLanguage<CPPLanguage>()
-                // it.registerLanguageInterface<CToCxxMapper>()
-                // it.registerLanguageInterface<CToCxxMapper>()
+                it.registerLanguageInterface<CToCxxMapper>()
+                it.registerLanguageInterface<CxxToCMapper>()
             }
 
         val main = result.functions["main"]
