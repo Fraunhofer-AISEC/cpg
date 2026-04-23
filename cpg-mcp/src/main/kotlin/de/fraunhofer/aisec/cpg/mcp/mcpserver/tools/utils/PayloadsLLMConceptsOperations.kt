@@ -63,7 +63,7 @@ data class LLMConceptDescription(
         "The operations that can be applied to this concept. Each operation should have a name, a description, and a list of parameters."
     )
     val operations: List<LLMOperationDescription>,
-) {}
+)
 
 @Serializable
 data class LLMProperty(
