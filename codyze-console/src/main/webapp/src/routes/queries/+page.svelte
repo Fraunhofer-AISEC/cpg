@@ -49,7 +49,7 @@ result.functions.size
       }
 
       const data = await response.json();
-      queryResult = data.result ?? 'Query executed successfully (no result)';
+      queryResult = data.result ?? 'Query executed successfully (no return value)';
     } catch (e) {
       error = e instanceof Error ? e.message : 'An unexpected error occurred';
     } finally {
