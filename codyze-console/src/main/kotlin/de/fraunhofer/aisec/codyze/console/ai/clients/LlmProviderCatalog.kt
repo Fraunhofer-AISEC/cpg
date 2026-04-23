@@ -106,7 +106,9 @@ class LlmProviderCatalog(private val httpClient: HttpClient, val clients: List<C
         // Local OpenAI-compatible servers only serve what they loaded, so we show everything they
         // expose.
         return if (clientConf.name == "openai") {
-            ids.filter { it.startsWith("gpt-5") }.sorted()
+            // Drop snapshots, e.g. "gpt-5-2025-08-07", and only keep alias "gpt-5".
+            val snapshot = Regex("-\\d{4}-\\d{2}-\\d{2}$")
+            ids.filter { it.startsWith("gpt-5") && !snapshot.containsMatchIn(it) }.sorted()
         } else {
             ids.sorted()
         }
@@ -120,13 +122,14 @@ class LlmProviderCatalog(private val httpClient: HttpClient, val clients: List<C
             }
         if (!response.status.isSuccess()) return emptyList()
 
+        // Only Gemini 2.0/2.5/3/3.1 in "-pro", "-flash", or "-flash-lite", optionally "-preview".
+        val allowed = Regex("^gemini-(2\\.0|2\\.5|3|3\\.1)-(pro|flash|flash-lite)(-preview)?$")
         return response
             .body<GeminiModelsResponse>()
             .models
             // Gemini returns names as "models/gemini-2.5-flash"
             .map { it.name.removePrefix("models/") }
-            // Only Gemini chat models
-            .filter { it.startsWith("gemini-") }
+            .filter { allowed.matches(it) }
             .sorted()
     }
 }

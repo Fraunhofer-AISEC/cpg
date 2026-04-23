@@ -18,10 +18,18 @@
   }: Props = $props();
 
   let menuOpen = $state(false);
+  let menuContainer = $state<HTMLDivElement | undefined>();
 
   function selectModel(model: Model) {
     onModelSelect?.(model);
     menuOpen = false;
+  }
+
+  function handleDocumentClick(event: MouseEvent) {
+    if (!menuOpen) return;
+    if (menuContainer && !menuContainer.contains(event.target as Node)) {
+      menuOpen = false;
+    }
   }
 
   let modelsByProvider = $derived.by(() => {
@@ -38,11 +46,13 @@
   });
 </script>
 
+<svelte:window onclick={handleDocumentClick} />
+
   <div class="flex items-center gap-1.5">
     {#if models.length === 0}
       <div
         class="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700"
-        title="No LLM provider is configured. Add a provider (e.g. openai, anthropic) to application.conf."
+        title="No LLM provider is available. Configure a client in application.conf (and set the matching API key env variable for providers that need one)."
       >
         <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-6.75a9 9 0 100 18 9 9 0 000-18zm0 12.75h.008v.008H12v-.008z" />
@@ -50,7 +60,7 @@
         <span>No LLM provider configured</span>
       </div>
     {:else}
-      <div class="relative">
+      <div class="relative" bind:this={menuContainer}>
         <button
           type="button"
           class="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700"
