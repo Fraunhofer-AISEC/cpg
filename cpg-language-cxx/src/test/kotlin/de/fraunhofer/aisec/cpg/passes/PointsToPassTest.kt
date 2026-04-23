@@ -4022,7 +4022,7 @@ class PointsToPassTest {
     }
 
     @Test
-    fun realCode() {
+    fun testRealCode() {
         val file = File("src/test/resources/pointsToPass/realcode.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
@@ -4168,6 +4168,113 @@ class PointsToPassTest {
                             setOf(memset1Call, memset2Call)
                 }
                 .size,
+        )
+    }
+
+    @Test
+    fun testStructReference() {
+        val file = File("src/test/resources/pointsToPass/structreference.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // Functions
+        val testFunc = tu.functions["CWE416_Use_After_Free__malloc_free_struct_07_bad"]
+        assertNotNull(testFunc)
+
+        val printStructLineFunc = tu.functions["printStructLine"]
+        assertNotNull(printStructLineFunc)
+
+        val freeFunc = tu.functions["free"]
+        assertNotNull(freeFunc)
+
+        // Calls
+        val printStructLineCall = testFunc.calls["printStructLine"]
+        assertNotNull(printStructLineCall)
+
+        val freeCall = testFunc.calls["free"]
+        assertNotNull(freeCall)
+
+        // Args
+        val printStructLineArg = printStructLineCall.arguments.single()
+        val printStructLineArgBase =
+            ((printStructLineArg as? PointerReference)?.input as? Subscription)?.base
+        assertNotNull(printStructLineArgBase)
+
+        // Parameters and PMVs
+        val printStructLineParam = printStructLineFunc.parameters.single()
+        val printStructLineDerefPMV =
+            printStructLineParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+
+        val freeParam = freeFunc.parameters.single()
+        val freeDerefPMV = freeParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+
+        // Stuff
+        val dataIIntTwoLine20 = testFunc.assignments[5].target
+        assertNotNull(dataIIntTwoLine20)
+
+        val dataLine13 = testFunc.assignments[2].target
+        assertNotNull(dataLine13)
+
+        val dataLine10 = testFunc.assignments[1].target
+        assertNotNull(dataLine10)
+
+        // We except the following DFG-Edges for the printStructLine Call
+        // 2) The argument has a DFG-Edge to the param
+        // 3) The currentderefvalue edge of the arg is the derefValue of free
+
+        // 1) the argument as well as data have 4 prevDFG edges:
+        //   + a ContextSensitive one to the PMVDerefValue of free
+        //   + a Full one to the base of the write to data[i].intTwo in Line 20 (TODO: Partial?)
+        //   + a Full one to the real initialization (Line 13)
+        //   + a Full one to the initialization to null ( Line 10)
+        // First the checks for data
+        assertEquals(4, printStructLineArgBase.prevDFG.size)
+        assertEquals(
+            freeDerefPMV,
+            printStructLineArgBase.prevDFGEdges
+                .singleOrNull {
+                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() == freeCall
+                }
+                ?.start,
+        )
+        assertNotNull(
+            printStructLineArgBase.prevDFG.singleOrNull {
+                it == ((dataIIntTwoLine20 as? MemberAccess)?.base as? Subscription)?.arrayExpression
+            }
+        )
+        assertNotNull(printStructLineArgBase.prevDFG.singleOrNull { it == dataLine13 })
+        assertNotNull(printStructLineArgBase.prevDFG.singleOrNull { it == dataLine10 })
+
+        // Now the same for the argument. Here we have an additional pointerReference-Edge
+        assertEquals(5, printStructLineArg.prevDFG.size)
+        assertEquals(
+            freeDerefPMV,
+            printStructLineArg.prevDFGEdges
+                .singleOrNull {
+                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() == freeCall
+                }
+                ?.start,
+        )
+        assertNotNull(
+            printStructLineArg.prevDFG.singleOrNull {
+                it == ((dataIIntTwoLine20 as? MemberAccess)?.base as? Subscription)?.arrayExpression
+            }
+        )
+        assertNotNull(printStructLineArg.prevDFG.singleOrNull { it == dataLine13 })
+        assertNotNull(printStructLineArg.prevDFG.singleOrNull { it == dataLine10 })
+        assertEquals(
+            printStructLineArg.input,
+            printStructLineArg.prevDFGEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "PointerReference"
+                }
+                ?.start,
         )
     }
 }

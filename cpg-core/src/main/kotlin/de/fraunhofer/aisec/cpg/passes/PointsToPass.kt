@@ -248,10 +248,12 @@ class PointsToState(
  * Returns a name that allows a human to identify the node. Mostly, this is simply the node's
  * localName, but for Literals, it is their value
  */
-fun getNodeName(node: Node): Name {
+fun getNodeName(node: Node?): Name {
+    if (node == null) return Name("")
     return when (node) {
         is Literal<*> -> Name(node.value.toString())
         is UnknownMemoryValue -> Name(node.name.localName, Name("UnknownMemoryValue"))
+        is Field -> Name(node.name.localName)
         else -> node.name
     }
 }
@@ -2489,10 +2491,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             ) {
                 values
                     .filterTo(concurrentIdentitySetOf()) {
-                        // If all we have here as a PMV value, we can skip it
-                        // Note: This only applies to the value, the deref and derefderefvalues
-                        // might be from different functions, so we leave those
-                        /* (it as? ParameterMemoryValue)?.name?.localName != "value" &&*/
+                        /* If all we have here as a PMV value, we can skip it
+                        Note: This only applies to the value, the deref and derefderefvalues
+                        might be from different functions, so we leave those */
                         doubleState.hasDeclarationStateValueEntry(it, true)
                     }
                     .forEach { value ->
@@ -3120,16 +3121,57 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
 fun PointsToState.Element.getLastWrites(
     node: Node
 ): PowersetLattice.Element<NodeWithPropertiesKey> {
-    // For pointerReferences, we take the memoryAddress of the refersTo, no matter if global or not
+    // For pointerReferences, it shouldn't make a difference if they are global or local
     if (node is PointerReference) {
-        // TODO: Handle other input types (e.g. Subscription, MemberAccess)
-        val refersTo = (node.input as? Reference)?.refersTo
-        return if (refersTo is Function)
-            PowersetLattice.Element(NodeWithPropertiesKey(refersTo, equalLinkedHashSetOf()))
-        else
-            refersTo?.memoryAddresses?.mapTo(PowersetLattice.Element()) {
-                NodeWithPropertiesKey(it, equalLinkedHashSetOf())
-            } ?: PowersetLattice.Element(NodeWithPropertiesKey(node, equalLinkedHashSetOf()))
+        return when (val input = node.input) {
+            is Subscription,
+            is MemberAccess -> {
+                // For Subscriptions and MemberAccesses, we have to look up an address from the
+                // field or from the base,
+                // and then we fetch the lastWrites from the declarationState
+                // TODO: In C(++), there should be a difference for Subscriptions if the
+                // arrayExpression is a pointer
+                // or an array, think more about if we also have to make this differentiation here
+                val base =
+                    if (input is MemberAccess) {
+                        input.base
+                    } else {
+                        (input as Subscription).arrayExpression
+                    }
+                val fieldName =
+                    if (input is MemberAccess) {
+                        getNodeName(input.refersTo)
+                    } else {
+                        getNodeName((input as Subscription).subscriptExpression)
+                    }
+                val fieldAddresses = fetchFieldAddresses(concurrentIdentitySetOf(base), fieldName)
+                // If we have no fieldAddresses, we resort to the base address
+                val addresses =
+                    if (
+                        fieldAddresses.isEmpty() ||
+                            fieldAddresses.all { this.declarationsState[it] == null }
+                    ) {
+                        this.getAddresses(base, base)
+                    } else fieldAddresses
+                addresses.flatMapTo(PowersetLattice.Element()) {
+                    this.declarationsState[it]?.third as PowersetLattice.Element
+                }
+            }
+            is Reference -> {
+                // In case the input is a reference, we take the memoryAddress of the refersTo
+                val refersTo = input.refersTo
+                if (refersTo is Function)
+                    PowersetLattice.Element(NodeWithPropertiesKey(refersTo, equalLinkedHashSetOf()))
+                else
+                    refersTo?.memoryAddresses?.mapTo(PowersetLattice.Element()) {
+                        NodeWithPropertiesKey(it, equalLinkedHashSetOf())
+                    }
+                        ?: PowersetLattice.Element(
+                            NodeWithPropertiesKey(node, equalLinkedHashSetOf())
+                        )
+            }
+            else -> PowersetLattice.Element()
+        }
     }
     if (isGlobal(node)) {
         return when (node) {
@@ -3271,6 +3313,13 @@ fun PointsToState.Element.getValues(
 ): PowersetLattice.Element<Pair<Node, Boolean>> {
     return when (node) {
         is PointerReference -> {
+            // A C(++) special: If we have the pointerReference &<Reference>[0], its value equals
+            // the one of the array. So if we have
+            // that, we return the value of the base
+            val sub = (node.input as? Subscription)
+            if ((sub?.subscriptExpression as? Literal<*>)?.value == 0) {
+                return this.getValues(sub.arrayExpression, sub.arrayExpression)
+            }
             /*
              * For PointerReferences, the value is the address of the input
              * For example, the value of `&i` is the address of `i`
@@ -3608,6 +3657,9 @@ fun PointsToState.Element.getCachedNestedValues(
         )
     }
 
+/*
+Takes a set of basenodes and fetches the field addresses if any
+*/
 fun PointsToState.Element.fetchFieldAddresses(
     baseAddresses: ConcurrentIdentitySet<Node>,
     nodeName: Name,
