@@ -67,7 +67,7 @@ llm {
 
 Each entry defines a `baseUrl` and, if the provider requires authentication, an `apiKeyEnv` that names the environment variable holding the key. The model itself is no longer set in the config, instead it can be selected in the chat UI.
 
-Currently, only Gemini and OpenAI-compatible endpoints are supported. The predefined clients (`vLLM`, `mlx`, etc.) all use the same OpenAI-compatible client internally. They are intended for testing and development and allow switching between different server URLs without reconfiguring every time.
+Currently, only Gemini and OpenAI-compatible endpoints are supported.
 
 ### 3. MCP Server
 

@@ -46,12 +46,12 @@ import org.slf4j.LoggerFactory
 /** ChatService manages LLM client configuration and provides an API for chat interactions. */
 class ChatService(
     private val httpClient: HttpClient,
-    private val llmProviderCatalog: LlmProviderCatalog,
+    private val llmProviderConfig: LlmProviderConfig,
     private val mcpServerUrl: String,
 ) {
 
     suspend fun listAvailableProviders(): List<LlmProviderWithModels> =
-        llmProviderCatalog.listAvailableProviders()
+        llmProviderConfig.listAvailableProviders()
 
     private val mcp: Client =
         Client(
@@ -146,7 +146,7 @@ class ChatService(
         val conversationHistory = request.messages
 
         val llm =
-            llmProviderCatalog.clientFor(request.client, request.model)
+            llmProviderConfig.clientFor(request.client, request.model)
                 ?: run {
                     send(Events.text("Unknown or unavailable LLM client"))
                     return@channelFlow
@@ -282,10 +282,9 @@ class ChatService(
                     }
                 }
 
-            val clients = configuredClients(config)
             return ChatService(
                 httpClient = httpClient,
-                llmProviderCatalog = LlmProviderCatalog(httpClient, clients),
+                llmProviderConfig = config.toLlmProviderConfig(httpClient),
                 mcpServerUrl = mcpServerUrl,
             )
         }

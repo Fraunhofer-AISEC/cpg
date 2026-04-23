@@ -34,10 +34,10 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import org.slf4j.LoggerFactory
 
-private val log = LoggerFactory.getLogger("LlmProviderCatalog")
+private val log = LoggerFactory.getLogger("LlmProviderConfig")
 
 /** Catalog of LLM providers configured in `llm.clients.*` */
-class LlmProviderCatalog(private val httpClient: HttpClient, val clients: List<ClientConfig>) {
+class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<ClientConfig>) {
 
     /**
      * Resolves the [ClientProvider] name with the chosen model to a [LlmClient]. Returns `null` if
@@ -103,13 +103,12 @@ class LlmProviderCatalog(private val httpClient: HttpClient, val clients: List<C
         val ids = response.body<OpenAiModelsResponse>().data.map { it.id }
         // OpenAI returns all models (also image and audio models), so we filter to get only the
         // GPT-5-series models.
-        // Local OpenAI-compatible servers only serve what they loaded, so we show everything they
-        // expose.
         return if (clientConf.name == "openai") {
             // Drop snapshots, e.g. "gpt-5-2025-08-07", and only keep alias "gpt-5".
             val snapshot = Regex("-\\d{4}-\\d{2}-\\d{2}$")
             ids.filter { it.startsWith("gpt-5") && !snapshot.containsMatchIn(it) }.sorted()
         } else {
+            // For local OpenAI-compatible servers we show everything they have loaded.
             ids.sorted()
         }
     }
@@ -134,35 +133,37 @@ class LlmProviderCatalog(private val httpClient: HttpClient, val clients: List<C
     }
 }
 
-/** Read `llm.clients.*` from the config */
-fun configuredClients(config: Config): List<ClientConfig> {
-    val clientsConfig = config.getConfig("llm.clients")
-    return clientsConfig.root().keys.map { name ->
-        val client = clientsConfig.getConfig(name)
-        val apiKey =
-            if (client.hasPath("apiKeyEnv")) {
-                val apiKeyEnv = client.getString("apiKeyEnv")
-                val envValue = System.getenv(apiKeyEnv)
+/** Build a [LlmProviderConfig] by reading `llm.clients.*` from the config. */
+fun Config.toLlmProviderConfig(httpClient: HttpClient): LlmProviderConfig {
+    val clientsConfig = getConfig("llm.clients")
+    val clients =
+        clientsConfig.root().keys.map { name ->
+            val client = clientsConfig.getConfig(name)
+            val apiKey =
+                if (client.hasPath("apiKeyEnv")) {
+                    val apiKeyEnv = client.getString("apiKeyEnv")
+                    val envValue = System.getenv(apiKeyEnv)
 
-                if (envValue.isNullOrBlank()) {
-                    log.debug("No API key found in env var {} for client {}", apiKeyEnv, name)
+                    if (envValue.isNullOrBlank()) {
+                        log.debug("No API key found in env var {} for client {}", apiKeyEnv, name)
+                    }
+
+                    envValue
+                } else {
+                    null
                 }
 
-                envValue
-            } else {
-                null
-            }
-
-        ClientConfig(
-            name = name,
-            baseUrl = client.getString("baseUrl"),
-            apiKey = apiKey,
-            provider =
-                if (name == "gemini") {
-                    ClientProvider.GEMINI
-                } else {
-                    ClientProvider.OPENAI_COMPATIBLE
-                },
-        )
-    }
+            ClientConfig(
+                name = name,
+                baseUrl = client.getString("baseUrl"),
+                apiKey = apiKey,
+                provider =
+                    if (name == "gemini") {
+                        ClientProvider.GEMINI
+                    } else {
+                        ClientProvider.OPENAI_COMPATIBLE
+                    },
+            )
+        }
+    return LlmProviderConfig(httpClient, clients)
 }

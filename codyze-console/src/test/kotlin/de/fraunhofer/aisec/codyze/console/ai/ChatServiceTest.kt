@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.codyze.console.ai
 
 import de.fraunhofer.aisec.codyze.console.ai.clients.Events
-import de.fraunhofer.aisec.codyze.console.ai.clients.LlmProviderCatalog
+import de.fraunhofer.aisec.codyze.console.ai.clients.LlmProviderConfig
 import io.ktor.client.*
 import kotlin.test.*
 import kotlinx.serialization.json.*
@@ -36,7 +36,7 @@ class ChatServiceTest {
     private fun createChatService(): ChatService {
         return ChatService(
             httpClient = HttpClient(),
-            llmProviderCatalog = LlmProviderCatalog(HttpClient(), emptyList()),
+            llmProviderConfig = LlmProviderConfig(HttpClient(), emptyList()),
             mcpServerUrl = "localhost",
         )
     }
