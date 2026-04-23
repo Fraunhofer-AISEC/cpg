@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PageHeader } from '$lib/components/navigation';
+  import MonacoEditor from '$lib/components/MonacoEditor.svelte';
 
   let scriptCode = $state(`// CPG Query Script — the TranslationResult is available as \`result\`
 // All CPG packages are imported automatically.
@@ -70,39 +71,44 @@ result.functions.size
           href="https://fraunhofer-aisec.github.io/cpg/GettingStarted/shortcuts/"
           class="text-blue-600 hover:underline"
           target="_blank"
-          rel="noopener noreferrer"
-        >Shortcut API</a>
+          rel="noopener noreferrer">Shortcut API</a
+        >
         (e.g. <code class="rounded bg-gray-100 px-1 font-mono text-xs">result.functions</code>,
         <code class="rounded bg-gray-100 px-1 font-mono text-xs">result.calls</code>) and the
         <a
           href="https://fraunhofer-aisec.github.io/cpg/GettingStarted/query/"
           class="text-blue-600 hover:underline"
           target="_blank"
-          rel="noopener noreferrer"
-        >Query API</a>
+          rel="noopener noreferrer">Query API</a
+        >
         are available. All standard CPG packages are imported automatically.
       </p>
     </div>
 
     <div class="px-6 pb-4">
-      <textarea
-        bind:value={scriptCode}
-        class="block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        rows="14"
-        placeholder="Enter your Kotlin query script…"
-        spellcheck="false"
-      ></textarea>
+      <MonacoEditor bind:value={scriptCode} height="320px" />
 
       <div class="mt-4 flex items-center gap-3">
         <button
           onclick={executeQuery}
           disabled={isExecuting}
-          class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+          class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
         >
           {#if isExecuting}
             <svg class="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
             </svg>
             Executing…
           {:else}
@@ -111,8 +117,12 @@ result.functions.size
         </button>
 
         <button
-          onclick={() => { scriptCode = ''; queryResult = ''; error = null; }}
-          class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          onclick={() => {
+            scriptCode = '';
+            queryResult = '';
+            error = null;
+          }}
+          class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
         >
           Clear
         </button>
@@ -123,8 +133,16 @@ result.functions.size
   {#if error}
     <div class="rounded-lg bg-red-50 p-4">
       <div class="flex">
-        <svg class="mr-3 h-5 w-5 flex-shrink-0 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+        <svg
+          class="mr-3 h-5 w-5 flex-shrink-0 text-red-400"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+            clip-rule="evenodd"
+          />
         </svg>
         <div>
           <h3 class="text-sm font-medium text-red-800">Error</h3>
@@ -140,7 +158,8 @@ result.functions.size
         <h2 class="text-lg font-medium text-gray-900">Result</h2>
       </div>
       <div class="px-6 pb-4">
-        <pre class="overflow-x-auto rounded-md bg-gray-50 p-4 text-sm text-gray-800">{queryResult}</pre>
+        <pre
+          class="overflow-x-auto rounded-md bg-gray-50 p-4 text-sm text-gray-800">{queryResult}</pre>
       </div>
     </div>
   {/if}
