@@ -33,11 +33,15 @@ data class LLMPropertyDescription(
     @Description("The name of the property. It should be short and precises, preferably one word.")
     val name: String,
     @Description(
-        "The type of the property. It should be a simple Kotlin data type (e.g. string, integer, boolean)."
+        "The type of the property. It should be a simple Kotlin data type (e.g. String, Integer, Boolean)."
     )
     val type: String,
     @Description("A short description of the property.") val description: String?,
-)
+) {
+    constructor(
+        property: LLMProperty
+    ) : this(name = property.name, type = property.type, description = property.description)
+}
 
 @Serializable
 data class LLMOperationDescription(
@@ -48,7 +52,15 @@ data class LLMOperationDescription(
     )
     val description: String,
     @Description("The parameters of the operation.") val properties: List<LLMPropertyDescription>,
-)
+) {
+    constructor(
+        operation: LLMOperation
+    ) : this(
+        name = operation.name,
+        description = operation.description,
+        properties = operation.properties.map { LLMPropertyDescription(it) },
+    )
+}
 
 @Serializable
 data class LLMConceptDescription(
@@ -63,7 +75,16 @@ data class LLMConceptDescription(
         "The operations that can be applied to this concept. Each operation should have a name, a description, and a list of parameters."
     )
     val operations: List<LLMOperationDescription>,
-)
+) {
+    constructor(
+        concept: LLMConcept
+    ) : this(
+        name = concept.name,
+        description = concept.description,
+        properties = concept.properties.map { LLMPropertyDescription(it) },
+        operations = concept.operations.map { LLMOperationDescription(it) },
+    )
+}
 
 @Serializable
 data class LLMProperty(
@@ -115,25 +136,6 @@ data class LLMConcept(
     @Description("A list of operations to apply to this concept.")
     val operations: List<LLMOperation>,
 )
-
-/** Convert an [LLMConcept] instance to its schema representation for YAML. */
-fun LLMConcept.toDescription() =
-    LLMConceptDescription(
-        name = name,
-        description = description,
-        properties = properties.map { it.toDescription() },
-        operations = operations.map { it.toDescription() },
-    )
-
-fun LLMOperation.toDescription() =
-    LLMOperationDescription(
-        name = name,
-        description = description,
-        properties = properties.map { it.toDescription() },
-    )
-
-fun LLMProperty.toDescription() =
-    LLMPropertyDescription(name = name, type = type, description = description)
 
 @Serializable
 data class LLMConceptList(

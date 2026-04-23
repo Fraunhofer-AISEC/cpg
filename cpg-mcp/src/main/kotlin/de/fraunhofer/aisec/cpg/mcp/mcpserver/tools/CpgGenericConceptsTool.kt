@@ -252,7 +252,7 @@ fun Server.addLLMConceptAndOperations() {
                     failedOperations = failedOps,
                 )
             )
-            schemasToPersist.add(concept.toDescription())
+            schemasToPersist.add(LLMConceptDescription(concept))
         }
 
         if (schemasToPersist.isNotEmpty()) {
