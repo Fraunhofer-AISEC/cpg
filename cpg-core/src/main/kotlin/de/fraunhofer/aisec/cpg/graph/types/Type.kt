@@ -176,14 +176,21 @@ abstract class Type : Node {
                 this is UnknownType ||
                 this is FunctionType ||
                 this is ProblemType ||
-                this is TupleType // TODO(oxisto): convert FunctionPointerType to second order type
-                ||
+                this is TupleType ||
                 this is FunctionPointerType ||
                 this is IncompleteType ||
-                this is ParameterizedType)
+                this is ParameterizedType ||
+                this is AliasType)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
+        // For backward compatibility: allow AliasType to match underlying type
+        // Use runtime class check since smart cast might not work in all cases
+        val otherClass = other?.let { it::class.simpleName }
+        if (otherClass == "AliasType") {
+            val otherType = other as Type
+            return name == otherType.name && language == otherType.language
+        }
         return other is Type &&
             name == other.name &&
             scope === other.scope &&
@@ -288,14 +295,21 @@ fun TypeOperations.apply(root: Type): Type {
     return type
 }
 
-/** A shortcut to return [ObjectType.recordDeclaration], if this is a [ObjectType]. */
+/**
+ * A shortcut to return [ObjectType.recordDeclaration], if this is a [ObjectType] or [AliasType].
+ */
 var Type.recordDeclaration: Record?
     get() {
-        return (this as? ObjectType)?.recordDeclaration
+        return when (this) {
+            is ObjectType -> this.recordDeclaration
+            is AliasType -> this.underlyingTypeRoot.recordDeclaration
+            else -> null
+        }
     }
     set(value) {
-        if (this is ObjectType) {
-            this.recordDeclaration = value
+        when (this) {
+            is ObjectType -> this.recordDeclaration = value
+            is AliasType -> this.underlyingTypeRoot.recordDeclaration = value
         }
     }
 

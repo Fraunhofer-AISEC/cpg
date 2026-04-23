@@ -693,6 +693,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     it.lastPartsMatch(lookupName)
                 }
             if (key != null) {
+                // Return the underlying type (not the AliasType) for type checking compatibility
                 return current.typedefs[key]?.type
             }
 
@@ -701,6 +702,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             if (!alias.isQualified()) {
                 val decl = current.typedefs[alias]
                 if (decl != null) {
+                    // Return the underlying type for backward compatibility
                     return decl.type
                 }
             }

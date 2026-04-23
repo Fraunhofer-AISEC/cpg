@@ -631,7 +631,15 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
         // TODO(oxisto): What about namespaces?
 
-        val declaration = frontend.newTypedef(type, frontend.typeOf(aliasName, doFqn = doFqn))
+        // Create an AliasType that wraps the underlying type
+        val aliasTypeName =
+            if (doFqn) {
+                frontend.scopeManager.currentNamespace.fqn(aliasName.toString())
+            } else {
+                aliasName.toString()
+            }
+        val aliasType = AliasType(aliasTypeName, type, frontend.language)
+        val declaration = frontend.newTypedef(type, aliasType)
 
         frontend.scopeManager.addTypedef(declaration, scope)
 

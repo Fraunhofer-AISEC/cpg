@@ -98,6 +98,12 @@ class PointerType : Type, SecondOrderType {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
+        // For backward compatibility: allow AliasType to match underlying type
+        val otherClass = other?.let { it::class.simpleName }
+        if (otherClass == "AliasType") {
+            val otherType = other as Type
+            return name == otherType.name && language == otherType.language
+        }
         if (other !is PointerType) return false
         return super.equals(other) &&
             elementType == other.elementType &&

@@ -58,8 +58,17 @@ open class NumericType(
         NOT_APPLICABLE,
     }
 
-    override fun equals(other: Any?) =
-        super.equals(other) && this.modifier == (other as? NumericType)?.modifier
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        // For backward compatibility: allow AliasType to match underlying type
+        val otherClass = other?.let { it::class.simpleName }
+        if (otherClass == "AliasType") {
+            val otherType = other as Type
+            // For AliasType, we just check name and language (ignore modifier)
+            return name == otherType.name && language == otherType.language
+        }
+        return super.equals(other) && this.modifier == (other as? NumericType)?.modifier
+    }
 
     override fun hashCode() = Objects.hash(super.hashCode(), generics, modifier, isPrimitive)
 }
