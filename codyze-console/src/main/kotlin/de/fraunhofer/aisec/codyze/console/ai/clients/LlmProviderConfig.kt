@@ -34,11 +34,9 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import org.slf4j.LoggerFactory
 
-private val log = LoggerFactory.getLogger("LlmProviderConfig")
+private val log = LoggerFactory.getLogger(LlmProviderConfig::class.java)
 
-/** Catalog of LLM providers configured in `llm.clients.*` */
 class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<ClientConfig>) {
-
     /**
      * Resolves the [ClientProvider] name with the chosen model to a [LlmClient]. Returns `null` if
      * the provider is unknown, or if a required API key is missing.
