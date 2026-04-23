@@ -45,6 +45,14 @@ import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import de.fraunhofer.aisec.cpg.serialization.toJSON
 import java.io.File
 import java.nio.file.Path
+import kotlin.script.experimental.api.ResultValue
+import kotlin.script.experimental.api.ResultWithDiagnostics
+import kotlin.script.experimental.api.ScriptDiagnostic
+import kotlin.script.experimental.api.constructorArgs
+import kotlin.script.experimental.host.toScriptSource
+import kotlin.script.experimental.jvmhost.BasicJvmScriptingHost
+import kotlin.script.experimental.jvmhost.createJvmCompilationConfigurationFromTemplate
+import kotlin.script.experimental.jvmhost.createJvmEvaluationConfigurationFromTemplate
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -245,6 +253,60 @@ class ConsoleService {
 
         return QueryTreeWithParentsJSON(queryTree = queryTree, parentIds = parentIds)
     }
+
+    /**
+     * Executes a Kotlin query script against the current [TranslationResult].
+     *
+     * The [TranslationResult] is available as the `result` variable within the script. All common
+     * CPG packages are imported automatically, so the
+     * [Shortcut API][de.fraunhofer.aisec.cpg.graph.functions] can be used directly.
+     *
+     * @param scriptCode The Kotlin script code to evaluate
+     * @return The result of the last expression in the script as a string, or an error message
+     */
+    suspend fun executeQuery(scriptCode: String): String =
+        withContext(Dispatchers.IO) {
+            val translationResult =
+                analysisResult?.analysisResult?.translationResult
+                    ?: return@withContext "No analysis result available. Please run an analysis first."
+
+            try {
+                val compilationConfiguration =
+                    createJvmCompilationConfigurationFromTemplate<CpgQueryScript>()
+                val evaluationConfiguration =
+                    createJvmEvaluationConfigurationFromTemplate<CpgQueryScript> {
+                        constructorArgs(translationResult)
+                    }
+
+                val scriptResult =
+                    BasicJvmScriptingHost()
+                        .eval(
+                            scriptCode.toScriptSource(),
+                            compilationConfiguration,
+                            evaluationConfiguration,
+                        )
+
+                when (scriptResult) {
+                    is ResultWithDiagnostics.Success -> {
+                        when (val returnValue = scriptResult.value.returnValue) {
+                            is ResultValue.Value -> returnValue.value?.toString() ?: "null"
+                            is ResultValue.Unit -> "Query executed successfully (no return value)"
+                            is ResultValue.Error -> "Error: ${returnValue.error}"
+                            else -> "Query executed (no result)"
+                        }
+                    }
+                    is ResultWithDiagnostics.Failure -> {
+                        val errors =
+                            scriptResult.reports.filter {
+                                it.severity >= ScriptDiagnostic.Severity.ERROR
+                            }
+                        "Compilation error: ${errors.joinToString("; ") { it.message }}"
+                    }
+                }
+            } catch (e: Exception) {
+                "Error executing query: ${e.message}"
+            }
+        }
 
     /**
      * Adds a new [Concept] node as an [OverlayNode] to an existing node in the analysis result. The
