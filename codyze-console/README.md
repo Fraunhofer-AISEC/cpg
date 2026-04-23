@@ -105,4 +105,4 @@ Frontend            Backend              LLM               MCP Server
 ```
 
 The LLM decides which tools to call and the Backend executes the tool calls on the MCP server, and streams results back to both the 
-LLM (for the next iteration) and the Frontend. This loop continues until the LLM responds with text instead of tool calls.
+LLM (for the next iteration) and the frontend. This loop continues until the LLM responds with text instead of tool calls.
