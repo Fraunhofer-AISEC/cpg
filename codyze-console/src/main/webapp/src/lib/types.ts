@@ -143,6 +143,42 @@ export interface ConceptInfo {
   constructorInfo: ConstructorInfo[];
 }
 
+// LLM Concept
+export interface LLMProperty {
+  name: string;
+  type: string;
+  description?: string;
+  value: string;
+}
+
+export interface LLMOperation {
+  name: string;
+  description: string;
+  nodeId: string;
+  properties: LLMProperty[];
+}
+
+export interface LLMConcept {
+  name: string;
+  description: string;
+  nodeId: string;
+  properties: LLMProperty[];
+  operations: LLMOperation[];
+}
+
+export type SuggestionItemStatus = 'pending' | 'accepted' | 'rejected';
+
+export interface OperationSuggestionItem {
+  operation: LLMOperation;
+  status: SuggestionItemStatus;
+}
+
+export interface ConceptSuggestionItem {
+  suggestion: LLMConcept;
+  status: SuggestionItemStatus;
+  operations: OperationSuggestionItem[];
+}
+
 export interface RequirementsCategoryJSON {
   id: string;
   name: string;

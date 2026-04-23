@@ -1,9 +1,12 @@
 <script lang="ts">
   import type { PageProps } from './$types';
-  import type { ChatMessage, LLMMessage, Model } from '$lib/types';
+  import type { ChatMessage, LLMMessage, ConceptSuggestionItem, LLMConcept, Model } from '$lib/types';
   import { WelcomeScreen, ChatInterface, McpCapabilitiesModal, NotConfigured } from '$lib/components/ai-agent';
   import { PageHeader } from '$lib/components/navigation';
   import { llmAgent, type StreamingCallbacks } from '$lib/services/llmAgent';
+
+  const SUGGEST_LLM_CONCEPTS_TOOL = 'cpg_suggest_llm_concepts_and_operations';
+  const ADD_LLM_CONCEPTS_TOOL = 'cpg_add_llm_concept_and_operations';
 
   let { data }: PageProps = $props();
   const analysisResult = $derived(data?.result);
@@ -18,7 +21,66 @@
     )
   );
 
+  function hasMcpToolAvailable(toolName: string): boolean {
+    return mcpCapabilities?.tools.some(t => t.name === toolName) ?? false;
+  }
+
   let showMcpModal = $state(false);
+  let suggestions = $state<ConceptSuggestionItem[]>([]);
+
+  function isConceptSuggestion(toolName: string | undefined, content: any): content is LLMConcept {
+    return toolName === SUGGEST_LLM_CONCEPTS_TOOL
+      && content != null
+      && typeof content === 'object'
+      && 'operations' in content
+      && 'properties' in content;
+  }
+
+  function addSuggestion(concept: LLMConcept) {
+    const item: ConceptSuggestionItem = {
+      suggestion: concept,
+      status: 'pending',
+      operations: concept.operations.map(op => ({ operation: op, status: 'pending' })),
+    };
+    suggestions = [...suggestions, item];
+  }
+
+  async function handleApplySuggestions(accepted: ConceptSuggestionItem[]) {
+    if (!hasMcpToolAvailable(ADD_LLM_CONCEPTS_TOOL)) {
+      chatMessages = [...chatMessages, {
+        id: Date.now().toString(),
+        role: 'assistant' as const,
+        content: `Tool "${ADD_LLM_CONCEPTS_TOOL}" is not available. Make sure the MCP server provides this tool.`,
+        timestamp: new Date()
+      }];
+      return;
+    }
+    const concepts = accepted.map(item => item.suggestion);
+    try {
+      const res = await fetch(`/api/chat/mcp/tools/${ADD_LLM_CONCEPTS_TOOL}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ concepts }),
+      });
+      const result = await res.json();
+      chatMessages = [...chatMessages, {
+        id: Date.now().toString(),
+        role: 'assistant' as const,
+        content: '',
+        contentType: 'tool-result',
+        toolResult: { toolName: ADD_LLM_CONCEPTS_TOOL, content: result },
+        timestamp: new Date()
+      }];
+      suggestions = [];
+    } catch (error) {
+      chatMessages = [...chatMessages, {
+        id: Date.now().toString(),
+        role: 'assistant' as const,
+        content: `Failed to apply concepts (called tool: "${ADD_LLM_CONCEPTS_TOOL}"): ${error instanceof Error ? error.message : 'Unknown error'}`,
+        timestamp: new Date()
+      }];
+    }
+  }
 
   // Load persisted state from sessionStorage
   function loadPersistedState() {
@@ -106,6 +168,7 @@
     currentMessage = '';
     streamingContent = '';
     streamingReasoning = '';
+    suggestions = [];
     isLoading = false;
   }
 
@@ -119,14 +182,18 @@
           } else if (event.type === 'reasoning') {
             streamingReasoning += event.content;
           } else if (event.type === 'tool_result') {
-            chatMessages = [...chatMessages, {
-              id: Date.now().toString(),
-              role: 'assistant' as const,
-              content: '',
-              contentType: 'tool-result',
-              toolResult: { toolName: event.toolName, content: event.content },
-              timestamp: new Date()
-            }];
+            if (isConceptSuggestion(event.toolName, event.content)) {
+              addSuggestion(event.content);
+            } else {
+              chatMessages = [...chatMessages, {
+                id: Date.now().toString(),
+                role: 'assistant' as const,
+                content: '',
+                contentType: 'tool-result',
+                toolResult: { toolName: event.toolName, content: event.content },
+                timestamp: new Date()
+              }];
+            }
           }
         } catch {
           streamingContent += chunk;
@@ -265,7 +332,7 @@
   subtitle="Understand your code better through AI-powered analysis."
 />
 
-<div class="-mx-6 -mb-6 flex flex-1 flex-col">
+<div class="-mx-6 -mb-6 flex flex-col" style="height: calc(100vh - 120px);">
   {#if mcpCapabilities === null}
     <NotConfigured />
   {:else if showWelcome}
@@ -291,6 +358,8 @@
         {selectedModel}
         {analysisResult}
         {mcpCapabilities}
+        bind:suggestions
+        onApplySuggestions={handleApplySuggestions}
         onSendMessage={sendMessage}
         onReset={resetChat}
         onMessageChange={(message) => (currentMessage = message)}

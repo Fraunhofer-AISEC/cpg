@@ -135,7 +135,7 @@ class ChatService(
     }
 
     /** Maximum number of tool call iterations before responding a text message. */
-    private val maxToolIterations = 8
+    private val maxToolIterations = 30
 
     /** Process a chat query using the LLM with MCP tool support */
     fun chat(request: ChatRequestJSON): Flow<String> = channelFlow {
@@ -164,15 +164,9 @@ class ChatService(
                     onText = { text -> send(Events.text(text)) },
                     onReasoning = { thought -> send(Events.reasoning(thought)) },
                 )
-            log.info(
-                "Initial prompt returned {} tool calls: {}",
-                toolCalls.size,
-                toolCalls.map { it.name },
-            )
 
             while (toolCalls.isNotEmpty() && iteration < maxToolIterations) {
                 iteration++
-                log.info("Agent: Round {}: executing {}", iteration, toolCalls.map { it.name })
                 val roundtripResults =
                     toolCalls.map { toolCall ->
                         val result = executeToolCall(toolCall) { jsonEvent -> send(jsonEvent) }
@@ -239,6 +233,13 @@ class ChatService(
             emit(Events.text(errorMsg))
             errorMsg
         }
+    }
+
+    /** Call an MCP tool directly and return the result as a parsed JSON element. */
+    suspend fun callTool(name: String, arguments: JsonObject): JsonElement {
+        val result = mcp.callTool(name = name, arguments = arguments)
+        val contentTexts = result.content.mapNotNull { (it as? TextContent)?.text }
+        return parseToolResultContent(contentTexts)
     }
 
     fun close() {

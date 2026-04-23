@@ -51,6 +51,10 @@ fun configureServer(
         this.listConceptsAndOperations()
         this.getNode()
         this.addDfgBackwardTool()
+        this.listLLMConceptsOperations()
+        this.addOrUpdateConcept()
+        this.suggestLLMConceptsAndOperations()
+        this.addLLMConceptAndOperations()
         // PROMPTS
         this.addSuggestConceptsPrompt()
         this
