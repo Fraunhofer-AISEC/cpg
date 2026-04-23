@@ -25,19 +25,19 @@
  */
 package de.fraunhofer.aisec.codyze.console.ai
 
-import de.fraunhofer.aisec.codyze.console.ai.skills.SkillRegistry
+import de.fraunhofer.aisec.codyze.console.ai.skills.SkillLoader
 import java.nio.file.Paths
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class SkillRegistrytest {
+class SkillLoaderTest {
 
     @Test
     fun discoverSingleSkillTest() {
         val skillsDir = Paths.get("src/test/resources/skills")
-        val registry = SkillRegistry(listOf(skillsDir))
-        val skills = registry.discoverSkills()
+        val loader = SkillLoader(listOf(skillsDir))
+        val skills = loader.discoverSkills()
 
         assertEquals(1, skills.size)
         val skill = skills.first()
@@ -48,14 +48,14 @@ class SkillRegistrytest {
 
     @Test
     fun missingDirectoryTest() {
-        val registry = SkillRegistry(listOf(Paths.get("src/test/resources/does-not-exist")))
-        assertEquals(emptyList(), registry.discoverSkills())
+        val loader = SkillLoader(listOf(Paths.get("src/test/resources/does-not-exist")))
+        assertEquals(emptyList(), loader.discoverSkills())
     }
 
     @Test
     fun directoryWithoutSkillMdFileTest() {
         val skillsDir = Paths.get("src/test/resources/empty-skills")
-        val registry = SkillRegistry(listOf(skillsDir))
-        assertEquals(emptyList(), registry.discoverSkills())
+        val loader = SkillLoader(listOf(skillsDir))
+        assertEquals(emptyList(), loader.discoverSkills())
     }
 }

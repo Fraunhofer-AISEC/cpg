@@ -31,8 +31,18 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import org.slf4j.LoggerFactory
 
-class SkillRegistry(private val skillsDirs: List<Path>) {
-    private val log = LoggerFactory.getLogger(SkillRegistry::class.java)
+/**
+ * Directories to scan for skills. By default, we look in `.agents/skills`, which is the recommended
+ * location for project-specific skills. However, in the future we might also scan client-specific
+ * locations used by other clients (e.g. `~/.claude/skills` or Gemini equivalents).
+ *
+ * See
+ * [Where to scan](https://agentskills.io/client-implementation/adding-skills-support#where-to-scan)
+ */
+val defaultSkillDirectories: List<Path> = listOf(Paths.get(".agents", "skills"))
+
+class SkillLoader(private val skillsDirs: List<Path>) {
+    private val log = LoggerFactory.getLogger(SkillLoader::class.java)
 
     private var skills: Map<String, Skill> = emptyMap()
 
@@ -44,21 +54,21 @@ class SkillRegistry(private val skillsDirs: List<Path>) {
      * [Parse SKILL.md files](https://agentskills.io/client-implementation/adding-skills-support#step-2-parse-skill-md-files)
      */
     fun discoverSkills(): List<Skill> {
-        val discovered =
-            skillsDirs
-                .filter { dir ->
-                    Files.isDirectory(dir).also {
-                        if (!it) {
-                            log.debug("Skills directory does not exist: {}", dir)
-                        }
-                    }
+        val discovered = mutableListOf<Skill>()
+        for (dir in skillsDirs) {
+            if (!Files.isDirectory(dir)) {
+                log.debug("Skills directory does not exist: {}", dir)
+                continue
+            }
+            Files.newDirectoryStream(dir).use { entries ->
+                for (entry in entries) {
+                    if (!Files.isDirectory(entry)) continue
+                    val skillMd = entry.resolve("SKILL.md")
+                    if (!Files.isRegularFile(skillMd)) continue
+                    parseSkill(skillMd)?.let { discovered.add(it) }
                 }
-                .flatMap { dir -> Files.list(dir).use { it.toList() } }
-                .filter { Files.isDirectory(it) }
-                .map { it.resolve("SKILL.md") }
-                .filter { Files.isRegularFile(it) }
-                .mapNotNull { parseSkill(it) }
-
+            }
+        }
         skills = discovered.associateBy { it.name }
         return discovered
     }
@@ -80,11 +90,19 @@ class SkillRegistry(private val skillsDirs: List<Path>) {
      */
     fun parseSkill(skillMd: Path): Skill? {
         val content = Files.readString(skillMd).trim()
-        if (!content.startsWith("---")) return null
+
+        // A valid SKILL.md must start with `---` to open the frontmatter block.
+        if (!content.startsWith("---")) {
+            return null
+        }
 
         // limit = 3 so that any `---` inside the body (in markdown) stays in parts[2].
         val parts = content.split("---", limit = 3)
-        if (parts.size < 3) return null
+        // We need three parts: the opening `---`, the frontmatter,
+        // and the body.
+        if (parts.size < 3) {
+            return null
+        }
 
         val frontMatter = parts[1].trim()
         val body = parts[2].trim()
@@ -98,27 +116,18 @@ class SkillRegistry(private val skillsDirs: List<Path>) {
                 .lines()
                 .mapNotNull { line ->
                     val lineIndex = line.indexOf(':')
-                    if (lineIndex < 0) null
-                    else line.substring(0, lineIndex).trim() to line.substring(lineIndex + 1).trim()
+                    if (lineIndex < 0) {
+                        return@mapNotNull null
+                    } else {
+                        line.substring(0, lineIndex).trim() to line.substring(lineIndex + 1).trim()
+                    }
                 }
                 .toMap()
 
+        // `name` and `description` are required fields
         val name = fields["name"] ?: return null
         val description = fields["description"] ?: return null
 
         return Skill(name = name, description = description, body = body, location = skillMd)
-    }
-
-    companion object {
-        /**
-         * Directories to scan for skills. By default, we look in `.agents/skills`, which is the
-         * recommended location for project-specific skills. However, in the future we might also
-         * scan client-specific locations used by other clients (e.g. `~/.claude/skills or Gemini
-         * equivalents)
-         *
-         * See
-         * [Where to scan](https://agentskills.io/client-implementation/adding-skills-support#where-to-scan)
-         */
-        fun skillDirectories(): List<Path> = listOf(Paths.get(".agents", "skills"))
     }
 }

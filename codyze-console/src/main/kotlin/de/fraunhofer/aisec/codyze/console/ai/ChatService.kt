@@ -29,9 +29,10 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import de.fraunhofer.aisec.codyze.console.ai.clients.*
 import de.fraunhofer.aisec.codyze.console.ai.skills.ACTIVATE_SKILL_TOOL_NAME
-import de.fraunhofer.aisec.codyze.console.ai.skills.SkillRegistry
+import de.fraunhofer.aisec.codyze.console.ai.skills.SkillLoader
 import de.fraunhofer.aisec.codyze.console.ai.skills.buildActivateSkillTool
 import de.fraunhofer.aisec.codyze.console.ai.skills.buildSkillCatalog
+import de.fraunhofer.aisec.codyze.console.ai.skills.defaultSkillDirectories
 import de.fraunhofer.aisec.codyze.console.ai.skills.wrapActivatedSkill
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -61,7 +62,7 @@ class ChatService(
             options = ClientOptions(),
         )
 
-    private val skillRegistry = SkillRegistry(SkillRegistry.skillDirectories())
+    private val skillLoader = SkillLoader(defaultSkillDirectories)
 
     private var tools: List<Tool> = emptyList()
     private var prompts: List<Prompt> = emptyList()
@@ -75,7 +76,7 @@ class ChatService(
         tools = mcp.listTools().tools
         prompts = mcp.listPrompts().prompts
         resources = mcp.listResources().resources
-        skills = skillRegistry.discoverSkills()
+        skills = skillLoader.discoverSkills()
     }
 
     /** Return the MCP capabilities: tools, prompts, and resources. */
