@@ -63,3 +63,46 @@ Currently, only Gemini and OpenAI-compatible endpoints are supported. The predef
 ### 3. MCP Server
 
 When `cpg-mcp` is enabled, the MCP server is automatically started on port `8081`. The AI chat connects to it as an MCP client to access the CPG tools (e.g., listing functions, records, and calls).
+
+## Architecture
+
+The following diagram shows the interaction between the main components during a chat request:
+
+```
+Frontend            Backend              LLM               MCP Server
+(Svelte)           (ChatService)      (Gemini/OpenAI)       (cpg-mcp)
+   |                    |                    |                   |
+   | POST /api/chat     |                    |                   |
+   | {messages}         |                    |                   |
+   |------------------->|                    |                   |
+   |                    |                    |                   |
+   |                    |  sendPrompt()      |                   |
+   |                    |  (messages + tools)|                   |
+   |                    |------------------->|                   |
+   |                    |                    |                   |
+   |                    |   "call tool X     |                   |
+   |                    |    with args Y"    |                   |
+   |                    |<-------------------|                   |
+   |                    |                    |                   |
+   |                    |  mcp.callTool(X, Y)                    |
+   |                    |--------------------------------------> |
+   |                    |                    |                   |
+   |                    |                         tool result    |
+   |                    |<-------------------------------------- |
+   |                    |                    |                   |
+   |   tool_result      |                    |                   |
+   |<-------------------|                    |                   |
+   |                    |                    |                   |
+   |                    |  sendPrompt()      |                   |
+   |                    |  (+ tool results)  |                   |
+   |                    |------------------->|                   |
+   |                    |                    |                   |
+   |                    |   text response    |                   |
+   |                    |<-------------------|                   |
+   |                    |                    |                   |
+   |       text         |                    |                   |
+   |<-------------------|                    |                   |
+```
+
+The LLM decides which tools to call and the backend executes the tool calls on the MCP server, and streams results back to both the 
+LLM (for the next iteration) and the frontend. This loop continues until the LLM responds with text instead of tool calls.

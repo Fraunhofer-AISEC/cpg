@@ -34,7 +34,7 @@ import io.ktor.utils.io.*
 import io.modelcontextprotocol.kotlin.sdk.types.Tool
 import kotlinx.serialization.json.*
 
-/** OpenAI-compatible API client (Ollama, vLLM, MLX) */
+/** OpenAI-compatible API client (Ollama, vLLM, MLX, etc.) */
 class OpenAiClient(
     private val httpClient: HttpClient,
     private val model: String,
