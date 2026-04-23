@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       chart.js:
-        specifier: ^4.5.1
+        specifier: ^4.4.9
         version: 4.5.1
       marked:
         specifier: ^16.3.0
@@ -19,79 +19,79 @@ importers:
         version: 0.55.1
     devDependencies:
       '@eslint/compat':
-        specifier: ^1.4.1
+        specifier: ^1.2.5
         version: 1.4.1(eslint@9.39.2(jiti@2.6.1))
       '@eslint/js':
-        specifier: ^9.39.2
+        specifier: ^9.18.0
         version: 9.39.2
       '@fontsource/noto-sans-mono':
-        specifier: ^5.2.10
+        specifier: ^5.2.6
         version: 5.2.10
       '@sveltejs/adapter-static':
-        specifier: ^3.0.10
+        specifier: ^3.0.8
         version: 3.0.10(@sveltejs/kit@2.57.1(@sveltejs/vite-plugin-svelte@5.1.1(svelte@5.54.1)(vite@6.4.2(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.54.1)(typescript@5.9.3)(vite@6.4.2(jiti@2.6.1)(lightningcss@1.30.2)))
       '@sveltejs/kit':
-        specifier: ^2.50.2
+        specifier: ^2.20.6
         version: 2.57.1(@sveltejs/vite-plugin-svelte@5.1.1(svelte@5.54.1)(vite@6.4.2(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.54.1)(typescript@5.9.3)(vite@6.4.2(jiti@2.6.1)(lightningcss@1.30.2))
       '@sveltejs/vite-plugin-svelte':
-        specifier: ^5.1.1
+        specifier: ^5.0.0
         version: 5.1.1(svelte@5.54.1)(vite@6.4.2(jiti@2.6.1)(lightningcss@1.30.2))
       '@tailwindcss/forms':
-        specifier: ^0.5.11
+        specifier: ^0.5.10
         version: 0.5.11(tailwindcss@4.1.18)
       '@tailwindcss/typography':
-        specifier: ^0.5.19
+        specifier: ^0.5.15
         version: 0.5.19(tailwindcss@4.1.18)
       '@tailwindcss/vite':
-        specifier: ^4.1.18
+        specifier: ^4.0.0
         version: 4.1.18(vite@6.4.2(jiti@2.6.1)(lightningcss@1.30.2))
       cookie:
         specifier: 1.1.1
         version: 1.1.1
       eslint:
-        specifier: ^9.39.2
+        specifier: ^9.18.0
         version: 9.39.2(jiti@2.6.1)
       eslint-config-prettier:
-        specifier: ^10.1.8
+        specifier: ^10.0.1
         version: 10.1.8(eslint@9.39.2(jiti@2.6.1))
       eslint-plugin-svelte:
-        specifier: ^3.15.0
+        specifier: ^3.0.0
         version: 3.17.0(eslint@9.39.2(jiti@2.6.1))(svelte@5.54.1)
       globals:
-        specifier: ^16.5.0
+        specifier: ^16.0.0
         version: 16.5.0
       inter-ui:
-        specifier: ^4.1.1
+        specifier: ^4.1.0
         version: 4.1.1
       prettier:
-        specifier: ^3.8.1
+        specifier: ^3.5.3
         version: 3.8.1
       prettier-plugin-svelte:
-        specifier: ^3.4.1
+        specifier: ^3.3.3
         version: 3.5.0(prettier@3.8.1)(svelte@5.54.1)
       prettier-plugin-tailwindcss:
-        specifier: ^0.7.2
+        specifier: ^0.7.0
         version: 0.7.2(prettier-plugin-svelte@3.5.0(prettier@3.8.1)(svelte@5.54.1))(prettier@3.8.1)
       svelte:
-        specifier: ^5.50.2
+        specifier: ^5.0.0
         version: 5.54.1
       svelte-check:
-        specifier: ^4.3.6
+        specifier: ^4.0.0
         version: 4.4.4(picomatch@4.0.4)(svelte@5.54.1)(typescript@5.9.3)
       svelte-highlight:
-        specifier: ^7.9.0
+        specifier: ^7.8.2
         version: 7.9.0
       tailwindcss:
-        specifier: ^4.1.18
+        specifier: ^4.0.0
         version: 4.1.18
       typescript:
-        specifier: ^5.9.3
+        specifier: ^5.0.0
         version: 5.9.3
       typescript-eslint:
-        specifier: ^8.55.0
+        specifier: ^8.20.0
         version: 8.56.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
       vite:
-        specifier: ^6.4.1
+        specifier: ^6.0.0
         version: 6.4.2(jiti@2.6.1)(lightningcss@1.30.2)
 
 packages:
@@ -809,9 +809,6 @@ packages:
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
-
-  devalue@5.6.4:
-    resolution: {integrity: sha512-Gp6rDldRsFh/7XuouDbxMH3Mx8GMCcgzIb1pDTvNyn8pZGQ22u+Wa+lGV9dQCltFQ7uVw0MhRyb8XDskNFOReA==}
 
   devalue@5.7.1:
     resolution: {integrity: sha512-MUbZ586EgQqdRnC4yDrlod3BEdyvE4TapGYHMW2CiaW+KkkFmWEFqBUaLltEZCGi0iFXCEjRF0OjF0DV2QHjOA==}
@@ -1897,7 +1894,7 @@ snapshots:
   '@typescript-eslint/project-service@8.56.1(typescript@5.9.3)':
     dependencies:
       '@typescript-eslint/tsconfig-utils': 8.56.1(typescript@5.9.3)
-      '@typescript-eslint/types': 8.56.1
+      '@typescript-eslint/types': 8.57.1
       debug: 4.4.3
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -2041,8 +2038,6 @@ snapshots:
   deepmerge@4.3.1: {}
 
   detect-libc@2.1.2: {}
-
-  devalue@5.6.4: {}
 
   devalue@5.7.1: {}
 
@@ -2549,7 +2544,7 @@ snapshots:
       aria-query: 5.3.1
       axobject-query: 4.1.0
       clsx: 2.1.1
-      devalue: 5.6.4
+      devalue: 5.7.1
       esm-env: 1.2.2
       esrap: 2.2.4
       is-reference: 3.0.3
