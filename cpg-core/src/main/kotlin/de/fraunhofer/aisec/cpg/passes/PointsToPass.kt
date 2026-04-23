@@ -3154,7 +3154,8 @@ fun PointsToState.Element.getLastWrites(
                         this.getAddresses(base, base)
                     } else fieldAddresses
                 addresses.flatMapTo(PowersetLattice.Element()) {
-                    this.declarationsState[it]?.third as PowersetLattice.Element
+                    this.declarationsState[it]?.third as? PowersetLattice.Element
+                        ?: PowersetLattice.Element()
                 }
             }
             is Reference -> {
