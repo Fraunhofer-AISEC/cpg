@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -4330,5 +4331,47 @@ class PointsToPassTest {
                 .filter { it.granularity !is FullDataflowGranularity }
                 .size,
         )
+    }
+
+    @Test
+    fun testDeleteDoesNotBecomePrevDfgOfPointerRead() {
+        val file = File("src/test/resources/simpleDelete.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+
+        assertNotNull(tu)
+
+        val xInit =
+            tu.refs.singleOrNull { it.name.localName == "x" && it.location?.region?.startLine == 6 }
+        assertNotNull(xInit)
+        val xAssign =
+            tu.refs.singleOrNull {
+                it !is PointerDereference &&
+                    it.name.localName == "x" &&
+                    it.location?.region?.startLine == 7
+            }
+        assertNotNull(xAssign)
+        val xRefDelete =
+            tu.refs.singleOrNull { it.name.localName == "x" && it.location?.region?.startLine == 8 }
+        assertNotNull(xRefDelete)
+        val xRefUse =
+            tu.refs.singleOrNull {
+                it.name.localName == "x" && it.location?.region?.startLine == 10
+            }
+        assertNotNull(xRefUse)
+        val delete = tu.allChildren<Delete>().singleOrNull()
+        assertNotNull(delete)
+
+        assertTrue(xInit in xAssign.prevDFG)
+        assertTrue(xAssign.prevDFG.none { it is Delete })
+
+        assertContains(delete.nextDFG, xRefUse)
+        assertContains(xRefDelete.nextDFG, xRefUse)
+        assertContains(xRefUse.prevDFG, delete)
+        assertContains(xRefUse.prevDFG, xRefDelete)
     }
 }

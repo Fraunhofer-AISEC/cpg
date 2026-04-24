@@ -1218,9 +1218,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val destinations: ConcurrentIdentitySet<Node> =
             currentNode.operands.toConcurrentIdentitySet()
         val destinationsAddresses =
-            destinations.flatMapTo(identitySetOf()) { doubleState.getAddresses(it, it) }
-        val lastWrites: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet()
-        lastWrites.add(NodeWithPropertiesKey(currentNode as Node, equalLinkedHashSetOf<Any>(false)))
+            destinations.flatMapTo(identitySetOf()) {
+                doubleState.getValues(it, it).mapTo(identitySetOf()) { value -> value.first }
+            }
+        val lastWrites: MutableSet<NodeWithPropertiesKey> =
+            destinations.mapTo(ConcurrentHashMap.newKeySet()) {
+                NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>(false))
+            }
+        lastWrites.add(NodeWithPropertiesKey(currentNode, equalLinkedHashSetOf<Any>(false)))
         doubleState =
             doubleState.updateValues(
                 lattice,
