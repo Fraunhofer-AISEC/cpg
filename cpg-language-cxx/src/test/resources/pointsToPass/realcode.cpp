@@ -26,4 +26,17 @@ static ee_t real_code(const w_t *a)
         return ERR;
     }
     return sc(CONST3, &b);
+}
+
+int main(int argc, char *argv[]) {
+  const w_t credentials =
+  {
+        .ssid = argv[0],
+        .pswd = (argc == 2) ? argv[1] : NULL
+  };
+  if (result != ESP_OK && (result != ESP_ERR_INVALID_ARG || set_band))
+  {
+      return EXIT_FAILURE;
+  }
+  result = real_code(&credentials);
 } 

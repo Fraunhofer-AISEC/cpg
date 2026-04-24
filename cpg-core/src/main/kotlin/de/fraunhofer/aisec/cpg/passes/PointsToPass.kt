@@ -2655,7 +2655,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         is PointerDereference -> handleExpression(lattice, ini.input, doubleState)
                         else -> handleExpression(lattice, ini, doubleState)
                     }
-                if (ini is InitializerList) {
+                if (
+                    ini is InitializerList &&
+                        // If we have an InitializerList that consists of only assigns, we handled
+                        // it via the normal EOG path, so we can ignore it now
+                        ini.initializers.any { it !is Assign }
+                ) {
                     // Create a field for every initializer, i.e. at offset 0 we store the first
                     // element, at offset 1 the second, etc...
                     val fieldAddresses = identitySetOf<Node>()

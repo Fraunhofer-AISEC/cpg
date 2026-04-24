@@ -4045,6 +4045,9 @@ class PointsToPassTest {
         val memsetFunc = tu.functions["memset"]
         assertNotNull(memsetFunc)
 
+        val mainFunc = tu.functions["main"]
+        assertNotNull(mainFunc)
+
         // Calls
         val scCall = testFunc.calls["sc"]
         assertNotNull(scCall)
@@ -4061,6 +4064,9 @@ class PointsToPassTest {
         val memset2Call = testFunc.calls("memset")[1]
         assertNotNull(memset2Call)
 
+        val realCodeCall = mainFunc.calls["real_code"]
+        assertNotNull(realCodeCall)
+
         // Call Args
         val scArg2 = scCall.arguments[1]
         assertNotNull(scArg2)
@@ -4074,6 +4080,10 @@ class PointsToPassTest {
 
         val strlcpy2SrcArg = strlcpy2Call.arguments[1]
         assertNotNull(strlcpy2SrcArg)
+
+        val realCodeCallArg = realCodeCall.arguments.single()
+        val realCodeCallArgInput = (realCodeCallArg as? PointerReference)?.input
+        assertNotNull(realCodeCallArgInput)
 
         // Params and PMVs
         val testFuncParam = testFunc.parameters.single()
@@ -4094,6 +4104,14 @@ class PointsToPassTest {
         val memsetDstDerefPMV =
             memsetDstParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
 
+        val realCodeParam = testFunc.parameters.single()
+        val realCodeDerefPMV =
+            realCodeParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(realCodeDerefPMV)
+        val realCodeDerefDerefPMV =
+            realCodeParam.memoryValues.singleOrNull { it.name.localName == "derefderefvalue" }
+        assertNotNull(realCodeDerefDerefPMV)
+
         // Other stuff
         val bdgh1 = testFunc.assignments[2].target as? MemberAccess
         assertNotNull(bdgh1)
@@ -4103,6 +4121,12 @@ class PointsToPassTest {
         assertNotNull(bd1)
         val b1 = bd1.base
         assertNotNull(b1)
+
+        // The base of the 2nd write to credentials within the constructor
+        val credentialLastWrite = mainFunc.refs[4]
+        val credentialAssign1 = mainFunc.assigns[0]
+        val credentialAssign2 = mainFunc.assigns[1]
+        assertEquals(credentialAssign2, (credentialLastWrite.astParent as? MemberAccess)?.astParent)
 
         // Actual tests
         // From all MemberAccesses a-><Something>, we except a prevDFG at FieldGranularity to their
@@ -4172,6 +4196,21 @@ class PointsToPassTest {
                 }
                 .size,
         )
+
+        // Back in the main function, let's check the prevDFGs from the PointerReference argument to
+        // real_code
+        // For the argument itself, the prevFullDFG is the memoryAddress from credentials
+        assertLocalName(
+            "credentials",
+            realCodeCallArg.prevFullDFG.singleOrNull { it is MemoryAddress },
+        )
+        // For the argument's input, the prevFullDFG is the base of the 2nd assign in the construtor
+        assertEquals(credentialLastWrite, realCodeCallArgInput.prevFullDFG.singleOrNull())
+
+        // The derefPMV has as prevFullDFG has the same prevFullDFG
+        assertEquals(credentialLastWrite, realCodeDerefPMV.prevFullDFG.singleOrNull())
+
+        // TODO: credentials* and the derefderefPMV also should point somewhere
     }
 
     @Test
