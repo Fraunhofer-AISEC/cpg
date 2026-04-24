@@ -3632,7 +3632,10 @@ class PointsToPassTest {
         val literal0 = fd.literals[0]
         assertNotNull(literal0)
 
+        // While numbers[0] prevFullDFG should point to the literal, it's base prevFullDFG points to
+        // the lastwrite, which is the variable declaration
         assertEquals(literal0, numbers0.prevFullDFG.single())
+        assertEquals(fd.variables["numbers"], numbers0.base.prevFullDFG.singleOrNull())
     }
 
     @Test
@@ -4201,8 +4204,8 @@ class PointsToPassTest {
 
         // Args
         val printStructLineArg = printStructLineCall.arguments.single()
-        val printStructLineArgBase =
-            ((printStructLineArg as? PointerReference)?.input as? Subscription)?.base
+        val printStructLineArgInput = (printStructLineArg as? PointerReference)?.input
+        val printStructLineArgBase = (printStructLineArgInput as? Subscription)?.base
         assertNotNull(printStructLineArgBase)
 
         // Parameters and PMVs
@@ -4275,6 +4278,19 @@ class PointsToPassTest {
                         "PointerReference"
                 }
                 ?.start,
+        )
+
+        // For data[0], we expect the following prevDFG Edges:
+        // 1) The fullprevDFG to the PMVDerefValue of free (and to the original assignment in Line
+        // 10 if we didn't enter
+        // the if in Line 11)
+        // 2) the index prevDFG
+        assertTrue(printStructLineArgInput.prevFullDFG.contains(freeDerefPMV))
+        assertEquals(
+            1,
+            printStructLineArgInput.prevDFGEdges
+                .filter { it.granularity !is FullDataflowGranularity }
+                .size,
         )
     }
 }

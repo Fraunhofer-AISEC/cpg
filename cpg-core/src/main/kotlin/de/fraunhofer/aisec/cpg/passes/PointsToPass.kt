@@ -2688,8 +2688,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // add the entries for the fieldAddress to the main addresses
                     addresses.forEach { addr ->
                         declEntriesMap[addr]?.first?.addAll(fieldAddresses)
-                        // For arrays, we want the value to be the address
-                        declEntriesMap[addr]?.second?.addAll(addresses.map { Pair(it, false) })
+                        // The value of the base is the address of the first element in the
+                        // initializer
+                        fieldAddresses
+                            .singleOrNull { it.name.localName == "0" }
+                            ?.let { element0Addr ->
+                                declEntriesMap[addr]?.second?.add(Pair(element0Addr, false))
+                            }
                     }
                 } else {
                     values.addAll(
@@ -3154,22 +3159,14 @@ fun PointsToState.Element.getLastWrites(
                         this.getAddresses(base, base)
                     } else fieldAddresses
                 addresses.flatMapTo(PowersetLattice.Element()) {
-                    this.declarationsState[it]?.third as? PowersetLattice.Element
-                        ?: PowersetLattice.Element()
+                    this.declarationsState[it]?.third ?: PowersetLattice.Element()
                 }
             }
             is Reference -> {
-                // In case the input is a reference, we take the memoryAddress of the refersTo
-                val refersTo = input.refersTo
-                if (refersTo is Function)
-                    PowersetLattice.Element(NodeWithPropertiesKey(refersTo, equalLinkedHashSetOf()))
-                else
-                    refersTo?.memoryAddresses?.mapTo(PowersetLattice.Element()) {
-                        NodeWithPropertiesKey(it, equalLinkedHashSetOf())
-                    }
-                        ?: PowersetLattice.Element(
-                            NodeWithPropertiesKey(node, equalLinkedHashSetOf())
-                        )
+                // In case the input is a reference, the lastwrite is its memoryAddress
+                getAddresses(input, input).mapTo(PowersetLattice.Element()) {
+                    NodeWithPropertiesKey(it, equalLinkedHashSetOf())
+                }
             }
             else -> PowersetLattice.Element()
         }
@@ -3236,22 +3233,23 @@ fun PointsToState.Element.getLastWrites(
         is Subscription -> {
             // For Subscriptions, we additionally check if the partial write matches
             val partial = getNodeName(node.subscriptExpression)
-            this.getAddresses(node, node)
-                .filterTo(PowersetLattice.Element()) {
-                    this.declarationsState[it]?.third?.isNotEmpty() == true
+            val addresses = this.getAddresses(node, node)
+            val addressesWithLastWrites =
+                addresses.filterTo(PowersetLattice.Element()) { addr ->
+                    this.declarationsState[addr]?.third?.isNotEmpty() == true
                 }
-                .flatMapTo(PowersetLattice.Element()) {
-                    this.declarationsState[it]?.third?.map {
-                        NodeWithPropertiesKey(
-                            it.node,
-                            it.properties.filterTo(EqualLinkedHashSet()) {
-                                !(it is PartialDataflowGranularity<*> &&
-                                    it.partialTarget is Field &&
-                                    it.partialTarget.name.localName == partial.localName)
-                            },
-                        )
-                    } ?: PowersetLattice.Element()
-                }
+            addressesWithLastWrites.flatMapTo(PowersetLattice.Element()) { addr ->
+                this.declarationsState[addr]?.third?.map {
+                    NodeWithPropertiesKey(
+                        it.node,
+                        it.properties.filterTo(EqualLinkedHashSet()) {
+                            !(it is PartialDataflowGranularity<*> &&
+                                it.partialTarget is Field &&
+                                it.partialTarget.name.localName == partial.localName)
+                        },
+                    )
+                } ?: PowersetLattice.Element()
+            }
         }
         is MemberAccess -> {
             // For MemberAccess, the lastWrite is the Field if we don't have anything
@@ -3314,13 +3312,6 @@ fun PointsToState.Element.getValues(
 ): PowersetLattice.Element<Pair<Node, Boolean>> {
     return when (node) {
         is PointerReference -> {
-            // A C(++) special: If we have the pointerReference &<Reference>[0], its value equals
-            // the one of the array. So if we have
-            // that, we return the value of the base
-            val sub = (node.input as? Subscription)
-            if ((sub?.subscriptExpression as? Literal<*>)?.value == 0) {
-                return this.getValues(sub.arrayExpression, sub.arrayExpression)
-            }
             /*
              * For PointerReferences, the value is the address of the input
              * For example, the value of `&i` is the address of `i`
@@ -3563,6 +3554,8 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
             val localName = getNodeName(node.subscriptExpression)
             // When startNode is different from the current node, we should already have an entry,
             // so we fetch that from the general state
+            // TODO: Should we skip dereferencing if the base is not a pointer (The C(++) compiler
+            // does that), or does it make no difference in our abstract model?
             val baseValues =
                 if (startNode != node)
                     fetchValueFromGeneralState(node.base).mapTo(ConcurrentIdentitySet<Node>()) {
@@ -3572,6 +3565,15 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
                     this.getValues(node.base, startNode).mapTo(ConcurrentIdentitySet<Node>()) {
                         it.first
                     }
+            // A C(++) special: If the base is a pointer, the value of this base-pointer is the
+            // address of the first element.
+            // So if it's about the address [0], we return the baseValues directly instead of
+            // fetching fieldAddresses which depict abstract offsets from those base values
+            if (localName.localName == "0") {
+                return this.getValues(node.base, startNode).mapTo(ConcurrentIdentitySet<Node>()) {
+                    it.first
+                }
+            }
             baseValues.flatMapTo(concurrentIdentitySetOf()) { node ->
                 fetchFieldAddresses(
                     concurrentIdentitySetOf(node),
