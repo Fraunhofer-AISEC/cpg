@@ -26,23 +26,24 @@
 package de.fraunhofer.aisec.codyze.console.ai
 
 import de.fraunhofer.aisec.codyze.console.ai.clients.Events
-import de.fraunhofer.aisec.codyze.console.ai.clients.LlmClient
-import de.fraunhofer.aisec.codyze.console.ai.clients.ToolCall
-import de.fraunhofer.aisec.codyze.console.ai.clients.ToolCallWithResult
+import de.fraunhofer.aisec.codyze.console.ai.clients.LlmProviderConfig
 import io.ktor.client.*
-import io.modelcontextprotocol.kotlin.sdk.types.Tool
 import kotlin.test.*
 import kotlinx.serialization.json.*
 
 class ChatServiceTest {
 
-    private fun createChatService(llm: LlmClient): ChatService {
-        return ChatService(httpClient = HttpClient(), llm = llm, mcpServerUrl = "localhost")
+    private fun createChatService(): ChatService {
+        return ChatService(
+            httpClient = HttpClient(),
+            llmProviderConfig = LlmProviderConfig(HttpClient(), emptyList()),
+            mcpServerUrl = "localhost",
+        )
     }
 
     @Test
     fun parseToolResultContentEmptyTest() {
-        val service = createChatService(TestLlmClient())
+        val service = createChatService()
         val result = service.parseToolResultContent(emptyList())
         assertIs<JsonArray>(result)
         assertEquals(0, result.size)
@@ -50,7 +51,7 @@ class ChatServiceTest {
 
     @Test
     fun parseToolResultContentSinglePlainTextTest() {
-        val service = createChatService(TestLlmClient())
+        val service = createChatService()
         val result = service.parseToolResultContent(listOf("hello world"))
         assertIs<JsonPrimitive>(result)
         assertEquals("hello world", result.content)
@@ -58,7 +59,7 @@ class ChatServiceTest {
 
     @Test
     fun parseToolResultContentSingleJsonObjectTest() {
-        val service = createChatService(TestLlmClient())
+        val service = createChatService()
         val result = service.parseToolResultContent(listOf("""{"key": "value"}"""))
         assertIs<JsonObject>(result)
         assertEquals(JsonPrimitive("value"), result["key"])
@@ -66,7 +67,7 @@ class ChatServiceTest {
 
     @Test
     fun parseToolResultContentSingleJsonArrayTest() {
-        val service = createChatService(TestLlmClient())
+        val service = createChatService()
         val result = service.parseToolResultContent(listOf("""[1, 2, 3]"""))
         assertIs<JsonArray>(result)
         assertEquals(3, result.size)
@@ -74,7 +75,7 @@ class ChatServiceTest {
 
     @Test
     fun parseToolResultContentMultipleItemsTest() {
-        val service = createChatService(TestLlmClient())
+        val service = createChatService()
         val result = service.parseToolResultContent(listOf("""{"a": 1}""", "plain text", """[1]"""))
         assertIs<JsonArray>(result)
         assertEquals(3, result.size)
@@ -85,7 +86,7 @@ class ChatServiceTest {
 
     @Test
     fun parseToolResultContentInvalidJsonFallsBackToPrimitiveTest() {
-        val service = createChatService(TestLlmClient())
+        val service = createChatService()
         val result = service.parseToolResultContent(listOf("{invalid json"))
         assertIs<JsonPrimitive>(result)
         assertEquals("{invalid json", result.content)
@@ -132,30 +133,5 @@ class ChatServiceTest {
         assertEquals("tool_result", json["type"]?.jsonPrimitive?.content)
         assertIs<JsonArray>(json["content"])
         assertEquals(0, json["content"]?.jsonArray?.size)
-    }
-}
-
-class TestLlmClient(private val responses: MutableList<List<ToolCall>> = mutableListOf()) :
-    LlmClient {
-    override val modelName = "test-model"
-
-    val receivedMessages = mutableListOf<String>()
-
-    override suspend fun sendPrompt(
-        userMessage: String,
-        conversationHistory: List<ChatMessageJSON>,
-        tools: List<Tool>,
-        toolCallHistory: List<List<ToolCallWithResult>>?,
-        systemPromptExtension: String?,
-        onText: suspend (String) -> Unit,
-        onReasoning: suspend (String) -> Unit,
-    ): List<ToolCall> {
-        receivedMessages.add(userMessage)
-        return if (responses.isNotEmpty()) {
-            responses.removeFirst()
-        } else {
-            onText("Final answer from LLM")
-            emptyList()
-        }
     }
 }

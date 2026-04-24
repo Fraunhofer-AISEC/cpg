@@ -7,7 +7,7 @@
   import ToolResultBlock from './widgets/ToolResultBlock.svelte';
   import { CodeViewer, FileTree } from '$lib/components/analysis';
   import { agentSession } from '$lib/stores/agentSession.svelte';
-  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, ComponentJSON } from '$lib/types';
+  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, ComponentJSON, ConceptSuggestionItem, Model } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
   let selectedTranslationUnit = $state<TranslationUnitJSON | null>(null);
@@ -96,12 +96,15 @@
     isLoading: boolean;
     streamingContent: string;
     isThinking: boolean;
+    models?: Model[];
+    selectedModel?: Model | null;
     analysisResult?: AnalysisResultJSON | null;
     suggestions?: ConceptSuggestionItem[];
     onApplySuggestions?: (accepted: ConceptSuggestionItem[]) => Promise<void> | void;
     onSendMessage: () => void;
     onReset: () => void;
     onMessageChange: (message: string) => void;
+    onModelSelect?: (model: Model) => void;
     onPromptSelect?: (name: string, args: Record<string, string>) => void;
   }
 
@@ -111,12 +114,15 @@
     isLoading,
     streamingContent,
     isThinking,
+    models = [],
+    selectedModel = null,
     analysisResult,
     suggestions = $bindable([]),
     onApplySuggestions,
     onSendMessage,
     onReset,
     onMessageChange,
+    onModelSelect,
     onPromptSelect,
   }: Props = $props();
 
@@ -300,13 +306,18 @@
           value={currentMessage}
           onSend={onSendMessage}
           onValueChange={onMessageChange}
-          disabled={isLoading}
+          placeholder={!selectedModel ? 'No LLM provider configured — check application.conf' : 'Ask me about your codebase...'}
+          disabled={isLoading || !selectedModel}
           prompts={agentSession.mcpCapabilities?.prompts}
           onPromptSelect={onPromptSelect}
           onNewChat={onReset}
         />
         <div class="mt-1.5">
-          <SessionBar />
+          <SessionBar
+            {models}
+            {selectedModel}
+            {onModelSelect}
+          />
         </div>
       </div>
     </div>

@@ -113,6 +113,16 @@ export interface SkillInfo {
 }
 
 // AI Agent / Chat interfaces
+export interface LlmProviderWithModels {
+  name: string;
+  models: string[];
+}
+
+export interface Model {
+  client: string;
+  model: string;
+}
+
 export interface LLMMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
