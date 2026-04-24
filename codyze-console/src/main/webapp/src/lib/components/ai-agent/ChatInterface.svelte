@@ -1,9 +1,12 @@
 <script lang="ts">
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
+  import SessionBar from './SessionBar.svelte';
+  import CodeItemList, { isCodeItemContent } from './widgets/CodeItemList.svelte';
+  import DfgFlowWidget from './widgets/DfgFlowWidget.svelte';
   import ToolResultBlock from './widgets/ToolResultBlock.svelte';
   import { CodeViewer, FileTree } from '$lib/components/analysis';
-  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, McpCapabilities, ComponentJSON, ConceptSuggestionItem } from '$lib/types';
+  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, McpCapabilities, ComponentJSON, ConceptSuggestionItem, Model } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
   let selectedTranslationUnit = $state<TranslationUnitJSON | null>(null);
@@ -92,6 +95,8 @@
     isLoading: boolean;
     streamingContent: string;
     isThinking: boolean;
+    models?: Model[];
+    selectedModel?: Model | null;
     analysisResult?: AnalysisResultJSON | null;
     mcpCapabilities?: McpCapabilities | null;
     suggestions?: ConceptSuggestionItem[];
@@ -99,6 +104,7 @@
     onSendMessage: () => void;
     onReset: () => void;
     onMessageChange: (message: string) => void;
+    onModelSelect?: (model: Model) => void;
     onPromptSelect?: (name: string, args: Record<string, string>) => void;
     onOpenMcpModal?: () => void;
   }
@@ -109,6 +115,8 @@
     isLoading,
     streamingContent,
     isThinking,
+    models = [],
+    selectedModel = null,
     analysisResult,
     mcpCapabilities,
     suggestions = $bindable([]),
@@ -116,6 +124,7 @@
     onSendMessage,
     onReset,
     onMessageChange,
+    onModelSelect,
     onPromptSelect,
     onOpenMcpModal
   }: Props = $props();
@@ -300,24 +309,21 @@
           value={currentMessage}
           onSend={onSendMessage}
           onValueChange={onMessageChange}
-          placeholder="Ask me about your codebase..."
-          disabled={isLoading}
+          placeholder={!selectedModel ? 'No LLM provider configured — check application.conf' : 'Ask me about your codebase...'}
+          disabled={isLoading || !selectedModel}
           prompts={mcpCapabilities?.prompts}
           onPromptSelect={onPromptSelect}
           onNewChat={onReset}
         />
-        {#if mcpCapabilities && onOpenMcpModal}
-          <div class="mt-1.5 flex items-center gap-1.5">
-            <button
-              class="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700"
-              onclick={onOpenMcpModal}
-              title="MCP Server"
-            >
-              <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-              {mcpCapabilities.serverName}
-            </button>
-          </div>
-        {/if}
+        <div class="mt-1.5">
+          <SessionBar
+            {models}
+            {selectedModel}
+            {mcpCapabilities}
+            {onOpenMcpModal}
+            {onModelSelect}
+          />
+        </div>
       </div>
     </div>
   </div>

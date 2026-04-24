@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { PageProps } from './$types';
-  import type { ChatMessage, LLMMessage, ConceptSuggestionItem, LLMConcept } from '$lib/types';
+  import type { ChatMessage, LLMMessage, ConceptSuggestionItem, LLMConcept, Model } from '$lib/types';
   import { WelcomeScreen, ChatInterface, McpCapabilitiesModal, NotConfigured } from '$lib/components/ai-agent';
   import { PageHeader } from '$lib/components/navigation';
   import { llmAgent, type StreamingCallbacks } from '$lib/services/llmAgent';
@@ -11,6 +11,15 @@
   let { data }: PageProps = $props();
   const analysisResult = $derived(data?.result);
   const mcpCapabilities = $derived(data?.mcpCapabilities ?? null);
+  const providers = $derived(data?.providers ?? []);
+  const models = $derived.by((): Model[] =>
+    providers.flatMap((provider) =>
+      provider.models.map((model) => ({
+        client: provider.name,
+        model
+      }))
+    )
+  );
 
   function hasMcpToolAvailable(toolName: string): boolean {
     return mcpCapabilities?.tools.some(t => t.name === toolName) ?? false;
@@ -75,18 +84,25 @@
 
   // Load persisted state from sessionStorage
   function loadPersistedState() {
-    if (typeof window === 'undefined') return { messages: [], showWelcome: true };
+    if (typeof window === 'undefined') {
+      return { messages: [], showWelcome: true, selectedClient: null, selectedModel: null };
+    }
     const stored = sessionStorage.getItem('codyze-agent-state');
-    if (!stored) return { messages: [], showWelcome: true };
+    if (!stored) return { messages: [], showWelcome: true, selectedClient: null, selectedModel: null };
     try {
       const parsed = JSON.parse(stored);
       const messages = parsed.messages.map((msg: any) => ({
         ...msg,
         timestamp: new Date(msg.timestamp)
       }));
-      return { messages, showWelcome: parsed.showWelcome };
+      return {
+        messages,
+        showWelcome: parsed.showWelcome,
+        selectedClient: parsed.selectedClient ?? null,
+        selectedModel: parsed.selectedModel ?? null
+      };
     } catch {
-      return { messages: [], showWelcome: true };
+      return { messages: [], showWelcome: true, selectedClient: null, selectedModel: null };
     }
   }
 
@@ -98,16 +114,43 @@
   let streamingContent = $state('');
   let streamingReasoning = $state('');
   let showWelcome = $state(persisted.showWelcome);
+  let selectedClient = $state<string | null>(persisted.selectedClient);
+  let selectedModelName = $state<string | null>(persisted.selectedModel);
   let abortController: AbortController | null = null;
+
+  const selectedModel = $derived.by((): Model | null => {
+    return models.find((model) => model.client === selectedClient && model.model === selectedModelName) ?? null;
+  });
+
+  $effect(() => {
+    const currentModel = selectedModel;
+    if (currentModel) return;
+
+    const firstModel = models[0];
+    if (firstModel) {
+      selectedClient = firstModel.client;
+      selectedModelName = firstModel.model;
+    } else {
+      selectedClient = null;
+      selectedModelName = null;
+    }
+  });
 
   $effect(() => {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('codyze-agent-state', JSON.stringify({
         messages: chatMessages,
-        showWelcome
+        showWelcome,
+        selectedClient,
+        selectedModel: selectedModelName
       }));
     }
   });
+
+  function selectModel(model: Model) {
+    selectedClient = model.client;
+    selectedModelName = model.model;
+  }
 
   function handleWelcomeMessage(message: string) {
     currentMessage = message;
@@ -196,6 +239,8 @@
   }
 
   async function handlePromptSelect(name: string, args: Record<string, string>) {
+    if (!selectedModel) return;
+
     try {
       const res = await fetch(`/api/chat/mcp/prompts/${encodeURIComponent(name)}`, {
         method: 'POST',
@@ -224,7 +269,12 @@
         content: m.content
       }));
 
-      await llmAgent.chat(llmMessages, makeStreamingCallbacks());
+      await llmAgent.chat(
+        llmMessages,
+        selectedModel.client,
+        selectedModel.model,
+        makeStreamingCallbacks()
+      );
     } catch (error) {
       chatMessages = [...chatMessages, {
         id: Date.now().toString(),
@@ -237,7 +287,7 @@
   }
 
   async function sendMessage() {
-    if (!currentMessage.trim()) return;
+    if (!currentMessage.trim() || !selectedModel) return;
 
     chatMessages = [...chatMessages, {
       id: Date.now().toString(),
@@ -258,7 +308,12 @@
           : msg.content
       }));
 
-      await llmAgent.chat(llmMessages, makeStreamingCallbacks());
+      await llmAgent.chat(
+        llmMessages,
+        selectedModel.client,
+        selectedModel.model,
+        makeStreamingCallbacks()
+      );
     } catch (error) {
       chatMessages = [...chatMessages, {
         id: (Date.now() + 1).toString(),
@@ -284,28 +339,34 @@
     <div class="flex-1 overflow-hidden">
       <WelcomeScreen
         onWelcomeMessage={handleWelcomeMessage}
+        {models}
+        {selectedModel}
+        onModelSelect={selectModel}
         {mcpCapabilities}
         onOpenMcpModal={() => (showMcpModal = true)}
         onPromptSelect={handlePromptSelect}
       />
     </div>
   {:else}
-    <ChatInterface
-      messages={chatMessages}
-      {currentMessage}
-      {isLoading}
-      {streamingContent}
-      isThinking={streamingReasoning.length > 0}
-      {analysisResult}
-      {mcpCapabilities}
-      bind:suggestions
-      onApplySuggestions={handleApplySuggestions}
-      onSendMessage={sendMessage}
-      onReset={resetChat}
-      onMessageChange={(message) => (currentMessage = message)}
-      onPromptSelect={handlePromptSelect}
-      onOpenMcpModal={() => (showMcpModal = true)}
-    />
+      <ChatInterface
+        messages={chatMessages}
+        {currentMessage}
+        {isLoading}
+        {streamingContent}
+        isThinking={streamingReasoning.length > 0}
+        {models}
+        {selectedModel}
+        {analysisResult}
+        {mcpCapabilities}
+        bind:suggestions
+        onApplySuggestions={handleApplySuggestions}
+        onSendMessage={sendMessage}
+        onReset={resetChat}
+        onMessageChange={(message) => (currentMessage = message)}
+        onModelSelect={selectModel}
+        onPromptSelect={handlePromptSelect}
+        onOpenMcpModal={() => (showMcpModal = true)}
+      />
   {/if}
 </div>
 
