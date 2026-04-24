@@ -1177,11 +1177,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 newVals.mapTo(PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>()) {
                     Triple(it.first, it.second, false)
                 }
-            val destinations: ConcurrentIdentitySet<Node> = concurrentIdentitySetOf()
+            val destinations = identitySetOf<Node>()
             if (wT is InitializerList) destinations.addAll(wT.initializers)
             else destinations.add(wT)
             val destinationsAddresses =
-                destinations.flatMapTo(ConcurrentIdentitySet()) { doubleState.getAddresses(it, it) }
+                destinations.flatMapTo(IdentitySet()) { doubleState.getAddresses(it, it) }
             // Also for the new lastWrites, we need the lastWrite from the wT as well as the
             // existing ones (in case the loop is not executed)
             val lastWrites: MutableSet<NodeWithPropertiesKey> =
@@ -1196,7 +1196,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     sources,
                     // Don't actually add any destinations. That would cause the function to draw
                     // DFG-Edges, and we don't want that here.
-                    concurrentIdentitySetOf(),
+                    identitySetOf(),
                     destinationsAddresses,
                     lastWrites,
                 )
@@ -1218,7 +1218,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val destinations: ConcurrentIdentitySet<Node> =
             currentNode.operands.toConcurrentIdentitySet()
         val destinationsAddresses =
-            destinations.flatMapTo(ConcurrentIdentitySet()) { doubleState.getAddresses(it, it) }
+            destinations.flatMapTo(identitySetOf()) { doubleState.getAddresses(it, it) }
         val lastWrites: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet()
         lastWrites.add(NodeWithPropertiesKey(currentNode as Node, equalLinkedHashSetOf<Any>(false)))
         doubleState =
@@ -1226,7 +1226,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 lattice,
                 doubleState,
                 sources,
-                concurrentIdentitySetOf(),
+                identitySetOf(),
                 destinationsAddresses,
                 lastWrites,
             )
@@ -1947,8 +1947,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             lattice,
             doubleState,
             sources,
-            destinations.mapTo(ConcurrentIdentitySet()) { it.ref },
-            concurrentIdentitySetOf(dstAddr),
+            destinations.mapTo(identitySetOf()) { it.ref },
+            identitySetOf(dstAddr),
             lastWrites,
         )
     }
@@ -2352,15 +2352,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             currentNode.rhs.flatMapTo(PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>()) {
                 doubleState.getValues(it, it).map { Triple(it.first, it.second, false) }
             }
-        val destinations: ConcurrentIdentitySet<Node> = concurrentIdentitySetOf()
+        val destinations = identitySetOf<Node>()
         currentNode.lhs.forEach {
             if (it is InitializerList) destinations.addAll(it.initializers)
             else destinations.add(it)
         }
         val destinationsAddresses =
-            destinations.flatMapTo(ConcurrentIdentitySet()) { doubleState.getAddresses(it, it) }
+            destinations.flatMapTo(identitySetOf()) { doubleState.getAddresses(it, it) }
         val lastWrites: MutableSet<NodeWithPropertiesKey> =
-            destinations.mapTo(ConcurrentHashMap.newKeySet()) {
+            destinations.mapTo(identitySetOf()) {
                 NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>(false))
             }
 
@@ -2432,7 +2432,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      *  Make sure to catch nested MemberAccesses/Subscriptions too */
     private fun updateBaseLastWrites(
         doubleState: PointsToState.Element,
-        destinations: ConcurrentIdentitySet<Node>,
+        destinations: IdentitySet<Node>,
     ): PointsToState.Element {
         val doubleState = doubleState
         val bases = destinations.flatMap { destination -> collectBases(destination) }
@@ -3696,9 +3696,9 @@ suspend fun PointsToState.Element.updateValues(
     lattice: PointsToState,
     doubleState: PointsToState.Element,
     sources: PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>,
-    destinations: ConcurrentIdentitySet<Node>,
+    destinations: IdentitySet<Node>,
     // Node and short FS yes or no
-    destinationAddresses: ConcurrentIdentitySet<Node>,
+    destinationAddresses: IdentitySet<Node>,
     lastWrites: MutableSet<NodeWithPropertiesKey>,
 ): PointsToState.Element = coroutineScope {
     var doubleState = doubleState

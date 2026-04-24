@@ -4282,8 +4282,7 @@ class PointsToPassTest {
 
         // For data[0], we expect the following prevDFG Edges:
         // 1) The fullprevDFG to the PMVDerefValue of free (and to the original assignment in Line
-        // 10 if we didn't enter
-        // the if in Line 11)
+        // 10 if we didn't enter the if in Line 11)
         // 2) the index prevDFG
         assertTrue(printStructLineArgInput.prevFullDFG.contains(freeDerefPMV))
         assertEquals(
