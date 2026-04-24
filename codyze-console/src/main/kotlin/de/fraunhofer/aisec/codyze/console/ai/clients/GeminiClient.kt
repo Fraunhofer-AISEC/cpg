@@ -50,19 +50,13 @@ class GeminiClient(
 
     override suspend fun sendPrompt(
         userMessage: String,
+        systemPrompt: String,
         conversationHistory: List<ChatMessageJSON>,
         tools: List<Tool>,
         toolCallHistory: List<List<ToolCallWithResult>>?,
-        systemPromptExtension: String?,
         onText: suspend (String) -> Unit,
         onReasoning: suspend (String) -> Unit,
     ): List<ToolCall> {
-        val systemPrompt =
-            if (systemPromptExtension.isNullOrBlank()) {
-                SYSTEM_PROMPT
-            } else {
-                "$SYSTEM_PROMPT\n\n$systemPromptExtension"
-            }
         val toolCalls = mutableListOf<ToolCall>()
 
         /*

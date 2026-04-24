@@ -4,3 +4,4 @@ export { default as McpCapabilitiesModal } from './McpCapabilitiesModal.svelte';
 export { default as SkillsModal } from './SkillsModal.svelte';
 export { default as SessionBar } from './SessionBar.svelte';
 export { default as NotConfigured } from './NotConfigured.svelte';
+export { default as SessionBar } from './SessionBar.svelte';

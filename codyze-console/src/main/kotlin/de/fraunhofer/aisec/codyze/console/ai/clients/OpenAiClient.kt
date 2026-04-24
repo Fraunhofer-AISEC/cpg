@@ -45,15 +45,15 @@ class OpenAiClient(
 
     override suspend fun sendPrompt(
         userMessage: String,
+        systemPrompt: String,
         conversationHistory: List<ChatMessageJSON>,
         tools: List<Tool>,
         toolCallHistory: List<List<ToolCallWithResult>>?,
-        systemPromptExtension: String?,
         onText: suspend (String) -> Unit,
         onReasoning: suspend (String) -> Unit,
     ): List<ToolCall> {
         val messages =
-            buildMessages(userMessage, conversationHistory, toolCallHistory, systemPromptExtension)
+            buildMessages(userMessage, conversationHistory, toolCallHistory, systemPrompt)
         val openAiTools = convertToolDefinitions(tools)
 
         val request =
@@ -105,15 +105,9 @@ class OpenAiClient(
         userMessage: String,
         conversationHistory: List<ChatMessageJSON>,
         toolCallHistory: List<List<ToolCallWithResult>>?,
-        systemPromptExtension: String?,
+        systemPrompt: String,
     ): List<OpenAiMessage> {
         val messages = mutableListOf<OpenAiMessage>()
-        val systemPrompt =
-            if (systemPromptExtension.isNullOrBlank()) {
-                SYSTEM_PROMPT
-            } else {
-                "$SYSTEM_PROMPT\n\n$systemPromptExtension"
-            }
         messages += OpenAiMessage(role = "system", content = JsonPrimitive(systemPrompt))
         conversationHistory.dropLast(1).forEach { msg ->
             if (msg.content.isNotBlank()) {
