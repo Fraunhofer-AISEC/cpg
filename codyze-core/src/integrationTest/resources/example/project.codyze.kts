@@ -51,7 +51,15 @@ project {
         name = "My Mock TOE"
         architecture {
             modules {
-                module("test-module") { directory = "/Users/leutrimshala/repos/testproject-md5" }
+                module("module1") {
+                    directory = "src/module1"
+                    includeAll()
+                    exclude("tests")
+                }
+                module("module2") {
+                    directory = "src/module2"
+                    include("pkg")
+                }
             }
         }
     }
