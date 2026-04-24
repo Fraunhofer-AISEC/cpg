@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util.matchArgumentsToCallParameters
 import de.fraunhofer.aisec.cpg.helpers.concurrentIdentitySetOf
@@ -48,6 +49,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toConcurrentIdentitySet
+import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import java.text.NumberFormat
@@ -717,11 +719,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // the destValueDepth is != 1, meaning it has to refer to something deferred
                         // Now let's replace that
                         if (entry.destValueDepth != 1) {
-                            entry.lastWrites.forEach {
+                            entry.lastWrites.forEach { lastWrite ->
                                 function.functionSummary[param]
                                     ?.singleOrNull { it == entry }
                                     ?.lastWrites
-                                    ?.remove(it)
+                                    ?.remove(lastWrite)
                             }
                             function.functionSummary[param]
                                 ?.singleOrNull { it == entry }
@@ -791,8 +793,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         .filterTo(concurrentIdentitySetOf()) {
                             doubleState.hasDeclarationStateValueEntry(it)
                         }
-                        .flatMap {
-                            doubleState.getValues(it, it).mapTo(PowersetLattice.Element()) {
+                        .flatMap { value ->
+                            doubleState.getValues(value, value).mapTo(PowersetLattice.Element()) {
                                 it.first
                             }
                         }
@@ -1678,7 +1680,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return doubleState
     }
 
-    suspend fun writeEntry(
+    fun writeEntry(
         doubleState: PointsToState.Element,
         mapDstToSrc: ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>,
         dstValueDepth: Int,
@@ -2265,7 +2267,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         subAccessName.ifEmpty { (partialAccess?.partialTarget as? String) ?: "" }
                     val newName = Name(partialString, parentName)
                     fieldAddresses.addAll(
-                        doubleState.fetchFieldAddresses(concurrentIdentitySetOf(v), newName).map {
+                        doubleState.fetchFieldAddresses(identitySetOf(v), newName).map {
                             it to null
                         }
                     )
@@ -2611,9 +2613,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /* No need to set the address, this already happens in the constructor */
         val addresses =
             if (currentNode is Tuple) {
-                currentNode.elements.flatMapTo(ConcurrentIdentitySet()) {
-                    doubleState.getAddresses(it, it)
-                }
+                currentNode.elements.flatMapTo(IdentitySet()) { doubleState.getAddresses(it, it) }
             } else {
                 doubleState.getAddresses(currentNode, currentNode)
             }
@@ -2761,7 +2761,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // both to the ParameterMemoryValue we create in the first step
                 var src: Node = param
                 var addresses = doubleState.getAddresses(src, src)
-                var prevAddresses = concurrentIdentitySetOf<Node>()
+                var prevAddresses: IdentitySet<Node> = identitySetOf<Node>()
                 // If we have a Pointer as param, we initialize all levels, otherwise, only
                 // the first one
                 val paramDepth =
@@ -2869,7 +2869,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
                     prevAddresses = addresses
                     src = pmv
-                    addresses = concurrentIdentitySetOf(pmv)
+                    addresses = identitySetOf(pmv)
                 }
             }
         return doubleState
@@ -3161,7 +3161,7 @@ fun PointsToState.Element.getLastWrites(
                     } else {
                         getNodeName((input as Subscription).subscriptExpression)
                     }
-                val fieldAddresses = fetchFieldAddresses(concurrentIdentitySetOf(base), fieldName)
+                val fieldAddresses = fetchFieldAddresses(identitySetOf(base), fieldName)
                 // If we have no fieldAddresses, we resort to the base address
                 val addresses =
                     if (
@@ -3460,7 +3460,7 @@ fun PointsToState.Element.getValues(
     }
 }
 
-fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentIdentitySet<Node> {
+fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet<Node> {
     return when (node) {
         is Declaration -> {
             /*
@@ -3470,7 +3470,7 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
                 node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
             }
 
-            node.memoryAddresses.toConcurrentIdentitySet()
+            node.memoryAddresses.toIdentitySet()
         }
         is ParameterMemoryValue -> {
             // Here, it depends on our scope. When we are outside the function to which the PMV
@@ -3478,21 +3478,22 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
             // `memoryAddresses` field
             // However, if we are dealing with a PMV from the function we are currently in, this
             // information has not yet been propagated to the node, so we check out the state
-            val ret = node.memoryAddresses.toConcurrentIdentitySet<Node>()
-            ret.ifEmpty { this.declarationsState[node]?.first ?: concurrentIdentitySetOf() }
+            val ret = node.memoryAddresses.toIdentitySet<Node>()
+
+            ret.ifEmpty { this.declarationsState[node]?.first?.toIdentitySet() ?: identitySetOf() }
         }
         is MemoryAddress -> {
-            concurrentIdentitySetOf(node)
+            identitySetOf(node)
         }
         is PointerReference -> {
-            concurrentIdentitySetOf()
+            identitySetOf()
         }
         is PointerDereference -> {
             /*
              * PointerDereferences have as address the value of their input.
              * For example, the address of `*a` is the value of `a`
              */
-            val ret = concurrentIdentitySetOf<Node>()
+            val ret = identitySetOf<Node>()
             // When the node.input is not the startNode,
             // we should already now the value, so no need to fetch it from the generalState
             // This way we avoid loops
@@ -3534,7 +3535,7 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
                 /* If the refersTo is a Function, its address is the Function itself */
                 if (refersTo is Function) {
                     globalDerefs.put(refersTo, PowersetLattice.Element(Pair(refersTo, false)))
-                    concurrentIdentitySetOf(refersTo)
+                    identitySetOf(refersTo)
                 } else {
                     /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a Function. So let's do this here */
                     if (refersTo.memoryAddresses.isEmpty()) {
@@ -3542,9 +3543,9 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
                         refersTo.memoryAddresses += newAddress
                     }
 
-                    refersTo.memoryAddresses.toConcurrentIdentitySet()
+                    refersTo.memoryAddresses.toIdentitySet()
                 }
-            } ?: concurrentIdentitySetOf()
+            } ?: identitySetOf()
         }
         is Cast -> {
             /*
@@ -3560,21 +3561,18 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
             // does that), or does it make no difference in our abstract model?
             val baseValues =
                 if (startNode != node)
-                    fetchValueFromGeneralState(node.base).mapTo(ConcurrentIdentitySet()) { it.node }
-                else
-                    this.getValues(node.base, startNode).mapTo(ConcurrentIdentitySet()) { it.first }
+                    fetchValueFromGeneralState(node.base).mapTo(IdentitySet()) { it.node }
+                else this.getValues(node.base, startNode).mapTo(IdentitySet()) { it.first }
             // A C(++) special: If the base is a pointer, the value of this base-pointer is the
             // address of the first element.
             // So if it's about the address [0], we return the baseValues directly instead of
             // fetching fieldAddresses which depict abstract offsets from those base values
             if (localName.localName == "0") {
-                return this.getValues(node.base, startNode).mapTo(ConcurrentIdentitySet()) {
-                    it.first
-                }
+                return this.getValues(node.base, startNode).mapTo(IdentitySet()) { it.first }
             }
-            baseValues.flatMapTo(concurrentIdentitySetOf()) { node ->
+            baseValues.flatMapTo(identitySetOf()) { node ->
                 fetchFieldAddresses(
-                    concurrentIdentitySetOf(node),
+                    identitySetOf(node),
                     Name(localName.localName, getNodeName(node)),
                 )
             }
@@ -3586,10 +3584,10 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
             if (node.memoryAddresses.isEmpty()) {
                 node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
             }
-            node.memoryAddresses.toConcurrentIdentitySet()
+            node.memoryAddresses.toIdentitySet()
             //            }
         }
-        else -> concurrentIdentitySetOf(node)
+        else -> identitySetOf(node)
     }
 }
 
@@ -3662,20 +3660,20 @@ fun PointsToState.Element.getCachedNestedValues(
 Takes a set of basenodes and fetches the field addresses if any
 */
 fun PointsToState.Element.fetchFieldAddresses(
-    baseAddresses: ConcurrentIdentitySet<Node>,
+    baseAddresses: IdentitySet<Node>,
     nodeName: Name,
-): ConcurrentIdentitySet<Node> {
-    val fieldAddresses = concurrentIdentitySetOf<Node>()
+): IdentitySet<Node> {
+    val fieldAddresses = identitySetOf<Node>()
 
     baseAddresses.forEach { addr ->
         val elements =
-            declarationsState[addr]?.first?.filterTo(concurrentIdentitySetOf()) {
+            declarationsState[addr]?.first?.filterTo(identitySetOf()) {
                 it.name.localName == nodeName.localName
             }
 
         if (elements.isNullOrEmpty()) {
             val newEntry =
-                concurrentIdentitySetOf<Node>(
+                identitySetOf<Node>(
                     nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, nodeName)) {
                         MemoryAddress(nodeName, isGlobal(addr))
                     }
