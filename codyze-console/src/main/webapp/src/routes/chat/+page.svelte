@@ -11,7 +11,9 @@
 
   let { data }: PageProps = $props();
   const analysisResult = $derived(data?.result);
+
   const providers = $derived(data?.providers ?? []);
+
   const models = $derived.by((): Model[] =>
     providers.flatMap((provider) =>
       provider.models.map((model) => ({
@@ -173,6 +175,8 @@
     streamingReasoning = '';
     suggestions = [];
     isLoading = false;
+    selectedClient = null;
+    selectedModelName = null;
   }
 
   function makeStreamingCallbacks(): StreamingCallbacks {

@@ -1,5 +1,17 @@
 llm {
   clients {
+    ollama {
+        baseUrl = "http://localhost:11434"
+    }
+
+    vLLM {
+          baseUrl = "http://localhost:8000"
+        }
+
+    mlx {
+      baseUrl = "http://localhost:8000"
+    }
+
     openai {
       baseUrl = "https://api.openai.com"
       apiKeyEnv = "CODYZE_OPENAI_API_KEY"
@@ -8,14 +20,6 @@ llm {
     gemini {
       baseUrl = "https://generativelanguage.googleapis.com/v1beta"
       apiKeyEnv = "CODYZE_GEMINI_API_KEY"
-    }
-
-    vLLM {
-      baseUrl = "http://localhost:8000"
-    }
-
-    mlx {
-      baseUrl = "http://localhost:8000"
     }
   }
 }

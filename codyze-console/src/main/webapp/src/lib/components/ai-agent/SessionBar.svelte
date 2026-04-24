@@ -22,6 +22,12 @@
     menuOpen = false;
   }
 
+  function scrollIntoViewWhenOpen(node: HTMLButtonElement) {
+    if (menuOpen) {
+      node.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
   function handleDocumentClick(event: MouseEvent) {
     if (!menuOpen) return;
     if (menuContainer && !menuContainer.contains(event.target as Node)) {
@@ -80,13 +86,14 @@
 
           <div class="max-h-80 overflow-y-auto py-1" role="listbox">
             {#each modelsByProvider as [provider, providerModels]}
-              <div class="px-3 pt-2 pb-1">
+              <div class="sticky top-0 z-10 border-b border-gray-100 bg-white/95 px-3 py-1.5 backdrop-blur">
                 <p class="text-[10px] font-semibold tracking-wider text-gray-400 uppercase">{provider}</p>
               </div>
               {#each providerModels as model}
                 {@const isSelected = selectedModel?.client === model.client && selectedModel?.model === model.model}
                 <button
                   type="button"
+                  {@attach isSelected ? scrollIntoViewWhenOpen : () => {}}
                   class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-gray-50 {isSelected ? 'bg-blue-50' : ''}"
                   onclick={() => selectModel(model)}
                 >

@@ -1,20 +1,22 @@
 ---
 name: suggest-concepts
-description: Explore the CPG of an analyzed codebase and suggest semantic concepts and operations that describe what nodes are and what they do.
+description: Explore the CPG of an analyzed codebase and suggest semantic concepts and operations to tag nodes with what they are and what they do.
 ---
 
 # Suggest Concepts and Operations for a CPG
 
 Your task is to explore a Code Property Graph (CPG) of an analyzed codebase and suggest semantic
-concept and operation overlays for the nodes you find.
+concept and operation overlays to tag the nodes you find. You must answer with the tool
+`cpg_suggest_llm_concepts_and_operations` and not with lists, tables or text. 
 
 ## About the CPG
 
 The Code Property Graph is a language-agnostic representation of source code. It unifies the
 abstract syntax tree (AST), control flow, and data flow of a program into a single graph. Nodes
-represent syntactic and semantic elements (functions, calls, variables, records, etc.), and edges connect them.
+represent syntactic and semantic elements (functions, calls, variables, records, etc.), and edges
+connect them.
 
-On top of the raw graph we layer **overlays** — `Concept` and `Operation` nodes, which attach
+On top of the raw graph we layer **overlays** `Concept` and `Operation` nodes, which attach
 higher-level meaning to existing CPG nodes.
 
 ## Concepts vs. Operations
@@ -27,58 +29,48 @@ higher-level meaning to existing CPG nodes.
 
 **Operations** describe what something *does*.
 
-- Attached to nodes that perform an action, most often **call sites** (function calls, method
+- Attached to nodes that perform an action, most often **calls** (function or method
   calls).
 - Examples: `requests.post(...) → HttpRequest`, `file.write(...) → FileWrite`, `encrypt(...) →
-  Encrypt`.
+  Encryption`.
 - Every operation belongs to a concept.
 
 Rules:
-- A single node can carry a concept; a concept can stand on its own. An operation always needs a
-  concept.
+- A concept can stand on its own. An operation always needs a concept.
 - Keep names short and semantic: one word where possible (`Encryption`, `Logging`, `Secret`).
 
 ## Workflow
 
 ### 1. Load existing concepts and operations
 
-Call `cpg_list_llm_concepts_operations` first. If concepts are already defined from previous runs,
-**reuse their names and property schemas** where they semantically fit. Only invent a new concept
-when nothing existing matches.
+Call `cpg_list_llm_concepts_operations` once, before anything else.
+- If the result is non-empty, reuse those concept and operation names and their property schemas
+  wherever they semantically fit. Do not invent a duplicate under a different name.
+- If the result is empty suggest new ones.
 
 ### 2. Explore the code comprehensively
 
 Before suggesting follow a multistep approach by calling other tools to explore the graph, so one listing is rarely enough:
+Combine several of:
+- `cpg_list_functions`, `cpg_list_records`, `cpg_list_calls`, `cpg_list_calls_to`, etc. for
+  overview.
+- `cpg_get_node` to inspect a specific node in detail (if needed).
 
-- Listing tools to get an overview, e.g. `cpg_list_functions`, `cpg_list_records`, `cpg_list_calls`, etc.
-- Or call `cpg_get_node` to retrieve complete details of a node by ID when you need 
+Keep exploring until you have real node IDs for every concept and operation you intend to suggest.
 
-### 3. Define any missing concepts
+### 3. Suggest via the tool
 
-For each concept you want to use that doesn't already exist in the list from step 1, call
-`cpg_add_or_update_llm_concept` with:
+For each concept, call `cpg_suggest_llm_concepts_and_operations` with:
 
-- a clear, short name,
-- a description of what it represents,
-- relevant properties (if any),
-- the operations you expect to associate with it.
-
-Reuse matches existing concepts whenever possible don't create redundant ones.
-
-### 4. Suggest concepts and operations 
-
-Call `cpg_suggest_llm_concepts_and_operations` with **node IDs** that you obtained from the
-exploration tools. For each suggestion:
-
-- The concept's `nodeId` points to the node the concept semantically describes (e.g. the record or
-  field that embodies the concept).
-- Each operation's `nodeId` points to the node where the action is realized (typically a call
-  site).
+- The concept's `nodeId` pointing to the node the concept semantically describes (typically a
+  record, field, or variable).
+- Each operation's `nodeId` pointing to the node where the action is realized.
 - Include reasoning so the user can judge the suggestion.
 
-Never pass placeholder strings like `"TODO"` or `"unknown"`. If you don't yet have a ID, go back to step 2.
+All node IDs must come from prior tool results. Never pass placeholder strings like `"TODO"`,
+`"unknown"`, or invented IDs. If you don't have a real ID, go back to step 2.
 
-### 5. Wait for user approval
+### 4. Stop
 
-After you've made your suggestions, stop. Do **not** immediately apply them. The user reviews the
-suggestions and decides what to accept.
+Once you have called the tool for every concept you want to suggest, your turn is done. The user
+reviews the suggestions and decides what to accept. Do not apply anything yourself.
