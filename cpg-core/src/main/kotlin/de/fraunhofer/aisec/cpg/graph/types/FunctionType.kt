@@ -94,13 +94,13 @@ constructor(
         fun buildSignature(func: Function, returnTypes: List<Type>): String =
             func.name.localName +
                 func.parameters.joinToString(COMMA + WHITESPACE, BRACKET_LEFT, BRACKET_RIGHT) {
-                    it.type.typeName
+                    it.type.comparisonName
                 } +
                 (if (returnTypes.size == 1) {
-                    returnTypes.first().typeName
+                    returnTypes.first().comparisonName
                 } else {
                     returnTypes.joinToString(COMMA + WHITESPACE, BRACKET_LEFT, BRACKET_RIGHT) {
-                        it.typeName
+                        it.comparisonName
                     }
                 })
     }

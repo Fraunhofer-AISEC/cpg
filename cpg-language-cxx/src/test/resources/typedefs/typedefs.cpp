@@ -60,6 +60,8 @@ fp intFptr2;
 // common C idiom to avoid having to write "struct S"
 typedef struct {int a; int b;} S, *pS;
 
+S s1;
+
 // struct pointers
 S *ps1;
 pS ps2;

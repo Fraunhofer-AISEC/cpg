@@ -68,7 +68,8 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        val declarations = result.functions { it.name.localName == "foo" && !it.isDefinition }
+        val declarations =
+            result.functions { it.name.localName == "foo" && !it.isDefinition && !it.isInferred }
         assertTrue(declarations.isNotEmpty())
 
         val definition = result.functions[{ it.name.localName == "foo" && it.isDefinition }]

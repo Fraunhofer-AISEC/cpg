@@ -638,7 +638,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             } else {
                 aliasName.toString()
             }
-        val aliasType = AliasType(aliasTypeName, type, frontend.language)
+        // Get the actual underlying type - if type is already an AliasType, we should
+        // follow the chain to get the final non-AliasType
+        var actualType = type
+        while (actualType is AliasType) {
+            actualType = actualType.underlyingType
+        }
+        val aliasType = AliasType(aliasTypeName, actualType, frontend.language)
         val declaration = frontend.newTypedef(type, aliasType)
 
         frontend.scopeManager.addTypedef(declaration, scope)

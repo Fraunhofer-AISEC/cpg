@@ -228,9 +228,11 @@ class CXXExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
         val candidates =
             scope.symbols[declaration.symbol]?.filterIsInstance<Function>()?.filter {
                 // We should only connect methods to methods, functions to functions and
-                // constructors to constructors.
+                // constructors to constructors. Exclude inferred functions since they have
+                // incorrect parameter types during parsing.
                 it::class == declaration::class &&
                     !it.isDefinition &&
+                    !it.isInferred &&
                     it.signature == declaration.signature
             } ?: emptyList()
         for (candidate in candidates) {

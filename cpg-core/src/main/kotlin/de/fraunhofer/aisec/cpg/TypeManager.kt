@@ -197,6 +197,8 @@ class TypeManager {
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
         val finalToCheck = alias.root
+        // Return underlying type for backward compatibility
+        // This ensures function parameter type matching and method inference work correctly
         val applicable = scopeManager.typedefFor(finalToCheck.name, alias.scope)
         return applicable ?: alias
     }
@@ -266,7 +268,13 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
  * Optionally, the nodes that hold the respective type can be supplied as [hint] and [targetHint].
  */
 fun Type.tryCast(targetType: Type, hint: HasType? = null, targetHint: HasType? = null): CastResult {
-    return this.language.tryCast(this, targetType, hint, targetHint)
+    val effectiveTargetType =
+        if (targetType is AliasType) {
+            targetType.underlyingType
+        } else {
+            targetType
+        }
+    return this.language.tryCast(this, effectiveTargetType, hint, targetHint)
 }
 
 /**

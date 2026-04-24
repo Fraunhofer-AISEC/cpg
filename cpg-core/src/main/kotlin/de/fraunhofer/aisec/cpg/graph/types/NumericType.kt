@@ -63,9 +63,13 @@ open class NumericType(
         // For backward compatibility: allow AliasType to match underlying type
         val otherClass = other?.let { it::class.simpleName }
         if (otherClass == "AliasType") {
-            val otherType = other as Type
-            // For AliasType, we just check name and language (ignore modifier)
-            return name == otherType.name && language == otherType.language
+            val aliasType = other as AliasType
+            // Get the final underlying type (follow AliasType chain)
+            var underlying = aliasType.underlyingType
+            while (underlying is AliasType) {
+                underlying = underlying.underlyingType
+            }
+            return name == underlying.name && language == aliasType.language
         }
         return super.equals(other) && this.modifier == (other as? NumericType)?.modifier
     }

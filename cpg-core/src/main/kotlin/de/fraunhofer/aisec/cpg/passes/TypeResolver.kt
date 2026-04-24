@@ -77,9 +77,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (node is HasType) {
             // Handle AliasType directly without going through .root
             val type = node.type
-            log.error("handleNode HasType: type=${type.name} class=${type::class.simpleName}")
             if (type is AliasType) {
-                log.error("  -> calling handleType for AliasType")
                 handleType(type)
             } else {
                 handleType(type.root)
@@ -102,15 +100,11 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * @param type The type to handle.
      */
     private fun handleType(type: Type) {
-        log.error(
-            "handleType: ${type.name} class=${type::class.simpleName} origin=${type.typeOrigin}"
-        )
         if (
             (type is ObjectType || type is AliasType) &&
                 (type.typeOrigin == Type.Origin.UNRESOLVED ||
                     type.typeOrigin == Type.Origin.GUESSED)
         ) {
-            log.error("  -> calling resolveType for ${type.name}")
             resolveType(type)
         }
 
@@ -150,7 +144,6 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (target != null) {
             // Get the underlying type from the typedef (could be AliasType or regular Type)
             val resolvedType = if (target is AliasType) target.underlyingType else target
-            val resolvedName = resolvedType.name
 
             if (resolvedType.typeOrigin == Type.Origin.UNRESOLVED && type != resolvedType) {
                 // Make sure our typedef target is resolved
@@ -158,10 +151,15 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             }
 
             var originDeclares = resolvedType.recordDeclaration
-            log.trace("Aliasing type {} in {} scope to {}", type.name, type.scope, resolvedName)
+            log.trace(
+                "Aliasing type {} in {} scope to {}",
+                type.name,
+                type.scope,
+                resolvedType.name,
+            )
 
-            // Set the name to match the target type for type equality
-            type.name = resolvedName
+            // Update the name to match the underlying type
+            type.name = resolvedType.name
 
             // Copy properties from the target type
             type.declaredFrom = originDeclares
