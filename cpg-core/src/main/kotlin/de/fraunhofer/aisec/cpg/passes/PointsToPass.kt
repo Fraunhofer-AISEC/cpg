@@ -70,7 +70,6 @@ import kotlinx.coroutines.*
 val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
 var totalFunctionCount = 0
 var analyzedFunctionCount = 0
-val nodeVisitedCounterMap = ConcurrentIdentityHashMap<Node, Int>()
 
 typealias GeneralStateEntry =
     TripleLattice<
@@ -533,15 +532,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 }
                 result as PointsToState.Element
             }
-
-        if (nodeVisitedCounterMap.isNotEmpty()) {
-            if (log.isTraceEnabled) {
-                log.trace(
-                    "Finished EOGIteration. One of the most visited nodes ( ${nodeVisitedCounterMap.values.max()} visits): ${nodeVisitedCounterMap.filter { it.value == nodeVisitedCounterMap.values.max() }.entries.first().key} "
-                )
-            }
-            nodeVisitedCounterMap.clear()
-        }
 
         for ((key, value) in finalState.generalState) {
             // The generalState values have 3 items: The address, the value, and the
@@ -1062,11 +1052,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToState.Element,
     ): PointsToState.Element {
         var doubleState = doubleState
-        // DEBUG: Update node visited count
-        nodeVisitedCounterMap.put(
-            currentNode,
-            nodeVisitedCounterMap.getOrElse(currentNode) { 0 } + 1,
-        )
 
         // Used to keep iterating for steps which do not modify the alias-state otherwise
         doubleState =
