@@ -452,6 +452,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                 // Handle typedefs.
                 val declaration = handleTypedef(nameDecl.name, type)
+                (primaryDeclaration as? Record)?.let {
+                    type.recordDeclaration = it
+                    type.typeOrigin = Type.Origin.RESOLVED
+                }
 
                 sequence.addDeclaration(declaration)
             } else {
