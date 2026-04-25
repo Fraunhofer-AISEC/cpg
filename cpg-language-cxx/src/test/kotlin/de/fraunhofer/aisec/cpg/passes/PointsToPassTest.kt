@@ -4371,6 +4371,12 @@ class PointsToPassTest {
 
         assertContains(delete.nextDFG, xRefUse)
         assertContains(xRefDelete.nextDFG, xRefUse)
+
+        assertTrue(xInit !in delete.nextDFG)
+        assertTrue(xInit !in xRefDelete.nextDFG)
+        assertTrue(xAssign !in delete.nextDFG)
+        assertTrue(xAssign !in xRefDelete.nextDFG)
+
         assertContains(xRefUse.prevDFG, delete)
         assertContains(xRefUse.prevDFG, xRefDelete)
     }
