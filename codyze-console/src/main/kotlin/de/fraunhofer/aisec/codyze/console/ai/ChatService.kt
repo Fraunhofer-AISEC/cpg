@@ -28,6 +28,12 @@ package de.fraunhofer.aisec.codyze.console.ai
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import de.fraunhofer.aisec.codyze.console.ai.clients.*
+import de.fraunhofer.aisec.codyze.console.ai.skills.ACTIVATE_SKILL_TOOL_NAME
+import de.fraunhofer.aisec.codyze.console.ai.skills.SkillLoader
+import de.fraunhofer.aisec.codyze.console.ai.skills.buildActivateSkillTool
+import de.fraunhofer.aisec.codyze.console.ai.skills.buildSkillCatalog
+import de.fraunhofer.aisec.codyze.console.ai.skills.defaultSkillDirectories
+import de.fraunhofer.aisec.codyze.console.ai.skills.wrapActivatedSkill
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
@@ -49,7 +55,6 @@ class ChatService(
     private val llmProviderConfig: LlmProviderConfig,
     private val mcpServerUrl: String,
 ) {
-
     suspend fun listAvailableProviders(): List<LlmProviderWithModels> =
         llmProviderConfig.listAvailableProviders()
 
@@ -70,6 +75,82 @@ class ChatService(
         tools = mcp.listTools().tools
         prompts = mcp.listPrompts().prompts
         resources = mcp.listResources().resources
+    }
+
+    private val skillLoader = SkillLoader(defaultSkillDirectories)
+    private var skills: List<Skill> = skillLoader.discoverSkills()
+
+    /** Maximum number of tool call iterations before responding a text message. */
+    private val maxToolIterations = 50
+
+    /** Return the discovered skills. */
+    fun getSkills(): List<Skill> = skills
+
+    /** Process a chat query using the LLM with MCP tool support */
+    fun chat(request: ChatRequestJSON): Flow<String> = channelFlow {
+        // Used if the LLM needs more time for a "cold-start"
+        send(Events.keepalive())
+
+        val userMessage = request.messages.lastOrNull()?.content ?: ""
+        val conversationHistory = request.messages
+
+        val llm =
+            llmProviderConfig.clientFor(request.client, request.model)
+                ?: run {
+                    send(Events.text("Unknown or unavailable LLM client"))
+                    return@channelFlow
+                }
+
+        try {
+            val toolCallHistory = mutableListOf<List<ToolCallWithResult>>()
+            var iteration = 0
+
+            val allTools = tools + listOfNotNull(buildActivateSkillTool(skills))
+            val systemPrompt = buildSystemPrompt(skills)
+
+            var toolCalls =
+                llm.sendPrompt(
+                    userMessage = userMessage,
+                    systemPrompt = systemPrompt,
+                    conversationHistory = conversationHistory,
+                    tools = allTools,
+                    onText = { text -> send(Events.text(text)) },
+                    onReasoning = { thought -> send(Events.reasoning(thought)) },
+                )
+
+            while (toolCalls.isNotEmpty() && iteration < maxToolIterations) {
+                iteration++
+                val roundtripResults =
+                    toolCalls.map { toolCall ->
+                        val result = executeToolCall(toolCall) { jsonEvent -> send(jsonEvent) }
+                        ToolCallWithResult(toolCall, result)
+                    }
+                toolCallHistory.add(roundtripResults)
+
+                toolCalls =
+                    llm.sendPrompt(
+                        userMessage = userMessage,
+                        systemPrompt = systemPrompt,
+                        conversationHistory = conversationHistory,
+                        toolCallHistory = toolCallHistory,
+                        tools = allTools,
+                        onText = { text -> send(Events.text(text)) },
+                        onReasoning = { thought -> send(Events.reasoning(thought)) },
+                    )
+            }
+        } catch (e: Exception) {
+            log.error("Chat error: {}", e.message, e)
+            send(Events.text("Error: ${e.message}"))
+        }
+    }
+
+    /**
+     * Compose the system prompt sent to the LLM: the base prompt followed by the skill catalog when
+     * skills are available.
+     */
+    private fun buildSystemPrompt(skills: List<Skill>): String {
+        val catalog = buildSkillCatalog(skills) ?: return SYSTEM_PROMPT
+        return "$SYSTEM_PROMPT\n\n$catalog"
     }
 
     /** Return the MCP capabilities: tools, prompts, and resources. */
@@ -134,62 +215,6 @@ class ChatService(
         }
     }
 
-    /** Maximum number of tool call iterations before responding a text message. */
-    private val maxToolIterations = 30
-
-    /** Process a chat query using the LLM with MCP tool support */
-    fun chat(request: ChatRequestJSON): Flow<String> = channelFlow {
-        // Used if the LLM needs more time for a "cold-start"
-        send(Events.keepalive())
-
-        val userMessage = request.messages.lastOrNull()?.content ?: ""
-        val conversationHistory = request.messages
-
-        val llm =
-            llmProviderConfig.clientFor(request.client, request.model)
-                ?: run {
-                    send(Events.text("Unknown or unavailable LLM client"))
-                    return@channelFlow
-                }
-
-        try {
-            val toolCallHistory = mutableListOf<List<ToolCallWithResult>>()
-            var iteration = 0
-
-            var toolCalls =
-                llm.sendPrompt(
-                    userMessage = userMessage,
-                    conversationHistory = conversationHistory,
-                    tools = tools,
-                    onText = { text -> send(Events.text(text)) },
-                    onReasoning = { thought -> send(Events.reasoning(thought)) },
-                )
-
-            while (toolCalls.isNotEmpty() && iteration < maxToolIterations) {
-                iteration++
-                val roundtripResults =
-                    toolCalls.map { toolCall ->
-                        val result = executeToolCall(toolCall) { jsonEvent -> send(jsonEvent) }
-                        ToolCallWithResult(toolCall, result)
-                    }
-                toolCallHistory.add(roundtripResults)
-
-                toolCalls =
-                    llm.sendPrompt(
-                        userMessage = userMessage,
-                        conversationHistory = conversationHistory,
-                        toolCallHistory = toolCallHistory,
-                        tools = tools,
-                        onText = { text -> send(Events.text(text)) },
-                        onReasoning = { thought -> send(Events.reasoning(thought)) },
-                    )
-            }
-        } catch (e: Exception) {
-            log.error("Chat error: {}", e.message, e)
-            send(Events.text("Error: ${e.message}"))
-        }
-    }
-
     /**
      * Parse a list of text content items from an MCP tool result into a [JsonElement]. JSON strings
      * are parsed into their structured form; plain text is wrapped as [JsonPrimitive]. A single
@@ -217,6 +242,15 @@ class ChatService(
     ): String {
         return try {
             val arguments = Json.parseToJsonElement(toolCall.arguments).jsonObject
+
+            if (toolCall.name == ACTIVATE_SKILL_TOOL_NAME) {
+                val skillName = arguments["name"]?.jsonPrimitive?.contentOrNull
+                val skill = skills.find { it.name == skillName }
+                val resultText =
+                    skill?.let { wrapActivatedSkill(it) } ?: "Unknown skill: $skillName"
+                emit(Events.toolResult(toolCall.name, JsonPrimitive(resultText)))
+                return resultText
+            }
 
             val result = mcp.callTool(name = toolCall.name, arguments = arguments)
             val contentTexts = result.content.mapNotNull { (it as? TextContent)?.text }

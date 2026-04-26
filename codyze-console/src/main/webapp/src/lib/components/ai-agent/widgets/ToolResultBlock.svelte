@@ -3,8 +3,23 @@
   import DfgFlowWidget from './DfgFlowWidget.svelte';
   import type { ToolResult } from '$lib/types';
 
-  function getResultSummary(content: any, isError?: boolean): string {
+  function extractSkillName(content: any): string | null {
+    const text = typeof content === 'string'
+      ? content
+      : Array.isArray(content) && typeof content[0]?.text === 'string'
+        ? content[0].text
+        : null;
+    if (!text) return null;
+    const match = text.match(/<skill_content\s+name="([^"]+)"/);
+    return match ? match[1] : null;
+  }
+
+  function getResultSummary(toolName: string, content: any, isError?: boolean): string {
     if (isError) return 'Error';
+    if (toolName === 'activate_skill') {
+      const name = extractSkillName(content);
+      if (name) return name;
+    }
     const items = getItemsArray(content);
     if (items.length > 0) {
       return `${items.length} result${items.length !== 1 ? 's' : ''}`;
@@ -29,7 +44,7 @@
   let expanded = $state(false);
 
   let toolName = $derived(toolResult.toolName || 'Tool');
-  let summary = $derived(getResultSummary(toolResult.content, toolResult.isError));
+  let summary = $derived(getResultSummary(toolName, toolResult.content, toolResult.isError));
   let isDfg = $derived(toolResult.toolName === 'cpg_dfg_backward');
   let isCodeItems = $derived(isCodeItemContent(toolResult.content));
   let hasExpandableContent = $derived(isDfg || isCodeItems || typeof toolResult.content === 'string' || toolResult.content != null);

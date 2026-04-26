@@ -106,6 +106,12 @@ export interface McpCapabilities {
   resources: McpResourceInfo[];
 }
 
+export interface SkillInfo {
+  name: string;
+  description: string;
+  body: string;
+}
+
 // AI Agent / Chat interfaces
 export interface LlmProviderWithModels {
   name: string;

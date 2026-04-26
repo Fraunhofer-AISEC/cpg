@@ -1,17 +1,19 @@
 <script lang="ts">
   import type { PageProps } from './$types';
   import type { ChatMessage, LLMMessage, ConceptSuggestionItem, LLMConcept, Model } from '$lib/types';
-  import { WelcomeScreen, ChatInterface, McpCapabilitiesModal, NotConfigured } from '$lib/components/ai-agent';
+  import { WelcomeScreen, ChatInterface, McpCapabilitiesModal, SkillsModal, NotConfigured } from '$lib/components/ai-agent';
   import { PageHeader } from '$lib/components/navigation';
   import { llmAgent, type StreamingCallbacks } from '$lib/services/llmAgent';
+  import { agentSession } from '$lib/stores/agentSession.svelte';
 
   const SUGGEST_LLM_CONCEPTS_TOOL = 'cpg_suggest_llm_concepts_and_operations';
   const ADD_LLM_CONCEPTS_TOOL = 'cpg_add_llm_concept_and_operations';
 
   let { data }: PageProps = $props();
   const analysisResult = $derived(data?.result);
-  const mcpCapabilities = $derived(data?.mcpCapabilities ?? null);
+
   const providers = $derived(data?.providers ?? []);
+
   const models = $derived.by((): Model[] =>
     providers.flatMap((provider) =>
       provider.models.map((model) => ({
@@ -21,11 +23,14 @@
     )
   );
 
+  $effect(() => {
+    agentSession.init(data?.mcpCapabilities ?? null, data?.skills ?? []);
+  });
+
   function hasMcpToolAvailable(toolName: string): boolean {
-    return mcpCapabilities?.tools.some(t => t.name === toolName) ?? false;
+    return agentSession.mcpCapabilities?.tools.some(t => t.name === toolName) ?? false;
   }
 
-  let showMcpModal = $state(false);
   let suggestions = $state<ConceptSuggestionItem[]>([]);
 
   function isConceptSuggestion(toolName: string | undefined, content: any): content is LLMConcept {
@@ -170,6 +175,8 @@
     streamingReasoning = '';
     suggestions = [];
     isLoading = false;
+    selectedClient = null;
+    selectedModelName = null;
   }
 
   function makeStreamingCallbacks(): StreamingCallbacks {
@@ -333,7 +340,7 @@
 />
 
 <div class="-mx-6 -mb-6 flex flex-col" style="height: calc(100vh - 120px);">
-  {#if mcpCapabilities === null}
+  {#if agentSession.mcpCapabilities === null}
     <NotConfigured />
   {:else if showWelcome}
     <div class="flex-1 overflow-hidden">
@@ -342,37 +349,40 @@
         {models}
         {selectedModel}
         onModelSelect={selectModel}
-        {mcpCapabilities}
-        onOpenMcpModal={() => (showMcpModal = true)}
         onPromptSelect={handlePromptSelect}
       />
     </div>
   {:else}
-      <ChatInterface
-        messages={chatMessages}
-        {currentMessage}
-        {isLoading}
-        {streamingContent}
-        isThinking={streamingReasoning.length > 0}
-        {models}
-        {selectedModel}
-        {analysisResult}
-        {mcpCapabilities}
-        bind:suggestions
-        onApplySuggestions={handleApplySuggestions}
-        onSendMessage={sendMessage}
-        onReset={resetChat}
-        onMessageChange={(message) => (currentMessage = message)}
-        onModelSelect={selectModel}
-        onPromptSelect={handlePromptSelect}
-        onOpenMcpModal={() => (showMcpModal = true)}
-      />
+    <ChatInterface
+      messages={chatMessages}
+      {currentMessage}
+      {isLoading}
+      {streamingContent}
+      isThinking={streamingReasoning.length > 0}
+      {models}
+      {selectedModel}
+      {analysisResult}
+      bind:suggestions
+      onApplySuggestions={handleApplySuggestions}
+      onSendMessage={sendMessage}
+      onReset={resetChat}
+      onMessageChange={(message) => (currentMessage = message)}
+      onModelSelect={selectModel}
+      onPromptSelect={handlePromptSelect}
+    />
   {/if}
 </div>
 
-{#if showMcpModal && mcpCapabilities}
+{#if agentSession.showMcpModal && agentSession.mcpCapabilities}
   <McpCapabilitiesModal
-    capabilities={mcpCapabilities}
-    onClose={() => (showMcpModal = false)}
+    capabilities={agentSession.mcpCapabilities}
+    onClose={agentSession.closeMcpModal}
+  />
+{/if}
+
+{#if agentSession.showSkillsModal}
+  <SkillsModal
+    skills={agentSession.skills}
+    onClose={agentSession.closeSkillsModal}
   />
 {/if}

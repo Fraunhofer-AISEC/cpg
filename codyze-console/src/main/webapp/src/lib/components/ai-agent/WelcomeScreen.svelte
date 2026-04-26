@@ -1,15 +1,14 @@
 <script lang="ts">
   import MessageInput from './MessageInput.svelte';
   import SessionBar from './SessionBar.svelte';
-  import type { McpCapabilities, Model } from '$lib/types';
+  import type { Model } from '$lib/types';
+  import { agentSession } from '$lib/stores/agentSession.svelte';
 
   interface Props {
     onWelcomeMessage: (message: string) => void;
     models?: Model[];
     selectedModel?: Model | null;
     onModelSelect?: (model: Model) => void;
-    mcpCapabilities?: McpCapabilities | null;
-    onOpenMcpModal?: () => void;
     onPromptSelect?: (name: string, args: Record<string, string>) => void;
   }
 
@@ -18,8 +17,6 @@
     models = [],
     selectedModel = null,
     onModelSelect,
-    mcpCapabilities,
-    onOpenMcpModal,
     onPromptSelect
   }: Props = $props();
 
@@ -98,15 +95,13 @@
       onValueChange={(value) => messageInput = value}
       placeholder={!selectedModel ? 'No LLM provider configured — check application.conf' : 'Ask me anything about your codebase...'}
       disabled={!selectedModel}
-      prompts={mcpCapabilities?.prompts}
+      prompts={agentSession.mcpCapabilities?.prompts}
       onPromptSelect={onPromptSelect}
     />
     <div class="mt-2">
       <SessionBar
         {models}
         {selectedModel}
-        {mcpCapabilities}
-        {onOpenMcpModal}
         {onModelSelect}
       />
     </div>

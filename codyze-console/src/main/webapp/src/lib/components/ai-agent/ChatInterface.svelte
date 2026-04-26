@@ -6,7 +6,8 @@
   import DfgFlowWidget from './widgets/DfgFlowWidget.svelte';
   import ToolResultBlock from './widgets/ToolResultBlock.svelte';
   import { CodeViewer, FileTree } from '$lib/components/analysis';
-  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, McpCapabilities, ComponentJSON, ConceptSuggestionItem, Model } from '$lib/types';
+  import { agentSession } from '$lib/stores/agentSession.svelte';
+  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, ComponentJSON, ConceptSuggestionItem, Model } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
   let selectedTranslationUnit = $state<TranslationUnitJSON | null>(null);
@@ -84,7 +85,7 @@
     ) ?? null;
   }
 
-  const selectedComponent = $derived.by(() => {
+  const selectedComponent: ComponentJSON | null = $derived.by(() => {
     if (!selectedTranslationUnit || !analysisResult) return null;
     return findComponentForTu(selectedTranslationUnit.id);
   });
@@ -98,7 +99,6 @@
     models?: Model[];
     selectedModel?: Model | null;
     analysisResult?: AnalysisResultJSON | null;
-    mcpCapabilities?: McpCapabilities | null;
     suggestions?: ConceptSuggestionItem[];
     onApplySuggestions?: (accepted: ConceptSuggestionItem[]) => Promise<void> | void;
     onSendMessage: () => void;
@@ -106,7 +106,6 @@
     onMessageChange: (message: string) => void;
     onModelSelect?: (model: Model) => void;
     onPromptSelect?: (name: string, args: Record<string, string>) => void;
-    onOpenMcpModal?: () => void;
   }
 
   let {
@@ -118,7 +117,6 @@
     models = [],
     selectedModel = null,
     analysisResult,
-    mcpCapabilities,
     suggestions = $bindable([]),
     onApplySuggestions,
     onSendMessage,
@@ -126,7 +124,6 @@
     onMessageChange,
     onModelSelect,
     onPromptSelect,
-    onOpenMcpModal
   }: Props = $props();
 
   async function handleApplyAndReload(accepted: ConceptSuggestionItem[]) {
@@ -311,7 +308,7 @@
           onValueChange={onMessageChange}
           placeholder={!selectedModel ? 'No LLM provider configured — check application.conf' : 'Ask me about your codebase...'}
           disabled={isLoading || !selectedModel}
-          prompts={mcpCapabilities?.prompts}
+          prompts={agentSession.mcpCapabilities?.prompts}
           onPromptSelect={onPromptSelect}
           onNewChat={onReset}
         />
@@ -319,8 +316,6 @@
           <SessionBar
             {models}
             {selectedModel}
-            {mcpCapabilities}
-            {onOpenMcpModal}
             {onModelSelect}
           />
         </div>

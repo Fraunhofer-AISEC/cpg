@@ -62,7 +62,7 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
     suspend fun listAvailableProviders(): List<LlmProviderWithModels> {
         val result = mutableListOf<LlmProviderWithModels>()
         for (config in clients) {
-            if (config.provider == ClientProvider.GEMINI && config.apiKey.isNullOrBlank()) {
+            if (config.requiresApiKey && config.apiKey.isNullOrBlank()) {
                 continue
             }
             val models = fetchModels(config)
@@ -137,8 +137,9 @@ fun Config.toLlmProviderConfig(httpClient: HttpClient): LlmProviderConfig {
     val clients =
         clientsConfig.root().keys.map { name ->
             val client = clientsConfig.getConfig(name)
+            val requiresApiKey = client.hasPath("apiKeyEnv")
             val apiKey =
-                if (client.hasPath("apiKeyEnv")) {
+                if (requiresApiKey) {
                     val apiKeyEnv = client.getString("apiKeyEnv")
                     val envValue = System.getenv(apiKeyEnv)
 
@@ -161,7 +162,10 @@ fun Config.toLlmProviderConfig(httpClient: HttpClient): LlmProviderConfig {
                     } else {
                         ClientProvider.OPENAI_COMPATIBLE
                     },
+                requiresApiKey = requiresApiKey,
             )
         }
-    return LlmProviderConfig(httpClient, clients)
+    // Put local providers first, openai and gemini last.
+    val sortedClients = clients.sortedBy { it.name == "openai" || it.name == "gemini" }
+    return LlmProviderConfig(httpClient, sortedClients)
 }

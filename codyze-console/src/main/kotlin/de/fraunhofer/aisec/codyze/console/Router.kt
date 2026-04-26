@@ -319,6 +319,8 @@ fun Route.chatRoutes(chatService: ChatService) {
             val result = chatService.callTool(toolName, body)
             call.respond(result)
         }
+
+        get("/skills") { call.respond(chatService.getSkills()) }
     }
 }
 

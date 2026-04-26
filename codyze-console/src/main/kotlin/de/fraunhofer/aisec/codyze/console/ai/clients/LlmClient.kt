@@ -38,6 +38,7 @@ interface LlmClient {
      */
     suspend fun sendPrompt(
         userMessage: String,
+        systemPrompt: String,
         conversationHistory: List<ChatMessageJSON> = emptyList(),
         tools: List<Tool> = emptyList(),
         toolCallHistory: List<List<ToolCallWithResult>>? = null,

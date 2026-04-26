@@ -100,6 +100,7 @@ data class ClientConfig(
     val baseUrl: String,
     val apiKey: String?,
     val provider: ClientProvider,
+    val requiresApiKey: Boolean,
 )
 
 @Serializable data class LlmProviderWithModels(val name: String, val models: List<String>)
