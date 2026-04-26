@@ -19,7 +19,7 @@ connect them.
 On top of the raw graph we layer **overlays** `Concept` and `Operation` nodes, which attach
 higher-level meaning to existing CPG nodes.
 
-## Concepts vs. Operations
+## Concepts and Operations
 
 **Concepts** describe what something *is*.
 
@@ -60,15 +60,16 @@ Keep exploring until you have real node IDs for every concept and operation you 
 
 ### 3. Suggest via the tool
 
-For each concept, call `cpg_suggest_llm_concepts_and_operations` with:
+Suggest one concept per turn: emit a single `cpg_suggest_llm_concepts_and_operations`
+tool call, then proceed to the next concept on your next turn.
 
-- The concept's `nodeId` pointing to the node the concept semantically describes (typically a
-  record, field, or variable).
+Pass REAL node IDs returned by the previous tools. Never pass placeholder, invented,
+or guessed IDs. If you don't have a real ID, go back to step 2.
+
+For each call provide:
+- The concept's `nodeId` (typically a record, field, or variable).
 - Each operation's `nodeId` pointing to the node where the action is realized.
-- Include reasoning so the user can judge the suggestion.
-
-All node IDs must come from prior tool results. Never pass placeholder strings like `"TODO"`,
-`"unknown"`, or invented IDs. If you don't have a real ID, go back to step 2.
+- Reasoning so the user can judge the suggestion.
 
 ### 4. Stop
 
