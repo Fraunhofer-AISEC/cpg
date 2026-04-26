@@ -53,7 +53,7 @@ class SkillLoaderTest {
     }
 
     @Test
-    fun directoryWithoutSkillMdFileTest() {
+    fun skipsSubdirectoryWithoutSkillMdTest() {
         val skillsDir = Paths.get("src/test/resources/empty-skills")
         val loader = SkillLoader(listOf(skillsDir))
         assertEquals(emptyList(), loader.discoverSkills())
