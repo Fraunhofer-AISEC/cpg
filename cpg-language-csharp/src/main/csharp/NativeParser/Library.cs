@@ -309,6 +309,89 @@ public static class Library
         return Register(((FieldDeclarationSyntax)Nodes[handlePtr]).Declaration);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetPropertyDeclarationIdentifier")]
+    public static IntPtr GetPropertyDeclarationIdentifier(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((PropertyDeclarationSyntax)Nodes[handlePtr]).Identifier.ToString()
+        );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetPropertyDeclarationType")]
+    public static IntPtr GetPropertyDeclarationType(IntPtr handlePtr)
+    {
+        return Register(((PropertyDeclarationSyntax)Nodes[handlePtr]).Type);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetPropertyDeclarationAccessorList")]
+    public static IntPtr GetPropertyDeclarationAccessorList(IntPtr handlePtr)
+    {
+        var accessorList = ((PropertyDeclarationSyntax)Nodes[handlePtr]).AccessorList;
+        return accessorList != null ? Register(accessorList) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetPropertyDeclarationExpressionBody")]
+    public static IntPtr GetPropertyDeclarationExpressionBody(IntPtr handlePtr)
+    {
+        var expressionBody = ((PropertyDeclarationSyntax)Nodes[handlePtr]).ExpressionBody;
+        return expressionBody != null ? Register(expressionBody.Expression) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetPropertyDeclarationInitializer")]
+    public static IntPtr GetPropertyDeclarationInitializer(IntPtr handlePtr)
+    {
+        var initializer = ((PropertyDeclarationSyntax)Nodes[handlePtr]).Initializer;
+        return initializer != null ? Register(initializer.Value) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAccessorListAccessorCount")]
+    public static int GetAccessorListAccessorCount(IntPtr handlePtr)
+    {
+        return ((AccessorListSyntax)Nodes[handlePtr]).Accessors.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAccessorListAccessor")]
+    public static IntPtr GetAccessorListAccessor(IntPtr handlePtr, int index)
+    {
+        return Register(((AccessorListSyntax)Nodes[handlePtr]).Accessors[index]);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAccessorDeclarationKeyword")]
+    public static IntPtr GetAccessorDeclarationKeyword(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((AccessorDeclarationSyntax)Nodes[handlePtr]).Keyword.Text
+        );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAccessorDeclarationModifierCount")]
+    public static int GetAccessorDeclarationModifierCount(IntPtr handlePtr)
+    {
+        return ((AccessorDeclarationSyntax)Nodes[handlePtr]).Modifiers.Count;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAccessorDeclarationModifier")]
+    public static IntPtr GetAccessorDeclarationModifier(IntPtr handlePtr, int index)
+    {
+        return Marshal.StringToCoTaskMemUTF8(
+            ((AccessorDeclarationSyntax)Nodes[handlePtr]).Modifiers[index].Text
+        );
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAccessorDeclarationBody")]
+    public static IntPtr GetAccessorDeclarationBody(IntPtr handlePtr)
+    {
+        var body = ((AccessorDeclarationSyntax)Nodes[handlePtr]).Body;
+        return body != null ? Register(body) : IntPtr.Zero;
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetAccessorDeclarationExpressionBody")]
+    public static IntPtr GetAccessorDeclarationExpressionBody(IntPtr handlePtr)
+    {
+        var expressionBody = ((AccessorDeclarationSyntax)Nodes[handlePtr]).ExpressionBody;
+        return expressionBody != null ? Register(expressionBody.Expression) : IntPtr.Zero;
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetVariableDeclaratorIdentifier")]
     public static IntPtr GetVariableDeclaratorIdentifier(IntPtr handlePtr)
     {

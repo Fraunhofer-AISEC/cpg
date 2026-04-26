@@ -132,6 +132,7 @@ interface Csharp : Library {
                     "InterfaceDeclarationSyntax" -> InterfaceDeclarationSyntax(nativeValue)
                     "EnumDeclarationSyntax" -> EnumDeclarationSyntax(nativeValue)
                     "FieldDeclarationSyntax" -> FieldDeclarationSyntax(nativeValue)
+                    "PropertyDeclarationSyntax" -> PropertyDeclarationSyntax(nativeValue)
                     "MethodDeclarationSyntax" -> MethodDeclarationSyntax(nativeValue)
                     "ConstructorDeclarationSyntax" -> ConstructorDeclarationSyntax(nativeValue)
                     else -> super.fromNative(nativeValue, context)
@@ -333,7 +334,7 @@ interface Csharp : Library {
          * class.
          */
         open class StatementSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
-            override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any {
+            override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any? {
                 if (nativeValue !is Pointer) {
                     return super.fromNative(nativeValue, context)
                 }
@@ -545,6 +546,54 @@ interface Csharp : Library {
         class FieldDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
             val declaration: VariableDeclarationSyntax by lazy {
                 INSTANCE.GetFieldDeclaration(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`PropertyDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.propertydeclarationsyntax)
+         * class.
+         */
+        class PropertyDeclarationSyntax(p: Pointer? = Pointer.NULL) : MemberDeclarationSyntax(p) {
+            val identifier: String by lazy { INSTANCE.GetPropertyDeclarationIdentifier(this) }
+            val type: TypeSyntax by lazy { INSTANCE.GetPropertyDeclarationType(this) }
+            val accessorList: AccessorListSyntax? by lazy {
+                INSTANCE.GetPropertyDeclarationAccessorList(this)
+            }
+            val expressionBody: ExpressionSyntax? by lazy {
+                INSTANCE.GetPropertyDeclarationExpressionBody(this)
+            }
+            val initializer: ExpressionSyntax? by lazy {
+                INSTANCE.GetPropertyDeclarationInitializer(this)
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`AccessorListSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.accessorlistsyntax)
+         * class.
+         */
+        class AccessorListSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val accessors: List<AccessorDeclarationSyntax> by lazy {
+                val count = INSTANCE.GetAccessorListAccessorCount(this)
+                (0 until count).map { i -> INSTANCE.GetAccessorListAccessor(this, i) }
+            }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`AccessorDeclarationSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.accessordeclarationsyntax)
+         * class.
+         */
+        class AccessorDeclarationSyntax(p: Pointer? = Pointer.NULL) : Node(p) {
+            val keyword: String by lazy { INSTANCE.GetAccessorDeclarationKeyword(this) }
+            val body: BlockSyntax? by lazy { INSTANCE.GetAccessorDeclarationBody(this) }
+            val expressionBody: ExpressionSyntax? by lazy {
+                INSTANCE.GetAccessorDeclarationExpressionBody(this)
+            }
+            val modifiers: List<String> by lazy {
+                val count = INSTANCE.GetAccessorDeclarationModifierCount(this)
+                (0 until count).map { i -> INSTANCE.GetAccessorDeclarationModifier(this, i) }
             }
         }
 
@@ -999,6 +1048,41 @@ interface Csharp : Library {
     fun GetTypeParameterListParameter(handle: AST.TypeParameterListSyntax, index: Int): String
 
     fun GetFieldDeclaration(handle: AST.FieldDeclarationSyntax): AST.VariableDeclarationSyntax
+
+    fun GetPropertyDeclarationIdentifier(handle: AST.PropertyDeclarationSyntax): String
+
+    fun GetPropertyDeclarationType(handle: AST.PropertyDeclarationSyntax): AST.TypeSyntax
+
+    fun GetPropertyDeclarationAccessorList(
+        handle: AST.PropertyDeclarationSyntax
+    ): AST.AccessorListSyntax?
+
+    fun GetPropertyDeclarationExpressionBody(
+        handle: AST.PropertyDeclarationSyntax
+    ): AST.ExpressionSyntax?
+
+    fun GetPropertyDeclarationInitializer(
+        handle: AST.PropertyDeclarationSyntax
+    ): AST.ExpressionSyntax?
+
+    fun GetAccessorListAccessorCount(handle: AST.AccessorListSyntax): Int
+
+    fun GetAccessorListAccessor(
+        handle: AST.AccessorListSyntax,
+        index: Int,
+    ): AST.AccessorDeclarationSyntax
+
+    fun GetAccessorDeclarationKeyword(handle: AST.AccessorDeclarationSyntax): String
+
+    fun GetAccessorDeclarationBody(handle: AST.AccessorDeclarationSyntax): AST.BlockSyntax?
+
+    fun GetAccessorDeclarationExpressionBody(
+        handle: AST.AccessorDeclarationSyntax
+    ): AST.ExpressionSyntax?
+
+    fun GetAccessorDeclarationModifierCount(handle: AST.AccessorDeclarationSyntax): Int
+
+    fun GetAccessorDeclarationModifier(handle: AST.AccessorDeclarationSyntax, index: Int): String
 
     fun GetVariableDeclaratorIdentifier(handle: AST.VariableDeclaratorSyntax): String
 
