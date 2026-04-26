@@ -25,11 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.csharp
 
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.New
 import de.fraunhofer.aisec.cpg.graph.implicit
+import de.fraunhofer.aisec.cpg.graph.incompleteType
 import de.fraunhofer.aisec.cpg.graph.newAssign
 import de.fraunhofer.aisec.cpg.graph.newBlock
 import de.fraunhofer.aisec.cpg.graph.newConstructor
@@ -247,15 +249,9 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
-     * Translates a [PropertyDeclarationSyntax][Csharp.AST.PropertyDeclarationSyntax] into a [Field]
-     * representing its backing field, and additionally adds the respective getter and setter
-     * methods to the current record. Accessor bodies follow the C# spec:
-     * - An accessor with an explicit block body (`get { ... }`) keeps that body.
-     * - An accessor with an expression body (`get => expr;`) is wrapped into an implicit block
-     *   containing a return (for getters) or an assignment to the backing field (for setters).
-     * - An auto-accessor (`get;` / `set;`) gets a synthesized body that reads from or writes to the
-     *   backing field (`return this.<field>;` or `this.<field> = value;`).
-     * - A property-level expression body (`int X => expr;`) produces a single `get` accessor.
+     * TODO: Not completed yet Translates a
+     *   [PropertyDeclarationSyntax][Csharp.AST.PropertyDeclarationSyntax] into a [Field] and a
+     *   [Method] per accessor (`get`, `set`).
      *
      * C# spec:
      * [Properties](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#157-properties)
@@ -264,33 +260,35 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         val record = frontend.scopeManager.currentRecord
         val propertyType = frontend.typeOf(node.type)
 
-        val field = newField(node.identifier, rawNode = node)
+        val field = newField(node.identifier, rawNode = node).implicit()
         field.type = propertyType
-        field.modifiers = node.modifiers.toSet()
 
         node.initializer?.let { field.initializer = frontend.expressionHandler.handle(it) }
 
         node.accessorList?.accessors?.forEach { accessor ->
-            val method =
-                newMethod(
-                    "${accessor.keyword}_${node.identifier}",
-                    recordDeclaration = record,
-                    rawNode = accessor,
+            val accessorName =
+                Name.temporary(
+                    prefix = "${accessor.keyword}_${node.identifier}",
+                    separatorChar = '_',
                 )
-            // An accessor-level access modifier (e.g. `private set`) replaces the property's
-            // access modifier; otherwise the accessor inherits the property's modifiers.
+            val method =
+                newMethod(accessorName, recordDeclaration = record, rawNode = accessor)
+                    .implicit(
+                        code = frontend.codeOf(accessor),
+                        location = frontend.locationOf(accessor),
+                    )
             method.modifiers =
                 if (accessor.modifiers.isNotEmpty()) accessor.modifiers.toSet()
                 else node.modifiers.toSet()
             frontend.scopeManager.enterScope(method)
             createMethodReceiver(method)
 
-            val isSetter = accessor.keyword == "set" || accessor.keyword == "init"
+            val isSetter = accessor.keyword == "set"
             if (isSetter) {
                 val param = newParameter("value", propertyType, rawNode = accessor)
                 frontend.scopeManager.addDeclaration(param)
                 method.parameters += param
-                method.returnTypes = listOf(unknownType())
+                method.returnTypes = listOf(incompleteType())
             } else {
                 method.returnTypes = listOf(propertyType)
             }
@@ -300,42 +298,67 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
             if (body != null) {
                 method.body = frontend.statementHandler.handle(body)
             } else if (expressionBody != null) {
-                // `get => expr;` or `set => expr;` — wrap into an implicit block with either a
-                // return (for getters) or an assignment to the backing field (for setters).
-                val block = newBlock().implicit()
+                val block =
+                    newBlock()
+                        .implicit(
+                            code = frontend.codeOf(accessor),
+                            location = frontend.locationOf(accessor),
+                        )
                 val expr = frontend.expressionHandler.handle(expressionBody)
                 if (isSetter) {
                     val assign =
                         newAssign(
                                 operatorCode = "=",
-                                lhs = listOf(implicitThisFieldAccess(field)),
+                                lhs = listOf(implicitThisFieldAccess(field, accessor)),
                                 rhs = listOf(expr),
                             )
-                            .implicit()
+                            .implicit(
+                                code = frontend.codeOf(accessor),
+                                location = frontend.locationOf(accessor),
+                            )
                     block.statements += assign
                 } else {
-                    val ret = newReturn().implicit()
+                    val ret =
+                        newReturn()
+                            .implicit(
+                                code = frontend.codeOf(accessor),
+                                location = frontend.locationOf(accessor),
+                            )
                     ret.returnValue = expr
                     block.statements += ret
                 }
                 method.body = block
             } else {
-                // Auto-accessor (`get;` / `set;` / `init;`) — synthesize a body that reads or
-                // writes the backing field.
-                val block = newBlock().implicit()
+                // Auto-accessor (`get;`, `set;`)
+                val block =
+                    newBlock()
+                        .implicit(
+                            code = frontend.codeOf(accessor),
+                            location = frontend.locationOf(accessor),
+                        )
                 if (isSetter) {
-                    val valueRef = newReference("value", propertyType).implicit(code = "value")
+                    val valueRef =
+                        newReference("value", propertyType)
+                            .implicit(code = "value", location = frontend.locationOf(accessor))
                     val assign =
                         newAssign(
                                 operatorCode = "=",
-                                lhs = listOf(implicitThisFieldAccess(field)),
+                                lhs = listOf(implicitThisFieldAccess(field, accessor)),
                                 rhs = listOf(valueRef),
                             )
-                            .implicit()
+                            .implicit(
+                                code = frontend.codeOf(accessor),
+                                location = frontend.locationOf(accessor),
+                            )
                     block.statements += assign
                 } else {
-                    val ret = newReturn().implicit()
-                    ret.returnValue = implicitThisFieldAccess(field)
+                    val ret =
+                        newReturn()
+                            .implicit(
+                                code = frontend.codeOf(accessor),
+                                location = frontend.locationOf(accessor),
+                            )
+                    ret.returnValue = implicitThisFieldAccess(field, accessor)
                     block.statements += ret
                 }
                 method.body = block
@@ -347,15 +370,21 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         }
 
         node.expressionBody?.let {
-            // Property-level `int X => expr;` — equivalent to a single get accessor.
+            val accessorName =
+                Name.temporary(prefix = "get_${node.identifier}", separatorChar = '_')
             val method =
-                newMethod("get_${node.identifier}", recordDeclaration = record, rawNode = node)
+                newMethod(accessorName, recordDeclaration = record, rawNode = node)
+                    .implicit(code = frontend.codeOf(node), location = frontend.locationOf(node))
             method.modifiers = node.modifiers.toSet()
             frontend.scopeManager.enterScope(method)
             createMethodReceiver(method)
             method.returnTypes = listOf(propertyType)
-            val block = newBlock().implicit()
-            val ret = newReturn().implicit()
+            val block =
+                newBlock()
+                    .implicit(code = frontend.codeOf(node), location = frontend.locationOf(node))
+            val ret =
+                newReturn()
+                    .implicit(code = frontend.codeOf(node), location = frontend.locationOf(node))
             ret.returnValue = frontend.expressionHandler.handle(it)
             block.statements += ret
             method.body = block
@@ -367,14 +396,13 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         return field
     }
 
-    /** Creates an implicit `this.<field>` [MemberAccess] used inside synthetic accessor bodies. */
-    private fun implicitThisFieldAccess(field: Field): MemberAccess {
+    private fun implicitThisFieldAccess(field: Field, from: Csharp.AST.Node): MemberAccess {
         val record = frontend.scopeManager.currentRecord
         val thisRef =
             newReference(name = "this", type = record?.toType() ?: unknownType())
-                .implicit(code = "this")
+                .implicit(code = "this", location = frontend.locationOf(from))
         return newMemberAccess(name = field.name, base = thisRef, operatorCode = ".")
-            .implicit(code = "this.${field.name.localName}")
+            .implicit(code = "this.${field.name.localName}", location = frontend.locationOf(from))
     }
 
     /**

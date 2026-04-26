@@ -474,4 +474,23 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertIs<Reference>(base)
         assertEquals(enumsEnum, base.refersTo)
     }
+
+    @Test
+    fun testPropertyDeclarations() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("Properties.cs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val person = tu.records["Person"]
+        assertNotNull(person)
+
+        TODO()
+    }
 }
