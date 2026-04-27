@@ -3624,19 +3624,53 @@ class PointsToPassTest {
             }
         assertNotNull(tu)
 
-        val fd = tu.functions("test_array_initializer").singleOrNull { it.body != null }
-        assertNotNull(fd)
+        val testFD = tu.functions["test_array_initializer"]
+        assertNotNull(testFD)
 
-        val numbers0 = fd.allChildren<Subscription>().singleOrNull()
+        val numbers0 = testFD.allChildren<Subscription>()[0]
         assertNotNull(numbers0)
 
-        val literal0 = fd.literals[0]
-        assertNotNull(literal0)
+        val unknownAssigns0 = testFD.allChildren<Subscription>()[1]
+        assertNotNull(unknownAssigns0)
 
-        // While numbers[0] prevFullDFG should point to the literal, it's base prevFullDFG points to
-        // the lastwrite, which is the variable declaration
-        assertEquals(literal0, numbers0.prevFullDFG.single())
-        assertEquals(fd.variables["numbers"], numbers0.base.prevFullDFG.singleOrNull())
+        val knownAssigns0 = testFD.allChildren<Subscription>()[2]
+        assertNotNull(knownAssigns0)
+
+        val numbersInitFirstElement = testFD.literals[0]
+        assertNotNull(numbersInitFirstElement)
+
+        val unknownAssignsAssign1 = testFD.assignments[2]
+        assertNotNull(unknownAssignsAssign1)
+        val unknownAssignsAssign2 = testFD.assignments[3]
+        assertNotNull(unknownAssignsAssign2)
+
+        val knownAssignsAssign2 = testFD.assignments[6]
+        assertNotNull(knownAssignsAssign2)
+
+        // We initialized numbers with a set of static literals. Hence, while numbers[0] prevFullDFG
+        // should point to the literal, it's base prevFullDFG points to the lastwrite, which is the
+        // variable declaration
+        assertEquals(numbersInitFirstElement, numbers0.prevFullDFG.single())
+        assertEquals(testFD.variables["numbers"], numbers0.base.prevFullDFG.singleOrNull())
+
+        // unknown_assigns was initialized with a constructor, but we don't know the struct, so we
+        // expect a prevDFG edge to every lastWrite of a field, which are the two targets of the
+        // assigns
+        assertEquals(
+            setOf<Node>(unknownAssignsAssign1.target as Node, unknownAssignsAssign2.target as Node),
+            unknownAssigns0.prevFullDFG.toSet(),
+        )
+        // TODO: This currently points to the last partial write in the declaration due to a
+        // confusing EOG
+        //        assertEquals(testFD.variables["unknown_assigns"],
+        // unknownAssigns0.base.prevFullDFG.singleOrNull())
+
+        // For known_assigns, we know the struct, so we expect the prevDFG edge to point to the
+        // lastWrite of the first element
+        assertEquals(knownAssignsAssign2.target as Node, knownAssigns0.prevFullDFG.singleOrNull())
+        // TODO: This currently points to the last partial write in the declaration due to a
+        // confusing EOG
+        //        assertEquals(null, knownAssigns0.base.prevFullDFG.singleOrNull())
     }
 
     @Test
@@ -4211,7 +4245,36 @@ class PointsToPassTest {
         // The derefPMV has as prevFullDFG has the same prevFullDFG
         assertEquals(credentialLastWrite, realCodeDerefPMV.prevFullDFG.singleOrNull())
 
-        // TODO: credentials* and the derefderefPMV also should point somewhere
+        // The derefderefPMV and the currentderefderefValues of the argument point to both
+        // memberAccesses, as the struct is unknown
+        assertEquals(
+            setOf<Node>(
+                credentialAssign1.lhs.singleOrNull() as Node,
+                credentialAssign2.lhs.singleOrNull() as Node,
+            ),
+            realCodeDerefDerefPMV.prevFullDFG.toSet(),
+        )
+
+        assertEquals(
+            setOf<Node>(
+                credentialAssign1.lhs.singleOrNull() as Node,
+                credentialAssign2.lhs.singleOrNull() as Node,
+            ),
+            realCodeCallArg.prevDFGEdges
+                .filter {
+                    (it.granularity as? PointerDataflowGranularity)?.pointerTarget?.name ==
+                        "currentDerefDerefValue"
+                }
+                .map { it.start }
+                .toSet(),
+        )
+
+        // The final test: We should now have a DFG-Path from the 2nd argument of the sc Call to the
+        // argv Parameter of main
+        assertTrue(
+            (scArg2.collectAllPrevDFGPaths().map { it.nodes.last() }.toSet() as LinkedHashSet<*>)
+                .contains(mainFunc.parameters[1])
+        )
     }
 
     @Test

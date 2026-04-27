@@ -297,7 +297,7 @@ fun resolveMemberAccess(node: MemberAccess): Pair<Node, Name> {
         base = base.base
     }
 
-    return Pair(base, Name(newLocalname))
+    return Pair(base, Name(newLocalname, base.name))
 }
 
 fun calculateInnerConcurrencyCounter(outerConcurrencyCounter: Int): Int {
@@ -2658,50 +2658,89 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     when (ini) {
                         is PointerReference -> handleExpression(lattice, ini.input, doubleState)
                         is PointerDereference -> handleExpression(lattice, ini.input, doubleState)
+                        // For initializerLists, we extract all assigns and handle them
+                        // TODO: We will handle them again afterwards by traversing the EOG, not
+                        // sure if this is a problem
+                        is InitializerList -> {
+                            var tmpState = doubleState
+                            ini.initializers.filterIsInstance<Assign>().forEach {
+                                tmpState = handleAssign(lattice, it, tmpState)
+                            }
+                            tmpState
+                        }
                         else -> handleExpression(lattice, ini, doubleState)
                     }
-                if (
-                    ini is InitializerList &&
-                        // If we have an InitializerList that consists of only assigns, we handled
-                        // it via the normal EOG path, so we can ignore it now
-                        ini.initializers.any { it !is Assign }
-                ) {
-                    // Create a field for every initializer, i.e. at offset 0 we store the first
-                    // element, at offset 1 the second, etc...
-                    val fieldAddresses = identitySetOf<Node>()
-                    // We only analyze the first 200 elements in order not to have a too large
-                    // state
-                    for (i in 0..<ini.initializers.size.coerceAtMost(200)) {
-                        val fieldVal = ini.initializers[i]
-                        val parentName = getNodeName(currentNode)
-                        val newName = Name(i.toString(), parentName)
-                        doubleState.fetchFieldAddresses(addresses, newName).forEach { fieldAddr ->
-                            fieldAddresses.add(fieldAddr)
-                            val newEntry =
-                                declEntriesMap.computeIfAbsent(fieldAddr) {
-                                    DeclarationStateEntryElement(
-                                        PowersetLattice.Element(),
-                                        PowersetLattice.Element(),
-                                        PowersetLattice.Element(),
-                                    )
-                                }
-                            newEntry.first.add(fieldAddr)
-                            newEntry.second.add(Pair(fieldVal, false))
-                            newEntry.third.add(
-                                NodeWithPropertiesKey(fieldVal, equalLinkedHashSetOf())
-                            )
-                        }
-                    }
-                    // add the entries for the fieldAddress to the main addresses
-                    addresses.forEach { addr ->
-                        declEntriesMap[addr]?.first?.addAll(fieldAddresses)
-                        // The value of the base is the address of the first element in the
-                        // initializer
-                        fieldAddresses
-                            .singleOrNull { it.name.localName == "0" }
-                            ?.let { element0Addr ->
-                                declEntriesMap[addr]?.second?.add(Pair(element0Addr, false))
+                if (ini is InitializerList) {
+                    // If we have an InitializerList that consists of only assigns, we handled
+                    // it via the normal EOG path, so we can ignore it now
+                    if (ini.initializers.any { it !is Assign }) {
+                        // Create a field for every initializer, i.e. at offset 0 we store the first
+                        // element, at offset 1 the second, etc...
+                        val fieldAddresses = identitySetOf<Node>()
+                        // We only analyze the first 200 elements in order not to have a too large
+                        // state
+                        for (i in 0..<ini.initializers.size.coerceAtMost(200)) {
+                            val fieldVal = ini.initializers[i]
+                            val parentName = getNodeName(currentNode)
+                            val newName = Name(i.toString(), parentName)
+                            doubleState.fetchFieldAddresses(addresses, newName).forEach { fieldAddr
+                                ->
+                                fieldAddresses.add(fieldAddr)
+                                val newEntry =
+                                    declEntriesMap.computeIfAbsent(fieldAddr) {
+                                        DeclarationStateEntryElement(
+                                            PowersetLattice.Element(),
+                                            PowersetLattice.Element(),
+                                            PowersetLattice.Element(),
+                                        )
+                                    }
+                                newEntry.first.add(fieldAddr)
+                                newEntry.second.add(Pair(fieldVal, false))
+                                newEntry.third.add(
+                                    NodeWithPropertiesKey(fieldVal, equalLinkedHashSetOf())
+                                )
                             }
+                        }
+                        // add the entries for the fieldAddress to the main addresses
+                        addresses.forEach { addr ->
+                            declEntriesMap[addr]?.first?.addAll(fieldAddresses)
+                            // The value of the base is the address of the first element in the
+                            // initializer
+                            fieldAddresses
+                                .singleOrNull { it.name.localName == "0" }
+                                ?.let { element0Addr ->
+                                    declEntriesMap[addr]?.second?.add(Pair(element0Addr, false))
+                                }
+                        }
+                    } else {
+                        // We have assigns in the list, those should have already been handled
+                        // All we need to do is to set the correct entry for the base address
+                        // If we initialize a struct we don't know, we fetch all fieldAddresses from
+                        // the declarationState and set those as values
+                        // If we know the record, we set the value to the address of the first field
+                        val rd = currentNode.type.root.declaredFrom as? Record
+                        val fieldAddresses =
+                            if (rd == null || rd.isInferred) {
+                                addresses.flatMap { address ->
+                                    doubleState.declarationsState[address]?.first?.filter {
+                                        it != address
+                                    } ?: PowersetLattice.Element()
+                                }
+                            } else {
+                                // We get the fieldAddress by fetch all fieldAddresses from teh
+                                // declarationState and there taking the one which's localName
+                                // matches the one of the first field
+                                addresses.flatMap { address ->
+                                    doubleState.declarationsState[address]?.first?.filter {
+                                        it.name.localName == rd.fields.first().name.localName
+                                    } ?: PowersetLattice.Element()
+                                }
+                            }
+                        addresses.forEach { addr ->
+                            declEntriesMap[addr]
+                                ?.second
+                                ?.addAll(fieldAddresses.map { Pair(it, false) })
+                        }
                     }
                 } else {
                     values.addAll(
