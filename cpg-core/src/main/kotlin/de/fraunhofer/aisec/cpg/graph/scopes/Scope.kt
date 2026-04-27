@@ -119,8 +119,8 @@ sealed class Scope(
     @DoNotPersist var predefinedLookupScopes: MutableMap<Symbol, LookupScope> = mutableMapOf()
 
     /**
-     * A map of typedefs keyed by their alias name. This is still needed as a bridge until we
-     * completely redesign the alias / typedef system.
+     * A map of typedefs keyed by their alias name. The Typedef's alias is an [AliasType] that
+     * delegates to the underlying type.
      */
     @DoNotPersist val typedefs = mutableMapOf<Name, Typedef>()
 

@@ -327,8 +327,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             // When we have an assignment, we have *identical* types. We handle them as a typedef /
             // alias.
             spec.assign != 0 -> {
-                val aliasType = frontend.typeOf(spec.name)
-                val typedef = newTypedef(targetType, aliasType, rawNode = spec)
+                val typedef = newTypedef(targetType, frontend.typeOf(spec.name), rawNode = spec)
 
                 frontend.scopeManager.addTypedef(typedef)
                 typedef

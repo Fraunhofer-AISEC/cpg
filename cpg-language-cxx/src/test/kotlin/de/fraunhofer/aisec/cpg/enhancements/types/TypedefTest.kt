@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
@@ -173,9 +174,28 @@ internal class TypedefTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
 
+        val s1 = tu.variables["s1"]
+        assertNotNull(s1)
+
         val ps1 = tu.variables["ps1"]
         val ps2 = tu.variables["ps2"]
-        assertEquals(ps1?.type, ps2?.type)
+
+        // s1 is typed with the resolved underlying type (backward compatible)
+        // The typedef S is an AliasType stored in scope, but variables use the underlying type
+        val s1Type = s1.type
+        println("DEBUG: s1.type=$s1Type class=${s1Type::class.simpleName}")
+
+        // ps1 is declared as S* - the pointer's element type is the resolved underlying type
+        val type = assertIs<PointerType>(ps1?.type)
+        val elementType = type.elementType
+        // elementType should be the ObjectType (the underlying struct)
+        assertIs<ObjectType>(elementType)
+
+        // ps2 is declared with pS which is a typedef for S*
+        // With backward compatibility, its type is the resolved PointerType
+        val ps2Type = ps2?.type
+        val ps2Pointer = assertIs<PointerType>(ps2Type)
+        assertEquals(elementType, ps2Pointer.elementType)
     }
 
     @Test

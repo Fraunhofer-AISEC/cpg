@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.types.AliasType
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -74,8 +75,13 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun handleNode(node: Node) {
         if (node is HasType) {
-            var type = node.type.root
-            handleType(type)
+            // Handle AliasType directly without going through .root
+            val type = node.type
+            if (type is AliasType) {
+                handleType(type)
+            } else {
+                handleType(type.root)
+            }
             node.assignedTypes.forEach { handleType(it.root) }
         } else if (node is DeclaresType) {
             handleType(node.declaredType)
@@ -95,8 +101,9 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun handleType(type: Type) {
         if (
-            type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED ||
-                type.typeOrigin == Type.Origin.GUESSED
+            (type is ObjectType || type is AliasType) &&
+                (type.typeOrigin == Type.Origin.UNRESOLVED ||
+                    type.typeOrigin == Type.Origin.GUESSED)
         ) {
             resolveType(type)
         }
@@ -132,16 +139,29 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         type.updateGlobalScope()
 
         // Check for a possible typedef
-        var target = scopeManager.typedefFor(type.name, type.scope)
+        val lookupScope = type.scope ?: scopeManager.globalScope
+        val target = scopeManager.typedefFor(type.name, lookupScope)
         if (target != null) {
-            if (target.typeOrigin == Type.Origin.UNRESOLVED && type != target) {
+            // Get the underlying type from the typedef (could be AliasType or regular Type)
+            val resolvedType = if (target is AliasType) target.underlyingType else target
+
+            if (resolvedType.typeOrigin == Type.Origin.UNRESOLVED && type != resolvedType) {
                 // Make sure our typedef target is resolved
-                resolveType(target)
+                resolveType(resolvedType)
             }
 
-            var originDeclares = target.recordDeclaration
-            var name = target.name
-            log.trace("Aliasing type {} in {} scope to {}", type.name, type.scope, name)
+            var originDeclares = resolvedType.recordDeclaration
+            log.trace(
+                "Aliasing type {} in {} scope to {}",
+                type.name,
+                type.scope,
+                resolvedType.name,
+            )
+
+            // Update the name to match the underlying type
+            type.name = resolvedType.name
+
+            // Copy properties from the target type
             type.declaredFrom = originDeclares
             type.recordDeclaration = originDeclares
             type.typeOrigin = Type.Origin.RESOLVED

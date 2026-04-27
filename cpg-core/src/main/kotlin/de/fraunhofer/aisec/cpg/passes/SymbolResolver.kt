@@ -820,11 +820,15 @@ internal fun Pass<*>.resolveWithArguments(
     arguments: List<Expression>,
     source: Expression,
 ): CallResolutionResult {
+    // Prefer non-inferred functions when resolving calls
+    val allFunctions = candidates.filterIsInstance<Function>()
+    val (nonInferred, inferred) = allFunctions.partition { !it.isInferred }
+    val filteredFunctions = nonInferred.ifEmpty { inferred }
     val result =
         CallResolutionResult(
             source,
             arguments,
-            candidates.filterIsInstance<Function>().toSet(),
+            filteredFunctions.toSet(),
             setOf(),
             mapOf(),
             setOf(),

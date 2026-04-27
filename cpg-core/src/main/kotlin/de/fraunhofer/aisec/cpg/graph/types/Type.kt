@@ -165,6 +165,13 @@ abstract class Type : Node {
     val typeName: String
         get() = name.toString()
 
+    /**
+     * Returns the name used for type comparison. For AliasType, this returns the underlying type's
+     * name to ensure typedefs compare equal to their underlying types.
+     */
+    open val comparisonName: String
+        get() = name.toString()
+
     val isFirstOrderType: Boolean
         /**
          * @return True if the Type parameter t is a FirstOrderType (Root of a chain) and not a
@@ -176,14 +183,61 @@ abstract class Type : Node {
                 this is UnknownType ||
                 this is FunctionType ||
                 this is ProblemType ||
-                this is TupleType // TODO(oxisto): convert FunctionPointerType to second order type
-                ||
+                this is TupleType ||
                 this is FunctionPointerType ||
                 this is IncompleteType ||
-                this is ParameterizedType)
+                this is ParameterizedType ||
+                this is AliasType)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
+        // For backward compatibility: allow AliasType to match underlying type
+        // Use runtime class check since smart cast might not work in all cases
+        val otherClass = other?.let { it::class.simpleName }
+
+        // Case 1: This is NOT AliasType, other IS AliasType
+        if (otherClass == "AliasType") {
+            val aliasType = other as AliasType
+            var underlying = aliasType.underlyingType
+            while (underlying is AliasType) {
+                underlying = underlying.underlyingType
+            }
+            return name == underlying.name && language == aliasType.language
+        }
+
+        // Case 2: This IS AliasType, other is NOT AliasType
+        if (this is AliasType) {
+            val thisAlias = this as AliasType
+            var thisUnderlying = thisAlias.underlyingType
+            while (thisUnderlying is AliasType) {
+                thisUnderlying = thisUnderlying.underlyingType
+            }
+
+            // Case 2a: other is AliasType too - compare underlying types
+            if (other is AliasType) {
+                var otherUnderlying = other.underlyingType
+                while (otherUnderlying is AliasType) {
+                    otherUnderlying = otherUnderlying.underlyingType
+                }
+                return thisUnderlying.name == otherUnderlying.name &&
+                    thisUnderlying::class.simpleName == otherUnderlying::class.simpleName &&
+                    language == other.language
+            }
+
+            // Case 2b: other is non-AliasType - compare with underlying
+            if (other is Type) {
+                var otherUnderlying = other
+                if (other is SecondOrderType) {
+                    otherUnderlying = other.root
+                }
+                return thisUnderlying.name == otherUnderlying.name &&
+                    thisUnderlying::class.simpleName == otherUnderlying::class.simpleName &&
+                    language == other.language
+            }
+            return false
+        }
+
+        // Case 3: Neither is AliasType - normal comparison
         return other is Type &&
             name == other.name &&
             scope === other.scope &&
@@ -288,14 +342,21 @@ fun TypeOperations.apply(root: Type): Type {
     return type
 }
 
-/** A shortcut to return [ObjectType.recordDeclaration], if this is a [ObjectType]. */
+/**
+ * A shortcut to return [ObjectType.recordDeclaration], if this is a [ObjectType] or [AliasType].
+ */
 var Type.recordDeclaration: Record?
     get() {
-        return (this as? ObjectType)?.recordDeclaration
+        return when (this) {
+            is ObjectType -> this.recordDeclaration
+            is AliasType -> this.underlyingTypeRoot.recordDeclaration
+            else -> null
+        }
     }
     set(value) {
-        if (this is ObjectType) {
-            this.recordDeclaration = value
+        when (this) {
+            is ObjectType -> this.recordDeclaration = value
+            is AliasType -> this.underlyingTypeRoot.recordDeclaration = value
         }
     }
 

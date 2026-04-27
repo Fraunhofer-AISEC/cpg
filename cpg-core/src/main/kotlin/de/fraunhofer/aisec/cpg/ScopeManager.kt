@@ -693,6 +693,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     it.lastPartsMatch(lookupName)
                 }
             if (key != null) {
+                // Return the underlying type (not the AliasType) for type checking compatibility
                 return current.typedefs[key]?.type
             }
 
@@ -701,7 +702,50 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             if (!alias.isQualified()) {
                 val decl = current.typedefs[alias]
                 if (decl != null) {
+                    // Return the underlying type for backward compatibility
                     return decl.type
+                }
+            }
+
+            current = current.parent
+        }
+
+        return null
+    }
+
+    /**
+     * Returns the AliasType for a typedef alias, or null if not found. This returns the AliasType
+     * wrapper rather than the underlying type.
+     */
+    fun typedefAliasFor(
+        alias: Name,
+        scope: Scope? = currentScope,
+        prefix: Name? = currentNamespace,
+    ): Type? {
+        var current: Scope? = scope
+
+        while (current != null) {
+            val key =
+                current.typedefs.keys.firstOrNull {
+                    var lookupName = alias
+
+                    lookupName =
+                        if (lookupName.isQualified()) {
+                            lookupName
+                        } else {
+                            prefix?.fqn(lookupName.localName) ?: lookupName
+                        }
+
+                    it.lastPartsMatch(lookupName)
+                }
+            if (key != null) {
+                return current.typedefs[key]?.alias
+            }
+
+            if (!alias.isQualified()) {
+                val decl = current.typedefs[alias]
+                if (decl != null) {
+                    return decl.alias
                 }
             }
 

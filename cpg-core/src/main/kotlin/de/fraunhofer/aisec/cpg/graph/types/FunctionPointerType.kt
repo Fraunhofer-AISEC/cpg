@@ -66,6 +66,17 @@ class FunctionPointerType : Type {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
+        // For backward compatibility: allow AliasType to match underlying type
+        val otherClass = other?.let { it::class.simpleName }
+        if (otherClass == "AliasType") {
+            val aliasType = other as AliasType
+            // Get the final underlying type (follow AliasType chain)
+            var underlying = aliasType.underlyingType
+            while (underlying is AliasType) {
+                underlying = underlying.underlyingType
+            }
+            return name == underlying.name && language == aliasType.language
+        }
         if (other !is FunctionPointerType) return false
         return super.equals(other) &&
             parameters == other.parameters &&

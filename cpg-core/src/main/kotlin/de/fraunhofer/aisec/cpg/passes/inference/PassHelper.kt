@@ -49,6 +49,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.translationUnit
+import de.fraunhofer.aisec.cpg.graph.types.AliasType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -385,17 +386,21 @@ internal fun Pass<*>.tryMethodInference(
     }
 
     var records =
-        possibleContainingTypes.mapNotNull {
-            val root = it.root as? ObjectType
-            root?.recordDeclaration
+        possibleContainingTypes.mapNotNull { type ->
+            // Handle AliasType by getting the underlying type root
+            val effectiveType = if (type is AliasType) type.underlyingTypeRoot else type.root
+            val objType = effectiveType as? ObjectType
+            objType?.recordDeclaration
         }
 
     // We access an unknown method of an unknown record. so we need to handle that along the way as
     // well. We prefer the base type. This should only happen on types that are "built-in", as all
     // other type declarations are already inferred by the type resolver at this stage.
     if (records.isEmpty()) {
-        records =
-            listOfNotNull(tryRecordInference(bestGuess?.root ?: call.unknownType(), source = call))
+        val inferType =
+            bestGuess?.let { if (it is AliasType) it.underlyingTypeRoot else it.root }
+                ?: call.unknownType()
+        records = listOfNotNull(tryRecordInference(inferType, source = call))
     }
     records = records.distinct()
 

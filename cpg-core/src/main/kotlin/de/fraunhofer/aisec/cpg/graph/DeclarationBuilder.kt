@@ -242,7 +242,7 @@ fun MetadataProvider.newTypedef(targetType: Type, alias: Type, rawNode: Any? = n
 
     node.type = targetType
     node.alias = alias
-    // litle bit of a hack to make the type FQN
+    // A little hack to make the type FQN
     node.alias.name = node.name
 
     log(node)

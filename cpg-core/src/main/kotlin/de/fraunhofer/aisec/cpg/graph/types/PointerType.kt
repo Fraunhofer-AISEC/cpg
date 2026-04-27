@@ -82,26 +82,51 @@ class PointerType : Type, SecondOrderType {
         if (elementType is PointerType) {
             elementType.refreshNames()
         }
-        var localName = elementType.name.localName
+        // Use the local name (unwrap AliasType if needed for proper name)
+        val effectiveElement = (elementType as? AliasType)?.underlyingType ?: elementType
+        var localName = effectiveElement.name.localName
         localName +=
             if (pointerOrigin == PointerOrigin.ARRAY) {
                 "[]"
             } else {
                 "*"
             }
-        val fullTypeName = Name(localName, elementType.name.parent, elementType.name.delimiter)
+        val fullTypeName =
+            Name(localName, effectiveElement.name.parent, effectiveElement.name.delimiter)
         name = fullTypeName
     }
 
     val isArray: Boolean
         get() = pointerOrigin == PointerOrigin.ARRAY
 
+    override val comparisonName: String
+        get() {
+            // Use the underlying type's comparisonName for proper typedef comparison
+            val effectiveElementType = elementType.unwrapAliasType()
+            val elementName = effectiveElementType.comparisonName
+            return elementName + if (pointerOrigin == PointerOrigin.ARRAY) "[]" else "*"
+        }
+
+    private fun Type.unwrapAliasType(): Type {
+        var type = this
+        while (type is AliasType) {
+            type = type.underlyingType
+        }
+        return type
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
+        // For backward compatibility: allow AliasType to match underlying type
+        val otherClass = other?.let { it::class.simpleName }
+        if (otherClass == "AliasType") {
+            val aliasType = other as AliasType
+            // Compare using comparisonName to handle typedef aliases
+            return comparisonName == aliasType.comparisonName && language == aliasType.language
+        }
         if (other !is PointerType) return false
-        return super.equals(other) &&
-            elementType == other.elementType &&
-            pointerOrigin == other.pointerOrigin
+        // Compare using comparisonName to handle typedef aliases in element types
+        return comparisonName == other.comparisonName && pointerOrigin == other.pointerOrigin
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), elementType, pointerOrigin)
