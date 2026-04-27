@@ -82,10 +82,16 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is CPPASTDeleteExpression -> handleDelete(node)
             is CPPASTLambdaExpression -> handleLambda(node)
             is CPPASTSimpleTypeConstructorExpression -> handleSimpleTypeConstructorExpression(node)
+            is CASTArrayModifier -> handleCASTArrayModifier(node)
             else -> {
                 handleNotSupported(node, node.javaClass.name)
             }
         }
+    }
+
+    private fun handleCASTArrayModifier(node: CASTArrayModifier): Expression {
+        return if (node.constantExpression != null) handleNode(node.constantExpression)
+        else ProblemExpression("constantExpression is null")
     }
 
     /**
@@ -371,7 +377,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         return newMemberAccess(
             name,
-            base,
+            if (ctx.isPointerDereference)
+                newPointerDereference(base.name, rawNode = ctx).apply { this.input = base }
+            else base,
             unknownType(),
             if (ctx.isPointerDereference) "->" else ".",
             rawNode = ctx,
@@ -423,17 +431,33 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             else ->
                 Util.errorWithFileLocation(frontend, ctx, log, "unknown operator {}", ctx.operator)
         }
-        val unaryOperator =
-            newUnaryOperator(
-                operatorCode,
-                ctx.isPostfixOperator,
-                !ctx.isPostfixOperator,
-                rawNode = ctx,
-            )
-        if (input != null) {
-            unaryOperator.input = input
+        if (operatorCode == "&") {
+            return newPointerReference(handle(ctx.operand)?.name, unknownType(), rawNode = ctx)
+                .apply {
+                    if (input != null) {
+                        this.input = input
+                    }
+                }
+        } else if (operatorCode == "*") {
+            return newPointerDereference(handle(ctx.operand)?.name, unknownType(), rawNode = ctx)
+                .apply {
+                    if (input != null) {
+                        this.input = input
+                    }
+                }
+        } else {
+            val unaryOperator =
+                newUnaryOperator(
+                    operatorCode,
+                    ctx.isPostfixOperator,
+                    !ctx.isPostfixOperator,
+                    rawNode = ctx,
+                )
+            if (input != null) {
+                unaryOperator.input = input
+            }
+            return unaryOperator
         }
-        return unaryOperator
     }
 
     private fun handleFunctionCall(ctx: IASTFunctionCallExpression): Expression {
@@ -468,7 +492,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // FunctionPointerCallResolver
                 callExpression = newMemberCall(reference, rawNode = ctx)
             }
-            reference is UnaryOperator && reference.operatorCode == "*" -> {
+            reference is PointerDereference -> {
                 // Classic C-style function pointer call -> let's extract the target
                 callExpression = newCall(reference, "", false, rawNode = ctx)
             }
@@ -595,8 +619,22 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         val operatorCode = String(ASTStringUtil.getBinaryOperatorString(ctx))
         val assign = newAssign(operatorCode, listOf(lhs), listOf(rhs), rawNode = ctx)
-        if (rhs is UnaryOperator && rhs.input is Reference) {
-            (rhs.input as Reference).resolutionHelper = lhs
+        if (rhs is PointerReference) {
+            var ref = rhs.input
+            // Ignore any possible casts
+            while (ref is Cast) ref = ref.expression
+            if (ref is Reference) {
+                ref.resolutionHelper = lhs
+                rhs.resolutionHelper = lhs
+            }
+        } else if (rhs is PointerDereference) {
+            var ref = rhs.input
+            // Ignore any possible casts
+            while (ref is Cast) ref = ref.expression
+            if (ref is Reference) {
+                ref.resolutionHelper = lhs
+                rhs.resolutionHelper = lhs
+            }
         }
 
         return assign

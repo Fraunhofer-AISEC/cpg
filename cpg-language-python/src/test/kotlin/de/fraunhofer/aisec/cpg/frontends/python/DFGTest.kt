@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.nio.file.Path
@@ -115,6 +116,7 @@ class DFGTest {
         val result =
             analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.registerPass<PointsToPass>()
             }
         assertNotNull(result)
         val getTuple = result.functions["getTuple"]
@@ -131,6 +133,7 @@ class DFGTest {
         val result =
             analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.registerPass<PointsToPass>()
             }
         assertNotNull(result)
         val returnTuple = result.functions["returnTuple"]
@@ -144,6 +147,7 @@ class DFGTest {
         val result =
             analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.registerPass<PointsToPass>()
             }
         assertNotNull(result)
         val returnTuple = result.functions["returnTuple2"]
@@ -157,6 +161,7 @@ class DFGTest {
         val result =
             analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.registerPass<PointsToPass>()
             }
         assertNotNull(result)
         val getTuple = result.functions["getTuple2"]
@@ -174,6 +179,7 @@ class DFGTest {
         val result =
             analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.registerPass<PointsToPass>()
             }
         assertNotNull(result)
         val getTuple = result.functions["getTuple3"]
@@ -190,6 +196,7 @@ class DFGTest {
         val result =
             analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.registerPass<PointsToPass>()
             }
         assertNotNull(result)
         val getTuple = result.functions["getTuple4"]
@@ -206,6 +213,7 @@ class DFGTest {
         val result =
             analyze(listOf(topLevel.resolve("tuple_assign.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.registerPass<PointsToPass>()
             }
         assertNotNull(result)
         val getTuple = result.functions["getTuple4"]
@@ -242,6 +250,7 @@ class DFGTest {
         val result =
             analyze(listOf(topLevel.resolve("context_sensitive.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
+                it.registerPass<PointsToPass>()
             }
         assertNotNull(result)
 
