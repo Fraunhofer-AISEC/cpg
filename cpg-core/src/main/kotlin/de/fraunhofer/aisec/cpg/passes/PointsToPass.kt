@@ -1080,7 +1080,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 is MemoryAddress -> {
                     handleDeclaration(lattice, currentNode, doubleState)
                 }
-
+                is New -> {
+                    handleNew(lattice, currentNode, doubleState)
+                }
                 is Assign -> {
                     handleAssign(lattice, currentNode, doubleState)
                 }
@@ -1102,6 +1104,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 }
                 else -> doubleState
             }
+        return doubleState
+    }
+
+    protected fun handleNew(
+        lattice: PointsToState,
+        currentNode: New,
+        doubleState: PointsToState.Element,
+    ): PointsToState.Element {
+        // New creates a new memory address. This would cause infinite loops b/c there would always
+        // be something new in the state.
+        // To avoid this, we simply throw away the existing state for new
+        val doubleState = doubleState
+        doubleState.declarationsState[currentNode]?.first?.clear()
+        doubleState.declarationsState[currentNode]?.second?.clear()
+        doubleState.declarationsState[currentNode]?.third?.clear()
         return doubleState
     }
 
@@ -1215,17 +1232,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>(
                 Triple(currentNode, false, false)
             )
-        val destinations: ConcurrentIdentitySet<Node> =
-            currentNode.operands.toConcurrentIdentitySet()
         val destinationsAddresses =
-            destinations.flatMapTo(identitySetOf()) {
+            currentNode.operands.flatMapTo(identitySetOf()) {
                 doubleState.getValues(it, it).mapTo(identitySetOf()) { value -> value.first }
             }
-        val lastWrites: MutableSet<NodeWithPropertiesKey> =
-            destinations.mapTo(ConcurrentHashMap.newKeySet()) {
-                NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>(false))
-            }
-        lastWrites.add(NodeWithPropertiesKey(currentNode, equalLinkedHashSetOf<Any>(false)))
+        val lastWrites =
+            mutableSetOf(NodeWithPropertiesKey(currentNode, equalLinkedHashSetOf<Any>(false)))
         doubleState =
             doubleState.updateValues(
                 lattice,
@@ -3478,6 +3490,10 @@ fun PointsToState.Element.getValues(
                 this.getValues(it, it)
             }
         }
+        /*        is New -> {
+            // New returns a new MemoryAddress each time
+            PowersetLattice.Element(Pair(MemoryAddress(Name("new", node.name)), false))
+        }*/
         // For BinaryOperators, UnaryOperators, Literals etc. we'll end up here
         // For those, we define that they are the values of themselves
         // However, if we have a DeclarationState entry, we will return this one.

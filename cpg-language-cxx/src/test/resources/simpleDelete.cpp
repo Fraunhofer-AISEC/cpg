@@ -5,7 +5,7 @@ static void simpleDeleteTest()
     {
         x = new int64_t;
         *x = 5LL;
-        delete x;
+        delete x; //free(x)
     }
-    use(x);
+    use(*x);
 }

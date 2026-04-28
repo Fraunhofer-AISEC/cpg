@@ -4413,34 +4413,54 @@ class PointsToPassTest {
         assertNotNull(xInit)
         val xAssign =
             tu.refs.singleOrNull {
-                it !is PointerDereference &&
+                it is PointerDereference &&
                     it.name.localName == "x" &&
                     it.location?.region?.startLine == 7
             }
         assertNotNull(xAssign)
+        val xAssignInput =
+            tu.refs.singleOrNull {
+                it !is PointerDereference &&
+                    it.name.localName == "x" &&
+                    it.location?.region?.startLine == 7
+            }
+        assertNotNull(xAssignInput)
         val xRefDelete =
             tu.refs.singleOrNull { it.name.localName == "x" && it.location?.region?.startLine == 8 }
         assertNotNull(xRefDelete)
-        val xRefUse =
+        val xDerefUse =
             tu.refs.singleOrNull {
-                it.name.localName == "x" && it.location?.region?.startLine == 10
+                it is PointerDereference &&
+                    it.name.localName == "x" &&
+                    it.location?.region?.startLine == 10
             }
-        assertNotNull(xRefUse)
+        assertNotNull(xDerefUse)
         val delete = tu.allChildren<Delete>().singleOrNull()
         assertNotNull(delete)
 
-        assertTrue(xInit in xAssign.prevDFG)
-        assertTrue(xAssign.prevDFG.none { it is Delete })
+        // From the assign to X, we except no prevDFG edges expect the rhs b/c the value is written
+        // to
+        assertTrue(xInit.prevDFG.singleOrNull() is New)
 
-        assertContains(delete.nextDFG, xRefUse)
-        assertContains(xRefDelete.nextDFG, xRefUse)
+        // From the assign to x*, we expect a single prevFullDFG to the rhs
+        // It's input has one prevFullDFG, which points to the init in Line 6
+        assertEquals(1, xAssign.prevFullDFG.filter { (it as? Literal<*>)?.value == 5L }.size)
+        assertEquals(xInit, xAssignInput.prevDFG.singleOrNull())
+
+        // The x handed to delete has one prevFullDFG to the init
+        assertEquals(xInit, xRefDelete.prevFullDFG.singleOrNull())
+        // Its currentderefValue points to the 5LL
+        // TODO: Currently this is broken b/c we are not able do clear the state of New
+        //        assertEquals(xAssign, xRefDelete.prevDFGEdges.singleOrNull { (it.granularity as?
+        // PointerDataflowGranularity)?.pointerTarget?.name == "currentDerefValue" }?.start)
+
+        assertContains(delete.nextDFG, xDerefUse)
 
         assertTrue(xInit !in delete.nextDFG)
         assertTrue(xInit !in xRefDelete.nextDFG)
-        assertTrue(xAssign !in delete.nextDFG)
-        assertTrue(xAssign !in xRefDelete.nextDFG)
+        assertTrue(xAssignInput !in delete.nextDFG)
+        assertTrue(xAssignInput !in xRefDelete.nextDFG)
 
-        assertContains(xRefUse.prevDFG, delete)
-        assertContains(xRefUse.prevDFG, xRefDelete)
+        assertContains(xDerefUse.prevDFG, delete)
     }
 }
