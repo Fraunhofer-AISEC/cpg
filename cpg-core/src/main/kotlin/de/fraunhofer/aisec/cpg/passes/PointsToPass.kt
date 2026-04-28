@@ -2673,13 +2673,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // For initializerLists, we extract all assigns and handle them
                         // TODO: We will handle them again afterwards by traversing the EOG, not
                         // sure if this is a problem
-                        is InitializerList -> {
-                            var tmpState = doubleState
-                            ini.initializers.filterIsInstance<Assign>().forEach {
-                                tmpState = handleAssign(lattice, it, tmpState)
-                            }
-                            tmpState
-                        }
                         else -> handleExpression(lattice, ini, doubleState)
                     }
                 if (ini is InitializerList) {
@@ -2731,22 +2724,31 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // the declarationState and set those as values
                         // If we know the record, we set the value to the address of the first field
                         val rd = currentNode.type.root.declaredFrom as? Record
+                        rd.fields
                         val fieldAddresses =
-                            if (rd == null || rd.isInferred) {
+                            if (rd == null) {
+                                // If we don't have anything at all, all we can do is fetch
+                                // fieldAddresses from the declaration state
                                 addresses.flatMap { address ->
                                     doubleState.declarationsState[address]?.first?.filter {
                                         it != address
                                     } ?: PowersetLattice.Element()
                                 }
-                            } else {
-                                // We get the fieldAddress by fetch all fieldAddresses from teh
-                                // declarationState and there taking the one which's localName
-                                // matches the one of the first field
-                                addresses.flatMap { address ->
-                                    doubleState.declarationsState[address]?.first?.filter {
-                                        it.name.localName == rd.fields.first().name.localName
-                                    } ?: PowersetLattice.Element()
+                            } else if (rd.isInferred) {
+                                // We don't know which field is the first one, so we take all of
+                                // them
+                                rd.fields.flatMapTo(PowersetLattice.Element()) { field ->
+                                    doubleState.fetchFieldAddresses(
+                                        addresses,
+                                        Name(field.name.localName, currentNode.name),
+                                    )
                                 }
+                            } else {
+                                // We know the record so we only take the first address
+                                doubleState.fetchFieldAddresses(
+                                    addresses,
+                                    Name(rd.fields.first().name.localName, currentNode.name),
+                                )
                             }
                         addresses.forEach { addr ->
                             declEntriesMap[addr]

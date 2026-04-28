@@ -3646,6 +3646,8 @@ class PointsToPassTest {
 
         val knownAssignsAssign2 = testFD.assignments[6]
         assertNotNull(knownAssignsAssign2)
+        val knownAssignsAssign3 = testFD.assignments[7]
+        assertNotNull(knownAssignsAssign3)
 
         // We initialized numbers with a set of static literals. Hence, while numbers[0] prevFullDFG
         // should point to the literal, it's base prevFullDFG points to the lastwrite, which is the
@@ -3660,17 +3662,30 @@ class PointsToPassTest {
             setOf<Node>(unknownAssignsAssign1.target as Node, unknownAssignsAssign2.target as Node),
             unknownAssigns0.prevFullDFG.toSet(),
         )
-        // TODO: This currently points to the last partial write in the declaration due to a
-        // confusing EOG
-        //        assertEquals(testFD.variables["unknown_assigns"],
-        // unknownAssigns0.base.prevFullDFG.singleOrNull())
+        // For the base of unknownAssigns0, we expect the following FullDFG-Path:
+        //        unknownAssigns0.base <- <MemberAccessLine10.base> <- <MemberAccessLine9.base> <-
+        // Variable
+        assertEquals(
+            (unknownAssignsAssign2.target as? MemberAccess)?.base,
+            unknownAssigns0.base.prevFullDFG.singleOrNull(),
+        )
+        assertEquals(
+            (unknownAssignsAssign1.target as? MemberAccess)?.base,
+            (unknownAssignsAssign2.target as? MemberAccess)?.base?.prevFullDFG?.singleOrNull(),
+        )
+        assertEquals(
+            testFD.variables["unknown_assigns"],
+            (unknownAssignsAssign1.target as? MemberAccess)?.base?.prevFullDFG?.singleOrNull(),
+        )
 
         // For known_assigns, we know the struct, so we expect the prevDFG edge to point to the
         // lastWrite of the first element
         assertEquals(knownAssignsAssign2.target as Node, knownAssigns0.prevFullDFG.singleOrNull())
-        // TODO: This currently points to the last partial write in the declaration due to a
-        // confusing EOG
-        //        assertEquals(null, knownAssigns0.base.prevFullDFG.singleOrNull())
+        // The base of the knownassign points to the 3rd assignment
+        assertEquals(
+            (knownAssignsAssign3.target as? MemberAccess)?.base,
+            knownAssigns0.base.prevFullDFG.singleOrNull(),
+        )
     }
 
     @Test
