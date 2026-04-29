@@ -4445,7 +4445,7 @@ class PointsToPassTest {
         assertNotNull(xRefDelete)
         val xDerefUse =
             tu.refs.singleOrNull {
-                it !is PointerDereference &&
+                it is PointerDereference &&
                     it.name.localName == "x" &&
                     it.location?.region?.startLine == 10
             }
@@ -4465,9 +4465,15 @@ class PointsToPassTest {
         // The x handed to delete has one prevFullDFG to the init
         assertEquals(xInit, xRefDelete.prevFullDFG.singleOrNull())
         // Its currentderefValue points to the 5LL
-        // TODO: Currently this is broken b/c we are not able do clear the state of New
-        //        assertEquals(xAssign, xRefDelete.prevDFGEdges.singleOrNull { (it.granularity as?
-        // PointerDataflowGranularity)?.pointerTarget?.name == "currentDerefValue" }?.start)
+        assertEquals(
+            xAssign,
+            xRefDelete.prevDFGEdges
+                .singleOrNull {
+                    (it.granularity as? PointerDataflowGranularity)?.pointerTarget?.name ==
+                        "currentDerefValue"
+                }
+                ?.start,
+        )
 
         assertContains(delete.nextDFG, xDerefUse)
 
