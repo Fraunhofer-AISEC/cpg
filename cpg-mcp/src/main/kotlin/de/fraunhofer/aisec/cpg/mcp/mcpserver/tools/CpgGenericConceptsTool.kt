@@ -107,20 +107,9 @@ fun Server.addOrUpdateConcept() {
 fun Server.suggestLLMConceptsAndOperations() {
     val toolDescription =
         """
-        You MUST call this tool whenever the user asks you to suggest, propose, or identify concepts and operations for the analyzed code. Do NOT answer with text, instead return your suggestion through this tool.
-
-        A "concept" is a high-level semantic label (e.g. "Authentication", "Encryption", "Logging", etc.) attached to a CPG node to describe what it does. 
-        Each concept can have properties and operations (specific actions of that concept, e.g. "Logging.log", "Encryption.encrypt()").
-
-        REQUIRED WORKFLOW BEFORE CALLING THIS TOOL:
-        1. Call `cpg_list_llm_concepts_operations` once to see if concepts exist. If the list is non-empty, reuse existing concept and operation names (and their property schemas) whenever they semantically fit. If empty, suggest new ones.
-        2. Discover the code comprehensively before deciding. Concepts and operations can attach to any kind of CPG node not only functions, but also calls, records, fields, etc. A single listing (e.g. only function declarations) is never sufficient. 
-        3. Only then call this tool, with REAL node IDs obtained from the previous tools.
-
-        RULES:
-        - Never pass placeholder strings like "placeholder", "unknown", or invented IDs. If you do not yet have a real ID from a prior tool result, call tools to retrieve the information.
-        - The `nodeId` on the concept should point to the node the concept semantically describes. 
-        Each operation's `nodeId` should point to the node where that operation is realized (e.g. a specific call).
+        Suggests concept and operations for a node in the CPG.
+        The `nodeId` on the concept refers to the node the concept describes. Each operation's `nodeId` refers to the node where the operation is realized.
+        All node IDs must come from prior tool results, so do not pass placeholder or invented IDs.
         """
             .trimIndent()
 

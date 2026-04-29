@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "generate:completions": "node scripts/generate-cpg-completions.mjs",
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",

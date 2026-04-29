@@ -3,7 +3,7 @@
   import MonacoEditor from '$lib/components/MonacoEditor.svelte';
 
   let scriptCode = $state(`// CPG Query Script — the TranslationResult is available as \`result\`
-// All CPG packages are imported automatically.
+// Common CPG packages are imported automatically.
 
 // Count all functions (Shortcut API):
 result.functions.size
@@ -81,7 +81,7 @@ result.functions.size
           target="_blank"
           rel="noopener noreferrer">Query API</a
         >
-        are available. All standard CPG packages are imported automatically.
+        are available. Common CPG packages are imported automatically.
       </p>
     </div>
 
