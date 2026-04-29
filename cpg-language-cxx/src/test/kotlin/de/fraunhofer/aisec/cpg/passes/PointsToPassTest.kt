@@ -4445,7 +4445,7 @@ class PointsToPassTest {
         assertNotNull(xRefDelete)
         val xDerefUse =
             tu.refs.singleOrNull {
-                it is PointerDereference &&
+                it !is PointerDereference &&
                     it.name.localName == "x" &&
                     it.location?.region?.startLine == 10
             }
