@@ -1232,12 +1232,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>(
                 Triple(currentNode, false, false)
             )
+        val destinations: IdentitySet<Node> = currentNode.operands.toIdentitySet()
         val destinationsAddresses =
-            currentNode.operands.flatMapTo(identitySetOf()) {
-                doubleState.getValues(it, it).mapTo(identitySetOf()) { value -> value.first }
-            }
-        val lastWrites =
-            mutableSetOf(NodeWithPropertiesKey(currentNode, equalLinkedHashSetOf<Any>(false)))
+            destinations.flatMapTo(identitySetOf()) { doubleState.getAddresses(it, it) }
+        val lastWrites: MutableSet<NodeWithPropertiesKey> = identitySetOf()
+        lastWrites.add(NodeWithPropertiesKey(currentNode as Node, equalLinkedHashSetOf<Any>(false)))
         doubleState =
             doubleState.updateValues(
                 lattice,
