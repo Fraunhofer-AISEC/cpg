@@ -467,7 +467,7 @@ interface Lattice<T : Lattice.Element> {
                     nextEdge.start.prevEOGEdges.size == 1
             // Either before or after this edge, there's a branching node within two steps
             // (start, end and the nodes before/after these). We have to ensure that we copy the
-            // state for all these nodes to enable the update checks conducted ib the branching
+            // state for all these nodes to enable the update checks conducted on the branching
             // edges. We need one more step for this, otherwise we will fail recognizing the updates
             // for a node "x" which is a branching edge because the next node would already modify
             // the state of x.
@@ -516,13 +516,23 @@ interface Lattice<T : Lattice.Element> {
                             TODO()
                         } else {
                             val result =
-                                (oldGlobalIt?.let {
+                                if (!isNoBranchingPoint && oldGlobalIt != null) {
+                                    // It's a merge point and we've been here before. Use lub to
+                                    // merge the different states.
                                     this@Lattice.lub(
                                         one = newState,
-                                        two = it,
+                                        two = oldGlobalIt,
                                         allowModify = isNotNearStartOrEndOfBasicBlock,
                                     )
-                                } ?: newState)
+                                } else {
+                                    // We have no oldGlobalIt => no other choice than taking the
+                                    // current new state
+                                    // If it's not near a branch (most importantly merge points),
+                                    // the existing state should already have been computed on a
+                                    // "merge" before, so we don't need to lub here (already
+                                    // built-in in the new result)
+                                    newState
+                                }
                             result
                         }
 
@@ -553,8 +563,7 @@ interface Lattice<T : Lattice.Element> {
                                 it.start.nextEOGEdges.any { it.scc == null }
                         ) {
                             // This edge brings us to a merge point, so we add it to the list of
-                            // merge
-                            // points.
+                            // merge points.
                             mergePointsEdgesMap.removeIncomingEdgeFromMergePoint(it, nextEdge)
                         } else if (nextEdge.end.nextEOGEdges.size > 1) {
                             // If we have multiple next edges, we add the ones that stay inside the

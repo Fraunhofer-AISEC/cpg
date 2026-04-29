@@ -2747,7 +2747,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 // We know the record so we only take the first address
                                 doubleState.fetchFieldAddresses(
                                     addresses,
-                                    Name(rd.fields.first().name.localName, currentNode.name),
+                                    Name(
+                                        rd.fields.firstOrNull()?.name?.localName
+                                            ?: rd.name.localName,
+                                        currentNode.name,
+                                    ),
                                 )
                             }
                         addresses.forEach { addr ->
