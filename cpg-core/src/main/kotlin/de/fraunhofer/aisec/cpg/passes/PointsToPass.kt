@@ -1548,7 +1548,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val srcNode: Node?,
         val lastWrites: MutableSet<NodeWithPropertiesKey>,
         val propertySet: EqualLinkedHashSet<Any>,
-        val dst: ConcurrentIdentitySet<Node> = concurrentIdentitySetOf(),
+        val dst: IdentitySet<Node> = identitySetOf(),
     ) {
         override fun equals(other: Any?): Boolean {
             return other is MapDstToSrcEntry &&
@@ -1993,8 +1993,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private fun addEntryToMap(
         doubleState: PointsToState.Element,
         mapDstToSrc: ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>,
-        destinationAddresses: ConcurrentIdentitySet<Pair<Node?, String?>>,
-        destinations: ConcurrentIdentitySet<Node>,
+        destinationAddresses: IdentitySet<Pair<Node?, String?>>,
+        destinations: IdentitySet<Node>,
         srcNode: Node?,
         shortFS: Boolean,
         srcValueDepth: Int,
@@ -2213,11 +2213,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         subAccessName: String,
         argument: Node,
         properties: EqualLinkedHashSet<Any>,
-    ): Pair<ConcurrentIdentitySet<Pair<Node?, String?>>, ConcurrentIdentitySet<Node>> {
+    ): Pair<IdentitySet<Pair<Node?, String?>>, IdentitySet<Node>> {
         // If the dstAddr is a Call, the dst is the same. Otherwise, we don't really know,
         // so we leave it empty
-        val destination: ConcurrentIdentitySet<Node> =
-            if (argument is Call) concurrentIdentitySetOf(argument)
+        val destination: IdentitySet<Node> =
+            if (argument is Call) identitySetOf(argument)
             // if the argument is a PointerReference for a global variable, the destination is it's
             // refersTo
             // It might also be the case that argument is a Reference to an array, so then we treat
@@ -2230,13 +2230,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     isGlobal(argument) &&
                     argument.refersTo != null
             )
-                concurrentIdentitySetOf(argument.refersTo!!)
-            else concurrentIdentitySetOf()
+                identitySetOf(argument.refersTo!!)
+            else identitySetOf()
 
         val destAddrDepth = dstValueDepth - 1
         // Is the destAddrDepth > 2? In this case, the DeclarationState
         // might be outdated. So check in the mapDstToSrc for updates
-        val updatedAddresses: ConcurrentIdentitySet<Pair<Node?, String?>> =
+        val updatedAddresses: IdentitySet<Pair<Node?, String?>> =
             mapDstToSrc.entries
                 .filter {
                     it.key in
@@ -2246,7 +2246,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 }
                 .flatMap { it.value }
                 .filter { it.srcNode != null }
-                .mapTo(ConcurrentIdentitySet()) { it.srcNode to null }
+                .mapTo(IdentitySet()) { it.srcNode to null }
 
         return if (dstValueDepth > 2 && updatedAddresses.isNotEmpty()) {
             Pair(updatedAddresses, destination)
@@ -2254,7 +2254,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val partialAccess =
                 properties.filterIsInstance<PartialDataflowGranularity<*>>().singleOrNull()
             if (subAccessName.isNotEmpty() || partialAccess != null) {
-                val fieldAddresses = concurrentIdentitySetOf<Pair<Node?, String?>>()
+                val fieldAddresses = identitySetOf<Pair<Node?, String?>>()
                 // Collect the fieldAddresses for each possible value
                 val argumentValues =
                     doubleState.getNestedValues(argument, destAddrDepth, fetchFields = true)
@@ -2278,7 +2278,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             } else {
                 val destinationAddresses =
                     doubleState.getNestedValues(argument, destAddrDepth).mapTo(
-                        ConcurrentIdentitySet<Pair<Node?, String?>>()
+                        identitySetOf<Pair<Node?, String?>>()
                     ) {
                         it.first to null
                     }
@@ -2497,7 +2497,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // Filter only the values that are not stored for short FunctionSummaries (aka
                     // it.second set to true)
                     .filter { !it.second }
-                    .mapTo(ConcurrentIdentitySet()) { it.first }
+                    .mapTo(IdentitySet()) { it.first }
             val prevDFGs = doubleState.getLastWrites(currentNode)
 
             // If we have any information from the dereferenced value, we also fetch that (if it's
@@ -2507,7 +2507,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     (currentNode.astParent as? PointerDereference)?.access != AccessValues.WRITE
             ) {
                 values
-                    .filterTo(concurrentIdentitySetOf()) {
+                    .filterTo(identitySetOf()) {
                         /* If all we have here as a PMV value, we can skip it
                         Note: This only applies to the value, the deref and derefderefvalues
                         might be from different functions, so we leave those */
