@@ -1,11 +1,11 @@
 uniffi::setup_scaffolding!();
 
 use std::fs;
-use ra_ap_syntax::{SourceFile, SyntaxNode};
+use ra_ap_syntax::{ast, SourceFile, SyntaxNode, SyntaxToken};
 use ra_ap_syntax::{AstNode, Edition};
 use itertools::Itertools;
-use ra_ap_parser::SyntaxKind;
-use ra_ap_syntax::ast::{Abi, Adt, ArgList, ArrayExpr, ArrayType, AsmClobberAbi, AsmConst, AsmExpr, AsmLabel, AsmOperand, AsmOperandNamed, AsmOptions, AsmPiece, AsmRegOperand, AsmSym, AssocItem, AssocTypeArg, AwaitExpr, BecomeExpr, BinExpr, BlockExpr, BoxPat, BreakExpr, CallExpr, CastExpr, ClosureExpr, Const, ConstArg, ConstBlockPat, ConstParam, ContinueExpr, DocCommentIter, DynTraitType, Enum, Expr, ExprStmt, ExternBlock, ExternCrate, ExternItem, FieldExpr, FieldList, Fn, FnPtrType, ForExpr, ForType, FormatArgsExpr, GenericArg, GenericParam, HasArgList, HasGenericParams, HasLoopBody, HasName, IdentPat, IfExpr, Impl, ImplTraitType, IndexExpr, InferType, Item, LetElse, LetExpr, LetStmt, Lifetime, LifetimeArg, LifetimeParam, Literal, LiteralPat, LoopExpr, MacroCall, MacroDef, MacroExpr, MacroPat, MacroRules, MacroType, MatchArm, MatchExpr, MethodCallExpr, Module, NameRef, NeverType, OffsetOfExpr, OrPat, Param, ParamList, ParenExpr, ParenPat, ParenType, Pat, Path, PathExpr, PathPat, PathSegment, PathType, PrefixExpr, PtrType, RangeExpr, RangePat, RecordExpr, RecordExprField, RecordField, RecordFieldList, RecordPat, RecordPatField, RefExpr, RefPat, RefType, RestPat, RetType, ReturnExpr, ReturnTypeSyntax, SelfParam, SlicePat, SliceType, Static, Stmt, Struct, TokenTree, Trait, TryExpr, TupleExpr, TupleField, TupleFieldList, TuplePat, TupleStructPat, TupleType, Type, TypeAlias, TypeAnchor, TypeArg, TypeBound, TypeBoundList, TypeParam, UnderscoreExpr, Union, Use, UseBoundGenericArg, UseTree, Variant, VariantDef, WhileExpr, WildcardPat, YeetExpr, YieldExpr};
+use ra_ap_parser::{SyntaxKind, T};
+use ra_ap_syntax::ast::{Abi, Adt, ArgList, ArrayExpr, ArrayType, AsmClobberAbi, AsmConst, AsmExpr, AsmLabel, AsmOperand, AsmOperandNamed, AsmOptions, AsmPiece, AsmRegOperand, AsmSym, AssocItem, AssocTypeArg, AwaitExpr, BecomeExpr, BinExpr, BlockExpr, BoxPat, BreakExpr, CallExpr, CastExpr, ClosureExpr, Const, ConstArg, ConstBlockPat, ConstParam, ContinueExpr, DocCommentIter, DynTraitType, Enum, Expr, ExprStmt, ExternBlock, ExternCrate, ExternItem, FieldExpr, FieldList, Fn, FnPtrType, ForExpr, ForType, FormatArgsExpr, GenericArg, GenericParam, HasArgList, HasGenericArgs, HasGenericParams, HasLoopBody, HasName, HasTypeBounds, IdentPat, IfExpr, Impl, ImplTraitType, IndexExpr, InferType, Item, LetElse, LetExpr, LetStmt, Lifetime, LifetimeArg, LifetimeParam, Literal, LiteralPat, LoopExpr, MacroCall, MacroDef, MacroExpr, MacroPat, MacroRules, MacroType, MatchArm, MatchExpr, MethodCallExpr, Module, NameRef, NeverType, OffsetOfExpr, OrPat, Param, ParamList, ParenExpr, ParenPat, ParenType, Pat, Path, PathExpr, PathPat, PathSegment, PathType, PrefixExpr, PtrType, RangeExpr, RangePat, RecordExpr, RecordExprField, RecordField, RecordFieldList, RecordPat, RecordPatField, RefExpr, RefPat, RefType, RestPat, RetType, ReturnExpr, ReturnTypeSyntax, SelfParam, SlicePat, SliceType, Static, Stmt, Struct, TokenTree, Trait, TryExpr, TupleExpr, TupleField, TupleFieldList, TuplePat, TupleStructPat, TupleType, Type, TypeAlias, TypeAnchor, TypeArg, TypeBound, TypeBoundList, TypeParam, UnderscoreExpr, Union, Use, UseBoundGenericArg, UseTree, Variant, VariantDef, WhileExpr, WildcardPat, YeetExpr, YieldExpr};
 use crate::RSAst::RustProblem;
 use ra_ap_syntax::ast::HasModuleItem;
 
@@ -356,15 +356,27 @@ impl From<Enum> for RSEnum {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSExternBlock {pub(crate) ast_node: RSNode}
+pub struct RSExternBlock {pub(crate) ast_node: RSNode, extern_items: Vec<RSExternItem>, abi: Option<RSAbi>}
 impl From<ExternBlock> for RSExternBlock {
-    fn from(node:  ExternBlock) -> Self {RSExternBlock{ast_node: node.syntax().into()}}
+    fn from(node:  ExternBlock) -> Self {
+        RSExternBlock{
+            ast_node: node.syntax().into(),
+            abi: node.abi().map(Into::into),
+            extern_items: node.extern_item_list().map(|eil|eil.extern_items().map(Into::into).collect::<Vec<_>>()).unwrap_or_default()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSExternCrate {pub(crate) ast_node: RSNode}
+pub struct RSExternCrate {pub(crate) ast_node: RSNode, name_ref: Option<RSNameRef>, rename: Option<String>}
 impl From<ExternCrate> for RSExternCrate {
-    fn from(node:  ExternCrate) -> Self {RSExternCrate{ast_node: node.syntax().into()}}
+    fn from(node:  ExternCrate) -> Self {
+        RSExternCrate{
+            ast_node: node.syntax().into(),
+            name_ref: node.name_ref().map(Into::into),
+            rename: node.rename().map(|rn|rn.name().map(|n|n.to_string())).unwrap_or_default(),
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -392,10 +404,15 @@ impl From<Fn> for RSFn {
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSAbi {pub(crate) ast_node: RSNode, }
+pub struct RSAbi {pub(crate) ast_node: RSNode, has_extern: bool, string_literal: String}
 impl From<Abi> for RSAbi {
     fn from(node:  Abi) -> Self {
-        RSAbi{ast_node: node.syntax().into(),}
+
+        RSAbi{
+            ast_node: node.syntax().into(),
+            has_extern: node.extern_token().is_some(),
+            string_literal: node.syntax().text().to_string()
+        }
     }
 }
 
@@ -424,15 +441,25 @@ impl From<MacroCall> for RSMacroCall {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSMacroDef {pub(crate) ast_node: RSNode}
+pub struct RSMacroDef {pub(crate) ast_node: RSNode, name: Option<String>}
 impl From<MacroDef> for RSMacroDef {
-    fn from(node:  MacroDef) -> Self {RSMacroDef{ast_node: node.syntax().into()}}
+    fn from(node:  MacroDef) -> Self {
+        RSMacroDef{
+            ast_node: node.syntax().into(),
+            name: node.name().map(|n|n.to_string())
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSMacroRules {pub(crate) ast_node: RSNode}
+pub struct RSMacroRules {pub(crate) ast_node: RSNode, name: Option<String>}
 impl From<MacroRules> for RSMacroRules {
-    fn from(node: MacroRules) -> Self {RSMacroRules{ast_node: node.syntax().into()}}
+    fn from(node: MacroRules) -> Self {
+        RSMacroRules{
+            ast_node: node.syntax().into(),
+            name: node.name().map(|n|n.to_string())
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -449,9 +476,17 @@ impl From<Module> for RSModule {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSStatic {pub(crate) ast_node: RSNode}
+pub struct RSStatic {
+    pub(crate) ast_node: RSNode, name: Option<String>, ty: Option<RSType>
+}
 impl From<Static> for RSStatic {
-    fn from(node:  Static) -> Self {RSStatic{ast_node: node.syntax().into()}}
+    fn from(node:  Static) -> Self {
+        RSStatic{
+            ast_node: node.syntax().into(),
+            name: node.name().map(|n|n.to_string()),
+            ty: node.ty().map(Into::into)
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -491,22 +526,32 @@ impl From<Trait> for RSTrait {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSTypeAlias {pub(crate) ast_node: RSNode, generic_params: Vec<RSGenericParam>}
+pub struct RSTypeAlias {pub(crate) ast_node: RSNode, name: Option<String>,ty: Option<RSType>, type_bound_list: Vec<RSTypeBound>, generic_params: Vec<RSGenericParam>}
 impl From<TypeAlias> for RSTypeAlias {
     fn from(node:  TypeAlias) -> Self {
         RSTypeAlias{
             ast_node: node.syntax().into(),
+            name: node.name().map(|n|n.to_string()),
+            ty: node.ty().map(Into::into),
+            type_bound_list: node.type_bound_list().iter().flat_map(|tb|tb.bounds().map(Into::into)).collect::<Vec<_>>(),
             generic_params: node.generic_param_list().map(|gpl|gpl.generic_params().into_iter().map(Into::into)).into_iter().flatten().collect_vec()
         }
     }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSUnion {pub(crate) ast_node: RSNode, generic_params: Vec<RSGenericParam>}
+pub struct RSUnion {
+    pub(crate) ast_node: RSNode,
+    generic_params: Vec<RSGenericParam>,
+    name: Option<String>,
+    field_list: Option<RSRecordFieldList>
+}
 impl From<Union> for RSUnion {
     fn from(node:  Union) -> Self {
         RSUnion{
             ast_node: node.syntax().into(),
+            name: node.name().map(|n|n.to_string()),
+            field_list: node.record_field_list().map(Into::into),
             generic_params: node.generic_param_list().map(|gpl|gpl.generic_params().into_iter().map(Into::into)).into_iter().flatten().collect_vec()
         }
     }
@@ -1164,9 +1209,14 @@ impl From<YeetExpr> for RSYeetExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSYieldExpr {pub(crate) ast_node: RSNode}
+pub struct RSYieldExpr {pub(crate) ast_node: RSNode, expr: Vec<RSExpr>}
 impl From<YieldExpr> for RSYieldExpr {
-    fn from(node: YieldExpr ) -> Self {RSYieldExpr{ast_node: node.syntax().into()}}
+    fn from(node: YieldExpr ) -> Self {
+        RSYieldExpr{
+            ast_node: node.syntax().into(),
+            expr: node.expr().map(Into::into).into_iter().collect()
+        }
+    }
 }
 
 
@@ -1314,9 +1364,14 @@ impl From<LiteralPat> for RSLiteralPat {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSMacroPat {pub(crate) ast_node: RSNode}
+pub struct RSMacroPat {pub(crate) ast_node: RSNode, macro_call: Option<RSMacroCall>}
 impl From<MacroPat> for RSMacroPat {
-    fn from(node: MacroPat ) -> Self {RSMacroPat{ast_node: node.syntax().into()}}
+    fn from(node: MacroPat ) -> Self {
+        RSMacroPat{
+            ast_node: node.syntax().into(),
+            macro_call: node.macro_call().map(Into::into)
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1697,9 +1752,20 @@ impl From<Lifetime> for RSLifetime {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSNameRef {pub(crate) ast_node: RSNode, text: String}
+pub struct RSNameRef {pub(crate) ast_node: RSNode, text: String, ident: Option<String>, int_number_token: Option<String>, has_cap_Self: bool, has_crate: bool, has_self: bool, has_super:bool}
 impl From<NameRef> for RSNameRef {
-    fn from(node: NameRef ) -> Self {RSNameRef{ast_node: node.syntax().into(), text: node.text().to_string()} }
+    fn from(node: NameRef ) -> Self {
+        RSNameRef{
+            ast_node: node.syntax().into(),
+            text: node.text().to_string(),
+            ident: node.ident_token().map(|t|t.text().to_string()),
+            int_number_token: node.int_number_token().map(|t|t.text().to_string()),
+            has_cap_Self: node.Self_token().is_some(),
+            has_crate: node.crate_token().is_some(),
+            has_self: node.self_token().is_some(),
+            has_super: node.super_token().is_some()
+        }
+    }
 }
 
 #[derive(uniffi::Enum)]
@@ -1842,10 +1908,33 @@ impl From<GenericArg> for RSGenericArg {
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSAssocTypeArg {pub(crate) ast_node: RSNode}
-impl From<AssocTypeArg> for RSAssocTypeArg {
-    fn from(node: AssocTypeArg ) -> Self {RSAssocTypeArg{ast_node: node.syntax().into()}}
+pub struct RSAssocTypeArg {
+    pub(crate) ast_node: RSNode,
+    const_arg: Option<RSConstArg>,
+    name: Option<RSNameRef>,
+    param_list: Option<RSParamList>,
+    ret_type: Option<RSType>,
+    return_type_syntax: Option<RSReturnTypeSyntax>,
+    ty: Option<RSType>,
+    type_bounds: Vec<RSTypeBound>,
+    generic_args: Vec<RSGenericArg>,
 }
+impl From<AssocTypeArg> for RSAssocTypeArg {
+    fn from(node: AssocTypeArg ) -> Self {
+        RSAssocTypeArg{
+            ast_node: node.syntax().into(),
+            const_arg: node.const_arg().map(Into::into),
+            name: node.name_ref().map(Into::into),
+            param_list: node.param_list().map(Into::into),
+            ret_type: node.ret_type().and_then(|rt|rt.ty().map(Into::into)),
+            return_type_syntax: node.return_type_syntax().map(Into::into),
+            ty: node.ty().map(Into::into),
+            type_bounds: node.type_bound_list().iter().flat_map(|tb|tb.bounds().map(Into::into)).collect::<Vec<_>>(),
+            generic_args: node.generic_arg_list().iter().flat_map(|gal|gal.generic_args().map(Into::into)).collect::<Vec<_>>()
+        }
+    }
+}
+
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RSConstArg {pub(crate) ast_node: RSNode, expr: Option<RSExpr>}
@@ -1859,15 +1948,25 @@ impl From<ConstArg> for RSConstArg {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSLifetimeArg {pub(crate) ast_node: RSNode}
+pub struct RSLifetimeArg {pub(crate) ast_node: RSNode, lifetime: Option<RSLifetime>}
 impl From<LifetimeArg> for RSLifetimeArg {
-    fn from(node: LifetimeArg ) -> Self {RSLifetimeArg{ast_node: node.syntax().into()}}
+    fn from(node: LifetimeArg ) -> Self {
+        RSLifetimeArg{
+            ast_node: node.syntax().into(),
+            lifetime: node.lifetime().map(Into::into)
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSTypeArg {pub(crate) ast_node: RSNode}
+pub struct RSTypeArg {pub(crate) ast_node: RSNode, ty: Option<RSType>}
 impl From<TypeArg> for RSTypeArg {
-    fn from(node: TypeArg ) -> Self {RSTypeArg{ast_node: node.syntax().into()}}
+    fn from(node: TypeArg ) -> Self {
+        RSTypeArg{
+            ast_node: node.syntax().into(),
+            ty: node.ty().map(Into::into)
+        }
+    }
 }
 
 #[derive(uniffi::Enum)]
@@ -1890,21 +1989,41 @@ impl From<GenericParam> for RSGenericParam {
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSConstParam {pub(crate) ast_node: RSNode}
+pub struct RSConstParam {pub(crate) ast_node: RSNode, default_val: Option<RSConstArg>, ty: Option<RSType>}
 impl From<ConstParam> for RSConstParam {
-    fn from(node: ConstParam ) -> Self {RSConstParam{ast_node: node.syntax().into()}}
+    fn from(node: ConstParam ) -> Self {
+        RSConstParam{
+            ast_node: node.syntax().into(),
+            default_val: node.default_val().map(Into::into),
+            ty: node.ty().map(Into::into)
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSLifetimeParam {pub(crate) ast_node: RSNode}
+pub struct RSLifetimeParam {pub(crate) ast_node: RSNode, lifetime: Option<RSLifetime>, type_bound_list: Vec<RSTypeBound>}
 impl From<LifetimeParam> for RSLifetimeParam {
-    fn from(node: LifetimeParam ) -> Self {RSLifetimeParam{ast_node: node.syntax().into()}}
+    fn from(node: LifetimeParam ) -> Self {
+        RSLifetimeParam{
+            ast_node: node.syntax().into(),
+            lifetime: node.lifetime().map(Into::into),
+            type_bound_list: node.type_bound_list().iter().flat_map(|tb|tb.bounds().map(Into::into)).collect::<Vec<_>>(),
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSTypeParam {pub(crate) ast_node: RSNode}
+pub struct RSTypeParam {pub(crate) ast_node: RSNode, name: Option<String>, type_bound_list: Vec<RSTypeBound>, default_type: Option<RSType>}
 impl From<TypeParam> for RSTypeParam {
-    fn from(node: TypeParam ) -> Self {RSTypeParam{ast_node: node.syntax().into()}}
+    fn from(node: TypeParam ) -> Self {
+        RSTypeParam{
+            ast_node: node.syntax().into(),
+            name: node.name().map(|n|n.to_string()),
+            type_bound_list: node.type_bound_list().iter().flat_map(|tb|tb.bounds().map(Into::into)).collect::<Vec<_>>(),
+            default_type: node.default_type().map(Into::into)
+
+        }
+    }
 }
 
 #[derive(uniffi::Enum)]
@@ -1950,15 +2069,25 @@ impl From<AsmOperand> for RSAsmOperand {
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSAsmConst {pub(crate) ast_node: RSNode}
+pub struct RSAsmConst {pub(crate) ast_node: RSNode, expr: Vec<RSExpr>}
 impl From<AsmConst> for RSAsmConst {
-    fn from(node: AsmConst ) -> Self {RSAsmConst{ast_node: node.syntax().into()}}
+    fn from(node: AsmConst ) -> Self {
+        RSAsmConst{
+            ast_node: node.syntax().into(),
+            expr: node.expr().map(Into::into).into_iter().collect()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSAsmLabel {pub(crate) ast_node: RSNode}
+pub struct RSAsmLabel {pub(crate) ast_node: RSNode, block_expr: Option<RSBlockExpr>}
 impl From<AsmLabel> for RSAsmLabel {
-    fn from(node: AsmLabel) -> Self {RSAsmLabel{ast_node: node.syntax().into()}}
+    fn from(node: AsmLabel) -> Self {
+        RSAsmLabel{
+            ast_node: node.syntax().into(),
+            block_expr: node.block_expr().map(Into::into)
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
