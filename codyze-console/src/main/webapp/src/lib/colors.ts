@@ -1,4 +1,4 @@
-export function getFindingStyle(kind: string | null): {
+export function getFindingStyle(kind: string | null | undefined): {
   backgroundColor: string;
   borderColor: string;
   color: string;
