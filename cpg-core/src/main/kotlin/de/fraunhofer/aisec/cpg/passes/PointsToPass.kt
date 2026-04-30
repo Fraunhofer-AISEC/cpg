@@ -230,6 +230,13 @@ class PointsToState(
                     "$other should be of type Element but is of type ${other.javaClass}"
                 )
 
+            if (
+                this.declarationsState.size < MIN_CHUNK_SIZE ||
+                    this.generalState.size < MIN_CHUNK_SIZE
+            ) {
+                return compare(other)
+            }
+
             // There are some occasions were we need to compare both the generalState and the
             // DeclarationState (instead of only the DeclarationState), so let's do that
             val firstResult = this@Element.first.parallelCompare(other.first)

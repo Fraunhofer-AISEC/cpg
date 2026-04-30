@@ -54,7 +54,7 @@ import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
 val CPU_CORES = Runtime.getRuntime().availableProcessors()
-val MIN_CHUNK_SIZE = 10
+val MIN_CHUNK_SIZE = 100
 
 /** Thread-safe map whose keys are compared by reference (===), not by equals(). */
 open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V> {
@@ -938,6 +938,10 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                     "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
 
+            if (this.size < MIN_CHUNK_SIZE) {
+                return compare(other)
+            }
+
             val otherKeySetIsBigger = other.keys.any { it !in this.keys }
 
             // We can check if the entries are equal, greater or lesser
@@ -1273,6 +1277,10 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                 throw IllegalArgumentException(
                     "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
+
+            if (this.size < MIN_CHUNK_SIZE) {
+                return compare(other)
+            }
 
             val otherKeySetIsBigger = other.keys.any { it !in this.keys }
 
