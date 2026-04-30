@@ -48,7 +48,6 @@ import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
-import de.fraunhofer.aisec.cpg.helpers.toConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -337,8 +336,8 @@ fun isGlobal(node: Node): Boolean {
 }
 
 /* Recursively collect the bases from MemberAccesses and SubscriptExpressions */
-fun collectBases(node: Node): ConcurrentIdentitySet<Node> {
-    val ret = concurrentIdentitySetOf<Node>()
+fun collectBases(node: Node): IdentitySet<Node> {
+    val ret = identitySetOf<Node>()
 
     var n: Node? = node
     while (n != null) {
@@ -765,9 +764,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // up possible new values
                     val indexes: MutableSet<IndexKey> = ConcurrentHashMap.newKeySet()
                     val values =
-                        doubleState.getValues(param, param).mapTo(ConcurrentIdentitySet()) {
-                            it.first
-                        }
+                        doubleState.getValues(param, param).mapTo(IdentitySet()) { it.first }
 
                     // We look at the deref and the derefderef, hence for depth 2 and 3
                     // We have to look up the index of the ParameterMemoryValue to check out
@@ -780,9 +777,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // Additionally, we can check out the "dereference" itself to look for
                     // "derefdereferences"
                     values
-                        .filterTo(concurrentIdentitySetOf()) {
-                            doubleState.hasDeclarationStateValueEntry(it)
-                        }
+                        .filterTo(identitySetOf()) { doubleState.hasDeclarationStateValueEntry(it) }
                         .flatMap { value ->
                             doubleState.getValues(value, value).mapTo(PowersetLattice.Element()) {
                                 it.first
@@ -882,7 +877,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             if (existingEntry.none { it == shortFSEntry })
                                                 existingEntry.add(shortFSEntry)
                                         }
-                                        val propertySet = concurrentIdentitySetOf<Any>(true)
+                                        val propertySet = identitySetOf<Any>(true)
                                         if (subAccessName != "")
                                             propertySet.add(
                                                 Field().apply { name = Name(subAccessName) }
@@ -1201,8 +1196,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 destinations.flatMapTo(IdentitySet()) { doubleState.getAddresses(it, it) }
             // Also for the new lastWrites, we need the lastWrite from the wT as well as the
             // existing ones (in case the loop is not executed)
-            val lastWrites: MutableSet<NodeWithPropertiesKey> =
-                destinations.mapTo(ConcurrentHashMap.newKeySet()) {
+            val lastWrites =
+                destinations.mapTo(mutableSetOf()) {
                     NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>(false))
                 }
             lastWrites.addAll(doubleState.getLastWrites(wT))
@@ -1578,11 +1573,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val mapDstToSrc = ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>()
 
         // The toIdentitySet avoids having the same elements multiple times
-        var invokes = currentNode.invokes.toConcurrentIdentitySet()
+        var invokes = currentNode.invokes.toIdentitySet()
         // If we have multiple functions with the same name and the same signature and one has an
         // empty body, we assume that this is from the header so we ignore it
         invokes =
-            invokes.mapNotNullTo(ConcurrentIdentitySet()) { inv ->
+            invokes.mapNotNullTo(identitySetOf()) { inv ->
                 if (
                     inv.body == null &&
                         // If the body is empty, check if we have the "real" Function
@@ -1628,12 +1623,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         else -> null
                                     }
                                 if (argument != null) {
-                                    /* If the argument is a MemberAccess or a Subscription, we additionally set the last write to the base/arrayExpression here */
-                                    /*                                    doubleState =
-                                    updateBaseLastWrites(
-                                        doubleState,
-                                        concurrentIdentitySetOf(argument),
-                                    )*/
                                     fsEntries
                                         .filter { it.destValueDepth == depth }
                                         .splitInto(maxParts = innerConcurrencyCounter)
@@ -1762,7 +1751,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         currentNode: Call,
         invoke: Function,
     ): MutableSet<NodeWithPropertiesKey> {
-        val ret: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet()
+        val ret = mutableSetOf<NodeWithPropertiesKey>()
         // If we have nothing, the last write is probably the Function
         if (lastWrites.isEmpty()) ret.add(NodeWithPropertiesKey(invoke, equalLinkedHashSetOf()))
         lastWrites.forEach { (lw, properties) ->
@@ -2034,8 +2023,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     fetchFields = true,
                                     excludeShortFSValues = true,
                                 )
-                                .mapTo(ConcurrentIdentitySet()) { it.first }
-                        else concurrentIdentitySetOf(currentNode.arguments[srcNode.argumentIndex])
+                                .mapTo(identitySetOf()) { it.first }
+                        else identitySetOf(currentNode.arguments[srcNode.argumentIndex])
                     values.forEach { value ->
                         destinationAddresses
                             .filter { it.first != null }
@@ -2081,7 +2070,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // dereference it, and then add it to the sources
                 currentNode.invokes
                     .flatMap { it.parameters }
-                    .filterTo(concurrentIdentitySetOf()) {
+                    .filterTo(identitySetOf()) {
                         it.name.localName == srcNode.name.parent?.localName
                     }
                     .forEach {
@@ -2240,9 +2229,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             mapDstToSrc.entries
                 .filter {
                     it.key in
-                        doubleState.getValues(argument, argument).mapTo(ConcurrentIdentitySet()) {
-                            it.first
-                        }
+                        doubleState.getValues(argument, argument).mapTo(IdentitySet()) { it.first }
                 }
                 .flatMap { it.value }
                 .filter { it.srcNode != null }
@@ -3042,8 +3029,8 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
     node: Node,
     fetchFields: Boolean = false,
     excludeShortFSValues: Boolean = false,
-): ConcurrentIdentitySet<FetchElementFromDeclarationStateEntry> {
-    val ret = concurrentIdentitySetOf<FetchElementFromDeclarationStateEntry>()
+): IdentitySet<FetchElementFromDeclarationStateEntry> {
+    val ret = identitySetOf<FetchElementFromDeclarationStateEntry>()
 
     // For global nodes, we check the globalDerefs map
     if (isGlobal(node)) {
@@ -3160,7 +3147,7 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
         // TODO: handle globals
         if (fetchFields) {
             val fields =
-                this.declarationsState[node]?.first?.filterTo(concurrentIdentitySetOf()) {
+                this.declarationsState[node]?.first?.filterTo(identitySetOf()) {
                     it != node && !this.getAddresses(node, node).contains(it)
                 }
             fields?.forEach { field ->
@@ -3778,8 +3765,8 @@ suspend fun PointsToState.Element.updateValues(
     destinationAddresses.forEach { destAddr ->
         if (!isGlobal(destAddr)) {
             val currentEntries =
-                this@updateValues.declarationsState[destAddr]?.first?.toConcurrentIdentitySet()
-                    ?: concurrentIdentitySetOf(destAddr)
+                this@updateValues.declarationsState[destAddr]?.first?.toIdentitySet()
+                    ?: identitySetOf(destAddr)
 
             // If we want to update the State with exactly the same elements as are already in the
             // state, we do nothing in order not to confuse the iterateEOG function
