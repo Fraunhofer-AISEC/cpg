@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.rust.RustLanguage
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.collectAllPrevDFGPaths
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Switch
 import de.fraunhofer.aisec.cpg.graph.functions
@@ -220,6 +221,125 @@ class RustLanguageFrontendTest {
             assertTrue(
                 reachableLiterals.contains(expectedLiteral),
                 "Match #$matchIndex in function '$functionName' should have DFG path to literal '$expectedLiteral'. Found: $reachableLiterals",
+            )
+        }
+    }
+
+    @Test
+    fun testDFInLetStatements() {
+        val topLevel = Path.of("src", "test", "resources")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("let.rs").toFile()), topLevel, true) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val mainFunction = tu.functions["main"]
+        assertNotNull(mainFunction, "main function should exist")
+
+        // Test simple binding: let alpha = 77;
+        testLetVariableDFG(tu, "alpha", listOf("77"))
+
+        // Test tuple destructuring: let (beta, gamma) = (11, 22);
+        testLetVariableDFG(tu, "beta", listOf("11"))
+        testLetVariableDFG(tu, "gamma", listOf("22"))
+
+        // Test nested tuple destructuring: let ((delta, epsilon), zeta) = ((33, 44), 55);
+        testLetVariableDFG(tu, "delta", listOf("33"))
+        testLetVariableDFG(tu, "epsilon", listOf("44"))
+        testLetVariableDFG(tu, "zeta", listOf("55"))
+
+        // Test struct destructuring: let Coord { a1, b1 } = c1; (where c1 = Coord { a1: 100, b1:
+        // 200 })
+        testLetVariableDFG(tu, "a1", listOf("100"))
+        testLetVariableDFG(tu, "b1", listOf("200"))
+
+        // Test struct destructuring with renaming: let Coord { a1: left_val, b1: _ } = c2; (where
+        // c2 = Coord { a1: 300, b1: 400 })
+        testLetVariableDFG(tu, "left_val", listOf("300"))
+
+        // Test array destructuring: let [first_val, second_val, ..] = data_arr; (where data_arr =
+        // [9, 8, 7, 6])
+        testLetVariableDFG(tu, "first_val", listOf("9"))
+        testLetVariableDFG(tu, "second_val", listOf("8"))
+
+        // Test ref binding: let ref greet_ref = greeting; (where greeting = "world")
+        testLetVariableDFG(tu, "greet_ref", listOf("world"))
+
+        // Test ref mut binding: let ref mut counter_ref = counter; (where counter = 12)
+        testLetVariableDFG(tu, "counter_ref", listOf("12"))
+
+        // Test enum destructuring: let Signal::Shift { dx, dy } = sig; (where sig = Signal::Shift {
+        // dx: 70, dy: 90 })
+        testLetVariableDFG(tu, "dx", listOf("70"))
+        testLetVariableDFG(tu, "dy", listOf("90"))
+
+        // Test if let: if let Some(found) = maybe_num { ... } (where maybe_num = Some(999))
+        testLetVariableDFG(tu, "found", listOf("999"))
+
+        // Test while let: while let Some(elem) = series[idx] { ... } (where series = [Some(5),
+        // Some(6), Some(7), None])
+        testLetVariableDFG(tu, "elem", listOf("5", "6", "7"))
+
+        // Test let-else: let Some(extracted) = maybe_text else { ... } (where maybe_text =
+        // Some("Pattern"))
+        testLetVariableDFG(tu, "extracted", listOf("Pattern"))
+
+        // Test @ binding: let bound_val @ 5..=15 = value_check; (where value_check = 8)
+        testLetVariableDFG(tu, "bound_val", listOf("8"))
+
+        // Test OR pattern: let 3 | 4 | 5 = choice; (where choice = 3)
+        testLetVariableDFG(tu, "choice", listOf("3"))
+
+        // Test reference destructuring: let &(left_side, right_side) = ref_tuple; (where ref_tuple
+        // = &(111, 222))
+        testLetVariableDFG(tu, "left_side", listOf("111"))
+        testLetVariableDFG(tu, "right_side", listOf("222"))
+
+        // Test ignoring values: let (keep_a, _, keep_c) = (13, 14, 15);
+        testLetVariableDFG(tu, "keep_a", listOf("13"))
+        testLetVariableDFG(tu, "keep_c", listOf("15"))
+
+        // Test slice pattern: let (start_val, .., end_val) = large_tuple; (where large_tuple = (21,
+        // 22, 23, 24, 25))
+        testLetVariableDFG(tu, "start_val", listOf("21"))
+        testLetVariableDFG(tu, "end_val", listOf("25"))
+    }
+
+    private fun testLetVariableDFG(
+        tu: TranslationUnit,
+        variableName: String,
+        expectedLiterals: List<String>,
+    ) {
+        // Find the variable declaration in the main function
+        val mainFunction = tu.functions["main"]
+        assertNotNull(mainFunction, "main function should exist")
+
+        // Find all variable declarations with the given name
+        val variables =
+            SubgraphWalker.flattenAST(mainFunction).filterIsInstance<Variable>().filter {
+                it.name.localName == variableName
+            }
+
+        assertTrue(variables.isNotEmpty(), "Variable '$variableName' should exist in main function")
+
+        // For simplicity, take the first one (in case of multiple declarations with same name)
+        val variable = variables.first()
+
+        // Collect all literals reachable to this variable through DFG
+        val reachableLiterals =
+            variable
+                .collectAllPrevDFGPaths()
+                .flatMap { it.nodes }
+                .filterIsInstance<Literal<*>>()
+                .map { it.value.toString() }
+                .toSet()
+
+        // Verify all expected literals are reachable
+        for (expectedLiteral in expectedLiterals) {
+            assertTrue(
+                reachableLiterals.contains(expectedLiteral),
+                "Variable '$variableName' should have DFG path to literal '$expectedLiteral'. Found: $reachableLiterals",
             )
         }
     }

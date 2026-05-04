@@ -341,24 +341,25 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     fun handleLetExpr(letExpr: RsLetExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.LetExpr(letExpr))
 
-        val declarationStatement = newDeclarationStatement(rawNode = raw)
+        // for us, a let expression is an assigment with a deconstruction
 
-        val variable =
-            newVariable(
-                name = (letExpr.pat as? RsPat.IdentPat)?.v1?.name ?: "",
-                type = unknownType(),
+        val assign: Assign =
+            newAssign(
+                operatorCode = "=",
+                lhs =
+                    letExpr.pat.firstOrNull()?.let {
+                        listOf(frontend.patternHandler.handle(RsAst.RustPat(it)))
+                    } ?: emptyList(),
+                rhs =
+                    letExpr.expr.firstOrNull()?.let {
+                        listOf(frontend.expressionHandler.handle(RsAst.RustExpr(it)))
+                    } ?: emptyList(),
                 rawNode = raw,
             )
 
-        letExpr.expr.let {
-            variable.initializer = frontend.expressionHandler.handle(RsAst.RustExpr(it.first()))
-        }
+        assign.usedAsExpression = true
 
-        declarationStatement.declarations += variable
-
-        declarationStatement.usedAsExpression = true
-
-        return declarationStatement
+        return assign
     }
 
     fun handleWhileExpr(whileExpr: RsWhileExpr): Expression {
