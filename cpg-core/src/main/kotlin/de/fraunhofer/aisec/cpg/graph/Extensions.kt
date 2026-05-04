@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.functional.CPU_CORES
 import de.fraunhofer.aisec.cpg.helpers.functional.MIN_CHUNK_SIZE
-import de.fraunhofer.aisec.cpg.helpers.functional.splitInto
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 import java.util.Objects
@@ -1894,6 +1893,39 @@ fun Node.isNullCheck(refersTo: Declaration?): Boolean {
     // when we ran through the whole checklist and didn't find anything besides a NULL-check, we can
     // return true
     return true
+}
+
+/**
+ * Extension that splits an IdentitySet<T> into at most [maxParts] subsets, each containing **at
+ * least [minPartSize] elements**.
+ *
+ * Rules
+ * 1. If the set is empty ➜ returns an empty list.
+ * 2. If the set has < [minPartSize] elements ➜ returns a single subset with all elements.
+ * 3. Otherwise the number of created subsets k is k = min(maxParts, size / [minPartSize]) (integer
+ *    division, k ≥ 1) so every subset can have at least [minPartSize] elements.
+ */
+fun <T> Collection<T>.splitInto(
+    maxParts: Int = CPU_CORES,
+    minPartSize: Int = MIN_CHUNK_SIZE,
+): List<List<T>> {
+    require(maxParts > 0) { "maxParts must be positive" }
+
+    if (isEmpty()) return emptyList()
+    if (size < minPartSize) return listOf(this.toList())
+
+    // Determine number of chunks
+    val k = minOf(maxParts, size / minPartSize) // k ≥ 1
+    val base = size / k // minimum size for each chunk
+    val extra = size % k
+
+    // split the Collection into chunks
+    val list = this.toList()
+    var index = 0
+    return List(k) { i ->
+        val partSize = base + if (i < extra) 1 else 0
+        list.subList(index, index + partSize).also { index += partSize }
+    }
 }
 
 /**

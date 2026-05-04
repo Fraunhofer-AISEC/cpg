@@ -184,39 +184,6 @@ fun compareMultiple(vararg orders: Order) =
         else -> Order.UNEQUAL
     }
 
-/**
- * Extension that splits an IdentitySet<T> into at most [maxParts] subsets, each containing **at
- * least [minPartSize] elements**.
- *
- * Rules
- * 1. If the set is empty ➜ returns an empty list.
- * 2. If the set has < [minPartSize] elements ➜ returns a single subset with all elements.
- * 3. Otherwise the number of created subsets k is k = min(maxParts, size / [minPartSize]) (integer
- *    division, k ≥ 1) so every subset can have at least [minPartSize] elements.
- */
-fun <T> Collection<T>.splitInto(
-    maxParts: Int = CPU_CORES,
-    minPartSize: Int = MIN_CHUNK_SIZE,
-): List<List<T>> {
-    require(maxParts > 0) { "maxParts must be positive" }
-
-    if (isEmpty()) return emptyList()
-    if (size < minPartSize) return listOf(this.toList())
-
-    // Determine number of chunks
-    val k = minOf(maxParts, size / minPartSize) // k ≥ 1
-    val base = size / k // minimum size for each chunk
-    val extra = size % k
-
-    // split the Collection into chunks
-    val list = this.toList()
-    var index = 0
-    return List(k) { i ->
-        val partSize = base + if (i < extra) 1 else 0
-        list.subList(index, index + partSize).also { index += partSize }
-    }
-}
-
 interface HasWidening<T : Lattice.Element> {
     /**
      * Computes the widening of [one] and [two]. This is used to ensure that the fixpoint iteration
@@ -665,9 +632,6 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             coroutineScope {
                 try {
                     this@Element.forEachMaybeParallel { t ->
-                        //                    this@Element.splitInto(CPU_CORES).forEach { chunk ->
-                        //                        launch(Dispatchers.Default) {
-                        //                            for (t in chunk) {
                         ensureActive()
                         val isEqual =
                             if (t is Pair<*, *>)
@@ -685,8 +649,6 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                             // cancel all coroutines
                             cancel()
                         }
-                        //                            }
-                        //                        }
                     }
                 } catch (_: CancellationException) {
                     ret = false
@@ -951,52 +913,48 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
             val ret = AtomicReference<Order?>(null)
 
             coroutineScope {
-                this@Element.entries.splitInto().forEach { chunk ->
+                this@Element.entries.forEachMaybeParallel { (k, v) ->
                     // We can't return in the coroutines, so we only set the return value
                     // there. If we have a return value, we can stop here
-                    launch(Dispatchers.Default) {
-                        for ((k, v) in chunk) {
-                            if (ret.load() != null) return@launch
-                            val otherV = other[k]
-                            if (otherV != null) {
-                                // Do not use parallelCompare since that would be too many
-                                // coroutines
-                                when (v.compare(otherV)) {
-                                    Order.EQUAL -> {
-                                        /* Nothing to do*/
-                                    }
+                    if (ret.load() != null) return@forEachMaybeParallel
+                    val otherV = other[k]
+                    if (otherV != null) {
+                        // Do not use parallelCompare since that would be too many
+                        // coroutines
+                        when (v.compare(otherV)) {
+                            Order.EQUAL -> {
+                                /* Nothing to do*/
+                            }
 
-                                    Order.GREATER -> {
-                                        if (someLesser.load()) {
-                                            ret.store(Order.UNEQUAL)
-                                            cancel()
-                                        }
-                                        someGreater.store(true)
-                                    }
-
-                                    Order.LESSER -> {
-                                        if (someGreater.load()) {
-                                            ret.store(Order.UNEQUAL)
-                                            cancel()
-                                        }
-                                        someLesser.store(true)
-                                    }
-
-                                    Order.UNEQUAL -> {
-                                        ret.store(Order.UNEQUAL)
-                                        someLesser.store(true)
-                                        someGreater.store(true)
-                                        cancel()
-                                    }
-                                }
-                            } else {
-                                // key is missing in other, so this is greater
-                                someGreater.store(true)
+                            Order.GREATER -> {
                                 if (someLesser.load()) {
                                     ret.store(Order.UNEQUAL)
                                     cancel()
                                 }
+                                someGreater.store(true)
                             }
+
+                            Order.LESSER -> {
+                                if (someGreater.load()) {
+                                    ret.store(Order.UNEQUAL)
+                                    cancel()
+                                }
+                                someLesser.store(true)
+                            }
+
+                            Order.UNEQUAL -> {
+                                ret.store(Order.UNEQUAL)
+                                someLesser.store(true)
+                                someGreater.store(true)
+                                cancel()
+                            }
+                        }
+                    } else {
+                        // key is missing in other, so this is greater
+                        someGreater.store(true)
+                        if (someLesser.load()) {
+                            ret.store(Order.UNEQUAL)
+                            cancel()
                         }
                     }
                 }
@@ -1041,39 +999,31 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
         var result: Element<K, V>
         coroutineScope {
             if (allowModify) {
-                two.splitInto(concurrencyCounter)
-                    .map { chunk ->
-                        launch(Dispatchers.Default) {
-                            for ((k, v) in chunk) {
-                                val entry = one[k]
-                                if (entry == null) {
-                                    // This key is not in "one", so we add the value from "two"
-                                    // to "one"
-                                    one.put(k, v)
-                                } else if (
-                                    two[k] != null && entry.compare(two[k]!!) != Order.EQUAL
-                                ) {
-                                    // This key already exists in "one" and the values in one
-                                    // and
-                                    // two are different,
-                                    // so we have to compute the lub of the values
-                                    one[k]?.let { oneValue ->
-                                        innerLattice.lub(
-                                            oneValue,
-                                            v,
-                                            allowModify = true,
-                                            widen = widen,
-                                            // We already run on $CPU_CORES coroutines, so we
-                                            // don't
-                                            // need any additional ones
-                                            1,
-                                        )
-                                    }
-                                }
-                            }
+                two.entries.forEachMaybeParallel(parallelism = concurrencyCounter) { (k, v) ->
+                    val entry = one[k]
+                    if (entry == null) {
+                        // This key is not in "one", so we add the value from "two"
+                        // to "one"
+                        one.put(k, v)
+                    } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
+                        // This key already exists in "one" and the values in one
+                        // and
+                        // two are different,
+                        // so we have to compute the lub of the values
+                        one[k]?.let { oneValue ->
+                            innerLattice.lub(
+                                oneValue,
+                                v,
+                                allowModify = true,
+                                widen = widen,
+                                // We already run on $CPU_CORES coroutines, so we
+                                // don't
+                                // need any additional ones
+                                1,
+                            )
                         }
                     }
-                    .joinAll()
+                }
                 result = one
             } else {
                 val allKeys =
@@ -1139,45 +1089,6 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
 open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     Lattice<MapLattice.Element<K, V>> {
     override lateinit var elements: ConcurrentIdentitySet<Element<K, V>>
-
-    /**
-     * Splits a MapLattice.Element<K,V> into at most [maxParts] smaller MapLattice.Element<K,V>
-     * objects, each containing **at least [minPartSize] entries**.
-     *
-     * Rules
-     * 1. Empty map ➜ empty list.
-     * 2. Less than [minPartSize] entries ➜ single element containing all entries.
-     * 3. Otherwise k = min(maxParts, size / minPartSize) subsets are created so that every subset
-     *    has ≥ [minPartSize] entries and their union equals the original map.
-     */
-    fun <K, V : Lattice.Element> Element<K, V>.splitInto(
-        maxParts: Int = CPU_CORES,
-        minPartSize: Int = MIN_CHUNK_SIZE,
-    ): List<Element<K, V>> {
-        require(maxParts > 0) { "maxParts must be positive" }
-
-        if (isEmpty()) return emptyList()
-        if (size < minPartSize) return listOf(this)
-
-        // -- determine the real number of subsets we can build --
-        val k = minOf(maxParts, size / minPartSize) // k ≥ 1
-        val base = size / k // minimal size of every subset (≥ minPartSize)
-        val extra = size % k // first 'extra' subsets get +1 entry
-
-        // -- create the subsets --
-        val entriesList = entries.toList()
-        var index = 0
-        return List(k) { i ->
-            val partSize = base + if (i < extra) 1 else 0
-            Element<K, V>(partSize).apply {
-                repeat(partSize) {
-                    val (key, value) = entriesList[index++]
-                    //                    this[key] = value
-                    put(key, value)
-                }
-            }
-        }
-    }
 
     open class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
         IdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
@@ -1369,35 +1280,29 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     ): Element<K, V> = coroutineScope {
         var result: Element<K, V>
         if (allowModify) {
-            two.splitInto(concurrencyCounter)
-                .map { chunk ->
-                    launch(Dispatchers.Default) {
-                        for ((k, v) in chunk) {
-                            val entry = one[k]
-                            if (entry == null) {
-                                // This key is not in "one", so we add the value from "two"
-                                // to "one"
-                                one.put(k, v)
-                            } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
-                                // This key already exists in "one" and the values in one and
-                                // two are different,
-                                // so we have to compute the lub of the values
-                                one[k]?.let { oneValue ->
-                                    innerLattice.lub(
-                                        oneValue,
-                                        v,
-                                        allowModify = true,
-                                        widen = widen,
-                                        // We already run on $CPU_CORES coroutines, so we don't
-                                        // need any additional ones
-                                        1,
-                                    )
-                                }
-                            }
-                        }
+            two.entries.forEachMaybeParallel { (k, v) ->
+                val entry = one[k]
+                if (entry == null) {
+                    // This key is not in "one", so we add the value from "two"
+                    // to "one"
+                    one.put(k, v)
+                } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
+                    // This key already exists in "one" and the values in one and
+                    // two are different,
+                    // so we have to compute the lub of the values
+                    one[k]?.let { oneValue ->
+                        innerLattice.lub(
+                            oneValue,
+                            v,
+                            allowModify = true,
+                            widen = widen,
+                            // We already run on $CPU_CORES coroutines, so we don't
+                            // need any additional ones
+                            1,
+                        )
                     }
                 }
-                .joinAll()
+            }
             result = one
         } else {
             val allKeys =
