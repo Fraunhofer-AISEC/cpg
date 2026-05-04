@@ -59,45 +59,63 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
     fun handleLetStmt(letStmt: RsLetStmt): Expression {
         val raw = RsAst.RustStmt(RsStmt.LetStmt(letStmt))
+        // for us, a let expression is an assigment with a deconstruction
 
-        val declarationStatement = newDeclarationStatement(rawNode = raw)
+        // If the Pattern is a simple identity pattern we make it a declaration statement
+        (letStmt.pat as? RsPat.IdentPat)?.let {
+            val declarationStatement = newDeclarationStatement(rawNode = raw)
 
-        val variable =
-            newVariable(
-                name = (letStmt.pat as? RsPat.IdentPat)?.v1?.name ?: "",
-                type = letStmt.ty?.let { frontend.typeOf(it) } ?: unknownType(),
-                rawNode = raw,
-            )
+            val variable =
+                newVariable(
+                    name = it.v1.name ?: "",
+                    type = letStmt.ty?.let { frontend.typeOf(it) } ?: unknownType(),
+                    rawNode = raw,
+                )
 
-        letStmt.initializer?.let {
-            // Todo If this is a tuple struct, rust analyzer will actually make a call out of it
-            variable.initializer = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            letStmt.initializer?.let {
+                // Todo If this is a tuple struct, rust analyzer will actually make a call out of it
+                variable.initializer = frontend.expressionHandler.handle(RsAst.RustExpr(it))
 
-            // Here, if we have the classical pattern for initializers we set the base of the
-            // contained member access. This part needs to be made more precise.
-            val initializingExpressions =
-                when (variable.initializer) {
-                    is Construction -> (variable.initializer as Construction).arguments
-                    is InitializerList -> (variable.initializer as InitializerList).initializers
-                    else -> listOf()
-                }
-            initializingExpressions.forEach {
-                (it as? Assign)?.lhs?.forEach {
-                    val targetRef = (it as? MemberAccess)?.base ?: it
-                    (targetRef as? Reference)?.let {
-                        if (it.name.toString() == "null") {
-                            it.name = variable.name
+                // Here, if we have the classical pattern for initializers we set the base of the
+                // contained member access. This part needs to be made more precise.
+                val initializingExpressions =
+                    when (variable.initializer) {
+                        is Construction -> (variable.initializer as Construction).arguments
+                        is InitializerList -> (variable.initializer as InitializerList).initializers
+                        else -> listOf()
+                    }
+                initializingExpressions.forEach {
+                    (it as? Assign)?.lhs?.forEach {
+                        val targetRef = (it as? MemberAccess)?.base ?: it
+                        (targetRef as? Reference)?.let {
+                            if (it.name.toString() == "null") {
+                                it.name = variable.name
+                            }
                         }
                     }
                 }
             }
+            declarationStatement.declarations += variable
+
+            frontend.scopeManager.addDeclaration(variable)
+            return declarationStatement
         }
 
-        declarationStatement.declarations += variable
+        val assign: Assign =
+            newAssign(
+                operatorCode = "=",
+                lhs =
+                    letStmt.pat?.let { listOf(frontend.patternHandler.handle(RsAst.RustPat(it))) }
+                        ?: emptyList(),
+                rhs =
+                    letStmt.initializer?.let {
+                        listOf(frontend.expressionHandler.handle(RsAst.RustExpr(it)))
+                    } ?: emptyList(),
+                rawNode = raw,
+            )
 
-        frontend.scopeManager.addDeclaration(variable)
-
-        return declarationStatement
+        assign.usedAsExpression = true
+        return assign
     }
 
     fun handleExprStmt(exprStmt: RsExprStmt): Expression {

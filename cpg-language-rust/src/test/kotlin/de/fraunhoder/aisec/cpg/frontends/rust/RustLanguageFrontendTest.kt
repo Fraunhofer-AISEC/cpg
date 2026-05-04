@@ -241,6 +241,7 @@ class RustLanguageFrontendTest {
         testLetVariableDFG(tu, "alpha", listOf("77"))
 
         // Test tuple destructuring: let (beta, gamma) = (11, 22);
+
         testLetVariableDFG(tu, "beta", listOf("11"))
         testLetVariableDFG(tu, "gamma", listOf("22"))
 
@@ -264,7 +265,7 @@ class RustLanguageFrontendTest {
         testLetVariableDFG(tu, "second_val", listOf("8"))
 
         // Test ref binding: let ref greet_ref = greeting; (where greeting = "world")
-        testLetVariableDFG(tu, "greet_ref", listOf("world"))
+        testLetVariableDFG(tu, "greet_ref", listOf("\"world\""))
 
         // Test ref mut binding: let ref mut counter_ref = counter; (where counter = 12)
         testLetVariableDFG(tu, "counter_ref", listOf("12"))
@@ -283,7 +284,7 @@ class RustLanguageFrontendTest {
 
         // Test let-else: let Some(extracted) = maybe_text else { ... } (where maybe_text =
         // Some("Pattern"))
-        testLetVariableDFG(tu, "extracted", listOf("Pattern"))
+        testLetVariableDFG(tu, "extracted", listOf("\"Pattern\""))
 
         // Test @ binding: let bound_val @ 5..=15 = value_check; (where value_check = 8)
         testLetVariableDFG(tu, "bound_val", listOf("8"))
