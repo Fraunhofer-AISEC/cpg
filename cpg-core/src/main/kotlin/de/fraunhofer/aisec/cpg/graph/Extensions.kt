@@ -38,6 +38,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.functional.CPU_CORES
+import de.fraunhofer.aisec.cpg.helpers.functional.MIN_CHUNK_SIZE
 import de.fraunhofer.aisec.cpg.helpers.functional.splitInto
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
@@ -49,6 +51,9 @@ import kotlin.math.absoluteValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -1889,4 +1894,28 @@ fun Node.isNullCheck(refersTo: Declaration?): Boolean {
     // when we ran through the whole checklist and didn't find anything besides a NULL-check, we can
     // return true
     return true
+}
+
+/**
+ * Runs [action] for every element in the collection.
+ *
+ * • If the collection has less than [MIN_CHUNK_SIZE] items _or_ [parallelism] is 1 – run the loop
+ * sequentially (no coroutines). • Otherwise split the list into [parallelism] chunks and process
+ * them in parallel on Dispatchers.Default.
+ */
+suspend fun <T> Collection<T>.forEachMaybeParallel(
+    parallelism: Int = CPU_CORES,
+    minChunkSize: Int = MIN_CHUNK_SIZE,
+    action: suspend (T) -> Unit,
+) {
+    if (size < minChunkSize || parallelism <= 1) {
+        // small – just run the loop
+        forEach { action(it) }
+    } else {
+        coroutineScope {
+            this@forEachMaybeParallel.splitInto(maxParts = parallelism, minPartSize = minChunkSize)
+                .map { chunk -> launch(Dispatchers.Default) { chunk.forEach { action(it) } } }
+                .joinAll()
+        }
+    }
 }

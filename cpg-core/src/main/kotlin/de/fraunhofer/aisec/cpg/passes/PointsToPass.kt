@@ -265,30 +265,6 @@ fun getNodeName(node: Node?): Name {
     }
 }
 
-/**
- * Runs [action] for every element in the collection.
- *
- * • If the collection has less than [MIN_CHUNK_SIZE] items _or_ [parallelism] is 1 – run the loop
- * sequentially (no coroutines). • Otherwise split the list into [parallelism] chunks and process
- * them in parallel on Dispatchers.Default.
- */
-suspend fun <T> Collection<T>.forEachMaybeParallel(
-    parallelism: Int = CPU_CORES,
-    minChunkSize: Int = MIN_CHUNK_SIZE,
-    action: suspend (T) -> Unit,
-) {
-    if (size < minChunkSize || parallelism <= 1) {
-        // small – just run the loop
-        forEach { action(it) }
-    } else {
-        coroutineScope {
-            this@forEachMaybeParallel.splitInto(maxParts = parallelism, minPartSize = minChunkSize)
-                .map { chunk -> launch(Dispatchers.Default) { chunk.forEach { action(it) } } }
-                .joinAll()
-        }
-    }
-}
-
 /** Returns the depth of a Node based on its name */
 fun stringToDepth(name: String): Int {
     return when (name) {
