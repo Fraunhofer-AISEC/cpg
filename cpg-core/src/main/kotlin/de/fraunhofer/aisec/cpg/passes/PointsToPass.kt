@@ -1327,14 +1327,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // We deal with this by drawing a DFG-Edge from
                     // the arg to the
                     // derefPMV in case of an array pointerType.
-                    val argVals = async {
+                    val argVals =
                         if (
                             (arg.type as? PointerType)?.pointerOrigin ==
                                 PointerType.PointerOrigin.ARRAY
                         )
                             PowersetLattice.Element(Pair(arg, true))
                         else doubleState.getCachedNestedValues(getNestedValuesCache, arg, 1, false)
-                    }
                     // Create a DFG-Edge from the argument to the Parameter or its
                     // ParameterMemoryValue
                     val p = paramArgMatching[arg]
@@ -1344,23 +1343,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         )
                         return@launch
                     }
-                    val derefPMVs = async {
+                    val derefPMVs =
                         p.memoryValueEdges
                             .filter {
                                 (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
                                     "derefvalue"
                             }
                             .map { it.start }
-                    }
-                    val derefderefPMVs = async {
+                    val derefderefPMVs =
                         p.memoryValueEdges
                             .filter {
                                 (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
                                     "derefderefvalue"
                             }
                             .map { it.start }
-                    }
-                    argVals.await().forEachMaybeParallel(parallelism = innerConcurrencyCounter) {
+                    argVals.forEachMaybeParallel(parallelism = innerConcurrencyCounter) {
                         (argVal, _) ->
                         val argDerefVals =
                             if (
@@ -1451,7 +1448,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         ?: PowersetLattice.Element()
                                 }
                             }
-                        derefPMVs.await().forEach { derefPMV ->
+                        derefPMVs.forEach { derefPMV ->
                             doubleState =
                                 lattice.push(
                                     doubleState,
@@ -1463,7 +1460,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     ),
                                 )
                             // The same for the derefderef values
-                            derefderefPMVs.await().forEach { derefderefPMV ->
+                            derefderefPMVs.forEach { derefderefPMV ->
                                 doubleState =
                                     lattice.push(
                                         doubleState,

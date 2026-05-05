@@ -138,6 +138,21 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
     fun clear() = backing.clear()
 
     override fun hashCode() = backing.hashCode()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ConcurrentIdentityHashMap<*, *>
+
+        if (backing != other.backing) return false
+        if (size != other.size) return false
+        if (keys != other.keys) return false
+        if (values != other.values) return false
+        if (entries != other.entries) return false
+
+        return true
+    }
 }
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
@@ -329,7 +344,7 @@ interface Lattice<T : Lattice.Element> {
             timeouts.addLast(timeout)
         }
 
-        val globalState = ConcurrentIdentityHashMap<EvaluationOrder, T>()
+        val globalState = IdentityHashMap<EvaluationOrder, T>()
         var finalState: T = this.bottom
         for (startEdge in startEdges) {
             globalState.put(startEdge, startState)
@@ -1352,10 +1367,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                     }
                 }
             concurrentProcesses.awaitAll().forEach { (key, value) ->
-                value.let {
-                    //                    newMap[key] = it
-                    newMap.put(key, it)
-                }
+                value.let { newMap.put(key, it) }
             }
         }
 
