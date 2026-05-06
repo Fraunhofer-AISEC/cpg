@@ -2457,7 +2457,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         it.node,
                                         equalLinkedHashSetOf(
                                             PointerDataflowGranularity(
-                                                PointerAccess.currentDerefValue
+                                                PointerAccess.CURRENT_DEREF_VALUE
                                             ),
                                             // Remove the FullDataGranularity, since here we only
                                             // want to indicate derefValues
@@ -2489,7 +2489,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 it.node,
                                                 equalLinkedHashSetOf(
                                                     PointerDataflowGranularity(
-                                                        PointerAccess.currentDerefDerefValue
+                                                        PointerAccess.CURRENT_DEREF_DEREF_VALUE
                                                     ),
                                                     // Here again, filter the
                                                     // FullDataflowGranularity since

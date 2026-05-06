@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
-import de.fraunhofer.aisec.cpg.query.not
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
@@ -1214,8 +1213,8 @@ class PointsToPassTest {
             bRefLine138.prevDFGEdges
                 .singleOrNull {
                     it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget.name ==
-                            "currentDerefValue"
+                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
+                            PointerAccess.CURRENT_DEREF_VALUE
                 }
                 ?.start,
         )
@@ -1251,8 +1250,8 @@ class PointsToPassTest {
             bRefLine139.prevDFGEdges
                 .singleOrNull {
                     it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget.name ==
-                            "currentDerefValue"
+                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
+                            PointerAccess.CURRENT_DEREF_VALUE
                 }
                 ?.start,
         )
@@ -1269,8 +1268,8 @@ class PointsToPassTest {
             cRefLine139.prevDFGEdges
                 .singleOrNull {
                     it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget.name ==
-                            "currentDerefValue"
+                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
+                            PointerAccess.CURRENT_DEREF_VALUE
                 }
                 ?.start,
         )
@@ -1279,8 +1278,8 @@ class PointsToPassTest {
             cRefLine139.prevDFGEdges
                 .singleOrNull {
                     it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget.name ==
-                            "currentDerefDerefValue"
+                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
+                            PointerAccess.CURRENT_DEREF_DEREF_VALUE
                 }
                 ?.start,
         )
@@ -1299,8 +1298,8 @@ class PointsToPassTest {
             cPointerDerefLine139.prevDFGEdges
                 .singleOrNull {
                     it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget.name ==
-                            "currentDerefValue"
+                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
+                            PointerAccess.CURRENT_DEREF_VALUE
                 }
                 ?.start,
         )
@@ -2509,7 +2508,7 @@ class PointsToPassTest {
                 .filter {
                     it.granularity is PointerDataflowGranularity &&
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.currentDerefValue
+                            PointerAccess.CURRENT_DEREF_VALUE
                 }
                 .size,
         )
@@ -2519,7 +2518,7 @@ class PointsToPassTest {
                 .first {
                     it.granularity is PointerDataflowGranularity &&
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.currentDerefValue
+                            PointerAccess.CURRENT_DEREF_VALUE
                 }
                 .start,
         )
@@ -2529,7 +2528,7 @@ class PointsToPassTest {
                 .filter {
                     it.granularity is PointerDataflowGranularity &&
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.currentDerefDerefValue
+                            PointerAccess.CURRENT_DEREF_DEREF_VALUE
                 }
                 .size,
         )
@@ -2539,7 +2538,7 @@ class PointsToPassTest {
                 .first {
                     it.granularity is PointerDataflowGranularity &&
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.currentDerefDerefValue
+                            PointerAccess.CURRENT_DEREF_DEREF_VALUE
                 }
                 .start,
         )
@@ -2554,7 +2553,7 @@ class PointsToPassTest {
                 .filter {
                     it.granularity is PointerDataflowGranularity &&
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.currentDerefValue
+                            PointerAccess.CURRENT_DEREF_VALUE
                 }
                 .size,
         )
@@ -2564,7 +2563,7 @@ class PointsToPassTest {
                 .first {
                     it.granularity is PointerDataflowGranularity &&
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.currentDerefValue
+                            PointerAccess.CURRENT_DEREF_VALUE
                 }
                 .start,
         )
@@ -2574,7 +2573,7 @@ class PointsToPassTest {
                 .filter {
                     it.granularity is PointerDataflowGranularity &&
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.currentDerefDerefValue
+                            PointerAccess.CURRENT_DEREF_DEREF_VALUE
                 }
                 .size,
         )
@@ -2584,7 +2583,7 @@ class PointsToPassTest {
                 .first {
                     it.granularity is PointerDataflowGranularity &&
                         (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.currentDerefDerefValue
+                            PointerAccess.CURRENT_DEREF_DEREF_VALUE
                 }
                 .start,
         )
@@ -4278,8 +4277,8 @@ class PointsToPassTest {
             ),
             realCodeCallArg.prevDFGEdges
                 .filter {
-                    (it.granularity as? PointerDataflowGranularity)?.pointerTarget?.name ==
-                        "currentDerefDerefValue"
+                    (it.granularity as? PointerDataflowGranularity)?.pointerTarget ==
+                        PointerAccess.CURRENT_DEREF_DEREF_VALUE
                 }
                 .map { it.start }
                 .toSet(),
@@ -4470,8 +4469,8 @@ class PointsToPassTest {
             xAssign,
             xRefDelete.prevDFGEdges
                 .singleOrNull {
-                    (it.granularity as? PointerDataflowGranularity)?.pointerTarget?.name ==
-                        "currentDerefValue"
+                    (it.granularity as? PointerDataflowGranularity)?.pointerTarget ==
+                        PointerAccess.CURRENT_DEREF_VALUE
                 }
                 ?.start,
         )
