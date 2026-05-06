@@ -44,7 +44,13 @@ class ForEach : Loop(), BranchingNode, StatementHolder {
     @Relationship("VARIABLE")
     var variableEdge =
         astOptionalEdgeOf<Expression>(
-            onChanged = { _, new -> (new?.end as? Expression)?.access = AccessValues.WRITE }
+            onChanged = { _, new ->
+                new?.end?.access = AccessValues.WRITE
+                val end = new?.end
+                if (end is Reference) {
+                    end.dfgHandlerHint = true
+                }
+            }
         )
 
     /**

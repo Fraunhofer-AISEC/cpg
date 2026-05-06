@@ -34,11 +34,14 @@ import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayState
 import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayStateElement
@@ -46,6 +49,7 @@ import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.getOverlaysByPrevDFG
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
+import kotlinx.coroutines.runBlocking
 
 // TODO: move file creation before join pass
 /**
@@ -58,6 +62,8 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 @DependsOn(EvaluationOrderGraphPass::class, false)
 @DependsOn(PythonFileJoinPass::class, false)
 @DependsOn(PythonTempFilePass::class, false)
+@DependsOn(PointsToPass::class, true)
+@DependsOn(ControlFlowSensitiveDFGPass::class, true)
 @Description(
     "Applies file concepts to the CPG, enriching the graph with additional semantic information relevant to handling files. It only considers code written in python."
 )
@@ -460,7 +466,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         val lastNode =
             paths.fulfilled
                 .map { it.nodes.last() }
-                .flatMap {
+                .flatMapTo(ConcurrentIdentitySet()) {
                     // collect all "overlay" nodes
                     state[it] ?: setOf(it, *it.overlays.toTypedArray())
                 }
@@ -483,15 +489,17 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                             // store the new file in the cache
                             currentMap[fileHandle.fileName] = newFile
                             // and add it to the lattice
-                            lattice.lub(
-                                one = state,
-                                two =
-                                    NodeToOverlayStateElement(
-                                        fileHandle.underlyingNode!! /* TODO*/ to
-                                            PowersetLattice.Element(newFile)
-                                    ),
-                                allowModify = true,
-                            )
+                            runBlocking {
+                                lattice.lub(
+                                    one = state,
+                                    two =
+                                        NodeToOverlayStateElement(
+                                            fileHandle.underlyingNode!! /* TODO*/ to
+                                                PowersetLattice.Element(newFile)
+                                        ),
+                                    allowModify = true,
+                                )
+                            }
                         }
             }
         }
@@ -526,14 +534,16 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                                 // store the new file in the cache
                                 currentMap[fileName] = newFile
                                 // and add it to the lattice
-                                lattice.lub(
-                                    one = state,
-                                    two =
-                                        NodeToOverlayStateElement(
-                                            cpgNode to PowersetLattice.Element(newFile)
-                                        ),
-                                    allowModify = true,
-                                )
+                                runBlocking {
+                                    lattice.lub(
+                                        one = state,
+                                        two =
+                                            NodeToOverlayStateElement(
+                                                cpgNode to PowersetLattice.Element(newFile)
+                                            ),
+                                        allowModify = true,
+                                    )
+                                }
                             }
                 }
 

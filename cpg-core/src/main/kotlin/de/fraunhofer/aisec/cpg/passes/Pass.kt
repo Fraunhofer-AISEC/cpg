@@ -37,7 +37,14 @@ import de.fraunhofer.aisec.cpg.graph.expressions.CatchClause
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
-import de.fraunhofer.aisec.cpg.passes.configuration.*
+import de.fraunhofer.aisec.cpg.helpers.orderEOGStartersBasedOnDependencies
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLast
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.function.Consumer
 import kotlin.reflect.KClass
@@ -84,6 +91,7 @@ abstract class TranslationUnitPass(
 abstract class EOGStarterPass(
     ctx: TranslationContext,
     sort: Sorter<Node> = EOGStarterLeastTUImportSorter,
+    val orderDependencies: Boolean = false,
 ) : Pass<Node>(ctx, sort)
 
 open class PassConfiguration
@@ -407,7 +415,11 @@ fun executePass(
             consumeTargets(
                 (prototype as EOGStarterPass)::class,
                 ctx,
-                prototype.sort(result),
+                if (prototype.orderDependencies) {
+                    orderEOGStartersBasedOnDependencies(prototype.sort(result))
+                } else {
+                    prototype.sort(result)
+                },
                 executedFrontends,
             )
         }
