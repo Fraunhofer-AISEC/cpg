@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
@@ -62,6 +63,7 @@ import kotlinx.coroutines.runBlocking
 @DependsOn(PythonFileJoinPass::class, false)
 @DependsOn(PythonTempFilePass::class, false)
 @DependsOn(PointsToPass::class, true)
+@DependsOn(ControlFlowSensitiveDFGPass::class, true)
 @Description(
     "Applies file concepts to the CPG, enriching the graph with additional semantic information relevant to handling files. It only considers code written in python."
 )

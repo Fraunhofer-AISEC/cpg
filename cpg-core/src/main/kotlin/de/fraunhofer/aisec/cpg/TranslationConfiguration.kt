@@ -270,6 +270,7 @@ private constructor(
         private var matchCommentsToNodes = false
         private var addIncludesToGraph = true
         private var useDefaultPasses = false
+        private var enablePointsToPass = true
         private var passConfigurations: MutableMap<KClass<out Pass<*>>, PassConfiguration> =
             mutableMapOf()
         private var frontendConfigurations:
@@ -593,7 +594,8 @@ private constructor(
          * - [EvaluationOrderGraphPass]
          * - [DynamicInvokeResolver]
          * - [TypeResolver]
-         * - [ControlFlowSensitiveDFGPass]
+         * - either [PointsToPass] (if [enablePointsToPass] is set to `true`) or
+         *   [ControlFlowSensitiveDFGPass] if [enablePointsToPass] is set to `false`.
          * - [ResolveCallAmbiguityPass]
          * - [ResolveMemberAmbiguityPass]
          *
@@ -607,12 +609,25 @@ private constructor(
             registerPass<DynamicInvokeResolver>()
             registerPass<EvaluationOrderGraphPass>() // creates EOG
             registerPass<TypeResolver>()
-            registerPass<PointsToPass>()
+
+            if (enablePointsToPass) registerPass<PointsToPass>()
+            else registerPass<ControlFlowSensitiveDFGPass>()
+
             registerPass<ResolveCallAmbiguityPass>()
             registerPass<ResolveMemberAmbiguityPass>()
             registerPass<BasicBlockCollectorPass>()
             registerPass<SccPass>()
             useDefaultPasses = true
+            return this
+        }
+
+        fun disablePointsToAnalysis(): Builder {
+            enablePointsToPass = false
+            return this
+        }
+
+        fun enablePointsToAnalysis(): Builder {
+            enablePointsToPass = true
             return this
         }
 
