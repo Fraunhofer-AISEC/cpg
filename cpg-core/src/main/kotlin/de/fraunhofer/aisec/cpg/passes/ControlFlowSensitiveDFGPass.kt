@@ -258,7 +258,6 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         state: State<Node, Set<Node>>,
         worklist: Worklist<Edge<Node>, Node, Set<Node>>,
     ): State<Node, Set<Node>> {
-        log.debug("In transfer")
         // We will set this if we write to a variable
         val writtenDeclaration: Declaration?
         val currentNode = currentEdge.end
