@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.newBreak
 import de.fraunhofer.aisec.cpg.graph.newCase
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import uniffi.cpgrust.RsArrayExpr
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsBinExpr
@@ -38,12 +39,14 @@ import uniffi.cpgrust.RsBlockExpr
 import uniffi.cpgrust.RsBreakExpr
 import uniffi.cpgrust.RsCallExpr
 import uniffi.cpgrust.RsCastExpr
+import uniffi.cpgrust.RsClosureExpr
 import uniffi.cpgrust.RsContinueExpr
 import uniffi.cpgrust.RsExpr
 import uniffi.cpgrust.RsFieldExpr
 import uniffi.cpgrust.RsForExpr
 import uniffi.cpgrust.RsIfExpr
 import uniffi.cpgrust.RsIndexExpr
+import uniffi.cpgrust.RsItem
 import uniffi.cpgrust.RsLetExpr
 import uniffi.cpgrust.RsLiteral
 import uniffi.cpgrust.RsLiteralType
@@ -102,6 +105,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.UnderscoreExpr -> handleUnderscoreExpr(node.v1)
             is RsExpr.ReturnExpr -> handleReturnExpr(node.v1)
             is RsExpr.TryExpr -> handleTryExpr(node.v1)
+            is RsExpr.ClosureExpr -> handleClosureExpr(node.v1)
 
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
@@ -712,7 +716,11 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                                     }
                             }
                     }
-                caseBlock.statements += newReference("val")
+
+                val breakStatement = newBreak()
+                breakStatement.expr = newReference("val")
+                breakStatement.usedAsExpression = true
+                caseBlock.statements += breakStatement
 
                 caseBlock.statements +=
                     newCase(raw).also { value ->
@@ -808,5 +816,54 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
 
         return caseExpressions
+    }
+
+    fun handleClosureExpr(closureExpr: RsClosureExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ClosureExpr(closureExpr))
+
+        val lambda = newLambda(rawNode = raw)
+        val enclosedFunction = newFunction("", rawNode = raw)
+        frontend.scopeManager.enterScope(enclosedFunction)
+
+        val paramsList = closureExpr.paramList.firstOrNull()
+
+        val function =
+            paramsList?.selfParam?.let {
+                newMethod(
+                        "",
+                        recordDeclaration = frontend.scopeManager.currentRecord,
+                        rawNode = raw,
+                    )
+                    .apply {
+                        val type = it.ty?.let { frontend.typeOf(it) }
+                        this.parameters +=
+                            newParameter(
+                                it.astNode.text,
+                                type = type ?: unknownType(),
+                                rawNode = RsAst.RustItem(RsItem.SelfParam(it)),
+                            )
+                    }
+            } ?: newFunction("", rawNode = raw)
+
+        paramsList?.let { params ->
+            for (parameter in params.params) {
+                val resolvedType = parameter.ty?.let { frontend.typeOf(it) } ?: unknownType()
+                // Todo We need to handle destructuring in a parameter properly
+                val param = newParameter(parameter.astNode.text, resolvedType)
+                frontend.scopeManager.addDeclaration(param)
+                enclosedFunction.parameters += param
+            }
+        }
+
+        val functionType = computeType(enclosedFunction)
+        enclosedFunction.type = functionType
+        closureExpr.expressions.firstOrNull()?.let {
+            enclosedFunction.body = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+        frontend.scopeManager.leaveScope(enclosedFunction)
+
+        lambda.function = enclosedFunction
+
+        return lambda
     }
 }

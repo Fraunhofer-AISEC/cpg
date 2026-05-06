@@ -79,7 +79,8 @@ pub enum RSAst {
     RustAbi(RSAbi), // Needed for now to have Abi nodes in the hierarchy
     RustProblem(RSProblem), // Used to represent nodes that we are currently not making an interface for
     RustUseTree(RSUseTree),
-    RustPat(RSPat)
+    RustPat(RSPat),
+    RustVariant(RSVariant) // Added as ast element to have it in the hierarchy
 }
 
 impl From<SyntaxNode> for RSAst {
@@ -1788,11 +1789,17 @@ impl From<VariantDef> for RSVariantDef {
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSVariant {pub(crate) ast_node: RSNode, expr: Vec<RSExpr>, fields: Vec<RSFieldList>}
+pub struct RSVariant {
+    pub(crate) ast_node: RSNode,
+    name: Option<String>,
+    expr: Vec<RSExpr>,
+    fields: Vec<RSFieldList>
+}
 impl From<Variant> for RSVariant {
     fn from(node: Variant ) -> Self {
         RSVariant{
             ast_node: node.syntax().into(),
+            name: node.name().map(|n|n.to_string()),
             expr: node.expr().map(Into::into).into_iter().collect(),
             fields: node.field_list().map(Into::into).into_iter().collect()
         }

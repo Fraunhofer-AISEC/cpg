@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import uniffi.cpgrust.RsAssocItem
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsConst
+import uniffi.cpgrust.RsEnum
 import uniffi.cpgrust.RsFieldList
 import uniffi.cpgrust.RsFn
 import uniffi.cpgrust.RsImpl
@@ -59,6 +60,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             is RsItem.Trait -> handleTrait(item.v1)
             is RsItem.Const -> handleConst(item.v1)
             is RsItem.Use -> handleUse(item.v1)
+            is RsItem.Enum -> handleEnum(item.v1)
             else -> handleNotSupported(node, item::class.simpleName ?: "")
         }
     }
@@ -78,6 +80,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                         val type = it.ty?.let { frontend.typeOf(it) }
                         this.parameters +=
                             newParameter(
+                                // Todo We need to handle destructuring in a parameter properly
                                 it.astNode.text,
                                 type = type ?: unknownType(),
                                 rawNode = RsAst.RustItem(RsItem.SelfParam(it)),
@@ -243,7 +246,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         if (scopedNode is Record && impl.pathTypes.size > 1) {
             val implInterface = impl.pathTypes.first()
             name = implInterface.path?.segment?.nameRef?.let { parseName(it.text) } ?: Name("")
-            scopedNode.superClasses +=
+            scopedNode.implementedInterfaces +=
                 objectType(name, rawNode = RsAst.RustType(RsType.PathType(implInterface)))
         }
 
@@ -345,6 +348,76 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
 
         return imports
+    }
+
+    fun handleEnum(enum: RsEnum): Declaration {
+        val raw = RsAst.RustItem(RsItem.Enum(enum))
+
+        val enumRecord = newRecord(enum.name ?: "", "enum", raw)
+
+        frontend.scopeManager.enterScope(enumRecord)
+
+        for (variant in enum.variants) {
+            val variantRecord = newRecord(variant.name ?: "", "variant", RsAst.RustVariant(variant))
+
+            frontend.scopeManager.enterScope(variantRecord)
+
+            // Handle discriminant expressions (integer discriminants)
+            if (variant.expr.isNotEmpty()) {
+                // Variant has an explicit discriminant value
+                val discriminantField = newField("discriminant", primitiveType("isize"))
+                discriminantField.initializer =
+                    frontend.expressionHandler.handle(RsAst.RustExpr(variant.expr.first()))
+                variantRecord.fields += discriminantField
+                frontend.scopeManager.addDeclaration(discriminantField)
+            }
+
+            // Handle field lists
+            for (fieldList in variant.fields) {
+                when (fieldList) {
+                    is RsFieldList.RecordFieldList -> {
+                        // Named fields - like struct with named fields
+                        val rfs = fieldList.v1
+                        for (rField in rfs.fields) {
+                            val type = rField.fieldType?.let { frontend.typeOf(it) }
+                            val field = newField(rField.name ?: "", type ?: unknownType())
+                            field.initializer =
+                                rField.expr?.let {
+                                    // Todo we may have to handle this before we enter the variant
+                                    // scope or before the variant is known as a name
+                                    frontend.expressionHandler.handle(RsAst.RustExpr(it))
+                                }
+                            variantRecord.fields += field
+                            frontend.scopeManager.addDeclaration(field)
+                        }
+                    }
+                    is RsFieldList.TupleFieldList -> {
+                        // Unnamed fields - like struct with unnamed fields
+                        var fieldCounter = 0
+                        val tfs = fieldList.v1
+                        for (tField in tfs.fields) {
+                            val type = tField.fieldType?.let { frontend.typeOf(it) }
+                            val field = newField(fieldCounter.toString(), type ?: unknownType())
+                            variantRecord.fields += field
+                            frontend.scopeManager.addDeclaration(field)
+                            fieldCounter++
+                        }
+                    }
+                }
+            }
+
+            variantRecord.implementedInterfaces += objectType(enumRecord.name, rawNode = raw)
+
+            frontend.scopeManager.leaveScope(variantRecord)
+
+            // Add the variant record as a sub-record of the enum
+            enumRecord.addDeclaration(variantRecord)
+            frontend.scopeManager.addDeclaration(variantRecord)
+        }
+
+        frontend.scopeManager.leaveScope(enumRecord)
+
+        return enumRecord
     }
 
     private fun handlePathForImport(rsPath: RsPath): Name? {

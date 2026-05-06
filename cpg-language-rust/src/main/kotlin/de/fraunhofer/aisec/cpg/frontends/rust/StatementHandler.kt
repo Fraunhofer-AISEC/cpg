@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import kotlin.collections.plusAssign
 import uniffi.cpgrust.RsAst
+import uniffi.cpgrust.RsBlockExpr
+import uniffi.cpgrust.RsExpr
 import uniffi.cpgrust.RsExprStmt
 import uniffi.cpgrust.RsItem
 import uniffi.cpgrust.RsLetStmt
@@ -60,6 +62,14 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     fun handleLetStmt(letStmt: RsLetStmt): Expression {
         val raw = RsAst.RustStmt(RsStmt.LetStmt(letStmt))
         // for us, a let expression is an assigment with a deconstruction
+
+        var initializer =
+            letStmt.initializer?.let { frontend.expressionHandler.handle(RsAst.RustExpr(it)) }
+                ?: newProblemExpression("Let statement does not have an initializer", rawNode = raw)
+
+        letStmt.letElse?.let {
+            return handleLetElse(letStmt, it, raw)
+        }
 
         // If the Pattern is a simple identity pattern we make it a declaration statement
         (letStmt.pat as? RsPat.IdentPat)?.let {
@@ -116,6 +126,86 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
         assign.usedAsExpression = true
         return assign
+    }
+
+    fun handleLetElse(letStmt: RsLetStmt, blockExpr: RsBlockExpr, raw: RsAst.RustStmt): Expression {
+
+        val patternResult =
+            letStmt.pat?.let { frontend.patternHandler.handle(RsAst.RustPat(it)) }
+                ?: newProblemExpression("Pattern cannot be parsed.", rawNode = raw)
+
+        val declarations = patternResult.nodes.filterIsInstance<DeclarationStatement>()
+
+        val variableDeconstruction =
+            newObjectDeconstruction(raw).also { obj ->
+                letStmt.ty?.let { obj.type = frontend.typeOf(it) }
+                    ?: run { obj.type = unknownType() }
+                declarations.forEach { declStmt -> obj.components += declStmt }
+            }
+
+        // Handle the pattern, extract the variable declarations, put them into an object
+        // deconstruction,
+        // are they already added to the scope?, for every variable, make a tuple expression with a
+        // reference for each
+        //    variable and put that as the return expression
+        // Translate the pattern a second time as case expression
+
+        val switch =
+            newSwitch(rawNode = raw).also { switch ->
+                switch.selector =
+                    letStmt.initializer?.let {
+                        frontend.expressionHandler.handle(RsAst.RustExpr(it))
+                    }
+                        ?: newProblemExpression(
+                            "Let statement does not have an initializer",
+                            rawNode = raw,
+                        )
+                frontend.scopeManager.enterScope(switch)
+
+                // Create a block to hold two case statements
+                val caseBlock = newBlock(raw)
+                caseBlock.usedAsExpression = true
+
+                caseBlock.statements +=
+                    newCase(raw).also { value ->
+                        value.caseExpression =
+                            letStmt.pat?.let { frontend.patternHandler.handle(RsAst.RustPat(it)) }
+                                ?: newProblemExpression("Pattern cannot be parsed.", rawNode = raw)
+                    }
+
+                val bindingsList = newInitializerList(rawNode = raw)
+
+                declarations
+                    .flatMap { it.variables }
+                    .forEach { variable ->
+                        val reference = newReference(variable.name.toString(), rawNode = raw)
+                        reference.refersTo = variable
+                        bindingsList.initializers += reference
+                    }
+
+                val breakExpr = newBreak(raw)
+                breakExpr.expr = bindingsList
+                breakExpr.usedAsExpression = true
+
+                caseBlock.statements += breakExpr
+
+                caseBlock.statements += newDefault(raw)
+                caseBlock.statements +=
+                    frontend.expressionHandler.handleNode(RsExpr.BlockExpr(blockExpr))
+
+                switch.statement = caseBlock
+
+                frontend.scopeManager.leaveScope(switch)
+
+                switch.usedAsExpression = true
+            }
+
+        return newAssign(
+            operatorCode = "=",
+            lhs = listOf(variableDeconstruction),
+            rhs = listOf(switch),
+            rawNode = raw,
+        )
     }
 
     fun handleExprStmt(exprStmt: RsExprStmt): Expression {
