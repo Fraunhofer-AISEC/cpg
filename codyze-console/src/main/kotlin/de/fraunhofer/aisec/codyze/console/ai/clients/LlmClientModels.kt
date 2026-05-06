@@ -89,3 +89,26 @@ data class OpenAiToolCall(
 
 @Serializable
 data class OpenAiFunctionDef(val name: String, val description: String, val parameters: JsonObject)
+
+enum class ClientProvider {
+    GEMINI,
+    OPENAI_COMPATIBLE,
+}
+
+data class ClientConfig(
+    val name: String,
+    val baseUrl: String,
+    val apiKey: String?,
+    val provider: ClientProvider,
+    val requiresApiKey: Boolean,
+)
+
+@Serializable data class LlmProviderWithModels(val name: String, val models: List<String>)
+
+@Serializable data class OpenAiModelsResponse(val data: List<OpenAiModel> = emptyList())
+
+@Serializable data class OpenAiModel(val id: String)
+
+@Serializable data class GeminiModelsResponse(val models: List<GeminiModel> = emptyList())
+
+@Serializable data class GeminiModel(val name: String)

@@ -38,6 +38,7 @@ import io.ktor.server.routing.*
 import io.ktor.utils.io.ClosedWriteChannelException
 import kotlin.reflect.KClass
 import kotlinx.coroutines.CancellationException
+import kotlinx.serialization.json.JsonObject
 
 /**
  * This function sets up the API routes for the web application. It defines the endpoints for
@@ -300,6 +301,8 @@ fun Route.chatRoutes(chatService: ChatService) {
             }
         }
 
+        get("/providers") { call.respond(chatService.listAvailableProviders()) }
+
         get("/mcp/capabilities") { call.respond(chatService.getMcpCapabilities()) }
 
         post("/mcp/prompts/{name}") {
@@ -308,6 +311,16 @@ fun Route.chatRoutes(chatService: ChatService) {
             val arguments = call.receiveNullable<Map<String, String>>() ?: emptyMap()
             call.respond(chatService.getPrompt(name, arguments))
         }
+
+        post("/mcp/tools/{toolName}") {
+            val toolName =
+                call.parameters["toolName"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+            val body = call.receive<JsonObject>()
+            val result = chatService.callTool(toolName, body)
+            call.respond(result)
+        }
+
+        get("/skills") { call.respond(chatService.getSkills()) }
     }
 }
 

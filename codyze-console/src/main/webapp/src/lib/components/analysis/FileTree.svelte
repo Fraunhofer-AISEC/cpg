@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ComponentJSON, TranslationUnitJSON } from '$lib/types';
+  import { CollapsiblePanel } from '$lib/components/ui';
 
   interface TreeNode {
     name: string;
@@ -20,7 +21,8 @@
     fileHref?: (unit: TranslationUnitJSON) => string;
     componentHref?: (componentName: string) => string;
     collapsed?: boolean;
-    hideHeader?: boolean;
+    width?: string;
+    conceptSuggestions?: Set<string>;
   }
 
   let {
@@ -31,7 +33,8 @@
     fileHref,
     componentHref,
     collapsed = $bindable(false),
-    hideHeader = false
+    width = 'w-56',
+    conceptSuggestions = new Set()
   }: Props = $props();
 
   function buildFileTree(units: TranslationUnitJSON[]): TreeNode[] {
@@ -155,6 +158,9 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
               <span class="text-xs">{node.name}</span>
+              {#if node.unit && conceptSuggestions.has(node.unit.id)}
+                <span class="ml-auto h-2 w-2 rounded-full bg-amber-400" title="Has concept suggestions"></span>
+              {/if}
             </a>
           {:else}
             <button
@@ -167,6 +173,9 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
               <span class="text-xs">{node.name}</span>
+              {#if node.unit && conceptSuggestions.has(node.unit.id)}
+                <span class="ml-auto h-2 w-2 rounded-full bg-amber-400" title="Has concept suggestions"></span>
+              {/if}
             </button>
           {/if}
         {/if}
@@ -175,60 +184,8 @@
   </ul>
 {/snippet}
 
-{#if hideHeader}
-  {#if collapsed}
-    <!-- Collapsed: narrow strip with vertical label -->
-    <button
-      onclick={() => (collapsed = false)}
-      class="group flex h-full w-8 shrink-0 flex-col items-center justify-start gap-2 border-r border-gray-200 bg-white pt-4 text-gray-400 transition-all rounded-l-xl hover:bg-blue-50 hover:text-blue-600"
-      aria-label="Show file tree"
-    >
-      <svg class="w-3 h-3 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-      </svg>
-      <span class="text-[10px] font-semibold tracking-widest uppercase group-hover:text-blue-500" style="writing-mode: vertical-rl;">Files</span>
-    </button>
-  {:else}
-    <!-- Expanded: left panel with clickable header + blue left accent bar -->
-    <div class="flex h-full w-56 shrink-0 flex-col border-r border-gray-200 bg-white rounded-l-xl overflow-hidden">
-      <button
-        onclick={() => (collapsed = true)}
-        class="group flex w-full shrink-0 items-center justify-between border-b border-gray-200 px-3 py-2 text-left transition-colors hover:bg-gray-50"
-        aria-label="Collapse file tree"
-      >
-        <div class="flex items-center gap-2">
-          <div class="h-3.5 w-0.5 rounded-full bg-blue-500"></div>
-          <span class="text-[11px] font-semibold uppercase tracking-widest text-gray-500 group-hover:text-gray-700">Files</span>
-        </div>
-        <svg class="h-3.5 w-3.5 text-gray-300 transition-transform group-hover:text-gray-500 group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
-      <nav class="flex-1 overflow-y-auto p-3">
-        {@render TreeNodeSnippet(fileTree)}
-      </nav>
-    </div>
-  {/if}
-{:else}
-  <div class="flex h-full flex-col border-r border-gray-200 bg-white transition-all duration-200 {collapsed ? 'w-8' : 'w-64'}">
-    <div class="flex shrink-0 items-center border-b border-gray-200 px-2 py-2 {collapsed ? 'justify-center' : 'justify-between'}">
-      {#if !collapsed}
-        <span class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Files</span>
-      {/if}
-      <button
-        onclick={() => (collapsed = !collapsed)}
-        class="flex items-center justify-center w-8 h-8 rounded-md text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700"
-        aria-label={collapsed ? 'Expand file tree' : 'Collapse file tree'}
-      >
-        <svg class="w-5 h-5 transition-transform duration-300 {collapsed ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-        </svg>
-      </button>
-    </div>
-    {#if !collapsed}
-      <nav class="flex-1 overflow-y-auto p-4">
-        {@render TreeNodeSnippet(fileTree)}
-      </nav>
-    {/if}
-  </div>
-{/if}
+<CollapsiblePanel title="Files" side="left" {width} bind:collapsed>
+  <nav class="flex-1 overflow-y-auto p-3">
+    {@render TreeNodeSnippet(fileTree)}
+  </nav>
+</CollapsiblePanel>
