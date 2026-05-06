@@ -31,11 +31,11 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.TranslationContext.EmptyTranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
+import de.fraunhofer.aisec.cpg.frontends.ForeignFunctionInterface
 import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
 import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.LanguageInterface
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.types.HasType.TypeObserver
@@ -115,7 +115,7 @@ private constructor(
     /** This list contains the files with function summaries which should be considered. */
     val functionSummaries: DFGFunctionSummaries,
     languages: Set<KClass<out Language<*>>>,
-    languageInterfaces: Set<KClass<out LanguageInterface<out Language<*>, out Language<*>>>>,
+    languageInterfaces: Set<KClass<out ForeignFunctionInterface<out Language<*>, out Language<*>>>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
     disableCleanup: Boolean,
@@ -142,7 +142,8 @@ private constructor(
 
     /** This list contains all language interfaces. */
     @JsonIgnore
-    val languageInterfaces: Set<KClass<out LanguageInterface<out Language<*>, out Language<*>>>>
+    val languageInterfaces:
+        Set<KClass<out ForeignFunctionInterface<out Language<*>, out Language<*>>>>
 
     /**
      * Switch off cleaning up TypeManager memory after analysis.
@@ -256,7 +257,7 @@ private constructor(
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
         private val languages = mutableSetOf<KClass<out Language<*>>>()
         private val languageInterfaces =
-            mutableSetOf<KClass<out LanguageInterface<out Language<*>, out Language<*>>>>()
+            mutableSetOf<KClass<out ForeignFunctionInterface<out Language<*>, out Language<*>>>>()
         private var topLevels = mutableMapOf<String, File>()
         private var debugParser = false
         private var failOnError = false
@@ -486,17 +487,17 @@ private constructor(
             return this
         }
 
-        /** Registers an additional [LanguageInterface] by its [KClass]. */
-        fun <T : LanguageInterface<out Language<*>, out Language<*>>> registerLanguageInterface(
-            clazz: KClass<T>
-        ): Builder {
+        /** Registers an additional [ForeignFunctionInterface] by its [KClass]. */
+        fun <
+            T : ForeignFunctionInterface<out Language<*>, out Language<*>>
+        > registerLanguageInterface(clazz: KClass<T>): Builder {
             languageInterfaces.add(clazz)
             return this
         }
 
-        /** Registers an additional [LanguageInterface] */
+        /** Registers an additional [ForeignFunctionInterface] */
         inline fun <
-            reified T : LanguageInterface<out Language<*>, out Language<*>>
+            reified T : ForeignFunctionInterface<out Language<*>, out Language<*>>
         > registerLanguageInterface(): Builder {
             registerLanguageInterface(T::class)
             return this

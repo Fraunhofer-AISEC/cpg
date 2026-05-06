@@ -28,7 +28,23 @@ package de.fraunhofer.aisec.cpg.frontends
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
-abstract class LanguageInterface<FROM : Language<*>, TO : Language<*>>(val from: FROM, val to: TO) {
+/**
+ * The CPG can hold nodes of different programming languages at the same time. There are several
+ * frameworks which allow calling functions from one language to another one. Examples which we also
+ * use in this repository are JNI or jep. However, the
+ * [de.fraunhofer.aisec.cpg.passes.SymbolResolver] won't be able to resolve functions across such
+ * interfaces for several reasons: First, it expects that the symbol and the declaration it refers
+ * to are of the same language. Second, the interfaces may slightly change the name and for sure the
+ * [Type]s (since each type has its own language).
+ *
+ * This class provides a way to specify such interfaces between two programming languages. It models
+ * the way to resolve a symbol from the language [from] (e.g., caller) to the language [to] (e.g.,
+ * callee, declaration).
+ */
+abstract class ForeignFunctionInterface<FROM : Language<*>, TO : Language<*>>(
+    val from: FROM,
+    val to: TO,
+) {
 
     /**
      * Maps the [Symbol] [from] the [FROM] language to a [Symbol] of the [TO] language. This is

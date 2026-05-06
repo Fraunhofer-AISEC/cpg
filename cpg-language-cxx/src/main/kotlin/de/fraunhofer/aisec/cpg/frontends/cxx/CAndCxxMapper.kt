@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.frontends.LanguageInterface
+import de.fraunhofer.aisec.cpg.frontends.ForeignFunctionInterface
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
-class CToCxxMapper : LanguageInterface<CLanguage, CPPLanguage>(CLanguage(), CPPLanguage()) {
+class CToCxxMapper : ForeignFunctionInterface<CLanguage, CPPLanguage>(CLanguage(), CPPLanguage()) {
     override fun mapSymbol(from: Symbol): Symbol {
         return from
     }
@@ -39,7 +39,7 @@ class CToCxxMapper : LanguageInterface<CLanguage, CPPLanguage>(CLanguage(), CPPL
     }
 }
 
-class CxxToCMapper : LanguageInterface<CPPLanguage, CLanguage>(CPPLanguage(), CLanguage()) {
+class CxxToCMapper : ForeignFunctionInterface<CPPLanguage, CLanguage>(CPPLanguage(), CLanguage()) {
     override fun mapSymbol(from: Symbol): Symbol {
         return from
     }

@@ -25,15 +25,24 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.ForeignFunctionInterface
+import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.persistence.createJsonGraph
 import de.fraunhofer.aisec.cpg.persistence.persistJson
 import de.fraunhofer.aisec.cpg.test.GraphExamples
+import de.fraunhofer.aisec.cpg.test.analyze
+import kotlin.io.path.Path
 import kotlin.io.path.createTempFile
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 /**
@@ -41,6 +50,60 @@ import org.junit.jupiter.api.Test
  * integration test. This might be replaced with a language-neutral test at some point.
  */
 class IntegrationTest {
+
+    class JavaCFFI :
+        ForeignFunctionInterface<JavaLanguage, CLanguage>(JavaLanguage(), CLanguage()) {
+        override fun mapSymbol(from: Symbol): Symbol {
+            val isNativeAdd =
+                from == "nativeAdd" ||
+                    from.endsWith(".nativeAdd") ||
+                    from.contains(".nativeAdd(") ||
+                    from.contains("nativeAdd(")
+
+            return if (isNativeAdd) {
+                "Java_MyClass_nativeAdd"
+            } else {
+                from
+            }
+        }
+
+        override fun mapType(from: Type): Type {
+            return to.builtInTypes[from.name.toString()] ?: from
+        }
+    }
+
+    //
+    // --report-output="study/python_analysis_output.py" --path-suffix="-python"
+
+    @Test
+    fun testForeignFunctionInterface() {
+        val topLevel = Path("src/integrationTest/resources/foreignFunctionInterface")
+        val result =
+            analyze(
+                listOf(
+                    topLevel.resolve("MyClass.java").toFile(),
+                    topLevel.resolve("native.c").toFile(),
+                ),
+                topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<CLanguage>()
+                it.registerLanguage<JavaLanguage>()
+                it.registerLanguageInterface<JavaCFFI>()
+            }
+        assertNotNull(result)
+
+        val useNativeAdd = result.functions["useNativeAdd"]
+        assertNotNull(useNativeAdd)
+
+        val nativeCall = useNativeAdd.calls["nativeAdd"]
+        assertNotNull(nativeCall)
+
+        val nativeImplementation = result.functions["Java_MyClass_nativeAdd"]
+        assertNotNull(nativeImplementation)
+
+        assertTrue(nativeCall.invokes.contains(nativeImplementation))
+    }
 
     @Test
     fun testBuildJsonGraph() {

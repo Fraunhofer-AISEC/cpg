@@ -787,31 +787,14 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         // We need to differentiate between a qualified and unqualified lookup. We have a qualified
         // lookup, if the scope is not null. In this case we need to stay within the specified scope
         val list =
-            when {
-                scope != null -> {
-                    scope
-                        .lookupSymbol(
-                            n.localName,
-                            languageOnly = language,
-                            qualifiedLookup = true,
-                            replaceImports = replaceImports,
-                            predicate = predicate,
-                        )
-                        .toMutableList()
-                }
-                else -> {
-                    // Otherwise, we can look up the symbol alone (without any FQN) starting from
-                    // the startScope
-                    startScope
-                        ?.lookupSymbol(
-                            n.localName,
-                            languageOnly = language,
-                            replaceImports = replaceImports,
-                            predicate = predicate,
-                        )
-                        ?.toMutableList() ?: mutableListOf()
-                }
-            }.toMutableList()
+            findDeclarationsByName(
+                scope,
+                n.localName,
+                language,
+                replaceImports,
+                predicate,
+                startScope,
+            )
 
         val otherLanguageInterfaces = ctx.languageInterfaces[language]
         otherLanguageInterfaces?.forEach { otherLanguageInterface ->
@@ -819,32 +802,14 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             val symbol = otherLanguageInterface.mapSymbol(n.localName)
 
             val toAdd =
-                when {
-                    scope != null -> {
-                        scope
-                            .lookupSymbol(
-                                symbol,
-                                languageOnly = otherLanguage,
-                                qualifiedLookup = true,
-                                replaceImports = replaceImports,
-                                predicate = predicate,
-                            )
-                            .toMutableList()
-                    }
-                    else -> {
-                        // Otherwise, we can look up the symbol alone (without any FQN) starting
-                        // from
-                        // the startScope
-                        startScope
-                            ?.lookupSymbol(
-                                symbol,
-                                languageOnly = otherLanguage,
-                                replaceImports = replaceImports,
-                                predicate = predicate,
-                            )
-                            ?.toMutableList() ?: mutableListOf()
-                    }
-                }
+                findDeclarationsByName(
+                    scope,
+                    symbol,
+                    otherLanguage,
+                    replaceImports,
+                    predicate,
+                    startScope,
+                )
 
             list.addAll(toAdd)
         }
@@ -864,6 +829,41 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
 
         return list
     }
+
+    private fun findDeclarationsByName(
+        scope: Scope?,
+        symbol: Symbol,
+        language: Language<*>,
+        replaceImports: Boolean,
+        predicate: ((Declaration) -> Boolean)?,
+        startScope: Scope?,
+    ): MutableList<Declaration> =
+        when {
+            scope != null -> {
+                scope
+                    .lookupSymbol(
+                        symbol,
+                        languageOnly = language,
+                        qualifiedLookup = true,
+                        replaceImports = replaceImports,
+                        predicate = predicate,
+                    )
+                    .toMutableList()
+            }
+
+            else -> {
+                // Otherwise, we can look up the symbol alone (without any FQN) starting from
+                // the startScope
+                startScope
+                    ?.lookupSymbol(
+                        symbol,
+                        languageOnly = language,
+                        replaceImports = replaceImports,
+                        predicate = predicate,
+                    )
+                    ?.toMutableList() ?: mutableListOf()
+            }
+        }.toMutableList()
 
     /**
      * This function tries to look up the symbol contained in [name] (using [lookupSymbolByName])

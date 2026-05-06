@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.TranslationManager.AdditionalSource
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.log
+import de.fraunhofer.aisec.cpg.frontends.ForeignFunctionInterface
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.LanguageInterface
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -113,7 +113,10 @@ open class TranslationContext(
     }
 
     val languageInterfaces:
-        Map<Language<*>?, Collection<LanguageInterface<out Language<*>, out Language<*>>>> by lazy {
+        Map<
+            Language<*>?,
+            Collection<ForeignFunctionInterface<out Language<*>, out Language<*>>>,
+        > by lazy {
         val list =
             config.languageInterfaces.map {
                 val li = it.constructors.firstOrNull()?.call()
