@@ -104,7 +104,9 @@ class PHPLanguageFrontend(ctx: TranslationContext, language: PHPLanguage) :
 
     companion object {
         private val FUNCTION_REGEX =
-            Regex("""\bfunction\s+&?\s*([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)""")
+            Regex(
+                """\bfunction\s+&?([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*(?::\s*[A-Za-z_\\|?][A-Za-z0-9_\\|?]*)?"""
+            )
         private val PARAMETER_REGEX = Regex("""(\.\.\.)?\$([A-Za-z_][A-Za-z0-9_]*)""")
     }
 }
