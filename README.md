@@ -2,7 +2,7 @@
 [![Actions Status](https://github.com/Fraunhofer-AISEC/cpg/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/Fraunhofer-AISEC/cpg/actions)
  [![codecov](https://codecov.io/gh/Fraunhofer-AISEC/cpg/graph/badge.svg?token=XBXZZOQIID)](https://codecov.io/gh/Fraunhofer-AISEC/cpg)
 
-A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang, Python and TypeScript. Furthermore, it has support for the [LLVM IR](http://llvm.org/docs/LangRef.html) and thus, theoretically support for all languages that compile using LLVM. 
+A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang, Python, TypeScript, Ruby, INI and PHP. Furthermore, it has support for the [LLVM IR](http://llvm.org/docs/LangRef.html) and thus, theoretically support for all languages that compile using LLVM. 
 
 ## What is this?
 
@@ -139,6 +139,7 @@ The current state of languages is:
 | LLVM                     | cpg-language-llvm                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
 | TypeScript/JavaScript    | cpg-language-typescript               | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
 | Ruby                     | cpg-language-ruby                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
+| PHP                      | cpg-language-php                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
 | {OpenQASM,Python-Qiskit} | cpg-language-{openqasm,python-qiskit} | [quantum-cpg](https://github.com/Fraunhofer-AISEC/cpg/tree/quantum-cpg) | `experimental` |
 
 Note that several languages can be compiled to LLVM IR and thus, can be analyzed using the `cpg-language-llvm` module (see [7]). This includes, but is not limited to, Rust, Swift, Objective-C, and Haskell (see https://llvm.org/ for more information). 
@@ -236,4 +237,3 @@ Additional extensions of the CPG to support further use-cases:
 [7] Alexander Küchler, Christian Banse. Representing LLVM-IR in a Code Property Graph. 25th Information Security Conference (ISC). Bali, Indonesia. 2022
 
 [8] Maximilian Kaul, Alexander Küchler, Christian Banse. A Uniform Representation of Classical and Quantum Source Code for Static Code Analysis. IEEE International Conference on Quantum Computing and Engineering (QCE). Bellevue, WA, USA. 2023
-
