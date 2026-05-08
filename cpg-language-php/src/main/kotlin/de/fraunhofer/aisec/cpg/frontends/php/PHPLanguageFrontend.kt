@@ -33,80 +33,94 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import org.antlr.v4.runtime.CharStreams
+import org.antlr.v4.runtime.CommonTokenStream
+import org.antlr.v4.runtime.ParserRuleContext
+import org.antlr.v4.runtime.Token
 
 /**
- * A relatively simple PHP frontend that extracts top-level function declarations and parameters
- * from PHP source code.
+ * A PHP language frontend that uses the ANTLR4-based PHP grammar (MIT-licensed, from
+ * antlr/grammars-v4) to parse PHP 8 source code into a CPG.
  */
 class PHPLanguageFrontend(ctx: TranslationContext, language: PHPLanguage) :
-    LanguageFrontend<String, String>(ctx, language), SupportsNewParse {
+    LanguageFrontend<ParserRuleContext, ParserRuleContext>(ctx, language), SupportsNewParse {
+
+    val declarationHandler: DeclarationHandler = DeclarationHandler(this)
+    val statementHandler: StatementHandler = StatementHandler(this)
+    val expressionHandler: ExpressionHandler = ExpressionHandler(this)
+
+    /** The source file path – kept to build [PhysicalLocation] objects. */
+    internal var filePath: Path? = null
 
     override fun parse(file: File): TranslationUnit {
         return parse(file.readText(StandardCharsets.UTF_8), file.toPath())
     }
 
     override fun parse(content: String, path: Path?): TranslationUnit {
-        val tu = newTranslationUnit(path?.toString() ?: "unknown.php", rawNode = content)
+        filePath = path
+
+        val charStream = CharStreams.fromString(content)
+        val lexer = PhpLexer(charStream)
+        val tokens = CommonTokenStream(lexer)
+        val parser = PhpParser(tokens)
+
+        val document = parser.htmlDocument()
+        val tu = newTranslationUnit(path?.toString() ?: "unknown.php", rawNode = document)
+
         scopeManager.resetToGlobal(tu)
 
-        FUNCTION_REGEX.findAll(content).forEach { match ->
-            val function = newFunction(match.groupValues[1], rawNode = match.value)
-            scopeManager.enterScope(function)
-            parseParameters(match.groupValues[2], match.value).forEach { parameter ->
-                scopeManager.addDeclaration(parameter)
-                function.parameters += parameter
+        for (block in document.phpBlock()) {
+            for (stmt in block.topStatement()) {
+                declarationHandler.handleTopStatement(stmt, tu)
             }
-            function.body = newBlock(rawNode = match.value)
-            scopeManager.leaveScope(function)
-
-            scopeManager.addDeclaration(function)
-            tu.declarations += function
         }
 
         return tu
     }
 
-    private fun parseParameters(
-        parameterList: String,
-        rawNode: String,
-    ): List<de.fraunhofer.aisec.cpg.graph.declarations.Parameter> {
-        if (parameterList.isBlank()) {
-            return emptyList()
-        }
-
-        return parameterList.split(",").mapNotNull { parameterDeclaration ->
-            PARAMETER_REGEX.find(parameterDeclaration.trim())?.let { parameterMatch ->
-                val isVariadic = parameterMatch.groupValues[1].isNotEmpty()
-                val name = parameterMatch.groupValues[2]
-                newParameter(name, variadic = isVariadic, rawNode = rawNode)
-            }
-        }
+    override fun codeOf(astNode: ParserRuleContext): String? {
+        return astNode.text
     }
 
-    override fun codeOf(astNode: String): String? {
-        return astNode
-    }
-
-    override fun locationOf(astNode: String): PhysicalLocation? {
-        return null
-    }
-
-    override fun typeOf(type: String): Type {
-        return autoType()
-    }
-
-    override fun setComment(node: Node, astNode: String) {
-        // not implemented
-    }
-
-    companion object {
-        private val FUNCTION_REGEX =
-            Regex(
-                """\bfunction\s+&?([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*(?::\s*[A-Za-z_\\|?][A-Za-z0-9_\\|?]*)?"""
+    override fun locationOf(astNode: ParserRuleContext): PhysicalLocation? {
+        val start = astNode.start ?: return null
+        val stop = astNode.stop ?: start
+        val uri = filePath?.toUri() ?: return null
+        // ANTLR uses 1-based line and 0-based column; CPG Region uses 1-based both
+        val region =
+            Region(
+                start.line,
+                start.charPositionInLine + 1,
+                stop.line,
+                stop.charPositionInLine + stop.text.length + 1,
             )
-        private val PARAMETER_REGEX = Regex("""(\.\.\.)?\$([A-Za-z_][A-Za-z0-9_]*)""")
+        return PhysicalLocation(uri, region)
     }
+
+    override fun typeOf(type: ParserRuleContext): Type {
+        return typeOf(type.text)
+    }
+
+    /**
+     * Resolves a PHP type-hint string (e.g. "string", "int", "\\App\\Foo") to a CPG [Type]. Falls
+     * back to [autoType] for unknown or compound types.
+     */
+    fun typeOf(typeName: String?): Type {
+        if (typeName == null || typeName.contains("|") || typeName.contains("?")) {
+            return autoType()
+        }
+        val stripped = typeName.trimStart('\\')
+        return objectType(stripped)
+    }
+
+    override fun setComment(node: Node, astNode: ParserRuleContext) {
+        // not yet implemented
+    }
+
+    /** Convenience to get the raw text of a [Token]. */
+    fun tokenText(token: Token?): String = token?.text ?: ""
 }

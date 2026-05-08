@@ -23,11 +23,41 @@
  *                    \______/ \__|       \______/
  *
  */
-plugins { id("cpg.frontend-conventions") }
+plugins {
+    id("cpg.frontend-conventions")
+    antlr
+}
 
 mavenPublishing {
     pom {
         name.set("Code Property Graph - PHP")
-        description.set("A simple PHP language frontend for the CPG")
+        description.set("A PHP language frontend for the CPG")
     }
 }
+
+dependencies {
+    // ANTLR4 tool is used at build time to generate the lexer/parser; runtime is needed at runtime
+    antlr(libs.antlr4)
+    implementation(libs.antlr4.runtime)
+}
+
+tasks.generateGrammarSource {
+    arguments =
+        arguments +
+            listOf(
+                "-visitor",
+                "-package",
+                "de.fraunhofer.aisec.cpg.frontends.php",
+                "-lib",
+                outputDirectory.absolutePath,
+            )
+    outputDirectory =
+        file(
+            "${project.layout.buildDirectory.get()}/generated-src/antlr/main/de/fraunhofer/aisec/cpg/frontends/php"
+        )
+}
+
+// Make sure ANTLR sources are generated before Kotlin compilation
+tasks.compileKotlin { dependsOn(tasks.generateGrammarSource) }
+
+tasks.compileTestKotlin { dependsOn(tasks.generateGrammarSource) }
