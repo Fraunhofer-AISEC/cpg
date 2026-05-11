@@ -91,8 +91,8 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
             is PhpParser.ConditionalExpressionContext -> handleConditional(ctx)
             is PhpParser.CloneExpressionContext -> handle(ctx.expression())
             is PhpParser.PrintExpressionContext -> {
-                val callee = frontend.newReference("print", rawNode = ctx)
-                val call = frontend.newCall(callee, rawNode = ctx)
+                val callee = newReference("print", rawNode = ctx)
+                val call = newCall(callee, rawNode = ctx)
                 call.addArgument(handle(ctx.expression()))
                 call
             }
@@ -115,7 +115,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
     private fun handleAssignment(ctx: PhpParser.AssignmentExpressionContext): Expression {
         // Identify the operator: the first child after the assignable that is an operator token
         val opText = ctx.assignmentOperator()?.text ?: ctx.Eq()?.text ?: "="
-        val assign = frontend.newAssign(opText, rawNode = ctx)
+        val assign = newAssign(opText, rawNode = ctx)
 
         val lhsExpr = handleAssignable(ctx.assignable())
         assign.lhs = mutableListOf(lhsExpr)
@@ -162,7 +162,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
             ctx.qualifiedStaticTypeRef() != null -> {
                 // Static call: ClassName::$var
                 val typeName = ctx.qualifiedStaticTypeRef().text
-                frontend.newReference(typeName, rawNode = ctx)
+                newReference(typeName, rawNode = ctx)
             }
             ctx.keyedVariable().isNotEmpty() -> {
                 val varCtx = ctx.keyedVariable(0)
@@ -176,11 +176,11 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
     private fun handleKeyedVariable(ctx: PhpParser.KeyedVariableContext): Expression {
         val varName =
             ctx.VarName()?.text?.removePrefix("$") ?: return ProblemExpression("no VarName")
-        val ref = frontend.newReference(varName, rawNode = ctx)
+        val ref = newReference(varName, rawNode = ctx)
         // Handle array access: $var[expr]
         var result: Expression = ref
         for (sqe in ctx.squareCurlyExpression()) {
-            val sub = frontend.newSubscription(rawNode = sqe)
+            val sub = newSubscription(rawNode = sqe)
             sub.arrayExpression = result
             sqe.expression()?.let { sub.subscriptExpression = handle(it) }
             result = sub
@@ -200,15 +200,15 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
         return if (ctx.actualArguments() != null) {
             // method call
-            val callee = frontend.newMemberAccess(fieldName, base, rawNode = ctx)
-            val call = frontend.newMemberCall(callee, false, rawNode = ctx)
+            val callee = newMemberAccess(fieldName, base, rawNode = ctx)
+            val call = newMemberCall(callee, false, rawNode = ctx)
             ctx.actualArguments()?.arguments()?.forEach { args ->
                 args.actualArgument()?.forEach { arg -> call.addArgument(handle(arg.expression())) }
             }
             call
         } else {
             // field access
-            frontend.newMemberAccess(fieldName, base, rawNode = ctx)
+            newMemberAccess(fieldName, base, rawNode = ctx)
         }
     }
 
@@ -219,7 +219,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
             when {
                 nameCtx.qualifiedNamespaceName() != null -> {
                     val name = nameCtx.qualifiedNamespaceName().text
-                    frontend.newReference(name, rawNode = nameCtx)
+                    newReference(name, rawNode = nameCtx)
                 }
                 nameCtx.classConstant() != null -> {
                     val cc = nameCtx.classConstant()
@@ -229,16 +229,16 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
                         cc.identifier()?.text
                             ?: cc.keyedVariable()?.firstOrNull()?.text
                             ?: "unknown"
-                    val base = frontend.newReference(className, rawNode = cc)
-                    frontend.newMemberAccess(methodName, base, rawNode = cc)
+                    val base = newReference(className, rawNode = cc)
+                    newMemberAccess(methodName, base, rawNode = cc)
                 }
                 nameCtx.chainBase() != null -> handleChainBase(nameCtx.chainBase())
                 else -> ProblemExpression("unsupported function call name: ${nameCtx.text}")
             }
 
         val call =
-            if (callee is MemberAccess) frontend.newMemberCall(callee, false, rawNode = ctx)
-            else frontend.newCall(callee, rawNode = ctx)
+            if (callee is MemberAccess) newMemberCall(callee, false, rawNode = ctx)
+            else newCall(callee, rawNode = ctx)
 
         ctx.actualArguments()?.arguments()?.forEach { args ->
             args.actualArgument()?.forEach { arg ->
@@ -256,8 +256,8 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
     private fun handleNew(ctx: PhpParser.NewExprContext): Expression {
         val typeName = ctx.typeRef()?.text ?: "unknown"
         val type = frontend.typeOf(typeName)
-        val newExpr = frontend.newNew(type, rawNode = ctx)
-        val construction = frontend.newConstruction(typeName, rawNode = ctx)
+        val newExpr = newNew(type, rawNode = ctx)
+        val construction = newConstruction(typeName, rawNode = ctx)
         ctx.arguments()?.actualArgument()?.forEach { arg ->
             val argExpr =
                 arg.expression()?.let { handle(it) } ?: arg.chain()?.let { handleChain(it) }
@@ -274,7 +274,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         return when {
             ctx.constant() != null -> handleConstant(ctx.constant())
             ctx.string() != null -> handleString(ctx.string())
-            ctx.Label() != null -> frontend.newReference(ctx.Label().text, rawNode = ctx)
+            ctx.Label() != null -> newReference(ctx.Label().text, rawNode = ctx)
             else -> ProblemExpression("unsupported scalar: ${ctx.text}")
         }
     }
@@ -282,19 +282,17 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
     /** Models PHP constants, magic constants, and class constants. */
     internal fun handleConstant(ctx: PhpParser.ConstantContext): Expression {
         return when {
-            ctx.Null() != null ->
-                frontend.newLiteral(null, frontend.primitiveType("null"), rawNode = ctx)
+            ctx.Null() != null -> newLiteral(null, primitiveType("null"), rawNode = ctx)
             ctx.literalConstant() != null -> handleLiteralConstant(ctx.literalConstant())
-            ctx.magicConstant() != null ->
-                frontend.newReference(ctx.magicConstant().text, rawNode = ctx)
+            ctx.magicConstant() != null -> newReference(ctx.magicConstant().text, rawNode = ctx)
             ctx.classConstant() != null -> {
                 val cc = ctx.classConstant()
-                val base = frontend.newReference(cc.text.substringBefore("::"), rawNode = cc)
+                val base = newReference(cc.text.substringBefore("::"), rawNode = cc)
                 val field = cc.text.substringAfter("::")
-                frontend.newMemberAccess(field, base, rawNode = cc)
+                newMemberAccess(field, base, rawNode = cc)
             }
             ctx.qualifiedNamespaceName() != null ->
-                frontend.newReference(ctx.qualifiedNamespaceName().text, rawNode = ctx)
+                newReference(ctx.qualifiedNamespaceName().text, rawNode = ctx)
             else -> ProblemExpression("unsupported constant: ${ctx.text}")
         }
     }
@@ -304,15 +302,14 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         return when {
             ctx.BooleanConstant() != null -> {
                 val value = ctx.BooleanConstant().text.lowercase() == "true"
-                frontend.newLiteral(value, frontend.primitiveType("bool"), rawNode = ctx)
+                newLiteral(value, primitiveType("bool"), rawNode = ctx)
             }
             ctx.numericConstant() != null -> handleNumericConstant(ctx.numericConstant())
             ctx.Real() != null -> {
                 val value = ctx.Real().text.toDoubleOrNull() ?: 0.0
-                frontend.newLiteral(value, frontend.primitiveType("float"), rawNode = ctx)
+                newLiteral(value, primitiveType("float"), rawNode = ctx)
             }
-            ctx.stringConstant() != null ->
-                frontend.newReference(ctx.stringConstant().text, rawNode = ctx)
+            ctx.stringConstant() != null -> newReference(ctx.stringConstant().text, rawNode = ctx)
             else -> ProblemExpression("unsupported literal: ${ctx.text}")
         }
     }
@@ -323,22 +320,22 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         return when {
             ctx.Decimal() != null -> {
                 val value = text.replace("_", "").toLongOrNull() ?: 0L
-                frontend.newLiteral(value, frontend.primitiveType("int"), rawNode = ctx)
+                newLiteral(value, primitiveType("int"), rawNode = ctx)
             }
             ctx.Octal() != null -> {
                 val stripped = text.removePrefix("0").removePrefix("o")
                 val value = stripped.replace("_", "").toLongOrNull(8) ?: 0L
-                frontend.newLiteral(value, frontend.primitiveType("int"), rawNode = ctx)
+                newLiteral(value, primitiveType("int"), rawNode = ctx)
             }
             ctx.Hex() != null -> {
                 val stripped = text.removePrefix("0x").replace("_", "")
                 val value = stripped.toLongOrNull(16) ?: 0L
-                frontend.newLiteral(value, frontend.primitiveType("int"), rawNode = ctx)
+                newLiteral(value, primitiveType("int"), rawNode = ctx)
             }
             ctx.Binary() != null -> {
                 val stripped = text.removePrefix("0b").replace("_", "")
                 val value = stripped.toLongOrNull(2) ?: 0L
-                frontend.newLiteral(value, frontend.primitiveType("int"), rawNode = ctx)
+                newLiteral(value, primitiveType("int"), rawNode = ctx)
             }
             else -> ProblemExpression("unsupported numeric constant: $text")
         }
@@ -356,7 +353,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
                         ?: ""
                 else -> ctx.text
             }
-        return frontend.newLiteral(text, frontend.primitiveType("string"), rawNode = ctx)
+        return newLiteral(text, primitiveType("string"), rawNode = ctx)
     }
 
     // ── Unary / increment / decrement ─────────────────────────────────────────
@@ -365,7 +362,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
     private fun handleUnary(ctx: PhpParser.UnaryOperatorExpressionContext): Expression {
         // First child gives the operator text
         val op = ctx.getChild(0).text
-        val unary = frontend.newUnaryOperator(op, postfix = false, prefix = true, rawNode = ctx)
+        val unary = newUnaryOperator(op, postfix = false, prefix = true, rawNode = ctx)
         unary.input = handle(ctx.expression())
         return unary
     }
@@ -373,7 +370,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
     /** Models a prefix increment or decrement expression. */
     private fun handlePrefixIncDec(ctx: PhpParser.PrefixIncDecExpressionContext): Expression {
         val op = ctx.getChild(0).text // '++' or '--'
-        val unary = frontend.newUnaryOperator(op, postfix = false, prefix = true, rawNode = ctx)
+        val unary = newUnaryOperator(op, postfix = false, prefix = true, rawNode = ctx)
         unary.input = handleChain(ctx.chain())
         return unary
     }
@@ -381,7 +378,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
     /** Models a postfix increment or decrement expression. */
     private fun handlePostfixIncDec(ctx: PhpParser.PostfixIncDecExpressionContext): Expression {
         val op = ctx.getChild(1).text // '++' or '--'
-        val unary = frontend.newUnaryOperator(op, postfix = true, prefix = false, rawNode = ctx)
+        val unary = newUnaryOperator(op, postfix = true, prefix = false, rawNode = ctx)
         unary.input = handleChain(ctx.chain())
         return unary
     }
@@ -394,7 +391,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         op: String,
         rhsCtx: PhpParser.ExpressionContext,
     ): Expression {
-        val binOp = frontend.newBinaryOperator(op, rawNode = lhsCtx.parent as? ParserRuleContext)
+        val binOp = newBinaryOperator(op, rawNode = lhsCtx.parent as? ParserRuleContext)
         binOp.lhs = handle(lhsCtx)
         binOp.rhs = handle(rhsCtx)
         return binOp
@@ -404,7 +401,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     /** Models an explicit PHP cast expression. */
     private fun handleCast(ctx: PhpParser.CastExpressionContext): Expression {
-        val cast = frontend.newCast(rawNode = ctx)
+        val cast = newCast(rawNode = ctx)
         cast.castType = frontend.typeOf(ctx.castOperation().text)
         cast.expression =
             ctx.expression()?.let { handle(it) } ?: ProblemExpression("cast without expression")
@@ -415,15 +412,14 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     /** Models an array literal as an initializer list. */
     private fun handleArrayCreation(ctx: PhpParser.ArrayCreationContext): Expression {
-        val initList = frontend.newInitializerList(rawNode = ctx)
+        val initList = newInitializerList(rawNode = ctx)
         ctx.arrayItemList()?.arrayItem()?.forEach { item ->
             val exprs = item.expression()
             val value = exprs.lastOrNull()?.let { handle(it) }
             if (value != null) {
                 if (exprs.size == 2) {
                     // key => value
-                    val kv =
-                        frontend.newKeyValue(key = handle(exprs[0]), value = value, rawNode = item)
+                    val kv = newKeyValue(key = handle(exprs[0]), value = value, rawNode = item)
                     initList.initializers += kv
                 } else {
                     initList.initializers += value
@@ -437,9 +433,9 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     /** Models an `instanceof` check as a binary operator. */
     private fun handleInstanceOf(ctx: PhpParser.InstanceOfExpressionContext): Expression {
-        val binOp = frontend.newBinaryOperator("instanceof", rawNode = ctx)
+        val binOp = newBinaryOperator("instanceof", rawNode = ctx)
         binOp.lhs = ctx.expression()?.let { handle(it) } ?: ProblemExpression("instanceof lhs")
-        binOp.rhs = frontend.newReference(ctx.typeRef().text, rawNode = ctx.typeRef())
+        binOp.rhs = newReference(ctx.typeRef().text, rawNode = ctx.typeRef())
         return binOp
     }
 
@@ -450,7 +446,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         val exprs = ctx.expression()
         val condExpr =
             if (exprs.isNotEmpty()) handle(exprs[0]) else ProblemExpression("ternary condition")
-        val cond = frontend.newConditional(condExpr, rawNode = ctx)
+        val cond = newConditional(condExpr, rawNode = ctx)
         if (exprs.size >= 3) {
             // full ternary: cond ? then : else
             cond.thenExpression = handle(exprs[1])
@@ -467,7 +463,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     /** Models an anonymous function or arrow function as a CPG lambda. */
     private fun handleLambda(ctx: PhpParser.LambdaFunctionExprContext): Expression {
-        val func = frontend.newFunction("", rawNode = ctx)
+        val func = newFunction("", rawNode = ctx)
         frontend.scopeManager.enterScope(func)
 
         ctx.formalParameterList()?.formalParameter()?.forEach { param ->
@@ -478,9 +474,9 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
         // Arrow function body is a single expression
         ctx.expression()?.let {
-            val ret = frontend.newReturn(rawNode = it)
+            val ret = newReturn(rawNode = it)
             ret.returnValue = handle(it)
-            val block = frontend.newBlock(rawNode = it)
+            val block = newBlock(rawNode = it)
             block.statements += ret
             func.body = block
         }
@@ -488,7 +484,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
         frontend.scopeManager.leaveScope(func)
 
-        val lambda = frontend.newLambda(rawNode = ctx)
+        val lambda = newLambda(rawNode = ctx)
         lambda.function = func
         return lambda
     }
@@ -498,16 +494,16 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
     /** Models a PHP 8 `match` expression as a switch-like construct. */
     private fun handleMatchExpr(ctx: PhpParser.MatchExprContext): Expression {
         // Model as a switch-like construct using a binary operator chain (simplified)
-        val sw = frontend.newSwitch(rawNode = ctx)
+        val sw = newSwitch(rawNode = ctx)
         sw.selector = ctx.expression()?.let { handle(it) } ?: ProblemExpression("match expression")
-        val body = frontend.newBlock(rawNode = ctx)
+        val body = newBlock(rawNode = ctx)
         ctx.matchItem()?.forEach { item ->
             val exprs = item.expression()
             if (exprs.size >= 2) {
-                val caseNode = frontend.newCase(rawNode = item)
+                val caseNode = newCase(rawNode = item)
                 caseNode.caseExpression = handle(exprs.first())
                 body.statements += caseNode
-                val ret = frontend.newReturn(rawNode = item)
+                val ret = newReturn(rawNode = item)
                 ret.returnValue = handle(exprs.last())
                 body.statements += ret
             }
@@ -520,8 +516,8 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     /** Models special-word expressions such as `isset`, `empty`, or `exit` as calls. */
     private fun handleSpecialWord(ctx: PhpParser.SpecialWordExpressionContext): Expression {
-        val callee = frontend.newReference(ctx.getChild(0).text, rawNode = ctx)
-        val call = frontend.newCall(callee, rawNode = ctx)
+        val callee = newReference(ctx.getChild(0).text, rawNode = ctx)
+        val call = newCall(callee, rawNode = ctx)
         // expression() returns single ExpressionContext? for SpecialWordExpression
         ctx.expression()?.let { e -> call.addArgument(handle(e)) }
         ctx.chainList()?.chain()?.forEach { c -> call.addArgument(handleChain(c)) }
@@ -538,7 +534,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
             ctx.constantInitializer() != null -> {
                 val inner = handleConstantInitializer(ctx.constantInitializer())
                 val unary =
-                    frontend.newUnaryOperator(
+                    newUnaryOperator(
                         ctx.getChild(0).text,
                         postfix = false,
                         prefix = true,
@@ -563,7 +559,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
                 if (parts.isEmpty()) ProblemExpression("empty constant initializer")
                 else
                     parts.drop(1).fold(parts[0]) { acc, next ->
-                        val bin = frontend.newBinaryOperator(".", rawNode = ctx)
+                        val bin = newBinaryOperator(".", rawNode = ctx)
                         bin.lhs = acc
                         bin.rhs = next
                         bin

@@ -97,7 +97,7 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
     /** Models a PHP function declaration including parameters, return type, and body. */
     private fun handleFunctionDeclaration(ctx: PhpParser.FunctionDeclarationContext): Function {
         val name = ctx.identifier()?.text ?: ""
-        val func = frontend.newFunction(name, rawNode = ctx)
+        val func = newFunction(name, rawNode = ctx)
 
         frontend.scopeManager.enterScope(func)
 
@@ -130,13 +130,13 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
                 ctx.classEntryType()?.Trait() != null -> "class" // treat traits as classes
                 else -> "class"
             }
-        val record = frontend.newRecord(name, kind, rawNode = ctx)
+        val record = newRecord(name, kind, rawNode = ctx)
 
         frontend.scopeManager.enterScope(record)
 
         // Superclass (Extends clause – qualifiedStaticTypeRef() returns single context)
         ctx.qualifiedStaticTypeRef()?.let { superType ->
-            record.superClasses += listOf(frontend.objectType(superType.text))
+            record.superClasses += listOf(objectType(superType.text))
         }
 
         // Members
@@ -152,7 +152,7 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
             // method
             ctx.Function_() != null -> {
                 val name = ctx.identifier()?.text ?: ""
-                val method = frontend.newMethod(name, rawNode = ctx)
+                val method = newMethod(name, rawNode = ctx)
                 method.recordDeclaration = record
 
                 frontend.scopeManager.enterScope(method)
@@ -185,7 +185,7 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
                                 vi.constantInitializer()
                             )
                         else null
-                    val field = frontend.newField(fieldName, initializer = initExpr, rawNode = vi)
+                    val field = newField(fieldName, initializer = initExpr, rawNode = vi)
                     frontend.scopeManager.addDeclaration(field)
                     record.fields += field
                 }
@@ -205,9 +205,9 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
         val name = rawName.removePrefix("$")
         val isVariadic = ctx.children?.any { it.text == "..." } == true
 
-        val type = ctx.typeHint()?.let { frontend.typeOf(it.text) } ?: frontend.autoType()
+        val type = ctx.typeHint()?.let { frontend.typeOf(it.text) } ?: autoType()
 
-        val param = frontend.newParameter(name, type, variadic = isVariadic, rawNode = ctx)
+        val param = newParameter(name, type, variadic = isVariadic, rawNode = ctx)
 
         // default value
         if (varInit?.constantInitializer() != null) {
@@ -280,7 +280,7 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
         rawNode: ParserRuleContext,
         tu: TranslationUnit,
     ): Namespace {
-        val ns = frontend.newNamespace(namespaceName, rawNode = rawNode)
+        val ns = newNamespace(namespaceName, rawNode = rawNode)
         frontend.scopeManager.addDeclaration(ns)
         tu.declarations += ns
         return ns

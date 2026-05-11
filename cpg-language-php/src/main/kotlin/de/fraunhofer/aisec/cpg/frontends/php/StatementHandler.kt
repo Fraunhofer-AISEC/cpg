@@ -56,7 +56,7 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
 
     /** Converts a block statement into a CPG [Block]. */
     private fun handleBlock(ctx: PhpParser.BlockStatementContext): Block {
-        val block = frontend.newBlock(rawNode = ctx)
+        val block = newBlock(rawNode = ctx)
         ctx.innerStatementList()?.innerStatement()?.forEach { inner ->
             val expr = handleInnerStatement(inner)
             block.statements += expr
@@ -66,7 +66,7 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
 
     /** Converts an inner statement list into a synthetic block node. */
     private fun handleInnerStatementList(ctx: PhpParser.InnerStatementListContext): Block {
-        val block = frontend.newBlock(rawNode = ctx)
+        val block = newBlock(rawNode = ctx)
         ctx.innerStatement()?.forEach { inner ->
             val expr = handleInnerStatement(inner)
             block.statements += expr
@@ -80,13 +80,13 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
             ctx.statement() != null -> handleStatement(ctx.statement())
             ctx.functionDeclaration() != null -> {
                 val decl = frontend.declarationHandler.handleNode(ctx.functionDeclaration())
-                val ds = frontend.newDeclarationStatement(rawNode = ctx)
+                val ds = newDeclarationStatement(rawNode = ctx)
                 ds.declarations += decl
                 ds
             }
             ctx.classDeclaration() != null -> {
                 val decl = frontend.declarationHandler.handleNode(ctx.classDeclaration())
-                val ds = frontend.newDeclarationStatement(rawNode = ctx)
+                val ds = newDeclarationStatement(rawNode = ctx)
                 ds.declarations += decl
                 ds
             }
@@ -114,7 +114,7 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
             ctx.switchStatement() != null -> handleSwitch(ctx.switchStatement())
             ctx.breakStatement() != null -> handleBreak(ctx.breakStatement())
             ctx.continueStatement() != null -> handleContinue(ctx.continueStatement())
-            ctx.emptyStatement_() != null -> frontend.newEmpty(rawNode = ctx)
+            ctx.emptyStatement_() != null -> newEmpty(rawNode = ctx)
             else -> ProblemExpression("unsupported statement: ${ctx.text}")
         }
     }
@@ -123,7 +123,7 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
 
     /** Models an if/elseif/else chain as nested [IfElse] nodes. */
     private fun handleIf(ctx: PhpParser.IfStatementContext): IfElse {
-        val ifElse = frontend.newIfElse(rawNode = ctx)
+        val ifElse = newIfElse(rawNode = ctx)
         ifElse.condition = frontend.expressionHandler.handle(ctx.parentheses().expression())
 
         ctx.statement()?.let { ifElse.thenStatement = handle(it) }
@@ -134,7 +134,7 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
 
         val elseIfs = ctx.elseIfStatement()?.reversed() ?: emptyList()
         for (elif in elseIfs) {
-            val nested = frontend.newIfElse(rawNode = elif)
+            val nested = newIfElse(rawNode = elif)
             nested.condition = frontend.expressionHandler.handle(elif.parentheses().expression())
             nested.thenStatement = elif.statement()?.let { handle(it) }
             nested.elseStatement = elseChain
@@ -149,19 +149,19 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
 
     /** Models a while loop and its body. */
     private fun handleWhile(ctx: PhpParser.WhileStatementContext): While {
-        val whileStmt = frontend.newWhile(rawNode = ctx)
+        val whileStmt = newWhile(rawNode = ctx)
         whileStmt.condition = frontend.expressionHandler.handle(ctx.parentheses().expression())
         val body =
             ctx.statement()?.let { handle(it) }
                 ?: ctx.innerStatementList()?.let { handleInnerStatementList(it) }
-                ?: frontend.newBlock(rawNode = ctx)
+                ?: newBlock(rawNode = ctx)
         whileStmt.statement = body
         return whileStmt
     }
 
     /** Models a do/while loop. */
     private fun handleDoWhile(ctx: PhpParser.DoWhileStatementContext): DoWhile {
-        val doWhile = frontend.newDoWhile(rawNode = ctx)
+        val doWhile = newDoWhile(rawNode = ctx)
         doWhile.condition = frontend.expressionHandler.handle(ctx.parentheses().expression())
         doWhile.statement = handle(ctx.statement())
         return doWhile
@@ -171,7 +171,7 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
 
     /** Models a classic PHP for-loop including init, condition, update, and body. */
     private fun handleFor(ctx: PhpParser.ForStatementContext): For {
-        val forStmt = frontend.newFor(rawNode = ctx)
+        val forStmt = newFor(rawNode = ctx)
 
         // initializerStatement is a single Expression; wrap multiple inits in a block
         val inits =
@@ -181,7 +181,7 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
         if (inits.size == 1) {
             forStmt.initializerStatement = inits[0]
         } else if (inits.size > 1) {
-            val block = frontend.newBlock(rawNode = ctx)
+            val block = newBlock(rawNode = ctx)
             inits.forEach { block.statements += it }
             forStmt.initializerStatement = block
         }
@@ -199,7 +199,7 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
         if (iters.size == 1) {
             forStmt.iterationStatement = iters[0]
         } else if (iters.size > 1) {
-            val block = frontend.newBlock(rawNode = ctx)
+            val block = newBlock(rawNode = ctx)
             iters.forEach { block.statements += it }
             forStmt.iterationStatement = block
         }
@@ -207,7 +207,7 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
         val body =
             ctx.statement()?.let { handle(it) }
                 ?: ctx.innerStatementList()?.let { handleInnerStatementList(it) }
-                ?: frontend.newBlock(rawNode = ctx)
+                ?: newBlock(rawNode = ctx)
         forStmt.statement = body
         return forStmt
     }
@@ -216,7 +216,7 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
 
     /** Models a foreach loop over an iterable expression. */
     private fun handleForeach(ctx: PhpParser.ForeachStatementContext): ForEach {
-        val forEach = frontend.newForEach(rawNode = ctx)
+        val forEach = newForEach(rawNode = ctx)
 
         // iterable – the expression being iterated (expression() returns single context)
         ctx.expression()?.let { forEach.iterable = frontend.expressionHandler.handle(it) }
@@ -230,8 +230,8 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
         // the loop variable – represented as a Reference (simplification)
         ctx.assignable()?.let { assignable ->
             val varName = assignable.text.removePrefix("$")
-            val variable = frontend.newVariable(varName, rawNode = assignable)
-            val ds = frontend.newDeclarationStatement(rawNode = assignable)
+            val variable = newVariable(varName, rawNode = assignable)
+            val ds = newDeclarationStatement(rawNode = assignable)
             ds.declarations += variable
             forEach.variable = ds
         }
@@ -240,7 +240,7 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
             if (ctx.statement() != null) handle(ctx.statement())
             else if (ctx.innerStatementList() != null)
                 handleInnerStatementList(ctx.innerStatementList())
-            else frontend.newBlock(rawNode = ctx)
+            else newBlock(rawNode = ctx)
         forEach.statement = body
         return forEach
     }
@@ -249,7 +249,7 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
 
     /** Models a return statement and its optional return value. */
     private fun handleReturn(ctx: PhpParser.ReturnStatementContext): Return {
-        val ret = frontend.newReturn(rawNode = ctx)
+        val ret = newReturn(rawNode = ctx)
         ctx.expression()?.let { ret.returnValue = frontend.expressionHandler.handle(it) }
         return ret
     }
@@ -258,19 +258,18 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
 
     /** Models a try/catch/finally statement with its handlers and cleanup block. */
     private fun handleTryCatch(ctx: PhpParser.TryCatchFinallyContext): Try {
-        val tryCatch = frontend.newTry(rawNode = ctx)
+        val tryCatch = newTry(rawNode = ctx)
         tryCatch.tryBlock = handleBlock(ctx.blockStatement())
 
         ctx.catchClause()?.forEach { catchCtx ->
-            val catch = frontend.newCatchClause(rawNode = catchCtx)
+            val catch = newCatchClause(rawNode = catchCtx)
 
             // Caught type(s) – use first for simplicity
             val typeRef = catchCtx.qualifiedStaticTypeRef()?.firstOrNull()
             val varName = catchCtx.VarName()?.text?.removePrefix("$") ?: "e"
-            val catchType =
-                if (typeRef != null) frontend.typeOf(typeRef.text) else frontend.autoType()
+            val catchType = if (typeRef != null) frontend.typeOf(typeRef.text) else autoType()
             // CatchClause.parameter is Variable?, not Parameter
-            catch.parameter = frontend.newVariable(varName, catchType, rawNode = catchCtx)
+            catch.parameter = newVariable(varName, catchType, rawNode = catchCtx)
 
             catch.body = handleBlock(catchCtx.blockStatement())
             tryCatch.catchClauses += catch
@@ -285,7 +284,7 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
 
     /** Models a throw statement. */
     private fun handleThrow(ctx: PhpParser.ThrowStatementContext): Throw {
-        val throwExpr = frontend.newThrow(rawNode = ctx)
+        val throwExpr = newThrow(rawNode = ctx)
         throwExpr.exception = frontend.expressionHandler.handle(ctx.expression())
         return throwExpr
     }
@@ -295,8 +294,8 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
     /** Models `echo` as a call to the built-in output facility. */
     private fun handleEcho(ctx: PhpParser.EchoStatementContext): Expression {
         // Model echo as a call to the built-in "echo" function
-        val callee = frontend.newReference("echo", rawNode = ctx)
-        val call = frontend.newCall(callee, rawNode = ctx)
+        val callee = newReference("echo", rawNode = ctx)
+        val call = newCall(callee, rawNode = ctx)
         ctx.expressionList().expression().forEach { e ->
             call.addArgument(frontend.expressionHandler.handle(e))
         }
@@ -307,18 +306,18 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
 
     /** Models a PHP switch statement and its case/default sections. */
     private fun handleSwitch(ctx: PhpParser.SwitchStatementContext): Switch {
-        val sw = frontend.newSwitch(rawNode = ctx)
+        val sw = newSwitch(rawNode = ctx)
         sw.selector = frontend.expressionHandler.handle(ctx.parentheses().expression())
 
-        val body = frontend.newBlock(rawNode = ctx)
+        val body = newBlock(rawNode = ctx)
         ctx.switchBlock()?.forEach { block ->
             block.expression()?.forEach { caseExpr ->
-                val caseNode = frontend.newCase(rawNode = block)
+                val caseNode = newCase(rawNode = block)
                 caseNode.caseExpression = frontend.expressionHandler.handle(caseExpr)
                 body.statements += caseNode
             }
             if (block.Default() != null) {
-                body.statements += frontend.newDefault(rawNode = block)
+                body.statements += newDefault(rawNode = block)
             }
             block.innerStatementList()?.innerStatement()?.forEach { inner ->
                 body.statements += handleInnerStatement(inner)
@@ -332,11 +331,11 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
 
     /** Models a break statement. */
     private fun handleBreak(ctx: PhpParser.BreakStatementContext): Break {
-        return frontend.newBreak(rawNode = ctx)
+        return newBreak(rawNode = ctx)
     }
 
     /** Models a continue statement. */
     private fun handleContinue(ctx: PhpParser.ContinueStatementContext): Continue {
-        return frontend.newContinue(rawNode = ctx)
+        return newContinue(rawNode = ctx)
     }
 }
