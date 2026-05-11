@@ -52,8 +52,10 @@ abstract class PHPHandler<ResultNode : Node, HandlerNode : ParserRuleContext>(
         return node
     }
 
+    /** Dispatches the concrete parser node to the matching handler implementation. */
     abstract fun handleNode(node: HandlerNode): ResultNode
 
+    /** Creates a problem node for parser constructs that the frontend does not model yet. */
     protected fun handleNotSupported(node: HandlerNode, name: String): ResultNode {
         Util.errorWithFileLocation(
             frontend,

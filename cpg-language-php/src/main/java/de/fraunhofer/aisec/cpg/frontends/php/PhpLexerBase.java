@@ -37,10 +37,12 @@ public abstract class PhpLexerBase extends Lexer {
     protected boolean _phpScript;
     protected boolean _insideString;
 
+    /** Creates the shared PHP lexer base for the generated ANTLR lexer. */
     public PhpLexerBase(CharStream input) {
         super(input);
     }
 
+    /** Tracks PHP/HTML mode transitions and normalizes lexer output around PHP end markers. */
     @Override
     public Token nextToken() {
         CommonToken token = (CommonToken) super.nextToken();
@@ -107,6 +109,7 @@ public abstract class PhpLexerBase extends Lexer {
         return token;
     }
 
+    /** Extracts the heredoc identifier from a heredoc terminator candidate. */
     private String GetHeredocIdentifier(String text) {
         String trimmedText = text.trim();
         boolean semi =
@@ -116,16 +119,19 @@ public abstract class PhpLexerBase extends Lexer {
         return semi ? trimmedText.substring(0, trimmedText.length() - 1) : trimmedText;
     }
 
+    /** Returns whether the provided heredoc text closes the currently open heredoc. */
     private boolean CheckHeredocEnd(String text) {
         return GetHeredocIdentifier(text).equals(_heredocIdentifier);
     }
 
+    /** Returns whether the lookahead position is at the start of input or a newline. */
     protected boolean IsNewLineOrStart(int pos) {
         return this._input.LA(pos) <= 0
                 || this._input.LA(pos) == '\r'
                 || this._input.LA(pos) == '\n';
     }
 
+    /** Restores the correct lexer mode after closing an HTML tag. */
     protected void PushModeOnHtmlClose() {
         popMode();
         if (_scriptTag) {
@@ -141,14 +147,17 @@ public abstract class PhpLexerBase extends Lexer {
         }
     }
 
+    /** Returns whether ASP-style tags are enabled. */
     protected boolean HasAspTags() {
         return this.AspTags;
     }
 
+    /** Returns whether the lexer is currently inside a PHP script HTML tag. */
     protected boolean HasPhpScriptTag() {
         return this._phpScript;
     }
 
+    /** Leaves the interpolated-string mode when a curly-brace interpolation closes. */
     protected void PopModeOnCurlyBracketClose() {
         if (_insideString) {
             _insideString = false;
@@ -157,14 +166,17 @@ public abstract class PhpLexerBase extends Lexer {
         }
     }
 
+    /** Returns whether a heredoc introducer should switch the lexer into heredoc mode. */
     protected boolean ShouldPushHereDocMode(int pos) {
         return _input.LA(pos) == '\r' || _input.LA(pos) == '\n';
     }
 
+    /** Returns whether the lookahead at the given position starts a `${...}` interpolation. */
     protected boolean IsCurlyDollar(int pos) {
         return _input.LA(pos) == '$';
     }
 
+    /** Marks the lexer as currently processing an interpolated string body. */
     protected void SetInsideString() {
         _insideString = true;
     }

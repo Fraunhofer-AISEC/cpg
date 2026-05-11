@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsNewParse
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -56,10 +57,12 @@ class PHPLanguageFrontend(ctx: TranslationContext, language: PHPLanguage) :
     /** The source file path – kept to build [PhysicalLocation] objects. */
     internal var filePath: Path? = null
 
+    /** Parses a PHP source file into a [TranslationUnit]. */
     override fun parse(file: File): TranslationUnit {
         return parse(file.readText(StandardCharsets.UTF_8), file.toPath())
     }
 
+    /** Parses PHP source code and models top-level namespace sections and declarations. */
     override fun parse(content: String, path: Path?): TranslationUnit {
         filePath = path
 
@@ -72,20 +75,31 @@ class PHPLanguageFrontend(ctx: TranslationContext, language: PHPLanguage) :
         val tu = newTranslationUnit(path?.toString() ?: "unknown.php", rawNode = document)
 
         scopeManager.resetToGlobal(tu)
+        var activeNamespace: Namespace? = null
 
         for (block in document.phpBlock()) {
             for (stmt in block.topStatement()) {
-                declarationHandler.handleTopStatement(stmt, tu)
+                val namespaceDeclaration = declarationHandler.handleNamespaceTopStatement(stmt, tu)
+                if (namespaceDeclaration != null) {
+                    activeNamespace?.let { scopeManager.leaveScope(it) }
+                    activeNamespace = namespaceDeclaration
+                    scopeManager.enterScope(namespaceDeclaration)
+                } else {
+                    declarationHandler.handleTopStatement(stmt, tu, activeNamespace)
+                }
             }
         }
 
+        activeNamespace?.let { scopeManager.leaveScope(it) }
         return tu
     }
 
+    /** Returns the raw source snippet represented by the parser node. */
     override fun codeOf(astNode: ParserRuleContext): String? {
         return astNode.text
     }
 
+    /** Computes the physical location of the parser node within the current source file. */
     override fun locationOf(astNode: ParserRuleContext): PhysicalLocation? {
         val start = astNode.start ?: return null
         val stop = astNode.stop ?: start
@@ -101,6 +115,7 @@ class PHPLanguageFrontend(ctx: TranslationContext, language: PHPLanguage) :
         return PhysicalLocation(uri, region)
     }
 
+    /** Resolves a parser rule that denotes a type to a CPG [Type]. */
     override fun typeOf(type: ParserRuleContext): Type {
         return typeOf(type.text)
     }
@@ -114,9 +129,12 @@ class PHPLanguageFrontend(ctx: TranslationContext, language: PHPLanguage) :
             return autoType()
         }
         val stripped = typeName.trimStart('\\')
-        return objectType(stripped)
+        return language.builtInTypes[stripped] ?: objectType(stripped)
     }
 
+    /**
+     * Attaches comments from the parser node to the CPG node once comment handling is implemented.
+     */
     override fun setComment(node: Node, astNode: ParserRuleContext) {
         // not yet implemented
     }

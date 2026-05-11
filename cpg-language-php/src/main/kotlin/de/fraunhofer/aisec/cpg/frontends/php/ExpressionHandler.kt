@@ -37,6 +37,7 @@ import org.antlr.v4.runtime.ParserRuleContext
 class ExpressionHandler(frontend: PHPLanguageFrontend) :
     PHPHandler<Expression, ParserRuleContext>({ ProblemExpression() }, frontend) {
 
+    /** Dispatches parser nodes that represent PHP expressions or expression-like helpers. */
     override fun handleNode(node: ParserRuleContext): Expression {
         return when (node) {
             is PhpParser.ExpressionContext -> handle(node)
@@ -47,6 +48,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         }
     }
 
+    /** Models a PHP expression by delegating to the specialized expression routine. */
     fun handle(ctx: PhpParser.ExpressionContext): Expression {
         return when (ctx) {
             is PhpParser.AssignmentExpressionContext -> handleAssignment(ctx)
@@ -109,6 +111,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     // ── Assignment ────────────────────────────────────────────────────────────
 
+    /** Models an assignment or compound-assignment expression. */
     private fun handleAssignment(ctx: PhpParser.AssignmentExpressionContext): Expression {
         // Identify the operator: the first child after the assignable that is an operator token
         val opText = ctx.assignmentOperator()?.text ?: ctx.Eq()?.text ?: "="
@@ -123,6 +126,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         return assign
     }
 
+    /** Models the left-hand side of an assignment expression. */
     private fun handleAssignable(ctx: PhpParser.AssignableContext): Expression {
         return when {
             ctx.chain() != null -> handleChain(ctx.chain())
@@ -133,6 +137,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     // ── Chains (member access, function calls, variables) ────────────────────
 
+    /** Models a PHP access chain such as `$obj->field()[0]`. */
     fun handleChain(ctx: PhpParser.ChainContext): Expression {
         var base = handleChainOrigin(ctx.chainOrigin())
         for (access in ctx.memberAccess()) {
@@ -141,6 +146,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         return base
     }
 
+    /** Models the base origin of a PHP access chain. */
     private fun handleChainOrigin(ctx: PhpParser.ChainOriginContext): Expression {
         return when {
             ctx.chainBase() != null -> handleChainBase(ctx.chainBase())
@@ -150,6 +156,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         }
     }
 
+    /** Models the first base element of a chain. */
     private fun handleChainBase(ctx: PhpParser.ChainBaseContext): Expression {
         return when {
             ctx.qualifiedStaticTypeRef() != null -> {
@@ -165,6 +172,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         }
     }
 
+    /** Models a variable access with optional array subscripts. */
     private fun handleKeyedVariable(ctx: PhpParser.KeyedVariableContext): Expression {
         val varName =
             ctx.VarName()?.text?.removePrefix("$") ?: return ProblemExpression("no VarName")
@@ -180,6 +188,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         return result
     }
 
+    /** Models field access or method calls on a chain base. */
     private fun handleMemberAccess(
         base: Expression,
         ctx: PhpParser.MemberAccessContext,
@@ -203,6 +212,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         }
     }
 
+    /** Models a standalone function call or static method call. */
     private fun handleFunctionCall(ctx: PhpParser.FunctionCallContext): Expression {
         val nameCtx = ctx.functionCallName()
         val callee: Expression =
@@ -242,6 +252,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     // ── New expression ────────────────────────────────────────────────────────
 
+    /** Models object construction via `new`. */
     private fun handleNew(ctx: PhpParser.NewExprContext): Expression {
         val typeName = ctx.typeRef()?.text ?: "unknown"
         val type = frontend.typeOf(typeName)
@@ -258,6 +269,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     // ── Scalar / literals ─────────────────────────────────────────────────────
 
+    /** Models a scalar expression such as a constant, string, or label reference. */
     private fun handleScalar(ctx: PhpParser.ScalarExpressionContext): Expression {
         return when {
             ctx.constant() != null -> handleConstant(ctx.constant())
@@ -267,6 +279,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         }
     }
 
+    /** Models PHP constants, magic constants, and class constants. */
     internal fun handleConstant(ctx: PhpParser.ConstantContext): Expression {
         return when {
             ctx.Null() != null ->
@@ -286,6 +299,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         }
     }
 
+    /** Models literal constants such as booleans, numbers, and string constants. */
     private fun handleLiteralConstant(ctx: PhpParser.LiteralConstantContext): Expression {
         return when {
             ctx.BooleanConstant() != null -> {
@@ -303,6 +317,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         }
     }
 
+    /** Models numeric literals across the supported PHP bases. */
     private fun handleNumericConstant(ctx: PhpParser.NumericConstantContext): Expression {
         val text = ctx.text
         return when {
@@ -329,6 +344,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         }
     }
 
+    /** Models string literals and simplified interpolated strings. */
     private fun handleString(ctx: PhpParser.StringContext): Expression {
         val text =
             when {
@@ -345,6 +361,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     // ── Unary / increment / decrement ─────────────────────────────────────────
 
+    /** Models a unary operator expression. */
     private fun handleUnary(ctx: PhpParser.UnaryOperatorExpressionContext): Expression {
         // First child gives the operator text
         val op = ctx.getChild(0).text
@@ -353,6 +370,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         return unary
     }
 
+    /** Models a prefix increment or decrement expression. */
     private fun handlePrefixIncDec(ctx: PhpParser.PrefixIncDecExpressionContext): Expression {
         val op = ctx.getChild(0).text // '++' or '--'
         val unary = frontend.newUnaryOperator(op, postfix = false, prefix = true, rawNode = ctx)
@@ -360,6 +378,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
         return unary
     }
 
+    /** Models a postfix increment or decrement expression. */
     private fun handlePostfixIncDec(ctx: PhpParser.PostfixIncDecExpressionContext): Expression {
         val op = ctx.getChild(1).text // '++' or '--'
         val unary = frontend.newUnaryOperator(op, postfix = true, prefix = false, rawNode = ctx)
@@ -369,6 +388,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     // ── Binary operators ──────────────────────────────────────────────────────
 
+    /** Models a binary operator from its left/right subexpressions and operator text. */
     private fun handleBinary(
         lhsCtx: PhpParser.ExpressionContext,
         op: String,
@@ -382,6 +402,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     // ── Cast ──────────────────────────────────────────────────────────────────
 
+    /** Models an explicit PHP cast expression. */
     private fun handleCast(ctx: PhpParser.CastExpressionContext): Expression {
         val cast = frontend.newCast(rawNode = ctx)
         cast.castType = frontend.typeOf(ctx.castOperation().text)
@@ -392,6 +413,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     // ── Array ─────────────────────────────────────────────────────────────────
 
+    /** Models an array literal as an initializer list. */
     private fun handleArrayCreation(ctx: PhpParser.ArrayCreationContext): Expression {
         val initList = frontend.newInitializerList(rawNode = ctx)
         ctx.arrayItemList()?.arrayItem()?.forEach { item ->
@@ -413,6 +435,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     // ── instanceof ────────────────────────────────────────────────────────────
 
+    /** Models an `instanceof` check as a binary operator. */
     private fun handleInstanceOf(ctx: PhpParser.InstanceOfExpressionContext): Expression {
         val binOp = frontend.newBinaryOperator("instanceof", rawNode = ctx)
         binOp.lhs = ctx.expression()?.let { handle(it) } ?: ProblemExpression("instanceof lhs")
@@ -422,6 +445,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     // ── Conditional / ternary ─────────────────────────────────────────────────
 
+    /** Models ternary and Elvis-style conditional expressions. */
     private fun handleConditional(ctx: PhpParser.ConditionalExpressionContext): Expression {
         val exprs = ctx.expression()
         val condExpr =
@@ -441,6 +465,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     // ── Lambda / closure ─────────────────────────────────────────────────────
 
+    /** Models an anonymous function or arrow function as a CPG lambda. */
     private fun handleLambda(ctx: PhpParser.LambdaFunctionExprContext): Expression {
         val func = frontend.newFunction("", rawNode = ctx)
         frontend.scopeManager.enterScope(func)
@@ -470,6 +495,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     // ── Match expression (PHP 8) ──────────────────────────────────────────────
 
+    /** Models a PHP 8 `match` expression as a switch-like construct. */
     private fun handleMatchExpr(ctx: PhpParser.MatchExprContext): Expression {
         // Model as a switch-like construct using a binary operator chain (simplified)
         val sw = frontend.newSwitch(rawNode = ctx)
@@ -492,6 +518,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     // ── Special words (isset, empty, eval, exit, list) ────────────────────────
 
+    /** Models special-word expressions such as `isset`, `empty`, or `exit` as calls. */
     private fun handleSpecialWord(ctx: PhpParser.SpecialWordExpressionContext): Expression {
         val callee = frontend.newReference(ctx.getChild(0).text, rawNode = ctx)
         val call = frontend.newCall(callee, rawNode = ctx)
@@ -504,6 +531,7 @@ class ExpressionHandler(frontend: PHPLanguageFrontend) :
 
     // ── Constant initializers (used in field/param defaults) ──────────────────
 
+    /** Models constant initializer expressions used in fields and parameter defaults. */
     internal fun handleConstantInitializer(ctx: PhpParser.ConstantInitializerContext): Expression {
         return when {
             // Unary +/- case: ctx.constantInitializer() returns single

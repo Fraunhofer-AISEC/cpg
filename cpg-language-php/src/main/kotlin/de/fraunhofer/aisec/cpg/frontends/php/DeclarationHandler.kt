@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import org.antlr.v4.runtime.ParserRuleContext
 
 /**
@@ -38,24 +39,42 @@ import org.antlr.v4.runtime.ParserRuleContext
 class DeclarationHandler(frontend: PHPLanguageFrontend) :
     PHPHandler<Declaration, ParserRuleContext>({ ProblemDeclaration() }, frontend) {
 
-    /** Dispatches a top-level statement into the given [TranslationUnit]. */
-    fun handleTopStatement(stmt: PhpParser.TopStatementContext, tu: TranslationUnit) {
+    /**
+     * Extracts a namespace declaration from a top-level statement, including the grammar fallback
+     * where `namespace Foo\Bar;` is parsed as an expression statement.
+     */
+    fun handleNamespaceTopStatement(
+        stmt: PhpParser.TopStatementContext,
+        tu: TranslationUnit,
+    ): Namespace? {
+        stmt.namespaceDeclaration()?.let {
+            return handleNamespaceDeclaration(it, tu)
+        }
+        return handleImplicitNamespaceDeclaration(stmt, tu)
+    }
+
+    /** Dispatches a top-level statement into the translation unit or the active namespace. */
+    fun handleTopStatement(
+        stmt: PhpParser.TopStatementContext,
+        tu: TranslationUnit,
+        namespace: Namespace? = null,
+    ) {
         when {
             stmt.functionDeclaration() != null ->
                 handleFunctionDeclaration(stmt.functionDeclaration()).also {
                     frontend.scopeManager.addDeclaration(it)
-                    tu.declarations += it
+                    addDeclarationToContainer(it, tu, namespace)
                 }
             stmt.classDeclaration() != null ->
                 handleClassDeclaration(stmt.classDeclaration()).also {
                     frontend.scopeManager.addDeclaration(it)
-                    tu.declarations += it
+                    addDeclarationToContainer(it, tu, namespace)
                 }
             stmt.namespaceDeclaration() != null ->
                 handleNamespaceDeclaration(stmt.namespaceDeclaration(), tu)
             stmt.statement() != null -> {
                 val stmtNode = frontend.statementHandler.handle(stmt.statement())
-                tu += stmtNode
+                addStatementToContainer(stmtNode, tu, namespace)
             }
             else -> {
                 // useDeclaration, globalConstantDeclaration, enumDeclaration – stub
@@ -63,6 +82,7 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
         }
     }
 
+    /** Dispatches a parser node to the corresponding declaration handler. */
     override fun handleNode(node: ParserRuleContext): Declaration {
         return when (node) {
             is PhpParser.FunctionDeclarationContext -> handleFunctionDeclaration(node)
@@ -74,6 +94,7 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
 
     // ── Functions ────────────────────────────────────────────────────────────
 
+    /** Models a PHP function declaration including parameters, return type, and body. */
     private fun handleFunctionDeclaration(ctx: PhpParser.FunctionDeclarationContext): Function {
         val name = ctx.identifier()?.text ?: ""
         val func = frontend.newFunction(name, rawNode = ctx)
@@ -99,6 +120,7 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
 
     // ── Classes ──────────────────────────────────────────────────────────────
 
+    /** Models a PHP class-like declaration and its members. */
     private fun handleClassDeclaration(ctx: PhpParser.ClassDeclarationContext): Record {
         // In the grammar, identifier() returns a single context (one class name)
         val name = ctx.identifier()?.text ?: ""
@@ -124,6 +146,7 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
         return record
     }
 
+    /** Models a class member declaration and adds it to the owning [record]. */
     private fun handleClassStatement(ctx: PhpParser.ClassStatementContext, record: Record) {
         when {
             // method
@@ -175,6 +198,7 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
 
     // ── Parameters ───────────────────────────────────────────────────────────
 
+    /** Models a formal parameter including its type, variadic flag, and default value. */
     internal fun handleFormalParameter(ctx: PhpParser.FormalParameterContext): Parameter {
         val varInit = ctx.variableInitializer()
         val rawName = varInit?.VarName()?.text ?: ""
@@ -196,12 +220,16 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
 
     // ── Namespaces ───────────────────────────────────────────────────────────
 
-    private fun handleNamespaceDeclaration(
+    /** Models a namespace declaration and returns it when it stays active after the statement. */
+    fun handleNamespaceDeclaration(
         ctx: PhpParser.NamespaceDeclarationContext,
         tu: TranslationUnit,
-    ) {
-        val namespaceName = ctx.namespaceNameList()?.text ?: ""
-        val ns = frontend.newNamespace(namespaceName, rawNode = ctx)
+    ): Namespace? {
+        val ns = createNamespace(ctx.namespaceNameList()?.text ?: "", ctx, tu)
+
+        if (ctx.OpenCurlyBracket() == null) {
+            return ns
+        }
 
         frontend.scopeManager.enterScope(ns)
 
@@ -226,7 +254,61 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
         }
 
         frontend.scopeManager.leaveScope(ns)
+        return null
+    }
+
+    /**
+     * Models semicolon-style namespace declarations that the grammar currently exposes as
+     * expression statements.
+     */
+    private fun handleImplicitNamespaceDeclaration(
+        stmt: PhpParser.TopStatementContext,
+        tu: TranslationUnit,
+    ): Namespace? {
+        val statementText = stmt.statement()?.expressionStatement()?.text ?: return null
+        if (!statementText.startsWith("namespace") || !statementText.endsWith(";")) {
+            return null
+        }
+
+        val namespaceName = statementText.removePrefix("namespace").removeSuffix(";")
+        return createNamespace(namespaceName, stmt, tu)
+    }
+
+    /** Creates a namespace node, registers it in the current scope, and attaches it to the TU. */
+    private fun createNamespace(
+        namespaceName: String,
+        rawNode: ParserRuleContext,
+        tu: TranslationUnit,
+    ): Namespace {
+        val ns = frontend.newNamespace(namespaceName, rawNode = rawNode)
         frontend.scopeManager.addDeclaration(ns)
         tu.declarations += ns
+        return ns
+    }
+
+    /** Adds a declaration either to the active namespace or directly to the translation unit. */
+    private fun addDeclarationToContainer(
+        declaration: Declaration,
+        tu: TranslationUnit,
+        namespace: Namespace?,
+    ) {
+        if (namespace != null) {
+            namespace.declarations += declaration
+        } else {
+            tu.declarations += declaration
+        }
+    }
+
+    /** Adds a statement either to the active namespace body or directly to the translation unit. */
+    private fun addStatementToContainer(
+        statement: Expression,
+        tu: TranslationUnit,
+        namespace: Namespace?,
+    ) {
+        if (namespace != null) {
+            namespace += statement
+        } else {
+            tu += statement
+        }
     }
 }

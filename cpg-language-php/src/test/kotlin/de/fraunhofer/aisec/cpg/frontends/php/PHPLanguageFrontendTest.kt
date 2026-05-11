@@ -39,6 +39,7 @@ class PHPLanguageFrontendTest {
 
     // ── Functions ─────────────────────────────────────────────────────────────
 
+    /** Verifies parsing of PHP function declarations and their parameters. */
     @Test
     fun testFunctionDeclarations() {
         val topLevel = Path.of("src", "test", "resources", "php")
@@ -72,6 +73,7 @@ class PHPLanguageFrontendTest {
 
     // ── Classes ───────────────────────────────────────────────────────────────
 
+    /** Verifies parsing of namespaced PHP classes and their methods. */
     @Test
     fun testClassDeclaration() {
         val topLevel = Path.of("src", "test", "resources", "php")
@@ -109,6 +111,7 @@ class PHPLanguageFrontendTest {
 
     // ── Statements ────────────────────────────────────────────────────────────
 
+    /** Verifies parsing of representative PHP control-flow statements. */
     @Test
     fun testStatements() {
         val topLevel = Path.of("src", "test", "resources", "php")
