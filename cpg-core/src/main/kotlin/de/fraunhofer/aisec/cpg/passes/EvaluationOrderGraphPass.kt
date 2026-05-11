@@ -1079,8 +1079,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleDoWhile(node: DoWhile) {
         handleEOG(node.statement)
         handleEOG(node.condition)
-        // TODO(oxisto): Do we really want to set DFG edges here?
-        node.condition?.let { node.prevDFGEdges += it }
+
         attachToEOG(node) // To have semantic information after the condition evaluation
         nextEdgeBranch = true
         connectCurrentEOGToLoopStart(node)
@@ -1158,8 +1157,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleForEach(node: ForEach) {
         handleEOG(node.iterable)
         handleEOG(node.variable)
-        // TODO(oxisto): Do we really want to set DFG edges here?
-        node.variable?.let { node.prevDFGEdges += it }
         attachToEOG(node) // To have semantic information after the variable declaration
         nextEdgeBranch = true
         val tmpEOGNodes = currentPredecessors.toMutableList()

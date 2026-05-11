@@ -520,30 +520,6 @@ object Util {
         return adjacentNodes
     }
 
-    /**
-     * Connects the node `n` with the node `branchingExp` if present or with the node
-     * `branchingDecl`. The assumption is that only `branchingExp` or `branchingDecl` are present,
-     * e.g. C++.
-     *
-     * @param n
-     * @param branchingExp
-     * @param branchingDeclaration
-     */
-    fun addDFGEdgesForMutuallyExclusiveBranchingExpression(
-        n: Node,
-        branchingExp: Expression?,
-        branchingDeclaration: Declaration?,
-    ) {
-        var conditionNodes = mutableListOf<AstNode>()
-        if (branchingExp != null) {
-            conditionNodes = mutableListOf()
-            conditionNodes.add(branchingExp)
-        } else if (branchingDeclaration != null) {
-            conditionNodes = getAdjacentDFGNodes(branchingDeclaration, true)
-        }
-        conditionNodes.forEach { n.prevDFGEdges += it }
-    }
-
     enum class Connect {
         NODE,
         SUBTREE,
