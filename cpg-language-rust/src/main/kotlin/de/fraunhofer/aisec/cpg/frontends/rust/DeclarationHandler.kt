@@ -372,6 +372,13 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                 frontend.scopeManager.addDeclaration(discriminantField)
             }
 
+            // Todo We have an issue with variants where these cannot always be used as a type.
+            // While normally this would
+            // not be a problem, the type of the invariant captures the type of struct references
+            // and we get an incorrect
+            // type if we use records of the same type name, in an Enum with a variant that has the
+            // same type name
+
             // Handle field lists
             for (fieldList in variant.fields) {
                 when (fieldList) {
@@ -383,8 +390,6 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                             val field = newField(rField.name ?: "", type ?: unknownType())
                             field.initializer =
                                 rField.expr?.let {
-                                    // Todo we may have to handle this before we enter the variant
-                                    // scope or before the variant is known as a name
                                     frontend.expressionHandler.handle(RsAst.RustExpr(it))
                                 }
                             variantRecord.fields += field

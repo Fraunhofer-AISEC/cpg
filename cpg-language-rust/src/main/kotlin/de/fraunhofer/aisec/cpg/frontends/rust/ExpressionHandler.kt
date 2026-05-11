@@ -55,7 +55,6 @@ import uniffi.cpgrust.RsMacroExpr
 import uniffi.cpgrust.RsMatchArm
 import uniffi.cpgrust.RsMatchExpr
 import uniffi.cpgrust.RsMethodCallExpr
-import uniffi.cpgrust.RsPat
 import uniffi.cpgrust.RsPathExpr
 import uniffi.cpgrust.RsPrefixExpr
 import uniffi.cpgrust.RsRangeExpr
@@ -126,7 +125,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
 
         frontend.scopeManager.leaveScope(block)
-        return block
+        return block.also { it.usedAsExpression = true }
     }
 
     fun handleLiteral(literal: RsLiteral): Expression {
@@ -339,7 +338,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
 
         frontend.scopeManager.leaveScope(ifElse)
-        return ifElse
+        return ifElse.also { it.usedAsExpression = true }
     }
 
     fun handleLetExpr(letExpr: RsLetExpr): Expression {
@@ -391,7 +390,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
         whileExpression.usedAsExpression = true
 
-        return whileExpression
+        return whileExpression.also { it.usedAsExpression = true }
     }
 
     fun handleLoopExpr(loopExpr: RsLoopExpr): Expression {
@@ -413,7 +412,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
         whileExpression.usedAsExpression = true
 
-        return whileExpression
+        return whileExpression.also { it.usedAsExpression = true }
     }
 
     fun handleForExpr(forExpr: RsForExpr): Expression {
@@ -422,14 +421,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         frontend.scopeManager.enterScope(forEach)
 
         val variable =
-            newVariable(
-                name = (forExpr.pat as? RsPat.IdentPat)?.v1?.name ?: "",
-                type = unknownType(),
-                rawNode = raw,
-            )
-        frontend.scopeManager.addDeclaration(variable)
-        val declarationStatement = newDeclarationStatement()
-        declarationStatement.singleDeclaration = variable
+            forExpr.pat?.let { frontend.patternHandler.handle(RsAst.RustPat(it)) }
+                ?: newProblemExpression("Variable pattern is null")
 
         forExpr.expressions.first().let {
             val iterable = frontend.expressionHandler.handle(RsAst.RustExpr(it))
@@ -440,13 +433,13 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             forEach.statement = frontend.expressionHandler.handle(RsAst.RustExpr(it))
         }
 
-        forEach.variable = declarationStatement
+        forEach.variable = variable
 
         frontend.scopeManager.leaveScope(forEach)
 
         forEach.usedAsExpression = true
 
-        return forEach
+        return forEach.also { it.usedAsExpression = true }
     }
 
     fun handleBreakExpr(breakExpr: RsBreakExpr): Expression {
