@@ -248,6 +248,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                         ident.name
                     }
                 val decl = newVariable(fqn, rawNode = valueSpec)
+                decl.isImplicit = true
                 if (type != null) {
                     decl.type = type
                 } else {

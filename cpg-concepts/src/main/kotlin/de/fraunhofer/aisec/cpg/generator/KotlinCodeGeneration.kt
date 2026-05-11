@@ -521,7 +521,7 @@ private val dataPropertyTypeMap: Map<String, TypeName> =
             ClassName("de.fraunhofer.aisec.cpg.graph.declarations", "Function"),
         )
         put(
-            "de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression",
+            "de.fraunhofer.aisec.cpg.graph.expressions.Expression",
             ClassName("de.fraunhofer.aisec.cpg.graph.statements.expressions", "Expression"),
         )
         put(
@@ -529,7 +529,7 @@ private val dataPropertyTypeMap: Map<String, TypeName> =
             ClassName("de.fraunhofer.aisec.cpg.graph", "Node"),
         )
         put(
-            "de.fraunhofer.aisec.cpg.graph.statements.expressions.Call",
+            "de.fraunhofer.aisec.cpg.graph.expressions.Call",
             ClassName("de.fraunhofer.aisec.cpg.graph.statements.expressions", "Call"),
         )
         put(
@@ -540,7 +540,7 @@ private val dataPropertyTypeMap: Map<String, TypeName> =
                 ),
         )
         put(
-            "java.util.List<de.fraunhofer.aisec.cpg.graph.statements.expressions.Call>",
+            "java.util.List<de.fraunhofer.aisec.cpg.graph.expressions.Call>",
             ClassName("java.util", "List")
                 .parameterizedBy(
                     ClassName("de.fraunhofer.aisec.cpg.graph.statements.expressions", "Call")

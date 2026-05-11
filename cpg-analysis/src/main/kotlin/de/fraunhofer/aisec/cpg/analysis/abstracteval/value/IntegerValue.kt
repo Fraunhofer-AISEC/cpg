@@ -25,25 +25,21 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.AbstractIntervalEvaluator
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.changeDeclarationState
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.intervalOf
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclarationState
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.*
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -52,10 +48,19 @@ import org.slf4j.LoggerFactory
  * the [IntegerValue] class to track possible values.
  */
 class IntegerIntervalEvaluator : ValueEvaluator() {
-    override fun evaluate(node: Any?): Any? {
+    /** Cache calculated values so that we don't have to calculate them each time */
+    companion object {
+        private val valuesCache = ConcurrentHashMap<Int, Any>()
+    }
+
+    override fun evaluate(node: Any?, useCache: Boolean): Any? {
         if (node !is Node) return cannotEvaluate(null, this)
 
-        return AbstractIntervalEvaluator().evaluate(node, IntegerValue::class)
+        return if (useCache)
+            valuesCache.getOrPut(node.hashCode()) {
+                AbstractIntervalEvaluator().evaluate(node, IntegerValue::class)
+            }
+        else AbstractIntervalEvaluator().evaluate(node, IntegerValue::class)
     }
 }
 
@@ -78,7 +83,7 @@ class IntegerValue : Value<LatticeInterval> {
             simpleComparison(lhs.lhs, rhs.lhs, lhs.operatorCode, lattice, lhsState)
             val rhsState = state.duplicate()
             simpleComparison(rhs.lhs, rhs.lhs, rhs.operatorCode, lattice, rhsState)
-            val newState = lattice.lub(lhsState, rhsState, false)
+            val newState = runBlocking { lattice.lub(lhsState, rhsState, false) }
             // TODO: Handle the new state
             return newState
         } else if (operator == "&&" && lhs is BinaryOperator && rhs is BinaryOperator) {
@@ -86,7 +91,7 @@ class IntegerValue : Value<LatticeInterval> {
             simpleComparison(lhs.lhs, rhs.lhs, lhs.operatorCode, lattice, lhsState)
             val rhsState = state.duplicate()
             simpleComparison(rhs.lhs, rhs.lhs, rhs.operatorCode, lattice, rhsState)
-            val newState = lattice.glb(lhsState, rhsState)
+            val newState = runBlocking { lattice.glb(lhsState, rhsState) }
             // TODO: Handle the new state
             return newState
         }
@@ -498,6 +503,27 @@ class IntegerValue : Value<LatticeInterval> {
                         "*=" -> lhsValue * rhsValue
                         "/=" -> lhsValue / rhsValue
                         "%=" -> lhsValue % rhsValue
+                        // We need to know how many bits our value can have as this affects the
+                        // shift's outcome. If we do not know, we assume 32 bits.
+                        // TODO: Configure this better, e.g. based on the platform if we have
+                        // information about it.
+                        "<<=" ->
+                            lhsValue.shl(
+                                rhsValue,
+                                maxBits = (node.lhs[0].type as? IntegerType)?.bitWidth ?: 32,
+                            )
+                        // We need to know how many bits our value can have as this affects the
+                        // shift's outcome. If we do not know, we assume 32 bits.
+                        // TODO: Configure this better, e.g. based on the platform if we have
+                        // information about it.
+                        ">>=" ->
+                            lhsValue.shr(
+                                rhsValue,
+                                maxBits = (node.lhs[0].type as? IntegerType)?.bitWidth ?: 32,
+                            )
+                        "|=" -> lhsValue.bitwiseOr(rhsValue)
+                        "&=" -> lhsValue.bitwiseAnd(rhsValue)
+
                         else -> {
                             log.info("Unsupported assignment operator: ${node.operatorCode}")
                             LatticeInterval.TOP
