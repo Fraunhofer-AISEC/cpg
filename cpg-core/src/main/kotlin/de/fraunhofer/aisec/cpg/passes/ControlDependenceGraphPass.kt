@@ -388,7 +388,7 @@ private fun EvaluationOrder.isConditionalBranch(): Boolean {
     return if (branch == true) {
         true
     } else
-    ((startNode.astParent as? IfElse)?.let {
+        ((startNode.astParent as? IfElse)?.let {
             startNode in listOfNotNull(it.condition, it.conditionDeclaration)
         } ?: false ||
             (startNode.astParent as? DoWhile)?.let { startNode == it.condition } ?: false ||
