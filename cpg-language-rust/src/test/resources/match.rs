@@ -76,6 +76,21 @@ pub fn handle_tuple<S: Sink>(sink: &mut S) {
     send(sink, out);
 }
 
+/// Tuple match with mixed patterns
+pub fn handle_alternative<S: Sink>(sink: &mut S) {
+    let value = (4, 5); // constructed literals: 4,5
+
+    let out = match value {
+        (4, x) | (x, 3)=> x,
+        // uses: 4 (pattern), x (binding → 5) or 3 (pattern), x (binding → 4)
+        (_, z) => z,
+        // uses: wildcard, z (binding → 5)
+    };
+    // possible results: 4 or 5
+
+    send(sink, out);
+}
+
 /// Deep nesting with real decomposition
 pub fn handle_deep<S: Sink>(sink: &mut S) {
     let value = Some(Wrap::Nested(Some(Ok(7))));

@@ -172,8 +172,12 @@ class RustLanguageFrontendTest {
         testMatchStatement(tu, "handle_wrap", 0, listOf("1", "2", "3"))
 
         // Test match in handle_tuple function
-        // 1st match: possible results: 4,5,6
+        // 1st match: possible results: 4,5
         testMatchStatement(tu, "handle_tuple", 0, listOf("4", "5"))
+
+        // Test match in handle_alternative function
+        // 1st match: possible results: 4,5
+        testMatchStatement(tu, "handle_alternative", 0, listOf("4", "5"))
 
         // Test match in handle_deep function
         // 1st match: possible results: 7,8,9
