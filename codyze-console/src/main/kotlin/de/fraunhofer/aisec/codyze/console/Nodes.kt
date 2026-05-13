@@ -269,6 +269,9 @@ data class ConceptRequestJSON(
     }
 }
 
+/** Request body for the `/api/execute-query` endpoint. */
+@Serializable data class ExecuteQueryRequestJSON(val scriptCode: String)
+
 /** Converts a [AnalysisResult] into its JSON representation. */
 fun AnalysisResult.toJSON(): AnalysisResultJSON =
     with(translationResult) {
