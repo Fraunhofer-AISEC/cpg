@@ -267,7 +267,8 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
             return handleForeachChainVariable(it)
         }
         return ProblemExpression(
-            "unsupported foreach assignable (expected chain-based variable target): ${assignable.text}"
+            "unsupported foreach assignable: expected a simple variable (e.g., \$v) or array " +
+                "element target, but got: ${assignable.text}"
         )
     }
 
