@@ -232,6 +232,11 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
 
         ctx.assignable()?.let { assignable -> loopVariables += handleForeachAssignable(assignable) }
 
+        // Grammar shape:
+        // - `foreach (chain as assignable (=> chain)?)` => first chain is iterable, optional second
+        //   chain is the second loop variable.
+        // - `foreach (expression as assignable (=> chain)?)` => all chains belong to loop
+        // variables.
         val chainVariables =
             if (ctx.expression() == null) ctx.chain()?.drop(1) ?: emptyList()
             else ctx.chain()?.toList() ?: emptyList()
@@ -261,7 +266,9 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
         assignable.chain()?.let {
             return handleForeachChainVariable(it)
         }
-        return ProblemExpression("unsupported foreach assignable: ${assignable.text}")
+        return ProblemExpression(
+            "unsupported foreach assignable (expected chain-based variable target): ${assignable.text}"
+        )
     }
 
     private fun handleForeachChainVariable(chain: PhpParser.ChainContext): Expression {

@@ -321,6 +321,10 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
     /** Returns the normalized type text including nullable marker when present. */
     private fun resolveTypeName(typeHint: PhpParser.TypeHintContext?, nullable: Boolean): String? {
         val typeName = typeHint?.text ?: return null
-        return if (nullable && !typeName.startsWith("?")) "?$typeName" else typeName
+        return when {
+            nullable && !typeName.startsWith("?") -> "?$typeName"
+            !nullable && typeName.startsWith("?") -> typeName.removePrefix("?")
+            else -> typeName
+        }
     }
 }
