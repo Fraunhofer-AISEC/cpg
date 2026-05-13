@@ -44,3 +44,21 @@ function riskyOperation(): string
         echo "done";
     }
 }
+
+function sumByKey(array $arr): int
+{
+    $sum = 0;
+    foreach ($arr as $k => $v) {
+        $sum += $k + $v;
+    }
+    return $sum;
+}
+
+function overwriteWithLoop(array $arr): int
+{
+    $i = 0;
+    foreach ($arr as $arr[$i]) {
+        $i++;
+    }
+    return $i;
+}

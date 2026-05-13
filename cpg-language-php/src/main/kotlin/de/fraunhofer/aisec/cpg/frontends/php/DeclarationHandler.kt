@@ -102,7 +102,9 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
         frontend.scopeManager.enterScope(func)
 
         // Return type
-        ctx.typeHint()?.let { func.returnTypes = listOf(frontend.typeOf(it.text)) }
+        resolveTypeName(ctx.typeHint(), ctx.QuestionMark() != null)?.let {
+            func.returnTypes = listOf(frontend.typeOf(it))
+        }
 
         // Parameters
         ctx.formalParameterList()?.formalParameter()?.forEach { param ->
@@ -157,9 +159,11 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
 
                 frontend.scopeManager.enterScope(method)
 
-                ctx.returnTypeDecl()?.typeHint()?.let {
-                    method.returnTypes = listOf(frontend.typeOf(it.text))
-                }
+                resolveTypeName(
+                        ctx.returnTypeDecl()?.typeHint(),
+                        ctx.returnTypeDecl()?.QuestionMark() != null,
+                    )
+                    ?.let { method.returnTypes = listOf(frontend.typeOf(it)) }
 
                 ctx.formalParameterList()?.formalParameter()?.forEach { param ->
                     val p = handleFormalParameter(param)
@@ -205,7 +209,9 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
         val name = rawName.removePrefix("$")
         val isVariadic = ctx.children?.any { it.text == "..." } == true
 
-        val type = ctx.typeHint()?.let { frontend.typeOf(it.text) } ?: autoType()
+        val type =
+            resolveTypeName(ctx.typeHint(), ctx.QuestionMark() != null)?.let { frontend.typeOf(it) }
+                ?: autoType()
 
         val param = newParameter(name, type, variadic = isVariadic, rawNode = ctx)
 
@@ -310,5 +316,11 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
         } else {
             tu += statement
         }
+    }
+
+    /** Returns the normalized type text including nullable marker when present. */
+    private fun resolveTypeName(typeHint: PhpParser.TypeHintContext?, nullable: Boolean): String? {
+        val typeName = typeHint?.text ?: return null
+        return if (nullable && !typeName.startsWith("?")) "?$typeName" else typeName
     }
 }

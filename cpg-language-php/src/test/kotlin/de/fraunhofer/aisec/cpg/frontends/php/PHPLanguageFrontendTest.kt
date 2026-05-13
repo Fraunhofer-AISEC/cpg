@@ -155,6 +155,34 @@ class PHPLanguageFrontendTest {
 
         val sumArray = tu.functions["sumArray"]
         assertNotNull(sumArray, "function 'sumArray' should exist")
+        val sumArrayLoop = sumArray.forEachLoops.firstOrNull()
+        assertNotNull(sumArrayLoop, "sumArray should contain a foreach loop")
+        val sumArrayVariable = sumArrayLoop.variable as? DeclarationStatement
+        assertNotNull(sumArrayVariable, "simple foreach variable should be a declaration")
+        assertLocalName("v", sumArrayVariable.singleDeclaration)
+
+        val sumByKey = tu.functions["sumByKey"]
+        assertNotNull(sumByKey, "function 'sumByKey' should exist")
+        val sumByKeyLoop = sumByKey.forEachLoops.firstOrNull()
+        assertNotNull(sumByKeyLoop, "sumByKey should contain a foreach loop")
+        val keyValueVariables = sumByKeyLoop.variable as? ExpressionList
+        assertNotNull(keyValueVariables, "key/value foreach should expose two loop variables")
+        assertEquals(2, keyValueVariables.expressions.size)
+        val keyDeclaration = keyValueVariables.expressions[0] as? DeclarationStatement
+        assertNotNull(keyDeclaration, "key variable should be declared")
+        assertLocalName("k", keyDeclaration.singleDeclaration)
+        val valueDeclaration = keyValueVariables.expressions[1] as? DeclarationStatement
+        assertNotNull(valueDeclaration, "value variable should be declared")
+        assertLocalName("v", valueDeclaration.singleDeclaration)
+
+        val overwriteWithLoop = tu.functions["overwriteWithLoop"]
+        assertNotNull(overwriteWithLoop, "function 'overwriteWithLoop' should exist")
+        val overwriteLoop = overwriteWithLoop.forEachLoops.firstOrNull()
+        assertNotNull(overwriteLoop, "overwriteWithLoop should contain a foreach loop")
+        assertTrue(
+            overwriteLoop.variable !is DeclarationStatement,
+            "complex foreach assignable should not create a declaration",
+        )
 
         val risky = tu.functions["riskyOperation"]
         assertNotNull(risky, "function 'riskyOperation' should exist")

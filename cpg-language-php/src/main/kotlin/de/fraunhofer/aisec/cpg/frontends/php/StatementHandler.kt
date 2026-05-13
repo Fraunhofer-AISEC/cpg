@@ -217,6 +217,7 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
     /** Models a foreach loop over an iterable expression. */
     private fun handleForeach(ctx: PhpParser.ForeachStatementContext): ForEach {
         val forEach = newForEach(rawNode = ctx)
+        frontend.scopeManager.enterScope(forEach)
 
         // iterable – the expression being iterated (expression() returns single context)
         ctx.expression()?.let { forEach.iterable = frontend.expressionHandler.handle(it) }
@@ -227,13 +228,23 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
             }
         }
 
-        // the loop variable – represented as a Reference (simplification)
-        ctx.assignable()?.let { assignable ->
-            val varName = assignable.text.removePrefix("$")
-            val variable = newVariable(varName, rawNode = assignable)
-            val ds = newDeclarationStatement(rawNode = assignable)
-            ds.declarations += variable
-            forEach.variable = ds
+        val loopVariables = mutableListOf<Expression>()
+
+        ctx.assignable()?.let { assignable -> loopVariables += handleForeachAssignable(assignable) }
+
+        val chainVariables =
+            if (ctx.expression() == null) ctx.chain()?.drop(1) ?: emptyList()
+            else ctx.chain()?.toList() ?: emptyList()
+        chainVariables.firstOrNull()?.let { chainVariable ->
+            loopVariables += handleForeachChainVariable(chainVariable)
+        }
+
+        if (loopVariables.size == 1) {
+            forEach.variable = loopVariables[0]
+        } else if (loopVariables.size > 1) {
+            val list = newExpressionList(rawNode = ctx)
+            list.expressions += loopVariables
+            forEach.variable = list
         }
 
         val body =
@@ -242,7 +253,46 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
                 handleInnerStatementList(ctx.innerStatementList())
             else newBlock(rawNode = ctx)
         forEach.statement = body
+        frontend.scopeManager.leaveScope(forEach)
         return forEach
+    }
+
+    private fun handleForeachAssignable(assignable: PhpParser.AssignableContext): Expression {
+        assignable.chain()?.let {
+            return handleForeachChainVariable(it)
+        }
+        return ProblemExpression("unsupported foreach assignable: ${assignable.text}")
+    }
+
+    private fun handleForeachChainVariable(chain: PhpParser.ChainContext): Expression {
+        val simpleVariableName = extractSimpleVariableName(chain)
+        if (simpleVariableName != null) {
+            val variable = newVariable(simpleVariableName, rawNode = chain)
+            frontend.scopeManager.addDeclaration(variable)
+            val declarationStatement = newDeclarationStatement(rawNode = chain)
+            declarationStatement.declarations += variable
+            return declarationStatement
+        }
+
+        return frontend.expressionHandler.handleChain(chain)
+    }
+
+    private fun extractSimpleVariableName(chain: PhpParser.ChainContext): String? {
+        if (chain.memberAccess().isNotEmpty()) {
+            return null
+        }
+
+        val chainBase = chain.chainOrigin()?.chainBase() ?: return null
+        if (chainBase.qualifiedStaticTypeRef() != null || chainBase.keyedVariable().size != 1) {
+            return null
+        }
+
+        val keyedVariable = chainBase.keyedVariable(0)
+        if (keyedVariable.squareCurlyExpression().isNotEmpty()) {
+            return null
+        }
+
+        return keyedVariable.VarName()?.text?.removePrefix("$")
     }
 
     // ── Return ────────────────────────────────────────────────────────────────
