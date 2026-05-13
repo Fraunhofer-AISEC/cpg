@@ -37,8 +37,8 @@ mavenPublishing {
 
 dependencies {
     // ANTLR4 tool is used at build time to generate the lexer/parser; runtime is needed at runtime
-    antlr(libs.antlr4)
-    implementation(libs.antlr4.runtime)
+    antlr("org.antlr:antlr4:4.9.3")
+    implementation("org.antlr:antlr4-runtime:4.9.3")
 }
 
 tasks.generateGrammarSource {

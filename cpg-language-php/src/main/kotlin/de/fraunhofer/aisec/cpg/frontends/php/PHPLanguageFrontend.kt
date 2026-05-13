@@ -66,7 +66,7 @@ class PHPLanguageFrontend(ctx: TranslationContext, language: PHPLanguage) :
     override fun parse(content: String, path: Path?): TranslationUnit {
         filePath = path
 
-        val charStream = CharStreams.fromString(content)
+        val charStream = CaseChangingCharStream(CharStreams.fromString(content))
         val lexer = PhpLexer(charStream)
         val tokens = CommonTokenStream(lexer)
         val parser = PhpParser(tokens)

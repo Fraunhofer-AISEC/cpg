@@ -38,7 +38,6 @@ channels {
 
 options {
     superClass = PhpLexerBase;
-    caseInsensitive = true;
 }
 
 // Insert here @header for C++ lexer.
@@ -359,12 +358,8 @@ HereDocText: ~[\r\n]*? ('\r'? '\n' | '\r');
 // '<?= "Hello world"; ?>' will be transformed to '<?php echo "Hello world"; ?>'
 fragment PhpStartEchoFragment : '<' ('?' '=' |    { this.HasAspTags() }? '%' '=');
 fragment PhpStartFragment     : '<' ('?' 'php'? | { this.HasAspTags() }? '%');
-fragment NameString options {
-    caseInsensitive = false;
-}: [a-zA-Z_\u0080-\ufffe][a-zA-Z0-9_\u0080-\ufffe]*;
-fragment HtmlNameChar options {
-    caseInsensitive = false;
-}:
+fragment NameString: [a-zA-Z_\u0080-\ufffe][a-zA-Z0-9_\u0080-\ufffe]*;
+fragment HtmlNameChar:
     HtmlNameStartChar
     | '-'
     | '_'
@@ -374,9 +369,7 @@ fragment HtmlNameChar options {
     | '\u0300' ..'\u036F'
     | '\u203F' ..'\u2040'
 ;
-fragment HtmlNameStartChar options {
-    caseInsensitive = false;
-}:
+fragment HtmlNameStartChar:
     [:a-zA-Z]
     | '\u2070' ..'\u218F'
     | '\u2C00' ..'\u2FEF'
