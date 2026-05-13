@@ -267,8 +267,8 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
             return handleForeachChainVariable(it)
         }
         return ProblemExpression(
-            "unsupported foreach assignable: expected a chain-based variable target (e.g., \$v), " +
-                "but got: ${assignable.text}"
+            "unsupported foreach assignable: expected a chain-based variable target (e.g., a " +
+                "variable), but got: ${assignable.text}"
         )
     }
 
@@ -285,6 +285,12 @@ class StatementHandler(frontend: PHPLanguageFrontend) :
         return frontend.expressionHandler.handleChain(chain)
     }
 
+    /**
+     * Extracts a plain variable name (e.g. `$v`) from a chain used as foreach loop target.
+     *
+     * Returns null for complex targets such as member access (`$obj->field`), static references, or
+     * indexed variables (for example `$arr[...]`).
+     */
     private fun extractSimpleVariableName(chain: PhpParser.ChainContext): String? {
         if (chain.memberAccess().isNotEmpty()) {
             return null

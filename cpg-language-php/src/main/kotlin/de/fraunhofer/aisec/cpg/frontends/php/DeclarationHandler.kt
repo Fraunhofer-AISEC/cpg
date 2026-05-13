@@ -327,11 +327,7 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
      * therefore normalize the string so it always follows the `nullable` flag.
      */
     private fun resolveTypeName(typeHint: PhpParser.TypeHintContext?, nullable: Boolean): String? {
-        val typeName = typeHint?.text ?: return null
-        return when {
-            nullable && !typeName.startsWith("?") -> "?$typeName"
-            !nullable && typeName.startsWith("?") -> typeName.removePrefix("?")
-            else -> typeName
-        }
+        val normalized = typeHint?.text?.removePrefix("?") ?: return null
+        return if (nullable) "?$normalized" else normalized
     }
 }
