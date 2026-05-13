@@ -21,3 +21,18 @@ class Counter
         return $this->value;
     }
 }
+
+CLASS Gauge
+{
+    PRIVATE int $value;
+
+    PUBLIC FUNCTION __construct(int $initial = 1)
+    {
+        $this->value = $initial;
+    }
+
+    PUBLIC FUNCTION read(): int
+    {
+        RETURN $this->value;
+    }
+}

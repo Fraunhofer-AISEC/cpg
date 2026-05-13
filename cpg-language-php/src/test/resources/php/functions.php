@@ -14,3 +14,8 @@ function joinAll(string ...$parts): string
 {
     return implode(",", $parts);
 }
+
+FUNCTION multiply(int $left, int $right = 1): int
+{
+    RETURN $left * $right;
+}

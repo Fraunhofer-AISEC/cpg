@@ -69,6 +69,13 @@ class PHPLanguageFrontendTest {
         assertNotNull(joinAll, "function 'joinAll' should exist")
         assertLocalName("parts", joinAll.parameters[0])
         assertTrue(joinAll.parameters[0].isVariadic, "'parts' should be variadic")
+
+        val multiply = tu.functions["multiply"]
+        assertNotNull(multiply, "function 'multiply' should exist")
+        assertEquals(2, multiply.parameters.size)
+        assertLocalName("left", multiply.parameters[0])
+        assertLocalName("right", multiply.parameters[1])
+        assertNotNull(multiply.parameters[1].default, "'right' should have a default value")
     }
 
     // ── Classes ───────────────────────────────────────────────────────────────
@@ -107,6 +114,18 @@ class PHPLanguageFrontendTest {
 
         val get = counter.methods.firstOrNull { it.name.localName == "get" }
         assertNotNull(get, "method 'get' should exist")
+
+        val gauge =
+            ns.declarations.filterIsInstance<Record>().firstOrNull { it.name.localName == "Gauge" }
+        assertNotNull(gauge, "class 'Gauge' should exist")
+
+        val gaugeCtor = gauge.methods.firstOrNull { it.name.localName == "__construct" }
+        assertNotNull(gaugeCtor, "Gauge constructor should exist")
+        assertEquals(1, gaugeCtor.parameters.size)
+        assertLocalName("initial", gaugeCtor.parameters[0])
+
+        val read = gauge.methods.firstOrNull { it.name.localName == "read" }
+        assertNotNull(read, "method 'read' should exist")
     }
 
     // ── Statements ────────────────────────────────────────────────────────────
