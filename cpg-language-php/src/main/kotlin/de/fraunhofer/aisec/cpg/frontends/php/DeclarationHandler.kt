@@ -318,11 +318,16 @@ class DeclarationHandler(frontend: PHPLanguageFrontend) :
         }
     }
 
-    /** Returns the normalized type text including nullable marker when present. */
+    /**
+     * Returns a normalized type text that matches the explicit nullable marker parsed from the
+     * grammar.
+     *
+     * The parser can expose the nullability marker as a separate `QuestionMark` token while
+     * `typeHint.text` may or may not already contain a leading `?` depending on rule context. We
+     * therefore normalize the string so it always follows the `nullable` flag.
+     */
     private fun resolveTypeName(typeHint: PhpParser.TypeHintContext?, nullable: Boolean): String? {
         val typeName = typeHint?.text ?: return null
-        // `nullable` is the source of truth from the grammar's explicit QuestionMark token.
-        // We normalize `typeName` to match it even if parser text already contains/removes `?`.
         return when {
             nullable && !typeName.startsWith("?") -> "?$typeName"
             !nullable && typeName.startsWith("?") -> typeName.removePrefix("?")
