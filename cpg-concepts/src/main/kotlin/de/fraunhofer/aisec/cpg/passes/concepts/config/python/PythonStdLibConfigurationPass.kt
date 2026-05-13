@@ -43,7 +43,10 @@ import de.fraunhofer.aisec.cpg.graph.followPrevDFG
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.implicit
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
+import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
+import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.Description
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
@@ -56,6 +59,9 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
  * standard library.
  */
 @DependsOn(SymbolResolver::class)
+@DependsOn(PointsToPass::class, true)
+@DependsOn(ControlFlowSensitiveDFGPass::class, true)
+@DependsOn(DFGPass::class)
 @ExecuteBefore(ProvideConfigPass::class)
 @Description(
     "This pass is responsible for creating [ConfigurationOperation] nodes based on the configparser module of the Python standard library."

@@ -61,7 +61,8 @@ fun FulfilledAndFailedPaths.toQueryTree(
             value = true,
             children =
                 mutableListOf(
-                    QueryTree(value = it.nodes, operator = GenericQueryOperators.EVALUATE)
+                    QueryTree(value = it.nodes, operator = GenericQueryOperators.EVALUATE),
+                    QueryTree(value = it.edges, operator = GenericQueryOperators.EVALUATE),
                 ),
             stringRepresentation =
                 "$queryType from ${startNode.compactToString()} to ${it.nodes.last().compactToString()} fulfills the requirement",
@@ -76,7 +77,8 @@ fun FulfilledAndFailedPaths.toQueryTree(
                 children =
                     mutableListOf(
                         QueryTree(value = nodePath.nodes, operator = GenericQueryOperators.EVALUATE)
-                            .addAssumptionDependence(nodePath)
+                            .addAssumptionDependence(nodePath),
+                        QueryTree(value = nodePath.edges, operator = GenericQueryOperators.EVALUATE),
                     ),
                 stringRepresentation =
                     "$queryType from $startNode to ${nodePath.nodes.last()} does not fulfill the requirement",
