@@ -2761,7 +2761,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             // If the type is unknown or an Object, we also
                             // initialize all levels to be sure
                             param.type is UnknownType ||
-                            param.type is ObjectType ||
+//                            param.type is ObjectType ||
                             // Another guess we take: If the length is the same as the
                             // addressLength, again, to be sure we initialize all levels
                             (param.type as? NumericType)?.bitWidth ==
