@@ -261,6 +261,14 @@ fun getNodeName(node: Node?): Name {
         is Literal<*> -> Name(node.value.toString())
         is UnknownMemoryValue -> Name(node.name.localName, Name("UnknownMemoryValue"))
         is Field -> Name(node.name.localName)
+        is BinaryOperator ->
+            Name(
+                getNodeName(node.lhs).localName +
+                    " " +
+                    node.operatorCode +
+                    " " +
+                    getNodeName(node.rhs).localName
+            )
         else -> node.name
     }
 }
@@ -2603,9 +2611,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     when (ini) {
                         is PointerReference -> handleExpression(lattice, ini.input, doubleState)
                         is PointerDereference -> handleExpression(lattice, ini.input, doubleState)
-                        // For initializerLists, we extract all assigns and handle them
-                        // TODO: We will handle them again afterwards by traversing the EOG, not
-                        // sure if this is a problem
                         else -> handleExpression(lattice, ini, doubleState)
                     }
                 if (ini is InitializerList) {
