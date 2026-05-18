@@ -477,8 +477,7 @@ open class ValueEvaluator(
             // There's only one incoming DFG edge, so we follow this one. Except if it brings us
             // back to the same node
             val prev = prevDFG.single()
-            if (prev == node) cannotEvaluate(node, this)
-            else evaluateInternal(prev, depth + 1)
+            if (prev == node) cannotEvaluate(node, this) else evaluateInternal(prev, depth + 1)
         } else if (prevDFG.size > 1) {
             // We cannot have more than ONE valid solution, so we need to abort
             log.warn(
