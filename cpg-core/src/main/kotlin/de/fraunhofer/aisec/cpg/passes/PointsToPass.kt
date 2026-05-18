@@ -686,7 +686,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         for ((param, fsEntries) in function.functionSummary) {
             fsEntries.forEach { entry ->
-                if (param is Parameter) { // && entry.srcNode is Parameter) {
+                if (param is Parameter) {
                     val dst =
                         doubleState
                             .getNestedValues(
@@ -2758,9 +2758,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 val paramDepth =
                     if (
                         param.type is PointerType ||
-                            // If the type is unknown or an Object, we also initialize all levels to
-                            // be
-                            // sure
+                            // If the type is unknown or an Object, we also
+                            // initialize all levels to be sure
                             param.type is UnknownType ||
                             param.type is ObjectType ||
                             // Another guess we take: If the length is the same as the
