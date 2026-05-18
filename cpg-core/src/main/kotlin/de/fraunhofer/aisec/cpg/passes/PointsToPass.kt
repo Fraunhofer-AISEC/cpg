@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.UnknownMemoryValue
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
@@ -2757,9 +2758,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 val paramDepth =
                     if (
                         param.type is PointerType ||
-                            // If the type is unknown, we also initialize all levels to be
+                            // If the type is unknown or an Object, we also initialize all levels to
+                            // be
                             // sure
                             param.type is UnknownType ||
+                            param.type is ObjectType ||
                             // Another guess we take: If the length is the same as the
                             // addressLength, again, to be sure we initialize all levels
                             (param.type as? NumericType)?.bitWidth ==
