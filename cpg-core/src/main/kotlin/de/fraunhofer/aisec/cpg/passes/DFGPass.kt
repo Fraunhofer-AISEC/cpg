@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -797,10 +798,25 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         node.components.forEach {
-
-            // Todo Partial positional or named dfgs
-            node.nextDFGEdges += it
+            node.nextDFGEdges.add(it) {
+                granularity =
+                    if (node.components.size == 1) full()
+                    else if (it is NamedDeconstruction)
+                        getField(node, it)?.let { field(it) } ?: indexed(it.name.toString())
+                    else indexed(node.components.indexOf(it))
+            }
         }
+    }
+
+    fun getField(
+        objectDeconstruction: ObjectDeconstruction,
+        namedDeconstruction: NamedDeconstruction,
+    ): Field? {
+        val type = objectDeconstruction.type
+        if (type is ObjectType) {
+            return type.recordDeclaration.fields.firstOrNull { it.name == namedDeconstruction.name }
+        }
+        return null
     }
 
     protected fun handleAlternativeDeconstruction(node: AlternativeDeconstruction) {
@@ -809,11 +825,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (node.prevDFG.isEmpty()) {
             node.prevEOG.forEach { node.prevDFGEdges += it }
         }
-        node.alternatives.forEach {
-
-            // Todo Full DFGs
-            node.nextDFGEdges += it
-        }
+        node.alternatives.forEach { node.nextDFGEdges += it }
     }
 
     protected fun handleNamedDeconstruction(node: NamedDeconstruction) {
