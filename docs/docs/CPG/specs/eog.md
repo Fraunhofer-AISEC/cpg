@@ -689,10 +689,10 @@ Scheme:
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["condition|conditionDeclaration"]
-  child1 --EOG--> parent
-  parent --EOG:false--> next:::outer
-  parent(["While"]) --EOG:true--> child3["statement"]
+  child1 --EOG:false--> parent(["While"])
+  child1 --EOG:true--> child3["statement"]
   child3 --EOG--> child1
+  parent --> next:::outer
   parent -.-> child1
   parent -.-> child3
 ```
@@ -711,9 +711,9 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["statement"];
   child1 --EOG--> child2["condition"];
-  child2 --EOG--> parent(["Do"]);
-  parent --EOG:false--> next:::outer
-  parent --EOG:true--> child1
+  child2 --EOG:true--> child1
+  child2 --EOG:false--> parent(["Do"]);
+  parent --EOG--> next:::outer
   parent -.-> child1
   parent -.-> child2
 ```
@@ -733,9 +733,9 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["iterable"]
   child1 --EOG--> child2["variable"]
-  child2 --EOG--> parent
-  parent --EOG:false--> next:::outer
-  parent(["ForEach"]) --EOG:true--> child3["statement"]
+  child2 --EOG:true--> child3["statement"]
+  child2 --EOG:false--> parent(["ForEach"])
+  parent --EOG--> next:::outer
   child3 --EOG--> child1
   parent -.-> child2
   parent -.-> child1
@@ -762,10 +762,10 @@ flowchart LR
   iteration --EOG--> condition
   statement --EOG--> iteration["iterationStatement"]
   prev:::outer --EOG--> initializer["initializerStatement"]
-  parent --EOG:false--> next:::outer
   initializer --EOG--> condition["condition|conditionDeclaration"]
-  condition --EOG--> parent
-  parent(["For"]) --EOG:true--> statement["statement"]
+  condition --EOG:false--> parent(["For"])
+  condition --EOG:true--> statement["statement"]
+  parent --EOG--> next:::outer
 ```
 
 ## If
@@ -786,12 +786,11 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["initializerStatement"]
   child1 --EOG--> child2["condition|conditionDeclaration"]
-  child2 --EOG--> parent
-  parent(["If"]) --EOG:true--> child4["thenStatement"]
-  parent --EOG:false--> child5["elseStatement"]
+  child2 --EOG:true--> child4["thenStatement"]
+  child2 --EOG:false--> child5["elseStatement"]
+  child4 --EOG--> parent(["If"])
+  child5 --EOG--> parent
   parent --EOG--> next:::outer
-  child4 --EOG--> next:::outer
-  child5 --EOG--> next:::outer
 ```
 
 ## Switch
@@ -813,15 +812,15 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["initializerStatement"]
   child1 --EOG--> child2["selector|selectorDeclaration"]
-  child2 --EOG--> parent
-  parent(["Switch"]) --EOG--> child4["case"]
-  parent --EOG--> child5["default"]
+  child2 --EOG--> child4["case"]
+  child2 --EOG--> child5["default"]
   child7["statement(n-1)"] --EOG--> child6["statement"]
-  parent -.->child6
+  parent(["Switch"]) -.->child6
   child6 -."statements(n)".-> child4
   child6 -."statements(n)".-> child5
   child6 -."statements(n)".-> child7
-  child6 --EOG--> next:::outer
+  child6 --EOG--> parent
+  parent --EOG--> next:::outer
 ```
 
 ## Case
