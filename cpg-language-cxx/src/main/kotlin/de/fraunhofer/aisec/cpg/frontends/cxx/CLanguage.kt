@@ -131,6 +131,15 @@ open class CLanguage :
             return ImplicitCast
         }
 
+        // In C, any pointer can be implicitly cast to void*
+        if (
+            type is PointerType &&
+                targetType is PointerType &&
+                targetType.elementType is IncompleteType
+        ) {
+            return ImplicitCast
+        }
+
         return CastNotPossible
     }
 }

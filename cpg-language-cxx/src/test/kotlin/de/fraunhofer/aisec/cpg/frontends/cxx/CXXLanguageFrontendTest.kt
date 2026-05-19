@@ -1831,4 +1831,35 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         assertEquals(label, goto.targetLabel)
     }
+
+    @Test
+    fun testCLanguagePointerToVoidCast() {
+        val file = File("src/test/resources/c/pointer_to_void.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+
+        val takesVoidPtr = tu.functions["takesVoidPtr"]
+        assertNotNull(takesVoidPtr)
+        val takesVoidPtrParameterType = assertIs<PointerType>(takesVoidPtr.parameters[0].type)
+        assertLocalName("void", takesVoidPtrParameterType.elementType)
+
+        val calls = main.calls
+        assertEquals(4, calls.size, "main should have 4 calls to takesVoidPtr")
+
+        for (call in calls) {
+            assertInvokes(call, takesVoidPtr, "call should invoke takesVoidPtr")
+            val arg = call.arguments.firstOrNull()
+            assertNotNull(arg, "call should have an argument")
+            val argType = arg.type
+            assertTrue(argType is PointerType, "argument should be a pointer type")
+            val elementType = (argType as PointerType).elementType
+            assertFalse(elementType is IncompleteType, "argument should not be void*")
+        }
+    }
 }
