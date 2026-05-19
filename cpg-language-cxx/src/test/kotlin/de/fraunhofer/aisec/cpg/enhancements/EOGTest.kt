@@ -86,11 +86,12 @@ internal class EOGTest : BaseTest() {
         var conditionEOG = SubgraphWalker.getEOGPathEdges(ifSimple.condition)
         var thenEOG = SubgraphWalker.getEOGPathEdges(ifSimple.thenStatement)
 
-        // IfStmt has 2 outgoing EOG edges (for true and false branch)
-        assertEquals(2, ifEOG.exits.size)
+        // IfStmts condition has 2 outgoing EOG edges (for true and false branch)
+        assertTrue(conditionEOG.exits.size == 2)
 
         // Assert: Only single entry and exit NODE per block
-        assertTrue(conditionEOG.entries.size == 1 && conditionEOG.exits.size == 1)
+        assertTrue(conditionEOG.entries.size == 1)
+        assertEquals(1, ifEOG.exits.size)
         assertTrue(thenEOG.entries.size == 1 && thenEOG.exits.size == 1)
 
         // Assert: Condition of simple if is preceded by print
@@ -110,7 +111,7 @@ internal class EOGTest : BaseTest() {
                 startNode = ifSimple.thenStatement,
                 connectEnd = Connect.NODE,
                 predicate = { it.branch == true },
-                endNodes = listOf(ifSimple),
+                endNodes = listOf(ifSimple.condition),
             )
         )
         // Assert: The EOGs going into the second print come either from the then branch or the
@@ -172,13 +173,13 @@ internal class EOGTest : BaseTest() {
             Util.eogConnect(
                 connectStart = Connect.NODE,
                 edgeDirection = Util.Edge.EXITS,
-                startNode = ifBranched,
+                startNode = ifBranched.condition,
                 predicate = { it.branch == false },
                 endNodes = listOf(ifBranched.elseStatement),
             )
         )
         val ifBranchedEOG = SubgraphWalker.getEOGPathEdges(ifBranched)
-        assertEquals(2, ifBranchedEOG.exits.size)
+        assertEquals(1, ifBranchedEOG.exits.size)
 
         // Assert: EOG going into then branch comes from the condition branch
         assertTrue(
