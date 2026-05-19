@@ -723,7 +723,7 @@ internal class EOGTest : BaseTest() {
                 )
             }
         }
-        
+
         wstat = functions[2].allChildren<While>()[0]
         swch = functions[2].allChildren<Switch>()[0]
         breaks = wstat.allChildren<Break>()
