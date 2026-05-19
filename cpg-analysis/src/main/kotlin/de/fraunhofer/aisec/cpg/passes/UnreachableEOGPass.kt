@@ -199,8 +199,8 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         state: UnreachabilityStateElement,
     ): UnreachabilityStateElement {
         if (
-            condition.astParent !is While ||
-                condition.astParent !is DoWhile ||
+            condition.astParent !is While &&
+                condition.astParent !is DoWhile &&
                 condition.astParent !is For
         ) {
             return state
