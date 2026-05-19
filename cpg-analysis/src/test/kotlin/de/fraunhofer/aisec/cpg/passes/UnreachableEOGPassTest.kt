@@ -66,9 +66,11 @@ class UnreachableEOGPassTest {
         val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
+        val condition = ifStatement.condition
+        assertNotNull(condition)
         // Check if the then-branch is set as reachable including all the edges until reaching the
         // print
-        val thenDecl = ifStatement.nextEOGEdges[0]
+        val thenDecl = condition.nextEOGEdges[0]
         assertFalse(thenDecl.unreachable)
         assertEquals(1, thenDecl.end.nextEOGEdges.size)
         // The "++"
@@ -85,7 +87,7 @@ class UnreachableEOGPassTest {
 
         // Check if the else-branch is set as unreachable including all the edges until reaching the
         // print
-        val elseDecl = ifStatement.nextEOGEdges[1]
+        val elseDecl = condition.nextEOGEdges[1]
         assertTrue(elseDecl.unreachable)
         assertEquals(1, elseDecl.end.nextEOGEdges.size)
         // The "--"
@@ -116,8 +118,10 @@ class UnreachableEOGPassTest {
         val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
-        assertFalse(ifStatement.nextEOGEdges[1].unreachable)
-        assertTrue(ifStatement.nextEOGEdges[0].unreachable)
+        ifStatement.condition?.let {
+            assertFalse(it.nextEOGEdges[1].unreachable)
+            assertTrue(it.nextEOGEdges[0].unreachable)
+        }
     }
 
     @Test
@@ -128,8 +132,10 @@ class UnreachableEOGPassTest {
         val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
-        assertFalse(ifStatement.nextEOGEdges[0].unreachable)
-        assertTrue(ifStatement.nextEOGEdges[1].unreachable)
+        ifStatement.condition?.let {
+            assertFalse(it.nextEOGEdges[0].unreachable)
+            assertTrue(it.nextEOGEdges[1].unreachable)
+        }
     }
 
     @Test
@@ -140,8 +146,10 @@ class UnreachableEOGPassTest {
         val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
-        assertFalse(ifStatement.nextEOGEdges[1].unreachable)
-        assertTrue(ifStatement.nextEOGEdges[0].unreachable)
+        ifStatement.condition?.let {
+            assertFalse(it.nextEOGEdges[1].unreachable)
+            assertTrue(it.nextEOGEdges[0].unreachable)
+        }
     }
 
     @Test
@@ -152,8 +160,10 @@ class UnreachableEOGPassTest {
         val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
-        assertFalse(whileStatement.nextEOGEdges[0].unreachable)
-        assertTrue(whileStatement.nextEOGEdges[1].unreachable)
+        whileStatement.condition?.let {
+            assertFalse(it.nextEOGEdges[0].unreachable)
+            assertTrue(it.nextEOGEdges[1].unreachable)
+        }
     }
 
     @Test
@@ -164,8 +174,10 @@ class UnreachableEOGPassTest {
         val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
-        assertFalse(whileStatement.nextEOGEdges[0].unreachable)
-        assertFalse(whileStatement.nextEOGEdges[1].unreachable)
+        whileStatement.condition?.let {
+            assertFalse(it.nextEOGEdges[0].unreachable)
+            assertFalse(it.nextEOGEdges[1].unreachable)
+        }
     }
 
     @Test
@@ -176,8 +188,10 @@ class UnreachableEOGPassTest {
         val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
-        assertFalse(whileStatement.nextEOGEdges[0].unreachable)
-        assertTrue(whileStatement.nextEOGEdges[1].unreachable)
+        whileStatement.condition?.let {
+            assertFalse(it.nextEOGEdges[0].unreachable)
+            assertTrue(it.nextEOGEdges[1].unreachable)
+        }
     }
 
     @Test
@@ -188,8 +202,10 @@ class UnreachableEOGPassTest {
         val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
-        assertFalse(whileStatement.nextEOGEdges[1].unreachable)
-        assertTrue(whileStatement.nextEOGEdges[0].unreachable)
+        whileStatement.condition?.let {
+            assertFalse(it.nextEOGEdges[1].unreachable)
+            assertTrue(it.nextEOGEdges[0].unreachable)
+        }
     }
 
     @Test
@@ -199,9 +215,10 @@ class UnreachableEOGPassTest {
 
         val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
-
-        assertFalse(whileStatement.nextEOGEdges[1].unreachable)
-        assertTrue(whileStatement.nextEOGEdges[0].unreachable)
+        whileStatement.condition?.let {
+            assertFalse(it.nextEOGEdges[1].unreachable)
+            assertTrue(it.nextEOGEdges[0].unreachable)
+        }
     }
 
     @Test
@@ -211,9 +228,10 @@ class UnreachableEOGPassTest {
 
         val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
-
-        assertFalse(whileStatement.nextEOGEdges[1].unreachable)
-        assertFalse(whileStatement.nextEOGEdges[0].unreachable)
+        whileStatement.condition?.let {
+            assertFalse(it.nextEOGEdges[1].unreachable)
+            assertFalse(it.nextEOGEdges[0].unreachable)
+        }
     }
 
     @Test

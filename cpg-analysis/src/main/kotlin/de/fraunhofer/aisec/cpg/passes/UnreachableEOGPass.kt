@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.branchOf
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.DoWhile
@@ -116,27 +117,23 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     ): UnreachabilityStateElement {
         val lattice = lattice as? UnreachabilityState ?: return currentState
         var newState = currentState
-        when (val currentNode = currentEdge.end) {
-            is IfElse -> {
-                newState = handleIfElse(lattice, currentEdge, currentNode, newState)
-            }
-
-            is Loop -> {
-                newState = handleLoop(lattice, currentEdge, currentNode, newState)
-            }
+        val currentNode = currentEdge.end
+        if (currentNode.branchOf(IfElse::class)) {
+            newState = handleIfElse(lattice, currentEdge, currentNode, newState)
+        } else if (currentNode.branchOf(Loop::class)) {
+            newState = handleLoop(lattice, currentEdge, currentNode, newState)
+        } else {
             // TODO: Add handling of Switch once we have a good way to follow the EOG edges
             //  for them (e.g. based on the branching condition or similar).
-            else -> {
-                // For all other edges, we simply propagate the reachability property of the edge
-                // which made us come here.
-                currentNode.nextEOGEdges.forEach {
-                    newState =
-                        lattice.push(
-                            newState,
-                            it,
-                            newState[currentEdge]?.reachability ?: Reachability.BOTTOM,
-                        )
-                }
+            // For all other edges, we simply propagate the reachability property of the edge
+            // which made us come here.
+            currentNode.nextEOGEdges.forEach {
+                newState =
+                    lattice.push(
+                        newState,
+                        it,
+                        newState[currentEdge]?.reachability ?: Reachability.BOTTOM,
+                    )
             }
         }
 
@@ -144,37 +141,37 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * Evaluates the condition of the [IfElse] [n] (which is the end node of [enteringEdge]). If it
-     * is always true, then the else-branch receives the [state] [Reachability.UNREACHABLE]. If the
+     * Evaluates the [condition] of the [IfElse] (which is the end node of [enteringEdge]). If it is
+     * always true, then the else-branch receives the [state] [Reachability.UNREACHABLE]. If the
      * condition is always false, then the then-branch receives the [state]
      * [Reachability.UNREACHABLE]. All other cases simply copy the state which led us here.
      */
     private fun handleIfElse(
         lattice: UnreachabilityState,
         enteringEdge: EvaluationOrder,
-        n: IfElse,
+        condition: Node,
         state: UnreachabilityStateElement,
     ): UnreachabilityStateElement {
-        val evalResult = n.language.evaluator.evaluate(n.condition)
+        val evalResult = condition.language.evaluator.evaluate(condition)
 
         val (unreachableEdges, remainingEdges) =
             when (evalResult) {
                 true -> {
                     // If the condition is always true, the "false" branch is always unreachable
                     Pair(
-                        n.nextEOGEdges.filter { e -> e.branch == false },
-                        n.nextEOGEdges.filter { e -> e.branch != false },
+                        condition.nextEOGEdges.filter { e -> e.branch == false },
+                        condition.nextEOGEdges.filter { e -> e.branch != false },
                     )
                 }
                 false -> {
                     // If the condition is always false, the "true" branch is always unreachable
                     Pair(
-                        n.nextEOGEdges.filter { e -> e.branch == true },
-                        n.nextEOGEdges.filter { e -> e.branch != true },
+                        condition.nextEOGEdges.filter { e -> e.branch == true },
+                        condition.nextEOGEdges.filter { e -> e.branch != true },
                     )
                 }
                 else -> {
-                    Pair(listOf(), n.nextEOGEdges)
+                    Pair(listOf(), condition.nextEOGEdges)
                 }
             }
 
@@ -188,8 +185,8 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * Evaluates the condition of the [Loop] [n] (which is the end node of [enteringEdge]). If it is
-     * always false, then the edge to the code inside the loop receives the [state]
+     * Evaluates the [condition] of the [Loop] [n] (which is the end node of [enteringEdge]). If it
+     * is always false, then the edge to the code inside the loop receives the [state]
      * [Reachability.UNREACHABLE]. If the condition is always true, then the edge after the loop
      * body receives the [state] [Reachability.UNREACHABLE]. All other cases simply copy the state
      * which led us here.
@@ -198,36 +195,37 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     private fun handleLoop(
         lattice: UnreachabilityState,
         enteringEdge: EvaluationOrder,
-        n: Loop,
+        condition: Node,
         state: UnreachabilityStateElement,
     ): UnreachabilityStateElement {
-        val condition =
-            when (n) {
-                is While -> n.condition
-                is DoWhile -> n.condition
-                is For -> n.condition
-                else -> return state
-            }
-        val evalResult = n.language.evaluator.evaluate(condition)
+        if (
+            condition.astParent !is While ||
+                condition.astParent !is DoWhile ||
+                condition.astParent !is For
+        ) {
+            return state
+        }
+
+        val evalResult = condition.language.evaluator.evaluate(condition)
 
         val (unreachableEdges, remainingEdges) =
             when (evalResult) {
                 is Boolean if evalResult -> {
                     Pair(
-                        n.nextEOGEdges.filter { e -> e.branch == false },
-                        n.nextEOGEdges.filter { e -> e.branch != false },
+                        condition.nextEOGEdges.filter { e -> e.branch == false },
+                        condition.nextEOGEdges.filter { e -> e.branch != false },
                     )
                 }
 
                 is Boolean if !evalResult -> {
                     Pair(
-                        n.nextEOGEdges.filter { e -> e.branch == true },
-                        n.nextEOGEdges.filter { e -> e.branch != true },
+                        condition.nextEOGEdges.filter { e -> e.branch == true },
+                        condition.nextEOGEdges.filter { e -> e.branch != true },
                     )
                 }
 
                 else -> {
-                    Pair(listOf(), n.nextEOGEdges)
+                    Pair(listOf(), condition.nextEOGEdges)
                 }
             }
         return propagateState(

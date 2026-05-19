@@ -29,12 +29,17 @@ import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import kotlin.reflect.KClass
 
 fun Node.evaluate(
     evaluator: ValueEvaluator = this.language.evaluator,
     useCache: Boolean = false,
 ): Any? {
     return evaluator.evaluate(this)
+}
+
+fun Node.branchOf(nodeType: KClass<*>): Boolean {
+    return nodeType.isInstance(this.astParent) && this.nextEOG.size > 1
 }
 
 val ArrayConstruction.capacity: Int

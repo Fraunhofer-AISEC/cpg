@@ -483,7 +483,8 @@ interface Lattice<T : Lattice.Element> {
                     // here (if oldGlobalIt is not null).
                     val newGlobalIt =
                         if (
-                            nextEdge.end is Loop &&
+                            nextEdge.end.astParent is Loop &&
+                                nextEdge.end.nextEOG.size > 1 &&
                                 (strategy == Strategy.WIDENING ||
                                     strategy == Strategy.WIDENING_NARROWING) &&
                                 oldGlobalIt != null
