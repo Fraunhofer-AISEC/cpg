@@ -1158,7 +1158,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
         val writtenTo: List<Node> =
             // Code from the ControlFlowSensitiveDFGPass suggests we should treat ForEach and
-            // Comprehensions slightly different, so let's to this for now
+            // Comprehensions slightly different, so lets to this for now
             when (currentNode) {
                 is ForEach -> {
                     when (variable) {
@@ -2789,7 +2789,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // we set both to the ParameterMemoryValue we create in the first step
         var src: Node = param
         var addresses = doubleState.getAddresses(src, src)
-        var prevAddresses: IdentitySet<Node> = identitySetOf<Node>()
+        var prevAddresses: IdentitySet<Node> = identitySetOf()
         // If we have a Pointer as param, we initialize all levels, otherwise, only
         // the first one
         val paramDepth =
@@ -2962,7 +2962,7 @@ suspend fun PointsToState.pushToDeclarationsState(
     val newLatticeCopy = newLatticeElement.duplicate()
 
     coroutineScope {
-        newLatticeElement.second.forEachMaybeParallel() { pair ->
+        newLatticeElement.second.forEachMaybeParallel { pair ->
             if (
                 currentState.declarationsState[newNode]?.second?.any {
                     it.first === pair.first && it.second == pair.second
@@ -2971,7 +2971,7 @@ suspend fun PointsToState.pushToDeclarationsState(
                 newLatticeCopy.second.remove(pair)
         }
 
-        newLatticeElement.third.forEachMaybeParallel() { nwpk ->
+        newLatticeElement.third.forEachMaybeParallel { nwpk ->
             if (currentState.declarationsState[newNode]?.third?.contains(nwpk) == true) {
                 newLatticeCopy.third.remove(nwpk)
             }
