@@ -593,9 +593,9 @@ Scheme:
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["expression"]
-  child1 --EOG--> parent(["Synchronized"])
-  parent --EOG--> child2["block"]
-  child2 --EOG--> next:::outer
+  child1 --EOG--> child2["block"]
+  child2 --EOG--> parent(["Synchronized"])
+  parent --EOG--> next:::outer
   parent -.-> child1
   parent -.-> child2
 ```
@@ -614,11 +614,12 @@ Scheme:
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["condition"]
-  child1 --EOG--> parent(["Conditional"])
-  parent --EOG:true--> child2["thenExpression"]
-  parent --EOG:false--> child3["elseExpression"]
-  child2 --EOG--> next:::outer
-  child3 --EOG--> next:::outer
+
+  child1 --EOG:true--> child2["thenExpression"]
+  child1 --EOG:false--> child3["elseExpression"]
+  child2 --EOG--> parent(["Conditional"])
+  child3 --EOG--> parent
+  parent --EOG--> next:::outer
   parent -.-> child1
   parent -.-> child2
   parent -.-> child3
