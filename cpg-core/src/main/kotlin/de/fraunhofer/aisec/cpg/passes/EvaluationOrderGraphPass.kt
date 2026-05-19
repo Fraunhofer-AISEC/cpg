@@ -1235,11 +1235,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             handleEOG(subStatement)
         }
 
-        // If we do not have default statement, we also need to put the switch statement into the
-        // currentPredecessors, otherwise we will completely ignore everything that is "beyond" the
-        // switch statement
+        // If we do not have default statement, we also need to put the selector nodes into the
+        // currentPredecessors, otherwise we will completely ignore the case where no case matches
         if (compound.statements.none { it is Default }) {
-            currentPredecessors.add(node)
+            currentPredecessors.addAll(tmp)
         }
 
         attachToEOG(compound)
