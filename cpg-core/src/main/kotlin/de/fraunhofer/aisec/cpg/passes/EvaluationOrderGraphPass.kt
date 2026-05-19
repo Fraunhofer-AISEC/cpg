@@ -745,8 +745,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 }
             }
             toRemove.forEach { catchesOrRelays?.remove(it) }
-            handleEOG(catchClause.body)
             attachToEOG(catchClause)
+            handleEOG(catchClause.body)
             catchEnds.addAll(currentPredecessors)
         }
 
