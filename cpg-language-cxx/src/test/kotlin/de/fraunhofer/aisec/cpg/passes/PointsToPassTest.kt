@@ -4484,4 +4484,36 @@ class PointsToPassTest {
 
         assertContains(xDerefUse.prevDFG, delete)
     }
+
+    @Test
+    fun testCreationOfPMVsForWrongTypes() {
+        val file = File("src/test/resources/pointsToPass/freeint.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+
+        assertNotNull(tu)
+
+        // Functions
+        val freeFunc = tu.functions["free"]
+        assertNotNull(freeFunc)
+
+        // Params and PMVs
+        val freeParam = freeFunc.parameters.single()
+        val freeDerefPMV = freeParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(freeDerefPMV)
+
+        // Usually we wouldn't calculate a PMV for the free function b/c we hand it an int
+        // However, since we have a (hardcoded) FS expecting a PMV we expect the defined DF to the
+        // UMV(freedMemory)
+        // nevertheless
+        assertTrue(
+            (freeDerefPMV as ParameterMemoryValue).prevFullDFG.any {
+                (it as? UnknownMemoryValue)?.name?.localName == "freedMemory"
+            }
+        )
+    }
 }
