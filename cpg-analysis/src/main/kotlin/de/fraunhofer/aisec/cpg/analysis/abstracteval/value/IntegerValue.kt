@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.*
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.branchOf
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.*
@@ -191,8 +192,8 @@ class IntegerValue : Value<LatticeInterval> {
         // For a node after a branching node: Calculate how variables are affected by the condition
         // in the different branches.
         val state =
-            if (prevNode is BranchingNode) {
-                val condition = prevNode.branchedBy
+            if (prevNode?.branchOf(BranchingNode::class) ?: false) {
+                val condition = prevNode
                 if (edge.branch == true && condition is BinaryOperator) {
                     // The "then" branch is taken, so the condition is true, and we can use the
                     // condition as is.
