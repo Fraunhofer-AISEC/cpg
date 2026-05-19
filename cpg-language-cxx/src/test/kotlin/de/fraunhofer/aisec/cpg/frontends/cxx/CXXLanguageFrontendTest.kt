@@ -1846,7 +1846,8 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val takesVoidPtr = tu.functions["takesVoidPtr"]
         assertNotNull(takesVoidPtr)
-        assertLocalName("void", (takesVoidPtr.parameters[0].type as PointerType).elementType)
+        val takesVoidPtrParameterType = assertIs<PointerType>(takesVoidPtr.parameters[0].type)
+        assertLocalName("void", takesVoidPtrParameterType.elementType)
 
         val calls = main.calls
         assertEquals(4, calls.size, "main should have 4 calls to takesVoidPtr")
