@@ -64,6 +64,7 @@ class ReplLoop(
                 .appName("codyze-repl")
                 .completer(KotlinReplCompleter(replService))
                 .parser(KotlinReplParser())
+                .highlighter(KotlinReplHighlighter())
                 .variable(LineReader.HISTORY_FILE, historyFile)
                 .variable(LineReader.SECONDARY_PROMPT_PATTERN, "%P  > ")
                 // AUTO_LIST: show the candidate menu immediately on first TAB instead of
@@ -223,6 +224,7 @@ class ReplLoop(
             "save" -> saveSession(arg, out)
             "result" -> printResultSummary(out)
             "flow" -> exportFlow(arg, out)
+            "dfg" -> exportDfg(arg, out)
             else -> out.println("Unknown command: :$cmd  (try :help)")
         }
         return true
@@ -240,6 +242,7 @@ class ReplLoop(
             |  :save <file>         write all evaluated lines to <file> as a .cpg.query.kts script
             |  :flow [<expr>]       export the last (or freshly evaluated) QueryTree as SARIF
             |                       and open it (VS Code SARIF Viewer renders the path)
+            |  :dfg [<expr>]       open the DFG of a Node as mermaid in VS Code
             |
             |Bindings:
             |  result               the current TranslationResult (always available)
@@ -307,6 +310,41 @@ class ReplLoop(
         }
         out.println("${DIM}Wrote SARIF flow to ${file.absolutePath} — opening …${RESET}")
         FlowExporter.openInOs(file)
+    }
+
+    /**
+     * `:dfg [<expression>]` — opens the DFG of a node as a mermaid graph in VS Code.
+     *
+     * No argument: uses `replService.lastValue`. With argument: evaluates the expression first.
+     */
+    private fun exportDfg(arg: String, out: java.io.PrintWriter) {
+        val node =
+            if (arg.isNotEmpty()) {
+                when (val res = replService.eval(arg)) {
+                    is ReplEvalResult.CompileError -> {
+                        out.println(res.message)
+                        return
+                    }
+                    is ReplEvalResult.RuntimeError -> {
+                        out.println(res.message)
+                        return
+                    }
+                    else -> replService.lastValue
+                }
+            } else {
+                replService.lastValue
+            }
+
+        if (node !is de.fraunhofer.aisec.cpg.graph.Node) {
+            out.println(
+                "No node to visualize. Run an expression that returns a Node, " +
+                    "or pass one: :dfg <expr>"
+            )
+            return
+        }
+
+        val result = openDFG(node)
+        out.println(result)
     }
 
     private fun printImports(out: java.io.PrintWriter) {

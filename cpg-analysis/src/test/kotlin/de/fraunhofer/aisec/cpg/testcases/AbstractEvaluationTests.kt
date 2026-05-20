@@ -237,6 +237,20 @@ abstract class AbstractEvaluationTests {
                                     call("afterLoop") { ref("i") }
                                 }
                             }
+                            method("f7") {
+                                body {
+                                    declare { variable("b", t("Bar")) }
+                                    declare { variable("a", t("int")) }
+
+                                    ifStmt {
+                                        condition { memberCall("nextBoolean", ref("Random")) }
+                                        thenStmt { ref("a") assign literal(16, t("int")) }
+                                        elseStmt { ref("a") assign literal(64, t("int")) }
+                                    }
+
+                                    memberCall("f", ref("Bar")) { ref("a") }
+                                }
+                            }
                         }
                         record("Bar") {
                             method("main") {

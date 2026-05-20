@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.AbstractIntervalEvaluator
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.changeDeclarationState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.intervalOf
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclarationState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -98,7 +98,7 @@ class ArrayValue : Value<LatticeInterval> {
         }
         if (target != null) {
             lattice.pushToGeneralState(state, target, size)
-            lattice.pushToDeclarationState(state, target, size)
+            lattice.changeDeclarationState(state, target, size)
             lattice.pushToGeneralState(state, node, state.intervalOf(node))
             return size
         }

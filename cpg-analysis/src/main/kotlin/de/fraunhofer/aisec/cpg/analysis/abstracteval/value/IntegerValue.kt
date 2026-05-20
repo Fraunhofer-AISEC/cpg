@@ -244,6 +244,16 @@ class IntegerValue : Value<LatticeInterval> {
             lattice.pushToGeneralState(state, node, initializerValue)
             return initializerValue
         }
+        // Member access: p.x or pp->x
+        else if (node is MemberAccess) {
+            val base = node.base
+            val field = node.refersTo
+            // Get the value of the base (either a variable or dereferenced pointer)
+            val baseValue = state.intervalOf(base)
+            // For now, return the base value - field tracking would require more infrastructure
+            lattice.pushToGeneralState(state, node, baseValue)
+            return baseValue
+        }
         // Unary Operators
         else if (node is UnaryOperator) {
             val current = state.intervalOf(node.input)
@@ -530,7 +540,30 @@ class IntegerValue : Value<LatticeInterval> {
                         }
                     }
                 // Push the new value to the declaration state of the variable
-                lattice.changeDeclarationState(state, node.lhs.first(), newValue)
+                val lhsNode = node.lhs.first()
+                // Handle pointer dereference: *ptr = value updates the pointed-to variable
+                val targetNode =
+                    when {
+                        lhsNode is PointerDereference -> {
+                            val target = resolvePointerTarget(lhsNode)
+                            val originalVariable = resolveOriginalVariable(lhsNode)
+                            if (originalVariable != null) {
+                                lattice.changeDeclarationState(state, originalVariable, newValue)
+                            }
+                            target
+                        }
+                        lhsNode is MemberAccess -> {
+                            // Handle p->field or (*pp)->field
+                            val base = lhsNode.base
+                            val resolvedBase = resolveMemberAccessBase(base)
+                            if (resolvedBase != null) {
+                                lattice.changeDeclarationState(state, resolvedBase, newValue)
+                            }
+                            lhsNode
+                        }
+                        else -> lhsNode
+                    }
+                lattice.changeDeclarationState(state, targetNode, newValue)
                 // lattice.pushToGeneralState(state, node, newValue)
                 return newValue
             } else {
@@ -541,5 +574,81 @@ class IntegerValue : Value<LatticeInterval> {
         lattice.pushToGeneralState(state, node, state.intervalOf(node))
 
         return state.intervalOf(node)
+    }
+
+    private fun resolvePointerTarget(deref: PointerDereference): Node {
+        val input = deref.input
+        if (input is Reference) {
+            val variable = input.refersTo
+            if (variable is Variable) {
+                // First try the variable's initializer (intra-procedural)
+                val initializer = variable.initializer
+                if (initializer is PointerReference) {
+                    return initializer.memoryValues.firstOrNull() ?: deref
+                }
+                // Then try memoryValues from PointsToPass (inter-proprocedural)
+                val memoryValues = variable.memoryValues
+                for (mv in memoryValues) {
+                    if (mv is PointerReference) {
+                        return mv
+                    }
+                }
+            }
+        }
+        return deref
+    }
+
+    private fun resolveOriginalVariable(deref: PointerDereference): Node? {
+        val input = deref.input
+        if (input is PointerDereference) {
+            return resolveOriginalVariable(input)
+        }
+        if (input is Reference) {
+            val variable = input.refersTo
+            if (variable is Variable) {
+                return followPointerChain(variable)
+            }
+        }
+        return null
+    }
+
+    private fun resolveMemberAccessBase(base: Node): Node? {
+        return when (base) {
+            is Reference -> {
+                val variable = base.refersTo
+                if (variable is Variable) {
+                    variable
+                } else null
+            }
+            is PointerDereference -> {
+                resolveOriginalVariable(base)
+            }
+            else -> null
+        }
+    }
+
+    private fun followPointerChain(variable: Variable): Node? {
+        // First try initializer
+        val initializer = variable.initializer
+        if (initializer is PointerReference) {
+            val refersTo = initializer.refersTo
+            if (refersTo is Variable) {
+                return followPointerChain(refersTo)
+            } else {
+                return refersTo
+            }
+        }
+        // Then try memoryValues from PointsToPass
+        for (mv in variable.memoryValues) {
+            if (mv is PointerReference) {
+                val refersTo = mv.refersTo
+                if (refersTo is Variable) {
+                    return followPointerChain(refersTo)
+                } else if (refersTo != null) {
+                    return refersTo
+                }
+            }
+        }
+        return variable
     }
 }

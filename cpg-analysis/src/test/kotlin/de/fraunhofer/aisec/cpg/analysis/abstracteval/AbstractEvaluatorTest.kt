@@ -164,6 +164,32 @@ class AbstractEvaluatorTest {
 
     /*
        Bar b = new Bar();
+       int a; // no initial value
+
+       if (new Random().nextBoolean()) {
+           a = 16;
+       } else {
+           a = 64;
+       }
+
+       b.f(a);
+    */
+    @Test
+    fun testBranchNoInitialValue() {
+        val mainClass = tu.records["Foo"]
+        assertNotNull(mainClass)
+        val f7 = mainClass.methods["f7"]
+        assertNotNull(f7)
+
+        val refA = f7.mcalls["f"]?.arguments?.firstOrNull()
+        assertNotNull(refA, "There should be an argument for the call to f")
+
+        val value = refA.evaluate(IntegerIntervalEvaluator())
+        assertEquals(LatticeInterval.Bounded(16, 64), value)
+    }
+
+    /*
+       Bar b = new Bar();
        int a = 5;
 
        for (int i = 0; i < 5; i++) {

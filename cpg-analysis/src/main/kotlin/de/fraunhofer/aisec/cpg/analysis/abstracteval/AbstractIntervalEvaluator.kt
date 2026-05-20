@@ -444,7 +444,7 @@ class AbstractIntervalEvaluator {
         currentState: TupleStateElement<Any>,
     ): TupleStateElement<Any> {
         val currentNode = currentEdge.end
-        val newState = currentState
+        val newState = currentState.duplicate()
 
         analysisType
             .createInstance()

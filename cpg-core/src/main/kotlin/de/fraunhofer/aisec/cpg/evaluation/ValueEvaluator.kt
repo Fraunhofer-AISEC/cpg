@@ -147,6 +147,10 @@ open class ValueEvaluator(
             is Assign -> return handleAssign(node, depth)
             is Reference -> return handleReference(node, depth)
             is Call -> return handleCall(node, depth)
+            // Handle pointer dereference: *ptr
+            is PointerDereference -> return evaluateInternal(node.input, depth + 1)
+            // Handle member access: p.x or p->x
+            is MemberAccess -> return handleMemberAccess(node, depth)
             else -> return handlePrevDFG(node, depth)
         }
 
@@ -163,6 +167,66 @@ open class ValueEvaluator(
     /** Handles a [Reference]. Default behaviour is to call [handlePrevDFG] */
     protected open fun handleReference(node: Reference, depth: Int): Any? {
         return handlePrevDFG(node, depth)
+    }
+
+    /** Handles a [MemberAccess] (p.x or p->x). Uses prevDFG (includes inter-procedural edges). */
+    protected open fun handleMemberAccess(node: MemberAccess, depth: Int): Any? {
+        // For MemberAccess, use prevDFG (not prevFullDFG) to include inter-procedural edges
+        val prevDFG = node.prevDFG.toList()
+
+        // Filter to only include edges that match this field name (e.g., "x" for p.x)
+        val targetField = node.name
+        val filteredDFG =
+            prevDFG.filter { prev ->
+                when (prev) {
+                    is MemberAccess -> prev.name == targetField
+                    is Call -> true // Keep Call edges for inter-procedural tracing
+                    is Literal<*> -> true // Keep Literal edges
+                    else -> false
+                }
+            }
+
+        if (filteredDFG.size == 1) {
+            return evaluateInternal(filteredDFG.first(), depth + 1)
+        } else if (filteredDFG.size > 1) {
+            // Evaluate each filtered edge and collect all results
+            val results = mutableSetOf<Any?>()
+            for (edge in filteredDFG) {
+                val res = evaluateInternal(edge, depth + 1)
+                if (res is Collection<*>) {
+                    results.addAll(res)
+                } else {
+                    results.add(res)
+                }
+            }
+            return results
+        }
+
+        return handlePrevDFG(node, depth)
+    }
+
+    /** Traces through a function call to find what value was passed that could modify the field. */
+    protected open fun traceCallArgument(call: Call, memberAccess: MemberAccess, depth: Int): Any? {
+        // Look for Literal arguments to the call (these are the values being passed)
+        // For set_point_x(&p, 99), the second argument is 99
+        @Suppress("UNCHECKED_CAST")
+        val literalArg = call.arguments.filter { it is Literal<*> }.firstOrNull() as? Literal<*>
+        if (literalArg != null) {
+            return evaluateInternal(literalArg, depth + 1)
+        }
+
+        // Find the argument that corresponds to the struct being modified
+        // For set_point_x(&p, 99), the first argument is &p (the pointer to the struct)
+        val structArg = call.arguments.firstOrNull()
+        if (structArg != null) {
+            // Follow the DFG from the argument to find the value
+            val result = evaluateInternal(structArg, depth + 1)
+            if (result !is CouldNotResolve) {
+                return result
+            }
+        }
+        // If we can't trace through, return the original value
+        return evaluateInternal(call, depth + 1)
     }
 
     /**

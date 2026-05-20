@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.codyze.console.repl
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.optional
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.path
 import de.fraunhofer.aisec.codyze.console.AnalyzeRequestJSON
@@ -59,6 +61,26 @@ class ReplCommand : CliktCommand(name = "repl") {
     private val conceptsFile by
         option("--concepts", help = "Path to a persisted concepts YAML file").path()
 
+    private val bundledSummaries by
+        option(
+                "--with-summaries",
+                "--no-summaries",
+                help =
+                    "Auto-load bundled per-language stdlib flow summaries " +
+                        "(`<lang>-stdlib-flows.yml`) from the classpath. Default: on.",
+            )
+            .flag("--no-summaries", default = true)
+
+    private val extraSummaries by
+        option(
+                "--summaries",
+                help =
+                    "Path to an additional function-summary YAML file. Repeatable. " +
+                        "Loaded in addition to the bundled defaults (unless `--no-summaries`).",
+            )
+            .path()
+            .multiple()
+
     override fun run() {
         // Print the banner up-front so it isn't buried under the analyzer's log output.
         // Analysis can take several seconds; the banner is a clear "you're in the right
@@ -74,6 +96,8 @@ class ReplCommand : CliktCommand(name = "repl") {
                     includeDir = includeDir?.toString(),
                     topLevel = topLevel?.toString(),
                     conceptsFile = conceptsFile?.toString(),
+                    loadBundledSummaries = bundledSummaries,
+                    extraSummaryFiles = extraSummaries.map { it.toString() },
                 )
             runBlocking { consoleService.analyze(request) }
         }

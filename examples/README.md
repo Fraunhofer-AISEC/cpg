@@ -265,9 +265,10 @@ lifting and returns a tree we can navigate.
 
 The REPL renders the tree: a root `✗` (the assertion failed overall),
 with a child per `free` site. Two children are red `✗` (the violations
-at `vuln.c:13` and `vuln.c:31`); the rest are green `✓`. Each violation
-expands further to show the execution path that the analyzer walked to
-reach the use — the evidence is right there.
+at `vuln.c:13` — simple UAF, and `vuln.c:31` — double free also shows
+as UAF); the rest are green `✓`. Each violation expands further to show
+the execution path that the analyzer walked to reach the use — the
+evidence is right there.
 
 Export the failing paths to VS Code:
 
@@ -280,38 +281,208 @@ full step-through path. *"This is the same workflow you'd get from a
 mature SAST product — except the rule is a six-line Kotlin expression
 you just wrote in the REPL."*
 
-> **Caveat for honesty:** this still misses the aliased UAF at
-> `vuln.c:24` — because `q.refersTo` is the declaration of `q`, not
-> `p`. The naive `refersTo == target` predicate is *reference-level*, not
-> *value-level*. UAF is fundamentally a data-flow property — "the freed
-> *value* must not flow into any subsequent use" — so a production query
-> reaches for richer primitives:
->
-> * **Function summaries.** Walk `free`'s `functionSummary` to identify
->   which arguments end up referenced as `…freedMemory` `UnknownMemoryValue`
->   nodes — that gives a precise free-effect model instead of guessing
->   from the call site.
-> * **`dataFlow(... sensitivities = FieldSensitive + ContextSensitive +
->   OnlyFullDFG)`** from the freed memory value, looking for `Reference`
->   reads (or arguments to `printf`/`wprintf`, since libc readers don't
->   modify but do read).
-> * **Hardcoded DFG edges** (e.g. `cpg-language-cxx/src/test/resources/hardcodedDFGedges.yml`)
->   to fill in libc semantics the front-end can't recover from source
->   alone.
->
-> That production query catches the aliased case (and many indirect
-> ones) because it follows the *value*, not the *name*. We keep the
-> simple version on stage because the point isn't "Codyze finds every
-> UAF" — it's "you can iterate on these queries in a REPL the way you'd
-> iterate on a SQL query, and the same query API scales from a one-liner
-> here to the full production rule."
+### Demo: Value Evaluation
 
-> **Talking point:** this is exactly where points-to analysis matters. The
-> CPG ships a `PointsToPass` that tracks which references resolve to which
-> abstract memory locations. Following it through here is the next step —
-> a great hook for the "what's coming" portion of your talk.
+The value evaluators compute numeric bounds and track data flow through
+pointers.
 
-### Stack buffer overflow via `strcpy`
+**Array size bounds:**
+
+```kotlin
+result.functions["bounded_alloc"].variables["buf"].let { sizeBounds(it) }
+```
+
+Output: `[16, 64]` — the evaluator joined two malloc branches!
+
+**Integer value tracking:**
+
+```kotlin
+val func = result.functions["eval_chained_pointer"]
+val cRef = func.calls[0].arguments.last()
+cRef.evaluate()
+```
+
+Output: `99` — tracks pointer dereferences including chained `**pp`.
+
+### Demo: PointsToPass and DFG Edges
+
+The **PointsToPass** runs automatically and populates `memoryValues` — the
+DFG edges that track data flow through pointers.
+
+**Track where a pointer's value flows:**
+
+```kotlin
+val call = result.functions["uaf_deref_write"].calls["strcpy"]
+call?.arguments?.first()?.memoryValues?.map { it.toString() }
+```
+
+Output: `[malloc : UnknownMemoryValue]` — at the strcpy call, we can see
+the first argument points to the malloc'd memory.
+
+**Follow data flow paths:**
+
+```kotlin
+val p = result.functions["uaf_simple"].variables["p"]!!
+val printfCall = result.functions["uaf_simple"].calls["printf"]!!
+dataFlow(p, predicate = { it == printfCall })
+```
+
+Output: ✓ Found data flow! `p` → Reference → Parameter → printf
+
+The path shows: variable `p` flows through a Reference, then a Parameter,
+to the printf call — exactly the UAF pattern.
+
+**Array size bounds:**
+
+```kotlin
+sizeBounds(result.functions["buffer_overflow"].variables["buf"])
+```
+
+Output: `8` — fixed 8-byte stack buffer.
+
+**Value evaluator: pointer dereference** — now works!
+
+```c
+int c = 0;
+int *pc = &c;
+*pc = 3;
+printf("eval_pointer_deref: c = %d\n", c);
+```
+
+```kotlin
+val printfCall = result.functions["eval_pointer_deref"].calls["printf"]
+val cRef = printfCall.arguments.last()
+cRef.evaluate()
+```
+
+Output: `3` — the evaluator tracked `*pc = 3` and updated `c`!
+
+**Inter-procedural** — the PointsToPass tracks which pointers refer to which
+variables across function boundaries:
+
+```c
+void set3(int *p) {
+    *p = 3;
+}
+
+void eval_inter_proc_pointer(void) {
+    int x = 0;
+    set3(&x);
+    printf("eval_inter_proc_pointer: x = %d\n", x);
+}
+```
+
+```kotlin
+val printfCall = result.functions["eval_inter_proc_pointer"].calls[1]
+val xRef = printfCall.arguments.last()
+xRef.evaluate()
+```
+
+Output: `3` — the value evaluator uses PointsToPass `memoryValues` to resolve
+the pointer `p` to the caller's variable `x`, then propagates `*p = 3`!
+
+**Double pointer (chained dereference)** — tracking through `**pp`:
+
+```c
+void eval_chained_pointer(void) {
+    int c = 42;
+    int *pc = &c;
+    int **ppc = &pc;
+    *ppc = 99;
+    printf("eval_chained_pointer: c = %d\n", c);
+}
+```
+
+```kotlin
+val func = result.functions["eval_chained_pointer"]
+val printfCall = func.calls[0]
+val cRef = printfCall.arguments.last()
+cRef.evaluate()
+```
+
+Output: `99` — the value evaluator recursively follows the pointer chain
+from `**ppc` → `*pc` → `c`!
+
+**Struct member access (intra-procedural):**
+
+```c
+typedef struct { int x; int y; } Point;
+
+void eval_struct_member(void) {
+    Point p;
+    p.x = 10;
+    p.y = 25;
+    printf("eval_struct_member: x=%d y=%d\n", p.x, p.y);
+}
+```
+
+```kotlin
+val func = result.functions["eval_struct_member"]
+val printfCall = func.calls[1]
+printfCall.arguments[1].evaluate()  // p.x
+printfCall.arguments[2].evaluate()  // p.y
+```
+
+Output: `10` and `25` — the evaluator follows DFG edges from the struct
+to its members!
+
+**Struct via pointer (intra-procedural):**
+
+```c
+void eval_struct_pointer(void) {
+    Point p;
+    Point *pp = &p;
+    pp->x = 30;
+    pp->y = 40;
+    printf("eval_struct_pointer: x=%d y=%d\n", p.x, p.y);
+}
+```
+
+```kotlin
+val func = result.functions["eval_struct_pointer"]
+val printfCall = func.calls[0]
+printfCall.arguments[1].evaluate()  // p.x
+printfCall.arguments[2].evaluate()  // p.y
+```
+
+Output: `30` and `40` — the evaluator handles pointer-to-struct (`->`)
+the same as dot notation!
+
+**Struct member access (inter-procedural):** — now works with MultiValueEvaluator!
+
+```c
+static void set_point_x(struct Point *pp, int val) {
+    pp->x = val;
+}
+
+void eval_struct_member(void) {
+    Point p;
+    p.x = 10;
+    p.y = 20;
+    // Inter-procedural: pass pointer to struct
+    set_point_x(&p, 99);
+    printf("eval_struct_member: x=%d y=%d\n", p.x, p.y);
+}
+```
+
+```kotlin
+val func = result.functions["eval_struct_member"]
+val printfCall = func.calls[1]
+
+// Use MultiValueEvaluator to get ALL possible values (not just first path)
+printfCall.arguments[1].evaluate(MultiValueEvaluator())   // p.x
+printfCall.arguments[2].evaluate(MultiValueEvaluator())   // p.y
+```
+
+Output: `ConcreteNumberSet[[10, 99]]` and `ConcreteNumberSet[[25, 20]]` —
+the evaluator correctly tracks both the local assignment (`p.x = 10`) and
+the inter-procedural modification via `set_point_x(&p, 99)`!
+
+For a single value (first path only), use the default evaluator:
+
+```kotlin
+printfCall.arguments[1].evaluate()   // returns 10 (or 99 depending on path)
+```
 
 CWE-120. The property: *for every `strcpy`, the destination must be
 large enough to hold the source*. Risk = the destination has a known
@@ -351,60 +522,6 @@ result.allExtended<Call>(sel = { it.name.localName == "strcpy" }) { call ->
 handle the corner cases the way you'd want: a `[-∞, ∞]` source against
 a `[8, 8]` dest is "could exceed" (the unbounded side wins), but
 unknown vs unknown isn't (nothing is asserted).
-
-The rendered tree shows the evaluated bounds under each verdict — `64`
-for the malloc'd buffers, `6` for `"secret"`, `[-∞, ∞]` for the
-parameter (TOP — anything-goes), and `8` for `char buf[8]`:
-
-```
-✗ [ALL] At least one of the elements is false
-├─ ✓ [EVALUATE] Starting at Call 'strcpy' @ vuln.c(12:5-12:25): ok       vuln.c:12
-│  ├─ 64 [EVALUATE]                                                       vuln.c:12
-│  └─  6 [EVALUATE]                                                       vuln.c:12
-├─ ✓ [EVALUATE] Starting at Call 'strcpy' @ vuln.c(23:5-23:25): ok       vuln.c:23
-│  ├─ 64 [EVALUATE]                                                       vuln.c:23
-│  └─  6 [EVALUATE]                                                       vuln.c:23
-├─ ✗ [EVALUATE] Starting at Call 'strcpy' @ vuln.c(41:5-41:29): overflow risk   vuln.c:41
-│  ├─  8 [EVALUATE]                                                       vuln.c:41
-│  └─ [-∞, ∞] [EVALUATE]                                                  vuln.c:41
-├─ ✓ [EVALUATE] Starting at Call 'strcpy' @ vuln.c(49:5-49:25): ok       vuln.c:49
-│  ├─ 64 [EVALUATE]                                                       vuln.c:49
-│  └─  6 [EVALUATE]                                                       vuln.c:49
-└─ ✓ [EVALUATE] Starting at Call 'strcpy' @ vuln.c(57:5-57:21): ok       vuln.c:57
-   ├─ 64 [EVALUATE]                                                       vuln.c:57
-   └─  2 [EVALUATE]                                                       vuln.c:57
-```
-
-Walk through it with the audience — *"this isn't pattern-matching.
-The evaluator actually computes that `"secret"` is 6 bytes, `malloc(64)`
-gives 64, `buf` is `char[8]`, and `user_input` is `[-∞, ∞]` — anything.
-The combination at line 41 — small known dest, unbounded src — is the
-textbook overflow shape."*
-
-> **Talking point:** to **prove** the overflow instead of flagging
-> risk, replace the `srcUpper < 0` check with a real bound from
-> `IntegerIntervalEvaluator` on `strlen(src)` and assert
-> `destUpper < srcMaxLen`. Same REPL, one extra evaluator call away.
-
-### Memory leak
-
-CWE-401. Allocations whose return value never reaches a `free` along any
-execution path.
-
-```kotlin
-val mallocs = result.calls.filter { it.name.localName == "malloc" }
-val leaks = mallocs.filter { mallocCall ->
-    !executionPath(mallocCall) { node ->
-        node is de.fraunhofer.aisec.cpg.graph.expressions.CallExpression &&
-        node.name.localName == "free"
-    }.value
-}
-leaks
-```
-
-This catches the `malloc` in `leak()` at `vuln.c:48`.
-
----
 
 ## 17:00 – 22:00 — Same queries, different language
 

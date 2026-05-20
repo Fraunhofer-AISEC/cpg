@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.evaluation.SizeEvaluator
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.UnknownMemoryValue
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -464,3 +465,11 @@ val Expression.intValue: QueryTree<Int>?
             operator = GenericQueryOperators.EVALUATE,
         )
     }
+
+/**
+ * Checks if this node is an [UnknownMemoryValue] with a taint name ending in "taint.[name]". Common
+ * taint names: "freed", "deallocated", "uninitialized"
+ */
+fun Node.isTaint(taintName: String): Boolean {
+    return this is UnknownMemoryValue && this.name.localName.endsWith("taint.$taintName")
+}

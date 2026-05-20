@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.codyze.console.repl
 import de.fraunhofer.aisec.codyze.console.ConsoleService
 import de.fraunhofer.aisec.codyze.console.CpgQueryScript
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.printDFG
+import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.script.experimental.api.ResultValue
 import kotlin.script.experimental.api.ResultWithDiagnostics
@@ -166,4 +168,21 @@ class ReplService(private val consoleService: ConsoleService) {
                 "${diag.severity}: ${diag.message}$loc"
             }
             .ifEmpty { "Unknown error" }
+}
+
+/** Opens the DFG of a node as a mermaid graph in VS Code. */
+fun openDFG(node: de.fraunhofer.aisec.cpg.graph.Node): String {
+    val mermaidWithWrapper = node.printDFG()
+    // Remove the markdown code fence wrapper
+    val mermaid = mermaidWithWrapper.removeSurrounding("```mermaid\n", "\n```")
+    val file =
+        File(
+            System.getProperty("java.io.tmpdir"),
+            "codyze-dfg-${System.currentTimeMillis()}.mermaid",
+        )
+    file.writeText(mermaid)
+
+    val target = "vscode://file${file.absolutePath}"
+    runCatching { ProcessBuilder("open", target).inheritIO().start() }
+    return "Opened DFG in VS Code: ${file.name}"
 }

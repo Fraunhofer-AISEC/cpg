@@ -13,7 +13,7 @@
     language: CPPLanguage
     methodName: free
   dataFlows:
-    - from: freedMemory
+    - from: taint.freed
       to: param0.deref
       dfgType: full
 
@@ -54,7 +54,6 @@
     - from: param2.deref
       to: param0.deref
       dfgType: full
-
 
 - functionDeclaration:
     language: CPPLanguage
@@ -159,7 +158,6 @@
     - from: param1.deref
       to: param0.deref
       dfgType: full
-
 
 - functionDeclaration:
     language: CPPLanguage

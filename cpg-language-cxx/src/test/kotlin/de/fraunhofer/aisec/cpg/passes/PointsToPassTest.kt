@@ -55,7 +55,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -340,7 +340,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -422,7 +422,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -562,7 +562,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -620,7 +620,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -1120,7 +1120,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -1339,7 +1339,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -2022,7 +2022,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -2296,7 +2296,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
                 it.configurePass<PointsToPass>(PointsToPass.Configuration(addressLength = 64))
             }
         assertNotNull(tu)
@@ -2406,7 +2406,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -2596,7 +2596,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
                 it.configurePass<PointsToPass>(PointsToPass.Configuration(addressLength = 64))
             }
         assertNotNull(tu)
@@ -2678,7 +2678,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -2961,7 +2961,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -3014,7 +3014,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -3154,7 +3154,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -3183,7 +3183,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -3336,7 +3336,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -3489,7 +3489,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
     }
@@ -3501,7 +3501,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
     }
@@ -3513,7 +3513,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
         val outerSubFSEntries =
@@ -3536,7 +3536,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
         val fd = tu.functions["test_compound"]
@@ -3560,7 +3560,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
         val fd = tu.functions["test_compound"]
@@ -3591,7 +3591,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -3620,7 +3620,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -3695,7 +3695,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -3727,7 +3727,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -3813,10 +3813,10 @@ class PointsToPassTest {
         )
 
         // Next the call to free
-        // We hardcoded that there should be an unknownMemoryValue "freedMemory" coming into the
+        // We hardcoded that there should be an unknownMemoryValue "taint.freed" coming into the
         // DerefPMV
         assertLocalName(
-            "freedMemory",
+            "taint.freed",
             (freeDerefPMV.prevDFGEdges.singleOrNull {
                     it !is ContextSensitiveDataflow &&
                         it.granularity is FullDataflowGranularity &&
@@ -3836,7 +3836,7 @@ class PointsToPassTest {
         // The slightly tricky stuff, the call to bar after the free
         /* We except the following incoming DFG-Edges into the bar call:
          1) The Reference p to the param0
-         2) free's PMVderefValue that assigns the UnknownMemoryValue(freedMemory) to the param's deref PMV
+         2) free's PMVderefValue that assigns the UnknownMemoryValue(taint.freed) to the param's deref PMV
         */
         assertEquals(barArg, barParam.prevFullDFG.singleOrNull())
         assertEquals(freeDerefPMV, barDerefPMV.prevFullDFG.singleOrNull())
@@ -3872,7 +3872,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -4081,7 +4081,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -4299,7 +4299,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
         assertNotNull(tu)
 
@@ -4418,7 +4418,7 @@ class PointsToPassTest {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
                 it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
             }
 
         assertNotNull(tu)

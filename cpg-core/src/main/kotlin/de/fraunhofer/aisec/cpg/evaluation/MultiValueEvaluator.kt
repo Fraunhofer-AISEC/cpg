@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Conditional
 import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.expressions.For
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
@@ -96,6 +97,8 @@ class MultiValueEvaluator : ValueEvaluator() {
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
             is Conditional -> return handleConditional(node, depth)
+            // Handle member access: p.x or p->x
+            is MemberAccess -> return handleMemberAccess(node, depth)
             else -> return handlePrevDFG(node, depth)
         }
 

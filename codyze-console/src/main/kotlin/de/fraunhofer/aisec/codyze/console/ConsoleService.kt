@@ -122,6 +122,18 @@ class ConsoleService {
                 )
             }
 
+            // Stdlib flow summaries: classpath-discovered bundled ones + any user-supplied
+            // extras. Each `cpg-language-*` module ships its profile at `/<lang>-stdlib-
+            // flows.yml`, so discovery just enumerates known names — no reflection or scanning.
+            val summaryFiles =
+                buildList<File> {
+                    if (request.loadBundledSummaries) addAll(loadBundledSummaryFiles())
+                    addAll(request.extraSummaryFiles.map(::File))
+                }
+            if (summaryFiles.isNotEmpty()) {
+                builder.registerFunctionSummaries(*summaryFiles.toTypedArray())
+            }
+
             val config = builder.build()
 
             // Build an ad-hoc project
@@ -381,5 +393,38 @@ class ConsoleService {
 
             return service
         }
+    }
+}
+
+/**
+ * Known names of per-language stdlib flow summary files. Each `cpg-language-*` module that ships a
+ * profile drops it at the classpath root with this naming convention. We keep an explicit list here
+ * rather than crawling the classpath because:
+ * * crawling shaded fat-jars is slow and unreliable,
+ * * the list rarely changes,
+ * * adding a new language is one line in this list.
+ */
+private val KNOWN_STDLIB_FLOW_RESOURCES =
+    listOf(
+        "cxx-stdlib-flows.yml"
+        // Add per-language profiles here as they land:
+        //   "python-stdlib-flows.yml",
+        //   "java-stdlib-flows.yml",
+        //   "go-stdlib-flows.yml",
+    )
+
+/**
+ * Loads each known per-language flow summary file from the runtime classpath and materializes it to
+ * a temp file (the `registerFunctionSummaries` API takes a [File], not an InputStream). Returns the
+ * list of temp files to register; resources that aren't on the classpath are silently skipped so
+ * optional language modules don't error.
+ */
+private fun loadBundledSummaryFiles(): List<File> {
+    val loader = ConsoleService::class.java.classLoader
+    return KNOWN_STDLIB_FLOW_RESOURCES.mapNotNull { name ->
+        val stream = loader.getResourceAsStream(name) ?: return@mapNotNull null
+        val tmp = File.createTempFile("codyze-flows-", "-$name").apply { deleteOnExit() }
+        stream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+        tmp
     }
 }
