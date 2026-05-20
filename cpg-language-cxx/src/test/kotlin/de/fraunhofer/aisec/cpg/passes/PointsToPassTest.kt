@@ -4581,4 +4581,63 @@ class PointsToPassTest {
             assertContains(endNodes, deref)
         }
     }
+
+    @Test
+    fun testReturnedDerefs() {
+        val file = File("src/test/resources/pointsToPass/returnfree.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // Functions
+        val testFunc = tu.functions("returnfreed").single()
+        val mainFunc = tu.functions("main").single()
+
+        // Calls
+        val printfCall2 = mainFunc.calls("printf")[1]
+        assertNotNull(printfCall2)
+
+        val testCall = mainFunc.calls["returnfreed"]
+        assertNotNull(testCall)
+
+        // Stuff
+        val testFuncFS = testFunc.functionSummary
+
+        // The actual tests
+
+        // We expect the FS to contain one key. This key has 2 values, the malloc at depth 0 and the
+        // hardcoded UMV freedMemory at
+        // depth 1
+        assertEquals(1, testFuncFS.entries.size)
+        assertEquals(2, testFuncFS.entries.single().value.size)
+        assertTrue(
+            testFuncFS.entries.single().value.any {
+                it.destValueDepth == 1 &&
+                    (it.srcNode as? UnknownMemoryValue)?.name?.localName == "malloc"
+            }
+        )
+        assertTrue(
+            testFuncFS.entries.single().value.any {
+                it.destValueDepth == 2 &&
+                    (it.srcNode as? UnknownMemoryValue)?.name?.localName == "freedMemory"
+            }
+        )
+
+        // The argument to the 2nd printf call should have as deref value the UMV(freedMemory)
+        // written by the test function
+        assertLocalName(
+            "freedMemory",
+            (printfCall2.arguments[1].prevDFGEdges.singleOrNull {
+                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                        testCall &&
+                        (it.granularity as? PointerDataflowGranularity)?.pointerTarget ==
+                            PointerAccess.CURRENT_DEREF_VALUE
+                } as ContextSensitiveDataflow)
+                .start as? UnknownMemoryValue,
+        )
+    }
 }

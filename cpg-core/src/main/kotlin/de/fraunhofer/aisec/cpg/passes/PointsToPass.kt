@@ -1273,31 +1273,56 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         if (currentNode.returnValues.isNotEmpty()) {
             val parentFD = currentNode.firstParentOrNull<Function>()
             if (parentFD != null) {
-                currentNode.returnValues.forEach { retval ->
-                    parentFD.functionSummary
-                        .computeIfAbsent(currentNode) { ConcurrentHashMap.newKeySet<FSEntry>() }
-                        .addAll(
-                            doubleState.getValues(retval, retval).map {
+                currentNode.returnValues.forEach { rV ->
+                    val fsEntry =
+                        parentFD.functionSummary.computeIfAbsent(currentNode) {
+                            ConcurrentHashMap.newKeySet<FSEntry>()
+                        }
+                    // Filter shortFS Values
+                    var values =
+                        doubleState
+                            .getValues(rV, rV)
+                            .filter { !it.second }
+                            .mapTo(mutableSetOf()) { it.first }
+                    for (depth in 1..3) {
+                        fsEntry.addAll(
+                            values.map { value ->
                                 // If the value is a newly created MemoryAddress, we only set the
                                 // name so that we know later that we have to create a new
                                 // MemoryAddress for each Call
-                                val addressName = (it.first as? MemoryAddress)?.name?.localName
+                                val addressName = (value as? MemoryAddress)?.name?.localName
                                 val v =
                                     if (addressName?.startsWith("NewMemoryAddress") == true)
                                         Name(addressName, parentFD.name)
-                                    else it.first
+                                    else value
                                 FSEntry(
-                                    0,
+                                    depth,
                                     v,
                                     1,
                                     "",
                                     mutableSetOf(
-                                        NodeWithPropertiesKey(parentFD, equalLinkedHashSetOf())
+                                        NodeWithPropertiesKey(
+                                            v as? Node ?: parentFD,
+                                            equalLinkedHashSetOf(),
+                                        )
                                     ),
                                     equalLinkedHashSetOf(false),
                                 )
                             }
                         )
+                        // Try to deref the values. If we have nothing there, stop, otherwise,
+                        // continue
+                        val derefValues =
+                            values
+                                .filter { value ->
+                                    doubleState.hasDeclarationStateValueEntry(value)
+                                }
+                                .flatMap { value ->
+                                    doubleState.getValues(value, value).filter { !it.second }
+                                }
+                                .mapTo(mutableSetOf()) { it.first }
+                        if (derefValues.isEmpty()) break else values = derefValues
+                    }
                 }
             }
         }
@@ -2198,8 +2223,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // If the dstAddr is a Call, the dst is the same. Otherwise, we don't really know,
         // so we leave it empty
         val destination: IdentitySet<Node> =
-            if (argument is Call) identitySetOf(argument)
-            // if the argument is a PointerReference for a global variable, the destination is it's
+            if (argument is Call) {
+                // For calls, if the dstValueDepth is 0, the destination is the argument AKA the
+                // call
+                // If the dstValueDepth is larger, we leave the destination empty for now
+                if (dstValueDepth == 0) identitySetOf(argument) else identitySetOf()
+            }
+            // If the argument is a PointerReference for a global variable, the destination is it's
             // refersTo
             // It might also be the case that argument is a Reference to an array, so then we treat
             // it like a PointerReference
@@ -2215,61 +2245,71 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             else identitySetOf()
 
         val destAddrDepth = dstValueDepth - 1
-        // Is the destAddrDepth > 2? In this case, the DeclarationState
-        // might be outdated. So check in the mapDstToSrc for updates
-        val updatedAddresses: IdentitySet<Pair<Node?, String?>> =
-            mapDstToSrc.entries
-                .filter {
-                    it.key in
-                        doubleState.getValues(argument, argument).mapTo(IdentitySet()) { it.first }
-                }
-                .flatMap { it.value }
-                .filter { it.srcNode != null }
-                .mapTo(IdentitySet()) { it.srcNode to null }
-
-        return if (dstValueDepth > 2 && updatedAddresses.isNotEmpty()) {
-            Pair(updatedAddresses, destination)
-        } else {
-            val partialAccess =
-                properties.filterIsInstance<PartialDataflowGranularity<*>>().singleOrNull()
-            if (subAccessName.isNotEmpty() || partialAccess != null) {
-                val fieldAddresses = identitySetOf<Pair<Node?, String?>>()
-                // Collect the fieldAddresses for each possible value
-                val argumentValues =
-                    doubleState.getNestedValues(argument, destAddrDepth, fetchFields = true)
-                argumentValues.forEach { (v, _) ->
-                    // We over approximate here and also add the main memory Address to the list of
-                    // destinations
-                    // TODO: Should this be true?
-                    fieldAddresses.add(v to null)
-
-                    val parentName = getNodeName(v)
-                    val partialString =
-                        subAccessName.ifEmpty { (partialAccess?.partialTarget as? String) ?: "" }
-                    val newName = Name(partialString, parentName)
-                    fieldAddresses.addAll(
-                        doubleState.fetchFieldAddresses(identitySetOf(v), newName).map {
-                            it to null
-                        }
-                    )
-                }
-                Pair(fieldAddresses, destination)
-            } else {
-                val destinationAddresses =
-                    doubleState.getNestedValues(argument, destAddrDepth).mapTo(
-                        identitySetOf<Pair<Node?, String?>>()
-                    ) {
-                        it.first to null
+        // Check if the declarationState might be outdated by reading the mapDstToSrc. When the
+        // argument is a call, we check for a lower depth (>1) as changes already at the deref
+        // (depth 2) can affect return
+        // values, otherwise it's probably about a parameter, so we start at a depth of > 2 since
+        // there won't be any affects on the first depth (AKA the value)
+        if (argument is Call && dstValueDepth > 1) {
+            val updatedAddresses: IdentitySet<Pair<Node?, String?>> =
+                mapDstToSrc.entries
+                    .filter { it.key == argument }
+                    .flatMap { it.value }
+                    .filter { it.srcNode != null }
+                    .mapTo(IdentitySet()) { it.srcNode to null }
+            if (updatedAddresses.isNotEmpty()) return Pair(updatedAddresses, destination)
+        } else if (dstValueDepth > 2) {
+            val updatedAddresses: IdentitySet<Pair<Node?, String?>> =
+                mapDstToSrc.entries
+                    .filter {
+                        it.key in
+                            doubleState.getValues(argument, argument).mapTo(IdentitySet()) {
+                                it.first
+                            }
                     }
-                // If the argument is a MemberAccess, we also collect the addresses of the bases
-                collectBases(argument).forEach { base ->
-                    doubleState.getAddresses(base, base).forEach { addr ->
-                        destinationAddresses.add(addr to base.name.toString())
-                    }
-                }
+                    .flatMap { it.value }
+                    .filter { it.srcNode != null }
+                    .mapTo(IdentitySet()) { it.srcNode to null }
+            if (updatedAddresses.isNotEmpty()) return Pair(updatedAddresses, destination)
+        }
 
-                Pair(destinationAddresses, destination)
+        val partialAccess =
+            properties.filterIsInstance<PartialDataflowGranularity<*>>().singleOrNull()
+        if (subAccessName.isNotEmpty() || partialAccess != null) {
+            val fieldAddresses = identitySetOf<Pair<Node?, String?>>()
+            // Collect the fieldAddresses for each possible value
+            val argumentValues =
+                doubleState.getNestedValues(argument, destAddrDepth, fetchFields = true)
+            argumentValues.forEach { (v, _) ->
+                // We over approximate here and also add the main memory Address to the list of
+                // destinations
+                // TODO: Should this be true?
+                fieldAddresses.add(v to null)
+
+                val parentName = getNodeName(v)
+                val partialString =
+                    subAccessName.ifEmpty { (partialAccess?.partialTarget as? String) ?: "" }
+                val newName = Name(partialString, parentName)
+                fieldAddresses.addAll(
+                    doubleState.fetchFieldAddresses(identitySetOf(v), newName).map { it to null }
+                )
             }
+            return Pair(fieldAddresses, destination)
+        } else {
+            val destinationAddresses =
+                doubleState.getNestedValues(argument, destAddrDepth).mapTo(
+                    identitySetOf<Pair<Node?, String?>>()
+                ) {
+                    it.first to null
+                }
+            // If the argument is a MemberAccess, we also collect the addresses of the bases
+            collectBases(argument).forEach { base ->
+                doubleState.getAddresses(base, base).forEach { addr ->
+                    destinationAddresses.add(addr to base.name.toString())
+                }
+            }
+
+            return Pair(destinationAddresses, destination)
         }
     }
 
