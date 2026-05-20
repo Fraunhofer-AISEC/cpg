@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.ArraySizeEvaluator
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.IntegerIntervalEvaluator
 import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.evaluation.NumberSet
@@ -145,16 +146,56 @@ inline fun <reified T> Node.exists(
 }
 
 /**
- * Evaluates the size of a node. The implementation is very, very basic!
+ * Evaluates the size of a node, e.g. the byte-capacity of a buffer, the length of a string literal,
+ * the element count of an initializer list.
  *
- * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
+ * Defaults to [ArraySizeEvaluator], which is the canonical size evaluator going forward — it
+ * handles literals, `InitializerList`, `ArrayConstruction`, and `malloc(constant)` directly, plus
+ * tracks size through variable initializers via the abstract-interval analysis (so
+ * `sizeof(reference_to_p)` where `char *p = malloc(64)` returns 64).
+ *
+ * Returns -1 when the size cannot be determined statically (parameters, opaque pointers, unbounded
+ * reads, …).
+ *
+ * @param eval the evaluator to use; pass [SizeEvaluator] for the older, simpler implementation that
+ *   walks variable initializers but doesn't track `malloc` sizes.
  */
-fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): QueryTree<Int> {
-    // The cast could potentially go wrong, but if it's not an int, it's not really a size
+fun sizeof(n: Node?, eval: ValueEvaluator = ArraySizeEvaluator()): QueryTree<Int> {
+    val raw = eval.evaluate(n)
+    val value: Int =
+        when (raw) {
+            is LatticeInterval.Bounded ->
+                ((raw.upper as? LatticeInterval.Bound.Value)?.value)?.toInt() ?: -1
+            is Number -> raw.toInt()
+            else -> -1
+        }
     return QueryTree(
-        eval.evaluate(n) as? Int ?: -1,
+        value,
         mutableListOf(),
         "sizeof($n)",
+        n,
+        operator = GenericQueryOperators.EVALUATE,
+    )
+}
+
+/**
+ * Like [sizeof], but preserves the full [LatticeInterval] in the [QueryTree] so callers (and the
+ * REPL renderer) can see the lower/upper bounds the abstract evaluator computed, not just the
+ * upper. Use this when you care about *ranges* — e.g. "this variable's size lies in [1, 64]" —
+ * rather than a single conservative number.
+ */
+fun sizeBounds(n: Node?, eval: ValueEvaluator = ArraySizeEvaluator()): QueryTree<LatticeInterval> {
+    val raw = eval.evaluate(n)
+    val interval: LatticeInterval =
+        when (raw) {
+            is LatticeInterval -> raw
+            is Number -> LatticeInterval.Bounded(raw.toLong(), raw.toLong())
+            else -> LatticeInterval.BOTTOM
+        }
+    return QueryTree(
+        interval,
+        mutableListOf(),
+        "sizeBounds($n)",
         n,
         operator = GenericQueryOperators.EVALUATE,
     )
