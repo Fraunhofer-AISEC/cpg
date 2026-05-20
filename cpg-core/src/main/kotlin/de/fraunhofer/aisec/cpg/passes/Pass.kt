@@ -337,8 +337,9 @@ fun executePassesSequentially(
         }
 
         // Execute it
+        println("Executing: ${pass.simpleName}")
         executePass(pass, ctx, result, executedFrontends)
-
+        println("Finished: ${pass.simpleName}")
         // Increment executions
         executions[pass] = numExec + 1
 
