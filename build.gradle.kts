@@ -99,6 +99,12 @@ val enablePythonFrontend: Boolean by extra {
 }
 project.logger.lifecycle("Python frontend is ${if (enablePythonFrontend) "enabled" else "disabled"}")
 
+val enableRustFrontend: Boolean by extra {
+    val enableRustFrontend: String? by project
+    enableRustFrontend.toBoolean()
+}
+project.logger.lifecycle("Rust frontend is ${if (enableRustFrontend) "enabled" else "disabled"}")
+
 val enableLLVMFrontend: Boolean by extra {
     val enableLLVMFrontend: String? by project
     enableLLVMFrontend.toBoolean()

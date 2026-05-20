@@ -52,6 +52,8 @@ answerGo=$(ask "Do you want to enable the Go frontend? (currently $(getProperty 
 setProperty "enableGoFrontend" $answerGo
 answerPython=$(ask "Do you want to enable the Python frontend? (currently $(getProperty "enablePythonFrontend"))")
 setProperty "enablePythonFrontend" $answerPython
+answerRust=$(ask "Do you want to enable the Rust frontend? (currently $(getProperty "enableRustFrontend"))")
+setProperty "enableRustFrontend" $answerRust
 answerLLVM=$(ask "Do you want to enable the LLVM frontend? (currently $(getProperty "enableLLVMFrontend"))")
 setProperty "enableLLVMFrontend" $answerLLVM
 answerTypescript=$(ask "Do you want to enable the TypeScript frontend? (currently $(getProperty "enableTypeScriptFrontend"))")

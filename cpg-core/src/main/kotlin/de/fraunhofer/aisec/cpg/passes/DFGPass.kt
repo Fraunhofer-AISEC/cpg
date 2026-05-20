@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -156,6 +157,9 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is Function -> handleFunction(node, functionSummaries)
             is Tuple -> handleTuple(node)
             is Variable -> handleVariable(node)
+            is ObjectDeconstruction -> handleObjectDeconstruction(node)
+            is AlternativeDeconstruction -> handleAlternativeDeconstruction(node)
+            is NamedDeconstruction -> handleNamedDeconstruction(node)
         }
     }
 
@@ -383,6 +387,8 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             node.selector,
             node.selectorDeclaration,
         )
+        // Todo KW: We now have an Issue with cf structures as expressions leading to incorrect dfg
+        // cycles.
         if (node.usedAsExpression) {
             node.statement?.let {
                 node.prevDFGEdges += it
@@ -700,10 +706,40 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleDeclarationStatement(node: DeclarationStatement) {
         if (node.usedAsExpression) {
+
+            val inDeconstruction =
+                node.astParent?.let { parent -> node.prevDFG.contains(parent) } ?: false
+
             node.declarations.forEach {
-                if (it is ValueDeclaration) {
-                    it.astChildren.filterIsInstance<Expression>().lastOrNull()?.let {
-                        node.prevDFGEdges += it
+                if (it is Variable) {
+                    // Expression case:
+                    // [parent: Expression] -> [DeclarationStatement] <- [Initializer] -> [Variable]
+                    //                                                               ^-- [children:
+                    // Expression]
+                    // If the parent of the declaration Statement is a Deconstruction, the dfg needs
+                    // to go from the
+                    // declaration statement to the initializer of the variable, because the
+                    // initializer potentially
+                    // deconstructs the variable further. The DFG handling for variables should
+                    // naturally draw a DFG
+                    // edge from the initializer to the variable, creating a path to properly bind
+                    // the value to the
+                    // variable that goes over the deconstruction that may hold type information.
+                    // [parent: Deconstruction] -> [DeclarationStatement] -> [Initializer] ->
+                    // [Variable]
+                    //                                                                   '-->
+                    // [children: Deconstruction]
+                    // Todo: what happens if there are nested bindings that i would depict as
+                    // declaration statements with
+                    // variables and their initializers are declarations statements?
+
+                    // The default for the dfg targets are the initializers
+                    val dfgTarget = it.initializer ?: it
+                    // If there is no initializer, the variable is the target
+                    if (inDeconstruction) {
+                        node.nextDFGEdges += dfgTarget
+                    } else {
+                        node.prevDFGEdges += dfgTarget
                     }
                 }
             }
@@ -717,7 +753,9 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     protected fun handleBreak(node: Break) {
-        // no action
+        if (node.usedAsExpression) {
+            node.expr?.let { node.prevDFGEdges += it }
+        }
     }
 
     protected fun handleAssert(node: Assert) {
@@ -750,5 +788,52 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
             breaksOfNode.forEach { node.prevDFGEdges += it }
         }
+    }
+
+    protected fun handleObjectDeconstruction(node: ObjectDeconstruction) {
+        // If this Deconstruction has no incoming DFG, the data comes from the previously evaluated
+        // node, e.g. the switch or initializer
+        if (node.prevDFG.isEmpty()) {
+            node.prevEOG.forEach { node.prevDFGEdges += it }
+        }
+
+        node.components.forEach {
+            node.nextDFGEdges.add(it) {
+                granularity =
+                    if (node.components.size == 1) full()
+                    else if (it is NamedDeconstruction)
+                        getField(node, it)?.let { field(it) } ?: indexed(it.name.toString())
+                    else indexed(node.components.indexOf(it))
+            }
+        }
+    }
+
+    fun getField(
+        objectDeconstruction: ObjectDeconstruction,
+        namedDeconstruction: NamedDeconstruction,
+    ): Field? {
+        val type = objectDeconstruction.type
+        if (type is ObjectType) {
+            return type.recordDeclaration.fields.firstOrNull { it.name == namedDeconstruction.name }
+        }
+        return null
+    }
+
+    protected fun handleAlternativeDeconstruction(node: AlternativeDeconstruction) {
+        // If this Deconstruction has no incoming DFG, the data comes from the previously evaluated
+        // node, e.g. the switch or initializer
+        if (node.prevDFG.isEmpty()) {
+            node.prevEOG.forEach { node.prevDFGEdges += it }
+        }
+        node.alternatives.forEach { node.nextDFGEdges += it }
+    }
+
+    protected fun handleNamedDeconstruction(node: NamedDeconstruction) {
+        // If this Deconstruction has no incoming DFG, the data comes from the previously evaluated
+        // node, e.g. the switch or initializer
+        if (node.prevDFG.isEmpty()) {
+            node.prevEOG.forEach { node.prevDFGEdges += it }
+        }
+        node.value.let { node.nextDFGEdges += it }
     }
 }
