@@ -88,3 +88,7 @@ tasks.register<Copy>("copyRustSharedLibToResources") {
 tasks.named("processResources") {
     dependsOn(cargoBuild, generateBindings, "copyRustSharedLibToResources")
 }
+
+tasks.compileKotlin { dependsOn(tasks.processResources) }
+
+tasks.compileTestKotlin { dependsOn(tasks.processResources) }

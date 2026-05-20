@@ -834,9 +834,6 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (node.prevDFG.isEmpty()) {
             node.prevEOG.forEach { node.prevDFGEdges += it }
         }
-        node.value.let {
-            // Todo Partials to their name
-            node.nextDFGEdges += it
-        }
+        node.value.let { node.nextDFGEdges += it }
     }
 }
