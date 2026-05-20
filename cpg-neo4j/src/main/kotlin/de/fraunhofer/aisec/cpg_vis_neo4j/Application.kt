@@ -311,6 +311,7 @@ class Application : Callable<Int> {
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.php.PHPLanguage")
                 .loadIncludes(loadIncludes)
                 .exclusionPatterns(*exclusionPatterns.toTypedArray())
                 .addIncludesToGraph(loadIncludes)
