@@ -246,13 +246,41 @@ class IntegerValue : Value<LatticeInterval> {
         }
         // Member access: p.x or pp->x
         else if (node is MemberAccess) {
-            val base = node.base
-            val field = node.refersTo
-            // Get the value of the base (either a variable or dereferenced pointer)
-            val baseValue = state.intervalOf(base)
-            // For now, return the base value - field tracking would require more infrastructure
-            lattice.pushToGeneralState(state, node, baseValue)
-            return baseValue
+            // The MemberAccess's objectIdentifier combines field + base so that p.x and p.y
+            // hash to different keys. The Assign handler stores per-field intervals under this
+            // identifier, so the intra-procedural read just looks the value up directly. Use a
+            // direct map peek (not intervalOf, which defaults missing keys to TOP) so we can tell
+            // "no info yet" (BOTTOM) apart from "could be anything" (TOP) when joining with DFG.
+            val intra = state.intervalAtOrBottom(node)
+
+            // Inter-procedural sources arrive via prevDFG edges added by
+            // ControlFlowSensitiveDFGPass (e.g. `set_point_x(&p, 99)` flowing 99 into `p.x`). We
+            // follow the same field-name filtering used by ValueEvaluator.handleMemberAccess so we
+            // don't mix `p.x` writes into `p.y` reads.
+            val targetField = node.name
+            val dfgInterval =
+                node.prevDFG
+                    .filter { prev ->
+                        when (prev) {
+                            is MemberAccess -> prev.name == targetField
+                            is Literal<*>,
+                            is Call -> true
+                            else -> false
+                        }
+                    }
+                    .fold(LatticeInterval.BOTTOM as LatticeInterval) { acc, prev ->
+                        val prevInterval =
+                            (prev as? Literal<*>)?.let {
+                                (it.value as? Number)?.let { n ->
+                                    LatticeInterval.Bounded(n.toLong(), n.toLong())
+                                } ?: LatticeInterval.TOP
+                            } ?: state.intervalAtOrBottom(prev)
+                        joinIntervals(acc, prevInterval)
+                    }
+
+            val combined = joinIntervals(intra, dfgInterval)
+            lattice.pushToGeneralState(state, node, combined)
+            return combined
         }
         // Unary Operators
         else if (node is UnaryOperator) {
@@ -624,6 +652,23 @@ class IntegerValue : Value<LatticeInterval> {
                 resolveOriginalVariable(base)
             }
             else -> null
+        }
+    }
+
+    /**
+     * Least upper bound on [LatticeInterval] treating [LatticeInterval.BOTTOM] as the identity ("no
+     * info yet") — mirrors [NewIntervalLattice.lub] semantics. The free-standing
+     * [LatticeInterval.join] is unsuitable here because it returns BOTTOM when either side is
+     * BOTTOM, which would erase information we just gathered.
+     */
+    private fun joinIntervals(a: LatticeInterval, b: LatticeInterval): LatticeInterval {
+        return when {
+            a is LatticeInterval.BOTTOM -> b
+            b is LatticeInterval.BOTTOM -> a
+            a is LatticeInterval.TOP || b is LatticeInterval.TOP -> LatticeInterval.TOP
+            a is LatticeInterval.Bounded && b is LatticeInterval.Bounded ->
+                LatticeInterval.Bounded(minOf(a.lower, b.lower), maxOf(a.upper, b.upper))
+            else -> LatticeInterval.TOP
         }
     }
 

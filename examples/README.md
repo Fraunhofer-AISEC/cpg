@@ -284,7 +284,10 @@ you just wrote in the REPL."*
 ### Demo: Value Evaluation
 
 The value evaluators compute numeric bounds and track data flow through
-pointers.
+pointers. Two evaluators are available:
+
+1. **Default evaluator** — returns a single value (first DFG path only)
+2. **MultiValueEvaluator** — returns all possible values from multiple DFG paths
 
 **Array size bounds:**
 
@@ -294,7 +297,7 @@ result.functions["bounded_alloc"].variables["buf"].let { sizeBounds(it) }
 
 Output: `[16, 64]` — the evaluator joined two malloc branches!
 
-**Integer value tracking:**
+**Integer value tracking (single value):**
 
 ```kotlin
 val func = result.functions["eval_chained_pointer"]
@@ -304,185 +307,73 @@ cRef.evaluate()
 
 Output: `99` — tracks pointer dereferences including chained `**pp`.
 
-### Demo: PointsToPass and DFG Edges
-
-The **PointsToPass** runs automatically and populates `memoryValues` — the
-DFG edges that track data flow through pointers.
-
-**Track where a pointer's value flows:**
-
-```kotlin
-val call = result.functions["uaf_deref_write"].calls["strcpy"]
-call?.arguments?.first()?.memoryValues?.map { it.toString() }
-```
-
-Output: `[malloc : UnknownMemoryValue]` — at the strcpy call, we can see
-the first argument points to the malloc'd memory.
-
-**Follow data flow paths:**
-
-```kotlin
-val p = result.functions["uaf_simple"].variables["p"]!!
-val printfCall = result.functions["uaf_simple"].calls["printf"]!!
-dataFlow(p, predicate = { it == printfCall })
-```
-
-Output: ✓ Found data flow! `p` → Reference → Parameter → printf
-
-The path shows: variable `p` flows through a Reference, then a Parameter,
-to the printf call — exactly the UAF pattern.
-
-**Array size bounds:**
-
-```kotlin
-sizeBounds(result.functions["buffer_overflow"].variables["buf"])
-```
-
-Output: `8` — fixed 8-byte stack buffer.
-
-**Value evaluator: pointer dereference** — now works!
-
-```c
-int c = 0;
-int *pc = &c;
-*pc = 3;
-printf("eval_pointer_deref: c = %d\n", c);
-```
-
-```kotlin
-val printfCall = result.functions["eval_pointer_deref"].calls["printf"]
-val cRef = printfCall.arguments.last()
-cRef.evaluate()
-```
-
-Output: `3` — the evaluator tracked `*pc = 3` and updated `c`!
-
-**Inter-procedural** — the PointsToPass tracks which pointers refer to which
-variables across function boundaries:
-
-```c
-void set3(int *p) {
-    *p = 3;
-}
-
-void eval_inter_proc_pointer(void) {
-    int x = 0;
-    set3(&x);
-    printf("eval_inter_proc_pointer: x = %d\n", x);
-}
-```
-
-```kotlin
-val printfCall = result.functions["eval_inter_proc_pointer"].calls[1]
-val xRef = printfCall.arguments.last()
-xRef.evaluate()
-```
-
-Output: `3` — the value evaluator uses PointsToPass `memoryValues` to resolve
-the pointer `p` to the caller's variable `x`, then propagates `*p = 3`!
-
-**Double pointer (chained dereference)** — tracking through `**pp`:
-
-```c
-void eval_chained_pointer(void) {
-    int c = 42;
-    int *pc = &c;
-    int **ppc = &pc;
-    *ppc = 99;
-    printf("eval_chained_pointer: c = %d\n", c);
-}
-```
-
-```kotlin
-val func = result.functions["eval_chained_pointer"]
-val printfCall = func.calls[0]
-val cRef = printfCall.arguments.last()
-cRef.evaluate()
-```
-
-Output: `99` — the value evaluator recursively follows the pointer chain
-from `**ppc` → `*pc` → `c`!
-
-**Struct member access (intra-procedural):**
-
-```c
-typedef struct { int x; int y; } Point;
-
-void eval_struct_member(void) {
-    Point p;
-    p.x = 10;
-    p.y = 25;
-    printf("eval_struct_member: x=%d y=%d\n", p.x, p.y);
-}
-```
+**Multiple values (all DFG paths):**
 
 ```kotlin
 val func = result.functions["eval_struct_member"]
 val printfCall = func.calls[1]
-printfCall.arguments[1].evaluate()  // p.x
-printfCall.arguments[2].evaluate()  // p.y
+printfCall.arguments[1].evaluate(MultiValueEvaluator())
 ```
 
-Output: `10` and `25` — the evaluator follows DFG edges from the struct
-to its members!
+Output: `ConcreteNumberSet[[10, 99]]` — returns all values from all DFG
+paths, useful when there are multiple assignments to the same location.
 
-**Struct via pointer (intra-procedural):**
+### Demo: PointsToPass and DFG Edges
+
+The **PointsToPass** runs automatically and stitches DFG edges through
+pointer indirection. The payoff: the value evaluators follow `*p`,
+`pp->x`, and inter-procedural mutations *for free*.
+
+**Inter-procedural pointer write:**
 
 ```c
-void eval_struct_pointer(void) {
-    Point p;
-    Point *pp = &p;
-    pp->x = 30;
-    pp->y = 40;
-    printf("eval_struct_pointer: x=%d y=%d\n", p.x, p.y);
+void set3(int *p)        { *p = 3; }
+void eval_inter_proc_pointer(void) {
+    int x = 0;
+    set3(&x);
+    printf("x = %d\n", x);
 }
 ```
 
 ```kotlin
-val func = result.functions["eval_struct_pointer"]
-val printfCall = func.calls[0]
-printfCall.arguments[1].evaluate()  // p.x
-printfCall.arguments[2].evaluate()  // p.y
+val xRef = result.functions["eval_inter_proc_pointer"].calls[1].arguments.last()
+xRef.evaluate()
 ```
 
-Output: `30` and `40` — the evaluator handles pointer-to-struct (`->`)
-the same as dot notation!
+Output: `3` — PointsToPass resolved `p` inside `set3` back to the
+caller's `x`, and the evaluator propagated `*p = 3` across the call.
 
-**Struct member access (inter-procedural):** — now works with MultiValueEvaluator!
+**Struct member access across a function boundary** — same machinery,
+now for fields:
 
 ```c
-static void set_point_x(struct Point *pp, int val) {
-    pp->x = val;
-}
+static void set_point_x(struct Point *pp, int val) { pp->x = val; }
 
 void eval_struct_member(void) {
     Point p;
     p.x = 10;
     p.y = 20;
-    // Inter-procedural: pass pointer to struct
+    (*pp).y = 25;
     set_point_x(&p, 99);
-    printf("eval_struct_member: x=%d y=%d\n", p.x, p.y);
+    printf("x=%d y=%d\n", p.x, p.y);
 }
 ```
 
 ```kotlin
-val func = result.functions["eval_struct_member"]
-val printfCall = func.calls[1]
-
-// Use MultiValueEvaluator to get ALL possible values (not just first path)
-printfCall.arguments[1].evaluate(MultiValueEvaluator())   // p.x
-printfCall.arguments[2].evaluate(MultiValueEvaluator())   // p.y
+val arg = result.functions["eval_struct_member"].calls[1].arguments
+arg[1].evaluate(MultiValueEvaluator())    // p.x → {10, 99}
+arg[1].evaluate(IntegerIntervalEvaluator()) // p.x → [10, 99]
+arg[2].evaluate(IntegerIntervalEvaluator()) // p.y → [20, 25]
 ```
 
-Output: `ConcreteNumberSet[[10, 99]]` and `ConcreteNumberSet[[25, 20]]` —
-the evaluator correctly tracks both the local assignment (`p.x = 10`) and
-the inter-procedural modification via `set_point_x(&p, 99)`!
+Two evaluators, same source of truth: `MultiValueEvaluator` yields the
+discrete set of possible values; `IntegerIntervalEvaluator` widens to an
+interval suitable for range-based safety queries (e.g. `couldExceed`).
+Both see the local `p.x = 10` write *and* the inter-procedural
+`set_point_x(&p, 99)` write, with field-name filtering so `p.x` writes
+don't leak into `p.y` reads.
 
-For a single value (first path only), use the default evaluator:
-
-```kotlin
-printfCall.arguments[1].evaluate()   // returns 10 (or 99 depending on path)
-```
+### Buffer Overflows
 
 CWE-120. The property: *for every `strcpy`, the destination must be
 large enough to hold the source*. Risk = the destination has a known
