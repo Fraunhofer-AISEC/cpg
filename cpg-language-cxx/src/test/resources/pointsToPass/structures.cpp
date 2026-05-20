@@ -1,3 +1,7 @@
+/* Part of Juliet Test Suite
+see https://github.com/arichardson/juliet-test-suite-c/blob/master/testcases/CWE416_Use_After_Free/CWE416_Use_After_Free__malloc_free_struct_64a.c
+*/
+
 void printStructLine (const twoIntsStruct * structTwoIntsStruct)
 {
     printf("%d -- %d\n", structTwoIntsStruct->intOne, structTwoIntsStruct->intTwo);
