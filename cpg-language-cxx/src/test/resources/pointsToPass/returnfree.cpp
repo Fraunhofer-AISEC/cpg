@@ -1,6 +1,11 @@
 char* returnfreed() {
   char* ret = malloc(16);
   
+  if (1 == 2) {
+	return NULL;
+  }
+
+  
   free(ret);
   
   return ret;
@@ -11,5 +16,5 @@ int main() {
 
   printf("%s", str);
   str = returnfreed();
-  printf("%s", str);
+  printf("%s %c", str, *str);
 }

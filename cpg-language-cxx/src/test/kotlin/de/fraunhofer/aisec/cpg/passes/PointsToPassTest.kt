@@ -4609,19 +4609,23 @@ class PointsToPassTest {
 
         // The actual tests
 
-        // We expect the FS to contain one key. This key has 2 values, the malloc at depth 0 and the
+        // We expect the FS to contain two keys, one for each return.
+        assertEquals(2, testFuncFS.entries.size)
+        // This return in Line 11 has 2 values, the malloc at depth 0 and the
         // hardcoded UMV freedMemory at
         // depth 1
-        assertEquals(1, testFuncFS.entries.size)
-        assertEquals(2, testFuncFS.entries.single().value.size)
+        val return2Entry =
+            testFuncFS.entries.singleOrNull { it.key.location?.region?.startLine == 11 }
+        assertNotNull(return2Entry)
+        assertEquals(2, return2Entry.value.size)
         assertTrue(
-            testFuncFS.entries.single().value.any {
+            return2Entry.value.any {
                 it.destValueDepth == 1 &&
                     (it.srcNode as? UnknownMemoryValue)?.name?.localName == "malloc"
             }
         )
         assertTrue(
-            testFuncFS.entries.single().value.any {
+            return2Entry.value.any {
                 it.destValueDepth == 2 &&
                     (it.srcNode as? UnknownMemoryValue)?.name?.localName == "freedMemory"
             }
@@ -4629,15 +4633,22 @@ class PointsToPassTest {
 
         // The argument to the 2nd printf call should have as deref value the UMV(freedMemory)
         // written by the test function
-        assertLocalName(
-            "freedMemory",
-            (printfCall2.arguments[1].prevDFGEdges.singleOrNull {
-                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                        testCall &&
-                        (it.granularity as? PointerDataflowGranularity)?.pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_VALUE
-                } as ContextSensitiveDataflow)
-                .start as? UnknownMemoryValue,
+        assertEquals(
+            "free.charPtr0.derefvalue",
+            ((printfCall2.arguments[1].prevDFGEdges.singleOrNull {
+                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.any {
+                            it === testCall
+                        } == true &&
+                            (it.granularity as? PointerDataflowGranularity)?.pointerTarget ==
+                                PointerAccess.CURRENT_DEREF_VALUE
+                    } as ContextSensitiveDataflow)
+                    .start as? ParameterMemoryValue)
+                ?.name
+                ?.toString(),
+        )
+        assertEquals(
+            "free.charPtr0.derefvalue",
+            printfCall2.arguments[2].prevFullDFG.singleOrNull()?.name?.toString(),
         )
     }
 }

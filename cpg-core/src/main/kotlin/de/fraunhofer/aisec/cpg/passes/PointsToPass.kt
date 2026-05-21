@@ -1284,6 +1284,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             .getValues(rV, rV)
                             .filter { !it.second }
                             .mapTo(mutableSetOf()) { it.first }
+                    var addresses = mutableSetOf<Node>()
                     for (depth in 1..3) {
                         fsEntry.addAll(
                             values.map { value ->
@@ -1295,19 +1296,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     if (addressName?.startsWith("NewMemoryAddress") == true)
                                         Name(addressName, parentFD.name)
                                     else value
-                                FSEntry(
-                                    depth,
-                                    v,
-                                    1,
-                                    "",
-                                    mutableSetOf(
-                                        NodeWithPropertiesKey(
-                                            v as? Node ?: parentFD,
-                                            equalLinkedHashSetOf(),
+                                val lastWrite =
+                                    if (depth == 1)
+                                        mutableSetOf(
+                                            NodeWithPropertiesKey(parentFD, equalLinkedHashSetOf())
                                         )
-                                    ),
-                                    equalLinkedHashSetOf(false),
-                                )
+                                    else
+                                        addresses.flatMapTo(mutableSetOf()) { address ->
+                                            doubleState.getLastWrites(address)
+                                        }
+                                FSEntry(depth, v, 1, "", lastWrite, equalLinkedHashSetOf(false))
                             }
                         )
                         // Try to deref the values. If we have nothing there, stop, otherwise,
@@ -1321,7 +1319,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     doubleState.getValues(value, value).filter { !it.second }
                                 }
                                 .mapTo(mutableSetOf()) { it.first }
-                        if (derefValues.isEmpty()) break else values = derefValues
+                        if (derefValues.isEmpty()) break
+                        else {
+                            // When we deref once, the values will become the addresses, and the
+                            // derefvalues are the new values
+                            addresses = values
+                            values = derefValues
+                        }
                     }
                 }
             }
