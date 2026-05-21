@@ -3718,6 +3718,7 @@ class PointsToPassTest {
                     (it as? ParameterMemoryValue)?.name?.toString() ==
                         "test_PMV_flows.param_1.derefderefvalue"
                 }
+                .toSet()
                 .size,
         )
     }
