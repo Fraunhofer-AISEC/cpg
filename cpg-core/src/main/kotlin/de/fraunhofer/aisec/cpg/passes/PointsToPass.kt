@@ -1305,7 +1305,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         addresses.flatMapTo(mutableSetOf()) { address ->
                                             doubleState.getLastWrites(address)
                                         }
-                                FSEntry(depth, v, 1, "", lastWrite, equalLinkedHashSetOf(false))
+                                FSEntry(depth, v, 0, "", lastWrite, equalLinkedHashSetOf(false))
                             }
                         )
                         // Try to deref the values. If we have nothing there, stop, otherwise,
@@ -1570,6 +1570,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     data class MapDstToSrcEntry(
+        val param: Node?, // From which parameter entry in the functionSummary did we gather the
+        // information
         val srcNode: Node?,
         val lastWrites: MutableSet<NodeWithPropertiesKey>,
         val propertySet: EqualLinkedHashSet<Any>,
@@ -1678,6 +1680,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 inv,
                                                 srcNode,
                                                 srcValueDepth,
+                                                param,
                                             )
                                         }
                                 }
@@ -1711,6 +1714,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         inv: Function,
         srcNode: Any?,
         srcValueDepth: Int,
+        param: Node,
     ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
         val shortFS = properties.any { it == true }
         val (destinationAddresses, destinations) =
@@ -1721,6 +1725,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 subAccessName,
                 argument,
                 properties,
+                param,
             )
 
         // Collect the properties for the
@@ -1770,6 +1775,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             propertySet,
             currentNode,
             prev,
+            param,
         )
     }
 
@@ -2011,6 +2017,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         propertySet: EqualLinkedHashSet<Any>,
         currentNode: Call,
         lastWrites: MutableSet<NodeWithPropertiesKey>,
+        param: Node,
     ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
         val doubleState = doubleState
         when (srcNode) {
@@ -2074,6 +2081,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 ) {
                                     currentSet +=
                                         MapDstToSrcEntry(
+                                            param,
                                             value,
                                             lastWrites,
                                             updatedPropertySet,
@@ -2125,6 +2133,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         ) {
                                             currentSet +=
                                                 MapDstToSrcEntry(
+                                                    param,
                                                     value,
                                                     lastWrites,
                                                     updatedPropertySet,
@@ -2158,6 +2167,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         ) {
                             currentSet +=
                                 MapDstToSrcEntry(
+                                    param,
                                     srcNode,
                                     lastWrites,
                                     updatedPropertySet,
@@ -2202,6 +2212,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 }
                                 currentSet +=
                                     MapDstToSrcEntry(
+                                        param,
                                         pair.first,
                                         lastWrites,
                                         updatedPropertySet,
@@ -2223,6 +2234,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         subAccessName: String,
         argument: Node,
         properties: EqualLinkedHashSet<Any>,
+        param: Node,
     ): Pair<IdentitySet<Pair<Node?, String?>>, IdentitySet<Node>> {
         // If the dstAddr is a Call, the dst is the same. Otherwise, we don't really know,
         // so we leave it empty
@@ -2259,7 +2271,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 mapDstToSrc.entries
                     .filter { it.key == argument }
                     .flatMap { it.value }
-                    .filter { it.srcNode != null }
+                    // Make sure we only fetch the entries from the respective parameter
+                    .filter { it.param == param && it.srcNode != null }
                     .mapTo(IdentitySet()) { it.srcNode to null }
             if (updatedAddresses.isNotEmpty()) return Pair(updatedAddresses, destination)
         } else if (dstValueDepth > 2) {
@@ -2693,6 +2706,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     when (ini) {
                         is PointerReference -> handleExpression(lattice, ini.input, doubleState)
                         is PointerDereference -> handleExpression(lattice, ini.input, doubleState)
+                        // TODO: This will cause us to handle the call twice (also afterwards in the
+                        // regular EOG iteration), not sure if this is a problem
+                        is Call -> handleCall(lattice, ini, doubleState)
                         else -> handleExpression(lattice, ini, doubleState)
                     }
                 if (ini is InitializerList) {

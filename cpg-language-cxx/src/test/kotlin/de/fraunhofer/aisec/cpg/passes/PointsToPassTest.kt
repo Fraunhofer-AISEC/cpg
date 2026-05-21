@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -4584,10 +4585,10 @@ class PointsToPassTest {
 
     @Test
     fun testReturnedDerefs() {
-        val file = File("src/test/resources/pointsToPass/returnfree.cpp")
+        val file = File("src/test/resources/pointsToPass/returnfree.c")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage<CPPLanguage>()
+                it.registerLanguage<CLanguage>()
                 it.registerPass<PointsToPass>()
                 it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
             }
@@ -4601,11 +4602,19 @@ class PointsToPassTest {
         val printfCall2 = mainFunc.calls("printf")[1]
         assertNotNull(printfCall2)
 
-        val testCall = mainFunc.calls["returnfreed"]
-        assertNotNull(testCall)
+        val printfCall3 = mainFunc.calls("printf")[2]
+        assertNotNull(printfCall3)
+
+        val testCall2 = mainFunc.calls("returnfreed")[1]
+        assertNotNull(testCall2)
 
         // Stuff
         val testFuncFS = testFunc.functionSummary
+        val pointerDerefLine20 = printfCall2.arguments[2]
+        assertNotNull(pointerDerefLine20)
+
+        val pointerDerefLine21 = printfCall3.arguments[1]
+        assertNotNull(pointerDerefLine21)
 
         // The actual tests
 
@@ -4618,37 +4627,66 @@ class PointsToPassTest {
             testFuncFS.entries.singleOrNull { it.key.location?.region?.startLine == 11 }
         assertNotNull(return2Entry)
         assertEquals(2, return2Entry.value.size)
-        assertTrue(
-            return2Entry.value.any {
-                it.destValueDepth == 1 &&
-                    (it.srcNode as? UnknownMemoryValue)?.name?.localName == "malloc"
-            }
+        assertLocalName(
+            "malloc",
+            return2Entry.value.single { it.destValueDepth == 1 }.srcNode as? UnknownMemoryValue,
         )
-        assertTrue(
-            return2Entry.value.any {
-                it.destValueDepth == 2 &&
-                    (it.srcNode as? UnknownMemoryValue)?.name?.localName == "freedMemory"
-            }
+        assertLocalName(
+            "freedMemory",
+            return2Entry.value.single { it.destValueDepth == 2 }.srcNode as? UnknownMemoryValue,
         )
 
         // The argument to the 2nd printf call should have as deref value the UMV(freedMemory)
         // written by the test function
         assertEquals(
             "free.charPtr0.derefvalue",
-            ((printfCall2.arguments[1].prevDFGEdges.singleOrNull {
+            (printfCall2.arguments[1]
+                    .prevDFGEdges
+                    .singleOrNull {
                         (it as? ContextSensitiveDataflow)?.callingContext?.calls?.any {
-                            it === testCall
+                            it === testCall2
                         } == true &&
                             (it.granularity as? PointerDataflowGranularity)?.pointerTarget ==
                                 PointerAccess.CURRENT_DEREF_VALUE
-                    } as ContextSensitiveDataflow)
-                    .start as? ParameterMemoryValue)
+                    }
+                    ?.start as? ParameterMemoryValue)
+                ?.name
+                ?.toString(),
+        )
+
+        // The pointerDeref in the 2nd printf has to prevFullDFGs: The freedMemoryValue and the UMV
+        // of NULL
+        assertEquals(2, pointerDerefLine20.prevFullDFG.size)
+        assertEquals(
+            "free.charPtr0.derefvalue",
+            pointerDerefLine20.prevFullDFG
+                .singleOrNull { it is ParameterMemoryValue }
                 ?.name
                 ?.toString(),
         )
         assertEquals(
+            "0.derefvalue",
+            pointerDerefLine20.prevFullDFG
+                .singleOrNull { it is UnknownMemoryValue }
+                ?.name
+                ?.toString(),
+        )
+        // The prevFullDFG of the last printf should also point to the hardcoded freedMemoryValue
+        // and the UMV(null)
+        assertEquals(2, pointerDerefLine21.prevFullDFG.size)
+        assertEquals(
             "free.charPtr0.derefvalue",
-            printfCall2.arguments[2].prevFullDFG.singleOrNull()?.name?.toString(),
+            pointerDerefLine21.prevFullDFG
+                .singleOrNull { it is ParameterMemoryValue }
+                ?.name
+                ?.toString(),
+        )
+        assertEquals(
+            "0.derefvalue",
+            pointerDerefLine21.prevFullDFG
+                .singleOrNull { it is UnknownMemoryValue }
+                ?.name
+                ?.toString(),
         )
     }
 }
