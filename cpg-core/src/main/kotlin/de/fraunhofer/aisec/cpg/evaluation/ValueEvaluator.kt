@@ -126,7 +126,7 @@ open class ValueEvaluator(
 
         // If the node is already in the path twice, we are looping, so we can stop here
         if (this.path.filter { it === node }.size > 1) {
-            cannotEvaluate(node, this)
+            return cannotEvaluate(node, this)
         }
 
         // Add the expression to the current path
@@ -540,8 +540,10 @@ open class ValueEvaluator(
             }
 
         return if (prevDFG.size == 1) {
-            // There's only one incoming DFG edge, so we follow this one.
-            evaluateInternal(prevDFG.first(), depth + 1)
+            // There's only one incoming DFG edge, so we follow this one. Except if it brings us
+            // back to the same node
+            val prev = prevDFG.single()
+            if (prev == node) cannotEvaluate(node, this) else evaluateInternal(prev, depth + 1)
         } else if (prevDFG.size > 1) {
             // We cannot have more than ONE valid solution, so we need to abort
             log.warn(
@@ -551,7 +553,7 @@ open class ValueEvaluator(
             cannotEvaluate(node, this)
         } else {
             // No previous DFG node
-            //            log.warn("We cannot evaluate {}: It has no previous DFG edges.", node)
+            log.trace("We cannot evaluate {}: It has no previous DFG edges.", node)
             cannotEvaluate(node, this)
         }
     }

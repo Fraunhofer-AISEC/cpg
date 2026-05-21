@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
+import kotlin.collections.singleOrNull
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -4483,5 +4484,101 @@ class PointsToPassTest {
         assertTrue(xAssignInput !in xRefDelete.nextDFG)
 
         assertContains(xDerefUse.prevDFG, delete)
+    }
+
+    @Test
+    fun testCreationOfPMVsForWrongTypes() {
+        val file = File("src/test/resources/pointsToPass/freeint.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
+            }
+
+        assertNotNull(tu)
+
+        // Functions
+        val freeFunc = tu.functions["free"]
+        assertNotNull(freeFunc)
+
+        // Params and PMVs
+        val freeParam = freeFunc.parameters.single()
+        val freeDerefPMV = freeParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(freeDerefPMV)
+
+        // Usually we wouldn't calculate a PMV for the free function b/c we hand it an int
+        // However, since we have a (hardcoded) FS expecting a PMV we expect the defined DF to the
+        // UMV(taint.freed)
+        // nevertheless
+        assertTrue(
+            (freeDerefPMV as ParameterMemoryValue).prevFullDFG.any {
+                (it as? UnknownMemoryValue)?.name?.localName == "taint.freed"
+            }
+        )
+    }
+
+    @Test
+    fun testStructureParameter() {
+        val file = File("src/test/resources/pointsToPass/structures.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/main/resources/cxx-stdlib-flows.yml"))
+            }
+
+        assertNotNull(tu)
+
+        // Functions
+        val mainFunc = tu.functions["CWE416_Use_After_Free__malloc_free_struct_64_bad"]
+        assertNotNull(mainFunc)
+
+        val badFunc = tu.functions["CWE416_Use_After_Free__malloc_free_struct_64b_badSink"]
+        assertNotNull(badFunc)
+
+        val freeFunc = tu.functions["free"]
+        assertNotNull(freeFunc)
+
+        val printFunc = tu.functions["printStructLine"]
+        assertNotNull(printFunc)
+
+        // Parameters and PMVs
+        val badParam = badFunc.parameters.single()
+        val badDerefPMV =
+            badParam.memoryValueEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "derefvalue"
+                }
+                ?.start
+        assertNotNull(badDerefPMV)
+        val badDerefDerefPMV =
+            badParam.memoryValueEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "derefderefvalue"
+                }
+                ?.start
+        assertNotNull(badDerefDerefPMV)
+
+        val freeParam = freeFunc.parameters.single()
+        val freeDerefPMV =
+            freeParam.memoryValueEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "derefvalue"
+                }
+                ?.start
+        assertNotNull(freeDerefPMV)
+
+        // The actual test. We expect a DF from free's DerefPMV to the two PointerDerefences in
+        // printStructLine
+        val endNodes = freeDerefPMV.collectAllNextFullDFGPaths().map { it.nodes.last() }.toSet()
+        // Size 3: The two derefs plus the Subscription that is the call argument
+        assertEquals(3, endNodes.size)
+        printFunc.allChildren<PointerDereference>().forEach { deref ->
+            assertContains(endNodes, deref)
+        }
     }
 }

@@ -261,6 +261,14 @@ fun getNodeName(node: Node?): Name {
         is Literal<*> -> Name(node.value.toString())
         is UnknownMemoryValue -> Name(node.name.localName, Name("UnknownMemoryValue"))
         is Field -> Name(node.name.localName)
+        is BinaryOperator ->
+            Name(
+                getNodeName(node.lhs).localName +
+                    " " +
+                    node.operatorCode +
+                    " " +
+                    getNodeName(node.rhs).localName
+            )
         else -> node.name
     }
 }
@@ -677,7 +685,30 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         for ((param, fsEntries) in function.functionSummary) {
             fsEntries.forEach { entry ->
-                if (param is Parameter) { // && entry.srcNode is Parameter) {
+                if (param is Parameter) {
+                    // In case this is a Parameter for which we didn't create deref-PMVs for some
+                    // reason (for example an unexpected type) we do create them now
+                    if (
+                        entry.destValueDepth > 1 &&
+                            param.memoryValues.none {
+                                (it as? ParameterMemoryValue)?.name?.localName ==
+                                    "deref".repeat(entry.destValueDepth - 1) + "value"
+                            } &&
+                            doubleState.getValues(param, param).none {
+                                (it.first as? ParameterMemoryValue)?.let { pmv ->
+                                    doubleState.hasDeclarationStateValueEntry(pmv)
+                                } ?: false
+                            }
+                    ) {
+                        doubleState =
+                            initializeParameter(
+                                lattice,
+                                function,
+                                param,
+                                doubleState,
+                                forceDerefPMVCreation = true,
+                            )
+                    }
                     val dst =
                         doubleState
                             .getNestedValues(
@@ -1034,7 +1065,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             when (currentNode) {
                 is Comprehension,
                 is ForEach -> handleForEach(lattice, currentNode, doubleState)
-                is Function -> initializeParameters(lattice, currentNode, doubleState)
+                is Function -> handleFunction(lattice, currentNode, doubleState)
                 is Literal<*> -> {
                     // Literals don't have any prevDFG edges, so we skip those
                     doubleState
@@ -1068,6 +1099,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     else doubleState
                 }
                 else -> doubleState
+            }
+        return doubleState
+    }
+
+    protected suspend fun handleFunction(
+        lattice: PointsToState,
+        function: Function,
+        doubleState: PointsToState.Element,
+    ): PointsToState.Element {
+        // For now, all we do here is to initialize the parameters
+        var doubleState = doubleState
+        function.parameters
+            .filter { it.memoryValues.filterIsInstance<ParameterMemoryValue>().isEmpty() }
+            .forEach { param ->
+                doubleState = initializeParameter(lattice, function, param, doubleState)
             }
         return doubleState
     }
@@ -1112,7 +1158,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
         val writtenTo: List<Node> =
             // Code from the ControlFlowSensitiveDFGPass suggests we should treat ForEach and
-            // Comprehensions slightly different, so let's to this for now
+            // Comprehensions slightly different, so lets to this for now
             when (currentNode) {
                 is ForEach -> {
                     when (variable) {
@@ -2603,9 +2649,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     when (ini) {
                         is PointerReference -> handleExpression(lattice, ini.input, doubleState)
                         is PointerDereference -> handleExpression(lattice, ini.input, doubleState)
-                        // For initializerLists, we extract all assigns and handle them
-                        // TODO: We will handle them again afterwards by traversing the EOG, not
-                        // sure if this is a problem
                         else -> handleExpression(lattice, ini, doubleState)
                     }
                 if (ini is InitializerList) {
@@ -2728,135 +2771,144 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     /** Create ParameterMemoryValues up to depth `depth` */
-    private suspend fun initializeParameters(
+    private suspend fun initializeParameter(
         lattice: PointsToState,
         function: Function,
+        param: Parameter,
         doubleState: PointsToState.Element,
         // Until which depth do we create ParameterMemoryValues
         depth: Int = 2,
+        // Create the PMVs independent of the parameter type
+        forceDerefPMVCreation: Boolean = false,
     ): PointsToState.Element {
         var doubleState = doubleState
-        function.parameters
-            .filter { it.memoryValues.filterIsInstance<ParameterMemoryValue>().isEmpty() }
-            .forEach { param ->
-                // In the first step, we have a triangle of Parameter, the
-                // Parameter's Memory Address and the ParameterMemoryValue
-                // Therefore, the src and the addresses are different. For all other depths,
-                // we set
-                // both to the ParameterMemoryValue we create in the first step
-                var src: Node = param
-                var addresses = doubleState.getAddresses(src, src)
-                var prevAddresses: IdentitySet<Node> = identitySetOf<Node>()
-                // If we have a Pointer as param, we initialize all levels, otherwise, only
-                // the first one
-                val paramDepth =
-                    if (
-                        param.type is PointerType ||
-                            // If the type is unknown, we also initialize all levels to be
-                            // sure
-                            param.type is UnknownType ||
-                            // Another guess we take: If the length is the same as the
-                            // addressLength, again, to be sure we initialize all levels
-                            (param.type as? NumericType)?.bitWidth ==
-                                // TODO: passConfig<Configuration> should never be null?
-                                (passConfig<Configuration>()?.addressLength ?: 64)
-                    )
-                        depth
-                    else 0
-                for (i in 0..paramDepth) {
-                    val pmvName = "deref".repeat(i) + "value"
-                    val pmv =
-                        ParameterMemoryValue(
+
+        // In the first step, we have a triangle of Parameter, the
+        // Parameter's Memory Address and the ParameterMemoryValue
+        // Therefore, the src and the addresses are different. For all other depths,
+        // we set both to the ParameterMemoryValue we create in the first step
+        var src: Node = param
+        var addresses = doubleState.getAddresses(src, src)
+        var prevAddresses: IdentitySet<Node> = identitySetOf()
+        // If we have a Pointer as param, we initialize all levels, otherwise, only
+        // the first one
+        val paramDepth =
+            if (
+                param.type is PointerType ||
+                    forceDerefPMVCreation ||
+                    // If the type is unknown we also
+                    // initialize all levels to be sure
+                    param.type is UnknownType ||
+                    // Another guess we take: If the length is the same as the
+                    // addressLength, again, to be sure we initialize all levels
+                    (param.type as? NumericType)?.bitWidth ==
+                        // TODO: passConfig<Configuration> should never be null?
+                        (passConfig<Configuration>()?.addressLength ?: 64)
+            )
+                depth
+            else 0
+        for (pD in 0..paramDepth) {
+            val pmvName = "deref".repeat(pD) + "value"
+            // If we force the DerefPMVCreation, we probably create the first PMV already, so let's
+            // search it. For this, we check the memoryValues and the
+            // state, and if all is null, we create a new PMV
+            //            var pmv: ParameterMemoryValue?
+            val pmv =
+                if (forceDerefPMVCreation && pD == 0) {
+                    param.memoryValues.singleOrNull { it.name.localName == pmvName }
+                        as? ParameterMemoryValue
+                        ?: doubleState
+                            .getValues(param, param)
+                            .singleOrNull { it.first.name.localName == pmvName }
+                            ?.first as? ParameterMemoryValue
+                        ?: ParameterMemoryValue(
                             Name(pmvName, Name(param.name.localName, function.name))
                         )
-                    (src as? MemoryAddress)?.let { pmv.memoryAddresses = mutableSetOf(it) }
+                } else {
+                    ParameterMemoryValue(Name(pmvName, Name(param.name.localName, function.name)))
+                }
+            (src as? MemoryAddress)?.let { pmv.memoryAddresses = mutableSetOf(it) }
 
-                    // In the first step, we link the Parameter to the PMV to be
-                    // able to also access it outside the function
-                    if (src is Parameter) {
-                        doubleState =
-                            lattice.push(
-                                doubleState,
-                                src,
-                                GeneralStateEntryElement(
-                                    PowersetLattice.Element(addresses),
-                                    PowersetLattice.Element(
-                                        NodeWithPropertiesKey(pmv, equalLinkedHashSetOf())
-                                    ),
-                                    PowersetLattice.Element(),
-                                ),
-                            )
-                    } else {
-                        // Link the PMVs with each other so that we can find them. This is
-                        // especially important outside the respective function where we
-                        // don't have
-                        // a state
-                        addresses.filterIsInstance<ParameterMemoryValue>().forEach {
-                            doubleState =
-                                lattice.push(
-                                    doubleState,
-                                    it,
-                                    GeneralStateEntryElement(
-                                        PowersetLattice.Element(prevAddresses),
-                                        PowersetLattice.Element(
-                                            NodeWithPropertiesKey(pmv, equalLinkedHashSetOf())
-                                        ),
-                                        PowersetLattice.Element(),
-                                    ),
-                                )
-                        }
-                        doubleState =
-                            lattice.push(
-                                doubleState,
-                                pmv,
-                                GeneralStateEntryElement(
-                                    PowersetLattice.Element(addresses),
-                                    PowersetLattice.Element(),
-                                    PowersetLattice.Element(),
-                                ),
-                            )
-                        doubleState =
-                            lattice.push(
-                                doubleState,
-                                param,
-                                GeneralStateEntryElement(
-                                    PowersetLattice.Element(),
-                                    PowersetLattice.Element(
-                                        NodeWithPropertiesKey(pmv, equalLinkedHashSetOf(pmvName))
-                                    ),
-                                    PowersetLattice.Element(),
-                                ),
-                            )
-                    }
-
-                    // Update the states
-                    val declStateElement =
-                        if (src is Parameter)
-                            DeclarationStateEntryElement(
+            // In the first step, we link the Parameter to the PMV to be
+            // able to also access it outside the function
+            if (src is Parameter) {
+                doubleState =
+                    lattice.push(
+                        doubleState,
+                        src,
+                        GeneralStateEntryElement(
+                            PowersetLattice.Element(addresses),
+                            PowersetLattice.Element(
+                                NodeWithPropertiesKey(pmv, equalLinkedHashSetOf())
+                            ),
+                            PowersetLattice.Element(),
+                        ),
+                    )
+            } else {
+                // Link the PMVs with each other so that we can find them. This is
+                // especially important outside the respective function where we
+                // don't have
+                // a state
+                addresses.filterIsInstance<ParameterMemoryValue>().forEach {
+                    doubleState =
+                        lattice.push(
+                            doubleState,
+                            it,
+                            GeneralStateEntryElement(
                                 PowersetLattice.Element(prevAddresses),
-                                PowersetLattice.Element(Pair(pmv, false)),
-                                PowersetLattice.Element(
-                                    NodeWithPropertiesKey(src, equalLinkedHashSetOf())
-                                ),
-                            )
-                        else
-                            DeclarationStateEntryElement(
-                                PowersetLattice.Element(addresses),
-                                PowersetLattice.Element(Pair(pmv, false)),
                                 PowersetLattice.Element(
                                     NodeWithPropertiesKey(pmv, equalLinkedHashSetOf())
                                 ),
-                            )
-                    addresses.forEach { addr ->
-                        doubleState =
-                            lattice.pushToDeclarationsState(doubleState, addr, declStateElement)
-                    }
-
-                    prevAddresses = addresses
-                    src = pmv
-                    addresses = identitySetOf(pmv)
+                                PowersetLattice.Element(),
+                            ),
+                        )
                 }
+                doubleState =
+                    lattice.push(
+                        doubleState,
+                        pmv,
+                        GeneralStateEntryElement(
+                            PowersetLattice.Element(addresses),
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(),
+                        ),
+                    )
+                doubleState =
+                    lattice.push(
+                        doubleState,
+                        param,
+                        GeneralStateEntryElement(
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(
+                                NodeWithPropertiesKey(pmv, equalLinkedHashSetOf(pmvName))
+                            ),
+                            PowersetLattice.Element(),
+                        ),
+                    )
             }
+
+            // Update the states
+            val declStateElement =
+                if (src is Parameter)
+                    DeclarationStateEntryElement(
+                        PowersetLattice.Element(prevAddresses),
+                        PowersetLattice.Element(Pair(pmv, false)),
+                        PowersetLattice.Element(NodeWithPropertiesKey(src, equalLinkedHashSetOf())),
+                    )
+                else
+                    DeclarationStateEntryElement(
+                        PowersetLattice.Element(addresses),
+                        PowersetLattice.Element(Pair(pmv, false)),
+                        PowersetLattice.Element(NodeWithPropertiesKey(pmv, equalLinkedHashSetOf())),
+                    )
+            addresses.forEach { addr ->
+                doubleState = lattice.pushToDeclarationsState(doubleState, addr, declStateElement)
+            }
+
+            prevAddresses = addresses
+            src = pmv
+            addresses = identitySetOf(pmv)
+        }
         return doubleState
     }
 }
@@ -2910,7 +2962,7 @@ suspend fun PointsToState.pushToDeclarationsState(
     val newLatticeCopy = newLatticeElement.duplicate()
 
     coroutineScope {
-        newLatticeElement.second.forEachMaybeParallel() { pair ->
+        newLatticeElement.second.forEachMaybeParallel { pair ->
             if (
                 currentState.declarationsState[newNode]?.second?.any {
                     it.first === pair.first && it.second == pair.second
@@ -2919,7 +2971,7 @@ suspend fun PointsToState.pushToDeclarationsState(
                 newLatticeCopy.second.remove(pair)
         }
 
-        newLatticeElement.third.forEachMaybeParallel() { nwpk ->
+        newLatticeElement.third.forEachMaybeParallel { nwpk ->
             if (currentState.declarationsState[newNode]?.third?.contains(nwpk) == true) {
                 newLatticeCopy.third.remove(nwpk)
             }
