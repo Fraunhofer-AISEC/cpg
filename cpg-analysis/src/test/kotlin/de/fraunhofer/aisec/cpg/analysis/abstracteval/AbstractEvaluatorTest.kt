@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.ArraySizeEvaluator
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.IntegerIntervalEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
@@ -164,6 +165,32 @@ class AbstractEvaluatorTest {
 
     /*
        Bar b = new Bar();
+       int a; // no initial value
+
+       if (new Random().nextBoolean()) {
+           a = 16;
+       } else {
+           a = 64;
+       }
+
+       b.f(a);
+    */
+    @Test
+    fun testBranchNoInitialValue() {
+        val mainClass = tu.records["Foo"]
+        assertNotNull(mainClass)
+        val f7 = mainClass.methods["f7"]
+        assertNotNull(f7)
+
+        val refA = f7.mcalls["f"]?.arguments?.firstOrNull()
+        assertNotNull(refA, "There should be an argument for the call to f")
+
+        val value = refA.evaluate(IntegerIntervalEvaluator())
+        assertEquals(LatticeInterval.Bounded(16, 64), value)
+    }
+
+    /*
+       Bar b = new Bar();
        int a = 5;
 
        for (int i = 0; i < 5; i++) {
@@ -239,5 +266,37 @@ class AbstractEvaluatorTest {
 
         val value = iAfterLoop.evaluate(IntegerIntervalEvaluator())
         assertEquals(LatticeInterval.Bounded(5, LatticeInterval.Bound.INFINITE), value)
+    }
+
+    /*
+       char *buf;
+       if (new Random().nextBoolean()) {
+           buf = malloc(16);
+       } else {
+           buf = malloc(64);
+       }
+       strcpy(buf, "hello");
+
+       The two branches assign different malloc sizes; after merging at `strcpy`,
+       the ArraySizeEvaluator must report the LUB [16, 64]. This regressed once
+       when ArrayValue switched from `pushToDeclarationState` (which LUBs branches)
+       to `changeDeclarationState` (which overwrites), and again when the
+       DeclarationState lattice failed to dedup autoboxed Integer keys across
+       branches — guard both with this test.
+    */
+    @Test
+    fun testBoundedAlloc() {
+        val mainClass = tu.records["Foo"]
+        assertNotNull(mainClass)
+        val f8 = mainClass.methods["f8"]
+        assertNotNull(f8)
+
+        val strcpyCall = f8.calls["strcpy"]
+        assertNotNull(strcpyCall, "There should be a call to strcpy")
+        val bufRef = strcpyCall.arguments.firstOrNull()
+        assertNotNull(bufRef, "strcpy should have a first argument")
+
+        val size = ArraySizeEvaluator().evaluate(bufRef)
+        assertEquals(LatticeInterval.Bounded(16, 64), size)
     }
 }

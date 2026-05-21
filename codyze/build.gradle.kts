@@ -31,7 +31,17 @@ plugins {
     id("cpg.frontend-dependency-conventions")
 }
 
-application { mainClass.set("de.fraunhofer.aisec.codyze.ApplicationKt") }
+application {
+    mainClass.set("de.fraunhofer.aisec.codyze.ApplicationKt")
+    // Suppress two unavoidable JVM warnings from transitive deps:
+    //   * sun.misc.Unsafe deprecation — emitted by kotlin-compiler-embeddable's
+    //     internal IntelliJ-platform copy on every scripting eval.
+    //   * Restricted-method warning — emitted by JNA when loading native libs.
+    // Both are out of our control. We pin the flags here so the generated start
+    // scripts (codyze, codyze.bat) inherit them.
+    applicationDefaultJvmArgs =
+        listOf("--sun-misc-unsafe-memory-access=allow", "--enable-native-access=ALL-UNNAMED")
+}
 
 mavenPublishing {
     pom {

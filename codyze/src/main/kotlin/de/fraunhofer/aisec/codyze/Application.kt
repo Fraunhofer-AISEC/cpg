@@ -37,6 +37,7 @@ fun main(args: Array<String>) {
     Codyze()
         .subcommands(
             de.fraunhofer.aisec.codyze.console.Command,
+            de.fraunhofer.aisec.codyze.console.repl.Command,
             de.fraunhofer.aisec.codyze.compliance.Command,
         )
         .main(args)

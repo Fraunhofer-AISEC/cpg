@@ -13,6 +13,7 @@ sarif4k = "0.7.0"
 ktor = "3.3.3"
 node = "22.14.0"
 deno-plugin = "0.1.5"
+jline = "3.30.7"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
@@ -20,6 +21,8 @@ kotlin-scripting-common = { module = "org.jetbrains.kotlin:kotlin-scripting-comm
 kotlin-scripting-dependencies = { module = "org.jetbrains.kotlin:kotlin-scripting-dependencies", version.ref = "kotlin"}
 kotlin-scripting-jvm = { module = "org.jetbrains.kotlin:kotlin-scripting-jvm", version.ref = "kotlin"}
 kotlin-scripting-jvm-host = { module = "org.jetbrains.kotlin:kotlin-scripting-jvm-host", version.ref = "kotlin"}
+kotlin-scripting-ide-services = { module = "org.jetbrains.kotlin:kotlin-scripting-ide-services", version.ref = "kotlin"}
+kotlin-scripting-compiler-embeddable = { module = "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable", version.ref = "kotlin"}
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin"}  # this is only needed for the testFixtures in cpg-core, everywhere else kotlin("test") is used
 kotlin-serialization = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-json" }
@@ -93,11 +96,16 @@ sootup-jimple = { module = "org.soot-oss:sootup.jimple.frontend", version.ref = 
 
 dex2jar = {module = "de.femtopedia.dex2jar:dex2jar", version="2.4.22" }
 
+jline-terminal = { module = "org.jline:jline-terminal", version.ref = "jline" }
+jline-terminal-jni = { module = "org.jline:jline-terminal-jni", version.ref = "jline" }
+jline-reader = { module = "org.jline:jline-reader", version.ref = "jline" }
+
 [bundles]
 log4j = ["log4j-impl", "log4j-core"]
 sootup = ["sootup-core", "sootup-java-core", "sootup-java-sourcecode", "sootup-java-bytecode", "sootup-jimple", "sootup-apk"]
 ktor = ["ktor-server-core", "ktor-server-netty", "ktor-server-cors","ktor-server-content-negotiation", "ktor-serialization-kotlinx-json", "ktor-server-sse"]
 ktor-client = ["ktor-client-core", "ktor-client-cio", "ktor-client-content-negotiation"]
+jline = ["jline-terminal", "jline-terminal-jni", "jline-reader"]
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin"}

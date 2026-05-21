@@ -46,6 +46,16 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.jacksonyml)
 
+    // REPL: Kotlin scripting host with IDE-services (code completion) + JLine terminal.
+    // kotlin-scripting-ide-services declares its compiler deps with runtime scope, but
+    // KJvmReplCompilerWithIdeServices extends KJvmReplCompilerBase (in
+    // scripting-compiler-embeddable)
+    // which we need on the compile classpath.
+    implementation(libs.kotlin.scripting.jvm.host)
+    implementation(libs.kotlin.scripting.ide.services)
+    implementation(libs.kotlin.scripting.compiler.embeddable)
+    implementation(libs.bundles.jline)
+
     // Testing
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.client.content.negotiation)

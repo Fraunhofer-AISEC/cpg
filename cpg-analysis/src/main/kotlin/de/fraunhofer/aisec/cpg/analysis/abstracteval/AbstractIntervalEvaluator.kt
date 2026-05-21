@@ -102,8 +102,36 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
         concurrencyCounter: Int,
     ): Element<NodeId, NewIntervalLattice.Element> {
         val result = super.lub(one, two, allowModify, widen, concurrencyCounter)
-        // If the result is a DeclarationStateElement, we can return it directly
-        return result as? DeclarationStateElement<NodeId> ?: DeclarationStateElement<NodeId>(result)
+        // MapLattice.Element is an IdentityHashMap, so an `Int` key autoboxed in two different
+        // branches (same value, different `Integer` reference) survives the merge as two separate
+        // entries. Re-fold by value-equality so branch convergence becomes a real LUB: e.g.
+        // `if(c) buf=malloc(16) else buf=malloc(64)` collapses to a single key with interval
+        // `[16, 64]` instead of two distinct entries.
+        val deduped = DeclarationStateElement<NodeId>()
+        // Use a map to track canonical keys - group by the node's name or toString to merge
+        // entries that refer to the same logical variable
+        val canonicalKeys = mutableMapOf<String, NodeId>()
+        for ((k, v) in result.entries) {
+            // Create a canonical key based on the node's properties
+            val canonicalKey =
+                when (k) {
+                    is Node ->
+                        "${k.javaClass.simpleName}:${k.name ?: k.location?.region?.startLine}"
+                    else -> k.toString()
+                }
+            val existingCanonicalKey = canonicalKeys[canonicalKey]
+            if (existingCanonicalKey != null) {
+                // Merge with the existing entry
+                val existing = deduped[existingCanonicalKey]
+                if (existing != null) {
+                    innerLattice.lub(existing, v, allowModify = true, widen = false, 1)
+                }
+            } else {
+                canonicalKeys[canonicalKey] = k
+                deduped.put(k, v)
+            }
+        }
+        return deduped
     }
 
     override suspend fun glb(
@@ -425,7 +453,24 @@ class AbstractIntervalEvaluator {
                     strategy = Lattice.Strategy.WIDENING_NARROWING,
                 )
             }
-        return finalState?.second?.get(targetNode)?.element ?: LatticeInterval.BOTTOM
+        // Prefer the per-AST-node value in general state (lets evaluators like IntegerValue.kt
+        // attach a node-specific interval — e.g. the DFG-joined value at a MemberAccess read).
+        // If general state holds a pessimistic TOP (e.g. ArrayValue.applyEffect pushing TOP at
+        // an uninitialised Variable), try declaration state — keyed by `objectIdentifier`, it
+        // finds intervals stored under the Variable's LHS References (the bounded_alloc case).
+        // If declaration state also has nothing useful (BOTTOM = no entry), fall back to the
+        // original TOP — for safety queries like `srcSize couldExceed destSize`, TOP means
+        // "could be anything" and is the right worst-case answer for an unbounded parameter,
+        // whereas BOTTOM would silently mask the risk.
+        val finalSecond = finalState?.second?.get(targetNode)?.element
+        if (finalSecond != null && finalSecond !is LatticeInterval.TOP) {
+            return finalSecond
+        }
+        val finalFirst = finalState?.intervalAtOrBottom(targetNode) ?: LatticeInterval.BOTTOM
+        if (finalFirst !is LatticeInterval.BOTTOM) {
+            return finalFirst
+        }
+        return finalSecond ?: LatticeInterval.BOTTOM
     }
 
     /**
@@ -444,7 +489,7 @@ class AbstractIntervalEvaluator {
         currentState: TupleStateElement<Any>,
     ): TupleStateElement<Any> {
         val currentNode = currentEdge.end
-        val newState = currentState
+        val newState = currentState.duplicate()
 
         analysisType
             .createInstance()
@@ -472,6 +517,21 @@ fun <NodeId> TupleStateElement<NodeId>.intervalOf(node: Node): LatticeInterval {
             this.first.keys.singleOrNull { it == tmpId } ?: (tmpId as? NodeId)
         } ?: node as? NodeId ?: TODO()
     return this.first[id]?.element ?: LatticeInterval.TOP
+}
+
+/**
+ * Like [intervalOf], but returns [LatticeInterval.BOTTOM] for missing keys instead of
+ * [LatticeInterval.TOP]. Use this when you want to distinguish "no info yet" from "could be any
+ * value" — for example, when joining the stored interval with intervals derived from elsewhere
+ * (DFG, alias info), where TOP would erase the join's contribution.
+ */
+@Suppress("UNCHECKED_CAST")
+fun <NodeId> TupleStateElement<NodeId>.intervalAtOrBottom(node: Node): LatticeInterval {
+    val id =
+        node.objectIdentifier()?.let { tmpId ->
+            this.first.keys.singleOrNull { it == tmpId } ?: (tmpId as? NodeId)
+        } ?: node as? NodeId ?: return LatticeInterval.BOTTOM
+    return this.first[id]?.element ?: LatticeInterval.BOTTOM
 }
 
 /**

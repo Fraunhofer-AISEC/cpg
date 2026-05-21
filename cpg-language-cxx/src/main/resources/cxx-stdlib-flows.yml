@@ -13,7 +13,20 @@
     language: CPPLanguage
     methodName: free
   dataFlows:
-    - from: freedMemory
+    - from: taint.freed
+      to: param0.deref
+      dfgType: full
+
+# Same flow for plain C — the YAML matcher resolves `language` by suffix-match on
+# the function's actual language class, so CPPLanguage entries don't apply to
+# CLanguage (CPPLanguage extends CLanguage but the matcher doesn't walk the
+# inheritance chain). Without this, the `taint.freed` UnknownMemoryValue is
+# never created for C `free(p)` calls and CWE-416 queries return empty.
+- functionDeclaration:
+    language: CLanguage
+    methodName: free
+  dataFlows:
+    - from: taint.freed
       to: param0.deref
       dfgType: full
 
@@ -54,7 +67,6 @@
     - from: param2.deref
       to: param0.deref
       dfgType: full
-
 
 - functionDeclaration:
     language: CPPLanguage
@@ -159,7 +171,6 @@
     - from: param1.deref
       to: param0.deref
       dfgType: full
-
 
 - functionDeclaration:
     language: CPPLanguage

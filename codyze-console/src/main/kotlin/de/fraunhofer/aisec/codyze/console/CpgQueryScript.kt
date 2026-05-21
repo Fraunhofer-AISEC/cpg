@@ -68,9 +68,20 @@ class CpgQueryScriptCompilationConfiguration :
             "de.fraunhofer.aisec.cpg.graph.*",
             "de.fraunhofer.aisec.cpg.graph.declarations.*",
             "de.fraunhofer.aisec.cpg.graph.statements.*",
-            "de.fraunhofer.aisec.cpg.graph.statements.expressions.*",
+            "de.fraunhofer.aisec.cpg.graph.expressions.*",
             "de.fraunhofer.aisec.cpg.graph.types.*",
+            // Explicitly list concept subpackages to avoid importing ontology.* which has colliding
+            // class names
+            "de.fraunhofer.aisec.cpg.graph.concepts.file.*",
+            "de.fraunhofer.aisec.cpg.graph.concepts.config.Configuration",
+            "de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret",
+            // ontology concepts - LogWrite and Logging are here
+            "de.fraunhofer.aisec.cpg.graph.concepts.ontology.*",
             "de.fraunhofer.aisec.cpg.query.*",
+            "de.fraunhofer.aisec.cpg.evaluation.*",
+            "de.fraunhofer.aisec.cpg.analysis.abstracteval.*",
+            "de.fraunhofer.aisec.cpg.analysis.abstracteval.value.*",
+            "de.fraunhofer.aisec.codyze.console.repl.openDFG",
         )
         jvm {
             val cp = classpathFromClassloader(CpgQueryScript::class.java.classLoader)

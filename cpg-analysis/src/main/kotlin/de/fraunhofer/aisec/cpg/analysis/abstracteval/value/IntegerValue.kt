@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.*
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.*
@@ -243,6 +244,45 @@ class IntegerValue : Value<LatticeInterval> {
             lattice.pushToDeclarationState(state, node, initializerValue)
             lattice.pushToGeneralState(state, node, initializerValue)
             return initializerValue
+        }
+        // Member access: p.x or pp->x
+        else if (node is MemberAccess) {
+            // The MemberAccess's objectIdentifier combines field + base so that p.x and p.y
+            // hash to different keys. The Assign handler stores per-field intervals under this
+            // identifier, so the intra-procedural read just looks the value up directly. Use a
+            // direct map peek (not intervalOf, which defaults missing keys to TOP) so we can tell
+            // "no info yet" (BOTTOM) apart from "could be anything" (TOP) when joining with DFG.
+            val intra = state.intervalAtOrBottom(node)
+
+            // Inter-procedural sources arrive via prevDFG edges added by
+            // ControlFlowSensitiveDFGPass (e.g. `set_point_x(&p, 99)` flowing 99 into `p.x`). We
+            // follow the same field-name filtering used by ValueEvaluator.handleMemberAccess so we
+            // don't mix `p.x` writes into `p.y` reads.
+            val targetField = node.name
+            val dfgInterval =
+                node.prevDFG
+                    .filter { prev ->
+                        when (prev) {
+                            is MemberAccess -> prev.name == targetField
+                            is Literal<*>,
+                            is Call,
+                            is Parameter -> true
+                            else -> false
+                        }
+                    }
+                    .fold(LatticeInterval.BOTTOM as LatticeInterval) { acc, prev ->
+                        val prevInterval =
+                            (prev as? Literal<*>)?.let {
+                                (it.value as? Number)?.let { n ->
+                                    LatticeInterval.Bounded(n.toLong(), n.toLong())
+                                } ?: LatticeInterval.TOP
+                            } ?: state.intervalAtOrBottom(prev)
+                        joinIntervals(acc, prevInterval)
+                    }
+
+            val combined = joinIntervals(intra, dfgInterval)
+            lattice.pushToGeneralState(state, node, combined)
+            return combined
         }
         // Unary Operators
         else if (node is UnaryOperator) {
@@ -530,7 +570,30 @@ class IntegerValue : Value<LatticeInterval> {
                         }
                     }
                 // Push the new value to the declaration state of the variable
-                lattice.changeDeclarationState(state, node.lhs.first(), newValue)
+                val lhsNode = node.lhs.first()
+                // Handle pointer dereference: *ptr = value updates the pointed-to variable
+                val targetNode =
+                    when {
+                        lhsNode is PointerDereference -> {
+                            val target = resolvePointerTarget(lhsNode)
+                            val originalVariable = resolveOriginalVariable(lhsNode)
+                            if (originalVariable != null) {
+                                lattice.changeDeclarationState(state, originalVariable, newValue)
+                            }
+                            target
+                        }
+                        lhsNode is MemberAccess -> {
+                            // Handle p->field or (*pp)->field
+                            val base = lhsNode.base
+                            val resolvedBase = resolveMemberAccessBase(base)
+                            if (resolvedBase != null) {
+                                lattice.changeDeclarationState(state, resolvedBase, newValue)
+                            }
+                            lhsNode
+                        }
+                        else -> lhsNode
+                    }
+                lattice.changeDeclarationState(state, targetNode, newValue)
                 // lattice.pushToGeneralState(state, node, newValue)
                 return newValue
             } else {
@@ -541,5 +604,98 @@ class IntegerValue : Value<LatticeInterval> {
         lattice.pushToGeneralState(state, node, state.intervalOf(node))
 
         return state.intervalOf(node)
+    }
+
+    private fun resolvePointerTarget(deref: PointerDereference): Node {
+        val input = deref.input
+        if (input is Reference) {
+            val variable = input.refersTo
+            if (variable is Variable) {
+                // First try the variable's initializer (intra-procedural)
+                val initializer = variable.initializer
+                if (initializer is PointerReference) {
+                    return initializer.memoryValues.firstOrNull() ?: deref
+                }
+                // Then try memoryValues from PointsToPass (inter-proprocedural)
+                val memoryValues = variable.memoryValues
+                for (mv in memoryValues) {
+                    if (mv is PointerReference) {
+                        return mv
+                    }
+                }
+            }
+        }
+        return deref
+    }
+
+    private fun resolveOriginalVariable(deref: PointerDereference): Node? {
+        val input = deref.input
+        if (input is PointerDereference) {
+            return resolveOriginalVariable(input)
+        }
+        if (input is Reference) {
+            val variable = input.refersTo
+            if (variable is Variable) {
+                return followPointerChain(variable)
+            }
+        }
+        return null
+    }
+
+    private fun resolveMemberAccessBase(base: Node): Node? {
+        return when (base) {
+            is Reference -> {
+                val variable = base.refersTo
+                if (variable is Variable) {
+                    variable
+                } else null
+            }
+            is PointerDereference -> {
+                resolveOriginalVariable(base)
+            }
+            else -> null
+        }
+    }
+
+    /**
+     * Least upper bound on [LatticeInterval] treating [LatticeInterval.BOTTOM] as the identity ("no
+     * info yet") — mirrors [NewIntervalLattice.lub] semantics. The free-standing
+     * [LatticeInterval.join] is unsuitable here because it returns BOTTOM when either side is
+     * BOTTOM, which would erase information we just gathered.
+     */
+    private fun joinIntervals(a: LatticeInterval, b: LatticeInterval): LatticeInterval {
+        return when {
+            a is LatticeInterval.BOTTOM -> b
+            b is LatticeInterval.BOTTOM -> a
+            a is LatticeInterval.TOP || b is LatticeInterval.TOP -> LatticeInterval.TOP
+            a is LatticeInterval.Bounded && b is LatticeInterval.Bounded ->
+                LatticeInterval.Bounded(minOf(a.lower, b.lower), maxOf(a.upper, b.upper))
+            else -> LatticeInterval.TOP
+        }
+    }
+
+    private fun followPointerChain(variable: Variable): Node? {
+        // First try initializer
+        val initializer = variable.initializer
+        if (initializer is PointerReference) {
+            val refersTo = initializer.refersTo
+            if (refersTo is Variable) {
+                return followPointerChain(refersTo)
+            } else {
+                return refersTo
+            }
+        }
+        // Then try memoryValues from PointsToPass
+        for (mv in variable.memoryValues) {
+            if (mv is PointerReference) {
+                val refersTo = mv.refersTo
+                if (refersTo is Variable) {
+                    return followPointerChain(refersTo)
+                } else if (refersTo != null) {
+                    return refersTo
+                }
+            }
+        }
+        return variable
     }
 }

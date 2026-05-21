@@ -58,6 +58,15 @@ class ArraySizeEvaluator : ValueEvaluator() {
     override fun evaluate(node: Any?, useCache: Boolean): Any? {
         if (node !is Node) return cannotEvaluate(null, this)
 
+        // Shortcut for nodes whose size is directly computable without running the full
+        // interval analysis over their EOG context — string literals, initializer lists,
+        // ArrayConstruction, malloc-style calls. Without this, evaluate("hello") would
+        // return BOTTOM because the abstract-interval traversal only applies ArrayValue's
+        // effect at Variable and Assign nodes, and never visits a bare Literal directly.
+        ArrayValue.directSize(node)?.let {
+            return it
+        }
+
         return if (useCache)
             valuesCache.getOrPut(node.hashCode()) {
                 AbstractIntervalEvaluator().evaluate(node, ArrayValue::class)
@@ -98,6 +107,23 @@ class ArrayValue : Value<LatticeInterval> {
         return state.intervalOf(node)
     }
 
+    companion object {
+        /**
+         * Statically-computable size for nodes whose shape carries it (literals, initializer lists,
+         * array constructions, malloc-style calls). Returns `null` when the size isn't directly
+         * knowable from the node alone — callers should then defer to the full interval analysis to
+         * look up Variable state, etc.
+         */
+        fun directSize(node: Node): LatticeInterval? =
+            when (node) {
+                is Literal<*>,
+                is InitializerList,
+                is ArrayConstruction -> ArrayValue().getSize(node)
+                is Call -> if (node.name.localName == "malloc") ArrayValue().getSize(node) else null
+                else -> null
+            }
+    }
+
     private fun getSize(node: Node): LatticeInterval {
         return when (node) {
             is Literal<*> -> {
@@ -136,7 +162,11 @@ class ArrayValue : Value<LatticeInterval> {
                     LatticeInterval.BOTTOM
                 }
             }
-            else -> TODO()
+            // For any other initializer kind (Subscription, opaque expressions, parameters,
+            // …) we don't know the size statically, so return BOTTOM ("unknown") rather than
+            // throwing — the caller's contract is "give me a LatticeInterval, BOTTOM means
+            // I couldn't determine it", not "crash if I'm given something unfamiliar".
+            else -> LatticeInterval.BOTTOM
         }
     }
 }

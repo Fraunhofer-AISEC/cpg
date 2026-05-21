@@ -775,3 +775,47 @@ class IntervalState : State<Node, LatticeInterval>() {
         return Pair(this, update)
     }
 }
+
+/**
+ * Convenience accessors for the concrete bounds of an interval. Both return `null` when the
+ * interval is [LatticeInterval.BOTTOM] or the bound is infinite — callers that want a definite
+ * value can `?: -1L` (or whatever sentinel), and callers that want to reason about infinity should
+ * match on [LatticeInterval] directly.
+ */
+val LatticeInterval.upperOrNull: Long?
+    get() = ((this as? LatticeInterval.Bounded)?.upper as? LatticeInterval.Bound.Value)?.value
+
+val LatticeInterval.lowerOrNull: Long?
+    get() = ((this as? LatticeInterval.Bounded)?.lower as? LatticeInterval.Bound.Value)?.value
+
+/**
+ * True when the interval has a concrete (non-infinite) upper bound. Useful for "the size of this
+ * thing is statically known".
+ */
+val LatticeInterval.isFinite: Boolean
+    get() = upperOrNull != null
+
+/**
+ * "May" comparison: there exists a value in `this` strictly greater than every value in `other`. In
+ * practice we compare upper bounds — if `this.upper > other.upper`, some realization of `this`
+ * exceeds every realization of `other`. Returns `false` when either side is
+ * [LatticeInterval.BOTTOM] (empty), or when both uppers are equal/infinite (we can't reliably say).
+ *
+ * Designed for safety queries like "could the source string be larger than the destination buffer?"
+ * — `srcSize couldExceed destSize`.
+ */
+infix fun LatticeInterval.couldExceed(other: LatticeInterval): Boolean {
+    val thisUpper = (this as? LatticeInterval.Bounded)?.upper ?: return false
+    val otherLower = (other as? LatticeInterval.Bounded)?.lower ?: return false
+    return thisUpper > otherLower
+}
+
+/**
+ * "Must" comparison: every value in `this` fits inside `other` (is ≤ `other`'s upper). Returns
+ * `false` if either side is [LatticeInterval.BOTTOM] or `this`'s upper is unknown/infinite.
+ */
+infix fun LatticeInterval.fitsIn(other: LatticeInterval): Boolean {
+    val thisUpper = (this as? LatticeInterval.Bounded)?.upper ?: return false
+    val otherLower = (other as? LatticeInterval.Bounded)?.lower ?: return false
+    return thisUpper <= otherLower
+}

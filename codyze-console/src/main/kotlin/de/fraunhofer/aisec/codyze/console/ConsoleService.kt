@@ -39,7 +39,13 @@ import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
+import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
+import de.fraunhofer.aisec.cpg.passes.concepts.config.ini.IniFileConfigurationSourcePass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileJoinPass
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonTempFilePass
+import de.fraunhofer.aisec.cpg.passes.concepts.logging.python.PythonLoggingConceptPass
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import de.fraunhofer.aisec.cpg.serialization.toJSON
@@ -92,6 +98,12 @@ class ConsoleService {
                     .loadIncludes(true)
                     .registerPass<PythonStdLibConfigurationPass>()
                     .registerPass<LoadPersistedConcepts>()
+                    .registerPass<PythonTempFilePass>()
+                    .registerPass<PythonFileJoinPass>()
+                    .registerPass<PythonFileConceptPass>()
+                    .registerPass<PythonLoggingConceptPass>()
+                    .registerPass<ProvideConfigPass>()
+                    .registerPass<IniFileConfigurationSourcePass>()
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
@@ -120,6 +132,18 @@ class ConsoleService {
                         conceptFiles = listOf(File(request.conceptsFile))
                     )
                 )
+            }
+
+            // Stdlib flow summaries: classpath-discovered bundled ones + any user-supplied
+            // extras. Each `cpg-language-*` module ships its profile at `/<lang>-stdlib-
+            // flows.yml`, so discovery just enumerates known names — no reflection or scanning.
+            val summaryFiles =
+                buildList<File> {
+                    if (request.loadBundledSummaries) addAll(loadBundledSummaryFiles())
+                    addAll(request.extraSummaryFiles.map(::File))
+                }
+            if (summaryFiles.isNotEmpty()) {
+                builder.registerFunctionSummaries(*summaryFiles.toTypedArray())
             }
 
             val config = builder.build()
@@ -381,5 +405,38 @@ class ConsoleService {
 
             return service
         }
+    }
+}
+
+/**
+ * Known names of per-language stdlib flow summary files. Each `cpg-language-*` module that ships a
+ * profile drops it at the classpath root with this naming convention. We keep an explicit list here
+ * rather than crawling the classpath because:
+ * * crawling shaded fat-jars is slow and unreliable,
+ * * the list rarely changes,
+ * * adding a new language is one line in this list.
+ */
+private val KNOWN_STDLIB_FLOW_RESOURCES =
+    listOf(
+        "cxx-stdlib-flows.yml"
+        // Add per-language profiles here as they land:
+        //   "python-stdlib-flows.yml",
+        //   "java-stdlib-flows.yml",
+        //   "go-stdlib-flows.yml",
+    )
+
+/**
+ * Loads each known per-language flow summary file from the runtime classpath and materializes it to
+ * a temp file (the `registerFunctionSummaries` API takes a [File], not an InputStream). Returns the
+ * list of temp files to register; resources that aren't on the classpath are silently skipped so
+ * optional language modules don't error.
+ */
+private fun loadBundledSummaryFiles(): List<File> {
+    val loader = ConsoleService::class.java.classLoader
+    return KNOWN_STDLIB_FLOW_RESOURCES.mapNotNull { name ->
+        val stream = loader.getResourceAsStream(name) ?: return@mapNotNull null
+        val tmp = File.createTempFile("codyze-flows-", "-$name").apply { deleteOnExit() }
+        stream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+        tmp
     }
 }

@@ -59,6 +59,15 @@ data class AnalyzeRequestJSON(
     val includeDir: String? = null,
     val topLevel: String? = null,
     val conceptsFile: String? = null,
+    /**
+     * When true (default), the analyzer scans the classpath for bundled per-language flow summary
+     * files (resources matching `*-stdlib-flows.yml` at the classpath root) and registers them with
+     * the translation configuration. Each `cpg-language-*` module ships its own summary file; this
+     * hands the user libc/python-stdlib/…-aware data-flow without any explicit configuration.
+     */
+    val loadBundledSummaries: Boolean = true,
+    /** Extra function-summary YAML files supplied by the user, loaded on top of the bundled set. */
+    val extraSummaryFiles: List<String> = emptyList(),
 )
 
 /** JSON data class for a SARIF [Result]. */
