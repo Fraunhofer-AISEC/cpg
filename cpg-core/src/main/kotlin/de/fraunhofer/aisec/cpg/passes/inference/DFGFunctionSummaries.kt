@@ -152,7 +152,6 @@ class DFGFunctionSummaries {
         if (functionToDFGEntryMap.isEmpty()) return null
 
         val language = functionDecl.language
-        val languageName = language.javaClass.name
         val methodName = functionDecl.name
 
         // The language and the method name have to match. If a signature is specified, it also has
@@ -160,7 +159,7 @@ class DFGFunctionSummaries {
         val matchingEntries =
             functionToDFGEntryMap.keys.filter {
                 // The language has to match otherwise the remaining comparison is useless
-                if (languageName.endsWith(it.language)) {
+                if (language.matchesOrDerivesFrom(it.language)) {
                     // Split the name if we have a FQN
                     val entryMethodName = language.parseName(it.methodName)
                     val entryRecord =
@@ -446,4 +445,17 @@ class DFGFunctionSummaries {
 
         val log: Logger = LoggerFactory.getLogger(DFGFunctionSummaries::class.java)
     }
+}
+
+private fun Language<*>.matchesOrDerivesFrom(candidateLanguageName: String): Boolean {
+    var currentClass: Class<*>? = this.javaClass
+
+    while (currentClass != null) {
+        if (currentClass.name.endsWith(candidateLanguageName)) {
+            return true
+        }
+        currentClass = currentClass.superclass
+    }
+
+    return false
 }

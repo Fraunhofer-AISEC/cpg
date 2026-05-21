@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
@@ -319,6 +320,19 @@ class DFGFunctionSummariesTest {
         assertEquals(returnedA, nextDFGOfPMV?.end)
     }
 
+    @Test
+    fun testLanguageHierarchyMatching() {
+        val dfgTest =
+            getDfgInferredCall(
+                customConfig = { defaultPasses() },
+                configureLanguageRegistration = { registerLanguage<TestLanguageWithColon>() },
+            )
+
+        val memcpy = dfgTest.functions["memcpy"]
+        assertNotNull(memcpy)
+        assertNotNull(memcpy.functionSummary)
+    }
+
     @Ignore(
         "We keep this ignored for now as the DFGPass does not draw these edges anymore, this should be done by the PointsToPass. In the future, the DFGPass could still draw the edges and the PtP could remove them again to have a more lightweight but less precise version of the DFG"
     )
@@ -392,14 +406,19 @@ class DFGFunctionSummariesTest {
 
     companion object {
         fun getDfgInferredCall(
+            configureLanguageRegistration:
+                TranslationConfiguration.Builder.() -> TranslationConfiguration.Builder =
+                {
+                    registerLanguage<TestLanguage>()
+                },
             customConfig: TranslationConfiguration.Builder.() -> TranslationConfiguration.Builder =
                 {
                     this
-                }
+                },
         ): TranslationResult {
             val config =
                 TranslationConfiguration.builder()
-                    .registerLanguage<TestLanguage>()
+                    .configureLanguageRegistration()
                     .registerFunctionSummaries(File("src/test/resources/function-dfg.yml"))
                     .inferenceConfiguration(
                         InferenceConfiguration.builder()
