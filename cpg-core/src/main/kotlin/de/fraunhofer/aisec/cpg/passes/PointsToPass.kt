@@ -2253,7 +2253,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // argument is a call, we check for a lower depth (>1) as changes already at the deref
         // (depth 2) can affect return
         // values, otherwise it's probably about a parameter, so we start at a depth of > 2 since
-        // there won't be any affects on the first depth (AKA the value)
+        // there won't be any effect on the first depth (AKA the value)
         if (argument is Call && dstValueDepth > 1) {
             val updatedAddresses: IdentitySet<Pair<Node?, String?>> =
                 mapDstToSrc.entries
