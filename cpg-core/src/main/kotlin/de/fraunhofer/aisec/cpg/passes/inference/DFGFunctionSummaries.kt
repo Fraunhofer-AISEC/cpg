@@ -447,11 +447,17 @@ class DFGFunctionSummaries {
     }
 }
 
-private fun Language<*>.matchesOrDerivesFrom(candidateLanguageName: String): Boolean {
+/**
+ * Returns `true` if this language class or one of its superclasses matches [targetLanguageName].
+ *
+ * This allows function summaries configured for a base language (e.g., `CLanguage`) to also match
+ * derived languages (e.g., `CPPLanguage`).
+ */
+private fun Language<*>.matchesOrDerivesFrom(targetLanguageName: String): Boolean {
     var currentClass: Class<*>? = this.javaClass
 
     while (currentClass != null) {
-        if (currentClass.name.endsWith(candidateLanguageName)) {
+        if (currentClass.name.endsWith(targetLanguageName)) {
             return true
         }
         currentClass = currentClass.superclass

@@ -325,7 +325,7 @@ class DFGFunctionSummariesTest {
         val dfgTest =
             getDfgInferredCall(
                 customConfig = { defaultPasses() },
-                configureLanguageRegistration = { registerLanguage<TestLanguageWithColon>() },
+                languageRegistration = { registerLanguage<TestLanguageWithColon>() },
             )
 
         val memcpy = dfgTest.functions["memcpy"]
@@ -406,7 +406,7 @@ class DFGFunctionSummariesTest {
 
     companion object {
         fun getDfgInferredCall(
-            configureLanguageRegistration:
+            languageRegistration:
                 TranslationConfiguration.Builder.() -> TranslationConfiguration.Builder =
                 {
                     registerLanguage<TestLanguage>()
@@ -418,7 +418,7 @@ class DFGFunctionSummariesTest {
         ): TranslationResult {
             val config =
                 TranslationConfiguration.builder()
-                    .configureLanguageRegistration()
+                    .languageRegistration()
                     .registerFunctionSummaries(File("src/test/resources/function-dfg.yml"))
                     .inferenceConfiguration(
                         InferenceConfiguration.builder()
