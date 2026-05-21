@@ -452,12 +452,18 @@ class DFGFunctionSummaries {
  *
  * This allows function summaries configured for a base language (e.g., `CLanguage`) to also match
  * derived languages (e.g., `CPPLanguage`).
+ *
+ * For backwards compatibility, both fully qualified class names and simple class names are
+ * supported, since existing summary YAMLs may use entries such as `CPPLanguage`.
  */
 private fun Language<*>.matchesOrDerivesFrom(targetLanguageName: String): Boolean {
     var currentClass: Class<*>? = this.javaClass
 
     while (currentClass != null) {
-        if (currentClass.name == targetLanguageName) {
+        if (
+            currentClass.name == targetLanguageName ||
+                currentClass.simpleName == targetLanguageName
+        ) {
             return true
         }
         currentClass = currentClass.superclass
