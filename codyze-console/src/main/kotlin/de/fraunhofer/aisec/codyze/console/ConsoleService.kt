@@ -39,7 +39,13 @@ import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
+import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
+import de.fraunhofer.aisec.cpg.passes.concepts.config.ini.IniFileConfigurationSourcePass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileJoinPass
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonTempFilePass
+import de.fraunhofer.aisec.cpg.passes.concepts.logging.python.PythonLoggingConceptPass
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import de.fraunhofer.aisec.cpg.serialization.toJSON
@@ -92,6 +98,12 @@ class ConsoleService {
                     .loadIncludes(true)
                     .registerPass<PythonStdLibConfigurationPass>()
                     .registerPass<LoadPersistedConcepts>()
+                    .registerPass<PythonTempFilePass>()
+                    .registerPass<PythonFileJoinPass>()
+                    .registerPass<PythonFileConceptPass>()
+                    .registerPass<PythonLoggingConceptPass>()
+                    .registerPass<ProvideConfigPass>()
+                    .registerPass<IniFileConfigurationSourcePass>()
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")

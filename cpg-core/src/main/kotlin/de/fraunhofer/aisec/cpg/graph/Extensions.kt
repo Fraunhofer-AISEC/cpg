@@ -1631,6 +1631,11 @@ fun TranslationResult.callsByName(name: String): List<Call> {
     } as List<Call>
 }
 
+/** Returns all overlay nodes of type [T] across the entire graph. */
+inline fun <reified T : OverlayNode> TranslationResult.overlays(): List<T> {
+    return SubgraphWalker.flattenAST(this).flatMap { it.overlays }.filterIsInstance<T>()
+}
+
 /** Set of all functions which are called from this function */
 val Function.callees: Set<Function>
     get() {

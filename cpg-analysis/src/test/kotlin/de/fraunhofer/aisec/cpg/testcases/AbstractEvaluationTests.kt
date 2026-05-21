@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import de.fraunhofer.aisec.cpg.graph.newReference
+import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 
 abstract class AbstractEvaluationTests {
@@ -249,6 +250,45 @@ abstract class AbstractEvaluationTests {
                                     }
 
                                     memberCall("f", ref("Bar")) { ref("a") }
+                                }
+                            }
+                            /*
+                               // bounded_alloc-style: malloc size differs per branch, so the
+                               // tracked size of `buf` at `strcpy` is the LUB [16, 64].
+                               public void f8() {
+                                   char *buf;
+                                   if (new Random().nextBoolean()) {
+                                       buf = malloc(16);
+                                   } else {
+                                       buf = malloc(64);
+                                   }
+                                   strcpy(buf, "hello");
+                               }
+                            */
+                            method("f8") {
+                                body {
+                                    declare { variable("buf", t("char").pointer()) }
+
+                                    ifStmt {
+                                        condition { memberCall("nextBoolean", ref("Random")) }
+                                        thenStmt {
+                                            ref("buf") assign
+                                                {
+                                                    call("malloc") { literal(16, t("int")) }
+                                                }
+                                        }
+                                        elseStmt {
+                                            ref("buf") assign
+                                                {
+                                                    call("malloc") { literal(64, t("int")) }
+                                                }
+                                        }
+                                    }
+
+                                    call("strcpy") {
+                                        ref("buf")
+                                        literal("hello", t("char").pointer())
+                                    }
                                 }
                             }
                         }

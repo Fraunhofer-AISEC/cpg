@@ -70,6 +70,13 @@ class CpgQueryScriptCompilationConfiguration :
             "de.fraunhofer.aisec.cpg.graph.statements.*",
             "de.fraunhofer.aisec.cpg.graph.expressions.*",
             "de.fraunhofer.aisec.cpg.graph.types.*",
+            // Explicitly list concept subpackages to avoid importing ontology.* which has colliding
+            // class names
+            "de.fraunhofer.aisec.cpg.graph.concepts.file.*",
+            "de.fraunhofer.aisec.cpg.graph.concepts.config.Configuration",
+            "de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret",
+            // ontology concepts - LogWrite and Logging are here
+            "de.fraunhofer.aisec.cpg.graph.concepts.ontology.*",
             "de.fraunhofer.aisec.cpg.query.*",
             "de.fraunhofer.aisec.cpg.evaluation.*",
             "de.fraunhofer.aisec.cpg.analysis.abstracteval.*",

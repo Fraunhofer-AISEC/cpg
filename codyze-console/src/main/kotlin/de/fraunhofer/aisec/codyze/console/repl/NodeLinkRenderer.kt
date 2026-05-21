@@ -27,13 +27,20 @@ package de.fraunhofer.aisec.codyze.console.repl
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.query.UnaryOperators
 
 private const val ESC = "\u001B"
 private const val OSC8 = "$ESC]8;;"
 private const val ST = "$ESC\\"
 private const val RESET = "$ESC[0m"
 private const val DIM = "$ESC[2m"
+// Explicit mid-dark gray (xterm 256-color code 240, ~RGB 88/88/88). Used in place of SGR "faint"
+// on light backgrounds, where ESC[2m typically renders as light-gray-on-white — invisible.
+private const val LIGHT_DIM = "$ESC[38;5;240m"
 private const val BOLD = "$ESC[1m"
 private const val CYAN = "$ESC[36m"
 private const val GREEN = "$ESC[32m"
@@ -101,6 +108,7 @@ enum class LinkScheme {
 class NodeLinkRenderer(
     private val color: Boolean = true,
     private val linkScheme: LinkScheme = LinkScheme.detect(),
+    private val theme: Theme = Theme.DARK,
 ) {
 
     fun render(value: Any?): String =
@@ -126,7 +134,7 @@ class NodeLinkRenderer(
      * wide trees.
      */
     private fun renderQueryTree(tree: QueryTree<*>): String = buildString {
-        renderQueryTreeInto(this, tree, prefix = "", isLast = true, isRoot = true)
+        renderQueryTreeInto(this, tree, prefix = "", isLast = true, isRoot = true, flip = false)
     }
 
     private fun renderQueryTreeInto(
@@ -135,6 +143,7 @@ class NodeLinkRenderer(
         prefix: String,
         isLast: Boolean,
         isRoot: Boolean,
+        flip: Boolean,
     ) {
         val connector =
             when {
@@ -147,7 +156,10 @@ class NodeLinkRenderer(
         // Value badge: ✓/✗ for booleans, the full node renderer for Node values, a recursive
         // walk for Collection-of-Node (so each step of a flow path renders with its file:line
         // link), otherwise just toString.
-        renderTreeValue(out, tree.value, prefix, isRoot, isLast)
+        // `flip` inverts ✓/✗ at this level so descendants of `not(...)` read with the
+        // audience-facing polarity (✓ = safe, ✗ = violation) instead of the dataflow-
+        // internal polarity (✓ = path found, which is the *bad* outcome when wrapped in not()).
+        renderTreeValue(out, tree.value, prefix, isRoot, isLast, flip)
 
         // Operator label + human-readable summary.
         out.append(' ')
@@ -172,6 +184,7 @@ class NodeLinkRenderer(
         val childPrefix = prefix + if (isRoot) "" else if (isLast) "   " else "│  "
         val children = tree.children.take(MAX_ITEMS)
         val truncated = tree.children.size - children.size
+        val childFlip = flip xor (tree.operator == UnaryOperators.NOT)
         children.forEachIndexed { i, child ->
             out.append('\n')
             renderQueryTreeInto(
@@ -180,6 +193,7 @@ class NodeLinkRenderer(
                 childPrefix,
                 isLast = (i == children.size - 1 && truncated == 0),
                 isRoot = false,
+                flip = childFlip,
             )
         }
         if (truncated > 0) {
@@ -197,11 +211,14 @@ class NodeLinkRenderer(
         prefix: String,
         isRoot: Boolean,
         isLast: Boolean,
+        flip: Boolean,
     ) {
         when (value) {
-            is Boolean ->
-                if (value) out.append(green()).append("✓").append(reset())
+            is Boolean -> {
+                val display = value xor flip
+                if (display) out.append(green()).append("✓").append(reset())
                 else out.append(red()).append("✗").append(reset())
+            }
             is Node -> out.append(renderNode(value))
             is LatticeInterval -> out.append(renderInterval(value))
             is Collection<*> ->
@@ -218,6 +235,31 @@ class NodeLinkRenderer(
                                 .append("step ${i + 1}: ")
                                 .append(reset())
                                 .append(renderNode(item))
+                        }
+                    }
+                } else if (value.isNotEmpty() && value.all { it is Dataflow }) {
+                    // Dataflow path edges: extract call sites from ContextSensitiveDataflow edges'
+                    // callingContext.calls. For paths through PointsToPass's abstract memory cells
+                    // this is the only way to recover the actual per-path call chain
+                    // (`free@13 → printf@15` for uaf_simple, `free@24 → printf@26` for uaf_aliased)
+                    // — the node sequence alone is just shared ParameterMemoryValues with no
+                    // source location, so a node-only render makes all UAF instances look alike.
+                    val pathCalls = LinkedHashSet<Call>()
+                    value.forEach { e ->
+                        if (e is ContextSensitiveDataflow) {
+                            pathCalls.addAll(e.callingContext.calls)
+                        }
+                    }
+                    if (pathCalls.isEmpty()) {
+                        out.append(dim()).append("(${value.size} edge(s))").append(reset())
+                    } else {
+                        out.append(dim()).append("calls: ").append(reset())
+                        pathCalls.forEachIndexed { i, call ->
+                            if (i > 0) out.append(dim()).append(" → ").append(reset())
+                            val callName = call.name.localName.ifEmpty { "Call" }
+                            out.append(callName).append("()")
+                            val loc = formatLocation(call)
+                            if (loc.isNotEmpty()) out.append(' ').append(loc)
                         }
                     }
                 } else {
@@ -241,6 +283,12 @@ class NodeLinkRenderer(
             if (location.isNotEmpty()) {
                 append("  ").append(location)
             }
+            // No per-step "via" tag here — PointsToPass's ParameterMemoryValue /
+            // UnknownMemoryValue cells are shared across every call site that touches the
+            // same parameter (the `usages` / `memoryValueUsages` chains all stay inside the
+            // abstract memory world, and `ContextSensitiveDataflow` edges are over-approximate
+            // at the node level). Per-path attribution lives on the `calls: …` chain rendered
+            // for a path's edge list — that one is exact for the specific path.
         }
     }
 
@@ -405,7 +453,7 @@ class NodeLinkRenderer(
         return OSC8 + target + ST + CYAN + display + RESET + OSC8 + ST
     }
 
-    private fun dim() = if (color) DIM else ""
+    private fun dim() = if (!color) "" else if (theme == Theme.LIGHT) LIGHT_DIM else DIM
 
     private fun bold() = if (color) BOLD else ""
 

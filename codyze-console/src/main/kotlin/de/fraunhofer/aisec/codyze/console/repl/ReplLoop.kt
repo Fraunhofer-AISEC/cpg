@@ -52,12 +52,15 @@ class ReplLoop(
 ) {
     private val historyFile: Path =
         Path.of(System.getProperty("user.home"), ".codyze", "repl_history")
-    private val renderer = NodeLinkRenderer()
     private val sessionLines = mutableListOf<String>()
 
     fun run() {
         Files.createDirectories(historyFile.parent)
         val terminal = TerminalBuilder.builder().system(true).build()
+        // Detect the terminal's light/dark mode now that we have a real JLine terminal — the
+        // OSC 11 query needs a TTY. Done before any prompt is printed so the first rendered
+        // output already picks the readable gray for the detected theme.
+        replService.theme = ThemeDetector.detect(terminal)
         val reader: LineReader =
             LineReaderBuilder.builder()
                 .terminal(terminal)
@@ -237,6 +240,7 @@ class ReplLoop(
             |  :help                show this message
             |  :quit                exit the REPL (also Ctrl-D)
             |  :reload [<path>]     re-analyze; with <path>, analyze a new source directory
+            |                       --concepts <file>  optionally load a concepts YAML file
             |  :imports             list the auto-imported packages
             |  :result              show a one-line summary of the loaded TranslationResult
             |  :save <file>         write all evaluated lines to <file> as a .cpg.query.kts script
@@ -256,17 +260,43 @@ class ReplLoop(
     }
 
     private fun reloadAnalysis(arg: String, out: java.io.PrintWriter) {
-        val sourceDir =
-            arg.ifEmpty {
-                consoleService.lastProject?.config?.sourceLocations?.firstOrNull()?.absolutePath
-                    ?: run {
-                        out.println("No previous analysis to reload — pass a path: :reload <dir>")
-                        return
+        // Parse arguments: support ":reload <path> --concepts <file>"
+        val tokens = arg.split(Regex("\\s+"))
+        var sourceDir: String? = null
+        var conceptsFile: String? = null
+
+        var i = 0
+        while (i < tokens.size) {
+            when (tokens[i]) {
+                "--concepts" -> {
+                    conceptsFile = tokens.getOrNull(i + 1)
+                    i += 2
+                }
+                else -> {
+                    if (!tokens[i].startsWith("-") && sourceDir == null) {
+                        sourceDir = tokens[i]
                     }
+                    i++
+                }
             }
-        out.println("Analyzing $sourceDir …")
+        }
+
+        // Use previous source dir if none provided
+        val finalSourceDir =
+            sourceDir
+                ?: consoleService.lastProject?.config?.sourceLocations?.firstOrNull()?.absolutePath
+                ?: run {
+                    out.println("No previous analysis to reload — pass a path: :reload <dir>")
+                    return
+                }
+
+        out.println("Analyzing $finalSourceDir …")
         out.flush()
-        runBlocking { consoleService.analyze(AnalyzeRequestJSON(sourceDir = sourceDir)) }
+        runBlocking {
+            consoleService.analyze(
+                AnalyzeRequestJSON(sourceDir = finalSourceDir, conceptsFile = conceptsFile)
+            )
+        }
         out.println("Analysis complete.")
     }
 
@@ -356,6 +386,8 @@ class ReplLoop(
                 "de.fraunhofer.aisec.cpg.graph.statements.*",
                 "de.fraunhofer.aisec.cpg.graph.expressions.*",
                 "de.fraunhofer.aisec.cpg.graph.types.*",
+                "de.fraunhofer.aisec.cpg.graph.concepts.*",
+                "de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.*",
                 "de.fraunhofer.aisec.cpg.query.*",
             )
             .forEach { out.println("  import $it") }
@@ -367,7 +399,7 @@ class ReplLoop(
             out.println("No analysis loaded.")
             return
         }
-        out.println(renderer.render(tr.components.flatMap { it.translationUnits }))
+        out.println(replService.render(tr.components.flatMap { it.translationUnits }))
     }
 
     private fun saveSession(arg: String, out: java.io.PrintWriter) {

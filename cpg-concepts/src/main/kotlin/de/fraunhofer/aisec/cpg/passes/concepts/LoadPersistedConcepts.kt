@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
-import de.fraunhofer.aisec.cpg.helpers.getNodesByRegion
+import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
@@ -84,6 +84,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @param translationResult The [TranslationResult] to which the [Concept]s will be added.
      */
     private fun addEntriesFromFile(file: File, translationResult: TranslationResult) {
+        log.info("Loading persisted concepts from file: ${file.path}")
         val entries =
             try {
                 val mapper =
@@ -110,9 +111,11 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
                     addConcept(underlyingNode, concept.concept)
                 }
             } else if (concept.location != null) {
-                translationResult.getNodesByLocation(concept.location).forEach { underlyingNode ->
-                    addConcept(underlyingNode, concept.concept)
-                }
+                val nodes = translationResult.getNodesByLocation(concept.location)
+                log.info(
+                    "Found ${nodes.size} nodes for location ${concept.location.file}:${concept.location.region}"
+                )
+                nodes.forEach { underlyingNode -> addConcept(underlyingNode, concept.concept) }
             } else {
                 log.error(
                     "Neither signature nor location are set. The entire entry will be ignored!"
@@ -176,12 +179,47 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
                 return emptyList()
             }
 
-        // find the matching node
-        return this.getNodesByRegion(location = loc, clsName = location.type).also { nodes ->
-            if (nodes.size != 1) {
-                log.warn("Found ${nodes.size} nodes for location $loc. Expected exactly one node.")
+        // find the matching node - match by filename only to handle relative vs absolute paths
+        val targetFileName = loc.artifactLocation.fileName
+        @Suppress("UNCHECKED_CAST")
+        val allNodes =
+            (this.nodes as List<Node>).filter {
+                it.location?.artifactLocation?.fileName == targetFileName
             }
-        }
+        log.debug(
+            "Looking for node in file $targetFileName, region ${loc.region}, type ${location.type}. Found ${allNodes.size} nodes in file"
+        )
+
+        // Debug: show all unique regions and variables without location
+        val regions =
+            allNodes.mapNotNull { it.location?.region }.distinct().sortedBy { it.startLine }
+        log.debug("All regions in file: ${regions.take(20)}")
+        val nodesWithoutLocation = allNodes.filter { it.location == null }
+        log.debug(
+            "Nodes without location: ${nodesWithoutLocation.take(10).map { "${it.javaClass.simpleName}:${it.name}" }}"
+        )
+
+        return allNodes
+            .filter { node ->
+                val nodeRegion = node.location?.region
+                val matchesRegion =
+                    nodeRegion != null &&
+                        nodeRegion.startLine <= loc.region.startLine &&
+                        nodeRegion.endLine >= loc.region.startLine
+                if (matchesRegion) {
+                    log.debug("MATCH: ${node.javaClass.simpleName}:${node.name} at $nodeRegion")
+                }
+                val matchesType = location.type == null || node.javaClass.name == location.type
+                val matchesName = location.name == null || node.name.localName == location.name
+                (matchesRegion || location.name != null) && matchesType && matchesName
+            }
+            .also { nodes ->
+                if (nodes.size != 1) {
+                    log.warn(
+                        "Found ${nodes.size} nodes for location $loc. Expected exactly one node."
+                    )
+                }
+            }
     }
 
     /**
@@ -267,7 +305,12 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @param type Optionally, the type of the node to match against. E.g.
      *   `de.fraunhofer.aisec.cpg.graph.expressions.Call`.
      */
-    data class LocationEntry(val file: String, val region: String, val type: String?)
+    data class LocationEntry(
+        val file: String,
+        val region: String,
+        val type: String?,
+        val name: String? = null,
+    )
 
     /**
      * This class represents a single signature entry in the YAML/JSON file.

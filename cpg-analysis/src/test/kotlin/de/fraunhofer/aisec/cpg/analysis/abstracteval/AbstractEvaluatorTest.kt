@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.ArraySizeEvaluator
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.IntegerIntervalEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
@@ -265,5 +266,37 @@ class AbstractEvaluatorTest {
 
         val value = iAfterLoop.evaluate(IntegerIntervalEvaluator())
         assertEquals(LatticeInterval.Bounded(5, LatticeInterval.Bound.INFINITE), value)
+    }
+
+    /*
+       char *buf;
+       if (new Random().nextBoolean()) {
+           buf = malloc(16);
+       } else {
+           buf = malloc(64);
+       }
+       strcpy(buf, "hello");
+
+       The two branches assign different malloc sizes; after merging at `strcpy`,
+       the ArraySizeEvaluator must report the LUB [16, 64]. This regressed once
+       when ArrayValue switched from `pushToDeclarationState` (which LUBs branches)
+       to `changeDeclarationState` (which overwrites), and again when the
+       DeclarationState lattice failed to dedup autoboxed Integer keys across
+       branches — guard both with this test.
+    */
+    @Test
+    fun testBoundedAlloc() {
+        val mainClass = tu.records["Foo"]
+        assertNotNull(mainClass)
+        val f8 = mainClass.methods["f8"]
+        assertNotNull(f8)
+
+        val strcpyCall = f8.calls["strcpy"]
+        assertNotNull(strcpyCall, "There should be a call to strcpy")
+        val bufRef = strcpyCall.arguments.firstOrNull()
+        assertNotNull(bufRef, "strcpy should have a first argument")
+
+        val size = ArraySizeEvaluator().evaluate(bufRef)
+        assertEquals(LatticeInterval.Bounded(16, 64), size)
     }
 }

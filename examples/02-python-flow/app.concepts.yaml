@@ -1,0 +1,11 @@
+concepts:
+  - concept:
+      name: "de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret"
+      dfg:
+        fromThisNodeToConcept: true
+        fromConceptToThisNode: true
+    location:
+      file: "app.py"
+      region: "1:1-97:41"
+      name: "MY_SECRET"
+      type: "de.fraunhofer.aisec.cpg.graph.declarations.Variable"

@@ -85,7 +85,22 @@ class ReplService(private val consoleService: ConsoleService) {
         BasicJvmReplEvaluator(BasicJvmScriptEvaluator())
 
     private val lineCounter = AtomicInteger(0)
-    private val renderer = NodeLinkRenderer()
+
+    /**
+     * Terminal theme used when rendering eval results. Set by [ReplLoop] after detecting the host
+     * terminal's background; defaults to [Theme.DARK] for non-TTY / startup contexts. Re-renders
+     * pick up the change because [renderer] is rebuilt on each assignment.
+     */
+    var theme: Theme = Theme.DARK
+        set(value) {
+            field = value
+            renderer = NodeLinkRenderer(theme = value)
+        }
+
+    private var renderer = NodeLinkRenderer(theme = theme)
+
+    /** Public render hook so callers (e.g. `:result` meta) reuse the same theme-aware renderer. */
+    fun render(value: Any?): String = renderer.render(value)
 
     /**
      * The raw value of the most recent successful eval. Used by meta-commands like `:flow` that

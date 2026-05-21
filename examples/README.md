@@ -26,13 +26,13 @@ project, run the query, talk through it.
 
 ## Demo arc at a glance
 
-| Time | Section | Example | Take-away |
-| ---: | --- | --- | --- |
-| 0:00 – 5:00 | Warm-up: the CPG is a queryable database | `01-c-pointer-vuln` | Code is a graph. We can query it like one. |
-| 5:00 – 17:00 | Pointer-aware bug hunting in C | `01-c-pointer-vuln` | UAF, double-free, buffer overflow as graph queries. |
-| 17:00 – 22:00 | Same queries, different language | `02-python-flow` | One API, every supported frontend. |
-| 22:00 – 28:00 | From query to policy: Codyze compliance | `04-compliance` | Queries become signed requirements. |
-| 28:00 – 30:00 | Open REPL / Q&A | any | Audience drives. |
+|          Time | Section                                  | Example             | Take-away                                           |
+| ------------: | ---------------------------------------- | ------------------- | --------------------------------------------------- |
+|   0:00 – 5:00 | Warm-up: the CPG is a queryable database | `01-c-pointer-vuln` | Code is a graph. We can query it like one.          |
+|  5:00 – 17:00 | Pointer-aware bug hunting in C           | `01-c-pointer-vuln` | UAF, double-free, buffer overflow as graph queries. |
+| 17:00 – 22:00 | Same queries, different language         | `02-python-flow`    | One API, every supported frontend.                  |
+| 22:00 – 28:00 | From query to policy: Codyze compliance  | `04-compliance`     | Queries become signed requirements.                 |
+| 28:00 – 30:00 | Open REPL / Q&A                          | any                 | Audience drives.                                    |
 
 The clickable `file:line` hyperlinks in REPL output rely on **OSC 8** —
 they work in iTerm2, Ghostty, WezTerm, and recent VS Code integrated
@@ -58,10 +58,10 @@ codyze repl examples/01-c-pointer-vuln
 ```
 
 The CODYZE banner prints first, then the analyzer runs for a few seconds,
-then you land in `codyze>`. While analysis runs, narrate: *"Codyze is
+then you land in `codyze>`. While analysis runs, narrate: _"Codyze is
 parsing this C file with the CPG — Code Property Graph. By the time the
 prompt drops, the entire codebase will be available as a queryable
-graph in Kotlin."*
+graph in Kotlin."_
 
 ### Step 1 — Size up the project
 
@@ -73,9 +73,9 @@ result.functions
 
 You should see **1 component**, then `11` functions: the six we wrote in
 `vuln.c`, plus `main`, plus inferred declarations for the libc calls
-(`malloc`, `strcpy`, `free`, `printf`). Narrate: *"Even though we didn't
+(`malloc`, `strcpy`, `free`, `printf`). Narrate: _"Even though we didn't
 hand it any header files, the CPG inferred the libc symbols from how
-they were used."*
+they were used."_
 
 ### Step 2 — Drill into one function
 
@@ -89,8 +89,8 @@ link. **Click it** — your editor opens `vuln.c` at line 62.
 
 Now press TAB after `main.` and watch the menu — properties like
 `parameters`, `body`, `prevDFG`, `nextEOG`, `code`, `location`, plus
-extension methods (`callersOf(...)`, `controlledBy()`, …). *"This is the
-shortcut API: everything you can ask about a node is right here."*
+extension methods (`callersOf(...)`, `controlledBy()`, …). _"This is the
+shortcut API: everything you can ask about a node is right here."_
 
 ```kotlin
 main?.body
@@ -121,8 +121,8 @@ void double_free(void) {
 ```
 
 …that's `free(p); free(p);` in the same function. Don't say "double-free"
-out loud yet — just let the audience notice. *"Interesting. Same pointer,
-two consecutive frees. We'll come back to that in a minute."*
+out loud yet — just let the audience notice. _"Interesting. Same pointer,
+two consecutive frees. We'll come back to that in a minute."_
 
 This is the moment the talk turns: the graph already surfaced something
 suspicious without us asking a security question. We just listed `free`
@@ -144,8 +144,8 @@ f
 Both `m` and `f` render as `Call` nodes with their clickable file:line
 links (`vuln.c:11` and `vuln.c:13`).
 
-Now ask the graph a real question: *"Where does the value returned by
-`malloc` flow next?"*
+Now ask the graph a real question: _"Where does the value returned by
+`malloc` flow next?"_
 
 ```kotlin
 m.nextDFG
@@ -154,7 +154,7 @@ m.nextDFG
 You get one downstream node: `p : Variable` at `vuln.c:11` — the local
 variable that captures the malloc's return value.
 
-And the punchline: *"Can the value from `malloc` reach the `free` call?"*
+And the punchline: _"Can the value from `malloc` reach the `free` call?"_
 
 ```kotlin
 dataFlow(startNode = m, predicate = { it == f }).value
@@ -162,8 +162,8 @@ dataFlow(startNode = m, predicate = { it == f }).value
 
 `true`. The CPG followed the value across the assignment to `p`, through
 the `strcpy` call (which doesn't sever the data flow), all the way to
-`free(p)`. *"This is the data-flow graph at work — value-level reasoning
-that just tracking syntax can't do."*
+`free(p)`. _"This is the data-flow graph at work — value-level reasoning
+that just tracking syntax can't do."_
 
 ### Step 5 — Show the path, not just the verdict
 
@@ -215,18 +215,18 @@ the editor to that line.
 > always lands in VS Code — never your browser or some other registered
 > `.sarif` handler.
 
-*"That's the path the CPG just discovered, exported as standard SARIF —
-the same format your CI tools already understand."*
+_"That's the path the CPG just discovered, exported as standard SARIF —
+the same format your CI tools already understand."_
 
 ### The pivot
 
 You've spent five minutes treating the file like a database of code
 facts. Drop the line:
 
-> *"We've not asked anything about security yet. We just looked at the
+> _"We've not asked anything about security yet. We just looked at the
 > shape of the code. Now watch the same API answer security questions —
 > use-after-free, double-free, buffer overflow — without changing
-> tools, languages, or even Kotlin syntax style."*
+> tools, languages, or even Kotlin syntax style."_
 
 ---
 
@@ -235,17 +235,17 @@ facts. Drop the line:
 Stay in the same REPL (still on `01-c-pointer-vuln`). The file deliberately
 contains:
 
-* `uaf_simple` — classic use-after-free
-* `uaf_aliased` — UAF hidden behind `char *q = p;`
-* `double_free` — `free(p); free(p);`
-* `buffer_overflow` — `strcpy(buf, user_input)` into an 8-byte stack buffer
-* `leak` — `malloc` with no matching `free`
-* `safe` — the same allocation pattern done right (negative control)
+- `uaf_simple` — classic use-after-free
+- `uaf_aliased` — UAF hidden behind `char *q = p;`
+- `double_free` — `free(p); free(p);`
+- `buffer_overflow` — `strcpy(buf, user_input)` into an 8-byte stack buffer
+- `leak` — `malloc` with no matching `free`
+- `safe` — the same allocation pattern done right (negative control)
 
 ### Use-after-free — the simple case
 
-CWE-416. The property we want to assert: *for every `free(x)`, no
-execution path afterward may dereference `x` again*.
+CWE-416. The property we want to assert: _for every `free(x)`, no
+execution path afterward may dereference `x` again_.
 
 That's exactly the shape of `allExtended<Call>(...)` — a universal
 quantifier over the matching nodes that returns a `QueryTree<Boolean>`
@@ -254,14 +254,21 @@ recording the per-call verdict and the evidence.
 ```kotlin
 result.allExtended<Call>(sel = { it.name.localName == "free" }) { free ->
     val arg = free.arguments.first() as Reference
-    not(executionPath(free) { it is Reference && it.refersTo == arg.refersTo && it != arg })
+    not(executionPath(free, scope = Intraprocedural()) {
+        it is Reference && it.refersTo == arg.refersTo && it != arg
+    })
 }
 ```
 
-Read it out loud: *"for every call to `free`, assert that the freed
-pointer is **not** reachable along any execution path afterward."* No
-explicit imports, no `.filter` plumbing — the query API does the heavy
-lifting and returns a tree we can navigate.
+Read it out loud: _"for every call to `free`, assert that the freed
+pointer is **not** reachable along any execution path afterward — within
+the same function."_ No explicit imports, no `.filter` plumbing — the
+query API does the heavy lifting and returns a tree we can navigate.
+
+> `scope = Intraprocedural()` matters: pointer lifetime is bound to the
+> declaring function, so an inter-procedural walk would cross into
+> sibling callers (e.g. main → next function) and produce noise. The
+> default scope is interprocedural; we narrow it for this query.
 
 The REPL renders the tree: a root `✗` (the assertion failed overall),
 with a child per `free` site. Two children are red `✗` (the violations
@@ -277,9 +284,73 @@ Export the failing paths to VS Code:
 ```
 
 The SARIF viewer opens with one finding per violation, each with the
-full step-through path. *"This is the same workflow you'd get from a
+full step-through path. _"This is the same workflow you'd get from a
 mature SAST product — except the rule is a six-line Kotlin expression
-you just wrote in the REPL."*
+you just wrote in the REPL."_
+
+#### The production-grade variant
+
+The EOG-based query above is great for the demo because it reads top to
+bottom in one breath. In a real rule pack you'd lean on the
+**PointsToPass** instead: every `free(p)` is modeled as a flow from an
+`UnknownMemoryValue("taint.freed")` into `p`'s memory cell, and we ask
+the DFG (not the EOG) whether that taint ever reaches a real use:
+
+```kotlin
+result.allExtended<de.fraunhofer.aisec.cpg.graph.declarations.Function>(
+    sel = { it.name.localName == "free" },
+    mustSatisfy = { fd ->
+        fd.functionSummary.values.flatMap { it }
+            .map { it.srcNode }
+            .filterIsInstance<UnknownMemoryValue>()
+            .filter { it.isTaint("freed") }
+            .map { taint ->
+                not(
+                    dataFlow(
+                        taint,
+                        sensitivities = FieldSensitive + ContextSensitive + OnlyFullDFG,
+                        predicate = { sink ->
+                            sink is Reference ||
+                            ((sink as? ParameterMemoryValue)?.let { pmv ->
+                                pmv.name.toString().endsWith(".derefvalue") &&
+                                !pmv.name.toString().startsWith("free.")
+                            } == true)
+                        }
+                    )
+                ).apply { if (!this.value) this.stringRepresentation = "CWE-416" }
+            }
+            .mergeWithAll()
+    },
+)
+```
+
+Two reasons this is the "production" version:
+
+- It rides on **function summaries**, so libc operations are modeled
+  declaratively from YAML (`cxx-stdlib-flows.yml`) instead of pattern-
+  matching the call site. New unsafe-after-free wrappers (`zfree`,
+  `safe_free`, …) just need a one-line summary, not a query change.
+- `FieldSensitive + ContextSensitive + OnlyFullDFG` follows the value
+  through struct fields and across call boundaries, but skips partial
+  DFG edges — which keeps the path count tractable on real codebases.
+
+The REPL flips ✓/✗ for everything underneath the `not(...)`, so the
+audience reads each path with the safety-query polarity (✓ = no flow,
+safe; ✗ = flow found, violation) instead of the dataflow-internal
+polarity (✓ = path found). Each violating path lists its source-level
+`calls:` chain so you can click straight to the offending `printf` or
+`free` site.
+
+Two demo-specific gotchas worth mentioning when you run it:
+
+- `Function` has to be fully qualified
+  (`de.fraunhofer.aisec.cpg.graph.declarations.Function`) — otherwise
+  Kotlin resolves it to `kotlin.Function<R>` from the standard library
+  and the lambdas can't infer their parameter types.
+- The bundled stdlib summaries match languages by class-name suffix, so
+  C and C++ need separate YAML entries. The repo ships both for `free`;
+  if you add a new libc shim, duplicate it for `CLanguage` and
+  `CPPLanguage`.
 
 ### Demo: Value Evaluation
 
@@ -292,7 +363,7 @@ pointers. Two evaluators are available:
 **Array size bounds:**
 
 ```kotlin
-result.functions["bounded_alloc"].variables["buf"].let { sizeBounds(it) }
+sizeBounds(result.functions["bounded_alloc"].variables["buf"])
 ```
 
 Output: `[16, 64]` — the evaluator joined two malloc branches!
@@ -300,7 +371,7 @@ Output: `[16, 64]` — the evaluator joined two malloc branches!
 **Integer value tracking (single value):**
 
 ```kotlin
-val func = result.functions["eval_chained_pointer"]
+val func = result.functions["eval_chained_pointer"]!!
 val cRef = func.calls[0].arguments.last()
 cRef.evaluate()
 ```
@@ -310,7 +381,7 @@ Output: `99` — tracks pointer dereferences including chained `**pp`.
 **Multiple values (all DFG paths):**
 
 ```kotlin
-val func = result.functions["eval_struct_member"]
+val func = result.functions["eval_struct_member"]!!
 val printfCall = func.calls[1]
 printfCall.arguments[1].evaluate(MultiValueEvaluator())
 ```
@@ -322,7 +393,7 @@ paths, useful when there are multiple assignments to the same location.
 
 The **PointsToPass** runs automatically and stitches DFG edges through
 pointer indirection. The payoff: the value evaluators follow `*p`,
-`pp->x`, and inter-procedural mutations *for free*.
+`pp->x`, and inter-procedural mutations _for free_.
 
 **Inter-procedural pointer write:**
 
@@ -369,29 +440,30 @@ arg[2].evaluate(IntegerIntervalEvaluator()) // p.y → [20, 25]
 Two evaluators, same source of truth: `MultiValueEvaluator` yields the
 discrete set of possible values; `IntegerIntervalEvaluator` widens to an
 interval suitable for range-based safety queries (e.g. `couldExceed`).
-Both see the local `p.x = 10` write *and* the inter-procedural
+Both see the local `p.x = 10` write _and_ the inter-procedural
 `set_point_x(&p, 99)` write, with field-name filtering so `p.x` writes
 don't leak into `p.y` reads.
 
 ### Buffer Overflows
 
-CWE-120. The property: *for every `strcpy`, the destination must be
-large enough to hold the source*. Risk = the destination has a known
+CWE-120. The property: _for every `strcpy`, the destination must be
+large enough to hold the source_. Risk = the destination has a known
 small bound AND the source is unbounded (could be longer).
 
 The CPG ships `sizeBounds()` — runs the abstract-value evaluator
 (`ArraySizeEvaluator`) and returns the result as a
-`QueryTree<LatticeInterval>` so the *bounds*, not just an upper
+`QueryTree<LatticeInterval>` so the _bounds_, not just an upper
 estimate, are preserved. The evaluator handles:
-  * fixed-size arrays (`char buf[8]` → `8`)
-  * string literals (`"secret"` → `6`)
-  * `InitializerList` and `ArrayConstruction` of known shape
-  * `malloc(constant)` calls (`char *p = malloc(64)` → `64`)
-  * everything else (parameters, opaque pointers) → `[-∞, ∞]` (TOP) or `⊥`
+
+- fixed-size arrays (`char buf[8]` → `8`)
+- string literals (`"secret"` → `6`)
+- `InitializerList` and `ArrayConstruction` of known shape
+- `malloc(constant)` calls (`char *p = malloc(64)` → `64`)
+- everything else (parameters, opaque pointers) → `[-∞, ∞]` (TOP) or `⊥`
 
 Use the `couldExceed` operator from the `LatticeInterval` API to
-compare the two intervals directly — *"could the source's value
-exceed the destination's?"* — and thread both `sizeBounds` calls as
+compare the two intervals directly — _"could the source's value
+exceed the destination's?"_ — and thread both `sizeBounds` calls as
 children so the evaluated intervals appear right in the rendered tree:
 
 ```kotlin
@@ -416,53 +488,81 @@ unknown vs unknown isn't (nothing is asserted).
 
 ## 17:00 – 22:00 — Same queries, different language
 
-Reload onto the Python example without restarting the REPL:
+### Step 5 — Concepts and overlays
+
+The CPG can attach _concepts_ — semantic overlays — to nodes. The Python
+frontend ships with passes that auto-detect:
+
+- **File operations** (`open`, `os.system`, etc.) → `OpenFile`, `WriteFile`, `ReadFile`
+- **Logging** (`logging.info`, `logger.error`, etc.) → `LogWrite`, `Logging`
+- **Configuration** (`configparser.ConfigParser`) → `Configuration`, `ConfigurationSource`
+
+Let's load the demo with a concepts file that also tags a variable as `Secret`:
 
 ```
-:reload examples/02-python-flow
+:reload examples/02-python-flow --concepts examples/02-python-flow/app.concepts.yaml
 ```
 
-Same Kotlin REPL session, new code. The Python file has the same theme as
-the C demo — untrusted input flowing into a dangerous sink — but the bug
-class is *command injection* (CWE-78), not memory corruption.
+Now query the concepts:
 
 ```kotlin
-// Same shortcut API, different language frontend.
-result.functions.map { it.name.localName }
-result.calls.filter { it.name.localName == "system" }
-```
+// File operations (auto-tagged)
+result.overlays<OpenFile>()
+result.overlays<WriteFile>()
 
-```kotlin
-// Untrusted input → dangerous sink, expressed as data-flow:
-val sinks = result.calls.filter { it.name.localName == "system" }
-val sources = result.calls.filter { it.name.localName == "get" }
+// Logging (auto-tagged)
+result.overlays<LogWrite>()
+result.overlays<Logging>()
 
-sinks.filter { sink ->
-    sources.any { source ->
-        dataFlow(startNode = source, predicate = { it == sink.arguments.first() }).value
+// Configuration from config.ini (auto-tagged)
+result.overlays<Configuration>()
+
+// Secret (manually tagged via YAML)
+result.overlays<Secret>()
+
+// Security check: verify NO secrets flow to files
+result.allExtended<Secret>(
+    mustSatisfy = { secret ->
+        not(
+            dataFlow(
+                startNode = secret,
+                direction = Forward(GraphToFollow.DFG),
+                scope = Interprocedural(),
+                predicate = { it is WriteFile }
+            )
+        )
     }
-}
+)
 ```
 
-The flow `os.environ.get(...) → run_command(...) → os.system(...)` is
-followed through the rename `sanitised_but_not_really = raw` — *exactly*
-the kind of variable-rename trick that a regex grep would miss.
+The `Secret` overlay was loaded from `app.concepts.yaml` — it marks the
+`MY_SECRET` variable. Let's follow where this secret flows:
 
-> **Talking point:** the query is the same shape as the C `dataFlow`
-> query because it's the same engine. The frontend (CXXFrontend vs.
-> PythonFrontend) is the only thing that changes.
+```kotlin
+val secret = result.overlays<Secret>().first()
+secret.underlyingNode
+```
+
+The security query above returns `false` because `MY_SECRET` flows to a
+`WriteFile` via `f.write(f"Secret: {MY_SECRET}\n")`. This is a data
+leakage finding.
+
+> **Talking point:** concepts are _layers_ on top of the raw AST. We can
+> auto-detect common patterns (file I/O, logging, config) and let analysts
+> add custom tags (like `Secret`) that then participate in the same data-flow
+> queries as everything else.
 
 ---
 
 ## 22:00 – 28:00 — From query to policy: Codyze compliance
 
 Quit the REPL (`:quit`) and switch hats: ad-hoc queries are great for
-exploring, but for *governance* you want named, signed requirements over
+exploring, but for _governance_ you want named, signed requirements over
 a structured project.
 
 > **Project:** `examples/04-compliance/` — a tiny app with two components
-> (`auth`, `webapp`) and one requirement: *"For each key K used in
-> encryption/decryption, K must be deleted afterward."*
+> (`auth`, `webapp`) and one requirement: _"For each key K used in
+> encryption/decryption, K must be deleted afterward."_
 
 Look at `project.codyze.kts`:
 
@@ -472,7 +572,7 @@ sed -n '30,60p' examples/04-compliance/project.codyze.kts
 
 The interesting block is `requirements { … fulfilledBy { properHandlingOfKeyMaterial() } … }`
 — and below it, the Kotlin function `properHandlingOfKeyMaterial()` is
-*the same shape* as the REPL queries we just wrote: it uses
+_the same shape_ as the REPL queries we just wrote: it uses
 `allExtended<Call>`, `executionPath`, and the `Delete` node type.
 
 Run the analyzer:
@@ -501,7 +601,7 @@ mv examples/04-compliance/components/webapp/webapp/main.py.bak \
 
 > **Talking point:** the REPL is for exploration; the compliance DSL is
 > for accountability. The same query API powers both — the requirement
-> in `project.codyze.kts` *is* the kind of query you just iterated on
+> in `project.codyze.kts` _is_ the kind of query you just iterated on
 > in the REPL, lifted into a signed, named, repeatable check.
 
 ---
@@ -536,28 +636,28 @@ result.nodes.flatMap { it.overlays }.distinctBy { it::class }
 
 ## Cheat-sheet
 
-| You want to … | REPL one-liner |
-| --- | --- |
-| List all functions | `result.functions` |
-| Find calls to X | `result.calls.filter { it.name.localName == "X" }` |
-| Follow a value forward | `dataFlow(startNode = node) { it == sink }` |
-| Follow execution forward | `executionPath(startNode = node) { it is …Call }` |
-| Get all `Reference` nodes | `result.refs` |
-| Re-analyze new code | `:reload <path>` |
-| Save session as script | `:save <file>` |
+| You want to …             | REPL one-liner                                     |
+| ------------------------- | -------------------------------------------------- |
+| List all functions        | `result.functions`                                 |
+| Find calls to X           | `result.calls.filter { it.name.localName == "X" }` |
+| Follow a value forward    | `dataFlow(startNode = node) { it == sink }`        |
+| Follow execution forward  | `executionPath(startNode = node) { it is …Call }`  |
+| Get all `Reference` nodes | `result.refs`                                      |
+| Re-analyze new code       | `:reload <path>`                                   |
+| Save session as script    | `:save <file>`                                     |
 
-| Meta-command | Effect |
-| --- | --- |
-| `:help` | show all commands |
-| `:reload [path]` | re-run analysis (with or without new source) |
-| `:imports` | list auto-imported packages |
-| `:result` | one-line summary of the current TranslationResult |
-| `:save <file>` | dump evaluated lines to a `.cpg.query.kts` |
-| `:quit` | exit (also Ctrl-D) |
+| Meta-command     | Effect                                            |
+| ---------------- | ------------------------------------------------- |
+| `:help`          | show all commands                                 |
+| `:reload [path]` | re-run analysis (with or without new source)      |
+| `:imports`       | list auto-imported packages                       |
+| `:result`        | one-line summary of the current TranslationResult |
+| `:save <file>`   | dump evaluated lines to a `.cpg.query.kts`        |
+| `:quit`          | exit (also Ctrl-D)                                |
 
-| What you see in a hyperlink | What you click to |
-| --- | --- |
-| `vuln.c:24` | `file://…/vuln.c#L24` — opens at that line in the OS-default editor |
+| What you see in a hyperlink | What you click to                                                   |
+| --------------------------- | ------------------------------------------------------------------- |
+| `vuln.c:24`                 | `file://…/vuln.c#L24` — opens at that line in the OS-default editor |
 
 ---
 
@@ -565,7 +665,7 @@ result.nodes.flatMap { it.overlays }.distinctBy { it::class }
 
 1. **First eval is slow.** The Kotlin scripting compiler warms up on the
    first snippet (~2–4 s on a modern laptop). Subsequent snippets are
-   sub-second. Run *one warm-up query* before the audience walks in.
+   sub-second. Run _one warm-up query_ before the audience walks in.
 2. **`sun.misc.Unsafe` warning.** The Kotlin compiler prints a JVM
    deprecation warning to stderr on each eval. Cosmetic; harmless.
    Silence by adding `--add-opens=java.base/java.lang=ALL-UNNAMED` to the

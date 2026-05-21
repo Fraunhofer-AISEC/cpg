@@ -104,9 +104,12 @@ class KotlinReplCompleter(private val replService: ReplService) : Completer {
             /* displ = */ display,
             /* group = */ variant.icon.ifEmpty { null },
             /* descr = */ desc.ifEmpty { null },
-            /* suffix = */ null,
+            /* suffix = */ "",
             /* key = */ null,
-            /* complete = */ true,
+            // false: don't treat the completion as terminal — JLine otherwise appends a
+            // trailing space, which is annoying for identifiers you usually continue with
+            // `.foo`, `[i]`, or `(...)`.
+            /* complete = */ false,
         )
     }
 }
