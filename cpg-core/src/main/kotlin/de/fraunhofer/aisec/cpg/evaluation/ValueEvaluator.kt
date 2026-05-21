@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -182,6 +183,7 @@ open class ValueEvaluator(
                     is MemberAccess -> prev.name == targetField
                     is Call -> true // Keep Call edges for inter-procedural tracing
                     is Literal<*> -> true // Keep Literal edges
+                    is Parameter -> true // Keep Parameter edges for inter-procedural tracing
                     else -> false
                 }
             }

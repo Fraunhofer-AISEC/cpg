@@ -431,18 +431,19 @@ void eval_struct_member(void) {
 ```
 
 ```kotlin
-val arg = result.functions["eval_struct_member"].calls[1].arguments
-arg[1].evaluate(MultiValueEvaluator())    // p.x → {10, 99}
-arg[1].evaluate(IntegerIntervalEvaluator()) // p.x → [10, 99]
-arg[2].evaluate(IntegerIntervalEvaluator()) // p.y → [20, 25]
+val func = result.functions["eval_struct_member"]
+val px = func.memberExpressions("x").last()
+val py = func.memberExpressions("y").last()
+
+interval(px)  // [99, 99]
+interval(py)  // [25, 25]
 ```
 
-Two evaluators, same source of truth: `MultiValueEvaluator` yields the
-discrete set of possible values; `IntegerIntervalEvaluator` widens to an
-interval suitable for range-based safety queries (e.g. `couldExceed`).
-Both see the local `p.x = 10` write _and_ the inter-procedural
-`set_point_x(&p, 99)` write, with field-name filtering so `p.x` writes
-don't leak into `p.y` reads.
+`interval()` runs the `IntegerIntervalEvaluator` and returns the full
+`[lower, upper]` bounds. Because `set_point_x(&p, 99)` is the last write
+to `p.x` before the read, the interval collapses to exactly `[99, 99]`.
+Same for `p.y` → `[25, 25]` from `(*pp).y = 25`. Field-name filtering
+ensures `p.x` writes don't leak into `p.y` reads.
 
 ### Buffer Overflows
 

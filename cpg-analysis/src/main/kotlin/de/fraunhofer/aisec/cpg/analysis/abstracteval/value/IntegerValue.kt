@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.*
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.*
@@ -264,7 +265,8 @@ class IntegerValue : Value<LatticeInterval> {
                         when (prev) {
                             is MemberAccess -> prev.name == targetField
                             is Literal<*>,
-                            is Call -> true
+                            is Call,
+                            is Parameter -> true
                             else -> false
                         }
                     }

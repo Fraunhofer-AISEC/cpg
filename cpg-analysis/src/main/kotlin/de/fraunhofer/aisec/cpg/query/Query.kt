@@ -211,7 +211,7 @@ fun min(n: Node?, eval: ValueEvaluator = IntegerIntervalEvaluator()): QueryTree<
     val evalRes = eval.evaluate(n)
     if (evalRes is LatticeInterval) {
         val result =
-            ((evalRes as? LatticeInterval.Bounded)?.upper as? LatticeInterval.Bound.Value)?.value
+            ((evalRes as? LatticeInterval.Bounded)?.lower as? LatticeInterval.Bound.Value)?.value
                 ?: Long.MIN_VALUE
         return QueryTree(
             result,
@@ -354,6 +354,31 @@ fun max(n: Node?, eval: ValueEvaluator = IntegerIntervalEvaluator()): QueryTree<
         mutableListOf(),
         "max($n)",
         n,
+        operator = GenericQueryOperators.EVALUATE,
+    )
+}
+
+/**
+ * Returns the [LatticeInterval] bounds for a node using the abstract interval evaluator. Returns a
+ * [QueryTree] with `null` if the value cannot be determined.
+ */
+fun interval(
+    n: Node?,
+    eval: ValueEvaluator = IntegerIntervalEvaluator(),
+): QueryTree<LatticeInterval.Bounded?> {
+    val evalRes = eval.evaluate(n)
+    val value =
+        if (evalRes is LatticeInterval.Bounded) {
+            evalRes
+        } else if (evalRes is Number) {
+            LatticeInterval.Bounded(evalRes.toLong(), evalRes.toLong())
+        } else {
+            null
+        }
+    return QueryTree(
+        value,
+        mutableListOf(QueryTree(n, operator = GenericQueryOperators.EVALUATE)),
+        node = n,
         operator = GenericQueryOperators.EVALUATE,
     )
 }
