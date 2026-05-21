@@ -322,11 +322,38 @@ class DFGFunctionSummariesTest {
 
     @Test
     fun testLanguageHierarchyMatching() {
+        val config =
+            TranslationConfiguration.builder()
+                .registerLanguage<TestLanguageWithColon>()
+                .registerFunctionSummaries(File("src/test/resources/function-dfg.yml"))
+                .inferenceConfiguration(
+                    InferenceConfiguration.builder()
+                        .inferDfgForUnresolvedCalls(true)
+                        .inferFunctions(true)
+                        .build()
+                )
+                .defaultPasses()
+                .build()
+
         val dfgTest =
-            getDfgInferredCall(
-                customConfig = { defaultPasses() },
-                languageRegistration = { registerLanguage<TestLanguageWithColon>() },
-            )
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("DfgInferredCall.c") {
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("a", t("int")) { literal(7, t("char")) } }
+                                declare { variable("b", t("int")) { literal(5, t("char")) } }
+                                call("memcpy") {
+                                    ref("a").pointerReference()
+                                    ref("b").pointerReference()
+                                    literal(1, t("int"))
+                                }
+                                returnStmt { ref("a") }
+                            }
+                        }
+                    }
+                }
+            }
 
         val memcpy = dfgTest.functions["memcpy"]
         assertNotNull(memcpy)
@@ -406,19 +433,14 @@ class DFGFunctionSummariesTest {
 
     companion object {
         fun getDfgInferredCall(
-            languageRegistration:
-                TranslationConfiguration.Builder.() -> TranslationConfiguration.Builder =
-                {
-                    registerLanguage<TestLanguage>()
-                },
             customConfig: TranslationConfiguration.Builder.() -> TranslationConfiguration.Builder =
                 {
                     this
-                },
+                }
         ): TranslationResult {
             val config =
                 TranslationConfiguration.builder()
-                    .languageRegistration()
+                    .registerLanguage<TestLanguage>()
                     .registerFunctionSummaries(File("src/test/resources/function-dfg.yml"))
                     .inferenceConfiguration(
                         InferenceConfiguration.builder()

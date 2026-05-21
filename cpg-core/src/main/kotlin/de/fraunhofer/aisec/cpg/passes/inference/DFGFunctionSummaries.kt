@@ -457,7 +457,7 @@ private fun Language<*>.matchesOrDerivesFrom(targetLanguageName: String): Boolea
     var currentClass: Class<*>? = this.javaClass
 
     while (currentClass != null) {
-        if (currentClass.name.endsWith(targetLanguageName)) {
+        if (currentClass.name == targetLanguageName) {
             return true
         }
         currentClass = currentClass.superclass
