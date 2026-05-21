@@ -435,15 +435,15 @@ val func = result.functions["eval_struct_member"]
 val px = func.memberExpressions("x").last()
 val py = func.memberExpressions("y").last()
 
-interval(px)  // [99, 99]
-interval(py)  // [25, 25]
+interval(px)  // [10, 99]
+interval(py)  // [20, 25]
 ```
 
 `interval()` runs the `IntegerIntervalEvaluator` and returns the full
-`[lower, upper]` bounds. Because `set_point_x(&p, 99)` is the last write
-to `p.x` before the read, the interval collapses to exactly `[99, 99]`.
-Same for `p.y` → `[25, 25]` from `(*pp).y = 25`. Field-name filtering
-ensures `p.x` writes don't leak into `p.y` reads.
+`[lower, upper]` bounds. `p.x` → `[10, 99]` merges the local `p.x = 10`
+and the inter-procedural `set_point_x(&p, 99)`. `p.y` → `[20, 25]` merges
+`p.y = 20` and `(*pp).y = 25`. Field-name filtering ensures `p.x` writes
+don't leak into `p.y` reads.
 
 ### Buffer Overflows
 
@@ -579,7 +579,16 @@ _the same shape_ as the REPL queries we just wrote: it uses
 Run the analyzer:
 
 ```bash
-codyze compliance scan --project examples/04-compliance
+codyze compliance scan --project-dir=examples/04-compliance --console=true
+```
+
+The `--console=true` flag opens the web console after the scan so you can
+explore the results interactively.
+
+Or for the REPL (analyze a component's source directly):
+
+```bash
+codyze repl examples/04-compliance/components/auth/auth
 ```
 
 You get a SARIF report with the requirement marked fulfilled. Now break
