@@ -4611,11 +4611,11 @@ class PointsToPassTest {
 
         // Stuff
         val testFuncFS = testFunc.functionSummary
-        val pointerDerefLine20 = printfCall2.arguments[2]
-        assertNotNull(pointerDerefLine20)
+        val pointerDerefLine22 = printfCall2.arguments[2]
+        assertNotNull(pointerDerefLine22)
 
-        val pointerDerefLine21 = printfCall3.arguments[1]
-        assertNotNull(pointerDerefLine21)
+        val pointerDerefLine23 = printfCall3.arguments[1]
+        assertNotNull(pointerDerefLine23)
 
         // The actual tests
 
@@ -4624,8 +4624,7 @@ class PointsToPassTest {
         // This return in Line 11 has 2 values, the malloc at depth 0 and the
         // hardcoded UMV freedMemory at
         // depth 1
-        val return2Entry =
-            testFuncFS.entries.singleOrNull { it.key.location?.region?.startLine == 11 }
+        val return2Entry = testFuncFS.entries.singleOrNull { it.key === testFunc.returns[1] }
         assertNotNull(return2Entry)
         assertEquals(2, return2Entry.value.size)
         assertLocalName(
@@ -4657,34 +4656,34 @@ class PointsToPassTest {
 
         // The pointerDeref in the 2nd printf has to prevFullDFGs: The freedMemoryValue and the UMV
         // of NULL
-        assertEquals(2, pointerDerefLine20.prevFullDFG.size)
+        assertEquals(2, pointerDerefLine22.prevFullDFG.size)
         assertEquals(
             "free.charPtr0.derefvalue",
-            pointerDerefLine20.prevFullDFG
+            pointerDerefLine22.prevFullDFG
                 .singleOrNull { it is ParameterMemoryValue }
                 ?.name
                 ?.toString(),
         )
         assertEquals(
             "0.derefvalue",
-            pointerDerefLine20.prevFullDFG
+            pointerDerefLine22.prevFullDFG
                 .singleOrNull { it is UnknownMemoryValue }
                 ?.name
                 ?.toString(),
         )
         // The prevFullDFG of the last printf should also point to the hardcoded freedMemoryValue
         // and the UMV(null)
-        assertEquals(2, pointerDerefLine21.prevFullDFG.size)
+        assertEquals(2, pointerDerefLine23.prevFullDFG.size)
         assertEquals(
             "free.charPtr0.derefvalue",
-            pointerDerefLine21.prevFullDFG
+            pointerDerefLine23.prevFullDFG
                 .singleOrNull { it is ParameterMemoryValue }
                 ?.name
                 ?.toString(),
         )
         assertEquals(
             "0.derefvalue",
-            pointerDerefLine21.prevFullDFG
+            pointerDerefLine23.prevFullDFG
                 .singleOrNull { it is UnknownMemoryValue }
                 ?.name
                 ?.toString(),
