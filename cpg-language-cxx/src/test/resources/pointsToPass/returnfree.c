@@ -1,3 +1,6 @@
+#include<stdio.h>
+#include<stdlib.h>
+
 char* returnfreed() {
   char* ret = malloc(16);
   
