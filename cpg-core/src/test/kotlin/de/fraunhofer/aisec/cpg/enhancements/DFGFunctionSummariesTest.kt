@@ -357,7 +357,10 @@ class DFGFunctionSummariesTest {
 
         val memcpy = dfgTest.functions["memcpy"]
         assertNotNull(memcpy)
-        assertTrue(memcpy.functionSummary.isNotEmpty(), "Expected memcpy to have a non-empty function summary")
+        assertTrue(
+            memcpy.functionSummary.isNotEmpty(),
+            "Expected memcpy to have a non-empty function summary",
+        )
     }
 
     @Ignore(

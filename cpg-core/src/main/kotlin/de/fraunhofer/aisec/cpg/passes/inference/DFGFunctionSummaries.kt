@@ -461,8 +461,7 @@ private fun Language<*>.matchesOrDerivesFrom(targetLanguageName: String): Boolea
 
     while (currentClass != null) {
         if (
-            currentClass.name == targetLanguageName ||
-                currentClass.simpleName == targetLanguageName
+            currentClass.name == targetLanguageName || currentClass.simpleName == targetLanguageName
         ) {
             return true
         }
