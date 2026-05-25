@@ -543,6 +543,9 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             }
             s = scope
             n = adjustNameIfNecessary(scope.name, n.parent, n)
+        } else {
+            // What should we do? This is probably a local variable, use the current scope
+            s = currentScope
         }
 
         return ScopeExtraction(s, n)
