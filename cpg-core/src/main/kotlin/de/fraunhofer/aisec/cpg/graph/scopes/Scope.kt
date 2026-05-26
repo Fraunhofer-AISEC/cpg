@@ -176,9 +176,11 @@ sealed class Scope(
         replaceImports: Boolean = true,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
+        val languageOnlyClass = languageOnly?.javaClass
+
         // First, try to look for the symbol in the current scope (unless we have a predefined
         // search scope). In the latter case we also need to restrict the lookup to the search scope
-        var modifiedScoped = this.predefinedLookupScopes[symbol]?.targetScope
+        val modifiedScoped = this.predefinedLookupScopes[symbol]?.targetScope
         var scope: Scope? = modifiedScoped ?: this
 
         var list: MutableList<Declaration>? = null
@@ -201,7 +203,11 @@ sealed class Scope(
 
             // Filter according to the language
             if (languageOnly != null) {
-                list.removeIf { it.language != languageOnly }
+                list.removeIf {
+                    val candidateLanguageClass = it.language::class.java
+                    languageOnlyClass?.isAssignableFrom(candidateLanguageClass) == false &&
+                        !candidateLanguageClass.isAssignableFrom(languageOnlyClass)
+                }
             }
 
             // Filter the list according to the predicate, if we have any

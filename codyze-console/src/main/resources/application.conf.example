@@ -1,29 +1,26 @@
 llm {
-  client = "ollama"  # Options: "ollama", "gemini", "vLLM"
+  clients {
+    ollama {
+        baseUrl = "http://localhost:11434"
+    }
 
-  gemini {
-    baseUrl = "https://generativelanguage.googleapis.com/v1beta"
-    model = "gemini-2.5-flash"
-  }
+    vLLM {
+          baseUrl = "http://localhost:8000"
+        }
 
-  ollama {
-    baseUrl = "http://localhost:11434"
-    model = "llama3"
-  }
+    mlx {
+      baseUrl = "http://localhost:8000"
+    }
 
-  mlx {
-    baseUrl = "http://localhost:8000"
-    model = "your-mlx-model"
-  }
+    openai {
+      baseUrl = "https://api.openai.com"
+      apiKeyEnv = "CODYZE_OPENAI_API_KEY"
+    }
 
-  local {
-    baseUrl = "http://localhost:1234"
-    model = "your-local-model"
-  }
-
-  vLLM {
-    baseUrl = "http://localhost:8000"
-    model = "your-vllm-model"
+    gemini {
+      baseUrl = "https://generativelanguage.googleapis.com/v1beta"
+      apiKeyEnv = "CODYZE_GEMINI_API_KEY"
+    }
   }
 }
 

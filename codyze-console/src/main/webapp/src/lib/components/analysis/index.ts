@@ -1,6 +1,7 @@
 // Analysis components
 export { default as AnalysisResult } from './AnalysisResult.svelte';
 export { default as CodeViewer } from './CodeViewer.svelte';
+export { default as ConceptChecklist } from './ConceptChecklist.svelte';
 export { default as FileTree } from './FileTree.svelte';
 export { default as Finding } from './Finding.svelte';
 export { default as FindingOverlay } from './FindingOverlay.svelte';

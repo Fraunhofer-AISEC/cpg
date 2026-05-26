@@ -50,6 +50,7 @@ class GeminiClient(
 
     override suspend fun sendPrompt(
         userMessage: String,
+        systemPrompt: String,
         conversationHistory: List<ChatMessageJSON>,
         tools: List<Tool>,
         toolCallHistory: List<List<ToolCallWithResult>>?,
@@ -169,7 +170,7 @@ class GeminiClient(
 
         val request =
             GeminiRequest(
-                systemInstruction = GeminiContent(parts = listOf(GeminiPart(text = SYSTEM_PROMPT))),
+                systemInstruction = GeminiContent(parts = listOf(GeminiPart(text = systemPrompt))),
                 contents = contents,
                 tools = geminiTools,
             )

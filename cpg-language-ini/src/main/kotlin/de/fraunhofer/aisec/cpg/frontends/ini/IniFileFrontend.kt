@@ -68,7 +68,7 @@ import org.ini4j.Profile.Section
  * - [setComment] not implemented as this is not used (no [Handler] pattern implemented)
  * - Comments in general are not supported.
  */
-class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFrontend>) :
+open class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFrontend>) :
     LanguageFrontend<Any, Any?>(ctx, language) {
 
     private lateinit var uri: URI
