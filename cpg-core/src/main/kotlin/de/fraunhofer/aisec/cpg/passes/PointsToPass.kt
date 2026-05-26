@@ -350,20 +350,20 @@ fun isGlobal(node: Node): Boolean {
     }
 }
 
-/* Recursively collect the bases from MemberAccesses and SubscriptExpressions */
-fun collectBases(node: Node): IdentitySet<Node> {
-    val ret = identitySetOf<Node>()
+/* Recursively collect the bases and offsets from MemberAccesses and SubscriptExpressions */
+fun collectBasesAndOffsets(node: Node): IdentitySet<Pair<Node, Any?>> {
+    val ret = identitySetOf<Pair<Node, Any?>>()
 
     var n: Node? = node
     while (n != null) {
         when (n) {
             is MemberAccess -> {
+                ret.add(n.base to n.refersTo)
                 n = n.base
-                ret.add(n)
             }
             is Subscription -> {
+                ret.add(n.arrayExpression to n.subscriptExpression)
                 n = n.arrayExpression
-                ret.add(n)
             }
             is Cast -> {
                 n = n.expression
@@ -1202,8 +1202,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // the loop may not get executed)
             val newVals = doubleState.getValues(wT, wT) + doubleState.getValues(iterable, iterable)
             val sources =
-                newVals.mapTo(PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>()) {
-                    Triple(it.first, it.second, false)
+                newVals.mapTo(PowersetLattice.Element<Triple<Node?, Boolean, Field?>>()) {
+                    Triple(it.first, it.second, null)
                 }
             val destinations = identitySetOf<Node>()
             if (wT is InitializerList) destinations.addAll(wT.initializers)
@@ -1240,8 +1240,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ): PointsToState.Element {
         var doubleState = doubleState
         val sources =
-            PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>(
-                Triple(currentNode, false, false)
+            PowersetLattice.Element<Triple<Node?, Boolean, Field?>>(
+                Triple(currentNode, false, null)
             )
         val destinationsAddresses =
             currentNode.operands.flatMapTo(identitySetOf()) {
@@ -1732,11 +1732,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // DeclarationStateEntry
         val propertySet = equalLinkedHashSetOf<Any>()
         propertySet.addAll(properties)
-        if (subAccessName.isNotEmpty()) {
-            propertySet.add(
-                PartialDataflowGranularity(Field().apply { name = Name(subAccessName) })
-            )
-        }
 
         // If the srcNode is a MemoryAddress, we look it up in a map to ensure that we have a
         // different MemoryAddress for each Call, but the same if the Call is
@@ -1776,6 +1771,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             currentNode,
             prev,
             param,
+            subAccessName,
         )
     }
 
@@ -1934,7 +1930,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     Triple(
                         it.srcNode,
                         true in it.propertySet,
-                        it.propertySet.any { it is PartialDataflowGranularity<*> },
+                        it.propertySet
+                            .filterIsInstance<PartialDataflowGranularity<*>>()
+                            .singleOrNull()
+                            ?.partialTarget as? Field,
                     )
                 }
             )
@@ -2018,6 +2017,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         currentNode: Call,
         lastWrites: MutableSet<NodeWithPropertiesKey>,
         param: Node,
+        subAccessName: String,
     ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
         val doubleState = doubleState
         when (srcNode) {
@@ -2064,10 +2064,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     equalLinkedHashSetOf<Any>().apply {
                                         addAll(propertySet)
                                         add(shortFS)
+                                        // If the partialWrite is null, it means this is the base
+                                        // memory address and no field, so we add the partial write
+                                        // property
+                                        if (partialWrite == null) {
+                                            add(
+                                                PartialDataflowGranularity(
+                                                    Field().apply { name = Name(subAccessName) }
+                                                )
+                                            )
+                                        }
                                     }
-                                partialWrite?.let {
-                                    updatedPropertySet.add(PartialDataflowGranularity(it))
-                                }
                                 val currentSet =
                                     mapDstToSrc.computeIfAbsent(d!!) { concurrentIdentitySetOf() }
                                 if (
@@ -2112,10 +2119,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         equalLinkedHashSetOf<Any>().apply {
                                             addAll(propertySet)
                                             add(shortFS)
+                                            // If the partialWrite is null, it means this is the
+                                            // base memory address and no field, so we add the
+                                            // partial write property
+                                            if (partialWrite == null) {
+                                                add(
+                                                    PartialDataflowGranularity(
+                                                        Field().apply { name = Name(subAccessName) }
+                                                    )
+                                                )
+                                            }
                                         }
-                                    partialWrite?.let {
-                                        updatedPropertySet.add(PartialDataflowGranularity(it))
-                                    }
                                     val currentSet =
                                         mapDstToSrc.computeIfAbsent(d!!) {
                                             concurrentIdentitySetOf()
@@ -2156,8 +2170,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             equalLinkedHashSetOf<Any>().apply {
                                 addAll(propertySet)
                                 add(shortFS)
+                                // If the partialWrite is null, it means this is the base
+                                // memory address and no field, so we add the partial write
+                                // property
+                                if (partialWrite == null) {
+                                    add(
+                                        PartialDataflowGranularity(
+                                            Field().apply { name = Name(subAccessName) }
+                                        )
+                                    )
+                                }
                             }
-                        partialWrite?.let { updatedPropertySet.add(PartialDataflowGranularity(it)) }
                         if (
                             currentSet.none {
                                 it.srcNode === srcNode &&
@@ -2206,10 +2229,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     equalLinkedHashSetOf<Any>().apply {
                                         addAll(propertySet)
                                         add(shortFS)
+                                        // If the partialWrite is null, it means this is the base
+                                        // memory address and no field, so we add the partial write
+                                        // property
+                                        if (partialWrite == null) {
+                                            add(
+                                                PartialDataflowGranularity(
+                                                    Field().apply { name = Name(subAccessName) }
+                                                )
+                                            )
+                                        }
                                     }
-                                partialWrite?.let {
-                                    updatedPropertySet.add(PartialDataflowGranularity(it))
-                                }
                                 currentSet +=
                                     MapDstToSrcEntry(
                                         param,
@@ -2300,7 +2330,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             argumentValues.forEach { (v, _) ->
                 // We over approximate here and also add the main memory Address to the list of
                 // destinations
-                // TODO: Should this be true?
                 fieldAddresses.add(v to null)
 
                 val parentName = getNodeName(v)
@@ -2308,7 +2337,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     subAccessName.ifEmpty { (partialAccess?.partialTarget as? String) ?: "" }
                 val newName = Name(partialString, parentName)
                 fieldAddresses.addAll(
-                    doubleState.fetchFieldAddresses(identitySetOf(v), newName).map { it to null }
+                    doubleState.fetchFieldAddresses(identitySetOf(v), newName).map {
+                        it to partialString
+                    }
                 )
             }
             return Pair(fieldAddresses, destination)
@@ -2320,7 +2351,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     it.first to null
                 }
             // If the argument is a MemberAccess, we also collect the addresses of the bases
-            collectBases(argument).forEach { base ->
+            collectBasesAndOffsets(argument).forEach { (base, _) ->
                 doubleState.getAddresses(base, base).forEach { addr ->
                     destinationAddresses.add(addr to base.name.toString())
                 }
@@ -2402,8 +2433,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var doubleState = doubleState
         /* For Assigns, we update the value of the lhs with the rhs */
         val sources =
-            currentNode.rhs.flatMapTo(PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>()) {
-                doubleState.getValues(it, it).map { Triple(it.first, it.second, false) }
+            currentNode.rhs.flatMapTo(PowersetLattice.Element<Triple<Node?, Boolean, Field?>>()) {
+                doubleState.getValues(it, it).map { Triple(it.first, it.second, null) }
             }
         val destinations = identitySetOf<Node>()
         currentNode.lhs.forEach {
@@ -2488,8 +2519,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         destinations: IdentitySet<Node>,
     ): PointsToState.Element {
         val doubleState = doubleState
-        val bases = destinations.flatMap { destination -> collectBases(destination) }
-        bases.forEach { base ->
+        val basesAndOffsets =
+            destinations.flatMap { destination -> collectBasesAndOffsets(destination) }
+        basesAndOffsets.forEach { (base, offset) ->
             doubleState.getAddresses(base, base).forEach { baseAddress ->
                 val entry =
                     doubleState.declarationsState.computeIfAbsent(baseAddress) {
@@ -2499,8 +2531,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             PowersetLattice.Element(),
                         )
                     }
-                entry.third.clear()
-                entry.third.add(NodeWithPropertiesKey(base, equalLinkedHashSetOf(false)))
+                val newProperties = equalLinkedHashSetOf(false, PartialDataflowGranularity(offset))
+                // If we already have an entry with exactly the same properties (so a write to the
+                // same field), we remove that one
+                entry.third.removeIf { nwpk -> nwpk.properties.containsAll(newProperties) }
+                entry.third.add(NodeWithPropertiesKey(base, newProperties))
             }
         }
         return doubleState
@@ -3707,8 +3742,8 @@ fun PointsToState.Element.getNestedValues(
                 }
                 // If we have a MemberAccess, also check for the addresses of the bases
                 &&
-                collectBases(node)
-                    .flatMap { base -> this.getAddresses(base, base) }
+                collectBasesAndOffsets(node)
+                    .flatMap { (base, _) -> this.getAddresses(base, base) }
                     .none { addr -> this.hasDeclarationStateValueEntry(addr, excludeShortFSValues) }
         )
             PowersetLattice.Element()
@@ -3803,7 +3838,7 @@ fun PointsToState.Element.fetchFieldAddresses(
 suspend fun PointsToState.Element.updateValues(
     lattice: PointsToState,
     doubleState: PointsToState.Element,
-    sources: PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>,
+    sources: PowersetLattice.Element<Triple<Node?, Boolean, Field?>>,
     destinations: IdentitySet<Node>,
     // Node and short FS yes or no
     destinationAddresses: IdentitySet<Node>,
@@ -3832,9 +3867,6 @@ suspend fun PointsToState.Element.updateValues(
                     .filterTo(PowersetLattice.Element()) { it.first != null }
                     .mapTo(PowersetLattice.Element()) { Pair(it.first!!, it.second) }
 
-            // Check if we have any full writes
-            val fullSourcesExist = sources.any { !it.third }
-
             // TODO: Do we also need to fetch some properties here?
             // If we already have exactly this value in the state for the prevDFGs, we take that in
             // order not to confuse the iterateEOG function
@@ -3845,6 +3877,10 @@ suspend fun PointsToState.Element.updateValues(
                 if (existingEntries?.isNotEmpty() == true) prevDFG.addAll(existingEntries)
                 else prevDFG.add(lw)
             }
+
+            // Check if we have any full writes. This is the case if a source has as third element
+            // null, AKA does not write to a field
+            val fullSourcesExist = sources.any { it.third == null }
 
             // If we have any full writes, we eliminate the previous state
             if (fullSourcesExist) {
@@ -3857,6 +3893,17 @@ suspend fun PointsToState.Element.updateValues(
                     ),
                 )
             } else {
+                // Check if we have any writes to the same field and remove those
+                // TODO: this should be fields, but for now we deal with the names
+                val writtenFields = sources.mapNotNullTo(HashSet()) { it.third?.name?.localName }
+                doubleState.declarationsState[destAddr]?.third?.removeIf {
+                    it.properties.any { p ->
+                        ((p as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
+                            ?.name
+                            ?.localName in writtenFields
+                    }
+                }
+
                 doubleState =
                     lattice.pushToDeclarationsState(
                         doubleState,

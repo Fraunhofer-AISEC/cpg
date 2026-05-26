@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
@@ -4688,5 +4689,186 @@ class PointsToPassTest {
                 ?.name
                 ?.toString(),
         )
+    }
+
+    @Test
+    fun testMemberWriteDFG() {
+        val file = File("src/test/resources/pointsToPass/member_write_in_function.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // Functions
+        val mainFunc = tu.functions("main").single()
+        val setPointXFunc = tu.functions("set_point_x").single()
+
+        // Calls
+        val printfCall1 = mainFunc.calls("printf").first()
+        val printfCall2 = mainFunc.calls("printf").last()
+        val setPointXCall = mainFunc.calls[1]
+        assertNotNull(setPointXCall)
+
+        // Args
+        val pxArg1 = printfCall1.arguments[1] as? MemberAccess
+        assertNotNull(pxArg1)
+        val pyArg1 = printfCall1.arguments[2] as? MemberAccess
+        assertNotNull(pyArg1)
+        val pxArg2 = printfCall2.arguments[1] as? MemberAccess
+        assertNotNull(pxArg2)
+        val pyArg2 = printfCall2.arguments[2] as? MemberAccess
+        assertNotNull(pyArg2)
+
+        // Variables, Structs and Fields
+        val pVar = mainFunc.variables["p"]
+        assertNotNull(pVar)
+
+        val xField = tu.fields["x"]
+        assertNotNull(xField)
+
+        val yField = tu.fields["y"]
+        assertNotNull(yField)
+
+        // Div
+        val pxWrite = mainFunc.assigns[0].lhs.single() as? MemberAccess
+        assertNotNull(pxWrite)
+
+        val pyWrite = mainFunc.assigns[1].lhs.single() as? MemberAccess
+        assertNotNull(pyWrite)
+
+        val ppyWrite = mainFunc.assigns[2].lhs.single() as? MemberAccess
+        assertNotNull(ppyWrite)
+
+        val ppxWrite = setPointXFunc.assigns.single().lhs.single()
+        assertNotNull(ppxWrite)
+
+        // The actual tests
+        // In the 1st printf, p.x should have 2 prevDFG Edges:
+        // 1) One full to the lhs of the assign in Line 14
+        // 2) The fieldGranularity Edge to the base
+        assertEquals(2, pxArg1.prevDFG.size)
+        assertEquals(pxWrite, pxArg1.prevFullDFG.singleOrNull())
+        assertEquals(
+            pxArg1.base,
+            pxArg1.prevDFGEdges.singleOrNull { it.granularity is FieldDataflowGranularity }?.start,
+        )
+
+        // p.y should have the following DFG-Edges
+        // 1) One full to the lhs of the assign in Line 15
+        // 2) The fieldGranularity Edge to the base
+        assertEquals(2, pyArg1.prevDFG.size)
+        assertEquals(pyWrite, pyArg1.prevFullDFG.singleOrNull())
+        assertEquals(
+            pyArg1.base,
+            pyArg1.prevDFGEdges.singleOrNull { it.granularity is FieldDataflowGranularity }?.start,
+        )
+
+        // Their bases should have the same DFG edges:
+        // 1) One full to the variable
+        // 2) A partial to the lhs of the assign in Line 14
+        // 3) A partial to the lhs of the assign in Line 15
+        setOf(pxArg1.base, pyArg1.base).forEach { base ->
+            assertEquals(3, base.prevDFG.size)
+            assertEquals(pVar, base.prevFullDFG.singleOrNull())
+            assertEquals(
+                pxWrite.base,
+                base.prevDFGEdges
+                    .singleOrNull {
+                        ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
+                                as? Field)
+                            ?.name
+                            ?.localName == "x"
+                    }
+                    ?.start,
+            )
+            assertEquals(
+                pyWrite.base,
+                base.prevDFGEdges
+                    .singleOrNull {
+                        ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
+                                as? Field)
+                            ?.name
+                            ?.localName == "y"
+                    }
+                    ?.start,
+            )
+        }
+
+        ///////////////////////////////////// 2nd printf /////////////////
+
+        // The p.x from the 2nd printf should have 4 prevDFG Edges:
+        // 1) A fullDFG to the lhs of the assign in the set_point_x function
+        // 2) The fieldGranularity Edge to the base
+        // 3+4) The shortFS edges to the parameter and the call of set_point_x
+        assertEquals(4, pxArg2.prevDFG.size)
+        assertEquals(
+            ppxWrite,
+            pxArg2.prevDFGEdges
+                .singleOrNull {
+                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                        setPointXCall
+                }
+                ?.start,
+        )
+        assertEquals(
+            1,
+            pxArg2.prevDFGEdges.filter { it.granularity is FieldDataflowGranularity }.size,
+        )
+        assertEquals(
+            setOf(setPointXCall.arguments[1], setPointXCall),
+            pxArg2.prevFunctionSummaryDFG.toSet(),
+        )
+
+        // The p.y from the printf should have 2 prevDFG Edges:
+        // 1) A fullDFG to the lhs of the assign in Line 19
+        // 2) The fieldGranularity Edge to the base
+        assertEquals(ppyWrite, pyArg2.prevFullDFG.single())
+        assertEquals(
+            pyArg2.base,
+            pyArg2.prevDFGEdges.singleOrNull { it.granularity is FieldDataflowGranularity }?.start,
+        )
+
+        // Their basees have the same DFG-Edges:
+        // 1) One Full to the variable
+        // 2) One to the last write of field y in Line 18
+        // 3) One to the last write of field x via set_point_x
+        // 4+5) 2 ShortFS Edges to the call and the parameter of set_point_x
+        setOf(pyArg2.base, pxArg2.base).forEach { base ->
+            assertEquals(5, base.prevDFG.size)
+            assertEquals(pVar, base.prevFullDFG.singleOrNull())
+            assertEquals(
+                ppyWrite.base,
+                base.prevDFGEdges
+                    .singleOrNull {
+                        ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
+                                as? Field)
+                            ?.name
+                            ?.localName == "y"
+                    }
+                    ?.start,
+            )
+            assertEquals(
+                ppxWrite,
+                (base.prevDFGEdges.singleOrNull {
+                        ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
+                                as? Field)
+                            ?.name
+                            ?.localName == "x" &&
+                            !it.functionSummary &&
+                            (it as? ContextSensitiveDataflow)
+                                ?.callingContext
+                                ?.calls
+                                ?.singleOrNull() == setPointXCall
+                    } as ContextSensitiveDataflow)
+                    .start,
+            )
+            assertEquals(
+                setOf(setPointXCall.arguments[1], setPointXCall),
+                base.prevFunctionSummaryDFG.toSet(),
+            )
+        }
     }
 }
