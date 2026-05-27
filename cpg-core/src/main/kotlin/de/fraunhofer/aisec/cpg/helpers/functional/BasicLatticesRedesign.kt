@@ -1336,6 +1336,186 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
 }
 
 /**
+ * Like [MapLattice], but [Element] is backed by [HashMap] rather than [IdentityHashMap] so keys are
+ * compared by `equals` instead of reference identity.
+ *
+ * Use this when keys are value types (autoboxed `Int`, `String`, …) or any other class where two
+ * instances that compare equal should map to the same entry. The default [MapLattice] is correct
+ * when keys are CPG `Node`s (or other reference-typed entities) where identity *is* the intended
+ * equality; using it with value-typed keys silently produces duplicate entries after [lub] across
+ * branches.
+ */
+open class HashMapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
+    Lattice<HashMapLattice.Element<K, V>> {
+    override lateinit var elements: ConcurrentIdentitySet<Element<K, V>>
+
+    open class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
+        HashMap<K, V>(expectedMaxSize), Lattice.Element {
+
+        constructor() : this(32)
+
+        constructor(m: Map<K, V>) : this(m.size) {
+            putAll(m)
+        }
+
+        constructor(entries: Collection<Pair<K, V>>) : this(entries.size) {
+            putAll(entries)
+        }
+
+        constructor(vararg entries: Pair<K, V>) : this(entries.size) {
+            putAll(entries)
+        }
+
+        // Element equality is defined via the lattice order (two elements are equal iff their
+        // compare result is EQUAL), not via Map.equals which compares entry-by-entry against
+        // the wrong notion of value equality.
+        override fun equals(other: Any?): Boolean {
+            return other is Element<*, *> && this@Element.compare(other) == Order.EQUAL
+        }
+
+        /**
+         * Pointwise lattice order: maps are compared key-by-key against the [innerLattice]'s order.
+         * The result is GREATER if every key in `this` has a value `>=` the corresponding value in
+         * `other` (and `this` has at least one extra key or a strictly greater value), LESSER if
+         * the inverse holds, EQUAL if both maps have the same keys with EQUAL values, and UNEQUAL
+         * when some keys go one way and some the other (incomparable).
+         */
+        override fun compare(other: Lattice.Element): Order {
+            if (this === other) return Order.EQUAL
+
+            if (other !is Element<*, *>)
+                throw IllegalArgumentException(
+                    "$other should be of type HashMapLattice.Element<K, V> but is of type ${other.javaClass}"
+                )
+
+            @Suppress("UNCHECKED_CAST") val otherTyped = other as Element<K, V>
+            // `other` having a key we don't already counts as `this < other` up front.
+            val otherKeySetIsBigger = otherTyped.keys.any { it !in this.keys }
+
+            var someGreater = false
+            var someLesser = otherKeySetIsBigger
+            this.entries.forEach { (k, v) ->
+                val otherV = otherTyped[k]
+                if (otherV != null) {
+                    when (v.compare(otherV)) {
+                        Order.EQUAL -> {}
+                        Order.GREATER -> {
+                            // If we already saw a key going the other way, the maps are
+                            // pointwise-incomparable.
+                            if (someLesser) return Order.UNEQUAL
+                            someGreater = true
+                        }
+                        Order.LESSER -> {
+                            if (someGreater) return Order.UNEQUAL
+                            someLesser = true
+                        }
+                        Order.UNEQUAL -> return Order.UNEQUAL
+                    }
+                } else {
+                    // Key present in `this`, missing in `other` -> contributes "this is greater".
+                    if (someLesser) return Order.UNEQUAL
+                    someGreater = true
+                }
+            }
+            @Suppress("KotlinConstantConditions")
+            return when {
+                !someGreater && !someLesser -> Order.EQUAL
+                someLesser && !someGreater -> Order.LESSER
+                !someLesser && someGreater -> Order.GREATER
+                else -> Order.UNEQUAL
+            }
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun duplicate(): Element<K, V> {
+            // Deep-copy: clone every value via the inner lattice's duplicate so callers can
+            // mutate the result without aliasing the original's value lattices.
+            return Element(this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) })
+        }
+
+        override fun hashCode(): Int {
+            return super.hashCode()
+        }
+    }
+
+    override val bottom: Element<K, V>
+        get() = Element()
+
+    override suspend fun lub(
+        one: Element<K, V>,
+        two: Element<K, V>,
+        allowModify: Boolean,
+        widen: Boolean,
+        concurrencyCounter: Int,
+    ): Element<K, V> = coroutineScope {
+        val result: Element<K, V>
+        if (allowModify) {
+            // In-place merge: walk `two`'s entries, add or lub them into `one`. Used on the
+            // worklist's hot path where callers already own `one` and don't need a new map.
+            two.entries.forEachMaybeParallel { (k, v) ->
+                val entry = one[k]
+                if (entry == null) {
+                    // Key only in `two` -> copy it across.
+                    one.put(k, v)
+                } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
+                    // Key in both with different values -> lub them in-place.
+                    one[k]?.let { oneValue ->
+                        // The outer forEachMaybeParallel already spawns CPU_CORES coroutines;
+                        // tell the inner lub not to spawn more.
+                        innerLattice.lub(oneValue, v, allowModify = true, widen = widen, 1)
+                    }
+                }
+            }
+            result = one
+        } else {
+            // Pure variant: build a fresh map so neither input is mutated. Used when the caller
+            // needs both `one` and `two` to survive (e.g. forking branches).
+            val allKeys = HashSet<K>(one.keys.size + two.keys.size)
+            allKeys.addAll(one.keys)
+            allKeys.addAll(two.keys)
+            val newMap = ConcurrentHashMap<K, V>(allKeys.size)
+            allKeys.forEachMaybeParallel { key ->
+                val thisValue = one[key]
+                val otherValue = two[key]
+                val newValue =
+                    if (thisValue != null && otherValue != null) {
+                        innerLattice.lub(thisValue, otherValue, allowModify = false, widen, 1)
+                    } else thisValue ?: otherValue
+                newValue?.let { newMap.put(key, it) }
+            }
+            result = Element(newMap)
+        }
+        return@coroutineScope result
+    }
+
+    override suspend fun glb(one: Element<K, V>, two: Element<K, V>): Element<K, V> {
+        // Pointwise glb: only keys present in BOTH maps survive; their values are glb'd. Keys
+        // missing from either side drop out (treated as `bottom` for the absent side, and
+        // `glb(x, bottom) = bottom` which we don't bother storing explicitly).
+        val allKeys = one.keys.intersect(two.keys)
+        val newMap = ConcurrentHashMap<K, V>()
+        allKeys.forEachMaybeParallel { key ->
+            val thisValue = one[key]
+            val otherValue = two[key]
+            val newValue =
+                if (thisValue != null && otherValue != null) {
+                    innerLattice.glb(thisValue, otherValue)
+                } else innerLattice.bottom
+            newMap.put(key, newValue)
+        }
+        return Element(newMap)
+    }
+
+    override fun compare(one: Element<K, V>, two: Element<K, V>): Order {
+        return one.compare(two)
+    }
+
+    override fun duplicate(one: Element<K, V>): Element<K, V> {
+        return one.duplicate()
+    }
+}
+
+/**
  * Implements the [Lattice] for a lattice over two other lattices which are represented by
  * [innerLattice1] and [innerLattice2].
  */
