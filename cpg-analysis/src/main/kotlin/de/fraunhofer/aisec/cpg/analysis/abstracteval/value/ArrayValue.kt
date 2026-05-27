@@ -59,14 +59,6 @@ class ArraySizeEvaluator : ValueEvaluator() {
     override fun evaluate(node: Any?, useCache: Boolean): Any? {
         if (node !is Node) return cannotEvaluate(null, this)
 
-        // Shape-based shortcut: literals, initializer lists, ArrayConstruction, and malloc with
-        // a constant argument all carry their size in their AST shape, so we can answer without
-        // walking the EOG. For nodes whose size lives in interval-analysis state (Variable,
-        // Reference, branch-merged allocations) directSize returns BOTTOM and we fall through
-        // to the full analysis.
-        val direct = ArrayValue.directSize(node)
-        if (direct !is LatticeInterval.BOTTOM) return direct
-
         return if (useCache)
             valuesCache.getOrPut(node.hashCode()) {
                 AbstractIntervalEvaluator().evaluate(node, ArrayValue::class)
@@ -90,10 +82,10 @@ class ArrayValue : Value<LatticeInterval> {
         var size: LatticeInterval = LatticeInterval.BOTTOM
         var target: Node? = null
         if (node is Variable && node.initializer != null && node.type is PointerType) {
-            size = directSize(node.initializer!!)
+            size = getSize(node.initializer!!)
             target = node
         } else if (node is Assign && node.rhs.size == 1 && node.lhs.size == 1) {
-            size = directSize(node.rhs.single())
+            size = getSize(node.rhs.single())
             // Anchor on the underlying Variable rather than the LHS Reference so that branches
             // writing to the same variable (e.g. `if (c) buf = malloc(16) else buf = malloc(64)`)
             // share a single key in general state — without this, each branch pushes against its
@@ -116,46 +108,43 @@ class ArrayValue : Value<LatticeInterval> {
         return current
     }
 
-    companion object {
-        /**
-         * Size of [node] determinable directly from its AST shape: string literals, fixed
-         * initializer lists, statically-dimensioned [ArrayConstruction], and `malloc` with a
-         * constant argument. Returns [LatticeInterval.BOTTOM] for nodes whose size requires
-         * interval-analysis context (Variable reads, References, branch-merged allocations, unknown
-         * calls) — callers should run [AbstractIntervalEvaluator] as a fallback in that case.
-         */
-        fun directSize(node: Node): LatticeInterval =
-            when (node) {
-                is Literal<*> -> {
-                    val v = node.value
-                    if (v is String) LatticeInterval.Bounded(v.length.toLong(), v.length.toLong())
-                    else LatticeInterval.Bounded(1, 1)
-                }
-                is InitializerList -> {
-                    val length = node.initializers.size.toLong()
-                    LatticeInterval.Bounded(length, length)
-                }
-                is ArrayConstruction -> {
-                    if (node.initializer != null) {
-                        directSize(node.initializer!!)
-                    } else {
-                        val length =
-                            node.dimensions
-                                .map { (it.value.value as Number).toLong() }
-                                .reduce { acc, dimension -> acc * dimension }
-                        LatticeInterval.Bounded(length, length)
-                    }
-                }
-                is Call -> {
-                    if (node.name.localName == "malloc") {
-                        (node.arguments.singleOrNull()?.value?.value as? Number)?.toLong()?.let {
-                            LatticeInterval.Bounded(it, it)
-                        } ?: LatticeInterval.BOTTOM
-                    } else {
-                        LatticeInterval.BOTTOM
-                    }
-                }
-                else -> LatticeInterval.BOTTOM
+    private fun getSize(node: Node): LatticeInterval =
+        when (node) {
+            is Literal<*> -> {
+                val v = node.value
+                if (v is String) LatticeInterval.Bounded(v.length.toLong(), v.length.toLong())
+                else LatticeInterval.Bounded(1, 1)
             }
-    }
+            is InitializerList -> {
+                val length = node.initializers.size.toLong()
+                LatticeInterval.Bounded(length, length)
+            }
+            is ArrayConstruction -> {
+                val init = node.initializer
+                if (init != null) {
+                    getSize(init)
+                } else {
+                    // Each dimension must constant-evaluate to a Number; if any doesn't (or
+                    // there are no dimensions at all), we can't determine the size statically and
+                    // must return BOTTOM rather than crash on a ClassCastException / empty reduce.
+                    val lengths = node.dimensions.map { (it.value.value as? Number)?.toLong() }
+                    if (lengths.isEmpty() || lengths.any { it == null }) {
+                        LatticeInterval.BOTTOM
+                    } else {
+                        val product = lengths.filterNotNull().reduce { acc, d -> acc * d }
+                        LatticeInterval.Bounded(product, product)
+                    }
+                }
+            }
+            is Call -> {
+                if (node.name.localName == "malloc") {
+                    (node.arguments.singleOrNull()?.value?.value as? Number)?.toLong()?.let {
+                        LatticeInterval.Bounded(it, it)
+                    } ?: LatticeInterval.BOTTOM
+                } else {
+                    LatticeInterval.BOTTOM
+                }
+            }
+            else -> LatticeInterval.BOTTOM
+        }
 }

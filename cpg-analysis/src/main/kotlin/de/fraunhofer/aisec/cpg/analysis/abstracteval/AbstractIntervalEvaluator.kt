@@ -95,16 +95,17 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
         get() = DeclarationStateElement()
 
     /**
-     * Merges two declaration states by [Lattice.lub] on the inner lattice, but matches keys by
-     * `equals` rather than reference identity.
+     * Merges two declaration states by [Lattice.lub] on the inner lattice, going through
+     * [DeclarationStateElement]'s `get`/`put` overrides so equal-value [Int] keys collapse onto a
+     * single entry.
      *
      * Background: [MapLattice.Element] inherits from [IdentityHashMap], so the inherited [lub]
      * treats two value-equal-but-distinct keys as separate entries. Our keys are autoboxed `Int`s
      * from [Node.objectIdentifier]; two branches of an `if/else` produce equal but distinct
      * `Integer` instances, so a naive merge of `if(c) buf=malloc(16) else buf=malloc(64)` ends up
-     * with two `buf` entries instead of a single one holding `[16, 64]`. Iterating entries and
-     * looking up equal keys ourselves restores value-based merge semantics without changing the
-     * underlying lattice infrastructure.
+     * with two `buf` entries instead of a single one holding `[16, 64]`. The element's overridden
+     * `get`/`put` already canonicalize by value for `Int` keys, so a plain `result[k]` / `result[k]
+     * = ...` loop is enough — no extra `keys.firstOrNull` scan.
      */
     override suspend fun lub(
         one: Element<NodeId, NewIntervalLattice.Element>,
@@ -115,16 +116,11 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
     ): Element<NodeId, NewIntervalLattice.Element> {
         val result = if (allowModify) one else DeclarationStateElement<NodeId>(one)
         for ((k, v) in two.entries) {
-            val existingKey = result.keys.firstOrNull { it == k }
-            if (existingKey != null) {
-                val current = result[existingKey]
-                if (current != null) {
-                    result[existingKey] =
-                        innerLattice.lub(current, v, allowModify, widen, concurrencyCounter)
-                }
-            } else {
-                result[k] = v
-            }
+            val current = result[k]
+            result[k] =
+                if (current != null)
+                    innerLattice.lub(current, v, allowModify, widen, concurrencyCounter)
+                else v
         }
         return result
     }

@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.ArraySizeEvaluator
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.ArrayValue
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
@@ -53,27 +52,25 @@ class ArraySizeEvaluatorTest {
 
     /** `char buf[8]` — size carried by the [ArrayConstruction] dimension. */
     @Test
-    fun fixedBuffer() {
+    fun testFixedBuffer() {
         val buf = tu.functions["fixed_buffer"]?.variables?.get("buf")
         assertNotNull(buf)
         assertEquals(LatticeInterval.Bounded(8, 8), ArraySizeEvaluator().evaluate(buf))
     }
 
-    /** `char *p = malloc(64)` — size carried by the malloc-with-constant shortcut. */
+    /** `char *p = malloc(64)` — size derived from the constant `malloc` argument. */
     @Test
-    fun heapAlloc() {
+    fun testHeapAlloc() {
         val p = tu.functions["heap_alloc"]?.variables?.get("p")
         assertNotNull(p)
         assertEquals(LatticeInterval.Bounded(64, 64), ArraySizeEvaluator().evaluate(p))
     }
 
-    /** A bare string literal goes through [ArrayValue.directSize] without any EOG walk. */
+    /** `char *s = "hello"` — size derived from the string literal initializer's length. */
     @Test
-    fun stringLiteralShortcut() {
+    fun testStringLiteralInitializer() {
         val s = tu.functions["string_literal"]?.variables?.get("s")
         assertNotNull(s)
-        // Variable -> walk EOG -> ArrayValue.applyEffect uses directSize on the "hello"
-        // initializer.
         assertEquals(LatticeInterval.Bounded(5, 5), ArraySizeEvaluator().evaluate(s))
     }
 
@@ -82,7 +79,7 @@ class ArraySizeEvaluatorTest {
      * answer. The shape-shortcut can't see this — only the full interval analysis can.
      */
     @Test
-    fun boundedAllocRange() {
+    fun testBoundedAllocRange() {
         val func = tu.functions["bounded_alloc"]
         assertNotNull(func)
         val buf = func.variables["buf"]
