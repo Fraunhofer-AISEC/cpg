@@ -802,13 +802,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             node.functionSummary.computeIfAbsent(param) { ConcurrentHashMap.newKeySet() }
         val filteredLastWrites =
             lastWrites
-                // for shortFS,only use these, and for !shortFS,
-                // only those
+                // for shortFS,only use these, and for !shortFS, only those
                 .filterTo(PowersetLattice.Element()) { shortFS in it.properties }
-        // If the value is a newly created MemoryAddress, we only
-        // set the
-        // name so that we know later that we have to create a new
-        // MemoryAddress for each Call
+        // If the value is a newly created MemoryAddress, we only set the name so that we know later
+        // that we have to create a new MemoryAddress for each Call
         val addressName = (value as? MemoryAddress)?.name?.localName
         val v =
             if (addressName?.startsWith("NewMemoryAddress") == true) Name(addressName, node.name)
@@ -824,7 +821,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             )
         )
         // Additionally, we store this as a shortFunctionSummary
-        // were the function writes to the parameter
+        // where the function writes to the parameter
         val shortFSEntry =
             FSEntry(
                 dstValueDepth,
@@ -836,14 +833,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             )
         // Add the new entry if it doesn't exist yet
         synchronized(existingEntry) {
+            // TODO: Do we need the synchronized? Can we be more efficient in finding matching
+            // entries?
             if (existingEntry.none { it == shortFSEntry }) existingEntry.add(shortFSEntry)
         }
         val propertySet = identitySetOf<Any>(true)
         if (subAccessName != "") propertySet.add(Field().apply { name = Name(subAccessName) })
 
         // Create the detailed shortFS. Like, which parameter
-        // influences
-        // what.
+        // influences what.
         // This may take a lot of time, so this is optional
         if ((passConfig<Configuration>()?.detailedShortFS ?: true)) {
             if (!shortFS) {
@@ -851,6 +849,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // Parameter and
                 // if so, add this information to the
                 // functionSummary
+                // TODO: Use memory value edges instead of DFG because these are shortcuts.
                 val paths =
                     value.followDFGEdgesUntilHit(
                         collectFailedPaths = false,
@@ -867,16 +866,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         predicate = {
                             it is ParameterMemoryValue &&
                                 /* If it's a ParameterMemoryValue from the node's
-                                parameters, it has to have a DFG Node to one
+                                parameters, it has to have a DFG edge to one
                                 of the node's parameters. Either partial to a derefvalue or full to the Parameter */
                                 it.memoryValueUsageEdges
-                                    .filter {
-                                        ((it.granularity is PartialDataflowGranularity<*> &&
-                                            ((it.granularity as PartialDataflowGranularity<*>)
-                                                    .partialTarget as? String)
-                                                ?.endsWith("derefvalue") == true) ||
-                                            (it.granularity is FullDataflowGranularity &&
-                                                it.end is Parameter)) && it.end in node.parameters
+                                    .filter { edge ->
+                                        ((((edge.granularity as? PartialDataflowGranularity<*>)
+                                                ?.partialTarget as? String)
+                                            ?.endsWith("derefvalue") == true) ||
+                                            (edge.granularity is FullDataflowGranularity &&
+                                                edge.end is Parameter)) &&
+                                            edge.end in node.parameters
                                     }
                                     .size == 1 &&
                                 node.parameters.any { param ->
@@ -885,7 +884,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         },
                     )
                 paths.fulfilled
-                    .map { it.nodes.last() }
+                    .mapTo(IdentitySet()) { it.nodes.last() }
                     .forEach { sourceParamValue ->
                         val matchingDeclarations =
                             if (sourceParamValue is ParameterMemoryValue)
@@ -949,63 +948,65 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // We look at the deref and the derefderef, hence for depth 2 and 3
                     // We have to look up the index of the ParameterMemoryValue to check out
                     // changes on the dereferences
-                    values
-                        .filterTo(concurrentIdentitySetOf()) {
-                            doubleState.hasDeclarationStateValueEntry(it)
-                        }
-                        .forEach { indexes.add(IndexKey(it, 2)) }
-                    // Additionally, we can check out the "dereference" itself to look for
-                    // "derefdereferences"
-                    values
-                        .filterTo(identitySetOf()) { doubleState.hasDeclarationStateValueEntry(it) }
-                        .flatMap { value ->
-                            doubleState.getValues(value, value).mapTo(PowersetLattice.Element()) {
-                                it.first
+                    values.forEach { value ->
+                        if (doubleState.hasDeclarationStateValueEntry(value)) {
+                            indexes.add(IndexKey(value, 2))
+
+                            // Additionally, we can check out the "dereference" itself to look for
+                            // "derefdereferences"
+                            val derefValues =
+                                doubleState.getValues(value, value).mapTo(
+                                    PowersetLattice.Element()
+                                ) {
+                                    it.first
+                                }
+                            // We are already inside $paramCount coroutines, so we have to divide
+                            // the CPU_CORES by these routines
+                            derefValues.forEachMaybeParallel(parallelism = innerCoroutineCounter) {
+                                value ->
+                                if (doubleState.hasDeclarationStateValueEntry(value))
+                                    indexes.add(IndexKey(value, 3))
                             }
                         }
-                        // We are already inside $paramCount coroutines, so we have to divide
-                        // the CPU_CORES by these routines
-                        .forEachMaybeParallel(parallelism = innerCoroutineCounter) { value ->
-                            if (doubleState.hasDeclarationStateValueEntry(value))
-                                indexes.add(IndexKey(value, 3))
-                        }
+                    }
 
                     indexes.forEach { (idx, dstValueDepth) ->
-                        val stateEntries =
-                            doubleState
-                                .fetchValueFromDeclarationState(
-                                    idx,
-                                    fetchFields = true,
-                                    excludeShortFSValues = true,
-                                )
-                                .filterTo(PowersetLattice.Element()) { it.value.name != param.name }
-                        stateEntries
-                            /* See if we can find something that is different from the initial value*/
-                            .filterTo(PowersetLattice.Element()) {
-                                /* Filter the PMVs from this parameter*/
-                                !(it.value is ParameterMemoryValue &&
-                                    it.value.name.localName.contains("derefvalue") &&
-                                    it.value.name.parent?.localName == param.name.localName)
-                                /* Filter the unknownMemoryValues that weren't written to*/
-                                && !(it.value is UnknownMemoryValue && it.lastWrites.isEmpty())
-                            }
-                            // If so, store the information for the parameter in the
-                            // FunctionSummary
-                            // We are already inside $paramCount coroutines, so we have to
-                            // divide the CPU_CORES by these routines
+                        doubleState
+                            .fetchValueFromDeclarationState(
+                                idx,
+                                fetchFields = true,
+                                excludeShortFSValues = true,
+                            )
                             .forEachMaybeParallel(
                                 parallelism = innerCoroutineCounter,
                                 minChunkSize = 1,
                             ) { (value, shortFS, subAccessName, lastWrites) ->
-                                addParameterInfoToFS(
-                                    node,
-                                    param,
-                                    dstValueDepth,
-                                    value,
-                                    shortFS,
-                                    subAccessName,
-                                    lastWrites,
-                                )
+                                /* See if we can find something that is different from the initial value.*/
+                                if (
+                                    value.name != param.name &&
+                                        /*Filter the PMVs from this parameter*/
+                                        !(value is ParameterMemoryValue &&
+                                            value.name.localName.contains("derefvalue") &&
+                                            value.name.parent?.localName == param.name.localName)
+                                        /* Filter the unknownMemoryValues that weren't written to*/
+                                        &&
+                                        !(value is UnknownMemoryValue && lastWrites.isEmpty())
+                                ) {
+
+                                    // If so, store the information for the parameter in the
+                                    // FunctionSummary
+                                    // We are already inside $paramCount coroutines, so we have to
+                                    // divide the CPU_CORES by these routines
+                                    addParameterInfoToFS(
+                                        node,
+                                        param,
+                                        dstValueDepth,
+                                        value,
+                                        shortFS,
+                                        subAccessName,
+                                        lastWrites,
+                                    )
+                                }
                             }
                     }
                 }
