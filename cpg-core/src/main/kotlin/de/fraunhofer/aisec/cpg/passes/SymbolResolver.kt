@@ -49,6 +49,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInferenceFromFunction
 import de.fraunhofer.aisec.cpg.passes.inference.tryVariableInference
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import java.util.IdentityHashMap
 import kotlin.collections.firstOrNull
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -721,7 +722,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(SymbolResolver::class.java)
 
-        val componentsToTemplates = mutableMapOf<Component, MutableList<Template>>()
+        val componentsToTemplates = IdentityHashMap<Component, MutableList<Template>>()
 
         /**
          * Adds implicit duplicates of the TemplateParams to the implicit Construction
