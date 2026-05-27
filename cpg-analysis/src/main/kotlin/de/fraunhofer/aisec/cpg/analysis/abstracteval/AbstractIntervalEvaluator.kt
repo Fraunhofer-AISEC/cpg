@@ -89,49 +89,38 @@ class TupleState<NodeId>(
 typealias TupleStateElement<NodeId> =
     TupleLattice.Element<DeclarationState.DeclarationStateElement<NodeId>, NewIntervalStateElement>
 
+/**
+ * Per-declaration interval state. Keys are autoboxed [Int]s produced by [Node.objectIdentifier]
+ * (or, for nodes without an identifier, the [Node] itself). Because the same logical variable
+ * yields equal-but-not-identical `Integer` instances across branches, this lattice must compare
+ * keys by `equals` rather than reference identity — hence [HashMapLattice] rather than the default
+ * [MapLattice]. Without that, an `if/else` writing the same variable in both arms would survive
+ * [lub] as two separate entries.
+ */
 class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>) :
-    MapLattice<NodeId, NewIntervalLattice.Element>(innerLattice) {
+    HashMapLattice<NodeId, NewIntervalLattice.Element>(innerLattice) {
     override val bottom: DeclarationStateElement<NodeId>
         get() = DeclarationStateElement()
 
-    /**
-     * Merges two declaration states by [Lattice.lub] on the inner lattice, going through
-     * [DeclarationStateElement]'s `get`/`put` overrides so equal-value [Int] keys collapse onto a
-     * single entry.
-     *
-     * Background: [MapLattice.Element] inherits from [IdentityHashMap], so the inherited [lub]
-     * treats two value-equal-but-distinct keys as separate entries. Our keys are autoboxed `Int`s
-     * from [Node.objectIdentifier]; two branches of an `if/else` produce equal but distinct
-     * `Integer` instances, so a naive merge of `if(c) buf=malloc(16) else buf=malloc(64)` ends up
-     * with two `buf` entries instead of a single one holding `[16, 64]`. The element's overridden
-     * `get`/`put` already canonicalize by value for `Int` keys, so a plain `result[k]` / `result[k]
-     * = ...` loop is enough — no extra `keys.firstOrNull` scan.
-     */
+    // HashMapLattice's lub/glb return a plain `Element`, but the typealias `TupleStateElement`
+    // pins `.first` to `DeclarationStateElement`. Re-wrap so the cast at call sites holds.
     override suspend fun lub(
         one: Element<NodeId, NewIntervalLattice.Element>,
         two: Element<NodeId, NewIntervalLattice.Element>,
         allowModify: Boolean,
         widen: Boolean,
         concurrencyCounter: Int,
-    ): Element<NodeId, NewIntervalLattice.Element> {
-        val result = if (allowModify) one else DeclarationStateElement<NodeId>(one)
-        for ((k, v) in two.entries) {
-            val current = result[k]
-            result[k] =
-                if (current != null)
-                    innerLattice.lub(current, v, allowModify, widen, concurrencyCounter)
-                else v
-        }
-        return result
+    ): DeclarationStateElement<NodeId> {
+        val result = super.lub(one, two, allowModify, widen, concurrencyCounter)
+        return result as? DeclarationStateElement<NodeId> ?: DeclarationStateElement(result)
     }
 
     override suspend fun glb(
         one: Element<NodeId, NewIntervalLattice.Element>,
         two: Element<NodeId, NewIntervalLattice.Element>,
-    ): Element<NodeId, NewIntervalLattice.Element> {
+    ): DeclarationStateElement<NodeId> {
         val result = super.glb(one, two)
-        // If the result is a DeclarationStateElement, we can return it directly
-        return result as? DeclarationStateElement<NodeId> ?: DeclarationStateElement<NodeId>(result)
+        return result as? DeclarationStateElement<NodeId> ?: DeclarationStateElement(result)
     }
 
     class DeclarationStateElement<NodeId>(expectedMaxSize: Int) :
@@ -152,8 +141,10 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
             putAll(entries)
         }
 
+        // Narrow the equality contract to `DeclarationStateElement` so two structurally-equal
+        // maps of different concrete subtypes still don't compare equal.
         override fun equals(other: Any?): Boolean {
-            return other is DeclarationStateElement<NodeId> &&
+            return other is DeclarationStateElement<*> &&
                 this@DeclarationStateElement.compare(other) == Order.EQUAL
         }
 
@@ -161,46 +152,23 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
             return super.hashCode()
         }
 
+        // Narrow the return type so callers see `DeclarationStateElement`, not the parent
+        // `HashMapLattice.Element`.
         override fun duplicate(): DeclarationStateElement<NodeId> {
             return DeclarationStateElement(
                 this.map { (k, v) -> Pair<NodeId, NewIntervalLattice.Element>(k, v.duplicate()) }
             )
         }
 
-        fun findKey(nodeId: NodeId): NodeId {
-            return if (nodeId is Int) {
-                this.entries.singleOrNull { it.key == nodeId }?.key ?: nodeId
-            } else nodeId
-        }
-
-        override fun containsKey(key: NodeId?): Boolean {
-            return if (key is Int) {
-                this.entries.singleOrNull { it.key == key } != null
-            } else {
-                super.containsKey(key)
-            }
-        }
-
-        override fun put(
-            key: NodeId?,
-            value: NewIntervalLattice.Element?,
-        ): NewIntervalLattice.Element? {
-            val actualKey = key?.let { findKey(it) }
-            return super.put(actualKey, value)
-        }
-
         /**
-         * Retrieves the interval element for the given [nodeId] from the declaration state element.
-         *
-         * @param nodeId The identifier of the node.
-         * @return The [NewIntervalLattice.Element] for the node, or null if not found.
+         * Accept a nullable key so callers can write `state[node.objectIdentifier()] = v` directly
+         * — `objectIdentifier()` returns `Int?` and Kotlin's strict-typed `[]=` operator (from the
+         * `MutableMap` extension) would otherwise reject a nullable key. A `null` key is silently
+         * dropped: nodes without an identifier have no canonical home in the state, so storing them
+         * would just leak unreachable entries.
          */
-        override operator fun get(nodeId: NodeId): NewIntervalLattice.Element? {
-            return if (nodeId is Int) {
-                this.entries.singleOrNull { it.key == nodeId }?.value
-            } else {
-                super.get(nodeId)
-            }
+        operator fun set(key: NodeId?, value: NewIntervalLattice.Element) {
+            if (key != null) super.put(key, value)
         }
     }
 }
