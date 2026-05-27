@@ -2053,32 +2053,27 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 )
                                 .mapTo(identitySetOf()) { it.first }
                         else identitySetOf(currentNode.arguments[srcNode.argumentIndex])
-                    values.forEach { value ->
-                        destinationAddresses
-                            .filter { it.first != null }
-                            .forEach { (d, partialWrite) ->
-                                // The extracted value might come from a state we
-                                // created for a short function summary. If so, we
-                                // have to store that info in the map
-                                val updatedPropertySet =
-                                    equalLinkedHashSetOf<Any>().apply {
-                                        addAll(propertySet)
-                                        add(shortFS)
-                                    }
-                                partialWrite?.let {
-                                    updatedPropertySet.add(PartialDataflowGranularity(it))
+
+                    destinationAddresses
+                        .filter { it.first != null }
+                        .forEach { (d, partialWrite) ->
+                            // The extracted value might come from a state we
+                            // created for a short function summary. If so, we
+                            // have to store that info in the map
+                            val updatedPropertySet =
+                                createPropertySet(propertySet, shortFS, partialWrite)
+                            val currentSet =
+                                mapDstToSrc.computeIfAbsent(d!!) { concurrentIdentitySetOf() }
+
+                            val filteredCurrentSet =
+                                currentSet.filter {
+                                    it.lastWrites.parallelEquals(
+                                        PowersetLattice.Element(lastWrites.singleOrNull())
+                                    ) && it.propertySet == updatedPropertySet
                                 }
-                                val currentSet =
-                                    mapDstToSrc.computeIfAbsent(d!!) { concurrentIdentitySetOf() }
-                                if (
-                                    currentSet.none {
-                                        it.srcNode === value &&
-                                            it.lastWrites.parallelEquals(
-                                                PowersetLattice.Element(lastWrites.singleOrNull())
-                                            ) &&
-                                            it.propertySet == updatedPropertySet
-                                    }
-                                ) {
+
+                            values.forEach { value ->
+                                if (filteredCurrentSet.none { it.srcNode === value }) {
                                     currentSet +=
                                         MapDstToSrcEntry(
                                             param,
@@ -2089,7 +2084,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         )
                                 }
                             }
-                    }
+                        }
                 }
             }
 
@@ -2097,40 +2092,29 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // In case the FunctionSummary says that we have to use the
                 // dereferenced value here, we look up the argument,
                 // dereference it, and then add it to the sources
-                currentNode.invokes
-                    .flatMap { it.parameters }
-                    .filterTo(identitySetOf()) {
-                        it.name.localName == srcNode.name.parent?.localName
-                    }
-                    .forEach {
-                        if (it.argumentIndex < currentNode.arguments.size) {
-                            val arg = currentNode.arguments[it.argumentIndex]
-                            destinationAddresses
-                                .filter { it.first != null }
-                                .forEach { (d, partialWrite) ->
-                                    val updatedPropertySet =
-                                        equalLinkedHashSetOf<Any>().apply {
-                                            addAll(propertySet)
-                                            add(shortFS)
-                                        }
-                                    partialWrite?.let {
-                                        updatedPropertySet.add(PartialDataflowGranularity(it))
-                                    }
-                                    val currentSet =
-                                        mapDstToSrc.computeIfAbsent(d!!) {
-                                            concurrentIdentitySetOf()
-                                        }
+                destinationAddresses
+                    .filter { it.first != null }
+                    .forEach { (d, partialWrite) ->
+                        val updatedPropertySet =
+                            createPropertySet(propertySet, shortFS, partialWrite)
+                        val currentSet =
+                            mapDstToSrc.computeIfAbsent(d!!) { concurrentIdentitySetOf() }
+                        val filteredCurrentSet =
+                            currentSet.filter {
+                                it.lastWrites.parallelEquals(PowersetLattice.Element(lastWrites)) &&
+                                    it.propertySet == updatedPropertySet
+                            }
+                        currentNode.invokes
+                            .flatMap { it.parameters }
+                            .filterTo(identitySetOf()) {
+                                it.name.localName == srcNode.name.parent?.localName
+                            }
+                            .forEach { parameter ->
+                                if (parameter.argumentIndex < currentNode.arguments.size) {
+                                    val arg = currentNode.arguments[parameter.argumentIndex]
                                     doubleState.getNestedValues(arg, srcValueDepth).forEach {
                                         (value, _) ->
-                                        if (
-                                            currentSet.none {
-                                                it.srcNode === value &&
-                                                    it.lastWrites.parallelEquals(
-                                                        PowersetLattice.Element(lastWrites)
-                                                    ) &&
-                                                    it.propertySet == updatedPropertySet
-                                            }
-                                        ) {
+                                        if (filteredCurrentSet.none { it.srcNode === value }) {
                                             currentSet +=
                                                 MapDstToSrcEntry(
                                                     param,
@@ -2142,7 +2126,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         }
                                     }
                                 }
-                        }
+                            }
                     }
             }
 
@@ -2153,11 +2137,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         val currentSet =
                             mapDstToSrc.computeIfAbsent(d!!) { concurrentIdentitySetOf() }
                         val updatedPropertySet =
-                            equalLinkedHashSetOf<Any>().apply {
-                                addAll(propertySet)
-                                add(shortFS)
-                            }
-                        partialWrite?.let { updatedPropertySet.add(PartialDataflowGranularity(it)) }
+                            createPropertySet(propertySet, shortFS, partialWrite)
                         if (
                             currentSet.none {
                                 it.srcNode === srcNode &&
@@ -2194,22 +2174,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     }
                                 } ?: PowersetLattice.Element(Pair(null, shortFS))
 
+                        val filteredCurrentSet = currentSet.filter { it.lastWrites === lastWrites }
                         newSet.forEach { pair ->
                             if (
-                                currentSet.none {
-                                    it.srcNode === pair.first &&
-                                        it.lastWrites === lastWrites &&
-                                        pair.second in it.propertySet
+                                filteredCurrentSet.none {
+                                    it.srcNode === pair.first && pair.second in it.propertySet
                                 }
                             ) {
                                 val updatedPropertySet =
-                                    equalLinkedHashSetOf<Any>().apply {
-                                        addAll(propertySet)
-                                        add(shortFS)
-                                    }
-                                partialWrite?.let {
-                                    updatedPropertySet.add(PartialDataflowGranularity(it))
-                                }
+                                    createPropertySet(propertySet, shortFS, partialWrite)
                                 currentSet +=
                                     MapDstToSrcEntry(
                                         param,
@@ -2224,6 +2197,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
         }
         return mapDstToSrc
+    }
+
+    private fun createPropertySet(
+        propertySet: EqualLinkedHashSet<Any>,
+        shortFS: Boolean,
+        partialWrite: String?,
+    ): EqualLinkedHashSet<Any> {
+        val updatedPropertySet =
+            equalLinkedHashSetOf<Any>().apply {
+                addAll(propertySet)
+                add(shortFS)
+            }
+        partialWrite?.let { updatedPropertySet.add(PartialDataflowGranularity(it)) }
+        return updatedPropertySet
     }
 
     /** Returns a Pair of destination (for the general State) and destinationAddresses */
@@ -2991,7 +2978,7 @@ suspend fun PointsToState.push(
     // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
     // iterateEOG function
     val newLatticeCopy = newLatticeElement.duplicate()
-    newLatticeElement.third.forEach { existingEntry ->
+    newLatticeElement.third.forEachMaybeParallel { existingEntry ->
         if (
             currentState.generalState[newNode]?.third?.any {
                 it.node === existingEntry.node && it.properties == existingEntry.properties
@@ -3021,20 +3008,18 @@ suspend fun PointsToState.pushToDeclarationsState(
     // iterateEOG function
     val newLatticeCopy = newLatticeElement.duplicate()
 
-    coroutineScope {
-        newLatticeElement.second.forEachMaybeParallel { pair ->
-            if (
-                currentState.declarationsState[newNode]?.second?.any {
-                    it.first === pair.first && it.second == pair.second
-                } == true
-            )
-                newLatticeCopy.second.remove(pair)
-        }
+    newLatticeElement.second.forEachMaybeParallel { pair ->
+        if (
+            currentState.declarationsState[newNode]?.second?.any {
+                it.first === pair.first && it.second == pair.second
+            } == true
+        )
+            newLatticeCopy.second.remove(pair)
+    }
 
-        newLatticeElement.third.forEachMaybeParallel { nwpk ->
-            if (currentState.declarationsState[newNode]?.third?.contains(nwpk) == true) {
-                newLatticeCopy.third.remove(nwpk)
-            }
+    newLatticeElement.third.forEachMaybeParallel { nwpk ->
+        if (currentState.declarationsState[newNode]?.third?.contains(nwpk) == true) {
+            newLatticeCopy.third.remove(nwpk)
         }
     }
 
@@ -3201,22 +3186,17 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
                     it != node && !this.getAddresses(node, node).contains(it)
                 }
             fields?.forEach { field ->
-                this.declarationsState[field]
-                    ?.second
-                    ?.filter { if (excludeShortFSValues) !it.second else true }
-                    ?.let {
-                        it.forEach {
-                            ret.add(
-                                FetchElementFromDeclarationStateEntry(
-                                    it.first,
-                                    it.second,
-                                    field.name.localName,
-                                    this.declarationsState[field]?.third
-                                        ?: PowersetLattice.Element(),
-                                )
+                this.declarationsState[field]?.second?.forEach {
+                    if (excludeShortFSValues && !it.second || !excludeShortFSValues)
+                        ret.add(
+                            FetchElementFromDeclarationStateEntry(
+                                it.first,
+                                it.second,
+                                field.name.localName,
+                                this.declarationsState[field]?.third ?: PowersetLattice.Element(),
                             )
-                        }
-                    }
+                        )
+                }
             }
         }
     }
@@ -3533,10 +3513,6 @@ fun PointsToState.Element.getValues(
                 this.getValues(it, it)
             }
         }
-        /*        is New -> {
-            // New returns a new MemoryAddress each time
-            PowersetLattice.Element(Pair(MemoryAddress(Name("new", node.name)), false))
-        }*/
         // For BinaryOperators, UnaryOperators, Literals etc. we'll end up here
         // For those, we define that they are the values of themselves
         // However, if we have a DeclarationState entry, we will return this one.
@@ -3642,7 +3618,7 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet
         }
         is Cast -> {
             /*
-             * For Casts we take the expression as the cast itself does not have any impact on the address
+             * For casts, we take the expression as the cast itself does not have any impact on the address
              */
             this.getAddresses(node.expression, startNode)
         }
@@ -3673,12 +3649,10 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet
         // TODO: This should work for all HasMemoryAddresses
         //        is HasMemoryAddress -> {
         is BinaryOperator -> {
-            //            synchronized(node.memoryAddresses) {
             if (node.memoryAddresses.isEmpty()) {
                 node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
             }
             node.memoryAddresses.toIdentitySet()
-            //            }
         }
         else -> identitySetOf(node)
     }
@@ -3811,6 +3785,16 @@ suspend fun PointsToState.Element.updateValues(
 ): PointsToState.Element = coroutineScope {
     var doubleState = doubleState
 
+    val noDestinationWithBody =
+        destinations.none { it is Call && it.invokes.singleOrNull()?.body == null }
+
+    val mappedSources =
+        sources.mapNotNullTo(PowersetLattice.Element()) {
+            it.first?.let { first ->
+                NodeWithPropertiesKey(first, equalLinkedHashSetOf<Any>().apply { add(it.second) })
+            }
+        }
+
     /* Update the declarationState for the addresses */
     destinationAddresses.forEach { destAddr ->
         if (!isGlobal(destAddr)) {
@@ -3821,16 +3805,13 @@ suspend fun PointsToState.Element.updateValues(
             // If we want to update the State with exactly the same elements as are already in the
             // state, we do nothing in order not to confuse the iterateEOG function
             val newSources: PowersetLattice.Element<Pair<Node, Boolean>> =
-                sources
-                    .mapTo(PowersetLattice.Element()) { triple ->
-                        val existingPair =
-                            this@updateValues.declarationsState[destAddr]?.second?.firstOrNull {
-                                it.first === triple.first && it.second == triple.second
-                            }
-                        existingPair ?: Pair(triple.first, triple.second)
-                    }
-                    .filterTo(PowersetLattice.Element()) { it.first != null }
-                    .mapTo(PowersetLattice.Element()) { Pair(it.first!!, it.second) }
+                sources.mapNotNullTo(PowersetLattice.Element()) { triple ->
+                    val existingPair =
+                        this@updateValues.declarationsState[destAddr]?.second?.firstOrNull {
+                            it.first === triple.first && it.second == triple.second
+                        } ?: Pair(triple.first, triple.second)
+                    existingPair.first?.let { first -> Pair(first, existingPair.second) }
+                }
 
             // Check if we have any full writes
             val fullSourcesExist = sources.any { !it.third }
@@ -3879,7 +3860,7 @@ suspend fun PointsToState.Element.updateValues(
 
             newLastWrites.forEachMaybeParallel { lw ->
                 if (
-                    destinations.none { it is Call && it.invokes.singleOrNull()?.body == null } &&
+                    noDestinationWithBody &&
                         (sources.any { src ->
                             src.first === lw.node && src.second in lw.properties
                         } || lw.node in destinations)
@@ -3893,21 +3874,21 @@ suspend fun PointsToState.Element.updateValues(
                     d,
                     GeneralStateEntryElement(
                         PowersetLattice.Element(destinationAddresses),
-                        PowersetLattice.Element(
-                            sources
-                                .filter { it.first != null }
-                                .mapTo(PowersetLattice.Element()) {
-                                    NodeWithPropertiesKey(
-                                        it.first!!,
-                                        equalLinkedHashSetOf<Any>().apply { add(it.second) },
-                                    )
-                                }
-                        ),
+                        PowersetLattice.Element(mappedSources),
                         PowersetLattice.Element(newLastWrites),
                     ),
                 )
             }
         } else {
+            val mappedSources =
+                sources.mapNotNullTo(IdentitySet()) {
+                    it.first?.let { first ->
+                        NodeWithPropertiesKey(
+                            first,
+                            equalLinkedHashSetOf<Any>().apply { add(it.second) },
+                        )
+                    }
+                }
             // For globals, we draw a DFG Edge from the source to the destination
             destinations.forEachMaybeParallel { d ->
                 val entry =
@@ -3918,16 +3899,7 @@ suspend fun PointsToState.Element.updateValues(
                             PowersetLattice.Element(),
                         )
                     }
-                sources
-                    .filter { it.first != null }
-                    .forEach {
-                        entry.third.add(
-                            NodeWithPropertiesKey(
-                                it.first!!,
-                                equalLinkedHashSetOf<Any>().apply { add(it.second) },
-                            )
-                        )
-                    }
+                entry.third.addAll(mappedSources)
             }
         }
     }
