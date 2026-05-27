@@ -119,4 +119,68 @@ class ArrayValueTest {
                 .applyEffect(lattice = lattice, state = startState, node = noInitializerDeclaration),
         )
     }
+
+    /**
+     * An [ArrayConstruction] with no [dimensions] (and no initializer) used to crash inside
+     * `getSize` because `reduce` throws on an empty list. It must now return BOTTOM gracefully —
+     * `ArraySizeEvaluator` calls `getSize` on arbitrary nodes, so any crash here propagates.
+     */
+    @Test
+    fun testEmptyDimensions() {
+        val startState =
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
+        val emptyDimensionsDeclaration =
+            Variable().apply {
+                this.name = name
+                this.type = IntegerType(language = TestLanguage()).array()
+                this.initializer = ArrayConstruction()
+            }
+
+        assertEquals(
+            LatticeInterval.BOTTOM,
+            ArrayValue()
+                .applyEffect(
+                    lattice = lattice,
+                    state = startState,
+                    node = emptyDimensionsDeclaration,
+                ),
+        )
+    }
+
+    /**
+     * An [ArrayConstruction] whose dimension constant-evaluates to a non-[Number] (e.g. a string
+     * literal — happens when the dimension expression can't be resolved to an integer) used to
+     * crash with `ClassCastException` because the cast was `as Number` rather than `as? Number`. It
+     * must now return BOTTOM gracefully.
+     */
+    @Test
+    fun testNonNumberDimension() {
+        val startState =
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
+        val nonNumberDimensionDeclaration =
+            Variable().apply {
+                this.name = name
+                this.type = IntegerType(language = TestLanguage()).array()
+                this.initializer =
+                    ArrayConstruction().apply {
+                        this.dimensions += Literal<String>().apply { this.value = "not a number" }
+                    }
+            }
+
+        assertEquals(
+            LatticeInterval.BOTTOM,
+            ArrayValue()
+                .applyEffect(
+                    lattice = lattice,
+                    state = startState,
+                    node = nonNumberDimensionDeclaration,
+                ),
+        )
+    }
 }
