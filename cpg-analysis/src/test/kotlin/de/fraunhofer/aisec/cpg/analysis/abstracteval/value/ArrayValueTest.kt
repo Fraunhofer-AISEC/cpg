@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
+import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
@@ -147,6 +148,91 @@ class ArrayValueTest {
                     state = startState,
                     node = emptyDimensionsDeclaration,
                 ),
+        )
+    }
+
+    /** Non-String [Literal] initializer falls into the "size is 1" branch of `getSize`. */
+    @Test
+    fun testLiteralInitializer() {
+        val startState =
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
+        val literalInitDeclaration =
+            Variable().apply {
+                this.name = name
+                this.type = IntegerType(language = TestLanguage()).array()
+                this.initializer = Literal<Int>().apply { this.value = 42 }
+            }
+
+        assertEquals(
+            LatticeInterval.Bounded(1, 1),
+            ArrayValue()
+                .applyEffect(lattice = lattice, state = startState, node = literalInitDeclaration),
+        )
+    }
+
+    /** An [InitializerList] initializer yields a size equal to its element count. */
+    @Test
+    fun testInitializerListInitializer() {
+        val startState =
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
+        val initializerListDeclaration =
+            Variable().apply {
+                this.name = name
+                this.type = IntegerType(language = TestLanguage()).array()
+                this.initializer =
+                    InitializerList().apply {
+                        this.initializers += Literal<Int>().apply { this.value = 1 }
+                        this.initializers += Literal<Int>().apply { this.value = 2 }
+                        this.initializers += Literal<Int>().apply { this.value = 3 }
+                    }
+            }
+
+        assertEquals(
+            LatticeInterval.Bounded(3, 3),
+            ArrayValue()
+                .applyEffect(
+                    lattice = lattice,
+                    state = startState,
+                    node = initializerListDeclaration,
+                ),
+        )
+    }
+
+    /**
+     * An [ArrayConstruction] with a nested [initializer] should recurse into `getSize` on that
+     * initializer rather than computing from `dimensions`.
+     */
+    @Test
+    fun testArrayConstructionWithInitializer() {
+        val startState =
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
+        val nestedInitDeclaration =
+            Variable().apply {
+                this.name = name
+                this.type = IntegerType(language = TestLanguage()).array()
+                this.initializer =
+                    ArrayConstruction().apply {
+                        this.initializer =
+                            InitializerList().apply {
+                                this.initializers += Literal<Int>().apply { this.value = 1 }
+                                this.initializers += Literal<Int>().apply { this.value = 2 }
+                            }
+                    }
+            }
+
+        assertEquals(
+            LatticeInterval.Bounded(2, 2),
+            ArrayValue()
+                .applyEffect(lattice = lattice, state = startState, node = nestedInitDeclaration),
         )
     }
 

@@ -81,9 +81,11 @@ class ArrayValue : Value<LatticeInterval> {
     ): LatticeInterval {
         var size: LatticeInterval = LatticeInterval.BOTTOM
         var target: Node? = null
-        if (node is Variable && node.initializer != null && node.type is PointerType) {
-            size = getSize(node.initializer!!)
-            target = node
+        if (node is Variable && node.type is PointerType) {
+            node.initializer?.let { init ->
+                size = getSize(init)
+                target = node
+            }
         } else if (node is Assign && node.rhs.size == 1 && node.lhs.size == 1) {
             size = getSize(node.rhs.single())
             // Anchor on the underlying Variable rather than the LHS Reference so that branches
@@ -108,16 +110,23 @@ class ArrayValue : Value<LatticeInterval> {
         return current
     }
 
-    private fun getSize(node: Node): LatticeInterval =
-        when (node) {
+    private fun getSize(node: Node): LatticeInterval {
+        return when (node) {
             is Literal<*> -> {
-                val v = node.value
-                if (v is String) LatticeInterval.Bounded(v.length.toLong(), v.length.toLong())
-                else LatticeInterval.Bounded(1, 1)
+                if (node.value is String) {
+                    // For strings, we return the length of the string
+                    val length = (node.value as String).length.toLong()
+                    LatticeInterval.Bounded(length, length)
+                } else {
+                    // Otherwise, we assume that the size is 1.
+                    LatticeInterval.Bounded(1, 1)
+                }
             }
             is InitializerList -> {
+                // The number of elements in the initializer list
                 val length = node.initializers.size.toLong()
                 LatticeInterval.Bounded(length, length)
+                // node.initializers.fold(0L) { acc, init -> acc + getSize(init) }
             }
             is ArrayConstruction -> {
                 val init = node.initializer
@@ -131,20 +140,22 @@ class ArrayValue : Value<LatticeInterval> {
                     if (lengths.isEmpty() || lengths.any { it == null }) {
                         LatticeInterval.BOTTOM
                     } else {
-                        val product = lengths.filterNotNull().reduce { acc, d -> acc * d }
-                        LatticeInterval.Bounded(product, product)
+                        val length =
+                            lengths.filterNotNull().reduce { acc, dimension -> acc * dimension }
+                        LatticeInterval.Bounded(length, length)
                     }
                 }
             }
             is Call -> {
                 if (node.name.localName == "malloc") {
-                    (node.arguments.singleOrNull()?.value?.value as? Number)?.toLong()?.let {
-                        LatticeInterval.Bounded(it, it)
-                    } ?: LatticeInterval.BOTTOM
+                    val length = (node.arguments.singleOrNull()?.value?.value as? Number)?.toLong()
+                    length?.let { LatticeInterval.Bounded(length, length) }
+                        ?: LatticeInterval.BOTTOM
                 } else {
                     LatticeInterval.BOTTOM
                 }
             }
             else -> LatticeInterval.BOTTOM
         }
+    }
 }
