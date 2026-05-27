@@ -46,7 +46,7 @@ class ArrayValueTest {
         )
 
     @Test
-    fun applyDeclarationTest() {
+    fun testApplyDeclaration() {
         val startState =
             TupleStateElement<Any>(
                 DeclarationState.DeclarationStateElement(),
@@ -71,7 +71,7 @@ class ArrayValueTest {
     }
 
     @Test
-    fun applyReferenceTest() {
+    fun testApplyReference() {
         val startState =
             TupleStateElement<Any>(
                 DeclarationState.DeclarationStateElement(),
@@ -101,7 +101,7 @@ class ArrayValueTest {
     }
 
     @Test
-    fun applyDeclarationWithoutInitializerTest() {
+    fun testApplyDeclarationWithoutInitializer() {
         val startState =
             TupleStateElement<Any>(
                 DeclarationState.DeclarationStateElement(),
