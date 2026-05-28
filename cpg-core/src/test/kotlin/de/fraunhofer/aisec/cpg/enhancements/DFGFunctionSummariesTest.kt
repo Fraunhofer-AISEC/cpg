@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
@@ -317,6 +318,49 @@ class DFGFunctionSummariesTest {
             }
         val returnedA = dfgTest.returns.single().returnValues.single()
         assertEquals(returnedA, nextDFGOfPMV?.end)
+    }
+
+    @Test
+    fun testLanguageHierarchyMatching() {
+        val config =
+            TranslationConfiguration.builder()
+                .registerLanguage<TestLanguageWithColon>()
+                .registerFunctionSummaries(File("src/test/resources/function-dfg.yml"))
+                .inferenceConfiguration(
+                    InferenceConfiguration.builder()
+                        .inferDfgForUnresolvedCalls(true)
+                        .inferFunctions(true)
+                        .build()
+                )
+                .defaultPasses()
+                .build()
+
+        val dfgTest =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("DfgInferredCall.c") {
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("a", t("int")) { literal(7, t("char")) } }
+                                declare { variable("b", t("int")) { literal(5, t("char")) } }
+                                call("memcpy") {
+                                    ref("a").pointerReference()
+                                    ref("b").pointerReference()
+                                    literal(1, t("int"))
+                                }
+                                returnStmt { ref("a") }
+                            }
+                        }
+                    }
+                }
+            }
+
+        val memcpy = dfgTest.functions["memcpy"]
+        assertNotNull(memcpy)
+        assertTrue(
+            memcpy.functionSummary.isNotEmpty(),
+            "Expected memcpy to have a non-empty function summary",
+        )
     }
 
     @Ignore(

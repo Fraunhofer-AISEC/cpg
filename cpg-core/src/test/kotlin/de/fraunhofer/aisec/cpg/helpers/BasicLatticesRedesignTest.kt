@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+import de.fraunhofer.aisec.cpg.helpers.functional.HashMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
@@ -261,6 +262,101 @@ class BasicLatticesRedesignTest {
             assertEquals(aBlaGlb, aBlaLattice1)
             assertEquals(Order.LESSER, aBlaGlb.compare(aBlaFooLattice))
             assertEquals(Order.LESSER, aBlaGlb.compare(aBlaBFooLattice))
+        }
+    }
+
+    @Test
+    fun testHashMapLattice() {
+        runBlocking {
+            val mapLattice =
+                HashMapLattice<String, PowersetLattice.Element<String>>(PowersetLattice<String>())
+
+            // bottom is empty
+            val emptyLattice1 = HashMapLattice.Element<String, PowersetLattice.Element<String>>()
+            val emptyLattice2 = mapLattice.bottom
+            assertEquals(Order.EQUAL, mapLattice.compare(emptyLattice1, emptyLattice2))
+            assertEquals(emptyLattice1, emptyLattice2)
+
+            // compare against the wrong lattice element type throws
+            val blaPowerset = PowersetLattice.Element("bla")
+            assertThrows<IllegalArgumentException> { emptyLattice1.compare(blaPowerset) }
+
+            // Pointwise ordering on a single key
+            val aBlaLattice1 = HashMapLattice.Element("a" to blaPowerset)
+            val aBlaLattice2 = HashMapLattice.Element("a" to PowersetLattice.Element("bla"))
+            assertEquals(Order.EQUAL, mapLattice.compare(aBlaLattice1, aBlaLattice2))
+            assertEquals(aBlaLattice1, aBlaLattice2)
+            assertNotSame(aBlaLattice1, aBlaLattice2)
+
+            val aBlaFooLattice =
+                HashMapLattice.Element("a" to PowersetLattice.Element("bla", "foo"))
+            assertEquals(Order.GREATER, mapLattice.compare(aBlaFooLattice, aBlaLattice1))
+            assertEquals(Order.LESSER, mapLattice.compare(aBlaLattice1, aBlaFooLattice))
+
+            val aBlaBFooLattice =
+                HashMapLattice.Element(
+                    "a" to PowersetLattice.Element("bla"),
+                    "b" to PowersetLattice.Element("foo"),
+                )
+            assertEquals(Order.GREATER, mapLattice.compare(aBlaBFooLattice, aBlaLattice1))
+            assertEquals(Order.LESSER, mapLattice.compare(aBlaLattice1, aBlaBFooLattice))
+
+            // duplicate is structurally equal but not identical
+            val aBlaLatticeDuplicate = mapLattice.duplicate(aBlaLattice1)
+            assertNotSame(aBlaLattice1, aBlaLatticeDuplicate)
+            assertEquals(aBlaLattice1, aBlaLatticeDuplicate)
+
+            // lub of disjoint maps unions keys
+            val aFooBBlaLattice =
+                HashMapLattice.Element(
+                    "a" to PowersetLattice.Element("foo"),
+                    "b" to PowersetLattice.Element("bla"),
+                )
+            val aBlaFooBBla = mapLattice.lub(aBlaFooLattice, aFooBBlaLattice)
+            assertEquals(setOf("a", "b"), aBlaFooBBla.keys)
+            assertEquals(PowersetLattice.Element("bla", "foo"), aBlaFooBBla["a"])
+            assertEquals(PowersetLattice.Element("bla"), aBlaFooBBla["b"])
+
+            // glb takes the intersection of keys and inner-glb's the values
+            val aEmptyBEmptyGlb = mapLattice.glb(aFooBBlaLattice, aBlaBFooLattice)
+            val aEmptyBEmpty =
+                HashMapLattice.Element(
+                    "a" to PowersetLattice.Element<String>(),
+                    "b" to PowersetLattice.Element<String>(),
+                )
+            assertEquals(aEmptyBEmpty, aEmptyBEmptyGlb)
+
+            // The point of HashMapLattice: keys collapse on `equals`, not identity. Build two
+            // `Integer` instances that are equal but allocated separately (above the
+            // Integer.valueOf cache range to defeat interning), put each into its own element,
+            // and check that the lub joins them onto a single entry. Doing this with the
+            // identity-keyed MapLattice would leave two distinct entries.
+            val intLattice =
+                HashMapLattice<Int, PowersetLattice.Element<String>>(PowersetLattice<String>())
+            val keyA: Int = 1000 + 1
+            val keyB: Int = (1000 + 1) * 1
+            assertNotSame(keyA as Any, keyB as Any) // different Integer instances
+            assertEquals(keyA, keyB) // …with equal values
+            val branchA = HashMapLattice.Element(keyA to PowersetLattice.Element("a"))
+            val branchB = HashMapLattice.Element(keyB to PowersetLattice.Element("b"))
+            val merged = intLattice.lub(branchA, branchB)
+            assertEquals(1, merged.size)
+            assertEquals(PowersetLattice.Element("a", "b"), merged[keyA])
+            assertEquals(PowersetLattice.Element("a", "b"), merged[keyB])
+
+            // The in-place `lub` variant should also collapse the equal keys.
+            val mergedInPlace = intLattice.lub(branchA, branchB, allowModify = true)
+            assertSame(branchA, mergedInPlace)
+            assertEquals(1, mergedInPlace.size)
+            assertEquals(PowersetLattice.Element("a", "b"), mergedInPlace[keyB])
+
+            // `set` operator allows a nullable key (silently dropped). This mirrors the override
+            // we rely on in DeclarationStateElement for `Node.objectIdentifier()` call sites.
+            // (HashMapLattice itself doesn't add that operator; we just check the underlying
+            // HashMap behavior here for completeness — set a real key and read it back.)
+            val mutable = HashMapLattice.Element<String, PowersetLattice.Element<String>>()
+            mutable["x"] = PowersetLattice.Element("y")
+            assertEquals(PowersetLattice.Element("y"), mutable["x"])
         }
     }
 

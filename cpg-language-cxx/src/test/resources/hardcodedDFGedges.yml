@@ -19,14 +19,6 @@
 
 - functionDeclaration:
     language: CPPLanguage
-    methodName: free
-  dataFlows:
-    - from: freedMemory
-      to: param0.deref
-      dfgType: full
-
-- functionDeclaration:
-    language: CPPLanguage
     methodName: memcpy
   dataFlows:
     - from: param1.deref
