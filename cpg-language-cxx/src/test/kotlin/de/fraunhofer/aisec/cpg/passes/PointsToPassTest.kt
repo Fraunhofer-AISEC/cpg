@@ -1214,11 +1214,7 @@ class PointsToPassTest {
         assertEquals(
             aDecl,
             bRefLine138.prevDFGEdges
-                .singleOrNull {
-                    it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_VALUE
-                }
+                .singleOrNull { it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE }
                 ?.start,
         )
         assertEquals(bDecl, bRefLine138.prevFullDFG.singleOrNull())
@@ -1251,11 +1247,7 @@ class PointsToPassTest {
         assertEquals(
             aDecl,
             bRefLine139.prevDFGEdges
-                .singleOrNull {
-                    it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_VALUE
-                }
+                .singleOrNull { it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE }
                 ?.start,
         )
         assertEquals(bDecl, bRefLine139.prevFullDFG.singleOrNull())
@@ -1269,21 +1261,13 @@ class PointsToPassTest {
         assertEquals(
             bDecl,
             cRefLine139.prevDFGEdges
-                .singleOrNull {
-                    it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_VALUE
-                }
+                .singleOrNull { it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE }
                 ?.start,
         )
         assertEquals(
             aDecl,
             cRefLine139.prevDFGEdges
-                .singleOrNull {
-                    it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_DEREF_VALUE
-                }
+                .singleOrNull { it.derefDepth == PointerAccess.CURRENT_DEREF_DEREF_VALUE }
                 ?.start,
         )
 
@@ -1299,11 +1283,7 @@ class PointsToPassTest {
         assertEquals(
             aDecl,
             cPointerDerefLine139.prevDFGEdges
-                .singleOrNull {
-                    it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_VALUE
-                }
+                .singleOrNull { it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE }
                 ?.start,
         )
         assertEquals(
@@ -2510,39 +2490,26 @@ class PointsToPassTest {
             p2pLine262.prevDFGEdges
                 .filter {
                     it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_VALUE
+                        it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE
                 }
                 .size,
         )
         assertEquals(
             p_oldvalDecl,
             p2pLine262.prevDFGEdges
-                .first {
-                    it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_VALUE
-                }
+                .first { it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE }
                 .start,
         )
         assertEquals(
             1,
             p2pLine262.prevDFGEdges
-                .filter {
-                    it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_DEREF_VALUE
-                }
+                .filter { it.derefDepth == PointerAccess.CURRENT_DEREF_DEREF_VALUE }
                 .size,
         )
         assertEquals(
             oldvalDecl,
             p2pLine262.prevDFGEdges
-                .first {
-                    it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_DEREF_VALUE
-                }
+                .first { it.derefDepth == PointerAccess.CURRENT_DEREF_DEREF_VALUE }
                 .start,
         )
 
@@ -2553,41 +2520,25 @@ class PointsToPassTest {
         assertEquals(
             1,
             p2pLine264.prevDFGEdges
-                .filter {
-                    it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_VALUE
-                }
+                .filter { it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE }
                 .size,
         )
         assertEquals(
             pDerefLine246,
             p2pLine264.prevDFGEdges
-                .first {
-                    it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_VALUE
-                }
+                .first { it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE }
                 .start,
         )
         assertEquals(
             1,
             p2pLine264.prevDFGEdges
-                .filter {
-                    it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_DEREF_VALUE
-                }
+                .filter { it.derefDepth == PointerAccess.CURRENT_DEREF_DEREF_VALUE }
                 .size,
         )
         assertEquals(
             pDerefDerefLine247,
             p2pLine264.prevDFGEdges
-                .first {
-                    it.granularity is PointerDataflowGranularity &&
-                        (it.granularity as PointerDataflowGranularity).pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_DEREF_VALUE
-                }
+                .first { it.derefDepth == PointerAccess.CURRENT_DEREF_DEREF_VALUE }
                 .start,
         )
     }
@@ -3521,8 +3472,7 @@ class PointsToPassTest {
         assertNotNull(tu)
         val outerSubFSEntries =
             tu.functions
-                .filter { it.name.localName == "outer_sub" }
-                .singleOrNull()
+                .singleOrNull { it.name.localName == "outer_sub" }
                 ?.functionSummary
                 ?.entries
                 ?.singleOrNull()
@@ -4264,13 +4214,25 @@ class PointsToPassTest {
         // prevDFG Edge to the strlcpy in Line 11 from here
         // TODO: We have deref(deref)value edges to the strlcpy PMV, not sure if this makes sense
         // Start with b
-        // 3 edges: The full to the variable, the partial to the DerefPMV of strlcpy, and the
-        // fieldgranularity
-        assertEquals(
-            3,
-            b1.prevDFGEdges.filter { it.granularity !is PointerDataflowGranularity }.size,
-        )
+        // 3 edges: The full to the variable, the fieldgranularity and three derefvalue edges, which
+        // all point to the PMV of strlcpy
+        assertEquals(5, b1.prevDFG.size)
         assertEquals(testFunc.variables("b").single(), b1.prevFullDFG.single())
+        assertEquals(
+            bd1,
+            b1.prevDFGEdges.single { (it.granularity is FieldDataflowGranularity) }.start,
+        )
+        assertEquals(3, b1.prevDFGEdges.filter { it.derefDepth != null }.size)
+        assertEquals(
+            strlDstDerefPMV,
+            b1.prevDFGEdges
+                .single {
+                    it.granularity is FullDataflowGranularity &&
+                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                            strlcpy2Call
+                }
+                .start,
+        )
         assertEquals(
             strlDstDerefPMV,
             b1.prevDFGEdges
@@ -4284,17 +4246,24 @@ class PointsToPassTest {
                 .start,
         )
         assertEquals(
-            bd1,
-            b1.prevDFGEdges.single { (it.granularity is FieldDataflowGranularity) }.start,
+            strlDstDerefPMV,
+            b1.prevDFGEdges
+                .single {
+                    ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
+                        ?.name
+                        ?.localName == "d.f" &&
+                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                            strlcpy2Call
+                }
+                .start,
         )
         // Now the b.d
-        // We expect one Full prevDFG to ?, and 3 partial ones: to both strcpys and to the memset
-        assertEquals(
-            4,
-            bd1.prevDFGEdges.filter { it.granularity !is PointerDataflowGranularity }.size,
-        )
-        // TODO
-        //        assertEquals(null, bd1.prevFullDFG.singleOrNull())
+        // We have 5 edges:
+        // A full to the field declaration and another full to the member b.d.g in this line
+        // TODO: (not sure where the prevDFG to the member is coming from)
+        // Additionally, the same current-deref-value edges as for b.
+        assertEquals(5, bd1.prevDFGEdges.size)
+        assertContains(bd1.prevFullDFG, tu.fields["d"] as Field)
         assertEquals(
             memsetDstDerefPMV,
             bd1.prevDFGEdges
@@ -4393,10 +4362,7 @@ class PointsToPassTest {
                 credentialAssign2.lhs.singleOrNull() as Node,
             ),
             realCodeCallArg.prevDFGEdges
-                .filter {
-                    (it.granularity as? PointerDataflowGranularity)?.pointerTarget ==
-                        PointerAccess.CURRENT_DEREF_DEREF_VALUE
-                }
+                .filter { it.derefDepth == PointerAccess.CURRENT_DEREF_DEREF_VALUE }
                 .map { it.start }
                 .toSet(),
         )
@@ -4488,9 +4454,7 @@ class PointsToPassTest {
             printStructLineArgBase.prevDFGEdges
                 .singleOrNull {
                     (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                        freeCall &&
-                        (it.granularity as? PointerDataflowGranularity)?.pointerTarget ==
-                            PointerAccess.CURRENT_DEREF_VALUE
+                        freeCall && it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE
                 }
                 ?.start,
         )
@@ -4626,10 +4590,7 @@ class PointsToPassTest {
         assertEquals(
             xAssign,
             xRefDelete.prevDFGEdges
-                .singleOrNull {
-                    (it.granularity as? PointerDataflowGranularity)?.pointerTarget ==
-                        PointerAccess.CURRENT_DEREF_VALUE
-                }
+                .singleOrNull { it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE }
                 ?.start,
         )
 
@@ -4800,9 +4761,7 @@ class PointsToPassTest {
                     .singleOrNull {
                         (it as? ContextSensitiveDataflow)?.callingContext?.calls?.any {
                             it === testCall2
-                        } == true &&
-                            (it.granularity as? PointerDataflowGranularity)?.pointerTarget ==
-                                PointerAccess.CURRENT_DEREF_VALUE
+                        } == true && it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE
                     }
                     ?.start as? ParameterMemoryValue)
                 ?.name
