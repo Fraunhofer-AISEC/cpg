@@ -1730,10 +1730,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val shortFS: Boolean,
     )
 
-    private data class AddEntryDedupBucket(
-        val version: Long,
-        val sources: ConcurrentIdentitySet<Node?>,
-    )
+    private class AddEntryDedupBucket {
+        val sources: ConcurrentIdentitySet<Node?> = concurrentIdentitySetOf()
+
+        @Volatile var initialized: Boolean = false
+    }
 
     private data class AddEntryArgumentValuesKey(
         val argument: IdKey<Node>,
@@ -1763,8 +1764,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     )
 
     private data class AddEntryDestinationDedupCache(
-        val buckets: ConcurrentHashMap<AddEntryDedupKey, AddEntryDedupBucket> = ConcurrentHashMap(),
-        val version: AtomicLong = AtomicLong(0),
+        val buckets: ConcurrentHashMap<AddEntryDedupKey, AddEntryDedupBucket> = ConcurrentHashMap()
     )
 
     private class AddEntryToMapCache {
@@ -2104,13 +2104,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     data class NodeWithPropertiesKey(val node: Node, val properties: Set<Any> = emptySet<Any>()) {
         // Since we are dealing with pairs, carefully check if we already have them
         override fun equals(other: Any?): Boolean =
-            other is NodeWithPropertiesKey &&
-                node === other.node &&
-                properties.size == other.properties.size &&
-                properties.all { t -> other.properties.any { o -> o == t } }
+            other is NodeWithPropertiesKey && node === other.node && properties == other.properties
 
         override fun hashCode(): Int {
-            var h = node.hashCode()
+            var h = System.identityHashCode(node)
             // The order of the properties doesn't matter
             for (p in properties) h += p.hashCode()
             return h
@@ -2313,29 +2310,27 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 dedupKey: AddEntryDedupKey,
                 matcher: (MapDstToSrcEntry) -> Boolean,
             ): ConcurrentIdentitySet<Node?> {
-                val currentVersion = context.dedupCache.version.get()
-                val cached = context.dedupCache.buckets[dedupKey]
-                if (cached != null && cached.version == currentVersion) {
+                val bucket =
+                    context.dedupCache.buckets.computeIfAbsent(dedupKey) { AddEntryDedupBucket() }
+                if (bucket.initialized) {
                     localDedupBucketHits++
-                    return cached.sources
+                    return bucket.sources
                 }
 
-                localDedupBucketMisses++
-                val bucket =
-                    context.dedupCache.buckets.compute(dedupKey) { _, existing ->
-                        if (existing == null || existing.version != currentVersion) {
-                            val sources = concurrentIdentitySetOf<Node?>()
-                            for (entry in context.currentSet) {
-                                localCurrentSetScans++
-                                if (matcher(entry)) {
-                                    sources.add(entry.srcNode)
-                                }
+                synchronized(bucket) {
+                    if (!bucket.initialized) {
+                        localDedupBucketMisses++
+                        for (entry in context.currentSet) {
+                            localCurrentSetScans++
+                            if (matcher(entry)) {
+                                bucket.sources.add(entry.srcNode)
                             }
-                            AddEntryDedupBucket(currentVersion, sources)
-                        } else {
-                            existing
                         }
-                    }!!
+                        bucket.initialized = true
+                    } else {
+                        localDedupBucketHits++
+                    }
+                }
                 return bucket.sources
             }
 
@@ -2386,6 +2381,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
             fun insertIfNew(
                 context: DestinationContext,
+                dedupKey: AddEntryDedupKey,
                 sources: ConcurrentIdentitySet<Node?>,
                 source: Node?,
                 branch: AddEntryDedupMode,
@@ -2396,7 +2392,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     localInserted++
                     accountBranch(branch, 1, 1)
                     context.currentSet += entry()
-                    context.dedupCache.version.incrementAndGet()
+                    context.dedupCache.buckets[dedupKey]?.sources?.add(source)
                 } else {
                     localSkippedDuplicates++
                     accountBranch(branch, 1, 0)
@@ -2482,6 +2478,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             for (value in values) {
                                 insertIfNew(
                                     context,
+                                    dedupKey,
                                     existingSources,
                                     value,
                                     AddEntryDedupMode.PARAMETER_SINGLETON,
@@ -2577,6 +2574,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         for (value in parameterValues) {
                             insertIfNew(
                                 context,
+                                dedupKey,
                                 existingSources,
                                 value,
                                 AddEntryDedupMode.PARAMETER_MEMORY,
@@ -2612,6 +2610,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
                         insertIfNew(
                             context,
+                            dedupKey,
                             existingSources,
                             srcNode,
                             AddEntryDedupMode.MEMORY_ADDRESS,
@@ -2691,6 +2690,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         for (newSource in newSources) {
                             insertIfNew(
                                 context,
+                                dedupKey,
                                 existingSources,
                                 newSource,
                                 AddEntryDedupMode.GENERIC,

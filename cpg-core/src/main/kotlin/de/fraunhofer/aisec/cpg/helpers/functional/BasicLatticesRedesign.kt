@@ -240,9 +240,7 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
-        return other is LinkedHashSet<*> &&
-            this.size == other.size &&
-            this.all { t -> other.any { it == t } }
+        return super.equals(other)
     }
 
     override fun hashCode(): Int {
