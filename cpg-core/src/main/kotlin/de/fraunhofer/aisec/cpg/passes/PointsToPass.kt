@@ -269,6 +269,7 @@ fun getNodeName(node: Node?): Name {
                     " " +
                     getNodeName(node.rhs).localName
             )
+        is Construction -> Name(node.code ?: "")
         else -> node.name
     }
 }
@@ -351,14 +352,14 @@ fun isGlobal(node: Node): Boolean {
 }
 
 /* Recursively collect the bases and offsets from MemberAccesses and SubscriptExpressions */
-fun collectBasesAndOffsets(node: Node): IdentitySet<Pair<Node, Any?>> {
-    val ret = identitySetOf<Pair<Node, Any?>>()
+fun collectBasesAndOffsets(node: Node): List<Pair<Node, Any?>> {
+    val ret = mutableListOf<Pair<Node, Any?>>()
 
     var n: Node? = node
     while (n != null) {
         when (n) {
             is MemberAccess -> {
-                ret.add(n.base to n.refersTo)
+                ret.add(n.base to (n.refersTo ?: n.name.localName))
                 n = n.base
             }
             is Subscription -> {
@@ -580,26 +581,30 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 var context: CallingContext? = null
                 var granularity = default()
                 var functionSummary = false
+                var derefDepth: PointerAccess? = null
 
                 // the properties can contain a lot of things. A granularity, a
                 // callingcontext, or a boolean indicating if this is a functionSummary edge or
                 // not
                 properties.forEach { property ->
                     when (property) {
+                        is PointerDataflowGranularity -> derefDepth = property.pointerTarget
                         is Granularity -> granularity = property
                         is CallingContext -> context = property
                         is Boolean -> functionSummary = property
                     }
                 }
 
-                if (context == null) // TODO: add functionSummary flag for contextSensitive DFs
-                 key.prevDFGEdges += Dataflow(prev, key, granularity, functionSummary)
+                if (context == null)
+                    key.prevDFGEdges +=
+                        Dataflow(prev, key, granularity, functionSummary, derefDepth)
                 else
                     key.prevDFGEdges.addContextSensitive(
                         prev,
                         granularity,
                         context,
                         functionSummary,
+                        derefDepth,
                     )
             }
         }
@@ -2064,13 +2069,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     equalLinkedHashSetOf<Any>().apply {
                                         addAll(propertySet)
                                         add(shortFS)
-                                        // If the partialWrite is null, it means this is the base
+                                        // If the partialWrite is not null, it means this is the
+                                        // base
                                         // memory address and no field, so we add the partial write
                                         // property
-                                        if (partialWrite == null) {
+                                        partialWrite?.let {
+                                            removeIf { it is FullDataflowGranularity }
                                             add(
                                                 PartialDataflowGranularity(
-                                                    Field().apply { name = Name(subAccessName) }
+                                                    Field().apply { name = Name(it) }
                                                 )
                                             )
                                         }
@@ -2122,10 +2129,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             // If the partialWrite is null, it means this is the
                                             // base memory address and no field, so we add the
                                             // partial write property
-                                            if (partialWrite == null) {
+                                            partialWrite?.let {
+                                                removeIf { it is FullDataflowGranularity }
                                                 add(
                                                     PartialDataflowGranularity(
-                                                        Field().apply { name = Name(subAccessName) }
+                                                        Field().apply { name = Name(it) }
                                                     )
                                                 )
                                             }
@@ -2170,13 +2178,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             equalLinkedHashSetOf<Any>().apply {
                                 addAll(propertySet)
                                 add(shortFS)
-                                // If the partialWrite is null, it means this is the base
+                                // If the partialWrite is not null, it means this is the base
                                 // memory address and no field, so we add the partial write
                                 // property
-                                if (partialWrite == null) {
+                                partialWrite?.let {
+                                    removeIf { it is FullDataflowGranularity }
                                     add(
                                         PartialDataflowGranularity(
-                                            Field().apply { name = Name(subAccessName) }
+                                            Field().apply { name = Name(it) }
                                         )
                                     )
                                 }
@@ -2229,13 +2238,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     equalLinkedHashSetOf<Any>().apply {
                                         addAll(propertySet)
                                         add(shortFS)
-                                        // If the partialWrite is null, it means this is the base
+                                        // If the partialWrite is not null, it means this is the
+                                        // base
                                         // memory address and no field, so we add the partial write
                                         // property
-                                        if (partialWrite == null) {
+                                        partialWrite?.let {
+                                            removeIf { it is FullDataflowGranularity }
                                             add(
                                                 PartialDataflowGranularity(
-                                                    Field().apply { name = Name(subAccessName) }
+                                                    Field().apply { name = Name(it) }
                                                 )
                                             )
                                         }
@@ -2256,7 +2267,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return mapDstToSrc
     }
 
-    /** Returns a Pair of destination (for the general State) and destinationAddresses */
+    /**
+     * Returns a Pair of destination (for the general State) and destinationAddresses The return
+     * address are a Pair. The string has the following coding:
+     * 1) null: No partial write
+     * 2) any other value: The field to which we write to
+     */
     private fun calculateCallDestinations(
         doubleState: PointsToState.Element,
         mapDstToSrc: ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>,
@@ -2330,16 +2346,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             argumentValues.forEach { (v, _) ->
                 // We over approximate here and also add the main memory Address to the list of
                 // destinations
-                fieldAddresses.add(v to null)
+                fieldAddresses.add(v to subAccessName)
 
                 val parentName = getNodeName(v)
                 val partialString =
                     subAccessName.ifEmpty { (partialAccess?.partialTarget as? String) ?: "" }
                 val newName = Name(partialString, parentName)
                 fieldAddresses.addAll(
-                    doubleState.fetchFieldAddresses(identitySetOf(v), newName).map {
-                        it to partialString
-                    }
+                    doubleState.fetchFieldAddresses(identitySetOf(v), newName).map { it to null }
                 )
             }
             return Pair(fieldAddresses, destination)
@@ -2351,9 +2365,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     it.first to null
                 }
             // If the argument is a MemberAccess, we also collect the addresses of the bases
-            collectBasesAndOffsets(argument).forEach { (base, _) ->
-                doubleState.getAddresses(base, base).forEach { addr ->
-                    destinationAddresses.add(addr to base.name.toString())
+            // We build the offsetStr from all offsets we find, so if the argument is 'a.b.c.d', the
+            // offset str of the last element should be 'b.c.d'
+            var offsetStr = ""
+            collectBasesAndOffsets(argument).reversed().forEach { (base, offset) ->
+                if (offsetStr != "") offsetStr += "."
+                offsetStr +=
+                    ((offset as? String)
+                        ?: (offset as? Field)?.name?.toString()
+                        ?: (offset as? Field)?.name?.localName)
+                doubleState.getNestedValues(base, destAddrDepth).forEach { (value, isShortFS) ->
+                    if (!isShortFS) {
+                        destinationAddresses.add(value to offsetStr)
+                    }
                 }
             }
 

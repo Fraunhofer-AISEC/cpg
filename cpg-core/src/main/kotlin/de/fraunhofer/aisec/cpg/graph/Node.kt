@@ -179,7 +179,11 @@ abstract class Node() :
     val prevFullDFG: List<Node>
         get() {
             return prevDFGEdges
-                .filter { it.granularity is FullDataflowGranularity && !it.functionSummary }
+                .filter {
+                    it.granularity is FullDataflowGranularity &&
+                        !it.functionSummary &&
+                        it.derefDepth == null
+                }
                 .map { it.start }
         }
 

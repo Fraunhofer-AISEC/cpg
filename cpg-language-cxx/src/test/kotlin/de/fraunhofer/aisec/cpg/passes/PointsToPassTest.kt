@@ -3665,28 +3665,20 @@ class PointsToPassTest {
             setOf<Node>(unknownAssignsAssign1.target as Node, unknownAssignsAssign2.target as Node),
             unknownAssigns0.prevFullDFG.toSet(),
         )
-        // For the base of unknownAssigns0, we expect the following FullDFG-Path:
-        //        unknownAssigns0.base <- <MemberAccessLine10.base> <- <MemberAccessLine9.base> <-
-        // Variable
+        // The base of unknownAssigns0 points to its variable declaration
+        // TODO: We could also check for the partial DFG Edges
         assertEquals(
-            (unknownAssignsAssign2.target as? MemberAccess)?.base,
+            tu.variables("unknown_assigns").single(),
             unknownAssigns0.base.prevFullDFG.singleOrNull(),
-        )
-        assertEquals(
-            (unknownAssignsAssign1.target as? MemberAccess)?.base,
-            (unknownAssignsAssign2.target as? MemberAccess)?.base?.prevFullDFG?.singleOrNull(),
-        )
-        assertEquals(
-            testFD.variables["unknown_assigns"],
-            (unknownAssignsAssign1.target as? MemberAccess)?.base?.prevFullDFG?.singleOrNull(),
         )
 
         // For known_assigns, we know the struct, so we expect the prevDFG edge to point to the
         // lastWrite of the first element
         assertEquals(knownAssignsAssign2.target as Node, knownAssigns0.prevFullDFG.singleOrNull())
-        // The base of the knownassign points to the 3rd assignment
+        // The base of the known_assigns points to its variable declaration
+        // TODO: We could also check for the partial DFG Edges
         assertEquals(
-            (knownAssignsAssign3.target as? MemberAccess)?.base,
+            tu.variables("known_assigns").single(),
             knownAssigns0.base.prevFullDFG.singleOrNull(),
         )
     }
@@ -3936,7 +3928,7 @@ class PointsToPassTest {
         assertNotNull(testFuncDerefPMV)
 
         // The returned PointerReference
-        val finalConfPointerReference = testFunc.returns.single().returnValue
+        val finalConfPointerReference = testFunc.returns.single().returnValue as? PointerReference
         assertNotNull(finalConfPointerReference)
 
         val memsetDstParam = memsetFunc.parameters[0]
@@ -3949,17 +3941,46 @@ class PointsToPassTest {
         assertNotNull(strlDstDerefPMV)
 
         // Actual tests
-        // For the arg of the printf, we except a Full prevDFG to the variable and a partial to the
-        // memset dst deref PMV
+        // For the arg of the printf, we except a Full prevDFG to the variable. Additionally, due to
+        // the memset, we expect 3 DEREF_VALUE edges:
+        // One full, one to the "st.s" and one to the "st" field.
+        // Note: Since we don't know much about conf_t, all member accesses resolve to the same
+        // address, causing the 3 different edges to the same value
+        assertEquals(4, printf1Arg.prevDFG.size)
+        assertEquals(testFunc.variables["conf"], printf1Arg.prevFullDFG.singleOrNull())
         assertEquals(
             memsetDstDerefPMV,
             printf1Arg.prevDFGEdges
                 .singleOrNull {
-                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget == "conf"
+                    it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE &&
+                        it.granularity is FullDataflowGranularity
                 }
                 ?.start,
         )
-        assertEquals(testFunc.variables["conf"], printf1Arg.prevFullDFG.singleOrNull())
+        assertEquals(
+            memsetDstDerefPMV,
+            printf1Arg.prevDFGEdges
+                .singleOrNull {
+                    it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE &&
+                        ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
+                                as? Field)
+                            ?.name
+                            ?.localName == "st"
+                }
+                ?.start,
+        )
+        assertEquals(
+            memsetDstDerefPMV,
+            printf1Arg.prevDFGEdges
+                .singleOrNull {
+                    it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE &&
+                        ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
+                                as? Field)
+                            ?.name
+                            ?.localName == "st.s"
+                }
+                ?.start,
+        )
 
         // The 2nd argument to strlcpy should have a prevDFG with FieldGranularity to its base. From
         // there, we expect a Full DFG to the PMV derefvalue of parameter c
@@ -3973,16 +3994,16 @@ class PointsToPassTest {
         )
 
         // For the 2nd printf, we except the prevFullDFG of the `conf` to point to the variable
-        // "conf". Additionally, we except partial prevDFGs to the memset and strlcpy derefvalues
-        // TODO: We could be more precise and delete the partial prevDFG to the memset since strlcpy
-        // also writes to conf.st.s
+        // "conf". Additionally, as above, we except 3 DEREF_VALUE edges with different
+        // granularities.
+        assertEquals(4, printf2Arg1.prevDFG.size)
         assertEquals(testFunc.variables["conf"], printf2Arg1.prevFullDFG.singleOrNull())
         assertEquals(
-            memsetDstDerefPMV,
+            strlDstDerefPMV,
             printf2Arg1.prevDFGEdges
                 .single {
-                    it.granularity is PartialDataflowGranularity<*> &&
-                        (it as ContextSensitiveDataflow).callingContext.calls.single() == memsetCall
+                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                        strlcpyCall && it.granularity is FullDataflowGranularity
                 }
                 .start,
         )
@@ -3990,28 +4011,48 @@ class PointsToPassTest {
             strlDstDerefPMV,
             printf2Arg1.prevDFGEdges
                 .single {
-                    it.granularity is PartialDataflowGranularity<*> &&
-                        (it as ContextSensitiveDataflow).callingContext.calls.single() ==
-                            strlcpyCall
+                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                        strlcpyCall &&
+                        ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
+                                as? Field)
+                            ?.name
+                            ?.localName == "st"
+                }
+                .start,
+        )
+        assertEquals(
+            strlDstDerefPMV,
+            printf2Arg1.prevDFGEdges
+                .single {
+                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                        strlcpyCall &&
+                        ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
+                                as? Field)
+                            ?.name
+                            ?.localName == "st.s"
                 }
                 .start,
         )
 
-        // For conf.st, we don't really have a prevFullDFG
-        // However, we want the same partialDataFlowGranularities as above plus one to the conf
-        // reference
-        assertTrue(printf2Arg2.prevFullDFG.isEmpty())
+        // conf.st has as prevFullDFG the field declaration
+        // Additionally, we expect: One FieldGranularityEdge to the base and the same 3 DEREF_VALUE
+        // edges as for conf. Note that 2 (a full and a partial for ".st" would be enough, but as
+        // noted above, they all point to the same memory address, so they get the same DFG edges
+        //
+        assertEquals(5, printf2Arg2.prevDFG.size)
+        assertEquals(tu.fields["st"], printf2Arg2.prevFullDFG.singleOrNull())
         assertEquals(
-            3,
-            printf2Arg2.prevDFGEdges.filter { it.granularity is PartialDataflowGranularity<*> }.size,
+            (printf2Arg2 as MemberAccess).base as Node,
+            (printf2Arg2.prevDFGEdges.singleOrNull { it.granularity is FieldDataflowGranularity }
+                    as Dataflow)
+                .start,
         )
         assertEquals(
-            memsetDstDerefPMV,
+            strlDstDerefPMV,
             printf2Arg2.prevDFGEdges
                 .single {
-                    it.granularity is PartialDataflowGranularity<*> &&
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                            memsetCall
+                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                        strlcpyCall && it.granularity is FullDataflowGranularity
                 }
                 .start,
         )
@@ -4019,62 +4060,80 @@ class PointsToPassTest {
             strlDstDerefPMV,
             printf2Arg2.prevDFGEdges
                 .single {
-                    it.granularity is PartialDataflowGranularity<*> &&
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                            strlcpyCall
+                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                        strlcpyCall &&
+                        ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
+                                as? Field)
+                            ?.name
+                            ?.localName == "st"
                 }
                 .start,
         )
         assertEquals(
-            (printf2Arg2 as MemberAccess).base,
+            strlDstDerefPMV,
             printf2Arg2.prevDFGEdges
                 .single {
-                    it.granularity is PartialDataflowGranularity<*> &&
-                        it !is ContextSensitiveDataflow
+                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                        strlcpyCall &&
+                        ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
+                                as? Field)
+                            ?.name
+                            ?.localName == "st.s"
                 }
                 .start,
         )
 
-        // The same partial edges apply to the PointerReference that is returned
+        // The returned pointerreference has 6 prevDFG edges
+        // a full one to the memory address of conf
+        // a DEREF-VALUE edge to the variable declaration of conf
+        // a pointerReference granularity edge to the input
+        // 3 DEREF-DEREF-VALUE edges to the param of strlcpy
+        assertEquals(6, finalConfPointerReference.prevDFG.size)
         assertEquals(
-            3,
-            finalConfPointerReference.prevDFGEdges
-                .filter { it.granularity is PartialDataflowGranularity<*> }
-                .size,
+            finalConfPointerReference.input.memoryAddresses.single(),
+            finalConfPointerReference.prevFullDFG.singleOrNull(),
         )
         assertEquals(
-            memsetDstDerefPMV,
+            finalConfPointerReference.input,
             finalConfPointerReference.prevDFGEdges
-                .single {
-                    it.granularity is PartialDataflowGranularity<*> &&
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                            memsetCall
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "PointerReference"
                 }
-                .start,
+                ?.start,
         )
         assertEquals(
             strlDstDerefPMV,
             finalConfPointerReference.prevDFGEdges
-                .single {
-                    it.granularity is PartialDataflowGranularity<*> &&
-                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                            strlcpyCall
+                .singleOrNull {
+                    it.derefDepth == PointerAccess.CURRENT_DEREF_DEREF_VALUE &&
+                        it.granularity is FullDataflowGranularity
                 }
-                .start,
+                ?.start,
         )
         assertEquals(
-            (finalConfPointerReference as PointerReference).input,
+            strlDstDerefPMV,
             finalConfPointerReference.prevDFGEdges
-                .single {
-                    it.granularity is PartialDataflowGranularity<*> &&
-                        it !is ContextSensitiveDataflow
+                .singleOrNull {
+                    it.derefDepth == PointerAccess.CURRENT_DEREF_DEREF_VALUE &&
+                        ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
+                                as? Field)
+                            ?.name
+                            ?.localName == "st"
                 }
-                .start,
+                ?.start,
         )
-        // The prevFullDFG should be the memoryAddress of conf
-        assertLocalName(
-            "conf",
-            finalConfPointerReference.prevFullDFG.singleOrNull() as MemoryAddress,
+        assertEquals(
+            strlDstDerefPMV,
+            finalConfPointerReference.prevDFGEdges
+                .singleOrNull {
+                    it.derefDepth == PointerAccess.CURRENT_DEREF_DEREF_VALUE &&
+                        ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget
+                                as? Field)
+                            ?.name
+                            ?.localName == "st.s"
+                }
+                ?.start,
         )
     }
 
@@ -4200,55 +4259,79 @@ class PointsToPassTest {
         )
 
         // Let's analyze the assign after the strlcpy. Here, both the b and the b.d should have 2
-        // partial prevDFGto the strlcpys dstParam
-        // (one from each strlcpy)
+        // partial prevDFGto to the strlcpy dstParam
+        // Note: Since we only detect the first subaccess (so b.d in this case), we don't have a
+        // prevDFG Edge to the strlcpy in Line 11 from here
+        // TODO: We have deref(deref)value edges to the strlcpy PMV, not sure if this makes sense
+        // Start with b
+        // 3 edges: The full to the variable, the partial to the DerefPMV of strlcpy, and the
+        // fieldgranularity
         assertEquals(
-            2,
+            3,
+            b1.prevDFGEdges.filter { it.granularity !is PointerDataflowGranularity }.size,
+        )
+        assertEquals(testFunc.variables("b").single(), b1.prevFullDFG.single())
+        assertEquals(
+            strlDstDerefPMV,
             b1.prevDFGEdges
-                .filter {
-                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget == "b" &&
-                        it.start == strlDstDerefPMV &&
-                        (it as ContextSensitiveDataflow).callingContext.calls.single() in
-                            setOf(strlcpy1Call, strlcpy2Call)
+                .single {
+                    ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
+                        ?.name
+                        ?.localName == "d" &&
+                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                            strlcpy2Call
                 }
-                .size,
+                .start,
         )
         assertEquals(
-            2,
+            bd1,
+            b1.prevDFGEdges.single { (it.granularity is FieldDataflowGranularity) }.start,
+        )
+        // Now the b.d
+        // We expect one Full prevDFG to ?, and 3 partial ones: to both strcpys and to the memset
+        assertEquals(
+            4,
+            bd1.prevDFGEdges.filter { it.granularity !is PointerDataflowGranularity }.size,
+        )
+        // TODO
+        //        assertEquals(null, bd1.prevFullDFG.singleOrNull())
+        assertEquals(
+            memsetDstDerefPMV,
             bd1.prevDFGEdges
-                .filter {
-                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                        "conf_t::d" &&
-                        it.start == strlDstDerefPMV &&
-                        (it as ContextSensitiveDataflow).callingContext.calls.single() in
-                            setOf(strlcpy1Call, strlcpy2Call)
+                .single {
+                    ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
+                        ?.name
+                        ?.localName == "e" &&
+                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                            memset1Call
                 }
-                .size,
-        )
-
-        // And we also want to edges like this to the memsets
-        assertEquals(
-            2,
-            b1.prevDFGEdges
-                .filter {
-                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget == "b" &&
-                        it.start == memsetDstDerefPMV &&
-                        (it as ContextSensitiveDataflow).callingContext.calls.single() in
-                            setOf(memset1Call, memset2Call)
-                }
-                .size,
+                .start,
         )
         assertEquals(
-            2,
+            strlDstDerefPMV,
             bd1.prevDFGEdges
-                .filter {
-                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                        "conf_t::d" &&
-                        it.start == memsetDstDerefPMV &&
-                        (it as ContextSensitiveDataflow).callingContext.calls.single() in
-                            setOf(memset1Call, memset2Call)
+                .single {
+                    ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
+                        ?.name
+                        ?.localName == "e" &&
+                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                            strlcpy1Call
                 }
-                .size,
+                .start,
+        )
+        // For "f", we have no edge to the memset in Line 13 b/c the edge is overwritten by the
+        // strlcpy in Line 16
+        assertEquals(
+            strlDstDerefPMV,
+            bd1.prevDFGEdges
+                .single {
+                    ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
+                        ?.name
+                        ?.localName == "f" &&
+                        (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                            strlcpy2Call
+                }
+                .start,
         )
 
         // Back in the main function, let's check the prevDFGs from the PointerReference argument to
@@ -4258,8 +4341,38 @@ class PointsToPassTest {
             "credentials",
             realCodeCallArg.prevFullDFG.singleOrNull { it is MemoryAddress },
         )
-        // For the argument's input, the prevFullDFG is the base of the 2nd assign in the construtor
-        assertEquals(credentialLastWrite, realCodeCallArgInput.prevFullDFG.singleOrNull())
+        // For the argument's input we have 3 prevDFG edges, the prevFullDFG is the variable
+        assertEquals(
+            3,
+            realCodeCallArgInput.prevDFGEdges
+                .filter { it.granularity !is PointerDataflowGranularity }
+                .size,
+        )
+        assertEquals(
+            mainFunc.variables("credentials").single(),
+            realCodeCallArgInput.prevFullDFG.singleOrNull(),
+        )
+        // And we also have the partial ones to the assigns in the constructor
+        assertEquals(
+            (credentialAssign1.lhs.single() as? MemberAccess)?.base as Node,
+            realCodeCallArgInput.prevDFGEdges
+                .single {
+                    ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
+                        ?.name
+                        ?.localName == "ssid"
+                }
+                .start,
+        )
+        assertEquals(
+            (credentialAssign2.lhs.single() as? MemberAccess)?.base as Node,
+            realCodeCallArgInput.prevDFGEdges
+                .single {
+                    ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
+                        ?.name
+                        ?.localName == "pswd"
+                }
+                .start,
+        )
 
         // The derefPMV has as prevFullDFG has the same prevFullDFG
         assertEquals(credentialLastWrite, realCodeDerefPMV.prevFullDFG.singleOrNull())
@@ -4332,51 +4445,79 @@ class PointsToPassTest {
 
         // Parameters and PMVs
         val printStructLineParam = printStructLineFunc.parameters.single()
-        val printStructLineDerefPMV =
-            printStructLineParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
 
         val freeParam = freeFunc.parameters.single()
         val freeDerefPMV = freeParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
 
         // Stuff
-        val dataIIntTwoLine20 = testFunc.assignments[5].target
-        assertNotNull(dataIIntTwoLine20)
+        val dataIIntOneLine23 = testFunc.assignments[4].target as? MemberAccess
+        assertNotNull(dataIIntOneLine23)
 
-        val dataLine13 = testFunc.assignments[2].target
-        assertNotNull(dataLine13)
+        val dataIIntTwoLine24 = testFunc.assignments[5].target as? MemberAccess
+        assertNotNull(dataIIntTwoLine24)
 
-        val dataLine10 = testFunc.assignments[1].target
-        assertNotNull(dataLine10)
+        val dataLine17 = testFunc.assignments[2].target
+        assertNotNull(dataLine17)
+
+        val dataLine14 = testFunc.assignments[1].target
+        assertNotNull(dataLine14)
+
+        val IindexLine23 = testFunc.refs("i")[0]
+        assertNotNull(IindexLine23)
+
+        val IindexLine24 = testFunc.refs("i")[1]
+        assertNotNull(IindexLine24)
 
         // We except the following DFG-Edges for the printStructLine Call
         // 2) The argument has a DFG-Edge to the param
         // 3) The currentderefvalue edge of the arg is the derefValue of free
 
         // 1) the argument as well as data have 4 prevDFG edges:
-        //   + a ContextSensitive one to the PMVDerefValue of free
-        //   + a Full one to the base of the write to data[i].intTwo in Line 20 (TODO: Partial?)
-        //   + a Full one to the real initialization (Line 13)
-        //   + a Full one to the initialization to null ( Line 10)
+        //   + a ContextSensitive deref_deref_value to the PMVDerefValue of free
+        // TODO: If we are being picky, since the partial edge points to "i", should we really have
+        // both partials?
+        //   + a partial one to the base of the write to data[i].intOne in Line 24
+        //   + a partial one to the base of the write to data[i].intTwo in Line 245
+        //   + a Full one to the real initialization (Line 17)
+        //   + a Full one to the initialization to null ( Line 14)
         // First the checks for data
-        assertEquals(4, printStructLineArgBase.prevDFG.size)
+        assertEquals(5, printStructLineArgBase.prevDFG.size)
+        assertEquals(2, printStructLineArgBase.prevFullDFG.size)
         assertEquals(
             freeDerefPMV,
             printStructLineArgBase.prevDFGEdges
                 .singleOrNull {
-                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() == freeCall
+                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
+                        freeCall &&
+                        (it.granularity as? PointerDataflowGranularity)?.pointerTarget ==
+                            PointerAccess.CURRENT_DEREF_VALUE
                 }
                 ?.start,
         )
-        assertNotNull(
-            printStructLineArgBase.prevDFG.singleOrNull {
-                it == ((dataIIntTwoLine20 as? MemberAccess)?.base as? Subscription)?.arrayExpression
-            }
+        assertEquals(
+            (dataIIntOneLine23.base as? Subscription)?.arrayExpression,
+            printStructLineArgBase.prevDFGEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        IindexLine23
+                }
+                ?.start,
         )
-        assertNotNull(printStructLineArgBase.prevDFG.singleOrNull { it == dataLine13 })
-        assertNotNull(printStructLineArgBase.prevDFG.singleOrNull { it == dataLine10 })
+        assertEquals(
+            (dataIIntTwoLine24.base as? Subscription)?.arrayExpression,
+            printStructLineArgBase.prevDFGEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        IindexLine24
+                }
+                ?.start,
+        )
+
+        assertNotNull(printStructLineArgBase.prevDFG.singleOrNull { it == dataLine17 })
+        assertNotNull(printStructLineArgBase.prevDFG.singleOrNull { it == dataLine14 })
 
         // Now the same for the argument. Here we have an additional pointerReference-Edge
-        assertEquals(5, printStructLineArg.prevDFG.size)
+        assertEquals(6, printStructLineArg.prevDFG.size)
         assertEquals(
             freeDerefPMV,
             printStructLineArg.prevDFGEdges
@@ -4385,13 +4526,26 @@ class PointsToPassTest {
                 }
                 ?.start,
         )
-        assertNotNull(
-            printStructLineArg.prevDFG.singleOrNull {
-                it == ((dataIIntTwoLine20 as? MemberAccess)?.base as? Subscription)?.arrayExpression
-            }
+        assertEquals(
+            (dataIIntOneLine23.base as? Subscription)?.arrayExpression,
+            printStructLineArg.prevDFGEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        IindexLine23
+                }
+                ?.start,
         )
-        assertNotNull(printStructLineArg.prevDFG.singleOrNull { it == dataLine13 })
-        assertNotNull(printStructLineArg.prevDFG.singleOrNull { it == dataLine10 })
+        assertEquals(
+            (dataIIntTwoLine24.base as? Subscription)?.arrayExpression,
+            printStructLineArg.prevDFGEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        IindexLine24
+                }
+                ?.start,
+        )
+        assertNotNull(printStructLineArg.prevDFG.singleOrNull { it == dataLine17 })
+        assertNotNull(printStructLineArg.prevDFG.singleOrNull { it == dataLine14 })
         assertEquals(
             printStructLineArg.input,
             printStructLineArg.prevDFGEdges
@@ -4404,7 +4558,7 @@ class PointsToPassTest {
 
         // For data[0], we expect the following prevDFG Edges:
         // 1) The fullprevDFG to the PMVDerefValue of free (and to the original assignment in Line
-        // 10 if we didn't enter the if in Line 11)
+        // 14 if we didn't enter the if in Line 15)
         // 2) the index prevDFG
         assertTrue(printStructLineArgInput.prevFullDFG.contains(freeDerefPMV))
         assertEquals(
