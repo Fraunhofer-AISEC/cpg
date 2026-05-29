@@ -984,7 +984,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     excludeShortFSValues = true,
                                 )
                                 .filterTo(PowersetLattice.Element()) { it.value.name != param.name }
-                        stateEntries
+                        // Remove overapproximated entries that do not indicate a subAccess
+                        data class KeyWithSubAccessEntry(val value: Any, val shortFS: Any)
+                        val keysWithSubAccess =
+                            stateEntries
+                                .filter { it.subAccessName.isNotEmpty() }
+                                .mapTo(mutableSetOf()) {
+                                    KeyWithSubAccessEntry(it.value, it.shortFS)
+                                }
+
+                        val filteredStateEntries =
+                            stateEntries.filterNot { entry ->
+                                entry.subAccessName.isEmpty() &&
+                                    KeyWithSubAccessEntry(entry.value, entry.shortFS) in
+                                        keysWithSubAccess
+                            }
+                        filteredStateEntries
                             /* See if we can find something that is different from the initial value*/
                             .filterTo(PowersetLattice.Element()) {
                                 /* Filter the PMVs from this parameter*/

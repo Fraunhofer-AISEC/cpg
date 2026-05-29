@@ -1955,7 +1955,6 @@ class PointsToPassTest {
             3,
             fssgxecallkeytoout.filter { it.key !is Return }.entries.firstOrNull()?.value?.size,
         )
-        // TODO: Should this really be 3?
         assertEquals(
             2,
             fssgxecallkeytoout
@@ -2372,9 +2371,7 @@ class PointsToPassTest {
         val preciseFSrenegotiate =
             FSrenegotiate.entries.firstOrNull()?.value?.filter { it.properties.none { it == true } }
         assertNotNull(preciseFSrenegotiate)
-        // Since we overapproximate, we have 5 entries here: The writes in Line 15 & 16 appear once
-        // with and once w/o the subAccesses
-        assertEquals(5, preciseFSrenegotiate.size)
+        assertEquals(3, preciseFSrenegotiate.size)
         assertTrue(preciseFSrenegotiate.any { it.srcNode == literal5 && it.subAccessName == "i" })
         assertTrue(preciseFSrenegotiate.any { it.srcNode == literal6 && it.subAccessName == "j" })
         assertTrue(
