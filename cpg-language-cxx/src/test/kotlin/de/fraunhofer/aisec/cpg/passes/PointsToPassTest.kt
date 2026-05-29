@@ -4359,9 +4359,17 @@ class PointsToPassTest {
                 .start,
         )
 
-        // The derefPMV has 3 prevFullDFG edges: The variable, and due to overapproximation, also
-        // the has the same prevFullDFG
-        assertEquals(credentialLastWrite, realCodeDerefPMV.prevFullDFG.singleOrNull())
+        // The derefPMV has 3 prevFullDFG edges: The variable, and also the edges of the partial
+        // writes
+        // TODO: the partial writes should have a partial Granularity
+        assertEquals(
+            setOf(
+                mainFunc.variables("credentials").single(),
+                (credentialAssign1.lhs.single() as MemberAccess).base,
+                (credentialAssign2.lhs.single() as MemberAccess).base,
+            ),
+            realCodeDerefPMV.prevFullDFG.toSet(),
+        )
 
         // The derefderefPMV and the currentderefderefValues of the argument point to both
         // memberAccesses, as the struct is unknown
