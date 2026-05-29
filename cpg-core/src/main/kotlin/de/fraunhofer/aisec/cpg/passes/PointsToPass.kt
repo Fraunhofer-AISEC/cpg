@@ -70,6 +70,8 @@ import kotlinx.coroutines.*
 val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
 var totalFunctionCount = 0
 var analyzedFunctionCount = 0
+private const val MAX_FIELD_ACCESS_PATH_DEPTH = 6
+private const val FIELD_ACCESS_SUMMARY_SEGMENT = "<summary>"
 
 typealias GeneralStateEntry =
     TripleLattice<
@@ -318,6 +320,36 @@ fun resolveMemberAccess(node: MemberAccess): Pair<Node, Name> {
 fun calculateInnerConcurrencyCounter(outerConcurrencyCounter: Int): Int {
     return if (outerConcurrencyCounter == 0) CPU_CORES
     else if (outerConcurrencyCounter > CPU_CORES) 1 else CPU_CORES / outerConcurrencyCounter
+}
+
+private fun Name.pathDepth(): Int {
+    var depth = 1
+    var current = this.parent
+    while (current != null) {
+        depth++
+        current = current.parent
+    }
+    return depth
+}
+
+private fun normalizeFieldAccessPath(name: Name): Name {
+    if (name.pathDepth() <= MAX_FIELD_ACCESS_PATH_DEPTH) {
+        return name
+    }
+
+    val segments = mutableListOf<Name>()
+    name.splitTo(segments)
+    val rootToLeaf = segments.asReversed()
+    val keep = (MAX_FIELD_ACCESS_PATH_DEPTH - 1).coerceAtLeast(1)
+
+    var normalized: Name? = null
+    for (i in 0 until minOf(keep, rootToLeaf.size)) {
+        val segment = rootToLeaf[i]
+        normalized = Name(segment.localName, normalized, segment.delimiter)
+    }
+
+    val delimiter = rootToLeaf.lastOrNull()?.delimiter ?: "."
+    return Name(FIELD_ACCESS_SUMMARY_SEGMENT, normalized, delimiter)
 }
 
 fun removePossibleCasts(node: Expression): Expression {
@@ -2124,16 +2156,32 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     val existingCallingContext =
                         lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
                     if (existingCallingContext != null) {
-                        if (
-                            callingContext.calls.any { call ->
-                                call !in existingCallingContext.calls
+                        // Keep and canonicalize call context by identity, then append missing
+                        // calls.
+                        // This avoids context churn and duplicate growth across iterations.
+                        val mergedCalls = mutableListOf<Call>()
+                        val seenCalls = hashSetOf<IdKey<Call>>()
+                        existingCallingContext.calls.forEach { call ->
+                            if (seenCalls.add(IdKey(call))) {
+                                mergedCalls.add(call)
                             }
-                        ) {
-                            val cpy = existingCallingContext.calls.toMutableList()
-                            cpy.addAll(callingContext.calls)
-                            lwPropertySet.add(CallingContextOut(cpy))
                         }
-                    } else lwPropertySet.add(callingContext)
+                        callingContext.calls.forEach { call ->
+                            if (seenCalls.add(IdKey(call))) {
+                                mergedCalls.add(call)
+                            }
+                        }
+                        lwPropertySet.add(CallingContextOut(mergedCalls))
+                    } else {
+                        val mergedCalls = mutableListOf<Call>()
+                        val seenCalls = hashSetOf<IdKey<Call>>()
+                        callingContext.calls.forEach { call ->
+                            if (seenCalls.add(IdKey(call))) {
+                                mergedCalls.add(call)
+                            }
+                        }
+                        lwPropertySet.add(CallingContextOut(mergedCalls))
+                    }
                 }
                 // Add all other previous properties
                 lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
@@ -4226,18 +4274,20 @@ fun PointsToState.Element.fetchFieldAddresses(
     nodeName: Name,
 ): IdentitySet<Node> {
     val fieldAddresses = identitySetOf<Node>()
+    // Widen very deep access paths to a stable summary segment.
+    val normalizedNodeName = normalizeFieldAccessPath(nodeName)
 
     baseAddresses.forEach { addr ->
         val elements =
             declarationsState[addr]?.first?.filterTo(identitySetOf()) {
-                it.name.localName == nodeName.localName
+                it.name.localName == normalizedNodeName.localName
             }
 
         if (elements.isNullOrEmpty()) {
             val newEntry =
                 identitySetOf<Node>(
-                    nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, nodeName)) {
-                        MemoryAddress(nodeName, isGlobal(addr))
+                    nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, normalizedNodeName)) {
+                        MemoryAddress(normalizedNodeName, isGlobal(addr))
                     }
                 )
 
