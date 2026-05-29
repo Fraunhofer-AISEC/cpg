@@ -2488,10 +2488,7 @@ class PointsToPassTest {
         assertEquals(
             1,
             p2pLine262.prevDFGEdges
-                .filter {
-                    it.granularity is PointerDataflowGranularity &&
-                        it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE
-                }
+                .filter { it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE }
                 .size,
         )
         assertEquals(
@@ -3257,10 +3254,10 @@ class PointsToPassTest {
             pDerefLine466Left.nextDFGEdges
                 .filter {
                     it.granularity is FullDataflowGranularity &&
+                        it.derefDepth == null &&
                         it is ContextSensitiveDataflow &&
                         it.callingContext.calls ==
-                            mutableListOf(veryInnerFuncCE, innerFuncCE, outerFuncCE) &&
-                        it.granularity is FullDataflowGranularity
+                            mutableListOf(veryInnerFuncCE, innerFuncCE, outerFuncCE)
                 }
                 .map { it.end }
                 .toSet(),
@@ -4175,6 +4172,11 @@ class PointsToPassTest {
             realCodeParam.memoryValues.singleOrNull { it.name.localName == "derefderefvalue" }
         assertNotNull(realCodeDerefDerefPMV)
 
+        val mainFuncArgv = mainFunc.parameters.last()
+        val mainFuncArgvDerefDerefPMV =
+            mainFuncArgv.memoryValues.singleOrNull { it.name.localName == "derefderefvalue" }
+        assertNotNull(realCodeDerefDerefPMV)
+
         // Other stuff
         val bdgh1 = testFunc.assignments[2].target as? MemberAccess
         assertNotNull(bdgh1)
@@ -4216,6 +4218,8 @@ class PointsToPassTest {
         // Start with b
         // 3 edges: The full to the variable, the fieldgranularity and three derefvalue edges, which
         // all point to the PMV of strlcpy
+        // TODO: shouldn't b also have partial edges to other previous writes such as the other
+        // strlcpy?
         assertEquals(5, b1.prevDFG.size)
         assertEquals(testFunc.variables("b").single(), b1.prevFullDFG.single())
         assertEquals(
@@ -4265,26 +4269,25 @@ class PointsToPassTest {
         assertEquals(5, bd1.prevDFGEdges.size)
         assertContains(bd1.prevFullDFG, tu.fields["d"] as Field)
         assertEquals(
-            memsetDstDerefPMV,
+            strlDstDerefPMV,
             bd1.prevDFGEdges
                 .single {
-                    ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
-                        ?.name
-                        ?.localName == "e" &&
+                    it.granularity is FullDataflowGranularity &&
                         (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                            memset1Call
+                            strlcpy2Call
                 }
                 .start,
         )
+
         assertEquals(
             strlDstDerefPMV,
             bd1.prevDFGEdges
                 .single {
                     ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
                         ?.name
-                        ?.localName == "e" &&
+                        ?.localName == "d" &&
                         (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
-                            strlcpy1Call
+                            strlcpy2Call
                 }
                 .start,
         )
@@ -4296,7 +4299,7 @@ class PointsToPassTest {
                 .single {
                     ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
                         ?.name
-                        ?.localName == "f" &&
+                        ?.localName == "d.f" &&
                         (it as? ContextSensitiveDataflow)?.callingContext?.calls?.single() ==
                             strlcpy2Call
                 }
@@ -4310,18 +4313,19 @@ class PointsToPassTest {
             "credentials",
             realCodeCallArg.prevFullDFG.singleOrNull { it is MemoryAddress },
         )
-        // For the argument's input we have 3 prevDFG edges, the prevFullDFG is the variable
-        assertEquals(
-            3,
-            realCodeCallArgInput.prevDFGEdges
-                .filter { it.granularity !is PointerDataflowGranularity }
-                .size,
-        )
+        // For the argument's input we have 6 prevDFG edges
+        // + The prevFullDFG is the variable
+        // + 2 partial ones to the bases of the writes in the constructor
+        // + 2 current-deref-value edges to the lhs in the constructor, since dereferencing
+        // credentials should
+        // bring us to the first element in the struct, and since we don't know the struct, we
+        // create dfg-edges to all of them
+        // + a current-deref-deref-value to argv
+        assertEquals(6, realCodeCallArgInput.prevDFG.size)
         assertEquals(
             mainFunc.variables("credentials").single(),
             realCodeCallArgInput.prevFullDFG.singleOrNull(),
         )
-        // And we also have the partial ones to the assigns in the constructor
         assertEquals(
             (credentialAssign1.lhs.single() as? MemberAccess)?.base as Node,
             realCodeCallArgInput.prevDFGEdges
@@ -4342,14 +4346,27 @@ class PointsToPassTest {
                 }
                 .start,
         )
+        assertEquals(
+            mutableSetOf<Node>(credentialAssign1.lhs.single(), credentialAssign2.lhs.single()),
+            realCodeCallArgInput.prevDFGEdges
+                .filter { it.derefDepth == PointerAccess.CURRENT_DEREF_VALUE }
+                .mapTo(mutableSetOf()) { it.start },
+        )
+        assertEquals(
+            mainFuncArgvDerefDerefPMV,
+            realCodeCallArgInput.prevDFGEdges
+                .single { it.derefDepth == PointerAccess.CURRENT_DEREF_DEREF_VALUE }
+                .start,
+        )
 
-        // The derefPMV has as prevFullDFG has the same prevFullDFG
+        // The derefPMV has 3 prevFullDFG edges: The variable, and due to overapproximation, also
+        // the has the same prevFullDFG
         assertEquals(credentialLastWrite, realCodeDerefPMV.prevFullDFG.singleOrNull())
 
         // The derefderefPMV and the currentderefderefValues of the argument point to both
         // memberAccesses, as the struct is unknown
         assertEquals(
-            setOf<Node>(
+            setOf(
                 credentialAssign1.lhs.singleOrNull() as Node,
                 credentialAssign2.lhs.singleOrNull() as Node,
             ),
@@ -4357,7 +4374,7 @@ class PointsToPassTest {
         )
 
         assertEquals(
-            setOf<Node>(
+            setOf(
                 credentialAssign1.lhs.singleOrNull() as Node,
                 credentialAssign2.lhs.singleOrNull() as Node,
             ),
