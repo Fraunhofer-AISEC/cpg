@@ -26,10 +26,14 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.component
+import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.Memory
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.MemoryManagementMode
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newAllocate
+import de.fraunhofer.aisec.cpg.graph.concepts.memory.newMemory
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Assign
@@ -38,7 +42,10 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
 import de.fraunhofer.aisec.cpg.passes.Description
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
 /**
  * Recognises C/C++ standard-library allocator calls (`malloc`, `calloc`, `realloc`) and attaches an
@@ -53,19 +60,20 @@ import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
  * `posix_memalign` (size lives in different argument positions). Adding them is a one-line
  * extension to the when-branch below plus the size-extraction helper.
  */
+@DependsOn(EvaluationOrderGraphPass::class)
+@DependsOn(SymbolResolver::class)
 @Description(
     "Recognises C/C++ allocator calls (malloc, calloc, realloc) and attaches Allocate concepts."
 )
 class CXXMemoryAllocationPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
     override fun handleNode(node: Node, tu: TranslationUnit) {
-        if (node is Call) handleCall(node, tu)
+        if (node is Call) handleCall(node)
     }
 
-    private fun handleCall(call: Call, tu: TranslationUnit) {
+    private fun handleCall(call: Call) {
         val size = allocationSizeOf(call) ?: return
-        val concept =
-            tu.getConceptOrCreate<Memory> { Memory(mode = MemoryManagementMode.UNMANAGED) }
+        val concept = unmanagedMemoryConcept(call) ?: return
         newAllocate(
             underlyingNode = call,
             concept = concept,
@@ -73,6 +81,24 @@ class CXXMemoryAllocationPass(ctx: TranslationContext) : ConceptPass(ctx) {
             size = size,
             connect = true,
         )
+    }
+
+    /**
+     * The single [Memory] concept (unmanaged variant) shared across the [Component] the [call]
+     * belongs to. A C/C++ program has one heap conceptually, not one per translation unit, so the
+     * concept lives at the component level and all `Allocate` ops point back to it. Returns null
+     * when the call isn't attached to a component (shouldn't happen in normal analysis but keeps us
+     * defensive).
+     *
+     * `Memory` requires a `mode` constructor argument, so [ConceptPass.getConceptOrCreate]'s
+     * single-arg reflective path can't build one — we look it up manually and fall back to
+     * [newMemory].
+     */
+    private fun unmanagedMemoryConcept(call: Call): Memory? {
+        val component = call.component ?: return null
+        return component.conceptNodes.filterIsInstance<Memory>().firstOrNull {
+            it.mode == MemoryManagementMode.UNMANAGED
+        } ?: newMemory(component, mode = MemoryManagementMode.UNMANAGED, connect = true)
     }
 
     /**
