@@ -54,7 +54,6 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import java.text.NumberFormat
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicLong
 import kotlin.Pair
 import kotlin.collections.MutableSet
 import kotlin.collections.contains
@@ -444,90 +443,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     // circles. Therefore, we store the chain of Functions we currently analyse
     private val functionSummaryAnalysisChain = mutableListOf<Function>()
 
-    private val addEntryToMapCalls = AtomicLong(0)
-    private val addEntryToMapNanos = AtomicLong(0)
-    private val addEntryToMapDestinationCount = AtomicLong(0)
-    private val addEntryToMapCurrentSetScans = AtomicLong(0)
-    private val addEntryToMapCandidates = AtomicLong(0)
-    private val addEntryToMapInserted = AtomicLong(0)
-    private val addEntryToMapSkippedDuplicates = AtomicLong(0)
-    private val addEntryToMapPropertySetCacheHits = AtomicLong(0)
-    private val addEntryToMapPropertySetCacheMisses = AtomicLong(0)
-    private val addEntryToMapDedupBucketHits = AtomicLong(0)
-    private val addEntryToMapDedupBucketMisses = AtomicLong(0)
-    private val addEntryToMapSaturationSkips = AtomicLong(0)
-    private val addEntryToMapSaturationSkippedCandidates = AtomicLong(0)
-    private val addEntryToMapCandidateCacheHits = AtomicLong(0)
-    private val addEntryToMapCandidateCacheMisses = AtomicLong(0)
-    private val addEntryToMapParameterCalls = AtomicLong(0)
-    private val addEntryToMapParameterCandidates = AtomicLong(0)
-    private val addEntryToMapParameterInserted = AtomicLong(0)
-    private val addEntryToMapParameterMemoryCalls = AtomicLong(0)
-    private val addEntryToMapParameterMemoryCandidates = AtomicLong(0)
-    private val addEntryToMapParameterMemoryInserted = AtomicLong(0)
-    private val addEntryToMapMemoryAddressCalls = AtomicLong(0)
-    private val addEntryToMapMemoryAddressCandidates = AtomicLong(0)
-    private val addEntryToMapMemoryAddressInserted = AtomicLong(0)
-    private val addEntryToMapGenericCalls = AtomicLong(0)
-    private val addEntryToMapGenericCandidates = AtomicLong(0)
-    private val addEntryToMapGenericInserted = AtomicLong(0)
-    private val addEntryToMapEarlyReturns = AtomicLong(0)
-    private val addEntryToMapProgressLogEvery = 100_000L
-
-    private fun logAddEntryToMapPerformance(prefix: String) {
-        val calls = addEntryToMapCalls.get()
-        if (calls == 0L || !log.isInfoEnabled) {
-            return
-        }
-
-        val nanos = addEntryToMapNanos.get()
-        val destinations = addEntryToMapDestinationCount.get()
-        val scans = addEntryToMapCurrentSetScans.get()
-        val candidates = addEntryToMapCandidates.get()
-        val inserted = addEntryToMapInserted.get()
-        val skipped = addEntryToMapSkippedDuplicates.get()
-        val cacheHits = addEntryToMapPropertySetCacheHits.get()
-        val cacheMisses = addEntryToMapPropertySetCacheMisses.get()
-        val dedupBucketHits = addEntryToMapDedupBucketHits.get()
-        val dedupBucketMisses = addEntryToMapDedupBucketMisses.get()
-        val saturationSkips = addEntryToMapSaturationSkips.get()
-        val saturationSkippedCandidates = addEntryToMapSaturationSkippedCandidates.get()
-        val candidateCacheHits = addEntryToMapCandidateCacheHits.get()
-        val candidateCacheMisses = addEntryToMapCandidateCacheMisses.get()
-        val parameterCalls = addEntryToMapParameterCalls.get()
-        val parameterCandidates = addEntryToMapParameterCandidates.get()
-        val parameterInserted = addEntryToMapParameterInserted.get()
-        val parameterMemoryCalls = addEntryToMapParameterMemoryCalls.get()
-        val parameterMemoryCandidates = addEntryToMapParameterMemoryCandidates.get()
-        val parameterMemoryInserted = addEntryToMapParameterMemoryInserted.get()
-        val memoryAddressCalls = addEntryToMapMemoryAddressCalls.get()
-        val memoryAddressCandidates = addEntryToMapMemoryAddressCandidates.get()
-        val memoryAddressInserted = addEntryToMapMemoryAddressInserted.get()
-        val genericCalls = addEntryToMapGenericCalls.get()
-        val genericCandidates = addEntryToMapGenericCandidates.get()
-        val genericInserted = addEntryToMapGenericInserted.get()
-        val earlyReturns = addEntryToMapEarlyReturns.get()
-        val cacheTotal = cacheHits + cacheMisses
-        val dedupBucketTotal = dedupBucketHits + dedupBucketMisses
-        val candidateCacheTotal = candidateCacheHits + candidateCacheMisses
-
-        log.info(
-            "$prefix addEntryToMap perf: calls=$calls, timeMs=${nanos / 1_000_000}, " +
-                "destinations=$destinations, currentSetScans=$scans, candidates=$candidates, " +
-                "inserted=$inserted, skippedDuplicates=$skipped, earlyReturns=$earlyReturns, " +
-                "propertySetCacheHitRate=${if (cacheTotal > 0) (100 * cacheHits) / cacheTotal else 0}%, " +
-                "dedupBucketHitRate=${if (dedupBucketTotal > 0) (100 * dedupBucketHits) / dedupBucketTotal else 0}%, " +
-                "candidateCacheHitRate=${if (candidateCacheTotal > 0) (100 * candidateCacheHits) / candidateCacheTotal else 0}%, " +
-                "saturationSkips=$saturationSkips, saturationSkippedCandidates=$saturationSkippedCandidates, " +
-                "branches=[parameter(calls=$parameterCalls,candidates=$parameterCandidates,inserted=$parameterInserted), " +
-                "parameterMemory(calls=$parameterMemoryCalls,candidates=$parameterMemoryCandidates,inserted=$parameterMemoryInserted), " +
-                "memoryAddress(calls=$memoryAddressCalls,candidates=$memoryAddressCandidates,inserted=$memoryAddressInserted), " +
-                "generic(calls=$genericCalls,candidates=$genericCandidates,inserted=$genericInserted)]"
-        )
-    }
-
     override fun cleanup() {
-        logAddEntryToMapPerformance("PointsToPass cleanup")
+        // Nothing to do
     }
 
     override fun accept(node: Node) {
@@ -2232,352 +2149,175 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         param: Node,
     ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
         val doubleState = doubleState
-        val callStart = System.nanoTime()
-        var localDestinations = 0L
-        var localCurrentSetScans = 0L
-        var localCandidates = 0L
-        var localInserted = 0L
-        var localSkippedDuplicates = 0L
-        var localPropertySetCacheHits = 0L
-        var localPropertySetCacheMisses = 0L
-        var localDedupBucketHits = 0L
-        var localDedupBucketMisses = 0L
-        var localSaturationSkips = 0L
-        var localSaturationSkippedCandidates = 0L
-        var localCandidateCacheHits = 0L
-        var localCandidateCacheMisses = 0L
-        var localParameterCalls = 0L
-        var localParameterCandidates = 0L
-        var localParameterInserted = 0L
-        var localParameterMemoryCalls = 0L
-        var localParameterMemoryCandidates = 0L
-        var localParameterMemoryInserted = 0L
-        var localMemoryAddressCalls = 0L
-        var localMemoryAddressCandidates = 0L
-        var localMemoryAddressInserted = 0L
-        var localGenericCalls = 0L
-        var localGenericCandidates = 0L
-        var localGenericInserted = 0L
-        var localEarlyReturns = 0L
+
         data class DestinationContext(
             val currentSet: ConcurrentIdentitySet<MapDstToSrcEntry>,
             val updatedPropertySet: EqualLinkedHashSet<Any>,
             val dedupCache: AddEntryDestinationDedupCache,
         )
 
-        try {
-            if (destinationAddresses.isEmpty()) {
-                localEarlyReturns++
-                return mapDstToSrc
+        if (destinationAddresses.isEmpty()) {
+            return mapDstToSrc
+        }
+
+        val basePropertySetKey = IdKey(propertySet)
+        fun getUpdatedPropertySet(partialWrite: String?): EqualLinkedHashSet<Any> {
+            val cacheKey = AddEntryPropertySetKey(basePropertySetKey, shortFS, partialWrite)
+            val cached = addEntryToMapCache.propertySetCache[cacheKey]
+            if (cached != null) {
+                return cached
             }
 
-            val basePropertySetKey = IdKey(propertySet)
-            fun getUpdatedPropertySet(partialWrite: String?): EqualLinkedHashSet<Any> {
-                val cacheKey = AddEntryPropertySetKey(basePropertySetKey, shortFS, partialWrite)
-                val cached = addEntryToMapCache.propertySetCache[cacheKey]
-                if (cached != null) {
-                    localPropertySetCacheHits++
-                    return cached
-                }
-
-                localPropertySetCacheMisses++
-                return createPropertySet(propertySet, shortFS, partialWrite).also {
-                    addEntryToMapCache.propertySetCache[cacheKey] = it
-                }
+            return createPropertySet(propertySet, shortFS, partialWrite).also {
+                addEntryToMapCache.propertySetCache[cacheKey] = it
             }
+        }
 
-            var destinationContexts: List<DestinationContext>? = null
-            fun getDestinationContexts(): List<DestinationContext> {
-                return destinationContexts
-                    ?: destinationAddresses
-                        .map { (destination, partialWrite) ->
-                            localDestinations++
-                            DestinationContext(
-                                mapDstToSrc.computeIfAbsent(destination) {
-                                    concurrentIdentitySetOf()
-                                },
-                                getUpdatedPropertySet(partialWrite),
-                                addEntryToMapCache.destinationDedup.computeIfAbsent(destination) {
-                                    AddEntryDestinationDedupCache()
-                                },
-                            )
-                        }
-                        .also { destinationContexts = it }
-            }
-
-            fun getOrBuildSources(
-                context: DestinationContext,
-                dedupKey: AddEntryDedupKey,
-                matcher: (MapDstToSrcEntry) -> Boolean,
-            ): ConcurrentIdentitySet<Node?> {
-                val bucket =
-                    context.dedupCache.buckets.computeIfAbsent(dedupKey) { AddEntryDedupBucket() }
-                if (bucket.initialized) {
-                    localDedupBucketHits++
-                    return bucket.sources
-                }
-
-                synchronized(bucket) {
-                    if (!bucket.initialized) {
-                        localDedupBucketMisses++
-                        for (entry in context.currentSet) {
-                            localCurrentSetScans++
-                            if (matcher(entry)) {
-                                bucket.sources.add(entry.srcNode)
-                            }
-                        }
-                        bucket.initialized = true
-                    } else {
-                        localDedupBucketHits++
+        var destinationContexts: List<DestinationContext>? = null
+        fun getDestinationContexts(): List<DestinationContext> {
+            return destinationContexts
+                ?: destinationAddresses
+                    .map { (destination, partialWrite) ->
+                        DestinationContext(
+                            mapDstToSrc.computeIfAbsent(destination) { concurrentIdentitySetOf() },
+                            getUpdatedPropertySet(partialWrite),
+                            addEntryToMapCache.destinationDedup.computeIfAbsent(destination) {
+                                AddEntryDestinationDedupCache()
+                            },
+                        )
                     }
-                }
+                    .also { destinationContexts = it }
+        }
+
+        fun getOrBuildSources(
+            context: DestinationContext,
+            dedupKey: AddEntryDedupKey,
+            matcher: (MapDstToSrcEntry) -> Boolean,
+        ): ConcurrentIdentitySet<Node?> {
+            val bucket =
+                context.dedupCache.buckets.computeIfAbsent(dedupKey) { AddEntryDedupBucket() }
+            if (bucket.initialized) {
                 return bucket.sources
             }
 
-            fun skipIfSaturated(
-                existingSources: ConcurrentIdentitySet<Node?>,
-                candidates: Collection<Node?>,
-            ): Boolean {
-                if (candidates.isEmpty()) {
-                    return true
-                }
-
-                for (candidate in candidates) {
-                    if (candidate !in existingSources) {
-                        return false
+            synchronized(bucket) {
+                if (!bucket.initialized) {
+                    for (entry in context.currentSet) {
+                        if (matcher(entry)) {
+                            bucket.sources.add(entry.srcNode)
+                        }
                     }
+                    bucket.initialized = true
                 }
+            }
+            return bucket.sources
+        }
 
-                localSaturationSkips++
-                localSaturationSkippedCandidates += candidates.size.toLong()
-                localCandidates += candidates.size.toLong()
-                localSkippedDuplicates += candidates.size.toLong()
+        fun skipIfSaturated(
+            existingSources: ConcurrentIdentitySet<Node?>,
+            candidates: Collection<Node?>,
+        ): Boolean {
+            if (candidates.isEmpty()) {
                 return true
             }
 
-            fun accountBranch(branch: AddEntryDedupMode, candidates: Long, inserted: Long) {
-                when (branch) {
-                    AddEntryDedupMode.PARAMETER_SINGLETON -> {
-                        localParameterCandidates += candidates
-                        localParameterInserted += inserted
-                    }
-
-                    AddEntryDedupMode.PARAMETER_MEMORY -> {
-                        localParameterMemoryCandidates += candidates
-                        localParameterMemoryInserted += inserted
-                    }
-
-                    AddEntryDedupMode.MEMORY_ADDRESS -> {
-                        localMemoryAddressCandidates += candidates
-                        localMemoryAddressInserted += inserted
-                    }
-
-                    AddEntryDedupMode.GENERIC -> {
-                        localGenericCandidates += candidates
-                        localGenericInserted += inserted
-                    }
+            for (candidate in candidates) {
+                if (candidate !in existingSources) {
+                    return false
                 }
             }
 
-            fun insertIfNew(
-                context: DestinationContext,
-                dedupKey: AddEntryDedupKey,
-                sources: ConcurrentIdentitySet<Node?>,
-                source: Node?,
-                branch: AddEntryDedupMode,
-                entry: () -> MapDstToSrcEntry,
-            ) {
-                localCandidates++
-                if (sources.add(source)) {
-                    localInserted++
-                    accountBranch(branch, 1, 1)
-                    context.currentSet += entry()
-                    context.dedupCache.buckets[dedupKey]?.sources?.add(source)
-                } else {
-                    localSkippedDuplicates++
-                    accountBranch(branch, 1, 0)
-                }
+            return true
+        }
+
+        fun insertIfNew(
+            context: DestinationContext,
+            dedupKey: AddEntryDedupKey,
+            sources: ConcurrentIdentitySet<Node?>,
+            source: Node?,
+            branch: AddEntryDedupMode,
+            entry: () -> MapDstToSrcEntry,
+        ) {
+            if (sources.add(source)) {
+                context.currentSet += entry()
+                context.dedupCache.buckets[dedupKey]?.sources?.add(source)
             }
+        }
 
-            when (srcNode) {
-                is Parameter -> {
-                    localParameterCalls++
-                    // Add the (dereferenced) value of the respective argument
-                    // in the Call
-                    if (srcNode.argumentIndex < currentNode.arguments.size) {
-                        val argument = currentNode.arguments[srcNode.argumentIndex]
-                        // If this is a short FunctionSummary, we also
-                        // update the generalState to draw the additional DFG Edges
-                        if (shortFS) {
-                            val newEntry =
-                                NodeWithPropertiesKey(argument, equalLinkedHashSetOf<Any>(true))
-                            doubleState.generalState.computeIfAbsent(currentNode) {
-                                TripleLattice.Element(
-                                    PowersetLattice.Element(),
-                                    PowersetLattice.Element(),
-                                    PowersetLattice.Element(),
-                                )
-                            }
-                            doubleState.generalState[currentNode]?.third?.add(newEntry)
+        when (srcNode) {
+            is Parameter -> {
+                // Add the (dereferenced) value of the respective argument
+                // in the Call
+                if (srcNode.argumentIndex < currentNode.arguments.size) {
+                    val argument = currentNode.arguments[srcNode.argumentIndex]
+                    // If this is a short FunctionSummary, we also
+                    // update the generalState to draw the additional DFG Edges
+                    if (shortFS) {
+                        val newEntry =
+                            NodeWithPropertiesKey(argument, equalLinkedHashSetOf<Any>(true))
+                        doubleState.generalState.computeIfAbsent(currentNode) {
+                            TripleLattice.Element(
+                                PowersetLattice.Element(),
+                                PowersetLattice.Element(),
+                                PowersetLattice.Element(),
+                            )
                         }
-                        val argumentValuesKey =
-                            AddEntryArgumentValuesKey(IdKey(argument), srcValueDepth, shortFS)
-                        val cachedValues = addEntryToMapCache.argumentValuesCache[argumentValuesKey]
-                        val values =
-                            if (cachedValues != null) {
-                                localCandidateCacheHits++
-                                cachedValues
-                            } else {
-                                localCandidateCacheMisses++
-                                val computedValues =
-                                    if (!shortFS)
-                                        doubleState
-                                            .getNestedValues(
-                                                argument,
-                                                srcValueDepth,
-                                                fetchFields = true,
-                                                excludeShortFSValues = true,
-                                            )
-                                            .mapTo(identitySetOf<Node?>()) { it.first }
-                                    else identitySetOf<Node?>(argument)
-                                addEntryToMapCache.argumentValuesCache[argumentValuesKey] =
-                                    computedValues
-                                computedValues
-                            }
-
-                        if (values.isEmpty()) {
-                            localEarlyReturns++
-                            return mapDstToSrc
-                        }
-
-                        val singletonLastWrite = lastWrites.singleOrNull()
-                        val singletonLastWrites = PowersetLattice.Element(singletonLastWrite)
-                        for (context in getDestinationContexts()) {
-                            val dedupKey =
-                                AddEntryDedupKey(
-                                    AddEntryDedupMode.PARAMETER_SINGLETON,
-                                    singletonLastWrite,
-                                    context.updatedPropertySet,
-                                    shortFS,
-                                )
-                            val existingSources =
-                                getOrBuildSources(context, dedupKey) {
-                                    it.lastWrites.parallelEquals(singletonLastWrites) &&
-                                        it.propertySet == context.updatedPropertySet
-                                }
-
-                            if (skipIfSaturated(existingSources, values)) {
-                                accountBranch(
-                                    AddEntryDedupMode.PARAMETER_SINGLETON,
-                                    values.size.toLong(),
-                                    0,
-                                )
-                                continue
-                            }
-
-                            for (value in values) {
-                                insertIfNew(
-                                    context,
-                                    dedupKey,
-                                    existingSources,
-                                    value,
-                                    AddEntryDedupMode.PARAMETER_SINGLETON,
-                                ) {
-                                    MapDstToSrcEntry(
-                                        param,
-                                        value,
-                                        lastWrites,
-                                        context.updatedPropertySet,
-                                        destinations,
-                                    )
-                                }
-                            }
-                        }
+                        doubleState.generalState[currentNode]?.third?.add(newEntry)
                     }
-                }
-
-                is ParameterMemoryValue -> {
-                    localParameterMemoryCalls++
-                    // In case the FunctionSummary says that we have to use the
-                    // dereferenced value here, we look up the argument,
-                    // dereference it, and then add it to the sources
-                    val fullLastWrites =
-                        PowersetLattice.Element<NodeWithPropertiesKey?>().apply {
-                            addAll(lastWrites)
-                        }
-                    val parameterName = srcNode.name.parent?.localName
-                    if (parameterName == null) {
-                        localEarlyReturns++
-                        return mapDstToSrc
-                    }
-
-                    val parameterValuesKey =
-                        AddEntryParameterValuesKey(parameterName, srcValueDepth)
-                    val cachedParameterValues =
-                        addEntryToMapCache.parameterValuesCache[parameterValuesKey]
-                    val parameterValues =
-                        if (cachedParameterValues != null) {
-                            localCandidateCacheHits++
-                            cachedParameterValues
+                    val argumentValuesKey =
+                        AddEntryArgumentValuesKey(IdKey(argument), srcValueDepth, shortFS)
+                    val cachedValues = addEntryToMapCache.argumentValuesCache[argumentValuesKey]
+                    val values =
+                        if (cachedValues != null) {
+                            cachedValues
                         } else {
-                            localCandidateCacheMisses++
-                            val computedParameterValues = identitySetOf<Node?>()
-                            for (invokedFunction in currentNode.invokes) {
-                                for (parameter in invokedFunction.parameters) {
-                                    if (parameter.name.localName != parameterName) {
-                                        continue
-                                    }
-
-                                    if (parameter.argumentIndex < currentNode.arguments.size) {
-                                        val arg = currentNode.arguments[parameter.argumentIndex]
-                                        for ((value, _) in
-                                            doubleState.getNestedValues(arg, srcValueDepth)) {
-                                            computedParameterValues.add(value)
-                                        }
-                                    }
-                                }
-                            }
-                            addEntryToMapCache.parameterValuesCache[parameterValuesKey] =
-                                computedParameterValues
-                            computedParameterValues
+                            val computedValues =
+                                if (!shortFS)
+                                    doubleState
+                                        .getNestedValues(
+                                            argument,
+                                            srcValueDepth,
+                                            fetchFields = true,
+                                            excludeShortFSValues = true,
+                                        )
+                                        .mapTo(identitySetOf<Node?>()) { it.first }
+                                else identitySetOf<Node?>(argument)
+                            addEntryToMapCache.argumentValuesCache[argumentValuesKey] =
+                                computedValues
+                            computedValues
                         }
 
-                    if (parameterValues.isEmpty()) {
-                        localEarlyReturns++
+                    if (values.isEmpty()) {
                         return mapDstToSrc
                     }
 
-                    val lastWritesSignature = lastWrites.mapTo(HashSet()) { it }
+                    val singletonLastWrite = lastWrites.singleOrNull()
+                    val singletonLastWrites = PowersetLattice.Element(singletonLastWrite)
                     for (context in getDestinationContexts()) {
                         val dedupKey =
                             AddEntryDedupKey(
-                                AddEntryDedupMode.PARAMETER_MEMORY,
-                                lastWritesSignature,
+                                AddEntryDedupMode.PARAMETER_SINGLETON,
+                                singletonLastWrite,
                                 context.updatedPropertySet,
                                 shortFS,
                             )
                         val existingSources =
                             getOrBuildSources(context, dedupKey) {
-                                it.lastWrites.parallelEquals(fullLastWrites) &&
+                                it.lastWrites.parallelEquals(singletonLastWrites) &&
                                     it.propertySet == context.updatedPropertySet
                             }
 
-                        if (skipIfSaturated(existingSources, parameterValues)) {
-                            accountBranch(
-                                AddEntryDedupMode.PARAMETER_MEMORY,
-                                parameterValues.size.toLong(),
-                                0,
-                            )
+                        if (skipIfSaturated(existingSources, values)) {
                             continue
                         }
 
-                        for (value in parameterValues) {
+                        for (value in values) {
                             insertIfNew(
                                 context,
                                 dedupKey,
                                 existingSources,
                                 value,
-                                AddEntryDedupMode.PARAMETER_MEMORY,
+                                AddEntryDedupMode.PARAMETER_SINGLETON,
                             ) {
                                 MapDstToSrcEntry(
                                     param,
@@ -2590,34 +2330,81 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         }
                     }
                 }
+            }
 
-                is MemoryAddress -> {
-                    localMemoryAddressCalls++
-                    val writesIdentity = IdKey(lastWrites)
-                    for (context in getDestinationContexts()) {
-                        val dedupKey =
-                            AddEntryDedupKey(
-                                AddEntryDedupMode.MEMORY_ADDRESS,
-                                writesIdentity,
-                                context.updatedPropertySet,
-                                shortFS,
-                            )
-                        val existingSources =
-                            getOrBuildSources(context, dedupKey) {
-                                it.lastWrites === lastWrites &&
-                                    it.propertySet == context.updatedPropertySet
+            is ParameterMemoryValue -> {
+                // In case the FunctionSummary says that we have to use the
+                // dereferenced value here, we look up the argument,
+                // dereference it, and then add it to the sources
+                val fullLastWrites =
+                    PowersetLattice.Element<NodeWithPropertiesKey?>().apply { addAll(lastWrites) }
+                val parameterName = srcNode.name.parent?.localName
+                if (parameterName == null) {
+                    return mapDstToSrc
+                }
+
+                val parameterValuesKey = AddEntryParameterValuesKey(parameterName, srcValueDepth)
+                val cachedParameterValues =
+                    addEntryToMapCache.parameterValuesCache[parameterValuesKey]
+                val parameterValues =
+                    if (cachedParameterValues != null) {
+                        cachedParameterValues
+                    } else {
+                        val computedParameterValues = identitySetOf<Node?>()
+                        for (invokedFunction in currentNode.invokes) {
+                            for (parameter in invokedFunction.parameters) {
+                                if (parameter.name.localName != parameterName) {
+                                    continue
+                                }
+
+                                if (parameter.argumentIndex < currentNode.arguments.size) {
+                                    val arg = currentNode.arguments[parameter.argumentIndex]
+                                    for ((value, _) in
+                                        doubleState.getNestedValues(arg, srcValueDepth)) {
+                                        computedParameterValues.add(value)
+                                    }
+                                }
                             }
+                        }
+                        addEntryToMapCache.parameterValuesCache[parameterValuesKey] =
+                            computedParameterValues
+                        computedParameterValues
+                    }
 
+                if (parameterValues.isEmpty()) {
+                    return mapDstToSrc
+                }
+
+                val lastWritesSignature = lastWrites.mapTo(HashSet()) { it }
+                for (context in getDestinationContexts()) {
+                    val dedupKey =
+                        AddEntryDedupKey(
+                            AddEntryDedupMode.PARAMETER_MEMORY,
+                            lastWritesSignature,
+                            context.updatedPropertySet,
+                            shortFS,
+                        )
+                    val existingSources =
+                        getOrBuildSources(context, dedupKey) {
+                            it.lastWrites.parallelEquals(fullLastWrites) &&
+                                it.propertySet == context.updatedPropertySet
+                        }
+
+                    if (skipIfSaturated(existingSources, parameterValues)) {
+                        continue
+                    }
+
+                    for (value in parameterValues) {
                         insertIfNew(
                             context,
                             dedupKey,
                             existingSources,
-                            srcNode,
-                            AddEntryDedupMode.MEMORY_ADDRESS,
+                            value,
+                            AddEntryDedupMode.PARAMETER_MEMORY,
                         ) {
                             MapDstToSrcEntry(
                                 param,
-                                srcNode,
+                                value,
                                 lastWrites,
                                 context.updatedPropertySet,
                                 destinations,
@@ -2625,123 +2412,106 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         }
                     }
                 }
+            }
 
-                else -> {
-                    localGenericCalls++
-                    val genericSourcesKey =
-                        AddEntryGenericSourcesKey(
-                            srcNode?.let { IdKey(it) },
-                            srcValueDepth,
+            is MemoryAddress -> {
+                val writesIdentity = IdKey(lastWrites)
+                for (context in getDestinationContexts()) {
+                    val dedupKey =
+                        AddEntryDedupKey(
+                            AddEntryDedupMode.MEMORY_ADDRESS,
+                            writesIdentity,
+                            context.updatedPropertySet,
                             shortFS,
                         )
-                    val cachedNewSources = addEntryToMapCache.genericSourcesCache[genericSourcesKey]
-                    val newSources =
-                        if (cachedNewSources != null) {
-                            localCandidateCacheHits++
-                            cachedNewSources
-                        } else {
-                            localCandidateCacheMisses++
-                            val newSet =
-                                if (srcValueDepth == 0)
-                                    PowersetLattice.Element(Pair(srcNode, shortFS))
-                                else
-                                    srcNode?.let {
-                                        doubleState.getNestedValues(it, srcValueDepth).mapTo(
-                                            PowersetLattice.Element()
-                                        ) {
-                                            Pair(it.first, shortFS)
-                                        }
-                                    } ?: PowersetLattice.Element(Pair(null, shortFS))
-                            if (newSet.isEmpty()) {
-                                localEarlyReturns++
-                                return mapDstToSrc
-                            }
-
-                            newSet
-                                .mapTo(identitySetOf<Node?>()) { it.first }
-                                .also {
-                                    addEntryToMapCache.genericSourcesCache[genericSourcesKey] = it
-                                }
+                    val existingSources =
+                        getOrBuildSources(context, dedupKey) {
+                            it.lastWrites === lastWrites &&
+                                it.propertySet == context.updatedPropertySet
                         }
-                    if (newSources.isEmpty()) {
-                        localEarlyReturns++
-                        return mapDstToSrc
+
+                    insertIfNew(
+                        context,
+                        dedupKey,
+                        existingSources,
+                        srcNode,
+                        AddEntryDedupMode.MEMORY_ADDRESS,
+                    ) {
+                        MapDstToSrcEntry(
+                            param,
+                            srcNode,
+                            lastWrites,
+                            context.updatedPropertySet,
+                            destinations,
+                        )
+                    }
+                }
+            }
+
+            else -> {
+                val genericSourcesKey =
+                    AddEntryGenericSourcesKey(srcNode?.let { IdKey(it) }, srcValueDepth, shortFS)
+                val cachedNewSources = addEntryToMapCache.genericSourcesCache[genericSourcesKey]
+                val newSources =
+                    if (cachedNewSources != null) {
+                        cachedNewSources
+                    } else {
+                        val newSet =
+                            if (srcValueDepth == 0) PowersetLattice.Element(Pair(srcNode, shortFS))
+                            else
+                                srcNode?.let {
+                                    doubleState.getNestedValues(it, srcValueDepth).mapTo(
+                                        PowersetLattice.Element()
+                                    ) {
+                                        Pair(it.first, shortFS)
+                                    }
+                                } ?: PowersetLattice.Element(Pair(null, shortFS))
+                        if (newSet.isEmpty()) {
+                            return mapDstToSrc
+                        }
+
+                        newSet
+                            .mapTo(identitySetOf<Node?>()) { it.first }
+                            .also { addEntryToMapCache.genericSourcesCache[genericSourcesKey] = it }
+                    }
+                if (newSources.isEmpty()) {
+                    return mapDstToSrc
+                }
+
+                val writesIdentity = IdKey(lastWrites)
+                for (context in getDestinationContexts()) {
+                    val dedupKey =
+                        AddEntryDedupKey(AddEntryDedupMode.GENERIC, writesIdentity, null, shortFS)
+                    val existingSources =
+                        getOrBuildSources(context, dedupKey) {
+                            it.lastWrites === lastWrites && shortFS in it.propertySet
+                        }
+
+                    if (skipIfSaturated(existingSources, newSources)) {
+                        continue
                     }
 
-                    val writesIdentity = IdKey(lastWrites)
-                    for (context in getDestinationContexts()) {
-                        val dedupKey =
-                            AddEntryDedupKey(
-                                AddEntryDedupMode.GENERIC,
-                                writesIdentity,
-                                null,
-                                shortFS,
-                            )
-                        val existingSources =
-                            getOrBuildSources(context, dedupKey) {
-                                it.lastWrites === lastWrites && shortFS in it.propertySet
-                            }
-
-                        if (skipIfSaturated(existingSources, newSources)) {
-                            accountBranch(AddEntryDedupMode.GENERIC, newSources.size.toLong(), 0)
-                            continue
-                        }
-
-                        for (newSource in newSources) {
-                            insertIfNew(
-                                context,
-                                dedupKey,
-                                existingSources,
+                    for (newSource in newSources) {
+                        insertIfNew(
+                            context,
+                            dedupKey,
+                            existingSources,
+                            newSource,
+                            AddEntryDedupMode.GENERIC,
+                        ) {
+                            MapDstToSrcEntry(
+                                param,
                                 newSource,
-                                AddEntryDedupMode.GENERIC,
-                            ) {
-                                MapDstToSrcEntry(
-                                    param,
-                                    newSource,
-                                    lastWrites,
-                                    context.updatedPropertySet,
-                                    destinations,
-                                )
-                            }
+                                lastWrites,
+                                context.updatedPropertySet,
+                                destinations,
+                            )
                         }
                     }
                 }
             }
-            return mapDstToSrc
-        } finally {
-            val calls = addEntryToMapCalls.incrementAndGet()
-            addEntryToMapNanos.addAndGet(System.nanoTime() - callStart)
-            addEntryToMapDestinationCount.addAndGet(localDestinations)
-            addEntryToMapCurrentSetScans.addAndGet(localCurrentSetScans)
-            addEntryToMapCandidates.addAndGet(localCandidates)
-            addEntryToMapInserted.addAndGet(localInserted)
-            addEntryToMapSkippedDuplicates.addAndGet(localSkippedDuplicates)
-            addEntryToMapPropertySetCacheHits.addAndGet(localPropertySetCacheHits)
-            addEntryToMapPropertySetCacheMisses.addAndGet(localPropertySetCacheMisses)
-            addEntryToMapDedupBucketHits.addAndGet(localDedupBucketHits)
-            addEntryToMapDedupBucketMisses.addAndGet(localDedupBucketMisses)
-            addEntryToMapSaturationSkips.addAndGet(localSaturationSkips)
-            addEntryToMapSaturationSkippedCandidates.addAndGet(localSaturationSkippedCandidates)
-            addEntryToMapCandidateCacheHits.addAndGet(localCandidateCacheHits)
-            addEntryToMapCandidateCacheMisses.addAndGet(localCandidateCacheMisses)
-            addEntryToMapParameterCalls.addAndGet(localParameterCalls)
-            addEntryToMapParameterCandidates.addAndGet(localParameterCandidates)
-            addEntryToMapParameterInserted.addAndGet(localParameterInserted)
-            addEntryToMapParameterMemoryCalls.addAndGet(localParameterMemoryCalls)
-            addEntryToMapParameterMemoryCandidates.addAndGet(localParameterMemoryCandidates)
-            addEntryToMapParameterMemoryInserted.addAndGet(localParameterMemoryInserted)
-            addEntryToMapMemoryAddressCalls.addAndGet(localMemoryAddressCalls)
-            addEntryToMapMemoryAddressCandidates.addAndGet(localMemoryAddressCandidates)
-            addEntryToMapMemoryAddressInserted.addAndGet(localMemoryAddressInserted)
-            addEntryToMapGenericCalls.addAndGet(localGenericCalls)
-            addEntryToMapGenericCandidates.addAndGet(localGenericCandidates)
-            addEntryToMapGenericInserted.addAndGet(localGenericInserted)
-            addEntryToMapEarlyReturns.addAndGet(localEarlyReturns)
-
-            if (calls % addEntryToMapProgressLogEvery == 0L) {
-                logAddEntryToMapPerformance("PointsToPass progress")
-            }
         }
+        return mapDstToSrc
     }
 
     private fun createPropertySet(
