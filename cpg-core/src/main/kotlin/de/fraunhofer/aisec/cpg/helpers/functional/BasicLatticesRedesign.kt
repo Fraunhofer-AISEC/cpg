@@ -86,23 +86,107 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
     override val size: Int
         get() = backing.size
 
+    private val keySetView =
+        object : AbstractMutableSet<K>() {
+            override val size: Int
+                get() = backing.size
+
+            override fun add(element: K): Boolean {
+                throw UnsupportedOperationException("Cannot add a key without a value")
+            }
+
+            override fun clear() = backing.clear()
+
+            override fun contains(element: K): Boolean =
+                this@ConcurrentIdentityHashMap.containsKey(element)
+
+            override fun containsAll(elements: Collection<K>): Boolean =
+                elements.all { contains(it) }
+
+            override fun hashCode(): Int = backing.keys.sumOf { it.hashCode() }
+
+            override fun isEmpty(): Boolean = backing.isEmpty()
+
+            override fun iterator(): MutableIterator<K> {
+                val iterator = backing.keys.iterator()
+                return object : MutableIterator<K> {
+                    override fun hasNext(): Boolean = iterator.hasNext()
+
+                    override fun next(): K = iterator.next().ref
+
+                    override fun remove() = iterator.remove()
+                }
+            }
+
+            override fun remove(element: K): Boolean =
+                this@ConcurrentIdentityHashMap.remove(element) != null
+        }
+
     override val keys: Set<K>
-        get() = backing.keys.mapTo(IdentitySet(backing.size)) { it.ref }
+        get() = keySetView
 
     override val values: Collection<V>
         get() = backing.values
 
-    override val entries: Set<Map.Entry<K, V>>
-        get() =
-            backing.entries.mapTo(IdentitySet(backing.size)) { (idKey, v) ->
-                object : Map.Entry<K, V> {
-                    override val key: K
-                        get() = idKey.ref
+    private val entrySetView =
+        object : AbstractMutableSet<Map.Entry<K, V>>() {
+            override val size: Int
+                get() = backing.size
 
-                    override val value: V
-                        get() = v
+            override fun add(element: Map.Entry<K, V>): Boolean {
+                throw UnsupportedOperationException("Cannot add an entry through the entry view")
+            }
+
+            override fun clear() = backing.clear()
+
+            override fun contains(element: Map.Entry<K, V>): Boolean {
+                val key = PointsToPass.IdKey(element.key)
+                return backing.containsKey(key) && backing[key] == element.value
+            }
+
+            override fun hashCode(): Int =
+                backing.entries.sumOf { (idKey, value) ->
+                    System.identityHashCode(idKey.ref) xor (value?.hashCode() ?: 0)
+                }
+
+            override fun isEmpty(): Boolean = backing.isEmpty()
+
+            override fun iterator(): MutableIterator<Map.Entry<K, V>> {
+                val iterator = backing.entries.iterator()
+                return object : MutableIterator<Map.Entry<K, V>> {
+                    override fun hasNext(): Boolean = iterator.hasNext()
+
+                    override fun next(): Map.Entry<K, V> {
+                        val entry = iterator.next()
+                        return object : Map.Entry<K, V> {
+                            override val key: K
+                                get() = entry.key.ref
+
+                            override val value: V
+                                get() = entry.value
+
+                            override fun equals(other: Any?): Boolean =
+                                other is Map.Entry<*, *> &&
+                                    other.key === key &&
+                                    other.value == value
+
+                            override fun hashCode(): Int =
+                                System.identityHashCode(key) xor (value?.hashCode() ?: 0)
+
+                            override fun toString(): String = "$key=$value"
+                        }
+                    }
+
+                    override fun remove() = iterator.remove()
                 }
             }
+
+            override fun remove(element: Map.Entry<K, V>): Boolean =
+                backing.remove(PointsToPass.IdKey(element.key), element.value)
+        }
+
+    override val entries: Set<Map.Entry<K, V>>
+        get() = entrySetView
 
     override fun isEmpty(): Boolean {
         return backing.isEmpty()
@@ -156,9 +240,7 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
-        return other is LinkedHashSet<*> &&
-            this.size == other.size &&
-            this.all { t -> other.any { it == t } }
+        return super.equals(other)
     }
 
     override fun hashCode(): Int {
@@ -606,32 +688,109 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
     class Element<T>(expectedMaxSize: Int) :
         ConcurrentIdentitySet<T>(expectedMaxSize), Lattice.Element {
-        // We make the new element a big bigger than the current size to avoid resizing
+
+        // Secondary track indexes to accelerate 'contains', 'equals', and 'compare' to O(1)
+        private val nodeIndex = ConcurrentHashMap<PointsToPass.NodeWithPropertiesKey, T>()
+        private val pairIndex = ConcurrentHashMap<PairKey, Pair<*, *>>()
+
+        private class PairKey(val first: Any?, val second: Any?) {
+            override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (other !is PairKey) return false
+                return this.first === other.first && this.second == other.second
+            }
+
+            override fun hashCode(): Int {
+                return 31 * System.identityHashCode(first) + (second?.hashCode() ?: 0)
+            }
+        }
+
+        // We make the new element a bit bigger than the current size to avoid resizing
         constructor(set: Set<T>) : this(ceil(set.size * 1.5).toInt()) {
             addAllWithoutCheck(set as? ConcurrentIdentitySet<T> ?: set.toConcurrentIdentitySet())
+            buildIndexFromCurrentElements()
         }
 
         constructor() : this(16)
 
-        // We make the new element a big bigger than the current size to avoid resizing
+        // We make the new element a bit bigger than the current size to avoid resizing
         constructor(vararg entries: T) : this(ceil(entries.size * 1.5).toInt()) {
-            addAll(entries)
+            addAll(entries) // standard addAll loops and calls our overridden add()
+        }
+
+        /**
+         * Rebuilds the secondary indexes from scratch. Crucial when batch operations like
+         * [addAllWithoutCheck] bypass the standard [add] method.
+         */
+        fun buildIndexFromCurrentElements() {
+            nodeIndex.clear()
+            pairIndex.clear()
+            for (item in this) {
+                when (item) {
+                    is Pair<*, *> -> pairIndex[PairKey(item.first, item.second)] = item
+                    is PointsToPass.NodeWithPropertiesKey -> nodeIndex[item] = item
+                }
+            }
+        }
+
+        override fun add(element: T): Boolean {
+            when (element) {
+                is Pair<*, *> -> {
+                    val key = PairKey(element.first, element.second)
+                    if (pairIndex.containsKey(key)) return false
+                    val added = super.add(element)
+                    if (added) {
+                        pairIndex[key] = element
+                    }
+                    return added
+                }
+                is PointsToPass.NodeWithPropertiesKey -> {
+                    if (nodeIndex.containsKey(element)) return false
+                    val added = super.add(element)
+                    if (added) {
+                        nodeIndex[element] = element
+                    }
+                    return added
+                }
+                else -> {
+                    return super.add(element)
+                }
+            }
+        }
+
+        // Note: If your framework's base class uses 'Any?' for remove, change 'T' to 'Any?'
+        override fun remove(element: T): Boolean {
+            val removed = super.remove(element)
+            if (removed) {
+                when (element) {
+                    is Pair<*, *> -> pairIndex.remove(PairKey(element.first, element.second))
+                    is PointsToPass.NodeWithPropertiesKey -> nodeIndex.remove(element)
+                }
+            }
+            return removed
+        }
+
+        override fun clear() {
+            super.clear()
+            nodeIndex.clear()
+            pairIndex.clear()
+        }
+
+        /** High-performance O(1) containment check utilizing our secondary indexes. */
+        fun containsFast(element: Any?): Boolean {
+            return when (element) {
+                is Pair<*, *> -> pairIndex.containsKey(PairKey(element.first, element.second))
+                is PointsToPass.NodeWithPropertiesKey -> nodeIndex.containsKey(element)
+                else -> (element as? T)?.let { super.contains(it) } ?: false
+            }
         }
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is Element<*> || this.size != other.size) return false
 
-            this@Element.forEach { t ->
-                val isEqual =
-                    if (t is Pair<*, *>)
-                        other.any {
-                            it is Pair<*, *> && it.first === t.first && it.second == t.second
-                        }
-                    else if (t is PointsToPass.NodeWithPropertiesKey) other.any { it == t }
-                    else t in other
-
-                if (!isEqual) {
+            for (item in this) {
+                if (!other.containsFast(item)) {
                     return false
                 }
             }
@@ -647,20 +806,8 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                 try {
                     this@Element.forEachMaybeParallel { t ->
                         ensureActive()
-                        val isEqual =
-                            if (t is Pair<*, *>)
-                                other.any {
-                                    it is Pair<*, *> &&
-                                        it.first === t.first &&
-                                        it.second == t.second
-                                }
-                            else if (t is PointsToPass.NodeWithPropertiesKey)
-                                other.any { it is PointsToPass.NodeWithPropertiesKey && it == t }
-                            else t in other
-
-                        if (!isEqual) {
+                        if (!other.containsFast(t)) {
                             ret = false
-                            // cancel all coroutines
                             cancel()
                         }
                     }
@@ -674,44 +821,35 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         override fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
-            if (other !is Element<T>)
+            if (other !is Element<*>)
                 throw IllegalArgumentException(
                     "$other should be of type PowersetLattice.Element<T> but is of type ${other.javaClass}"
                 )
-            val otherOnly = Element(other)
-            val thisOnly =
-                this.filterTo(IdentitySet<T>()) { t ->
-                    !when (t) {
-                        is Pair<*, *> -> {
-                            otherOnly.removeIf { o ->
-                                o is Pair<*, *> && o.first === t.first && o.second == t.second
-                            }
-                        }
 
-                        is PointsToPass.NodeWithPropertiesKey -> {
-                            otherOnly.removeIf { o ->
-                                o is PointsToPass.NodeWithPropertiesKey && o == t
-                            }
-                        }
+            var hasThisOnly = false
+            var hasOtherOnly = false
 
-                        else -> otherOnly.remove(t)
-                    }
+            // 1. Check if 'this' contains elements missing in 'other'
+            for (item in this) {
+                if (!other.containsFast(item)) {
+                    hasThisOnly = true
+                    break // Short-circuit instantly
                 }
+            }
+
+            // 2. Check if 'other' contains elements missing in 'this'
+            for (item in other) {
+                if (!this.containsFast(item)) {
+                    hasOtherOnly = true
+                    break // Short-circuit instantly
+                }
+            }
+
             return when {
-                otherOnly.isEmpty() && thisOnly.isEmpty() -> {
-                    Order.EQUAL
-                }
-                thisOnly.isNotEmpty() && otherOnly.isNotEmpty() -> {
-                    Order.UNEQUAL
-                }
-                thisOnly.isNotEmpty() -> {
-                    // This set is greater than the other set
-                    Order.GREATER
-                }
-                else -> {
-                    // The other set is greater than this set
-                    Order.LESSER
-                }
+                !hasThisOnly && !hasOtherOnly -> Order.EQUAL
+                hasThisOnly && hasOtherOnly -> Order.UNEQUAL
+                hasThisOnly -> Order.GREATER
+                else -> Order.LESSER
             }
         }
 
@@ -721,24 +859,6 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         override fun hashCode(): Int {
             return super.hashCode()
-        }
-
-        override fun add(element: T): Boolean {
-            if (
-                element is Pair<*, *> &&
-                    this.any {
-                        it is Pair<*, *> &&
-                            it.first === element.first &&
-                            it.second == element.second
-                    }
-            ) {
-                return false
-            } else if (
-                element is PointsToPass.NodeWithPropertiesKey &&
-                    this.any { it is PointsToPass.NodeWithPropertiesKey && it == element }
-            )
-                return false
-            return super.add(element)
         }
     }
 
@@ -759,6 +879,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         val result = Element<T>(one.size + two.size)
         result.addAllWithoutCheck(one)
+        result.buildIndexFromCurrentElements() // Force index generation after raw batch load!
         result += two
         return result
     }
