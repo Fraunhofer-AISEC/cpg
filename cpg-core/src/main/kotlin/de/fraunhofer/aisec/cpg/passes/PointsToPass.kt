@@ -1513,10 +1513,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 )
                             else {
                                 // Since we already have the argVal, AKA the memoryAddress
-                                // of the
-                                // argDerefVal, we simply fetch the last write for the
-                                // argVal from the
-                                // declarationState and add the properties
+                                // of the argDerefVal, we simply fetch the last write for the
+                                // argVal from the declarationState and add the properties
                                 doubleState.declarationsState[argVal]?.third?.mapTo(
                                     PowersetLattice.Element()
                                 ) {
@@ -1528,8 +1526,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             }
                         // Also draw the edges for the (deref)derefvalues if we have
                         // any and are dealing with a pointer parameter (AKA memoryValue is
-                        // not
-                        // null)
+                        // not null)
                         val argDerefValsElement =
                             PowersetLattice.Element(
                                 argDerefVals.mapTo(PowersetLattice.Element()) {
@@ -1563,11 +1560,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     )
                                 }
                             else {
-                                // As for the lastDerefWrites, we already have the
-                                // ArgDerefVals which we
-                                // treat as the addresses, so we directly look up the
-                                // lastWrites for
-                                // those addresses in the declarationState
+                                // As for the lastDerefWrites, we already have the ArgDerefVals
+                                // which we treat as the addresses, so we directly look up the
+                                // lastWrites for those addresses in the declarationState
                                 argDerefVals.flatMapTo(PowersetLattice.Element()) { argDerefVal ->
                                     doubleState.declarationsState[argDerefVal]?.third
                                         ?: PowersetLattice.Element()
@@ -1829,20 +1824,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // affect a higher level. So let's do this step by step
                 for (depth in 0..3) {
                     coroutineScope {
-                        // We use coroutines in coroutines. So, in order not to launch way too
-                        // many of them, we calculate the amount of inner coroutines that we can
-                        // reasonably launch
-                        val innerConcurrencyCounter =
-                            calculateInnerConcurrencyCounter(inv.functionSummary.size)
                         for (work in parameterWork) {
                             if (work.entriesByDepth[depth].isEmpty()) {
                                 continue
                             }
 
                             launch(Dispatchers.Default) {
-                                work.entriesByDepth[depth].forEachMaybeParallel(
-                                    parallelism = innerConcurrencyCounter
-                                ) { entry ->
+                                work.entriesByDepth[depth].forEachMaybeParallel { entry ->
                                     writeEntry(
                                         doubleState,
                                         mapDstToSrc,
