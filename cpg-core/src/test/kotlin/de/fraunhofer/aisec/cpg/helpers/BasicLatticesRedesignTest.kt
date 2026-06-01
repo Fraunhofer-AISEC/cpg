@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.HashMapLattice
-import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
@@ -162,11 +162,14 @@ class BasicLatticesRedesignTest {
     }
 
     @Test
-    fun testMapLattice() {
+    fun testConcurrentMapLattice() {
         runBlocking {
             val mapLattice =
-                MapLattice<String, PowersetLattice.Element<String>>(PowersetLattice<String>())
-            val emptyLattice1 = MapLattice.Element<String, PowersetLattice.Element<String>>()
+                ConcurrentMapLattice<String, PowersetLattice.Element<String>>(
+                    PowersetLattice<String>()
+                )
+            val emptyLattice1 =
+                ConcurrentMapLattice.Element<String, PowersetLattice.Element<String>>()
             val emptyLattice2 = mapLattice.bottom
             assertEquals(Order.EQUAL, mapLattice.compare(emptyLattice1, emptyLattice2))
             assertEquals(emptyLattice1, emptyLattice2)
@@ -176,20 +179,21 @@ class BasicLatticesRedesignTest {
             assertThrows<IllegalArgumentException> { emptyLattice1.compare(blaPowerset) }
             assertThrows<IllegalArgumentException> { blaPowerset.compare(emptyLattice1) }
 
-            val aBlaLattice1 = (MapLattice.Element("a" to blaPowerset))
-            val aBlaLattice2 = (MapLattice.Element("a" to PowersetLattice.Element("bla")))
+            val aBlaLattice1 = (ConcurrentMapLattice.Element("a" to blaPowerset))
+            val aBlaLattice2 = (ConcurrentMapLattice.Element("a" to PowersetLattice.Element("bla")))
             assertEquals(Order.EQUAL, mapLattice.compare(aBlaLattice1, aBlaLattice2))
             assertEquals(aBlaLattice1, aBlaLattice2)
             assertNotSame(aBlaLattice1, aBlaLattice2)
 
-            val aBlaFooLattice = (MapLattice.Element("a" to PowersetLattice.Element("bla", "foo")))
+            val aBlaFooLattice =
+                (ConcurrentMapLattice.Element("a" to PowersetLattice.Element("bla", "foo")))
             assertEquals(Order.GREATER, mapLattice.compare(aBlaFooLattice, aBlaLattice1))
             assertNotEquals(aBlaFooLattice, aBlaLattice1)
             assertEquals(Order.LESSER, mapLattice.compare(aBlaLattice1, aBlaFooLattice))
             assertNotEquals(aBlaLattice1, aBlaFooLattice)
 
             val aBlaBFooLattice =
-                (MapLattice.Element(
+                (ConcurrentMapLattice.Element(
                     "a" to PowersetLattice.Element("bla"),
                     "b" to PowersetLattice.Element("foo"),
                 ))
@@ -234,7 +238,7 @@ class BasicLatticesRedesignTest {
             assertEquals(Order.EQUAL, mapLattice.compare(aBlaLattice1, emptyLubABla))
 
             val aFooBBlaLattice =
-                MapLattice.Element(
+                ConcurrentMapLattice.Element(
                     "a" to PowersetLattice.Element("foo"),
                     "b" to PowersetLattice.Element("bla"),
                 )
@@ -273,7 +277,7 @@ class BasicLatticesRedesignTest {
 
             val aEmptyBEmptyGlb = mapLattice.glb(aFooBBlaLattice, aBlaBFooLattice)
             val aEmptyBEmpty =
-                MapLattice.Element(
+                ConcurrentMapLattice.Element(
                     "a" to PowersetLattice.Element<String>(),
                     "b" to PowersetLattice.Element<String>(),
                 )

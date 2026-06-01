@@ -33,16 +33,17 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInEOGPath
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
-import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlinx.coroutines.runBlocking
 
-typealias NodeToOverlayStateElement = MapLattice.Element<Node, PowersetLattice.Element<OverlayNode>>
+typealias NodeToOverlayStateElement =
+    ConcurrentMapLattice.Element<Node, PowersetLattice.Element<OverlayNode>>
 
-typealias NodeToOverlayState = MapLattice<Node, PowersetLattice.Element<OverlayNode>>
+typealias NodeToOverlayState = ConcurrentMapLattice<Node, PowersetLattice.Element<OverlayNode>>
 
 /**
  * An abstract pass that is used to identify and create [Concept] and [Operation] nodes in the
@@ -191,8 +192,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
     /**
      * Generates the initial [NodeToOverlayStateElement] state for the current execution of this
-     * pass, which is currently [MapLattice.bottom] where some stuff based on [node] is already
-     * added.
+     * pass, which is currently [ConcurrentMapLattice.bottom] where some stuff based on [node] is
+     * already added.
      */
     open fun getInitialState(lattice: NodeToOverlayState, node: Node): NodeToOverlayStateElement {
         return overlayStateForNode(lattice, lattice.bottom, node)
