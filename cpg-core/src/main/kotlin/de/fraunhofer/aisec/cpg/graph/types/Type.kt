@@ -266,6 +266,82 @@ abstract class Type : Node {
     }
 }
 
+private object TypeStructuralHash {
+    private const val VISITING = Int.MIN_VALUE
+
+    private class HashContext {
+        val cache = IdentityHashMap<Type, Int>()
+        var depth = 0
+    }
+
+    private val context = ThreadLocal.withInitial(::HashContext)
+
+    fun hash(type: Type): Int {
+        val ctx = context.get()
+        val isTopLevel = ctx.depth == 0
+        ctx.depth++
+
+        return try {
+            hash(type, ctx.cache)
+        } finally {
+            ctx.depth--
+            if (isTopLevel) {
+                ctx.cache.clear()
+            }
+        }
+    }
+
+    private fun hash(type: Type, cache: IdentityHashMap<Type, Int>): Int {
+        val cached = cache[type]
+        if (cached != null) {
+            return if (cached == VISITING) shallowHash(type) else cached
+        }
+
+        cache[type] = VISITING
+
+        var result = shallowHash(type)
+        when (type) {
+            is PointerType -> {
+                result = 31 * result + (type.pointerOrigin?.hashCode() ?: 0)
+                result = 31 * result + hash(type.elementType, cache)
+            }
+
+            is ReferenceType -> {
+                result = 31 * result + hash(type.elementType, cache)
+            }
+
+            is FunctionPointerType -> {
+                type.parameters.forEach { parameter ->
+                    result = 31 * result + hash(parameter, cache)
+                }
+                result = 31 * result + hash(type.returnType, cache)
+            }
+
+            is NumericType -> {
+                type.generics.forEach { generic -> result = 31 * result + hash(generic, cache) }
+                result = 31 * result + type.modifier.hashCode()
+            }
+
+            is ObjectType -> {
+                type.generics.forEach { generic -> result = 31 * result + hash(generic, cache) }
+            }
+        }
+
+        cache[type] = result
+        return result
+    }
+
+    private fun shallowHash(type: Type): Int {
+        var result = type::class.hashCode()
+        result = 31 * result + type.name.hashCode()
+        result = 31 * result + (type.scope?.let(System::identityHashCode) ?: 0)
+        result = 31 * result + type.language.hashCode()
+        return result
+    }
+}
+
+internal fun Type.structuralHashCode(): Int = TypeStructuralHash.hash(this)
+
 /**
  * Wraps the given [Type] into a chain of [PointerType]s and [ReferenceType]s, given the operations
  * in [TypeOperations].

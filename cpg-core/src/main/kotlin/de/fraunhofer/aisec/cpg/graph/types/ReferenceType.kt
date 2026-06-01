@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.graph.unknownType
-import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
@@ -69,7 +68,7 @@ class ReferenceType : Type, SecondOrderType {
         return super.equals(other) && elementType == other.elementType
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), elementType)
+    override fun hashCode() = structuralHashCode()
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

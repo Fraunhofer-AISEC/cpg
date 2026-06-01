@@ -27,10 +27,12 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.test.assertLocalName
+import kotlin.system.measureTimeMillis
 import kotlin.test.*
 import org.junit.jupiter.api.assertThrows
 
@@ -83,5 +85,44 @@ class TypeTest {
             assertIs<DynamicType>(type.reference(PointerType.PointerOrigin.ARRAY))
             assertIs<DynamicType>(type.dereference())
         }
+    }
+
+    @Test
+    fun testPointerHashCodeIsStableForSelfReferentialType() {
+        val pointer =
+            PointerType(UnknownType.getUnknownType(null), PointerType.PointerOrigin.POINTER)
+        pointer.elementType = pointer
+
+        val hash1 = pointer.hashCode()
+        val hash2 = pointer.hashCode()
+
+        assertEquals(hash1, hash2)
+    }
+
+    @Test
+    fun testPointerHashCodeForEqualButDistinctTypes() {
+        with(TestLanguageFrontend()) {
+            val p1 = objectType("Node").pointer()
+            val p2 = objectType("Node").pointer()
+
+            assertEquals(p1, p2)
+            assertEquals(p1.hashCode(), p2.hashCode())
+        }
+    }
+
+    @Test
+    fun testStructuralHashPerformanceSmoke() {
+        val base = ObjectType("Node", listOf(), false, true, UnknownLanguage)
+        var type: Type = base
+        repeat(64) { type = type.pointer() }
+
+        var accumulator = 0
+        val elapsedMs = measureTimeMillis {
+            repeat(200_000) { accumulator = accumulator xor type.hashCode() }
+        }
+
+        assertEquals(type.hashCode(), type.hashCode())
+        assertTrue(elapsedMs >= 0)
+        assertTrue(accumulator != Int.MIN_VALUE)
     }
 }

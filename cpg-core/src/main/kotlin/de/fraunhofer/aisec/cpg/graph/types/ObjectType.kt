@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.persistence.Relationship
-import java.util.*
 
 /**
  * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class.
@@ -114,7 +113,7 @@ open class ObjectType : Type, HasSecondaryTypeEdge {
         return generics == other.generics && isPrimitive == other.isPrimitive
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), generics, isPrimitive)
+    override fun hashCode() = structuralHashCode()
 
     override val secondaryTypes: List<Type>
         get() = generics
