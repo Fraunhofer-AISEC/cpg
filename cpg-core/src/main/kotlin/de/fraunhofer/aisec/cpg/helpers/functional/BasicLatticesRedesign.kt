@@ -810,7 +810,7 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
 
             if (other !is Element<K, V>)
                 throw IllegalArgumentException(
-                    "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
+                    "$other should be of type ConcurrentMapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
 
             val otherKeySetIsBigger = other.keys.any { it !in this.keys }
@@ -872,7 +872,7 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
 
             if (other !is Element<K, V>)
                 throw IllegalArgumentException(
-                    "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
+                    "$other should be of type ConcurrentMapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
 
             if (this.size < MIN_CHUNK_SIZE) {
@@ -974,6 +974,8 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
         var result: Element<K, V>
         coroutineScope {
             if (allowModify) {
+                // TODO: Would it be more efficient here to clone two.entries and iterate over the
+                // clone? This would avoid concurrent-access checks
                 two.entries.forEachMaybeParallel(parallelism = concurrencyCounter) { (k, v) ->
                     val entry = one[k]
                     if (entry == null) {
@@ -981,10 +983,8 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                         // to "one"
                         one.put(k, v)
                     } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
-                        // This key already exists in "one" and the values in one
-                        // and
-                        // two are different,
-                        // so we have to compute the lub of the values
+                        // This key already exists in "one" and the values in one and
+                        // two are different, so we have to compute the lub of the values
                         one[k]?.let { oneValue ->
                             innerLattice.lub(
                                 oneValue,
@@ -992,8 +992,7 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                                 allowModify = true,
                                 widen = widen,
                                 // We already run on $CPU_CORES coroutines, so we
-                                // don't
-                                // need any additional ones
+                                // don't need any additional ones
                                 1,
                             )
                         }
@@ -1251,11 +1250,12 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         two: Element<K, V>,
         allowModify: Boolean,
         widen: Boolean,
+        /* we don't actually need the concurrencyCounter here, since this is the non-parallel version of the MapLattice */
         concurrencyCounter: Int,
     ): Element<K, V> = coroutineScope {
         var result: Element<K, V>
         if (allowModify) {
-            two.entries.forEachMaybeParallel { (k, v) ->
+            two.entries.forEach { (k, v) ->
                 val entry = one[k]
                 if (entry == null) {
                     // This key is not in "one", so we add the value from "two"
@@ -1285,8 +1285,8 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                     addAll(one.keys)
                     addAll(two.keys)
                 }
-            val newMap = ConcurrentIdentityHashMap<K, V>(allKeys.size)
-            allKeys.forEachMaybeParallel { key ->
+            val newMap = IdentityHashMap<K, V>(allKeys.size)
+            allKeys.forEach { key ->
                 val otherValue = two[key]
                 val thisValue = one[key]
                 val newValue =
@@ -1312,9 +1312,9 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     override suspend fun glb(one: Element<K, V>, two: Element<K, V>): Element<K, V> {
         val allKeys = one.keys.intersect(two.keys).toIdentitySet()
 
-        val newMap = ConcurrentIdentityHashMap<K, V>()
+        val newMap = IdentityHashMap<K, V>()
 
-        allKeys.forEachMaybeParallel { key ->
+        allKeys.forEach { key ->
             val otherValue = two[key]
             val thisValue = one[key]
             val newValue =

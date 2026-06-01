@@ -41,8 +41,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
-import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import java.text.NumberFormat
@@ -431,13 +431,14 @@ private fun IfElse.allBranchesFromMyThenBranchGoThrough(node: Node?): Boolean {
     return true
 }
 
-typealias PrevEOGLatticeElement = MapLattice.Element<Node, PowersetLattice.Element<BasicBlock>>
+typealias PrevEOGLatticeElement =
+    ConcurrentMapLattice.Element<Node, PowersetLattice.Element<BasicBlock>>
 
-typealias PrevEOGLattice = MapLattice<Node, PowersetLattice.Element<BasicBlock>>
+typealias PrevEOGLattice = ConcurrentMapLattice<Node, PowersetLattice.Element<BasicBlock>>
 
-typealias PrevEOGStateElement = MapLattice.Element<BasicBlock, PrevEOGLatticeElement>
+typealias PrevEOGStateElement = ConcurrentMapLattice.Element<BasicBlock, PrevEOGLatticeElement>
 
-typealias PrevEOGState = MapLattice<BasicBlock, PrevEOGLatticeElement>
+typealias PrevEOGState = ConcurrentMapLattice<BasicBlock, PrevEOGLatticeElement>
 
 suspend fun PrevEOGState.push(
     currentElement: PrevEOGStateElement,
