@@ -67,8 +67,8 @@ data class PointerDataflowGranularity(
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
- * [Dataflow.end] but only parts of it. Common examples include [MemberAccess]s, array or tuple
- * accesses. This class should allow
+ * [Dataflow.end] but only parts of it. Common examples include [MemberAccess]s, array, pointer
+ * dereference values or tuple accesses. This class should allow
  */
 open class PartialDataflowGranularity<T>(
     /** The target that is affected by this partial dataflow. */
@@ -172,18 +172,22 @@ open class Dataflow(
     @JsonIgnore
     var granularity: Granularity = default(),
     open val functionSummary: Boolean = false,
+    open val derefDepth: PointerAccess? = null,
 ) : ProgramDependence(start, end, DependenceType.DATA) {
     override var labels = super.labels.plus("DFG")
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Dataflow) return false
-        return this.granularity == other.granularity && super.equals(other)
+        return this.granularity == other.granularity &&
+            this.derefDepth == other.derefDepth &&
+            super.equals(other)
     }
 
     override fun hashCode(): Int {
         var result = super.hashCode()
         result = 31 * result + granularity.hashCode()
+        result = 31 * result + derefDepth.hashCode()
         return result
     }
 }
@@ -249,6 +253,7 @@ class ContextSensitiveDataflow(
     granularity: Granularity = default(),
     val callingContext: CallingContext,
     override val functionSummary: Boolean = false,
+    override val derefDepth: PointerAccess? = null,
 ) : Dataflow(start, end, granularity) {
 
     override fun equals(other: Any?): Boolean {
@@ -282,6 +287,7 @@ class Dataflows<T : Node>(
         granularity: Granularity = default(),
         callingContext: CallingContext,
         functionSummary: Boolean = false,
+        derefDepth: PointerAccess? = null,
     ) {
         val edge =
             if (outgoing) {
@@ -291,6 +297,7 @@ class Dataflows<T : Node>(
                     granularity,
                     callingContext,
                     functionSummary,
+                    derefDepth,
                 )
             } else {
                 ContextSensitiveDataflow(
@@ -299,6 +306,7 @@ class Dataflows<T : Node>(
                     granularity,
                     callingContext,
                     functionSummary,
+                    derefDepth,
                 )
             }
 

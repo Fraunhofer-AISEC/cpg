@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
-import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.ParameterMemoryValue
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
@@ -264,10 +263,7 @@ class DFGFunctionSummariesTest {
         assertEquals(1, argA.nextDFG.size)
         // The MemoryAddress a
         assertEquals(1, argA.prevFullDFG.size)
-        assertEquals(
-            1,
-            argA.prevDFGEdges.filter { it.granularity is PointerDataflowGranularity }.size,
-        )
+        assertEquals(1, argA.prevDFGEdges.filter { it.derefDepth != null }.size)
 
         val nextDfg = argA.nextDFGEdges.single()
         assertEquals(
