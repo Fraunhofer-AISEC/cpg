@@ -94,8 +94,8 @@ typealias TupleStateElement<NodeId> =
  * (or, for nodes without an identifier, the [Node] itself). Because the same logical variable
  * yields equal-but-not-identical `Integer` instances across branches, this lattice must compare
  * keys by `equals` rather than reference identity — hence [HashMapLattice] rather than the default
- * [MapLattice]. Without that, an `if/else` writing the same variable in both arms would survive
- * [lub] as two separate entries.
+ * [ConcurrentMapLattice]. Without that, an `if/else` writing the same variable in both arms would
+ * survive [lub] as two separate entries.
  */
 class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>) :
     HashMapLattice<NodeId, NewIntervalLattice.Element>(innerLattice) {
@@ -173,9 +173,9 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
     }
 }
 
-typealias NewIntervalState = MapLattice<Node, NewIntervalLattice.Element>
+typealias NewIntervalState = ConcurrentMapLattice<Node, NewIntervalLattice.Element>
 
-typealias NewIntervalStateElement = MapLattice.Element<Node, NewIntervalLattice.Element>
+typealias NewIntervalStateElement = ConcurrentMapLattice.Element<Node, NewIntervalLattice.Element>
 
 class NewIntervalLattice() :
     Lattice<NewIntervalLattice.Element>,
