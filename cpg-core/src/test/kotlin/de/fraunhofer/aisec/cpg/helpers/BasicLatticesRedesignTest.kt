@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
 import de.fraunhofer.aisec.cpg.helpers.functional.HashMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
@@ -42,6 +43,31 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.assertThrows
 
 class BasicLatticesRedesignTest {
+    @Test
+    fun testConcurrentIdentityHashMapKeysView() {
+        data class ValueKey(val id: Int)
+
+        val map = ConcurrentIdentityHashMap<ValueKey, String>()
+        val first = ValueKey(1)
+        val equalButDistinct = ValueKey(1)
+        val absentEqualKey = ValueKey(1)
+
+        val keys = map.keys
+
+        map.put(first, "first")
+        assertTrue(first in keys)
+        assertFalse(absentEqualKey in keys)
+
+        map.put(equalButDistinct, "second")
+        assertEquals(2, keys.size)
+        assertTrue(equalButDistinct in keys)
+
+        @Suppress("UNCHECKED_CAST") val mutableKeys = keys as MutableSet<ValueKey>
+        assertTrue(mutableKeys.remove(first))
+        assertFalse(map.containsKey(first))
+        assertTrue(map.containsKey(equalButDistinct))
+    }
+
     @Test
     fun testPowersetLattice() {
         runBlocking {
