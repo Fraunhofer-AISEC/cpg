@@ -197,15 +197,32 @@ sealed interface CallingContext {
     val calls: MutableList<Call>
 }
 
+private fun callsEqualByIdentity(left: List<Call>, right: List<Call>): Boolean {
+    if (left === right) return true
+    if (left.size != right.size) return false
+    for (i in left.indices) {
+        if (left[i] !== right[i]) return false
+    }
+    return true
+}
+
+private fun callsIdentityHash(calls: List<Call>): Int {
+    var result = 1
+    for (call in calls) {
+        result = 31 * result + System.identityHashCode(call)
+    }
+    return result
+}
+
 class CallingContextIn(override val calls: MutableList<Call>) : CallingContext {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is CallingContextIn) return false
-        return this.calls == other.calls
+        return callsEqualByIdentity(this.calls, other.calls)
     }
 
     override fun hashCode(): Int {
-        return 31 * calls.hashCode()
+        return 31 * callsIdentityHash(calls)
     }
 }
 
@@ -216,11 +233,11 @@ class CallingContextOut(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is CallingContextOut) return false
-        return this.calls == other.calls
+        return callsEqualByIdentity(this.calls, other.calls)
     }
 
     override fun hashCode(): Int {
-        return 31 * calls.hashCode()
+        return 31 * callsIdentityHash(calls)
     }
 }
 
