@@ -41,11 +41,10 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.functional.CPU_CORES
 import de.fraunhofer.aisec.cpg.helpers.functional.MIN_CHUNK_SIZE
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 import java.util.Objects
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.collections.component1
-import kotlin.collections.component2
 import kotlin.collections.filter
 import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
@@ -128,7 +127,7 @@ inline fun <reified T> Node?.allChildrenWithOverlays(
 
 /** Checks, whether this [Node] has any overlays of type [T]. */
 inline fun <reified T : OverlayNode> Node.hasOverlay(): Boolean {
-    return this.overlays.filterIsInstance<T>().isNotEmpty()
+    return this.overlays.any { it is T }
 }
 
 /**
@@ -1192,8 +1191,9 @@ fun Node.followXUntilHit(
     }
 
     val failedLoops =
-        loopingPaths
-            .filter { path ->
+        loopingPaths.mapFilteredTo(
+            mutableSetOf(),
+            { path ->
                 fulfilledPaths.none {
                     it.nodes.size > path.nodes.size &&
                         it.nodes.subList(0, path.nodes.size - 1) == path.nodes
@@ -1202,8 +1202,10 @@ fun Node.followXUntilHit(
                         it.second.nodes.size > path.nodes.size &&
                             it.second.nodes.subList(0, path.nodes.size - 1) == path.nodes
                     }
-            }
-            .map { FailureReason.PATH_ENDED to it }
+            },
+        ) {
+            FailureReason.PATH_ENDED to it
+        }
 
     return FulfilledAndFailedPaths(
         fulfilledPaths,
@@ -1280,16 +1282,16 @@ val Function.lastEOGNodes: Collection<Node>
             // In some cases, we do not have a body, so we have to jump directly to the
             // function declaration.
             listOf(this)
-        } else lastEOG.filter { !it.unreachable }.map { it.start }
+        } else lastEOG.mapFilteredTo(mutableListOf(), { !it.unreachable }) { it.start }
     }
 
 /** Returns only potentially reachable previous EOG edges. */
 val Node.reachablePrevEOG: Collection<Node>
-    get() = this.prevEOGEdges.filter { !it.unreachable }.map { it.start }
+    get() = this.prevEOGEdges.mapFilteredTo(mutableListOf(), { !it.unreachable }) { it.start }
 
 /** Returns only potentially reachable previous EOG edges. */
 val Node.reachableNextEOG: Collection<Node>
-    get() = this.nextEOGEdges.filter { !it.unreachable }.map { it.end }
+    get() = this.nextEOGEdges.mapFilteredTo(mutableListOf(), { !it.unreachable }) { it.end }
 
 /**
  * Returns a list of edges which are from the evaluation order between the starting node [this] and
@@ -1301,20 +1303,22 @@ val Node.reachableNextEOG: Collection<Node>
 fun Node.followNextEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
     val path = mutableListOf<Edge<*>>()
 
-    for (edge in this.nextEOGEdges.filter { !it.unreachable }) {
-        val target = edge.end
+    for (edge in this.nextEOGEdges) {
+        if (!edge.unreachable) {
+            val target = edge.end
 
-        path.add(edge)
+            path.add(edge)
 
-        if (predicate(edge)) {
-            return path
-        }
+            if (predicate(edge)) {
+                return path
+            }
 
-        val subPath = target.followNextEOG(predicate)
-        if (subPath != null) {
-            path.addAll(subPath)
+            val subPath = target.followNextEOG(predicate)
+            if (subPath != null) {
+                path.addAll(subPath)
 
-            return path
+                return path
+            }
         }
     }
 
@@ -1331,20 +1335,22 @@ fun Node.followNextEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
 fun Node.followPrevEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
     val path = mutableListOf<Edge<*>>()
 
-    for (edge in this.prevEOGEdges.filter { !it.unreachable }) {
-        val source = edge.start
+    for (edge in this.prevEOGEdges) {
+        if (!edge.unreachable) {
+            val source = edge.start
 
-        path.add(edge)
+            path.add(edge)
 
-        if (predicate(edge)) {
-            return path
-        }
+            if (predicate(edge)) {
+                return path
+            }
 
-        val subPath = source.followPrevEOG(predicate)
-        if (subPath != null) {
-            path.addAll(subPath)
+            val subPath = source.followPrevEOG(predicate)
+            if (subPath != null) {
+                path.addAll(subPath)
 
-            return path
+                return path
+            }
         }
     }
 
@@ -1605,11 +1611,12 @@ val AstNode?.assignments: List<Assignment>
 val Variable.firstAssignment: Expression?
     get() {
         val start = this.scope?.astNode ?: return null
-        val assignments = start.assignments.filter { (it.target as? Reference)?.refersTo == this }
-
-        // We need to measure the distance between the start and each assignment value
-        return assignments
-            .map { Pair(it, start.eogDistanceTo(it.value)) }
+        return start.assignments
+            .mapFilteredTo(mutableListOf(), { (it.target as? Reference)?.refersTo == this })
+            // We need to measure the distance between the start and each assignment value
+            {
+                Pair(it, start.eogDistanceTo(it.value))
+            }
             .minByOrNull { it.second }
             ?.first
             ?.value
@@ -1660,7 +1667,7 @@ operator fun Function.get(n: Int): Expression? {
 
 /** Set of all functions calling [function] */
 fun TranslationResult.callersOf(function: Function): Set<Function> {
-    return this.functions.filter { function in it.callees }.toSet()
+    return this.functions.filterTo(mutableSetOf()) { function in it.callees }
 }
 
 /** All nodes which depend on this if statement */
