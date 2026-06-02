@@ -623,7 +623,7 @@ interface Lattice<T : Lattice.Element> {
                             // In comparison to a loop entry, a merge point has multiple
                             // prevEOGEdges
                             // without SCC-Label and at least one nextEOGEdge without
-                            it.start.prevEOGEdges.filter { it.scc == null }.size > 1 &&
+                            it.start.prevEOGEdges.any { it.scc == null } &&
                                 it.start.nextEOGEdges.any { it.scc == null }
                         ) {
                             // This edge brings us to a merge point, so we add it to the list of

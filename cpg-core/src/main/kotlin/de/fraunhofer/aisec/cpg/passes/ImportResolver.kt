@@ -46,7 +46,6 @@ import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
-import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.inference.tryNamespaceInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -108,7 +107,9 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
                         // future, if we see a benefit to NOT group processing per component but
                         // rather just process all TUs in the order they are necessary regardless of
                         // their parent component.
-                        entry.value.filter { entry.key.astParent == it.astParent }.toIdentitySet(),
+                        entry.value.filterTo(identitySetOf()) {
+                            entry.key.astParent == it.astParent
+                        },
                     )
                 }
         }
@@ -286,9 +287,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
                     // leaf namespaces. However, this can be extremely slow because it first gathers
                     // all children and then filters them. Instead, we can directly filter for the
                     // child declarations.
-                    it is Namespace &&
-                        !it.isInferred &&
-                        it.declarations.filterIsInstance<Namespace>().isEmpty()
+                    it is Namespace && !it.isInferred && it.declarations.none { it is Namespace }
                 }
 
             // We are only interested in "leaf" namespace declarations, meaning that they do not

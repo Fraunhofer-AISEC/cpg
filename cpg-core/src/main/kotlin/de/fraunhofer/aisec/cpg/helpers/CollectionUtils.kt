@@ -37,3 +37,6 @@ fun <R, T, C : MutableCollection<in R>> Iterable<T>.mapFilteredTo(
     }
     return target
 }
+
+fun <R, T> Iterable<T>.mapFiltered(predicate: (T) -> Boolean, transform: (T) -> R): List<R> =
+    mapFilteredTo(mutableListOf(), predicate, transform)

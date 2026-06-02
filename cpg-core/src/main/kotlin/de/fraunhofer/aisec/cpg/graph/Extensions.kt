@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.functional.CPU_CORES
 import de.fraunhofer.aisec.cpg.helpers.functional.MIN_CHUNK_SIZE
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 import java.util.Objects
@@ -1282,16 +1283,16 @@ val Function.lastEOGNodes: Collection<Node>
             // In some cases, we do not have a body, so we have to jump directly to the
             // function declaration.
             listOf(this)
-        } else lastEOG.mapFilteredTo(mutableListOf(), { !it.unreachable }) { it.start }
+        } else lastEOG.mapFiltered({ !it.unreachable }) { it.start }
     }
 
 /** Returns only potentially reachable previous EOG edges. */
 val Node.reachablePrevEOG: Collection<Node>
-    get() = this.prevEOGEdges.mapFilteredTo(mutableListOf(), { !it.unreachable }) { it.start }
+    get() = this.prevEOGEdges.mapFiltered({ !it.unreachable }) { it.start }
 
 /** Returns only potentially reachable previous EOG edges. */
 val Node.reachableNextEOG: Collection<Node>
-    get() = this.nextEOGEdges.mapFilteredTo(mutableListOf(), { !it.unreachable }) { it.end }
+    get() = this.nextEOGEdges.mapFiltered({ !it.unreachable }) { it.end }
 
 /**
  * Returns a list of edges which are from the evaluation order between the starting node [this] and
@@ -1612,7 +1613,7 @@ val Variable.firstAssignment: Expression?
     get() {
         val start = this.scope?.astNode ?: return null
         return start.assignments
-            .mapFilteredTo(mutableListOf(), { (it.target as? Reference)?.refersTo == this })
+            .mapFiltered({ (it.target as? Reference)?.refersTo == this })
             // We need to measure the distance between the start and each assignment value
             {
                 Pair(it, start.eogDistanceTo(it.value))

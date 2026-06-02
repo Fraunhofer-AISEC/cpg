@@ -38,8 +38,10 @@ import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.expressions.operatorCallFromDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
@@ -518,10 +520,9 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         // Add overridden invokes
         candidates.addAll(
-            candidates
-                .filterIsInstance<Function>()
-                .map { getOverridingCandidates(possibleContainingTypes, it) }
-                .flatten()
+            candidates.filterIsInstance<Function>().flatMap {
+                getOverridingCandidates(possibleContainingTypes, it)
+            }
         )
 
         return candidates
@@ -679,16 +680,14 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         possibleSubTypes: Set<Type>,
         declaration: Function,
     ): Set<Function> {
-        return declaration.overriddenBy
-            .filter { f ->
-                if (f is Method) {
-                    val record = f.recordDeclaration
-                    record != null && record.toType() in possibleSubTypes
-                } else {
-                    false
-                }
+        return declaration.overriddenBy.filterTo(mutableSetOf()) { f ->
+            if (f is Method) {
+                val record = f.recordDeclaration
+                record != null && record.toType() in possibleSubTypes
+            } else {
+                false
             }
-            .toSet()
+        }
     }
 
     /**
@@ -831,7 +830,9 @@ internal fun Pass<*>.resolveWithArguments(
         CallResolutionResult(
             source,
             arguments,
-            candidates.filterIsInstance<Function>().toSet(),
+            candidates.filterIsInstanceTo<Function, IdentitySet<Function>>(
+                identitySetOf<Function>()
+            ),
             setOf(),
             mapOf(),
             setOf(),

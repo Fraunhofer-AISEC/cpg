@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.configuration
 
 import de.fraunhofer.aisec.cpg.ConfigurationException
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.Pass
 import java.util.*
@@ -125,11 +126,7 @@ class PassOrderingHelper {
      * * [ExecuteBefore] dependencies
      */
     private fun addToWorkingList(newElement: KClass<out Pass<*>>) {
-        if (
-            (workingList + firstPassesList + lastPassesList)
-                .filter { it.passClass == newElement }
-                .isNotEmpty()
-        ) {
+        if ((workingList + firstPassesList + lastPassesList).any { it.passClass == newElement }) {
             // we already know about this pass
             return
         }
@@ -221,7 +218,6 @@ class PassOrderingHelper {
                 (pass.passClass.softExecuteBefore +
                     pass.passClass.hardExecuteBefore)) { // iterate over all executeBefore passes
                 (workingList + firstPassesList + lastPassesList)
-                    .map { it }
                     .filter { it.passClass == executeBeforePass } // find the executeBeforePass
                     .forEach {
                         it.dependenciesRemaining += pass.passClass
@@ -254,11 +250,11 @@ class PassOrderingHelper {
      *   otherwise.
      */
     private fun getAndRemoveNextPasses(allowLatePasses: Boolean): List<KClass<out Pass<*>>> {
-        return workingList
-            .filter {
-                it.dependenciesRemaining.isEmpty() && it.passClass.isLatePass == allowLatePasses
-            }
-            .map { selectPass(it) }
+        return workingList.mapFiltered({
+            it.dependenciesRemaining.isEmpty() && it.passClass.isLatePass == allowLatePasses
+        }) {
+            selectPass(it)
+        }
     }
 
     /**

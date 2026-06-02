@@ -39,6 +39,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -71,10 +73,12 @@ interface HasMemoryValue {
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val fullMemoryValues: Set<Node>
         get() =
-            memoryValueEdges
-                .filter { it.granularity is FullDataflowGranularity && !it.functionSummary }
-                .map { it.start }
-                .toSet()
+            memoryValueEdges.mapFilteredTo(
+                identitySetOf(),
+                { it.granularity is FullDataflowGranularity && !it.functionSummary },
+            ) {
+                it.start
+            }
 }
 
 /** A simple interface that a node has [language]. */

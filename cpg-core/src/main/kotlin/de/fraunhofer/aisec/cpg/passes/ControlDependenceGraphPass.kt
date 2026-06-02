@@ -44,6 +44,8 @@ import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import java.text.NumberFormat
 import java.util.Locale
@@ -233,8 +235,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     val branchesSet =
                         finalDominator.nextEOGEdges
                             .filter { edge -> edge.end in reachingBB.flatMap { it.nodes } }
-                            .mapNotNull { it.branch }
-                            .toSet()
+                            .mapNotNullTo(mutableSetOf()) { it.branch }
 
                     basicBlock.nodes.forEach { node ->
                         if (
@@ -294,14 +295,16 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                             if (branchingNode.nextEOGEdges.any { !it.isConditionalBranch() }) {
                                 // There's an unconditional path (case 1), so when reaching this
                                 // branch, we're done. Collect all (=1) unconditional branches.
-                                branchingNode.nextEOGEdges
-                                    .filter { !it.isConditionalBranch() }
-                                    .map { it.end }
-                                    .toSet()
+                                branchingNode.nextEOGEdges.mapFilteredTo(
+                                    identitySetOf(),
+                                    { !it.isConditionalBranch() },
+                                ) {
+                                    it.end
+                                }
                             } else {
                                 // All branches are executed based on some condition (case 2), so we
                                 // collect all these branches.
-                                branchingNode.nextEOGEdges.map { it.end }.toSet()
+                                branchingNode.nextEOGEdges.mapTo(identitySetOf()) { it.end }
                             }
                         branchingNode to mergingPoints.mapNotNull { nodeToBBMap[it] }
                     }
@@ -414,7 +417,8 @@ private fun IfElse.allBranchesFromMyThenBranchGoThrough(node: Node?): Boolean {
     if (node == null) return true
 
     val alreadySeen = mutableSetOf<Node>()
-    val nextNodes = this.nextEOGEdges.filter { it.branch == true }.map { it.end }.toMutableList()
+    val nextNodes =
+        this.nextEOGEdges.mapFilteredTo(mutableListOf(), { it.branch == true }) { it.end }
 
     while (nextNodes.isNotEmpty()) {
         val nextNode = nextNodes.removeFirst()

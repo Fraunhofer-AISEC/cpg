@@ -60,7 +60,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
-import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.inference.Inference
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -469,8 +469,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
         // Find the best (lowest) rank and find functions with the specific rank
         val bestRanking = rankings.minBy { it.first }.first
-        val list =
-            rankings.mapFilteredTo(mutableListOf(), { it.first == bestRanking }) { it.second }
+        val list = rankings.mapFiltered({ it.first == bestRanking }) { it.second }
         return if (list.size > 1) {
             // Return the list of best-ranked (hopefully only one). If one then more result has
             // the same ranking, this result is ambiguous

@@ -49,6 +49,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.ProblemType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -192,10 +193,12 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // Do not consider the base for member expressions, we have to know possible values of
             // the member (e.g. field).
             val prevDFGToPush =
-                curr.prevDFGEdges
-                    .filter { it.granularity is FullDataflowGranularity }
-                    .map { it.start }
-                    .toMutableList()
+                curr.prevDFGEdges.mapFilteredTo(
+                    mutableListOf(),
+                    { it.granularity is FullDataflowGranularity },
+                ) {
+                    it.start
+                }
             if (curr is MemberAccess && prevDFGToPush.isEmpty()) {
                 // TODO: This is only a workaround!
                 //   If there is nothing found for Members, we may have set the field

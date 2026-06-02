@@ -615,9 +615,9 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * @return A set of corresponding [FileAccessModeFlags]
      */
     internal fun translateOsOpenFlags(flags: Long): Set<FileAccessModeFlags> {
-        return FileAccessModeFlags.entries
-            .filter { it.value == (flags and O_ACCMODE_MODE_MASK) }
-            .toSet()
+        return FileAccessModeFlags.entries.filterTo(mutableSetOf()) {
+            it.value == (flags and O_ACCMODE_MODE_MASK)
+        }
     }
 
     /**
