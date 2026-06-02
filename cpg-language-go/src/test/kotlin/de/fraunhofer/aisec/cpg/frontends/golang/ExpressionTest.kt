@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Cast
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.PointerDereference
 import de.fraunhofer.aisec.cpg.graph.expressions.Range
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
@@ -203,11 +204,11 @@ class ExpressionTest {
 
         val x = main.variables["x"]
         assertNotNull(x)
-        assertLocalName("string**", x.type)
+        assertLocalName("string*", x.type)
 
         val y = main.variables["y"]
         assertNotNull(y)
-        assertLocalName("string*", y.type)
+        assertLocalName("string", y.type)
 
         val derefX = main.allChildren<PointerDereference>().firstOrNull()
         assertNotNull(derefX)
@@ -218,5 +219,96 @@ class ExpressionTest {
         assertContains(derefX.assignedTypes, y.type)
         assertEquals(y.type.pointer(), x.type)
         assertEquals(setOf(y.type.pointer()), input.assignedTypes)
+    }
+
+    @Test
+    fun testLinkedListCircularTypeWithPointerDerefAssign() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("linked_list_deref_assign.go").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        val node = tu.records["p.Node"]
+        assertNotNull(node)
+
+        val next = node.fields["next"]
+        assertNotNull(next)
+        assertLocalName("Node*", next.type)
+
+        val main = tu.functions["p.main"]
+        assertNotNull(main)
+
+        val y = main.variables["y"]
+        assertNotNull(y)
+        assertLocalName("Node*", y.type)
+
+        val x = main.variables["x"]
+        assertNotNull(x)
+        assertLocalName("Node**", x.type)
+
+        val derefXAsPointer =
+            main.allChildren<PointerDereference>().firstOrNull {
+                val input = it.input as? Reference
+                input?.refersTo == x
+            }
+        val derefXAsUnary =
+            main.allChildren<UnaryOperator>().firstOrNull {
+                it.operatorCode == "*" && (it.input as? Reference)?.refersTo == x
+            }
+        val derefX = derefXAsPointer ?: derefXAsUnary
+        assertNotNull(derefX)
+
+        assertEquals(y.type, derefX.type)
+        assertContains(derefX.assignedTypes, y.type)
+    }
+
+    @Test
+    fun testLinkedListCircularTypeWithPointerDerefAssignFromField() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("linked_list_deref_assign_field.go").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        val node = tu.records["p.Node"]
+        assertNotNull(node)
+        val next = node.fields["next"]
+        assertNotNull(next)
+        assertLocalName("Node*", next.type)
+
+        val main = tu.functions["p.main"]
+        assertNotNull(main)
+
+        val x = main.variables["x"]
+        assertNotNull(x)
+        assertLocalName("Node**", x.type)
+
+        val derefXAsPointer =
+            main.allChildren<PointerDereference>().firstOrNull {
+                val input = it.input as? Reference
+                input?.refersTo == x
+            }
+        val derefXAsUnary =
+            main.allChildren<UnaryOperator>().firstOrNull {
+                it.operatorCode == "*" && (it.input as? Reference)?.refersTo == x
+            }
+        val derefX = derefXAsPointer ?: derefXAsUnary
+        assertNotNull(derefX)
+
+        val rhsNext = main.allChildren<MemberAccess>().firstOrNull { it.name.localName == "next" }
+        assertNotNull(rhsNext)
+        assertEquals(rhsNext.type, derefX.type)
+        assertContains(derefX.assignedTypes, rhsNext.type)
     }
 }
