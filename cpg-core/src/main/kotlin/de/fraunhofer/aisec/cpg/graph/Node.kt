@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -178,13 +179,16 @@ abstract class Node() :
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val prevFullDFG: List<Node>
         get() {
-            return prevDFGEdges
-                .filter {
+            return prevDFGEdges.mapFilteredTo(
+                mutableListOf(),
+                {
                     it.granularity is FullDataflowGranularity &&
                         !it.functionSummary &&
                         it.derefDepth == null
-                }
-                .map { it.start }
+                },
+            ) {
+                it.start
+            }
         }
 
     /** Virtual property for accessing [prevDFGEdges] that are [functionSummary]-edges. */
@@ -192,7 +196,7 @@ abstract class Node() :
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val prevFunctionSummaryDFG: List<Node>
         get() {
-            return prevDFGEdges.filter { it.functionSummary }.map { it.start }
+            return prevDFGEdges.mapFilteredTo(mutableListOf(), { it.functionSummary }) { it.start }
         }
 
     /** Outgoing data flow edges */
@@ -211,13 +215,16 @@ abstract class Node() :
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val nextFullDFG: List<Node>
         get() {
-            return nextDFGEdges
-                .filter {
+            return nextDFGEdges.mapFilteredTo(
+                mutableListOf(),
+                {
                     it.granularity is FullDataflowGranularity &&
                         !it.functionSummary &&
                         it.derefDepth == null
-                }
-                .map { it.end }
+                },
+            ) {
+                it.end
+            }
         }
 
     /** Virtual property for accessing [nextDFGEdges] that are [functionSummary]-edges. */
@@ -225,7 +232,7 @@ abstract class Node() :
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val nextFunctionSummaryDFG: List<Node>
         get() {
-            return nextDFGEdges.filter { it.functionSummary }.map { it.end }
+            return nextDFGEdges.mapFilteredTo(mutableListOf(), { it.functionSummary }) { it.end }
         }
 
     /** Outgoing Program Dependence Edges. */

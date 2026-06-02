@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -158,9 +159,12 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     // The only way to do this, is to filter for the particular
                     // scope (the value of the map) and return the keys (the nodes)
                     val keys =
-                        manager.scopeMap
-                            .filter { it.value.astNode == entry.value.astNode }
-                            .map { it.key }
+                        manager.scopeMap.entries.mapFilteredTo(
+                            mutableListOf(),
+                            { it.value.astNode == entry.value.astNode },
+                        ) {
+                            it.key
+                        }
 
                     // now, we redirect it to the existing scope
                     keys.forEach { manager.scopeMap[it] = existing }
