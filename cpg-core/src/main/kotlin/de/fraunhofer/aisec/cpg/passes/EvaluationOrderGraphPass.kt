@@ -1162,9 +1162,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         connectCurrentEOGToLoopStart(node)
         currentPredecessors.clear()
         currentPredecessors.addAll(tmpEOGNodes)
+        nextEdgeBranch = false
         node.elseStatement?.let { handleEOG(it) }
         handleContainedBreaksAndContinues(node)
-        nextEdgeBranch = false
         attachToEOG(node)
     }
 
@@ -1184,9 +1184,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
         currentPredecessors.clear()
         currentPredecessors.addAll(tmpEOGNodes)
+        nextEdgeBranch = false
         node.elseStatement?.let { handleEOG(it) }
         handleContainedBreaksAndContinues(node)
-        nextEdgeBranch = false
         attachToEOG(node)
     }
 
@@ -1206,7 +1206,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             handleEOG(node.elseStatement)
             openBranchNodes.addAll(currentPredecessors)
         } else {
-            openBranchNodes.addAll(openConditionEOGs)
+            setCurrentEOGs(openConditionEOGs)
+            nextEdgeBranch = false
+            attachToEOG(node)
         }
         setCurrentEOGs(openBranchNodes)
         attachToEOG(node)
