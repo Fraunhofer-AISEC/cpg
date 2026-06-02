@@ -418,6 +418,9 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleUnaryOperator(node: UnaryOperator) {
         if ((node.input as? Reference)?.access == AccessValues.WRITE) {
+            // The unary operator should no longer be a type observer of the input. This is the
+            // default case but could cause loops
+            (node.input as? Reference)?.let { it.unregisterTypeObserver(node) }
             node.input.let { node.nextDFGEdges += it }
         } else {
             node.input.let {
