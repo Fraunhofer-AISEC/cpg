@@ -37,8 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Loop
 import de.fraunhofer.aisec.cpg.graph.expressions.While
 import de.fraunhofer.aisec.cpg.graph.isBranchOf
 import de.fraunhofer.aisec.cpg.helpers.*
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
-import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -348,9 +348,9 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
 }
 
 typealias UnreachabilityStateElement =
-    MapLattice.Element<EvaluationOrder, ReachabilityLattice.Element>
+    ConcurrentMapLattice.Element<EvaluationOrder, ReachabilityLattice.Element>
 
-typealias UnreachabilityState = MapLattice<EvaluationOrder, ReachabilityLattice.Element>
+typealias UnreachabilityState = ConcurrentMapLattice<EvaluationOrder, ReachabilityLattice.Element>
 
 fun UnreachabilityState.push(
     currentState: UnreachabilityStateElement,

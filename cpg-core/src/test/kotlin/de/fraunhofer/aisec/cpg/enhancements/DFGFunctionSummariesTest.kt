@@ -29,13 +29,13 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
-import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.ParameterMemoryValue
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
@@ -263,10 +263,7 @@ class DFGFunctionSummariesTest {
         assertEquals(1, argA.nextDFG.size)
         // The MemoryAddress a
         assertEquals(1, argA.prevFullDFG.size)
-        assertEquals(
-            1,
-            argA.prevDFGEdges.filter { it.granularity is PointerDataflowGranularity }.size,
-        )
+        assertEquals(1, argA.prevDFGEdges.filter { it.derefDepth != null }.size)
 
         val nextDfg = argA.nextDFGEdges.single()
         assertEquals(
@@ -317,6 +314,49 @@ class DFGFunctionSummariesTest {
             }
         val returnedA = dfgTest.returns.single().returnValues.single()
         assertEquals(returnedA, nextDFGOfPMV?.end)
+    }
+
+    @Test
+    fun testLanguageHierarchyMatching() {
+        val config =
+            TranslationConfiguration.builder()
+                .registerLanguage<TestLanguageWithColon>()
+                .registerFunctionSummaries(File("src/test/resources/function-dfg.yml"))
+                .inferenceConfiguration(
+                    InferenceConfiguration.builder()
+                        .inferDfgForUnresolvedCalls(true)
+                        .inferFunctions(true)
+                        .build()
+                )
+                .defaultPasses()
+                .build()
+
+        val dfgTest =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("DfgInferredCall.c") {
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("a", t("int")) { literal(7, t("char")) } }
+                                declare { variable("b", t("int")) { literal(5, t("char")) } }
+                                call("memcpy") {
+                                    ref("a").pointerReference()
+                                    ref("b").pointerReference()
+                                    literal(1, t("int"))
+                                }
+                                returnStmt { ref("a") }
+                            }
+                        }
+                    }
+                }
+            }
+
+        val memcpy = dfgTest.functions["memcpy"]
+        assertNotNull(memcpy)
+        assertTrue(
+            memcpy.functionSummary.isNotEmpty(),
+            "Expected memcpy to have a non-empty function summary",
+        )
     }
 
     @Ignore(

@@ -652,7 +652,8 @@ object OnlyFullDFG : AnalysisSensitivity() {
         analysisDirection: AnalysisDirection,
         interproceduralEdgesExist: Boolean,
     ): Boolean {
-        return edge !is Dataflow || edge.granularity is FullDataflowGranularity
+        return edge !is Dataflow ||
+            (edge.granularity is FullDataflowGranularity && edge.derefDepth == null)
     }
 }
 
