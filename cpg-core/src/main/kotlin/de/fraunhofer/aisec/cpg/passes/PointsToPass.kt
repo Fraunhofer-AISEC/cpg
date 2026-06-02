@@ -48,6 +48,8 @@ import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
+import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -1332,8 +1334,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         }
                     // Filter shortFS Values
                     var values =
-                        doubleState.getValues(rV, rV).mapNotNullTo(mutableSetOf()) {
-                            if (!it.second) it.first else null
+                        doubleState.getValues(rV, rV).mapFilteredTo(
+                            mutableSetOf(),
+                            { !it.second },
+                        ) {
+                            it.first
                         }
                     var addresses = mutableSetOf<Node>()
                     for (depth in 1..3) {
@@ -1364,8 +1369,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         val derefValues =
                             values.flatMapTo(mutableSetOf()) { value ->
                                 if (doubleState.hasDeclarationStateValueEntry(value)) {
-                                    doubleState.getValues(value, value).mapNotNull {
-                                        if (!it.second) it.first else null
+                                    doubleState.getValues(value, value).mapFiltered({
+                                        !it.second
+                                    }) {
+                                        it.first
                                     }
                                 } else emptyList()
                             }
@@ -1720,15 +1727,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // If we have multiple functions with the same name and the same signature and one has an
         // empty body, we assume that this is from the header so we ignore it
         invokes =
-            invokes.mapNotNullTo(identitySetOf()) { inv ->
-                if (
-                    inv.body == null &&
+            invokes.mapFilteredTo(
+                identitySetOf(),
+                { inv ->
+                    !(inv.body == null &&
                         // If the body is empty, check if we have the "real" Function
                         // somewhere in our list
-                        invokes.any { it != inv && it.name == inv.name && it.type == inv.type }
-                )
-                    null
-                else inv
+                        invokes.any { it != inv && it.name == inv.name && it.type == inv.type })
+                },
+            ) { inv ->
+                inv
             }
         invokes.forEach { invoke ->
             val inv = calculateFunctionSummaries(invoke)
@@ -2583,10 +2591,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val updatedAddresses: IdentitySet<Pair<Node, String?>> =
                 mapDstToSrc.entries.flatMapTo(IdentitySet()) {
                     if (it.key == argument) {
-                        it.value.mapNotNullTo(IdentitySet()) {
-                            if (it.param == param && it.srcNode != null) {
-                                it.srcNode to null
-                            } else null
+                        it.value.mapFilteredTo(
+                            IdentitySet(),
+                            { it.param == param && it.srcNode != null },
+                        ) {
+                            it.srcNode!! to null
                         }
                     } else emptySet()
                 }
@@ -2858,7 +2867,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     .getValues(currentNode, currentNode)
                     // Filter only the values that are not stored for short FunctionSummaries (aka
                     // it.second set to true)
-                    .mapNotNullTo(IdentitySet()) { if (!it.second) it.first else null }
+                    .mapFilteredTo(IdentitySet(), { !it.second }) { it.first }
             val prevDFGs = doubleState.getLastWrites(currentNode)
 
             // If we have any information from the dereferenced value, we also fetch that (if it's

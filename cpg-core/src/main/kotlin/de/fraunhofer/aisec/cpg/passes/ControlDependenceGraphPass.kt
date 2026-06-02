@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
+import de.fraunhofer.aisec.cpg.helpers.flatMapNotNull
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
@@ -203,18 +204,16 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             // dominators
             // but also dominates one of our (remaining) dominators, we remove it.
             val transitiveDominators =
-                finalDominators
-                    .mapNotNull {
-                        // Get the dominator of this dominator
-                        val transitiveBB = nodeToBBMap[it.first]
-                        transitiveBB
-                            ?.let { finalState[it] }
-                            ?.entries
-                            ?.mapNotNull { (k, v) ->
-                                if (k != transitiveBB.branchingNode) k to v else null
-                            }
-                    }
-                    .flatten()
+                finalDominators.flatMapNotNull {
+                    // Get the dominator of this dominator
+                    val transitiveBB = nodeToBBMap[it.first]
+                    transitiveBB
+                        ?.let { finalState[it] }
+                        ?.entries
+                        ?.mapNotNull { (k, v) ->
+                            if (k != transitiveBB.branchingNode) k to v else null
+                        }
+                }
             // Major hack: In both transitiveDominators and finalDominators, we have Pairs, we need
             // to make sure that those are compared by equality
             finalDominators =

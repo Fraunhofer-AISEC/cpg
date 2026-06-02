@@ -48,6 +48,7 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.LatticeElement
 import de.fraunhofer.aisec.cpg.helpers.Util.infoWithFileLocation
+import de.fraunhofer.aisec.cpg.helpers.flatMapNotNull
 import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
@@ -365,7 +366,7 @@ private fun SymbolResolver.handleReference(
         state.pushType(
             lattice,
             node,
-            *candidates.mapNotNull { state.types[it]?.toSet() }.flatten().toTypedArray(),
+            *candidates.flatMapNotNull { state.types[it]?.toSet() }.toTypedArray(),
         )
 
     return state

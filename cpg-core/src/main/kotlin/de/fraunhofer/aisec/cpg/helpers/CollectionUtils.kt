@@ -40,3 +40,14 @@ fun <R, T, C : MutableCollection<in R>> Iterable<T>.mapFilteredTo(
 
 fun <R, T> Iterable<T>.mapFiltered(predicate: (T) -> Boolean, transform: (T) -> R): List<R> =
     mapFilteredTo(mutableListOf(), predicate, transform)
+
+fun <T, R> Iterable<T>.flatMapNotNull(transform: (T) -> Collection<R>?): List<R> {
+    val result = ArrayList<R>()
+    for (element in this) {
+        val newElements = transform(element)
+        for (newElement in newElements) {
+            newElement?.let { result.add(it) }
+        }
+    }
+    return result
+}
