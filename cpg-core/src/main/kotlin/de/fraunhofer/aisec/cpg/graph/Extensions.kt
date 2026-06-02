@@ -173,7 +173,7 @@ inline fun <reified T : AstNode> AstNode.ast(): List<T> {
 }
 
 inline fun <reified T : Node> Node.dfgFrom(): List<T> {
-    return this.prevDFG.toList().filterIsInstance<T>()
+    return this.prevDFG.filterIsInstance<T>()
 }
 
 /**
@@ -1118,7 +1118,7 @@ fun Node.followXUntilHit(
     // If it does, we consider this path fulfilled and skip further traversal.
     if (predicate(this)) {
         fulfilledPaths.add(NodePath(mutableListOf(this), emptyList()).addAssumptionDependence(this))
-        return FulfilledAndFailedPaths(fulfilledPaths.toSet().toList(), failedPaths)
+        return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
     }
     while (worklist.isNotEmpty()) {
         val currentPath = worklist.maxBy { it.size }
@@ -1140,7 +1140,7 @@ fun Node.followXUntilHit(
             failedPaths.add(
                 FailureReason.PATH_ENDED to
                     NodePath(currentPathNodes, currentPathEdges)
-                        .addAssumptionDependence(currentPath.map { it.third }.toList())
+                        .addAssumptionDependence(currentPath.map { it.third })
             )
         }
 
@@ -1149,10 +1149,10 @@ fun Node.followXUntilHit(
             if (predicate(nextNode)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
                 // the path to the results.
-                fulfilledPaths.add(
+                val nodePath =
                     NodePath(currentPathNodes + nextNode, currentPathEdges + edge)
                         .addAssumptionDependence(currentPath.map { it.third } + newContext)
-                )
+                fulfilledPaths.add(nodePath)
                 continue // Don't add this path anymore. The requirement is satisfied.
             }
             if (earlyTermination(nextNode, currentContext)) {
@@ -1206,8 +1206,8 @@ fun Node.followXUntilHit(
             .map { FailureReason.PATH_ENDED to it }
 
     return FulfilledAndFailedPaths(
-        fulfilledPaths.toSet().toList(),
-        (failedPaths + failedLoops).toSet().toList().map { Pair(it.first, it.second) },
+        fulfilledPaths,
+        (failedPaths + failedLoops).toSet().map { Pair(it.first, it.second) },
     )
 }
 
@@ -1906,7 +1906,7 @@ fun Node.isNullCheck(refersTo: Declaration?): Boolean {
  * Rules
  * 1. If the set is empty ➜ returns an empty list.
  * 2. If the set has < [minPartSize] elements ➜ returns a single subset with all elements.
- * 3. Otherwise the number of created subsets k is k = min(maxParts, size / [minPartSize]) (integer
+ * 3. Otherwise, the number of created subsets k is k = min(maxParts, size / [minPartSize]) (integer
  *    division, k ≥ 1) so every subset can have at least [minPartSize] elements.
  */
 fun <T> Collection<T>.splitInto(

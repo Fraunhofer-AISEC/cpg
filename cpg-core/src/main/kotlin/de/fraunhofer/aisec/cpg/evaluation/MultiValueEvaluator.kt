@@ -231,7 +231,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         // references.
         val prevDFG =
             if (node is Reference) {
-                filterSelfReferences(node, node.prevDFG.toList())
+                filterSelfReferences(node, node.prevDFG)
             } else {
                 node.prevDFG
             }

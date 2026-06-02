@@ -286,7 +286,7 @@ val Collection<Type>.commonType: Type?
 
         // Make sure, we only compare types of the same "kind" of type (e.g. ObjectType vs.
         // NumericType)
-        val sameKind = this.map { it::class.simpleName }.toSet().size == 1
+        val sameKind = this.mapTo(mutableSetOf()) { it::class.simpleName }.size == 1
         if (!sameKind) {
             return null
         }
@@ -295,7 +295,7 @@ val Collection<Type>.commonType: Type?
         // (which contains the pointer origins), because otherwise we need to re-create the
         // equivalent wrap state at the end. Make sure we only have one wrap state before we
         // proceed.
-        val operations = this.map { it.typeOperations }.toSet()
+        val operations = this.mapTo(mutableSetOf()) { it.typeOperations }
         val typeOp = operations.singleOrNull() ?: return null
 
         // Build all ancestors out of the root types. This way we compare the most inner type,

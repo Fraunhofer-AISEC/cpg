@@ -88,7 +88,7 @@ open class EOGConceptPass(ctx: TranslationContext) :
         val lattice = NodeToOverlayState(PowersetLattice())
         val startState = getInitialState(lattice, node)
 
-        val nextEog = node.nextEOGEdges.toList()
+        val nextEog = node.nextEOGEdges
         val finalState = runBlocking {
             lattice.iterateEOG(nextEog, startState, ::transfer).first.let { tmpFinalState ->
                 lattice.lub(tmpFinalState, startState, true)
