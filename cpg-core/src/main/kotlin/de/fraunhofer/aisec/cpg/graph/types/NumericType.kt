@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
+import java.util.*
 
 /** This type collects all kind of numeric types. */
 open class NumericType(
@@ -60,5 +61,5 @@ open class NumericType(
     override fun equals(other: Any?) =
         super.equals(other) && this.modifier == (other as? NumericType)?.modifier
 
-    override fun hashCode() = structuralHashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), generics, modifier, isPrimitive)
 }

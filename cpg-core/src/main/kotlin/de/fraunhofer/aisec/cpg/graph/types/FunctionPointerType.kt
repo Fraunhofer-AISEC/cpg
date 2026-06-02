@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.persistence.Relationship
+import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
@@ -71,7 +72,7 @@ class FunctionPointerType : Type {
             returnType == other.returnType
     }
 
-    override fun hashCode() = structuralHashCode()
+    override fun hashCode() = Objects.hash(super.hashCode(), parameters, returnType)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

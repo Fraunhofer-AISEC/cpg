@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.persistence.Relationship
+import java.util.*
 
 /**
  * PointerTypes represent all references to other Types. For C/CPP this includes pointers, as well
@@ -104,6 +105,9 @@ class PointerType : Type, SecondOrderType {
     }
 
     override fun hashCode(): Int {
-        return structuralHashCode()
+        return Objects.hash(super.hashCode(), elementType, pointerOrigin)
+        // TODO: Use System.identityHashCode for elementType to avoid infinite recursion
+        //   when dealing with circular type references (e.g., struct with pointer to itself).
+        // However, this needs a re-design of the current type handling
     }
 }
