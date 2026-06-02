@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.branchOf
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.DoWhile
@@ -36,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.For
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Loop
 import de.fraunhofer.aisec.cpg.graph.expressions.While
+import de.fraunhofer.aisec.cpg.graph.isBranchOf
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
@@ -118,9 +118,9 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val lattice = lattice as? UnreachabilityState ?: return currentState
         var newState = currentState
         val currentNode = currentEdge.end
-        if (currentNode.branchOf(IfElse::class)) {
+        if (currentNode.isBranchOf<IfElse>()) {
             newState = handleIfElse(lattice, currentEdge, currentNode, newState)
-        } else if (currentNode.branchOf(Loop::class)) {
+        } else if (currentNode.isBranchOf<Loop>()) {
             newState = handleLoop(lattice, currentEdge, currentNode, newState)
         } else {
             // TODO: Add handling of Switch once we have a good way to follow the EOG edges
