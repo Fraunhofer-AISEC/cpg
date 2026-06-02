@@ -458,9 +458,9 @@ interface Lattice<T : Lattice.Element> {
         ) {
             if (mergePointNextEdge !in this) {
                 this[mergePointNextEdge] =
-                    mergePointNextEdge.start.prevEOGEdges
-                        .map { Pair(it.end, it.start) }
-                        .toMutableSet()
+                    mergePointNextEdge.start.prevEOGEdges.mapTo(mutableSetOf()) {
+                        Pair(it.end, it.start)
+                    }
             }
             this[mergePointNextEdge]?.removeIf {
                 it.first == incomingEdge.end && it.second == incomingEdge.start

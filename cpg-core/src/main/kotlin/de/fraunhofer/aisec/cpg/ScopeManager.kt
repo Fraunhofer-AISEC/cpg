@@ -586,7 +586,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     .lookupSymbol(part.localName, languageOnly = language) {
                         it is Namespace || it is Record || it is Typedef
                     }
-                    .map {
+                    .mapTo(mutableSetOf()) {
                         // If it is a typedef, we need to use the type's name instead of the
                         // declaration's name. Otherwise, we just take the name of the declaration
                         // to look up the corresponding scope.
@@ -597,7 +597,6 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                                 it.name
                             }]
                     }
-                    .toSet()
                     .singleOrNull()
         }
 

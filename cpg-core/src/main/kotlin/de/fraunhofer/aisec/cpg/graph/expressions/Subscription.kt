@@ -100,7 +100,7 @@ class Subscription : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder
             return
         }
 
-        addAssignedTypes(assignedTypes.map { getSubscriptType(it) }.toSet())
+        addAssignedTypes(assignedTypes.mapTo(mutableSetOf()) { getSubscriptType(it) })
     }
 
     override fun addArgument(expression: Expression) {

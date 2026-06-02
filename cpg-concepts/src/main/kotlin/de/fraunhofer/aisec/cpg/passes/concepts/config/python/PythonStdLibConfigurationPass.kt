@@ -102,8 +102,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
                 }
             paths
                 ?.fulfilled
-                ?.map { Pair(it, it.nodes.lastOrNull() as? Configuration) }
-                ?.toSet()
+                ?.mapTo(mutableSetOf()) { Pair(it, it.nodes.lastOrNull() as? Configuration) }
                 ?.forEach { pathToConfig ->
                     pathToConfig.second?.let {
                         newLoadConfiguration(

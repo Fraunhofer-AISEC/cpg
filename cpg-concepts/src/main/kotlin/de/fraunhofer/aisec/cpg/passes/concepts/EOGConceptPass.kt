@@ -293,10 +293,10 @@ inline fun <reified T : OverlayNode> Node.getOverlaysByPrevDFG(
         }
         .fulfilled
         // The last nodes on the path are the ones we are interested in.
-        .map { it.nodes.last() }
         .flatMap {
+            val last = it.nodes.last()
             // collect all "overlay" nodes
-            stateElement[it] ?: setOf(it, *it.overlays.toTypedArray())
+            stateElement[last] ?: setOf(last, *last.overlays.toTypedArray())
         }
         .filterIsInstance<T>() // discard not-relevant overlays
 }

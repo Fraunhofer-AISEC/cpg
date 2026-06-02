@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes.configuration
 
 import de.fraunhofer.aisec.cpg.ConfigurationException
-import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.Pass
 import java.util.*
@@ -250,11 +249,11 @@ class PassOrderingHelper {
      *   otherwise.
      */
     private fun getAndRemoveNextPasses(allowLatePasses: Boolean): List<KClass<out Pass<*>>> {
-        return workingList.mapFiltered({
-            it.dependenciesRemaining.isEmpty() && it.passClass.isLatePass == allowLatePasses
-        }) {
-            selectPass(it)
-        }
+        return workingList
+            .filter {
+                it.dependenciesRemaining.isEmpty() && it.passClass.isLatePass == allowLatePasses
+            }
+            .map { selectPass(it) }
     }
 
     /**

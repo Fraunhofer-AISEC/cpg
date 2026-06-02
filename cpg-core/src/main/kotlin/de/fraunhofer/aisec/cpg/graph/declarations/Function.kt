@@ -263,7 +263,7 @@ open class Function :
 
         // Build new function types out of our function declaration and the assigned types
         var returnFuncTypes =
-            assignedTypes.map { computeType(this, returnTypes = listOf(it)) }.toSet()
+            assignedTypes.mapTo(mutableSetOf()) { computeType(this, returnTypes = listOf(it)) }
 
         // And assign it us
         addAssignedTypes(returnFuncTypes)

@@ -1644,13 +1644,10 @@ fun TranslationResult.callsByName(name: String): List<Call> {
 /** Set of all functions which are called from this function */
 val Function.callees: Set<Function>
     get() {
-        return this.calls
-            .map { it.invokes }
-            .foldRight(mutableListOf<Function>()) { l, res ->
-                res.addAll(l)
-                res
-            }
-            .toSet()
+        return this.calls.foldRight(mutableSetOf<Function>()) { l, res ->
+            res.addAll(l.invokes)
+            res
+        }
     }
 
 /** Retrieves the n-th statement of the body of this function declaration. */

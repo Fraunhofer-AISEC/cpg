@@ -421,7 +421,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         if (directMatches.size > 1) {
             // This is an ambiguous result. Let's return all direct matches
             return Pair(
-                directMatches.map { it.key }.toSet(),
+                directMatches.mapTo(mutableSetOf()) { it.key },
                 CallResolutionResult.SuccessKind.AMBIGUOUS,
             )
         } else if (directMatches.size == 1) {
@@ -610,7 +610,7 @@ class MultipleLanguages(val languages: Set<Language<*>>) : Language<Nothing>() {
  * different languages, it returns a [MultipleLanguages] object.
  */
 fun AstNode.multiLanguage(): Language<*> {
-    val languages = astChildren.map { it.language }.toSet()
+    val languages = astChildren.mapTo(mutableSetOf()) { it.language }
     return if (languages.size == 1) {
         languages.single()
     } else if (languages.size > 1) {

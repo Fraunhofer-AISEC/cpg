@@ -273,7 +273,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 !ref.name.isQualified() &&
                 record != null
         ) {
-            candidates = resolveMemberByName(ref.name.localName, setOf(record.toType())).toSet()
+            candidates = resolveMemberByName(ref.name.localName, setOf(record.toType()))
         }
 
         // Store the candidates in the reference
@@ -360,7 +360,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         // Find candidates based on possible base types
         val (possibleTypes, _) = getPossibleContainingTypes(current)
-        current.candidates = resolveMemberByName(current.name.localName, possibleTypes).toSet()
+        current.candidates = resolveMemberByName(current.name.localName, possibleTypes)
 
         // For legacy reasons, resolving of simple variable references (including fields) is
         // separated from call resolving. Therefore, we need to stop here if we are the callee of a
@@ -505,7 +505,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         possibleContainingTypes: Set<Type>,
     ): Set<Declaration> {
         var candidates = mutableSetOf<Declaration>()
-        val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
+        val records =
+            possibleContainingTypes.mapNotNullTo(mutableSetOf()) { it.root.recordDeclaration }
         for (record in records) {
             candidates.addAll(
                 ctx.scopeManager.lookupSymbolByName(record.name.fqn(symbol), record.language)
@@ -514,7 +515,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         // Find invokes by supertypes
         if (candidates.isEmpty() && symbol.isNotEmpty()) {
-            val records = possibleContainingTypes.mapNotNull { it.root.recordDeclaration }.toSet()
+            val records =
+                possibleContainingTypes.mapNotNullTo(mutableSetOf()) { it.root.recordDeclaration }
             candidates = getInvocationCandidatesFromParents(symbol, records).toMutableSet()
         }
 
@@ -629,8 +631,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
         possibleTypes.addAll(baseAssignedtype)
 
-        val candidates =
-            resolveMemberByName(symbol, possibleTypes).filterIsInstance<Operator>().toSet()
+        val candidates = resolveMemberByName(symbol, possibleTypes).filterIsInstance<Operator>()
 
         return resolveWithArguments(candidates, op.operatorArguments, op as Expression)
     }
@@ -644,11 +645,9 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
             listOf()
         } else {
             val firstLevelCandidates =
-                possibleTypes
-                    .map { record ->
-                        scopeManager.lookupSymbolByName(record.name.fqn(name), record.language)
-                    }
-                    .flatten()
+                possibleTypes.flatMap { record ->
+                    scopeManager.lookupSymbolByName(record.name.fqn(name), record.language)
+                }
 
             // C++ does not allow overloading at different hierarchy levels. If we find a
             // Function with the same name as the function in the Call we have
@@ -822,7 +821,7 @@ internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>,
  * language used in the resolution.
  */
 internal fun Pass<*>.resolveWithArguments(
-    candidates: Set<Declaration>,
+    candidates: Collection<Declaration>,
     arguments: List<Expression>,
     source: Expression,
 ): CallResolutionResult {

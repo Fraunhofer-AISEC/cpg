@@ -58,6 +58,6 @@ open class PointerDereference : Reference() {
         }
 
         // Apply our operator to all assigned types and forward them to us
-        this.addAssignedTypes(assignedTypes.map(Type::dereference).toSet())
+        this.addAssignedTypes(assignedTypes.mapTo(mutableSetOf(), Type::dereference))
     }
 }
