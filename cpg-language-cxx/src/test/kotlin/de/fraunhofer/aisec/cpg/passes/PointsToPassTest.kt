@@ -46,10 +46,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class PointsToPassTest {
-    companion object {
-        private val topLevel = java.nio.file.Path.of("src", "test", "resources")
-    }
-
     @Test
     fun testBasics() {
         val file = File("src/test/resources/pointsToPass/pointsto.cpp")
@@ -349,7 +345,6 @@ class PointsToPassTest {
         // Declarations
         val iDecl = tu.allChildren<Declaration> { it.location?.region?.startLine == 22 }.first()
         val jDecl = tu.allChildren<Declaration> { it.location?.region?.startLine == 23 }.first()
-        val aDecl = tu.allChildren<Declaration> { it.location?.region?.startLine == 24 }.first()
 
         // PointerDerefs
         val aPointerDerefLine27 =
@@ -1737,7 +1732,7 @@ class PointsToPassTest {
         assertEquals(
             ceLine180,
             local28DerefLine181.prevDFGEdges
-                .single {
+                .singleOrNull {
                     it.functionSummary &&
                         it !is ContextSensitiveDataflow &&
                         it.granularity is FullDataflowGranularity
@@ -2244,7 +2239,7 @@ class PointsToPassTest {
 
         // Line 242
         // Make sure that we created a dummy function summary for the unknownFunc
-        assertEquals(3, unknownFuncFD.functionSummary.entries?.singleOrNull()?.value?.size)
+        assertEquals(3, unknownFuncFD.functionSummary.entries.singleOrNull()?.value?.size)
         assertEquals(
             2,
             unknownFuncFD.functionSummary.entries
@@ -2304,21 +2299,21 @@ class PointsToPassTest {
         assertNotNull(tu)
 
         // FunctionSummaries
-        val FSread =
+        val fSread =
             tu.allChildren<Function> { it.name.localName == "mbedtls_ssl_read" }
                 .first()
                 .functionSummary
-        assertNotNull(FSread)
+        assertNotNull(fSread)
 
-        val FSinnerrenegotiate =
+        val fSinnerrenegotiate =
             tu.allChildren<Function> { it.name.localName == "inner_renegotiate" }
                 .first()
                 .functionSummary
-        assertNotNull(FSinnerrenegotiate)
+        assertNotNull(fSinnerrenegotiate)
 
-        val FSrenegotiate =
+        val fSrenegotiate =
             tu.allChildren<Function> { it.name.localName == "renegotiate" }.first().functionSummary
-        assertNotNull(FSrenegotiate)
+        assertNotNull(fSrenegotiate)
 
         // Literals
         val literal1 =
@@ -2359,9 +2354,9 @@ class PointsToPassTest {
 
         // Function Summary for mbedtls_ssl_read
         // Start with the precise function summaries:
-        assertEquals(1, FSread.size)
+        assertEquals(1, fSread.size)
         val preciseFSread =
-            FSread.entries.firstOrNull()?.value?.filter { it.properties.none { it == true } }
+            fSread.entries.firstOrNull()?.value?.filter { it.properties.none { it == true } }
         assertNotNull(preciseFSread)
         assertEquals(4, preciseFSread.size)
         assertTrue(preciseFSread.any { it.srcNode == literal1 && it.subAccessName == "i" })
@@ -2370,9 +2365,9 @@ class PointsToPassTest {
         assertTrue(preciseFSread.any { it.srcNode == literal4 && it.subAccessName == "session.l" })
 
         // Function Summary for inner_renegotiate
-        assertEquals(1, FSinnerrenegotiate.size)
+        assertEquals(1, fSinnerrenegotiate.size)
         val preciseFSinnerrenegotiate =
-            FSinnerrenegotiate.entries.firstOrNull()?.value?.filter {
+            fSinnerrenegotiate.entries.firstOrNull()?.value?.filter {
                 it.properties.none { it == true }
             }
         assertNotNull(preciseFSinnerrenegotiate)
@@ -2387,9 +2382,9 @@ class PointsToPassTest {
         )
 
         // Function Summary for renegotiate
-        assertEquals(1, FSrenegotiate.size)
+        assertEquals(1, fSrenegotiate.size)
         val preciseFSrenegotiate =
-            FSrenegotiate.entries.firstOrNull()?.value?.filter { it.properties.none { it == true } }
+            fSrenegotiate.entries.firstOrNull()?.value?.filter { it.properties.none { it == true } }
         assertNotNull(preciseFSrenegotiate)
         // Since we overapproximate, we have 5 entries here: The writes in Line 15 & 16 appear once
         // with and once w/o the subAccesses
@@ -2448,12 +2443,12 @@ class PointsToPassTest {
         val newvalDecl =
             tu.allChildren<Declaration> { it.location?.region?.startLine == 259 }.singleOrNull()
         assertNotNull(newvalDecl)
-        val p_oldvalDecl =
+        val pOldvalDecl =
             tu.allChildren<Declaration> { it.location?.region?.startLine == 257 }.singleOrNull()
-        assertNotNull(p_oldvalDecl)
-        val p_newvalDecl =
+        assertNotNull(pOldvalDecl)
+        val pNewvalDecl =
             tu.allChildren<Declaration> { it.location?.region?.startLine == 260 }.singleOrNull()
-        assertNotNull(p_newvalDecl)
+        assertNotNull(pNewvalDecl)
         val p2pDecl =
             tu.allChildren<Declaration> { it.location?.region?.startLine == 258 }.singleOrNull()
         assertNotNull(p2pDecl)
@@ -2503,7 +2498,7 @@ class PointsToPassTest {
         // p2p before the call in Line 262
         assertEquals(3, p2pLine262.prevDFGEdges.size)
         assertEquals(1, p2pLine262.fullMemoryValues.size)
-        assertEquals(p_oldvalDecl.memoryAddresses.single(), p2pLine262.fullMemoryValues.first())
+        assertEquals(pOldvalDecl.memoryAddresses.single(), p2pLine262.fullMemoryValues.first())
         assertEquals(
             1,
             p2pLine262.prevDFGEdges
@@ -2515,7 +2510,7 @@ class PointsToPassTest {
                 .size,
         )
         assertEquals(
-            p_oldvalDecl,
+            pOldvalDecl,
             p2pLine262.prevDFGEdges
                 .first {
                     it.granularity is PointerDataflowGranularity &&
@@ -2548,7 +2543,7 @@ class PointsToPassTest {
         // Test the result on p2p
         assertEquals(3, p2pLine264.prevDFGEdges.size)
         assertEquals(1, p2pLine264.fullMemoryValues.size)
-        assertEquals(p_oldvalDecl.memoryAddresses.single(), p2pLine264.fullMemoryValues.first())
+        assertEquals(pOldvalDecl.memoryAddresses.single(), p2pLine264.fullMemoryValues.first())
         assertEquals(
             1,
             p2pLine264.prevDFGEdges
@@ -3520,8 +3515,7 @@ class PointsToPassTest {
         assertNotNull(tu)
         val outerSubFSEntries =
             tu.functions
-                .filter { it.name.localName == "outer_sub" }
-                .singleOrNull()
+                .singleOrNull { it.name.localName == "outer_sub" }
                 ?.functionSummary
                 ?.entries
                 ?.singleOrNull()
@@ -3661,7 +3655,7 @@ class PointsToPassTest {
         // expect a prevDFG edge to every lastWrite of a field, which are the two targets of the
         // assigns
         assertEquals(
-            setOf<Node>(unknownAssignsAssign1.target as Node, unknownAssignsAssign2.target as Node),
+            setOf(unknownAssignsAssign1.target as Node, unknownAssignsAssign2.target as Node),
             unknownAssigns0.prevFullDFG.toSet(),
         )
         // For the base of unknownAssigns0, we expect the following FullDFG-Path:
@@ -4266,7 +4260,7 @@ class PointsToPassTest {
         // The derefderefPMV and the currentderefderefValues of the argument point to both
         // memberAccesses, as the struct is unknown
         assertEquals(
-            setOf<Node>(
+            setOf(
                 credentialAssign1.lhs.singleOrNull() as Node,
                 credentialAssign2.lhs.singleOrNull() as Node,
             ),
@@ -4274,7 +4268,7 @@ class PointsToPassTest {
         )
 
         assertEquals(
-            setOf<Node>(
+            setOf(
                 credentialAssign1.lhs.singleOrNull() as Node,
                 credentialAssign2.lhs.singleOrNull() as Node,
             ),
@@ -4333,6 +4327,7 @@ class PointsToPassTest {
         val printStructLineParam = printStructLineFunc.parameters.single()
         val printStructLineDerefPMV =
             printStructLineParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(printStructLineDerefPMV)
 
         val freeParam = freeFunc.parameters.single()
         val freeDerefPMV = freeParam.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
