@@ -693,7 +693,7 @@ flowchart LR
   child1 --EOG:false--> parent(["While"])
   child1 --EOG:true--> child3["statement"]
   child3 --EOG--> child1
-  parent --> next:::outer
+  parent --EOG--> next:::outer
   parent -.-> child1
   parent -.-> child3
 ```
