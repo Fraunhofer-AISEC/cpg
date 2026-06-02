@@ -329,6 +329,8 @@ private fun Edge<out Node>.label(): String {
         } else {
             builder.append(" (full)")
         }
+
+        derefDepth?.let { builder.append("${it.name}") }
     }
 
     builder.append("\"")

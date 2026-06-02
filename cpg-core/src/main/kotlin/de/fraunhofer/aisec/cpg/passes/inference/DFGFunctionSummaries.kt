@@ -152,7 +152,6 @@ class DFGFunctionSummaries {
         if (functionToDFGEntryMap.isEmpty()) return null
 
         val language = functionDecl.language
-        val languageName = language.javaClass.name
         val methodName = functionDecl.name
 
         // The language and the method name have to match. If a signature is specified, it also has
@@ -160,7 +159,7 @@ class DFGFunctionSummaries {
         val matchingEntries =
             functionToDFGEntryMap.keys.filter {
                 // The language has to match otherwise the remaining comparison is useless
-                if (languageName.endsWith(it.language)) {
+                if (language.matchesOrDerivesFrom(it.language)) {
                     // Split the name if we have a FQN
                     val entryMethodName = language.parseName(it.methodName)
                     val entryRecord =
@@ -385,8 +384,7 @@ class DFGFunctionSummaries {
             // TODO: It would make sense to model properties here. Could be the index of a return
             // value, full vs. partial flow or whatever comes to our minds in the future
             // We can't currently draw the edges between ParameterMemoryValues here because we don't
-            // yet have them, so we do
-            // this in handleCallExpression in the pointsToPass
+            // yet have them, so we do this in handleCallExpression in the pointsToPass
             // Note: When we have a Name for a memoryAddress that does not yet exist, we need to
             // draw the DFG edge later in writeEntry()
             if (destValueDepth == 1 && srcValueDepth == 1)
@@ -447,4 +445,28 @@ class DFGFunctionSummaries {
 
         val log: Logger = LoggerFactory.getLogger(DFGFunctionSummaries::class.java)
     }
+}
+
+/**
+ * Returns `true` if this language class or one of its superclasses matches [targetLanguageName].
+ *
+ * This allows function summaries configured for a base language (e.g., `CLanguage`) to also match
+ * derived languages (e.g., `CPPLanguage`).
+ *
+ * For backwards compatibility, both fully qualified class names and simple class names are
+ * supported, since existing summary YAMLs may use entries such as `CPPLanguage`.
+ */
+private fun Language<*>.matchesOrDerivesFrom(targetLanguageName: String): Boolean {
+    var currentClass: Class<*>? = this.javaClass
+
+    while (currentClass != null) {
+        if (
+            currentClass.name == targetLanguageName || currentClass.simpleName == targetLanguageName
+        ) {
+            return true
+        }
+        currentClass = currentClass.superclass
+    }
+
+    return false
 }

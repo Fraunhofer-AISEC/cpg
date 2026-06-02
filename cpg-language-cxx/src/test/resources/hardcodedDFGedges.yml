@@ -10,7 +10,7 @@
       dfgType: full
 
 - functionDeclaration:
-    language: CPPLanguage
+    language: CLanguage
     methodName: free
   dataFlows:
     - from: freedMemory

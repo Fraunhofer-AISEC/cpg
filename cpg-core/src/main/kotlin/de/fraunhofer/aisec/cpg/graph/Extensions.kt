@@ -1525,6 +1525,7 @@ val AstNode?.assigns: List<Assign>
 inline fun <reified T : Node> Node.firstParentOrNull(
     noinline predicate: ((T) -> Boolean)? = null
 ): T? {
+    val alreadySeen = identitySetOf<Node>()
     // start at searchNodes parent
     var node = this.astParent
 
@@ -1535,6 +1536,7 @@ inline fun <reified T : Node> Node.firstParentOrNull(
 
         // go upwards in the ast tree
         node = node.astParent
+        if (node == null || !alreadySeen.add(node)) return null
     }
 
     return null

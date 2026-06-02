@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
@@ -81,9 +82,9 @@ class ControlFlowSensitiveDFGPassTest {
         with(s1) {
             // The DFG from the variable declaration of s1 should go to base of the member
             // expression s1.field1 of the first doSomething call (line 11) as well as the s1.field1
-            // in the assignment (line 13)
+            // in the assignment (line 13) and the base of the second doSomething call (line 15)
             val next = this.nextDFGEdges.sortedBy { it.end.location?.region?.startLine }
-            assertEquals(2, next.size)
+            assertEquals(3, next.size)
 
             val baseOfMemberRead11 = assertNotNull(next.firstOrNull()?.end)
             assertEquals(11, baseOfMemberRead11.location?.region?.startLine)
@@ -178,15 +179,28 @@ class ControlFlowSensitiveDFGPassTest {
             }
         }
 
-        // The DFG from the variable declaration of s2 should only go the s2.field1 of the
-        // assignment (line 14)
+        // The DFG from the variable declaration of s2 should go the base of s2.field1 of the
+        // assignment (line 14) and to the base of argument of the call doSomething (line 16)
         with(s2) {
             val next = this.nextDFGEdges.sortedBy { it.end.location?.region?.startLine }
-            val single = assertNotNull(next.singleOrNull()?.end)
-            assertEquals(14, single.location?.region?.startLine)
-            assertIs<Reference>(single)
-            val me = assertIs<MemberAccess>(single.astParent)
-            assertEquals(AccessValues.WRITE, me.access)
+            assertEquals(2, next.size)
+
+            val baseOfMemberWrite14 = assertNotNull(next.getOrNull(0)?.end)
+            assertEquals(14, baseOfMemberWrite14.location?.region?.startLine)
+            assertIs<Reference>(baseOfMemberWrite14)
+            assertIs<MemberAccess>(baseOfMemberWrite14.astParent)
+            assertEquals(AccessValues.READ, baseOfMemberWrite14.access)
+
+            val baseOfArg16 = assertNotNull(next.getOrNull(1)?.end)
+            assertEquals(16, baseOfArg16.location?.region?.startLine)
+            assertIs<Reference>(baseOfArg16)
+            assertIs<MemberAccess>(baseOfArg16.astParent)
+            assertEquals(AccessValues.READ, baseOfMemberWrite14.access)
+
+            assertEquals(
+                mutableSetOf<Node>(baseOfMemberWrite14, baseOfArg16),
+                next.mapTo(mutableSetOf()) { it.end },
+            )
 
             // The rest should be the same as s1, so we can probably skip the rest of the asserts
         }
@@ -221,11 +235,32 @@ class ControlFlowSensitiveDFGPassTest {
         val refO = main.refs("o")
         assertEquals(2, refO.size)
 
-        // There should be a full flow from each first individual ref and member expression (line
-        // 13) to the second one (line 15)
+        // There should be a full flow from the field to the argument (since this is the only one
+        // that is fully written) and partial flows between the middle MemberAccess and the second
+        // as well as for the ref
         assertFullEdgeBetween(meFields[0], meFields[1])
-        assertFullEdgeBetween(meIn[0], meIn[1])
-        assertFullEdgeBetween(refO[0], refO[1])
+        assertEquals(
+            meIn[1],
+            meIn[0]
+                .nextDFGEdges
+                .singleOrNull {
+                    ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
+                        ?.name
+                        ?.toString() == "inner.field"
+                }
+                ?.end,
+        )
+        assertEquals(
+            refO[1],
+            refO[0]
+                .nextDFGEdges
+                .singleOrNull {
+                    ((it.granularity as? PartialDataflowGranularity<*>)?.partialTarget as? Field)
+                        ?.name
+                        ?.toString() == "outer.in"
+                }
+                ?.end,
+        )
 
         // There should be a partial flow from the first '.field' which writes to the first '.in'
         assertPartialEdgeBetween(meFields[0], meIn[0], field)
