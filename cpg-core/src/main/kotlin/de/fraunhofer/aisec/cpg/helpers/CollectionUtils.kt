@@ -45,8 +45,10 @@ fun <T, R> Iterable<T>.flatMapNotNull(transform: (T) -> Collection<R>?): List<R>
     val result = ArrayList<R>()
     for (element in this) {
         val newElements = transform(element)
-        for (newElement in newElements) {
-            newElement?.let { result.add(it) }
+        if (newElements != null) {
+            for (newElement in newElements) {
+                newElement?.let { result.add(it) }
+            }
         }
     }
     return result
