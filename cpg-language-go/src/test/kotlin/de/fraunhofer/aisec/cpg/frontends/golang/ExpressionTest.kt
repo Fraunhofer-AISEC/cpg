@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Cast
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerDereference
 import de.fraunhofer.aisec.cpg.graph.expressions.Range
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
@@ -182,5 +183,40 @@ class ExpressionTest {
         assertEquals(3, paths.fulfilled.firstOrNull()?.nodes?.size)
 
         assertEquals(5, x.evaluate())
+    }
+
+    @Test
+    fun testPointerDerefAssignTypePropagation() {
+        val topLevel = Path.of("src", "test", "resources", "golang")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("pointer_deref_assign.go").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<GoLanguage>()
+            }
+        assertNotNull(tu)
+
+        val main = tu.functions["p.main"]
+        assertNotNull(main)
+
+        val x = main.variables["x"]
+        assertNotNull(x)
+        assertLocalName("string**", x.type)
+
+        val y = main.variables["y"]
+        assertNotNull(y)
+        assertLocalName("string*", y.type)
+
+        val derefX = main.allChildren<PointerDereference>().firstOrNull()
+        assertNotNull(derefX)
+        val input = derefX.input
+        assertRefersTo(input, x)
+
+        assertEquals(y.type, derefX.type)
+        assertContains(derefX.assignedTypes, y.type)
+        assertEquals(y.type.pointer(), x.type)
+        assertEquals(setOf(y.type.pointer()), input.assignedTypes)
     }
 }
