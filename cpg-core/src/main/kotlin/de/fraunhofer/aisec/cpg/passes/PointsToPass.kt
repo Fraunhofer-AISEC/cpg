@@ -1777,8 +1777,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             ) in fsEntries) {
                                 if (dstValueDepth in 0..3) {
                                     val shortFS = properties.any { it == true }
-                                    val propertySet =
-                                        equalLinkedHashSetOf<Any>().apply { addAll(properties) }
+                                    val propertySet = properties
                                     val normalizedSrcNode =
                                         when (srcNode) {
                                             is Function -> currentNode
@@ -1892,10 +1891,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // If we have nothing, the last write is probably the Function
         if (lastWrites.isEmpty()) ret.add(NodeWithPropertiesKey(invoke, equalLinkedHashSetOf()))
         lastWrites.forEach { (lw, properties) ->
-            val filteredProperties = equalLinkedHashSetOf<Any>().apply { addAll(properties) }
             if (shortFS) {
                 when (lw) {
-                    is Function -> ret.add(NodeWithPropertiesKey(currentNode, filteredProperties))
+                    is Function -> ret.add(NodeWithPropertiesKey(currentNode, properties))
                     is Parameter -> {
                         // For dummy functionSummary entries, we have an Integer indicating the
                         // parameter's index for which we should use the Call's argument
@@ -1904,17 +1902,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // it as is
                         val index = properties.filterIsInstance<Int>().singleOrNull()
                         if (index != null && index < currentNode.arguments.size)
-                            ret.add(
-                                NodeWithPropertiesKey(
-                                    currentNode.arguments[index],
-                                    filteredProperties,
-                                )
-                            )
-                        else ret.add(NodeWithPropertiesKey(lw, filteredProperties))
+                            ret.add(NodeWithPropertiesKey(currentNode.arguments[index], properties))
+                        else ret.add(NodeWithPropertiesKey(lw, properties))
                     }
-                    else -> ret.add(NodeWithPropertiesKey(lw, filteredProperties))
+                    else -> ret.add(NodeWithPropertiesKey(lw, properties))
                 }
-            } else ret.add(NodeWithPropertiesKey(lw, filteredProperties))
+            } else ret.add(NodeWithPropertiesKey(lw, properties))
         }
         return ret
     }
@@ -3542,7 +3535,7 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
 
 private fun copyNodeProperties(properties: Set<Any>): Set<Any> {
     if (properties.isEmpty()) return emptySet()
-    return equalLinkedHashSetOf<Any>().apply { addAll(properties) }
+    return properties
 }
 
 private fun PointsToState.Element.collectLastWritesFromAddresses(
