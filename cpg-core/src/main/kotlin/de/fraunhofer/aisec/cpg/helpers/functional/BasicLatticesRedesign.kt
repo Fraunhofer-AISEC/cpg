@@ -218,6 +218,10 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
     /** Inserts all entries from the given [Sequence] of pairs. */
     fun putAll(pairs: Sequence<Pair<K, V>>) = putAll(pairs.asIterable())
 
+    internal fun copyFrom(other: ConcurrentIdentityHashMap<K, V>) {
+        backing.putAll(other.backing)
+    }
+
     fun clear() = backing.clear()
 
     override fun hashCode() = backing.hashCode()
