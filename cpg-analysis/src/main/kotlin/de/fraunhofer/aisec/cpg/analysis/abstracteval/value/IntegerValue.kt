@@ -31,12 +31,12 @@ import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.isBranchOf
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.runBlocking
@@ -191,8 +191,8 @@ class IntegerValue : Value<LatticeInterval> {
         // For a node after a branching node: Calculate how variables are affected by the condition
         // in the different branches.
         val state =
-            if (prevNode is BranchingNode) {
-                val condition = prevNode.branchedBy
+            if (prevNode?.isBranchOf<BranchingNode>() ?: false) {
+                val condition = prevNode
                 if (edge.branch == true && condition is BinaryOperator) {
                     // The "then" branch is taken, so the condition is true, and we can use the
                     // condition as is.

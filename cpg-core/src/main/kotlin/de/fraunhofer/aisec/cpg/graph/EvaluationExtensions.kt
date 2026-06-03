@@ -37,6 +37,10 @@ fun Node.evaluate(
     return evaluator.evaluate(this)
 }
 
+inline fun <reified T : Any> Node.isBranchOf(): Boolean {
+    return this.astParent is T && this.nextEOG.size > 1
+}
+
 val ArrayConstruction.capacity: Int
     get() {
         return dimensions.first().evaluate() as Int

@@ -55,15 +55,15 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
                 startNode = elseCall,
-                endNodes = listOf(whileStmt),
-                connectEnd = Util.Connect.NODE,
+                endNodes = listOf(whileStmt.condition, whileStmt.conditionDeclaration),
+                connectEnd = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
                 startNode = postWhile,
-                endNodes = listOf(whileStmt.elseStatement, breakStmt),
+                endNodes = listOf(whileStmt, breakStmt),
                 connectEnd = Util.Connect.NODE,
             )
         )
@@ -71,16 +71,16 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
                 startNode = whileStmt.elseStatement,
-                endNodes = listOf(postWhile),
-                connectEnd = Util.Connect.SUBTREE,
+                endNodes = listOf(whileStmt),
+                connectEnd = Util.Connect.NODE,
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
                 startNode = breakStmt,
-                endNodes = listOf(postWhile),
-                connectEnd = Util.Connect.SUBTREE,
+                endNodes = listOf(whileStmt),
+                connectEnd = Util.Connect.NODE,
             )
         )
     }
@@ -105,14 +105,15 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
                 startNode = elseCall,
-                endNodes = listOf(doStmt),
-                connectEnd = Util.Connect.NODE,
+                endNodes = listOf(doStmt.condition),
+                connectEnd = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
-                startNode = postWhile,
+                connectStart = Util.Connect.NODE,
+                startNode = doStmt,
                 endNodes = listOf(doStmt.elseStatement, breakStmt),
                 connectEnd = Util.Connect.NODE,
             )
@@ -121,14 +122,22 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
                 startNode = doStmt.elseStatement,
-                endNodes = listOf(postWhile),
-                connectEnd = Util.Connect.SUBTREE,
+                endNodes = listOf(doStmt),
+                connectEnd = Util.Connect.NODE,
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
                 startNode = breakStmt,
+                endNodes = listOf(doStmt),
+                connectEnd = Util.Connect.NODE,
+            )
+        )
+        assertTrue(
+            Util.eogConnect(
+                edgeDirection = Util.Edge.EXITS,
+                startNode = doStmt,
                 endNodes = listOf(postWhile),
                 connectEnd = Util.Connect.SUBTREE,
             )
@@ -155,15 +164,14 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
                 startNode = elseCall,
-                endNodes = listOf(forStmt),
-                connectEnd = Util.Connect.NODE,
+                endNodes = listOf(forStmt.condition, forStmt.conditionDeclaration),
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
                 startNode = postFor,
-                endNodes = listOf(forStmt.elseStatement, breakStmt),
+                endNodes = listOf(forStmt, breakStmt),
                 connectEnd = Util.Connect.NODE,
             )
         )
@@ -171,16 +179,24 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
                 startNode = forStmt.elseStatement,
-                endNodes = listOf(postFor),
-                connectEnd = Util.Connect.SUBTREE,
+                endNodes = listOf(forStmt),
+                connectEnd = Util.Connect.NODE,
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
                 startNode = breakStmt,
+                endNodes = listOf(forStmt),
+                connectEnd = Util.Connect.NODE,
+            )
+        )
+
+        assertTrue(
+            Util.eogConnect(
+                edgeDirection = Util.Edge.EXITS,
+                startNode = forStmt,
                 endNodes = listOf(postFor),
-                connectEnd = Util.Connect.SUBTREE,
             )
         )
     }
@@ -205,22 +221,23 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
                 startNode = elseCall,
-                endNodes = listOf(forEachStmt),
-                connectEnd = Util.Connect.NODE,
+                endNodes = listOf(forEachStmt.variable),
+                connectEnd = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.ENTRIES,
                 startNode = postForEach,
-                endNodes = listOf(forEachStmt.elseStatement, breakStmt),
-                connectEnd = Util.Connect.NODE,
+                endNodes = listOf(forEachStmt),
+                connectEnd = Util.Connect.SUBTREE,
             )
         )
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
-                startNode = forEachStmt.elseStatement,
+                connectStart = Util.Connect.NODE,
+                startNode = forEachStmt,
                 endNodes = listOf(postForEach),
                 connectEnd = Util.Connect.SUBTREE,
             )
@@ -229,8 +246,8 @@ class EvaluationOrderGraphPassTest {
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
                 startNode = breakStmt,
-                endNodes = listOf(postForEach),
-                connectEnd = Util.Connect.SUBTREE,
+                endNodes = listOf(forEachStmt),
+                connectEnd = Util.Connect.NODE,
             )
         )
     }
