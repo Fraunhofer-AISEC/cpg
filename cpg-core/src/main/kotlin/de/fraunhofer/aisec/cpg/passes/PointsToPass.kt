@@ -442,7 +442,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ) : PassConfiguration()
 
     // For recursive creation of FunctionSummaries, we have to make sure that we don't run in
-    // circles. Therefore, we store the chain of Functions we currently analyse
+    // circles. Therefore, we store the chain of Functions we currently analyze
     private val functionSummaryAnalysisChain = mutableListOf<Function>()
 
     override fun cleanup() {
@@ -1696,7 +1696,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val srcNode: Node?,
         val srcValueDepth: Int,
         val shortFS: Boolean,
-        val propertySet: EqualLinkedHashSet<Any>,
+        var propertySet: EqualLinkedHashSet<Any>,
         val prev: MutableSet<NodeWithPropertiesKey>,
     )
 
@@ -2327,10 +2327,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // dereference it, and then add it to the sources
                 val fullLastWrites =
                     PowersetLattice.Element<NodeWithPropertiesKey?>().apply { addAll(lastWrites) }
-                val parameterName = srcNode.name.parent?.localName
-                if (parameterName == null) {
-                    return mapDstToSrc
-                }
+                val parameterName = srcNode.name.parent?.localName ?: return mapDstToSrc
 
                 val parameterValuesKey = AddEntryParameterValuesKey(parameterName, srcValueDepth)
                 val cachedParameterValues =
@@ -2508,18 +2505,36 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         shortFS: Boolean,
         partialWrite: String?,
     ): EqualLinkedHashSet<Any> {
-        val updatedPropertySet =
-            equalLinkedHashSetOf<Any>().apply {
+        val hasShortFS = shortFS in propertySet
+
+        if (partialWrite == null) {
+            if (hasShortFS) return propertySet
+
+            return equalLinkedHashSetOf<Any>().apply {
                 addAll(propertySet)
                 add(shortFS)
-                // If the partialWrite is not null, it means this is the base memory address and no
-                // field, so we add the partial write property
-                partialWrite?.let {
-                    removeIf { it is FullDataflowGranularity }
-                    add(PartialDataflowGranularity(Field().apply { name = Name(it) }))
-                }
             }
-        return updatedPropertySet
+        }
+
+        val hasFullGranularity = propertySet.any { it is FullDataflowGranularity }
+        val hasMatchingPartialGranularity =
+            propertySet.any {
+                it is PartialDataflowGranularity<*> &&
+                    (it.partialTarget as? Field)?.name?.localName == partialWrite
+            }
+
+        if (hasShortFS && !hasFullGranularity && hasMatchingPartialGranularity) {
+            return propertySet
+        }
+
+        return equalLinkedHashSetOf<Any>().apply {
+            addAll(propertySet)
+            add(shortFS)
+            // If the partialWrite is not null, it means this is the base memory address and no
+            // field, so we add the partial write property
+            removeIf { it is FullDataflowGranularity }
+            add(PartialDataflowGranularity(Field().apply { name = Name(partialWrite) }))
+        }
     }
 
     /**
