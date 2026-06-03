@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
@@ -518,30 +517,6 @@ object Util {
                 subnodes.filter { it.prevDFG.contains(n) }.toMutableList()
             }
         return adjacentNodes
-    }
-
-    /**
-     * Connects the node `n` with the node `branchingExp` if present or with the node
-     * `branchingDecl`. The assumption is that only `branchingExp` or `branchingDecl` are present,
-     * e.g. C++.
-     *
-     * @param n
-     * @param branchingExp
-     * @param branchingDeclaration
-     */
-    fun addDFGEdgesForMutuallyExclusiveBranchingExpression(
-        n: Node,
-        branchingExp: Expression?,
-        branchingDeclaration: Declaration?,
-    ) {
-        var conditionNodes = mutableListOf<AstNode>()
-        if (branchingExp != null) {
-            conditionNodes = mutableListOf()
-            conditionNodes.add(branchingExp)
-        } else if (branchingDeclaration != null) {
-            conditionNodes = getAdjacentDFGNodes(branchingDeclaration, true)
-        }
-        conditionNodes.forEach { n.prevDFGEdges += it }
     }
 
     enum class Connect {

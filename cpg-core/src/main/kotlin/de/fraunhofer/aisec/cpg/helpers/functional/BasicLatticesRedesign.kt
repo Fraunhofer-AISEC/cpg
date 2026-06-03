@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.Loop
 import de.fraunhofer.aisec.cpg.graph.forEachMaybeParallel
+import de.fraunhofer.aisec.cpg.graph.isBranchOf
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toConcurrentIdentitySet
@@ -569,7 +570,7 @@ interface Lattice<T : Lattice.Element> {
                     // here (if oldGlobalIt is not null).
                     val newGlobalIt =
                         if (
-                            nextEdge.end is Loop &&
+                            nextEdge.end.isBranchOf<Loop>() &&
                                 (strategy == Strategy.WIDENING ||
                                     strategy == Strategy.WIDENING_NARROWING) &&
                                 oldGlobalIt != null

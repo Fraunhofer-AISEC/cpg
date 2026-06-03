@@ -1052,8 +1052,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      */
     protected fun handleSynchronized(node: Synchronized) {
         handleEOG(node.expression)
-        attachToEOG(node)
         handleEOG(node.block)
+        attachToEOG(node)
     }
 
     /**
@@ -1063,8 +1063,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleConditional(node: Conditional) {
         val openBranchNodes = mutableListOf<Node>()
         handleEOG(node.condition)
-        // To have semantic information after the condition evaluation
-        attachToEOG(node)
         val openConditionEOGs = currentPredecessors.toMutableList()
         nextEdgeBranch = true
         handleEOG(node.thenExpression)
@@ -1074,20 +1072,20 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         handleEOG(node.elseExpression)
         openBranchNodes.addAll(currentPredecessors)
         setCurrentEOGs(openBranchNodes)
+        attachToEOG(node)
     }
 
     /** See [Specification for Do](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#do) */
     protected fun handleDoWhile(node: DoWhile) {
         handleEOG(node.statement)
         handleEOG(node.condition)
-        // TODO(oxisto): Do we really want to set DFG edges here?
-        node.condition?.let { node.prevDFGEdges += it }
-        attachToEOG(node) // To have semantic information after the condition evaluation
+
         nextEdgeBranch = true
         connectCurrentEOGToLoopStart(node)
         nextEdgeBranch = false
         node.elseStatement?.let { handleEOG(it) }
         handleContainedBreaksAndContinues(node)
+        attachToEOG(node)
     }
 
     /**
@@ -1159,18 +1157,16 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleForEach(node: ForEach) {
         handleEOG(node.iterable)
         handleEOG(node.variable)
-        // TODO(oxisto): Do we really want to set DFG edges here?
-        node.variable?.let { node.prevDFGEdges += it }
-        attachToEOG(node) // To have semantic information after the variable declaration
         nextEdgeBranch = true
         val tmpEOGNodes = currentPredecessors.toMutableList()
         handleEOG(node.statement)
         connectCurrentEOGToLoopStart(node)
         currentPredecessors.clear()
         currentPredecessors.addAll(tmpEOGNodes)
+        nextEdgeBranch = false
         node.elseStatement?.let { handleEOG(it) }
         handleContainedBreaksAndContinues(node)
-        nextEdgeBranch = false
+        attachToEOG(node)
     }
 
     /** See [Specification for For](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#for) */
@@ -1179,7 +1175,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         handleEOG(node.conditionDeclaration)
         handleEOG(node.condition)
 
-        attachToEOG(node) // To have semantic information after the condition evaluation
         nextEdgeBranch = true
         val tmpEOGNodes = currentPredecessors.toMutableList()
 
@@ -1190,9 +1185,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
         currentPredecessors.clear()
         currentPredecessors.addAll(tmpEOGNodes)
+        nextEdgeBranch = false
         node.elseStatement?.let { handleEOG(it) }
         handleContainedBreaksAndContinues(node)
-        nextEdgeBranch = false
+        attachToEOG(node)
     }
 
     /** See [Specification for If](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#if) */
@@ -1201,7 +1197,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         handleEOG(node.initializerStatement)
         handleEOG(node.conditionDeclaration)
         handleEOG(node.condition)
-        attachToEOG(node) // To have semantic information after the condition evaluation
         val openConditionEOGs = currentPredecessors.toMutableList()
         nextEdgeBranch = true
         handleEOG(node.thenStatement)
@@ -1212,9 +1207,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             handleEOG(node.elseStatement)
             openBranchNodes.addAll(currentPredecessors)
         } else {
-            openBranchNodes.addAll(openConditionEOGs)
+            setCurrentEOGs(openConditionEOGs)
+            nextEdgeBranch = false
+            attachToEOG(node)
         }
         setCurrentEOGs(openBranchNodes)
+        attachToEOG(node)
     }
 
     /**
@@ -1224,7 +1222,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         handleEOG(node.initializerStatement)
         handleEOG(node.selectorDeclaration)
         handleEOG(node.selector)
-        attachToEOG(node) // To have semantic information after the condition evaluation
         val tmp = currentPredecessors.toMutableList()
         val compound =
             if (node.statement is DoWhile) {
@@ -1241,15 +1238,16 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             handleEOG(subStatement)
         }
 
-        // If we do not have default statement, we also need to put the switch statement into the
-        // currentPredecessors, otherwise we will completely ignore everything that is "beyond" the
-        // switch statement
+        // If we do not have default statement, we also need to put the selector nodes into the
+        // currentPredecessors, otherwise we will completely ignore the case where no case matches
         if (compound.statements.none { it is Default }) {
-            currentPredecessors.add(node)
+            currentPredecessors.addAll(tmp)
         }
 
         attachToEOG(compound)
         currentPredecessors.addAll(nodesWithContinuesAndBreaks[node] ?: mutableListOf())
+
+        attachToEOG(node)
     }
 
     /**
@@ -1258,7 +1256,6 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleWhile(node: While) {
         handleEOG(node.conditionDeclaration)
         handleEOG(node.condition)
-        attachToEOG(node) // To have semantic information after the condition evaluation
         nextEdgeBranch = true
         val tmpEOGNodes = currentPredecessors.toMutableList()
         handleEOG(node.statement)
@@ -1270,6 +1267,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         nextEdgeBranch = false
         node.elseStatement?.let { handleEOG(it) }
         handleContainedBreaksAndContinues(node)
+        attachToEOG(node)
     }
 
     /**
