@@ -316,11 +316,6 @@ fun resolveMemberAccess(node: MemberAccess): Pair<Node, Name> {
     return Pair(base, Name(newLocalname, base.name))
 }
 
-fun calculateInnerConcurrencyCounter(outerConcurrencyCounter: Int): Int {
-    return if (outerConcurrencyCounter == 0) CPU_CORES
-    else if (outerConcurrencyCounter > CPU_CORES) 1 else CPU_CORES / outerConcurrencyCounter
-}
-
 private fun Name.pathDepth(): Int {
     var depth = 1
     var current = this.parent
@@ -1837,13 +1832,28 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
                             launch(Dispatchers.Default) {
                                 work.entriesByDepth[depth].forEachMaybeParallel { entry ->
-                                    writeEntry(
+                                    val (destinationAddresses, destinations) =
+                                        calculateCallDestinations(
+                                            doubleState,
+                                            mapDstToSrc,
+                                            entry.dstValueDepth,
+                                            entry.subAccessName,
+                                            work.argument,
+                                            entry.propertySet,
+                                            work.param,
+                                        )
+                                    addEntryToMap(
                                         doubleState,
                                         mapDstToSrc,
                                         addEntryToMapCache,
-                                        entry,
-                                        work.argument,
+                                        destinationAddresses,
+                                        destinations,
+                                        entry.srcNode,
+                                        entry.shortFS,
+                                        entry.srcValueDepth,
+                                        entry.propertySet,
                                         currentNode,
+                                        entry.prev,
                                         work.param,
                                     )
                                 }
@@ -1863,41 +1873,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         return doubleState
-    }
-
-    private fun writeEntry(
-        doubleState: PointsToState.Element,
-        mapDstToSrc: ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>,
-        addEntryToMapCache: AddEntryToMapCache,
-        preprocessedEntry: PreprocessedFSEntry,
-        argument: Expression,
-        currentNode: Call,
-        param: Node,
-    ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
-        val (destinationAddresses, destinations) =
-            calculateCallDestinations(
-                doubleState,
-                mapDstToSrc,
-                preprocessedEntry.dstValueDepth,
-                preprocessedEntry.subAccessName,
-                argument,
-                preprocessedEntry.propertySet,
-                param,
-            )
-        return addEntryToMap(
-            doubleState,
-            mapDstToSrc,
-            addEntryToMapCache,
-            destinationAddresses,
-            destinations,
-            preprocessedEntry.srcNode,
-            preprocessedEntry.shortFS,
-            preprocessedEntry.srcValueDepth,
-            preprocessedEntry.propertySet,
-            currentNode,
-            preprocessedEntry.prev,
-            param,
-        )
     }
 
     private fun calculatePrevDFGs(
@@ -2343,10 +2318,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // dereference it, and then add it to the sources
                 val fullLastWrites =
                     PowersetLattice.Element<NodeWithPropertiesKey?>().apply { addAll(lastWrites) }
-                val parameterName = srcNode.name.parent?.localName
-                if (parameterName == null) {
-                    return mapDstToSrc
-                }
+                val parameterName = srcNode.name.parent?.localName ?: return mapDstToSrc
 
                 val parameterValuesKey = AddEntryParameterValuesKey(parameterName, srcValueDepth)
                 val cachedParameterValues =
