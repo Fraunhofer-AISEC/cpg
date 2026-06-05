@@ -1894,7 +1894,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val prev = if (lw is Record && srcNode is Node) srcNode else lw
             if (shortFS) {
                 when (prev) {
-                    is Function -> ret.add(NodeWithPropertiesKey(currentNode, filteredProperties))
+                    is Function -> ret.add(NodeWithPropertiesKey(currentNode, properties))
                     is Parameter -> {
                         // For dummy functionSummary entries, we have an Integer indicating the
                         // parameter's index for which we should use the Call's argument
@@ -1903,17 +1903,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // it as is
                         val index = properties.filterIsInstance<Int>().singleOrNull()
                         if (index != null && index < currentNode.arguments.size)
-                            ret.add(
-                                NodeWithPropertiesKey(
-                                    currentNode.arguments[index],
-                                    filteredProperties,
-                                )
-                            )
-                        else ret.add(NodeWithPropertiesKey(prev, filteredProperties))
+                            ret.add(NodeWithPropertiesKey(currentNode.arguments[index], properties))
+                        else ret.add(NodeWithPropertiesKey(prev, properties))
                     }
-                    else -> ret.add(NodeWithPropertiesKey(prev, filteredProperties))
+                    else -> ret.add(NodeWithPropertiesKey(prev, properties))
                 }
-            } else ret.add(NodeWithPropertiesKey(prev, filteredProperties))
+            } else ret.add(NodeWithPropertiesKey(prev, properties))
         }
         return ret
     }
