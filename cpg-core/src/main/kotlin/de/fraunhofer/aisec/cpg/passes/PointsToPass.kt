@@ -881,6 +881,39 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // if so, add this information to the
                 // functionSummary
                 // TODO: Use memory value edges instead of DFG because these are shortcuts.
+                val mvgpaths =
+                    value.followDFGEdgesUntilHit(
+                        collectFailedPaths = false,
+                        findAllPossiblePaths = false,
+                        direction = Backward(GraphToFollow.MVG),
+                        sensitivities = OnlyFullDFG + FieldSensitive + ContextSensitive,
+                        // We need to search interprocedural
+                        // here.
+                        // In order this acceptable also in
+                        // larger graphs,
+                        // we limit the maxCallDepth and hop
+                        // size
+                        scope = Interprocedural(maxCallDepth = 1, maxSteps = 10),
+                        predicate = {
+                            it is ParameterMemoryValue &&
+                                /* If it's a ParameterMemoryValue from the node's
+                                parameters, it has to have a DFG edge to one
+                                of the node's parameters. Either partial to a derefvalue or full to the Parameter */
+                                it.memoryValueUsageEdges
+                                    .filter { edge ->
+                                        ((((edge.granularity as? PartialDataflowGranularity<*>)
+                                                ?.partialTarget as? String)
+                                            ?.endsWith("derefvalue") == true) ||
+                                            (edge.granularity is FullDataflowGranularity &&
+                                                edge.end is Parameter)) &&
+                                            edge.end in node.parameters
+                                    }
+                                    .size == 1 &&
+                                node.parameters.any { param ->
+                                    param.name.localName == it.name.parent?.localName
+                                } || it in node.parameters
+                        },
+                    )
                 val paths =
                     value.followDFGEdgesUntilHit(
                         collectFailedPaths = false,
