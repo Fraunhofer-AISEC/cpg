@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
  *
@@ -5,7 +6,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,14 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- *                    $$$$$$\  $$$$$$$\   $$$$$$\
- *                   $$  __$$\ $$  __$$\ $$  __$$\
- *                   $$ /  \__|$$ |  $$ |$$ /  \__|
- *                   $$ |      $$$$$$$  |$$ |$$$$\
- *                   $$ |      $$  ____/ $$ |\_$$ |
- *                   $$ |  $$\ $$ |      $$ |  $$ |
- *                   \$$$$$   |$$ |      \$$$$$   |
- *                    \______/ \__|       \______/
+ * $$$$$$\  $$$$$$$\   $$$$$$\
+ * $$  __$$\ $$  __$$\ $$  __$$\
+ * $$ /  \__|$$ |  $$ |$$ /  \__|
+ * $$ |      $$$$$$$  |$$ |$$$$\
+ * $$ |      $$  ____/ $$ |\_$$ |
+ * $$ |  $$\ $$ |      $$ |  $$ |
+ * \$$$$$   |$$ |      \$$$$$   |
+ * \______/ \__|       \______/
  *
  */
 package de.fraunhofer.aisec.cpg.query
@@ -33,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
 import de.fraunhofer.aisec.cpg.testcases.Query
@@ -64,8 +66,6 @@ class QueryTest {
 
         assertFalse(queryTreeResult2.value)
         println(queryTreeResult2.printNicely())
-
-        // result.calls["memcpy"].all { n -> sizeof(n.arguments[0]) >= sizeof(n.arguments[1]) }
     }
 
     @Test
@@ -358,13 +358,6 @@ class QueryTest {
                 mustSatisfy = { it.assignments.all { (it.value() as QueryTree<Number>) < 5 } }
             )
         assertTrue(queryTreeResult.first)
-
-        /*val queryTreeResult2 =
-            result.allExtended<AssignmentHolder>(
-                mustSatisfy = { it.assignments.all { it.value.invoke() as QueryTree<Number> lt 5 } }
-            )
-
-        assertTrue(queryTreeResult2.value)*/
     }
 
     @Test
@@ -544,22 +537,6 @@ class QueryTest {
                 },
             )
         assertFalse(queryTreeResult.first)
-
-        /*
-        TODO: This test will not work anymore because we cannot put it into a QueryTree
-        val queryTreeResult2 =
-            result.allExtended<AssignmentHolder>(
-                { it.assignments.all { assign -> assign.target.type.isPrimitive } },
-                {
-                    QueryTree(it.assignments.any {
-                        (max(it.value) le maxSizeOfType(it.target.type)) and
-                                (min(it.value) ge minSizeOfType(it.target.type))
-                    })
-                }
-            )
-
-        println(queryTreeResult2.printNicely())
-        assertFalse(queryTreeResult2.value)*/
     }
 
     @Test
@@ -694,6 +671,117 @@ class QueryTest {
     }
 
     @Test
+    fun testInherentlyDangerousFunctionGets() {
+        val result = Query.getVulnerable()
+
+        val queryTreeResult =
+            result.allExtended<Call>(
+                mustSatisfy = { not(it.name.localName eq "gets") }
+            )
+
+        assertFalse(queryTreeResult.value)
+    }
+
+    @Test
+    fun testTimeOfCheckTimeOfUseTOCTOU() {
+        val result = Query.getVulnerable()
+
+        val queryTreeResult =
+            result.allExtended<Call>(
+                { it.name.localName == "access" },
+                { outer ->
+                    not(
+                        executionPath(outer) {
+                            (it as? Call)?.name?.localName == "open" &&
+                                (it.arguments.getOrNull(0) as? Reference)?.refersTo ==
+                                    (outer.arguments.getOrNull(0) as? Reference)?.refersTo
+                        }
+                    )
+                },
+            )
+
+        assertFalse(queryTreeResult.value)
+    }
+
+    @Test
+    fun testUncheckedPrivilegeDropReturnValue() {
+        val result = Query.getVulnerable()
+
+        val queryTreeResult =
+            result.allExtended<Call>(
+                { it.name.localName == "setuid" },
+                { setuidCall ->
+                    dataFlow(setuidCall) { node ->
+                        node is BinaryOperator && node.operatorCode in listOf("==", "!=", "<", "<=")
+                    }
+                }
+            )
+
+        assertTrue(queryTreeResult.value)
+    }
+
+    @Test
+    fun testHardcodedCredentialsQuery() {
+        val result = Query.getVulnerable()
+
+        val queryTreeResult =
+            result.allExtended<Call>(
+                { it.name.localName in listOf("connect", "login", "setCryptographicKey") },
+                { cryptoCall ->
+                    val passwordArg = cryptoCall.arguments.getOrNull(1)
+                    if (passwordArg != null) {
+                        val origins = passwordArg.followPrevFullDFGEdgesUntilHit { node ->
+                            node is Literal<*>
+                        }
+                        QueryTree(origins.fulfilled.isEmpty(), operator = GenericQueryOperators.EVALUATE)
+                    } else {
+                        QueryTree(true, operator = GenericQueryOperators.EVALUATE)
+                    }
+                }
+            )
+
+        assertFalse(queryTreeResult.value)
+    }
+
+    @Test
+    fun testSqlInjection() {
+        val result = Query.getVulnerable()
+
+        val queryTreeResult = result.allExtended<Call>(
+            { it.name.localName in listOf("sqlite3_exec", "mysql_query", "PQexec") },
+            { queryCall ->
+                val queryArg = queryCall.arguments.getOrNull(1)
+                if (queryArg != null) {
+                    queryArg.allNonLiteralsFlowTo(
+                        predicate = { it == queryArg },
+                        allowOverwritingValue = true,
+                        scope = Interprocedural()
+                    )
+                } else {
+                    QueryTree(true, operator = GenericQueryOperators.EVALUATE)
+                }
+            }
+        )
+
+        assertFalse(queryTreeResult.value)
+    }
+
+    @Test
+    fun testFormatStringVulnerability() {
+        val result = Query.getVulnerable()
+
+        val queryTreeResult = result.allExtended<Call>(
+            { it.name.localName in listOf("printf", "sprintf", "fprintf", "syslog") },
+            { printfCall ->
+                val formatArg = printfCall.arguments.getOrNull(0)
+                QueryTree(formatArg !is Reference, operator = GenericQueryOperators.EVALUATE)
+            }
+        )
+
+        assertFalse(queryTreeResult.value)
+    }
+
+    @Test
     fun testNode() {
         with(TestLanguageFrontend()) {
             val lit1 = newLiteral(1)
@@ -728,3 +816,5 @@ class QueryTest {
         }
     }
 }
+
+```
