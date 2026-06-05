@@ -280,10 +280,12 @@ class DFGFunctionSummaries {
         for (entry in dfgEntries) {
             var srcValueDepth = 1
             var destValueDepth = 1
-            val granularity =
+            var granularity =
                 if (entry.dfgType == "partial") PartialDataflowGranularity("hardcoded")
                 else default()
             val destNodes: MutableSet<Node> = mutableSetOf()
+            val properties = equalLinkedHashSetOf<Any>()
+            var subAccessName = ""
             val from: Any? =
                 if (entry.from == "function") {
                     functionDeclaration
@@ -322,36 +324,22 @@ class DFGFunctionSummaries {
                     } catch (_: NumberFormatException) {
                         null
                     }
-                } else if (entry.to == "base") {
-                    val receiver = (functionDeclaration as? Method)?.receiver
-                    if (from != null) {
-                        if (receiver != null) {
-                            destNodes.add(receiver)
-                            // TODO Make sure that this makes sense
-                            /*functionDeclaration.functionSummary
-                            .computeIfAbsent(receiver) { identitySetOf() }
-                            .add(
-                                Function.FSEntry(
-                                    destValueDepth,
-                                    from,
-                                    srcValueDepth,
-                                    "",
-                                    equalLinkedHashSetOf(
-                                        Pair(functionDeclaration, equalLinkedHashSetOf())
-                                    ),
-                                    equalLinkedHashSetOf(false),
-                                )
-                            )*/
-                        }
-                    }
-                    receiver
+                } else if (entry.to == "base" && functionDeclaration is Method) {
+                    // We'll later in handlePrevDFG fetch the base of the MemberCall, for now we add
+                    // the record
+                    functionDeclaration.recordDeclaration?.let { destNodes.add(it) }
+                    val newGranularity =
+                        PartialDataflowGranularity(functionDeclaration.name.localName)
+                    // Add a property that this is only a partial write (since it is to the base)
+                    properties.add(newGranularity)
+                    granularity = newGranularity
+                    functionDeclaration.receiver
                 } else if (entry.to == "return") {
                     if (functionDeclaration.returns.isNotEmpty())
                         destNodes.addAll(functionDeclaration.returns)
                     else destNodes.add(functionDeclaration)
                     functionDeclaration
                 } else if (entry.to.startsWith("return")) {
-                    val returnIndex = entry.to.removePrefix("return").toInt()
                     // TODO: It would be nice if we could model the index. Not sure how this is done
                     destNodes.addAll(functionDeclaration.returns)
                     functionDeclaration
@@ -368,12 +356,9 @@ class DFGFunctionSummaries {
                                 destValueDepth,
                                 from,
                                 srcValueDepth,
-                                "",
+                                subAccessName,
                                 PowersetLattice.Element(
-                                    PointsToPass.NodeWithPropertiesKey(
-                                        destNode,
-                                        equalLinkedHashSetOf(),
-                                    )
+                                    PointsToPass.NodeWithPropertiesKey(destNode, properties)
                                 ),
                                 equalLinkedHashSetOf(granularity, false),
                             )
