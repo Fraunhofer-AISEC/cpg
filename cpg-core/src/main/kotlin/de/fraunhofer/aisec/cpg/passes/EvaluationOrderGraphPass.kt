@@ -41,6 +41,8 @@ import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.tryCast
 import java.util.*
 import org.slf4j.LoggerFactory
@@ -149,7 +151,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             }
         )
         // only eog entry points
-        var validStarts = eogNodes.filter { it is EOGStarterHolder || it is Variable }.toSet()
+        var validStarts =
+            eogNodes.filterTo(identitySetOf()) { it is EOGStarterHolder || it is Variable }
         // Remove all nodes from eogNodes which are reachable from validStarts and transitively.
         val alreadySeen = IdentitySet<Node>()
         while (validStarts.isNotEmpty()) {
@@ -157,9 +160,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             validStarts =
                 validStarts
                     .flatMap { it.nextEOGEdges }
-                    .filter { it.end !in alreadySeen }
-                    .map { it.end }
-                    .toSet()
+                    .mapFilteredTo(identitySetOf(), { it.end !in alreadySeen }) { it.end }
             alreadySeen.addAll(validStarts)
         }
         // The remaining nodes are unreachable from the entry points. We delete their outgoing EOG

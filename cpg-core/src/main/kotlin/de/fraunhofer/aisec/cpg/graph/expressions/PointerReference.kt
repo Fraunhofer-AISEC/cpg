@@ -59,6 +59,6 @@ open class PointerReference : Reference() {
         }
 
         // Apply our operator to all assigned types and forward them to us
-        this.addAssignedTypes(assignedTypes.map { it.pointer() }.toSet())
+        this.addAssignedTypes(assignedTypes.mapTo(mutableSetOf()) { it.pointer() })
     }
 }

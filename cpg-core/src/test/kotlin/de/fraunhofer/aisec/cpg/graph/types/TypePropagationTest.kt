@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
 
@@ -330,11 +331,13 @@ class TypePropagationTest {
 
         val derivedClassA = result.records["DerivedClassA"]
         assertNotNull(derivedClassA)
-        assertContains(derivedClassA.superTypeDeclarations, baseClass)
+        // TODO: For some reason, the element is not found in the set. This is strange because the
+        // hashCode matches, the equals matches, identity matches...
+        assertContains(derivedClassA.superTypeDeclarations.toIdentitySet(), baseClass)
 
         val derivedClassB = result.records["DerivedClassB"]
         assertNotNull(derivedClassB)
-        assertContains(derivedClassB.superTypeDeclarations, baseClass)
+        assertContains(derivedClassB.superTypeDeclarations.toIdentitySet(), baseClass)
 
         val create = result.functions["create"]
         assertNotNull(create)

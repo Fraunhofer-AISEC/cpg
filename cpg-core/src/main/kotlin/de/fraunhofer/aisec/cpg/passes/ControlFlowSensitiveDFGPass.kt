@@ -186,9 +186,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         edgePropertiesMap
             // TODO: What's the purpose of these two filters? One of them is unnecessary.
             .filter { entry ->
-                entry.key.first in from && (to as? Reference)?.refersTo == entry.key.second
+                entry.key.first in from &&
+                    (to as? Reference)?.refersTo == entry.key.second &&
+                    entry.key.first in from &&
+                    entry.key.second == null
             }
-            .filter { it.key.first in from && it.key.second == null }
             .forEach {
                 edgePropertiesMap
                     .computeIfAbsent(Triple(it.key.first, to, true)) { mutableSetOf() }

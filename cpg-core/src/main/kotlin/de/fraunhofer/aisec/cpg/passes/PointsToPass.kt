@@ -48,6 +48,8 @@ import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
+import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -435,7 +437,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ) : PassConfiguration()
 
     // For recursive creation of FunctionSummaries, we have to make sure that we don't run in
-    // circles. Therefore, we store the chain of Functions we currently analyse
+    // circles. Therefore, we store the chain of Functions we currently analyze
     private val functionSummaryAnalysisChain = mutableListOf<Function>()
 
     override fun cleanup() {
@@ -1324,8 +1326,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         }
                     // Filter shortFS Values
                     var values =
-                        doubleState.getValues(rV, rV).mapNotNullTo(mutableSetOf()) {
-                            if (!it.second) it.first else null
+                        doubleState.getValues(rV, rV).mapFilteredTo(
+                            mutableSetOf(),
+                            { !it.second },
+                        ) {
+                            it.first
                         }
                     var addresses = mutableSetOf<Node>()
                     for (depth in 1..3) {
@@ -1356,8 +1361,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         val derefValues =
                             values.flatMapTo(mutableSetOf()) { value ->
                                 if (doubleState.hasDeclarationStateValueEntry(value)) {
-                                    doubleState.getValues(value, value).mapNotNull {
-                                        if (!it.second) it.first else null
+                                    doubleState.getValues(value, value).mapFiltered({
+                                        !it.second
+                                    }) {
+                                        it.first
                                     }
                                 } else emptyList()
                             }
@@ -1681,7 +1688,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val srcNode: Node?,
         val srcValueDepth: Int,
         val shortFS: Boolean,
-        val propertySet: EqualLinkedHashSet<Any>,
+        var propertySet: EqualLinkedHashSet<Any>,
         val prev: MutableSet<NodeWithPropertiesKey>,
     )
 
@@ -1712,15 +1719,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // If we have multiple functions with the same name and the same signature and one has an
         // empty body, we assume that this is from the header so we ignore it
         invokes =
-            invokes.mapNotNullTo(identitySetOf()) { inv ->
-                if (
-                    inv.body == null &&
+            invokes.mapFilteredTo(
+                identitySetOf(),
+                { inv ->
+                    !(inv.body == null &&
                         // If the body is empty, check if we have the "real" Function
                         // somewhere in our list
-                        invokes.any { it != inv && it.name == inv.name && it.type == inv.type }
-                )
-                    null
-                else inv
+                        invokes.any { it != inv && it.name == inv.name && it.type == inv.type })
+                },
+            ) { inv ->
+                inv
             }
         invokes.forEach { invoke ->
             val inv = calculateFunctionSummaries(invoke)
@@ -1765,8 +1773,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             ) in fsEntries) {
                                 if (dstValueDepth in 0..3) {
                                     val shortFS = properties.any { it == true }
-                                    val propertySet =
-                                        equalLinkedHashSetOf<Any>().apply { addAll(properties) }
+                                    val propertySet = properties
                                     val normalizedSrcNode =
                                         when (srcNode) {
                                             is Function -> currentNode
@@ -1855,6 +1862,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         currentNode,
                                         entry.prev,
                                         work.param,
+                                        // TODO for merge: add subAccessName?
                                     )
                                 }
                             }
@@ -1886,8 +1894,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // If we have nothing, the last write is probably the Function
         if (lastWrites.isEmpty()) ret.add(NodeWithPropertiesKey(invoke, equalLinkedHashSetOf()))
         lastWrites.forEach { (lw, properties) ->
-            // TODO: do we need the copy?
-            val filteredProperties = equalLinkedHashSetOf<Any>().apply { addAll(properties) }
             // If the lastWrite is a Record, that's a hint from the functionSummary that we have a
             // write to the base. Since we didn't know the base yet when creating the
             // functionSummary, we fetch it now
@@ -2473,18 +2479,36 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         shortFS: Boolean,
         partialWrite: String?,
     ): EqualLinkedHashSet<Any> {
-        val updatedPropertySet =
-            equalLinkedHashSetOf<Any>().apply {
+        val hasShortFS = shortFS in propertySet
+
+        if (partialWrite == null) {
+            if (hasShortFS) return propertySet
+
+            return equalLinkedHashSetOf<Any>().apply {
                 addAll(propertySet)
                 add(shortFS)
-                // If the partialWrite is not null, it means this is the base memory address and no
-                // field, so we add the partial write property
-                partialWrite?.let {
-                    removeIf { it is FullDataflowGranularity }
-                    add(PartialDataflowGranularity(Field().apply { name = Name(it) }))
-                }
             }
-        return updatedPropertySet
+        }
+
+        val hasFullGranularity = propertySet.any { it is FullDataflowGranularity }
+        val hasMatchingPartialGranularity =
+            propertySet.any {
+                it is PartialDataflowGranularity<*> &&
+                    (it.partialTarget as? Field)?.name?.localName == partialWrite
+            }
+
+        if (hasShortFS && !hasFullGranularity && hasMatchingPartialGranularity) {
+            return propertySet
+        }
+
+        return equalLinkedHashSetOf<Any>().apply {
+            addAll(propertySet)
+            add(shortFS)
+            // If the partialWrite is not null, it means this is the base memory address and no
+            // field, so we add the partial write property
+            removeIf { it is FullDataflowGranularity }
+            add(PartialDataflowGranularity(Field().apply { name = Name(partialWrite) }))
+        }
     }
 
     /**
@@ -2536,10 +2560,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val updatedAddresses: IdentitySet<Pair<Node, String?>> =
                 mapDstToSrc.entries.flatMapTo(IdentitySet()) {
                     if (it.key == argument) {
-                        it.value.mapNotNullTo(IdentitySet()) {
-                            if (it.param == param && it.srcNode != null) {
-                                it.srcNode to null
-                            } else null
+                        it.value.mapFilteredTo(
+                            IdentitySet(),
+                            { it.param == param && it.srcNode != null },
+                        ) {
+                            it.srcNode!! to null
                         }
                     } else emptySet()
                 }
@@ -2813,7 +2838,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     .getValues(currentNode, currentNode)
                     // Filter only the values that are not stored for short FunctionSummaries (aka
                     // it.second set to true)
-                    .mapNotNullTo(IdentitySet()) { if (!it.second) it.first else null }
+                    .mapFilteredTo(IdentitySet(), { !it.second }) { it.first }
             val prevDFGs = doubleState.getLastWrites(currentNode)
 
             // If we have any information from the dereferenced value, we also fetch that (if it's
@@ -3412,9 +3437,10 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
     } else {
         // Otherwise, we read the declarationState.
         // Let's start with the main element
-        var elements = this.declarationsState[node]?.second?.toList()
-        if (excludeShortFSValues) elements = elements?.filter { !it.second }
-        if (elements.isNullOrEmpty()) {
+        val declarationEntry = this.declarationsState[node]
+        val values = declarationEntry?.second
+        val hasUsableValues = values?.any { pair -> !excludeShortFSValues || !pair.second } == true
+        if (!hasUsableValues) {
             // If we are already dealing with an UnknownMemoryValue, we simply return that in order
             // to avoid too much looping in the unknown
             if (node is UnknownMemoryValue) {
@@ -3458,26 +3484,20 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
                     )
                 )
             }
-        } else
-            elements.forEach {
-                ret.add(
-                    FetchElementFromDeclarationStateEntry(
-                        it.first,
-                        it.second,
-                        "",
-                        this.declarationsState[node]?.third ?: PowersetLattice.Element(),
-                    )
-                )
+        } else {
+            val lastWrites = declarationEntry.third
+            values.forEach {
+                if (excludeShortFSValues && it.second) return@forEach
+                ret.add(FetchElementFromDeclarationStateEntry(it.first, it.second, "", lastWrites))
             }
+        }
 
         // if fetchFields is true, we also fetch the values for fields
         // TODO: handle globals
         if (fetchFields) {
-            val fields =
-                this.declarationsState[node]?.first?.filterTo(identitySetOf()) {
-                    it != node && !this.getAddresses(node, node).contains(it)
-                }
-            fields?.forEach { field ->
+            val nodeAddresses = this.getAddresses(node, node)
+            this.declarationsState[node]?.first?.forEach { field ->
+                if (field === node || nodeAddresses.contains(field)) return@forEach
                 this.declarationsState[field]?.second?.forEach {
                     if (excludeShortFSValues && !it.second || !excludeShortFSValues)
                         ret.add(
@@ -3494,6 +3514,23 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
     }
 
     return ret
+}
+
+private fun copyNodeProperties(properties: Set<Any>): Set<Any> {
+    if (properties.isEmpty()) return emptySet()
+    return properties
+}
+
+private fun PointsToState.Element.collectLastWritesFromAddresses(
+    addresses: Iterable<Node>
+): PowersetLattice.Element<NodeWithPropertiesKey> {
+    val lastWrites = PowersetLattice.Element<NodeWithPropertiesKey>()
+    addresses.forEach { address ->
+        this.declarationsState[address]?.third?.forEach { entry ->
+            lastWrites.add(NodeWithPropertiesKey(entry.node, copyNodeProperties(entry.properties)))
+        }
+    }
+    return lastWrites
 }
 
 fun PointsToState.Element.getLastWrites(
@@ -3531,9 +3568,11 @@ fun PointsToState.Element.getLastWrites(
                     ) {
                         this.getAddresses(base, base)
                     } else fieldAddresses
-                addresses.flatMapTo(PowersetLattice.Element()) {
-                    this.declarationsState[it]?.third ?: PowersetLattice.Element()
+                val ret = PowersetLattice.Element<NodeWithPropertiesKey>()
+                addresses.forEach { address ->
+                    this.declarationsState[address]?.third?.let { ret.addAll(it) }
                 }
+                ret
             }
             is Reference -> {
                 // In case the input is a reference, the lastwrite is its memoryAddress
@@ -3580,10 +3619,10 @@ fun PointsToState.Element.getLastWrites(
                     val lastWrite = this.declarationsState[addr]?.third
                     // Usually, we should have a lastwrite, so we take that
                     if (lastWrite?.isNotEmpty() == true)
-                        lastWrite.mapTo(PowersetLattice.Element()) {
-                            val newProps =
-                                equalLinkedHashSetOf<Any>().apply { addAll(it.properties) }
-                            ret.add(NodeWithPropertiesKey(it.node, newProps))
+                        lastWrite.forEach {
+                            ret.add(
+                                NodeWithPropertiesKey(it.node, copyNodeProperties(it.properties))
+                            )
                         }
                     // However, there might be cases were we don't yet have written to the
                     // dereferenced
@@ -3607,33 +3646,27 @@ fun PointsToState.Element.getLastWrites(
             // For Subscriptions, we additionally check if the partial write matches
             val partial = getNodeName(node.subscriptExpression)
             val addresses = this.getAddresses(node, node)
-            val addressesWithLastWrites =
-                addresses.filterTo(PowersetLattice.Element()) { addr ->
-                    this.declarationsState[addr]?.third?.isNotEmpty() == true
-                }
-            addressesWithLastWrites.flatMapTo(PowersetLattice.Element()) { addr ->
-                this.declarationsState[addr]?.third?.map {
-                    NodeWithPropertiesKey(
-                        it.node,
-                        it.properties.filterTo(EqualLinkedHashSet()) {
-                            !(it is PartialDataflowGranularity<*> &&
-                                it.partialTarget is Field &&
-                                it.partialTarget.name.localName == partial.localName)
-                        },
+            val ret = PowersetLattice.Element<NodeWithPropertiesKey>()
+            addresses.forEach { addr ->
+                this.declarationsState[addr]?.third?.forEach { entry ->
+                    ret.add(
+                        NodeWithPropertiesKey(
+                            entry.node,
+                            entry.properties.filterTo(EqualLinkedHashSet()) {
+                                !(it is PartialDataflowGranularity<*> &&
+                                    it.partialTarget is Field &&
+                                    it.partialTarget.name.localName == partial.localName)
+                            },
+                        )
                     )
-                } ?: PowersetLattice.Element()
+                }
             }
+            ret
         }
         is MemberAccess -> {
             // For MemberAccess, the lastWrite is the Field if we don't have anything
             // else
-            val lastWrites =
-                this.getAddresses(node, node).flatMapTo(PowersetLattice.Element()) {
-                    this.declarationsState[it]?.third?.map {
-                        val newProps = equalLinkedHashSetOf<Any>().apply { addAll(it.properties) }
-                        NodeWithPropertiesKey(it.node, newProps)
-                    } ?: setOf()
-                }
+            val lastWrites = this.collectLastWritesFromAddresses(this.getAddresses(node, node))
             if (lastWrites.isEmpty()) {
                 val ref = node.refersTo
                 if (ref != null)
@@ -3661,12 +3694,7 @@ fun PointsToState.Element.getLastWrites(
         else ->
             // For the rest, we read the declarationState to determine when the memoryAddress of the
             // node was last written to
-            this.getAddresses(node, node).flatMapTo(PowersetLattice.Element()) {
-                this.declarationsState[it]?.third?.map {
-                    val newProps = equalLinkedHashSetOf<Any>().apply { addAll(it.properties) }
-                    NodeWithPropertiesKey(it.node, newProps)
-                } ?: setOf()
-            }
+            this.collectLastWritesFromAddresses(this.getAddresses(node, node))
     }
 }
 
@@ -3841,7 +3869,8 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet
             // information has not yet been propagated to the node, so we check out the state
             val ret = node.memoryAddresses.toIdentitySet<Node>()
 
-            ret.ifEmpty { this.declarationsState[node]?.first?.toIdentitySet() ?: identitySetOf() }
+            if (ret.isNotEmpty()) ret
+            else this.declarationsState[node]?.first?.toIdentitySet() ?: identitySetOf()
         }
         is MemoryAddress -> {
             identitySetOf(node)
@@ -3916,6 +3945,9 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet
         }
         is Subscription -> {
             val localName = getNodeName(node.subscriptExpression)
+            if (localName.localName == "0") {
+                return this.getValues(node.base, startNode).mapTo(IdentitySet()) { it.first }
+            }
             // When startNode is different from the current node, we should already have an entry,
             // so we fetch that from the general state
             // TODO: Should we skip dereferencing if the base is not a pointer (The C(++) compiler
@@ -3924,13 +3956,6 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet
                 if (startNode != node)
                     fetchValueFromGeneralState(node.base).mapTo(IdentitySet()) { it.node }
                 else this.getValues(node.base, startNode).mapTo(IdentitySet()) { it.first }
-            // A C(++) special: If the base is a pointer, the value of this base-pointer is the
-            // address of the first element.
-            // So if it's about the address [0], we return the baseValues directly instead of
-            // fetching fieldAddresses which depict abstract offsets from those base values
-            if (localName.localName == "0") {
-                return this.getValues(node.base, startNode).mapTo(IdentitySet()) { it.first }
-            }
             baseValues.flatMapTo(identitySetOf()) { node ->
                 fetchFieldAddresses(
                     identitySetOf(node),
@@ -3964,35 +3989,51 @@ fun PointsToState.Element.getNestedValues(
     if (nestingDepth == -1) return PowersetLattice.Element(Pair(node, false))
     if (nestingDepth == 0)
         return this.getAddresses(node, node).mapTo(PowersetLattice.Element()) { Pair(it, false) }
-    var ret =
-        if (
-            node !is PointerReference &&
-                onlyFetchExistingEntries &&
-                this.getAddresses(node, node).none { addr ->
+    val skipInitialFetch =
+        if (node !is PointerReference && onlyFetchExistingEntries) {
+            val hasDirectAddressEntries =
+                this.getAddresses(node, node).any { addr ->
                     this.hasDeclarationStateValueEntry(addr, excludeShortFSValues)
                 }
-                // If we have a MemberAccess, also check for the addresses of the bases
-                &&
-                collectBasesAndOffsets(node)
-                    .flatMap { (base, _) -> this.getAddresses(base, base) }
-                    .none { addr -> this.hasDeclarationStateValueEntry(addr, excludeShortFSValues) }
-        )
-            PowersetLattice.Element()
-        else
-            getValues(node, node).filterTo(PowersetLattice.Element()) {
-                if (excludeShortFSValues) !it.second else true
+            if (hasDirectAddressEntries) {
+                false
+            } else {
+                var hasBaseEntries = false
+                collectBasesAndOffsets(node).forEach { (base, _) ->
+                    if (hasBaseEntries) return@forEach
+                    if (
+                        this.getAddresses(base, base).any { addr ->
+                            this.hasDeclarationStateValueEntry(addr, excludeShortFSValues)
+                        }
+                    ) {
+                        hasBaseEntries = true
+                    }
+                }
+                !hasBaseEntries
             }
+        } else {
+            false
+        }
+    var ret = PowersetLattice.Element<Pair<Node, Boolean>>()
+    if (!skipInitialFetch) {
+        getValues(node, node).forEach {
+            if (!excludeShortFSValues || !it.second) {
+                ret.add(it)
+            }
+        }
+    }
     for (i in 1..<nestingDepth) {
-        ret =
-            ret.filterTo(PowersetLattice.Element()) {
-                    if (onlyFetchExistingEntries)
-                        this.hasDeclarationStateValueEntry(it.first, excludeShortFSValues)
-                    else true
-                }
-                .flatMap {
-                    this.fetchValueFromDeclarationState(it.first, fetchFields, excludeShortFSValues)
-                }
-                .mapTo(PowersetLattice.Element()) { Pair(it.value, it.shortFS) }
+        val next = PowersetLattice.Element<Pair<Node, Boolean>>()
+        ret.forEach {
+            if (
+                !onlyFetchExistingEntries ||
+                    this.hasDeclarationStateValueEntry(it.first, excludeShortFSValues)
+            ) {
+                this.fetchValueFromDeclarationState(it.first, fetchFields, excludeShortFSValues)
+                    .forEach { fetched -> next.add(Pair(fetched.value, fetched.shortFS)) }
+            }
+        }
+        ret = next
     }
     return ret
 }
@@ -4027,37 +4068,33 @@ fun PointsToState.Element.fetchFieldAddresses(
     val normalizedNodeName = normalizeFieldAccessPath(nodeName)
 
     baseAddresses.forEach { addr ->
-        val elements =
-            declarationsState[addr]?.first?.filterTo(identitySetOf()) {
-                it.name.localName == normalizedNodeName.localName
+        var foundAnyFieldAddress = false
+        declarationsState[addr]?.first?.forEach { candidate ->
+            if (candidate.name.localName == normalizedNodeName.localName) {
+                fieldAddresses.add(candidate)
+                foundAnyFieldAddress = true
             }
+        }
 
-        if (elements.isNullOrEmpty()) {
+        if (!foundAnyFieldAddress) {
             val newEntry =
-                identitySetOf<Node>(
-                    nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, normalizedNodeName)) {
-                        MemoryAddress(normalizedNodeName, isGlobal(addr))
-                    }
-                )
+                nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, normalizedNodeName)) {
+                    MemoryAddress(normalizedNodeName, isGlobal(addr))
+                }
 
             // No need to update the state for values we don't know anyway
             if (addr !is UnknownMemoryValue) {
-                if (this.declarationsState[addr] == null) {
-                    this.declarationsState.put(
-                        addr,
+                val declarationEntry =
+                    this.declarationsState.computeIfAbsent(addr) {
                         TripleLattice.Element(
                             PowersetLattice.Element(addr),
                             PowersetLattice.Element(),
                             PowersetLattice.Element(),
-                        ),
-                    )
-                }
-                val newElements = this.declarationsState[addr]?.first
-                newElements?.addAll(newEntry)
+                        )
+                    }
+                declarationEntry.first.add(newEntry)
             }
-            fieldAddresses.addAll(newEntry)
-        } else {
-            elements.let { fieldAddresses.addAll(it) }
+            fieldAddresses.add(newEntry)
         }
     }
 

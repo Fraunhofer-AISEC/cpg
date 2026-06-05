@@ -60,6 +60,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.inference.Inference
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -420,7 +421,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         if (directMatches.size > 1) {
             // This is an ambiguous result. Let's return all direct matches
             return Pair(
-                directMatches.map { it.key }.toSet(),
+                directMatches.mapTo(mutableSetOf()) { it.key },
                 CallResolutionResult.SuccessKind.AMBIGUOUS,
             )
         } else if (directMatches.size == 1) {
@@ -468,7 +469,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
         // Find the best (lowest) rank and find functions with the specific rank
         val bestRanking = rankings.minBy { it.first }.first
-        val list = rankings.filter { it.first == bestRanking }.map { it.second }
+        val list = rankings.mapFiltered({ it.first == bestRanking }) { it.second }
         return if (list.size > 1) {
             // Return the list of best-ranked (hopefully only one). If one then more result has
             // the same ranking, this result is ambiguous
@@ -609,7 +610,7 @@ class MultipleLanguages(val languages: Set<Language<*>>) : Language<Nothing>() {
  * different languages, it returns a [MultipleLanguages] object.
  */
 fun AstNode.multiLanguage(): Language<*> {
-    val languages = astChildren.map { it.language }.toSet()
+    val languages = astChildren.mapTo(mutableSetOf()) { it.language }
     return if (languages.size == 1) {
         languages.single()
     } else if (languages.size > 1) {
