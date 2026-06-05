@@ -219,6 +219,10 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
     /** Inserts all entries from the given [Sequence] of pairs. */
     fun putAll(pairs: Sequence<Pair<K, V>>) = putAll(pairs.asIterable())
 
+    internal fun copyFrom(other: ConcurrentIdentityHashMap<K, V>) {
+        backing.putAll(other.backing)
+    }
+
     fun clear() = backing.clear()
 
     override fun hashCode() = backing.hashCode()
@@ -459,9 +463,9 @@ interface Lattice<T : Lattice.Element> {
         ) {
             if (mergePointNextEdge !in this) {
                 this[mergePointNextEdge] =
-                    mergePointNextEdge.start.prevEOGEdges
-                        .map { Pair(it.end, it.start) }
-                        .toMutableSet()
+                    mergePointNextEdge.start.prevEOGEdges.mapTo(mutableSetOf()) {
+                        Pair(it.end, it.start)
+                    }
             }
             this[mergePointNextEdge]?.removeIf {
                 it.first == incomingEdge.end && it.second == incomingEdge.start
@@ -624,7 +628,7 @@ interface Lattice<T : Lattice.Element> {
                             // In comparison to a loop entry, a merge point has multiple
                             // prevEOGEdges
                             // without SCC-Label and at least one nextEOGEdge without
-                            it.start.prevEOGEdges.filter { it.scc == null }.size > 1 &&
+                            it.start.prevEOGEdges.any { it.scc == null } &&
                                 it.start.nextEOGEdges.any { it.scc == null }
                         ) {
                             // This edge brings us to a merge point, so we add it to the list of

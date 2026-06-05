@@ -110,7 +110,7 @@ class InitializerList : Expression(), ArgumentHolder, HasType.TypeObserver {
         // if we are initializing an array
         val type = type
         if (type is PointerType && type.pointerOrigin == PointerType.PointerOrigin.ARRAY) {
-            addAssignedTypes(assignedTypes.map { it.array() }.toSet())
+            addAssignedTypes(assignedTypes.mapTo(mutableSetOf()) { it.array() })
         }
     }
 

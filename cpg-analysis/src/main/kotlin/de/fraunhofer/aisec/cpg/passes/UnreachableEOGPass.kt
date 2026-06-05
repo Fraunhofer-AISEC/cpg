@@ -79,7 +79,7 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             startState = unreachabilityState.push(startState, firstEdge, Reachability.REACHABLE)
         }
 
-        val nextEog = node.nextEOGEdges.toList()
+        val nextEog = node.nextEOGEdges
         val (finalStateNew, timeout) =
             runBlocking { unreachabilityState.iterateEOG(nextEog, startState, ::transfer) }
         if (timeout) {

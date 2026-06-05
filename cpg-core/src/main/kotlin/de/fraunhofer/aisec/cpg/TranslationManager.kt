@@ -267,14 +267,12 @@ private constructor(
             )
 
             // Collects all used languages used in the main analysis code
-            result.usedLanguages.addAll(
-                sourceLocations.mapNotNull { with(ctx) { it.language } }.toSet()
-            )
+            result.usedLanguages.addAll(sourceLocations.mapNotNull { with(ctx) { it.language } })
         }
 
         // Adds all languages provided as additional sources that may be relevant in the main code
         result.usedLanguages.addAll(
-            ctx.additionalSources.mapNotNull { with(ctx) { it.relative.language } }.toSet()
+            ctx.additionalSources.mapNotNull { with(ctx) { it.relative.language } }
         )
 
         result.usedLanguages.filterIsInstance<HasBuiltins>().forEach { hasBuiltins ->

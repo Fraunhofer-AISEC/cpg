@@ -128,7 +128,7 @@ open class Function :
         // Additional properties such the granularity or the shortFS
         // We use shortFunctionSummaries to draw "short" DFG-Edges that allow us to follow DFG Paths
         // without going into functions. Not as detailed, but faster
-        val properties: EqualLinkedHashSet<Any> = equalLinkedHashSetOf(),
+        var properties: EqualLinkedHashSet<Any> = equalLinkedHashSetOf(),
         // Sometimes, we need a dummy of a functionSummary, for example to avoid recursion. We
         // indicate here if this is one
         val isDummy: Boolean = false,
@@ -263,7 +263,7 @@ open class Function :
 
         // Build new function types out of our function declaration and the assigned types
         var returnFuncTypes =
-            assignedTypes.map { computeType(this, returnTypes = listOf(it)) }.toSet()
+            assignedTypes.mapTo(mutableSetOf()) { computeType(this, returnTypes = listOf(it)) }
 
         // And assign it us
         addAssignedTypes(returnFuncTypes)

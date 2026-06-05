@@ -121,7 +121,7 @@ open class TranslationContext(
         get() {
             val languages = availableLanguages.filter { it.handlesFile(this) }
             if (languages.size > 1) {
-                TranslationManager.Companion.log.warn(
+                log.warn(
                     "Multiple languages match for file extension ${this.extension}, the first registered language will be used."
                 )
             }

@@ -54,7 +54,7 @@ data class JsonGraph(val nodes: List<JsonNode>, val edges: List<JsonEdge>)
 /** Serialise the cpg using the OGM as nodes and edge list. */
 fun TranslationResult.createJsonGraph(): JsonGraph {
     val astNodes = this@createJsonGraph.nodes
-    val connected = astNodes.flatMap { it.connectedNodes }.toSet()
+    val connected = astNodes.flatMapTo(mutableSetOf()) { it.connectedNodes }
     val nodes = (astNodes + connected).distinct()
 
     log.info(

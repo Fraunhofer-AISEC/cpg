@@ -468,7 +468,7 @@ open class ValueEvaluator(
         // references.
         val prevDFG =
             if (node is Reference) {
-                filterSelfReferences(node, node.prevFullDFG.toList())
+                filterSelfReferences(node, node.prevFullDFG)
             } else {
                 node.prevFullDFG
             }
@@ -496,7 +496,7 @@ open class ValueEvaluator(
      * If a reference has READWRITE access, ignore any "self-references", e.g. from a
      * plus/minus/div/times-assign or a plusplus/minusminus, etc.
      */
-    protected fun filterSelfReferences(ref: Reference, inDFG: List<Node>): List<Node> {
+    protected fun filterSelfReferences(ref: Reference, inDFG: Collection<Node>): Collection<Node> {
         var list = inDFG
 
         // The ops +=, -=, ... and ++, -- have in common that we see the ref twice: Once to reach
