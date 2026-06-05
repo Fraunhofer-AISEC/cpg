@@ -342,11 +342,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * mutually exclusive.
      */
     protected fun handleFor(node: For) {
-        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
-            node,
-            node.condition,
-            node.conditionDeclaration,
-        )
+
         if (node.usedAsExpression) {
             node.statement?.let { node.prevDFGEdges += it }
             node.elseStatement?.let { node.prevDFGEdges += it }
@@ -360,11 +356,6 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * statement is mutually exclusive.
      */
     protected fun handleIfElse(node: IfElse) {
-        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
-            node,
-            node.condition,
-            node.conditionDeclaration,
-        )
 
         if (node.usedAsExpression) {
             node.thenStatement?.let { node.prevDFGEdges += it }
@@ -378,11 +369,6 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * statement is mutually exclusive.
      */
     protected fun handleSwitch(node: Switch) {
-        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
-            node,
-            node.selector,
-            node.selectorDeclaration,
-        )
         if (node.usedAsExpression) {
             node.statement?.let {
                 node.prevDFGEdges += it
@@ -398,11 +384,6 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * statement is mutually exclusive.
      */
     protected fun handleWhile(node: While) {
-        Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
-            node,
-            node.condition,
-            node.conditionDeclaration,
-        )
 
         if (node.usedAsExpression) {
             node.statement?.let { node.prevDFGEdges += it }
@@ -418,6 +399,9 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     protected fun handleUnaryOperator(node: UnaryOperator) {
         if ((node.input as? Reference)?.access == AccessValues.WRITE) {
+            // The unary operator should no longer be a type observer of the input. This is the
+            // default case but could cause loops
+            (node.input as? Reference)?.let { it.unregisterTypeObserver(node) }
             node.input.let { node.nextDFGEdges += it }
         } else {
             node.input.let {
