@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Invoke
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
+import de.fraunhofer.aisec.cpg.graph.expressions.ParameterMemoryValue
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import kotlin.collections.mapNotNull
@@ -595,7 +596,14 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                             currentNode is HasMemoryValue &&
                             currentNode.memoryValues.any { it != currentNode }
                     ) {
-                        currentNode.memoryValueEdges.map { mV -> Pair(mV, ctx) }
+                        currentNode.memoryValueEdges.mapNotNull { mV ->
+                            if (
+                                "deref" + (currentNode as? ParameterMemoryValue)?.name?.localName ==
+                                    (mV.start as? ParameterMemoryValue)?.name?.localName
+                            )
+                                null
+                            else Pair(mV, ctx)
+                        }
                     } else
                         filterEdges(
                             currentNode = currentNode,
