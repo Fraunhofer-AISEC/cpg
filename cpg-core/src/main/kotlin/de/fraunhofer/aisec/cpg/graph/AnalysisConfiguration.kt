@@ -599,7 +599,9 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                         currentNode.memoryValueEdges.mapNotNull { mV ->
                             if (
                                 "deref" + (currentNode as? ParameterMemoryValue)?.name?.localName ==
-                                    (mV.start as? ParameterMemoryValue)?.name?.localName
+                                    (mV.start as? ParameterMemoryValue)?.name?.localName &&
+                                    (currentNode as? ParameterMemoryValue)?.name?.parent ==
+                                        (mV.start as? ParameterMemoryValue)?.name?.parent
                             )
                                 null
                             else Pair(mV, ctx)

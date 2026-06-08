@@ -874,11 +874,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // Create the detailed shortFS. Like, which parameter
         // influences what.
         // This may take a lot of time, so this is optional
+        // TODO: if detailedShortFS is false, create an overapproximated FS
         if ((passConfig<Configuration>()?.detailedShortFS ?: true)) {
             if (!shortFS) {
                 // Check if the value is influenced by a Parameter and if so, add this information
                 // to the functionSummary
-                // TODO: Use memory value edges instead of DFG because these are shortcuts.
                 val paths =
                     value.followDFGEdgesUntilHit(
                         collectFailedPaths = false,
