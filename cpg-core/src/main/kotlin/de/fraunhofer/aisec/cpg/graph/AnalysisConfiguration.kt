@@ -443,7 +443,8 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                 // back to the DFG
                 val edges =
                     if (
-                        currentNode is HasMemoryValue &&
+                        Implicit !in sensitivities &&
+                            currentNode is HasMemoryValue &&
                             currentNode.memoryValueUsages.any { it != currentNode }
                     )
                         currentNode.memoryValueUsageEdges.map { edge -> Pair(edge, ctx) }
@@ -590,7 +591,8 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                 // Otherwise, we take the DFG
                 val edges =
                     if (
-                        currentNode is HasMemoryValue &&
+                        Implicit !in sensitivities &&
+                            currentNode is HasMemoryValue &&
                             currentNode.memoryValues.any { it != currentNode }
                     ) {
                         currentNode.memoryValueEdges.map { mV -> Pair(mV, ctx) }

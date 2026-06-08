@@ -947,7 +947,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 } || it in node.parameters
                         },
                     )
-                paths.fulfilled
+                mvgpaths.fulfilled
                     .mapTo(IdentitySet()) { it.nodes.last() }
                     .forEach { sourceParamValue ->
                         val matchingDeclarations =
@@ -3209,7 +3209,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // If we force the DerefPMVCreation, we probably create the first PMV already, so let's
             // search it. For this, we check the memoryValues and the
             // state, and if all is null, we create a new PMV
-            //            var pmv: ParameterMemoryValue?
             val pmv =
                 if (forceDerefPMVCreation && pD == 0) {
                     param.memoryValues.singleOrNull { it.name.localName == pmvName }
@@ -3244,8 +3243,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             } else {
                 // Link the PMVs with each other so that we can find them. This is
                 // especially important outside the respective function where we
-                // don't have
-                // a state
+                // don't have a state
                 addresses.filterIsInstance<ParameterMemoryValue>().forEach {
                     doubleState =
                         lattice.push(
