@@ -23,7 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-plugins { id("cpg.frontend-conventions") }
+import de.undercouch.gradle.tasks.download.Download
+
+plugins {
+    id("cpg.frontend-conventions")
+    alias(libs.plugins.download)
+}
 
 mavenPublishing {
     pom {
@@ -36,59 +41,57 @@ sourceSets { main { kotlin { srcDir("src/main/rust") } } }
 
 dependencies { implementation(libs.jna) }
 
-// Register a task that runs “cargo build”
-val cargoBuild by
-    tasks.registering(Exec::class) {
-        group = "build"
-        description = "Build Rust release"
-        workingDir = file("src/main/rust")
-        commandLine("cargo", "build", "--release")
-    }
+tasks {
+    val downloadLibRustAST by
+        registering(Download::class) {
+            val version = "v0.0.9"
 
-val generateBindings by
-    tasks.registering(Exec::class) {
-        group = "build"
-        description = "Generate uniffi bindings"
-        workingDir = file("src/main/rust")
-        // Run the binding generation only after a successful build
-        dependsOn(cargoBuild)
-        commandLine(
-            "cargo",
-            "run",
-            "--bin",
-            "uniffi-bindgen",
-            "generate",
-            "--library",
-            "target/release/libcpgrust.so",
-            "--language",
-            "kotlin",
-            "--out-dir",
-            "./",
-        )
-    }
+            src(
+                listOf(
+                    "https://github.com/Fraunhofer-AISEC/libast/releases/download/${version}/librustast-arm64.dylib",
+                    "https://github.com/Fraunhofer-AISEC/libast/releases/download/${version}/librustast-amd64.dylib",
+                    "https://github.com/Fraunhofer-AISEC/libast/releases/download/${version}/librustast-arm64.so",
+                    "https://github.com/Fraunhofer-AISEC/libast/releases/download/${version}/librustast-amd64.so",
+                    "https://github.com/Fraunhofer-AISEC/libast/releases/download/${version}/librustast-amd64.dll",
+                )
+            )
+            dest(projectDir.resolve("build/downloads/rustast"))
+            onlyIfModified(true)
+        }
 
-tasks.named("build") { dependsOn(cargoBuild, generateBindings) }
+    val prepareRustAstResources by
+        registering(Copy::class) {
+            dependsOn(downloadLibRustAST)
 
-val nativeSrc =
-    layout.projectDirectory.dir(
-        "src/main/rust/target/release"
-    ) // adjust path to where cargo builds .so
-val nativeName = "libcpgrust.so"
+            into(projectDir.resolve("src/main/resources"))
 
-// val resourceSubdir = "linux-x86-64" // Todo Can I extend this to all possible targets?
+            from("build/downloads/rustast/librustast-amd64.so") {
+                into("linux-x86-64")
+                rename { "librustast.so" }
+            }
 
-tasks.register<Copy>("copyRustSharedLibToResources") {
-    from(nativeSrc.file(nativeName))
-    into(layout.buildDirectory.dir("resources/main"))
-    doFirst {
-        println("Copying native lib from ${nativeSrc.file(nativeName).asFile} to resources...")
-    }
+            from("build/downloads/rustast/librustast-arm64.so") {
+                into("linux-aarch64")
+                rename { "librustast.so" }
+            }
+
+            from("build/downloads/rustast/librustast-amd64.dylib") {
+                into("darwin-x86-64")
+                rename { "librustast.dylib" }
+            }
+
+            from("build/downloads/rustast/librustast-arm64.dylib") {
+                into("darwin-aarch64")
+                rename { "librustast.dylib" }
+            }
+
+            from("build/downloads/rustast/librustast-amd64.dll") {
+                into("win32-x86-64")
+                rename { "rustast.dll" }
+            }
+        }
+
+    processResources { dependsOn(prepareRustAstResources) }
+
+    sourcesJar { dependsOn(prepareRustAstResources) }
 }
-
-tasks.named("processResources") {
-    dependsOn(cargoBuild, generateBindings, "copyRustSharedLibToResources")
-}
-
-tasks.compileKotlin { dependsOn(tasks.processResources) }
-
-tasks.compileTestKotlin { dependsOn(tasks.processResources) }

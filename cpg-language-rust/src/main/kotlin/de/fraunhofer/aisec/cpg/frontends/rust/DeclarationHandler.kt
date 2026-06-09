@@ -29,23 +29,23 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
-import uniffi.cpgrust.RsAssocItem
-import uniffi.cpgrust.RsAst
-import uniffi.cpgrust.RsConst
-import uniffi.cpgrust.RsEnum
-import uniffi.cpgrust.RsFieldList
-import uniffi.cpgrust.RsFn
-import uniffi.cpgrust.RsImpl
-import uniffi.cpgrust.RsItem
-import uniffi.cpgrust.RsModule
-import uniffi.cpgrust.RsParam
-import uniffi.cpgrust.RsPat
-import uniffi.cpgrust.RsPath
-import uniffi.cpgrust.RsStruct
-import uniffi.cpgrust.RsTrait
-import uniffi.cpgrust.RsType
-import uniffi.cpgrust.RsUse
-import uniffi.cpgrust.RsUseTree
+import uniffi.rustast.RsAssocItem
+import uniffi.rustast.RsAst
+import uniffi.rustast.RsConst
+import uniffi.rustast.RsEnum
+import uniffi.rustast.RsFieldList
+import uniffi.rustast.RsFn
+import uniffi.rustast.RsImpl
+import uniffi.rustast.RsItem
+import uniffi.rustast.RsModule
+import uniffi.rustast.RsParam
+import uniffi.rustast.RsPat
+import uniffi.rustast.RsPath
+import uniffi.rustast.RsStruct
+import uniffi.rustast.RsTrait
+import uniffi.rustast.RsType
+import uniffi.rustast.RsUse
+import uniffi.rustast.RsUseTree
 
 class DeclarationHandler(frontend: RustLanguageFrontend) :
     RustHandler<Declaration, RsAst.RustItem>(::ProblemDeclaration, frontend) {

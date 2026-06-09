@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
-import uniffi.cpgrust.RsAst
+import uniffi.rustast.RsAst
 
 abstract class RustHandler<ResultNode : Node, HandlerNode : RsAst>(
     configConstructor: Supplier<ResultNode>,

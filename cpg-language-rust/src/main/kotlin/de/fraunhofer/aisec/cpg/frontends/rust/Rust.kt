@@ -25,13 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.rust
 
-import uniffi.cpgrust.RsAst
-import uniffi.cpgrust.RsExpr
-import uniffi.cpgrust.RsItem
-import uniffi.cpgrust.RsNode
-import uniffi.cpgrust.RsPat
-import uniffi.cpgrust.RsStmt
-import uniffi.cpgrust.RsType
+import uniffi.rustast.RsAst
+import uniffi.rustast.RsExpr
+import uniffi.rustast.RsItem
+import uniffi.rustast.RsNode
+import uniffi.rustast.RsPat
+import uniffi.rustast.RsStmt
+import uniffi.rustast.RsType
 
 /**
  * I dislike accessing a field by continuous extending of an access function, but Rust does not

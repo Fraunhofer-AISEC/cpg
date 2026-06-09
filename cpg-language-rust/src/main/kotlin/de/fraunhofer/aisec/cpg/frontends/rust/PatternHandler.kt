@@ -40,26 +40,26 @@ import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newRange
 import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.graph.newVariable
-import uniffi.cpgrust.RsAst
-import uniffi.cpgrust.RsBoxPat
-import uniffi.cpgrust.RsConstBlockPat
-import uniffi.cpgrust.RsExpr
-import uniffi.cpgrust.RsIdentPat
-import uniffi.cpgrust.RsLiteralPat
-import uniffi.cpgrust.RsMacroPat
-import uniffi.cpgrust.RsOrPat
-import uniffi.cpgrust.RsParenPat
-import uniffi.cpgrust.RsPat
-import uniffi.cpgrust.RsPathPat
-import uniffi.cpgrust.RsRangePat
-import uniffi.cpgrust.RsRecordPat
-import uniffi.cpgrust.RsRecordPatField
-import uniffi.cpgrust.RsRefPat
-import uniffi.cpgrust.RsRestPat
-import uniffi.cpgrust.RsSlicePat
-import uniffi.cpgrust.RsTuplePat
-import uniffi.cpgrust.RsTupleStructPat
-import uniffi.cpgrust.RsWildcardPat
+import uniffi.rustast.RsAst
+import uniffi.rustast.RsBoxPat
+import uniffi.rustast.RsConstBlockPat
+import uniffi.rustast.RsExpr
+import uniffi.rustast.RsIdentPat
+import uniffi.rustast.RsLiteralPat
+import uniffi.rustast.RsMacroPat
+import uniffi.rustast.RsOrPat
+import uniffi.rustast.RsParenPat
+import uniffi.rustast.RsPat
+import uniffi.rustast.RsPathPat
+import uniffi.rustast.RsRangePat
+import uniffi.rustast.RsRecordPat
+import uniffi.rustast.RsRecordPatField
+import uniffi.rustast.RsRefPat
+import uniffi.rustast.RsRestPat
+import uniffi.rustast.RsSlicePat
+import uniffi.rustast.RsTuplePat
+import uniffi.rustast.RsTupleStructPat
+import uniffi.rustast.RsWildcardPat
 
 class PatternHandler(frontend: RustLanguageFrontend) :
     RustHandler<Expression, RsAst.RustPat>(::ProblemExpression, frontend) {

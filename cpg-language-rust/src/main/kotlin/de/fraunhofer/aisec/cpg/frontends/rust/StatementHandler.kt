@@ -29,14 +29,14 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import kotlin.collections.plusAssign
-import uniffi.cpgrust.RsAst
-import uniffi.cpgrust.RsBlockExpr
-import uniffi.cpgrust.RsExpr
-import uniffi.cpgrust.RsExprStmt
-import uniffi.cpgrust.RsItem
-import uniffi.cpgrust.RsLetStmt
-import uniffi.cpgrust.RsPat
-import uniffi.cpgrust.RsStmt
+import uniffi.rustast.RsAst
+import uniffi.rustast.RsBlockExpr
+import uniffi.rustast.RsExpr
+import uniffi.rustast.RsExprStmt
+import uniffi.rustast.RsItem
+import uniffi.rustast.RsLetStmt
+import uniffi.rustast.RsPat
+import uniffi.rustast.RsStmt
 
 class StatementHandler(frontend: RustLanguageFrontend) :
     RustHandler<Expression, RsAst.RustStmt>(::ProblemExpression, frontend) {

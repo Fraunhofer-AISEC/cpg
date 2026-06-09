@@ -41,11 +41,11 @@ import java.io.File
 import java.net.URI
 import kotlin.collections.plusAssign
 import kotlin.math.min
-import uniffi.cpgrust.RsAst
-import uniffi.cpgrust.RsItem
-import uniffi.cpgrust.RsPath
-import uniffi.cpgrust.RsType
-import uniffi.cpgrust.parseRustCode
+import uniffi.rustast.RsAst
+import uniffi.rustast.RsItem
+import uniffi.rustast.RsPath
+import uniffi.rustast.RsType
+import uniffi.rustast.parseRustCode
 
 /** The [LanguageFrontend] for Rust. It uses the TreeSitter project to generate a RUST AST. */
 @SupportsParallelParsing(true)
@@ -75,7 +75,6 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         lastColumnLength = fileAsLines.lastOrNull()?.length ?: -1
 
         val rsRustFile = parseRustCode(file.absolutePath)
-        println(rsRustFile?.astNode?.text)
         val tud =
             newTranslationUnit(file.path, rawNode = null).apply {
                 this.location =
