@@ -63,7 +63,7 @@ val generateBindings by
             "--language",
             "kotlin",
             "--out-dir",
-            "out",
+            "./",
         )
     }
 
