@@ -580,7 +580,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // The generalState values have 3 items: The address, the value, and the
             // prevDFG-Edges with a set of properties
             // Let's start with fetching the addresses
-            if (key is HasMemoryAddress) {
+            // In case the key is a global variable, there's no need to add the address, we already
+            // have it
+            if (key is HasMemoryAddress && (key !is Variable || !key.isGlobal)) {
                 key.memoryAddresses += value.first.filterIsInstance<MemoryAddress>()
             }
 
