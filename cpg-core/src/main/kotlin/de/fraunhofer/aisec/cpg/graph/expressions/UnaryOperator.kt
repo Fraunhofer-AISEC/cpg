@@ -121,15 +121,13 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
 
         // Apply our operator to all assigned types and forward them to us
         this.addAssignedTypes(
-            assignedTypes
-                .map {
-                    when (operatorCode) {
-                        "*" -> it.dereference()
-                        "&" -> it.pointer()
-                        else -> it
-                    }
+            assignedTypes.mapTo(mutableSetOf()) {
+                when (operatorCode) {
+                    "*" -> it.dereference()
+                    "&" -> it.pointer()
+                    else -> it
                 }
-                .toSet()
+            }
         )
     }
 

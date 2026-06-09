@@ -49,11 +49,9 @@ class CommentMatcher {
     ): AstNode {
         // If there's an ArtifactLocation specified, it should at least be in the same file.
         val children =
-            node.astChildren
-                .filter {
-                    artifactLocation == null || artifactLocation == it.location?.artifactLocation
-                }
-                .toMutableSet()
+            node.astChildren.filterTo(mutableSetOf()) {
+                artifactLocation == null || artifactLocation == it.location?.artifactLocation
+            }
 
         // When a child has no location we can not properly decide if it encloses the comment, we
         // instead consider its children with locations.
@@ -93,11 +91,9 @@ class CommentMatcher {
         }
 
         val children =
-            smallestEnclosingNode.astChildren
-                .filter {
-                    artifactLocation == null || artifactLocation == it.location?.artifactLocation
-                }
-                .toMutableSet()
+            smallestEnclosingNode.astChildren.filterTo(mutableSetOf()) {
+                artifactLocation == null || artifactLocation == it.location?.artifactLocation
+            }
 
         // When a child has no location we can not properly consider it for comment matching,
         // however, instead we consider its contained children that have a location.
@@ -166,9 +162,10 @@ class CommentMatcher {
         while (locationLess.isNotEmpty()) {
             val containedChildren = locationLess.flatMap { it.astChildren }
             locationLess =
-                containedChildren
-                    .filter { node -> node.location == null || node.location?.region == Region() }
-                    .filter { it !in candidates }
+                containedChildren.filter { node ->
+                    (node.location == null || node.location?.region == Region()) &&
+                        node !in candidates
+                }
             candidates.addAll(containedChildren)
         }
     }

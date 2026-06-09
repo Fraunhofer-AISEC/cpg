@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.expressions.Loop
 import de.fraunhofer.aisec.cpg.graph.forEachMaybeParallel
+import de.fraunhofer.aisec.cpg.graph.isBranchOf
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toConcurrentIdentitySet
@@ -86,23 +87,107 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
     override val size: Int
         get() = backing.size
 
+    private val keySetView =
+        object : AbstractMutableSet<K>() {
+            override val size: Int
+                get() = backing.size
+
+            override fun add(element: K): Boolean {
+                throw UnsupportedOperationException("Cannot add a key without a value")
+            }
+
+            override fun clear() = backing.clear()
+
+            override fun contains(element: K): Boolean =
+                this@ConcurrentIdentityHashMap.containsKey(element)
+
+            override fun containsAll(elements: Collection<K>): Boolean =
+                elements.all { contains(it) }
+
+            override fun hashCode(): Int = backing.keys.sumOf { it.hashCode() }
+
+            override fun isEmpty(): Boolean = backing.isEmpty()
+
+            override fun iterator(): MutableIterator<K> {
+                val iterator = backing.keys.iterator()
+                return object : MutableIterator<K> {
+                    override fun hasNext(): Boolean = iterator.hasNext()
+
+                    override fun next(): K = iterator.next().ref
+
+                    override fun remove() = iterator.remove()
+                }
+            }
+
+            override fun remove(element: K): Boolean =
+                this@ConcurrentIdentityHashMap.remove(element) != null
+        }
+
     override val keys: Set<K>
-        get() = backing.keys.mapTo(IdentitySet(backing.size)) { it.ref }
+        get() = keySetView
 
     override val values: Collection<V>
         get() = backing.values
 
-    override val entries: Set<Map.Entry<K, V>>
-        get() =
-            backing.entries.mapTo(IdentitySet(backing.size)) { (idKey, v) ->
-                object : Map.Entry<K, V> {
-                    override val key: K
-                        get() = idKey.ref
+    private val entrySetView =
+        object : AbstractMutableSet<Map.Entry<K, V>>() {
+            override val size: Int
+                get() = backing.size
 
-                    override val value: V
-                        get() = v
+            override fun add(element: Map.Entry<K, V>): Boolean {
+                throw UnsupportedOperationException("Cannot add an entry through the entry view")
+            }
+
+            override fun clear() = backing.clear()
+
+            override fun contains(element: Map.Entry<K, V>): Boolean {
+                val key = PointsToPass.IdKey(element.key)
+                return backing.containsKey(key) && backing[key] == element.value
+            }
+
+            override fun hashCode(): Int =
+                backing.entries.sumOf { (idKey, value) ->
+                    System.identityHashCode(idKey.ref) xor (value?.hashCode() ?: 0)
+                }
+
+            override fun isEmpty(): Boolean = backing.isEmpty()
+
+            override fun iterator(): MutableIterator<Map.Entry<K, V>> {
+                val iterator = backing.entries.iterator()
+                return object : MutableIterator<Map.Entry<K, V>> {
+                    override fun hasNext(): Boolean = iterator.hasNext()
+
+                    override fun next(): Map.Entry<K, V> {
+                        val entry = iterator.next()
+                        return object : Map.Entry<K, V> {
+                            override val key: K
+                                get() = entry.key.ref
+
+                            override val value: V
+                                get() = entry.value
+
+                            override fun equals(other: Any?): Boolean =
+                                other is Map.Entry<*, *> &&
+                                    other.key === key &&
+                                    other.value == value
+
+                            override fun hashCode(): Int =
+                                System.identityHashCode(key) xor (value?.hashCode() ?: 0)
+
+                            override fun toString(): String = "$key=$value"
+                        }
+                    }
+
+                    override fun remove() = iterator.remove()
                 }
             }
+
+            override fun remove(element: Map.Entry<K, V>): Boolean =
+                backing.remove(PointsToPass.IdKey(element.key), element.value)
+        }
+
+    override val entries: Set<Map.Entry<K, V>>
+        get() = entrySetView
 
     override fun isEmpty(): Boolean {
         return backing.isEmpty()
@@ -134,6 +219,10 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
     /** Inserts all entries from the given [Sequence] of pairs. */
     fun putAll(pairs: Sequence<Pair<K, V>>) = putAll(pairs.asIterable())
 
+    internal fun copyFrom(other: ConcurrentIdentityHashMap<K, V>) {
+        backing.putAll(other.backing)
+    }
+
     fun clear() = backing.clear()
 
     override fun hashCode() = backing.hashCode()
@@ -156,9 +245,7 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
-        return other is LinkedHashSet<*> &&
-            this.size == other.size &&
-            this.all { t -> other.any { it == t } }
+        return super.equals(other)
     }
 
     override fun hashCode(): Int {
@@ -376,9 +463,9 @@ interface Lattice<T : Lattice.Element> {
         ) {
             if (mergePointNextEdge !in this) {
                 this[mergePointNextEdge] =
-                    mergePointNextEdge.start.prevEOGEdges
-                        .map { Pair(it.end, it.start) }
-                        .toMutableSet()
+                    mergePointNextEdge.start.prevEOGEdges.mapTo(mutableSetOf()) {
+                        Pair(it.end, it.start)
+                    }
             }
             this[mergePointNextEdge]?.removeIf {
                 it.first == incomingEdge.end && it.second == incomingEdge.start
@@ -483,7 +570,7 @@ interface Lattice<T : Lattice.Element> {
                     // here (if oldGlobalIt is not null).
                     val newGlobalIt =
                         if (
-                            nextEdge.end is Loop &&
+                            nextEdge.end.isBranchOf<Loop>() &&
                                 (strategy == Strategy.WIDENING ||
                                     strategy == Strategy.WIDENING_NARROWING) &&
                                 oldGlobalIt != null
@@ -541,7 +628,7 @@ interface Lattice<T : Lattice.Element> {
                             // In comparison to a loop entry, a merge point has multiple
                             // prevEOGEdges
                             // without SCC-Label and at least one nextEOGEdge without
-                            it.start.prevEOGEdges.filter { it.scc == null }.size > 1 &&
+                            it.start.prevEOGEdges.any { it.scc == null } &&
                                 it.start.nextEOGEdges.any { it.scc == null }
                         ) {
                             // This edge brings us to a merge point, so we add it to the list of
@@ -606,32 +693,109 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
     class Element<T>(expectedMaxSize: Int) :
         ConcurrentIdentitySet<T>(expectedMaxSize), Lattice.Element {
-        // We make the new element a big bigger than the current size to avoid resizing
+
+        // Secondary track indexes to accelerate 'contains', 'equals', and 'compare' to O(1)
+        private val nodeIndex = ConcurrentHashMap<PointsToPass.NodeWithPropertiesKey, T>()
+        private val pairIndex = ConcurrentHashMap<PairKey, Pair<*, *>>()
+
+        private class PairKey(val first: Any?, val second: Any?) {
+            override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (other !is PairKey) return false
+                return this.first === other.first && this.second == other.second
+            }
+
+            override fun hashCode(): Int {
+                return 31 * System.identityHashCode(first) + (second?.hashCode() ?: 0)
+            }
+        }
+
+        // We make the new element a bit bigger than the current size to avoid resizing
         constructor(set: Set<T>) : this(ceil(set.size * 1.5).toInt()) {
             addAllWithoutCheck(set as? ConcurrentIdentitySet<T> ?: set.toConcurrentIdentitySet())
+            buildIndexFromCurrentElements()
         }
 
         constructor() : this(16)
 
-        // We make the new element a big bigger than the current size to avoid resizing
+        // We make the new element a bit bigger than the current size to avoid resizing
         constructor(vararg entries: T) : this(ceil(entries.size * 1.5).toInt()) {
-            addAll(entries)
+            addAll(entries) // standard addAll loops and calls our overridden add()
+        }
+
+        /**
+         * Rebuilds the secondary indexes from scratch. Crucial when batch operations like
+         * [addAllWithoutCheck] bypass the standard [add] method.
+         */
+        fun buildIndexFromCurrentElements() {
+            nodeIndex.clear()
+            pairIndex.clear()
+            for (item in this) {
+                when (item) {
+                    is Pair<*, *> -> pairIndex[PairKey(item.first, item.second)] = item
+                    is PointsToPass.NodeWithPropertiesKey -> nodeIndex[item] = item
+                }
+            }
+        }
+
+        override fun add(element: T): Boolean {
+            when (element) {
+                is Pair<*, *> -> {
+                    val key = PairKey(element.first, element.second)
+                    if (pairIndex.containsKey(key)) return false
+                    val added = super.add(element)
+                    if (added) {
+                        pairIndex[key] = element
+                    }
+                    return added
+                }
+                is PointsToPass.NodeWithPropertiesKey -> {
+                    if (nodeIndex.containsKey(element)) return false
+                    val added = super.add(element)
+                    if (added) {
+                        nodeIndex[element] = element
+                    }
+                    return added
+                }
+                else -> {
+                    return super.add(element)
+                }
+            }
+        }
+
+        // Note: If your framework's base class uses 'Any?' for remove, change 'T' to 'Any?'
+        override fun remove(element: T): Boolean {
+            val removed = super.remove(element)
+            if (removed) {
+                when (element) {
+                    is Pair<*, *> -> pairIndex.remove(PairKey(element.first, element.second))
+                    is PointsToPass.NodeWithPropertiesKey -> nodeIndex.remove(element)
+                }
+            }
+            return removed
+        }
+
+        override fun clear() {
+            super.clear()
+            nodeIndex.clear()
+            pairIndex.clear()
+        }
+
+        /** High-performance O(1) containment check utilizing our secondary indexes. */
+        fun containsFast(element: Any?): Boolean {
+            return when (element) {
+                is Pair<*, *> -> pairIndex.containsKey(PairKey(element.first, element.second))
+                is PointsToPass.NodeWithPropertiesKey -> nodeIndex.containsKey(element)
+                else -> (element as? T)?.let { super.contains(it) } ?: false
+            }
         }
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is Element<*> || this.size != other.size) return false
 
-            this@Element.forEach { t ->
-                val isEqual =
-                    if (t is Pair<*, *>)
-                        other.any {
-                            it is Pair<*, *> && it.first === t.first && it.second == t.second
-                        }
-                    else if (t is PointsToPass.NodeWithPropertiesKey) other.any { it == t }
-                    else t in other
-
-                if (!isEqual) {
+            for (item in this) {
+                if (!other.containsFast(item)) {
                     return false
                 }
             }
@@ -647,20 +811,8 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                 try {
                     this@Element.forEachMaybeParallel { t ->
                         ensureActive()
-                        val isEqual =
-                            if (t is Pair<*, *>)
-                                other.any {
-                                    it is Pair<*, *> &&
-                                        it.first === t.first &&
-                                        it.second == t.second
-                                }
-                            else if (t is PointsToPass.NodeWithPropertiesKey)
-                                other.any { it is PointsToPass.NodeWithPropertiesKey && it == t }
-                            else t in other
-
-                        if (!isEqual) {
+                        if (!other.containsFast(t)) {
                             ret = false
-                            // cancel all coroutines
                             cancel()
                         }
                     }
@@ -674,44 +826,35 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         override fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
-            if (other !is Element<T>)
+            if (other !is Element<*>)
                 throw IllegalArgumentException(
                     "$other should be of type PowersetLattice.Element<T> but is of type ${other.javaClass}"
                 )
-            val otherOnly = Element(other)
-            val thisOnly =
-                this.filterTo(IdentitySet<T>()) { t ->
-                    !when (t) {
-                        is Pair<*, *> -> {
-                            otherOnly.removeIf { o ->
-                                o is Pair<*, *> && o.first === t.first && o.second == t.second
-                            }
-                        }
 
-                        is PointsToPass.NodeWithPropertiesKey -> {
-                            otherOnly.removeIf { o ->
-                                o is PointsToPass.NodeWithPropertiesKey && o == t
-                            }
-                        }
+            var hasThisOnly = false
+            var hasOtherOnly = false
 
-                        else -> otherOnly.remove(t)
-                    }
+            // 1. Check if 'this' contains elements missing in 'other'
+            for (item in this) {
+                if (!other.containsFast(item)) {
+                    hasThisOnly = true
+                    break // Short-circuit instantly
                 }
+            }
+
+            // 2. Check if 'other' contains elements missing in 'this'
+            for (item in other) {
+                if (!this.containsFast(item)) {
+                    hasOtherOnly = true
+                    break // Short-circuit instantly
+                }
+            }
+
             return when {
-                otherOnly.isEmpty() && thisOnly.isEmpty() -> {
-                    Order.EQUAL
-                }
-                thisOnly.isNotEmpty() && otherOnly.isNotEmpty() -> {
-                    Order.UNEQUAL
-                }
-                thisOnly.isNotEmpty() -> {
-                    // This set is greater than the other set
-                    Order.GREATER
-                }
-                else -> {
-                    // The other set is greater than this set
-                    Order.LESSER
-                }
+                !hasThisOnly && !hasOtherOnly -> Order.EQUAL
+                hasThisOnly && hasOtherOnly -> Order.UNEQUAL
+                hasThisOnly -> Order.GREATER
+                else -> Order.LESSER
             }
         }
 
@@ -721,24 +864,6 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         override fun hashCode(): Int {
             return super.hashCode()
-        }
-
-        override fun add(element: T): Boolean {
-            if (
-                element is Pair<*, *> &&
-                    this.any {
-                        it is Pair<*, *> &&
-                            it.first === element.first &&
-                            it.second == element.second
-                    }
-            ) {
-                return false
-            } else if (
-                element is PointsToPass.NodeWithPropertiesKey &&
-                    this.any { it is PointsToPass.NodeWithPropertiesKey && it == element }
-            )
-                return false
-            return super.add(element)
         }
     }
 
@@ -759,6 +884,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
         val result = Element<T>(one.size + two.size)
         result.addAllWithoutCheck(one)
+        result.buildIndexFromCurrentElements() // Force index generation after raw batch load!
         result += two
         return result
     }
@@ -810,7 +936,7 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
 
             if (other !is Element<K, V>)
                 throw IllegalArgumentException(
-                    "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
+                    "$other should be of type ConcurrentMapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
 
             val otherKeySetIsBigger = other.keys.any { it !in this.keys }
@@ -872,7 +998,7 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
 
             if (other !is Element<K, V>)
                 throw IllegalArgumentException(
-                    "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
+                    "$other should be of type ConcurrentMapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
 
             if (this.size < MIN_CHUNK_SIZE) {
@@ -974,6 +1100,8 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
         var result: Element<K, V>
         coroutineScope {
             if (allowModify) {
+                // TODO: Would it be more efficient here to clone two.entries and iterate over the
+                // clone? This would avoid concurrent-access checks
                 two.entries.forEachMaybeParallel(parallelism = concurrencyCounter) { (k, v) ->
                     val entry = one[k]
                     if (entry == null) {
@@ -981,10 +1109,8 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                         // to "one"
                         one.put(k, v)
                     } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
-                        // This key already exists in "one" and the values in one
-                        // and
-                        // two are different,
-                        // so we have to compute the lub of the values
+                        // This key already exists in "one" and the values in one and
+                        // two are different, so we have to compute the lub of the values
                         one[k]?.let { oneValue ->
                             innerLattice.lub(
                                 oneValue,
@@ -992,8 +1118,7 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                                 allowModify = true,
                                 widen = widen,
                                 // We already run on $CPU_CORES coroutines, so we
-                                // don't
-                                // need any additional ones
+                                // don't need any additional ones
                                 1,
                             )
                         }
@@ -1058,15 +1183,21 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
 }
 
 /**
- * Implements the [Lattice] for a lattice over a map of nodes to another lattice represented by
- * [innerLattice].
+ * Like [MapLattice], but [Element] is backed by [HashMap] rather than [IdentityHashMap] so keys are
+ * compared by `equals` instead of reference identity.
+ *
+ * Use this when keys are value types (autoboxed `Int`, `String`, …) or any other class where two
+ * instances that compare equal should map to the same entry. The default [MapLattice] is correct
+ * when keys are CPG `Node`s (or other reference-typed entities) where identity *is* the intended
+ * equality; using it with value-typed keys silently produces duplicate entries after [lub] across
+ * branches.
  */
-open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
-    Lattice<MapLattice.Element<K, V>> {
+open class HashMapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
+    Lattice<HashMapLattice.Element<K, V>> {
     override lateinit var elements: ConcurrentIdentitySet<Element<K, V>>
 
     open class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
-        IdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
+        HashMap<K, V>(expectedMaxSize), Lattice.Element {
 
         constructor() : this(32)
 
@@ -1082,159 +1213,70 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             putAll(entries)
         }
 
+        // Element equality is defined via the lattice order (two elements are equal iff their
+        // compare result is EQUAL), not via Map.equals which compares entry-by-entry against
+        // the wrong notion of value equality.
         override fun equals(other: Any?): Boolean {
-            return other is Element<K, V> && this@Element.compare(other) == Order.EQUAL
+            return other is Element<*, *> && this@Element.compare(other) == Order.EQUAL
         }
 
+        /**
+         * Pointwise lattice order: maps are compared key-by-key against the [innerLattice]'s order.
+         * The result is GREATER if every key in `this` has a value `>=` the corresponding value in
+         * `other` (and `this` has at least one extra key or a strictly greater value), LESSER if
+         * the inverse holds, EQUAL if both maps have the same keys with EQUAL values, and UNEQUAL
+         * when some keys go one way and some the other (incomparable).
+         */
         override fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
-            if (other !is Element<K, V>)
+            if (other !is Element<*, *>)
                 throw IllegalArgumentException(
-                    "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
+                    "$other should be of type HashMapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
 
-            val otherKeySetIsBigger = other.keys.any { it !in this.keys }
+            @Suppress("UNCHECKED_CAST") val otherTyped = other as Element<K, V>
+            // `other` having a key we don't already counts as `this < other` up front.
+            val otherKeySetIsBigger = otherTyped.keys.any { it !in this.keys }
 
-            // We can check if the entries are equal, greater or lesser
             var someGreater = false
             var someLesser = otherKeySetIsBigger
             this.entries.forEach { (k, v) ->
-                val otherV = other[k]
+                val otherV = otherTyped[k]
                 if (otherV != null) {
                     when (v.compare(otherV)) {
-                        Order.EQUAL -> {
-                            /* Nothing to do*/
-                        }
+                        Order.EQUAL -> {}
                         Order.GREATER -> {
-                            if (someLesser) {
-                                return Order.UNEQUAL
-                            }
+                            // If we already saw a key going the other way, the maps are
+                            // pointwise-incomparable.
+                            if (someLesser) return Order.UNEQUAL
                             someGreater = true
                         }
                         Order.LESSER -> {
-                            if (someGreater) {
-                                return Order.UNEQUAL
-                            }
+                            if (someGreater) return Order.UNEQUAL
                             someLesser = true
                         }
-                        Order.UNEQUAL -> {
-                            return Order.UNEQUAL
-                        }
+                        Order.UNEQUAL -> return Order.UNEQUAL
                     }
                 } else {
-                    if (someLesser) {
-                        return Order.UNEQUAL
-                    }
-                    someGreater = true // key is missing in other, so this is greater
+                    // Key present in `this`, missing in `other` -> contributes "this is greater".
+                    if (someLesser) return Order.UNEQUAL
+                    someGreater = true
                 }
             }
             @Suppress("KotlinConstantConditions")
-            return if (!someGreater && !someLesser) {
-                // All entries are the same, so the maps are equal
-                Order.EQUAL
-            } else if (someLesser && !someGreater) {
-                // Some entries are equal, some are lesser and none are greater, so this map is
-                // lesser.
-                Order.LESSER
-            } else if (!someLesser && someGreater) {
-                // Some entries are equal, some are greater but none are lesser, so this map is
-                // greater.
-                Order.GREATER
-            } else {
-                // Some entries are greater and some are lesser, so the maps are unequal
-                Order.UNEQUAL
-            }
-        }
-
-        @OptIn(ExperimentalAtomicApi::class)
-        suspend fun parallelCompare(other: Lattice.Element): Order {
-            if (this === other) return Order.EQUAL
-
-            if (other !is Element<K, V>)
-                throw IllegalArgumentException(
-                    "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
-                )
-
-            if (this.size < MIN_CHUNK_SIZE) {
-                return compare(other)
-            }
-
-            val otherKeySetIsBigger = other.keys.any { it !in this.keys }
-
-            // We can check if the entries are equal, greater or lesser
-            val someGreater = AtomicBoolean(false)
-            val someLesser = AtomicBoolean(otherKeySetIsBigger)
-
-            val ret = AtomicReference<Order?>(null)
-
-            coroutineScope {
-                this@Element.entries.forEachMaybeParallel { (k, v) ->
-                    // We can't return in the coroutines, so we only set the return value
-                    // there. If we have a return value, we can stop here
-                    if (ret.load() != null) return@forEachMaybeParallel
-                    val otherV = other[k]
-                    if (otherV != null) {
-                        // Do not use parallelCompare since that would be too many
-                        // coroutines
-                        when (v.compare(otherV)) {
-                            Order.EQUAL -> {
-                                /* Nothing to do*/
-                            }
-
-                            Order.GREATER -> {
-                                if (someLesser.load()) {
-                                    ret.store(Order.UNEQUAL)
-                                    cancel()
-                                }
-                                someGreater.store(true)
-                            }
-
-                            Order.LESSER -> {
-                                if (someGreater.load()) {
-                                    ret.store(Order.UNEQUAL)
-                                    cancel()
-                                }
-                                someLesser.store(true)
-                            }
-
-                            Order.UNEQUAL -> {
-                                ret.store(Order.UNEQUAL)
-                                someLesser.store(true)
-                                someGreater.store(true)
-                                cancel()
-                            }
-                        }
-                    } else {
-                        // key is missing in other, so this is greater
-                        someGreater.store(true)
-                        if (someLesser.load()) {
-                            ret.store(Order.UNEQUAL)
-                            cancel()
-                        }
-                    }
-                }
-            }
-
-            return if (!someGreater.load() && !someLesser.load()) {
-                // All entries are the same, so the maps are equal
-                Order.EQUAL
-            } else if (someLesser.load() && !someGreater.load()) {
-                // Some entries are equal, some are lesser and none are greater, so this map is
-                // lesser.
-                Order.LESSER
-            } else if (!someLesser.load() && someGreater.load()) {
-                // Some entries are equal, some are greater but none are lesser, so this map is
-                // greater.
-                Order.GREATER
-            } else {
-                // Some entries are greater and some are lesser, so the maps are unequal
-                Order.UNEQUAL
+            return when {
+                !someGreater && !someLesser -> Order.EQUAL
+                someLesser && !someGreater -> Order.LESSER
+                !someLesser && someGreater -> Order.GREATER
+                else -> Order.UNEQUAL
             }
         }
 
         @Suppress("UNCHECKED_CAST")
         override fun duplicate(): Element<K, V> {
+            // Deep-copy: clone every value via the inner lattice's duplicate so callers can
+            // mutate the result without aliasing the original's value lattices.
             return Element(this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) })
         }
 
@@ -1244,7 +1286,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     }
 
     override val bottom: Element<K, V>
-        get() = MapLattice.Element()
+        get() = Element()
 
     override suspend fun lub(
         one: Element<K, V>,
@@ -1253,54 +1295,38 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         widen: Boolean,
         concurrencyCounter: Int,
     ): Element<K, V> = coroutineScope {
-        var result: Element<K, V>
+        val result: Element<K, V>
         if (allowModify) {
+            // In-place merge: walk `two`'s entries, add or lub them into `one`. Used on the
+            // worklist's hot path where callers already own `one` and don't need a new map.
             two.entries.forEachMaybeParallel { (k, v) ->
                 val entry = one[k]
                 if (entry == null) {
-                    // This key is not in "one", so we add the value from "two"
-                    // to "one"
+                    // Key only in `two` -> copy it across.
                     one.put(k, v)
                 } else if (two[k] != null && entry.compare(two[k]!!) != Order.EQUAL) {
-                    // This key already exists in "one" and the values in one and
-                    // two are different,
-                    // so we have to compute the lub of the values
+                    // Key in both with different values -> lub them in-place.
                     one[k]?.let { oneValue ->
-                        innerLattice.lub(
-                            oneValue,
-                            v,
-                            allowModify = true,
-                            widen = widen,
-                            // We already run on $CPU_CORES coroutines, so we don't
-                            // need any additional ones
-                            1,
-                        )
+                        // The outer forEachMaybeParallel already spawns CPU_CORES coroutines;
+                        // tell the inner lub not to spawn more.
+                        innerLattice.lub(oneValue, v, allowModify = true, widen = widen, 1)
                     }
                 }
             }
             result = one
         } else {
-            val allKeys =
-                IdentitySet<K>(one.keys.size + two.keys.size).apply {
-                    addAll(one.keys)
-                    addAll(two.keys)
-                }
-            val newMap = ConcurrentIdentityHashMap<K, V>(allKeys.size)
+            // Pure variant: build a fresh map so neither input is mutated. Used when the caller
+            // needs both `one` and `two` to survive (e.g. forking branches).
+            val allKeys = HashSet<K>(one.keys.size + two.keys.size)
+            allKeys.addAll(one.keys)
+            allKeys.addAll(two.keys)
+            val newMap = ConcurrentHashMap<K, V>(allKeys.size)
             allKeys.forEachMaybeParallel { key ->
-                val otherValue = two[key]
                 val thisValue = one[key]
+                val otherValue = two[key]
                 val newValue =
                     if (thisValue != null && otherValue != null) {
-                        innerLattice.lub(
-                            one = thisValue,
-                            two = otherValue,
-                            allowModify = false,
-                            widen = widen,
-                            // We already run on $CPU_CORES coroutines, so we
-                            // don't
-                            // need any additional ones
-                            1,
-                        )
+                        innerLattice.lub(thisValue, otherValue, allowModify = false, widen, 1)
                     } else thisValue ?: otherValue
                 newValue?.let { newMap.put(key, it) }
             }
@@ -1310,13 +1336,14 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     }
 
     override suspend fun glb(one: Element<K, V>, two: Element<K, V>): Element<K, V> {
-        val allKeys = one.keys.intersect(two.keys).toIdentitySet()
-
-        val newMap = ConcurrentIdentityHashMap<K, V>()
-
+        // Pointwise glb: only keys present in BOTH maps survive; their values are glb'd. Keys
+        // missing from either side drop out (treated as `bottom` for the absent side, and
+        // `glb(x, bottom) = bottom` which we don't bother storing explicitly).
+        val allKeys = one.keys.intersect(two.keys)
+        val newMap = ConcurrentHashMap<K, V>()
         allKeys.forEachMaybeParallel { key ->
-            val otherValue = two[key]
             val thisValue = one[key]
+            val otherValue = two[key]
             val newValue =
                 if (thisValue != null && otherValue != null) {
                     innerLattice.glb(thisValue, otherValue)

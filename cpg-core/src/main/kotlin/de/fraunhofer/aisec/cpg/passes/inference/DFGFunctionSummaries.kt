@@ -152,7 +152,6 @@ class DFGFunctionSummaries {
         if (functionToDFGEntryMap.isEmpty()) return null
 
         val language = functionDecl.language
-        val languageName = language.javaClass.name
         val methodName = functionDecl.name
 
         // The language and the method name have to match. If a signature is specified, it also has
@@ -160,7 +159,7 @@ class DFGFunctionSummaries {
         val matchingEntries =
             functionToDFGEntryMap.keys.filter {
                 // The language has to match otherwise the remaining comparison is useless
-                if (languageName.endsWith(it.language)) {
+                if (language.matchesOrDerivesFrom(it.language)) {
                     // Split the name if we have a FQN
                     val entryMethodName = language.parseName(it.methodName)
                     val entryRecord =
@@ -281,10 +280,12 @@ class DFGFunctionSummaries {
         for (entry in dfgEntries) {
             var srcValueDepth = 1
             var destValueDepth = 1
-            val granularity =
+            var granularity =
                 if (entry.dfgType == "partial") PartialDataflowGranularity("hardcoded")
                 else default()
             val destNodes: MutableSet<Node> = mutableSetOf()
+            val properties = equalLinkedHashSetOf<Any>()
+            var subAccessName = ""
             val from: Any? =
                 if (entry.from == "function") {
                     functionDeclaration
@@ -323,36 +324,22 @@ class DFGFunctionSummaries {
                     } catch (_: NumberFormatException) {
                         null
                     }
-                } else if (entry.to == "base") {
-                    val receiver = (functionDeclaration as? Method)?.receiver
-                    if (from != null) {
-                        if (receiver != null) {
-                            destNodes.add(receiver)
-                            // TODO Make sure that this makes sense
-                            /*functionDeclaration.functionSummary
-                            .computeIfAbsent(receiver) { identitySetOf() }
-                            .add(
-                                Function.FSEntry(
-                                    destValueDepth,
-                                    from,
-                                    srcValueDepth,
-                                    "",
-                                    equalLinkedHashSetOf(
-                                        Pair(functionDeclaration, equalLinkedHashSetOf())
-                                    ),
-                                    equalLinkedHashSetOf(false),
-                                )
-                            )*/
-                        }
-                    }
-                    receiver
+                } else if (entry.to == "base" && functionDeclaration is Method) {
+                    // We'll later in handlePrevDFG fetch the base of the MemberCall, for now we add
+                    // the record
+                    functionDeclaration.recordDeclaration?.let { destNodes.add(it) }
+                    val newGranularity =
+                        PartialDataflowGranularity(functionDeclaration.name.localName)
+                    // Add a property that this is only a partial write (since it is to the base)
+                    properties.add(newGranularity)
+                    granularity = newGranularity
+                    functionDeclaration.receiver
                 } else if (entry.to == "return") {
                     if (functionDeclaration.returns.isNotEmpty())
                         destNodes.addAll(functionDeclaration.returns)
                     else destNodes.add(functionDeclaration)
                     functionDeclaration
                 } else if (entry.to.startsWith("return")) {
-                    val returnIndex = entry.to.removePrefix("return").toInt()
                     // TODO: It would be nice if we could model the index. Not sure how this is done
                     destNodes.addAll(functionDeclaration.returns)
                     functionDeclaration
@@ -369,12 +356,9 @@ class DFGFunctionSummaries {
                                 destValueDepth,
                                 from,
                                 srcValueDepth,
-                                "",
+                                subAccessName,
                                 PowersetLattice.Element(
-                                    PointsToPass.NodeWithPropertiesKey(
-                                        destNode,
-                                        equalLinkedHashSetOf(),
-                                    )
+                                    PointsToPass.NodeWithPropertiesKey(destNode, properties)
                                 ),
                                 equalLinkedHashSetOf(granularity, false),
                             )
@@ -385,8 +369,7 @@ class DFGFunctionSummaries {
             // TODO: It would make sense to model properties here. Could be the index of a return
             // value, full vs. partial flow or whatever comes to our minds in the future
             // We can't currently draw the edges between ParameterMemoryValues here because we don't
-            // yet have them, so we do
-            // this in handleCallExpression in the pointsToPass
+            // yet have them, so we do this in handleCallExpression in the pointsToPass
             // Note: When we have a Name for a memoryAddress that does not yet exist, we need to
             // draw the DFG edge later in writeEntry()
             if (destValueDepth == 1 && srcValueDepth == 1)
@@ -447,4 +430,28 @@ class DFGFunctionSummaries {
 
         val log: Logger = LoggerFactory.getLogger(DFGFunctionSummaries::class.java)
     }
+}
+
+/**
+ * Returns `true` if this language class or one of its superclasses matches [targetLanguageName].
+ *
+ * This allows function summaries configured for a base language (e.g., `CLanguage`) to also match
+ * derived languages (e.g., `CPPLanguage`).
+ *
+ * For backwards compatibility, both fully qualified class names and simple class names are
+ * supported, since existing summary YAMLs may use entries such as `CPPLanguage`.
+ */
+private fun Language<*>.matchesOrDerivesFrom(targetLanguageName: String): Boolean {
+    var currentClass: Class<*>? = this.javaClass
+
+    while (currentClass != null) {
+        if (
+            currentClass.name == targetLanguageName || currentClass.simpleName == targetLanguageName
+        ) {
+            return true
+        }
+        currentClass = currentClass.superclass
+    }
+
+    return false
 }

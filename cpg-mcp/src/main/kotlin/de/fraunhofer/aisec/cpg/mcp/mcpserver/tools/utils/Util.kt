@@ -219,24 +219,22 @@ fun Call.toInfo() = CallInfo(this)
 
 /** Returns all available concrete (non-abstract) concept classes. */
 fun getAvailableConcepts(): List<Class<out Concept>> {
-    return listOverlayClasses<Concept>()
-        .filter { !it.kotlin.isAbstract }
-        .filter {
+    return listOverlayClasses<Concept>().filter {
+        !it.kotlin.isAbstract &&
             // TODO: The concept/operation build helper are explicitly checking against underlying
             //  node, which some of our concepts don't have.
             !it.packageName.endsWith(".policy")
-        }
+    }
 }
 
 /** Returns all available concrete (non-abstract) operation classes. */
 fun getAvailableOperations(): List<Class<out Operation>> {
-    return listOverlayClasses<Operation>()
-        .filter { !it.kotlin.isAbstract }
-        .filter {
+    return listOverlayClasses<Operation>().filter {
+        !it.kotlin.isAbstract &&
             // TODO: The concept/operation build helper are explicitly checking against underlying
             //  node, which some of our concepts don't have.
             !it.packageName.endsWith(".policy")
-        }
+    }
 }
 
 @PublishedApi internal val lenientJson = Json { ignoreUnknownKeys = true }

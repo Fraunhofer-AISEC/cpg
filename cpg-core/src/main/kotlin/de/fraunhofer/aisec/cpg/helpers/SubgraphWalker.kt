@@ -74,7 +74,7 @@ object SubgraphWalker {
             }
             val fields = ArrayList<Field>()
             fields.addAll(getAllEdgeFields(classType.superclass))
-            fields.addAll(listOf(*classType.declaredFields).filter { it.name.contains("Edge") })
+            fields.addAll(classType.declaredFields.filter { it.name.contains("Edge") })
 
             // update the cache
             fieldCache[cacheKey] = fields
@@ -192,13 +192,13 @@ object SubgraphWalker {
             flattedASTTree.filter { node -> node.prevEOG.isNotEmpty() || node.nextEOG.isNotEmpty() }
         // Nodes that are incoming edges, no other node
         border.entries =
-            eogNodes
-                .filter { node: Node -> node.prevEOG.any { prev -> prev !in eogNodes } }
-                .toMutableList()
+            eogNodes.filterTo(mutableListOf()) { node: Node ->
+                node.prevEOG.any { prev -> prev !in eogNodes }
+            }
         border.exits =
-            eogNodes
-                .filter { node: Node -> node.nextEOG.any { next -> next !in eogNodes } }
-                .toMutableList()
+            eogNodes.filterTo(mutableListOf()) { node: Node ->
+                node.nextEOG.any { next -> next !in eogNodes }
+            }
         return border
     }
 
@@ -263,7 +263,7 @@ object SubgraphWalker {
                     }
 
                     val unseenChildren =
-                        strategy(current).asSequence().filter { it !in seen }.toMutableList()
+                        strategy(current).asSequence().filterTo(mutableListOf()) { it !in seen }
 
                     seen.addAll(unseenChildren)
                     unseenChildren.asReversed().forEach { child -> todo.push(Pair(child, current)) }

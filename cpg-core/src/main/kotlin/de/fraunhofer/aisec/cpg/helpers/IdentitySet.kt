@@ -193,6 +193,12 @@ open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
      * should only be used if this set is empty!
      */
     fun addAllWithoutCheck(elements: ConcurrentIdentitySet<T>) {
+        if (map.isEmpty()) {
+            map.copyFrom(elements.map)
+            counter.set(elements.counter.get())
+            return
+        }
+
         // We rely on the input set and add everything without checking if an element is already
         // present.
         for (element in elements) {

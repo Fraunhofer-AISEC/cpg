@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.CatchClause
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
+import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.helpers.orderEOGStartersBasedOnDependencies
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
@@ -123,9 +124,9 @@ object LeastImportComponentSorter : Sorter<Component>() {
  */
 object LeastImportTranslationUnitSorter : Sorter<TranslationUnit>() {
     override fun invoke(result: TranslationResult): List<TranslationUnit> =
-        LeastImportComponentSorter.invoke(result)
-            .flatMap { (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(it).asSequence() }
-            .toList()
+        LeastImportComponentSorter.invoke(result).flatMap {
+            (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(it).asSequence()
+        }
 }
 
 /**
@@ -135,9 +136,7 @@ object LeastImportTranslationUnitSorter : Sorter<TranslationUnit>() {
  */
 object EOGStarterLeastTUImportSorter : Sorter<Node>() {
     override fun invoke(result: TranslationResult): List<Node> =
-        LeastImportTranslationUnitSorter.invoke(result)
-            .flatMap { it.allUniqueEOGStartersOrSingles }
-            .toList()
+        LeastImportTranslationUnitSorter.invoke(result).flatMap { it.allUniqueEOGStartersOrSingles }
 }
 
 /**
@@ -149,15 +148,13 @@ object EOGStarterLeastTUImportSorter : Sorter<Node>() {
  */
 object EOGStarterLeastTUImportCatchLastSorter : Sorter<Node>() {
     override fun invoke(result: TranslationResult): List<Node> =
-        LeastImportTranslationUnitSorter.invoke(result)
-            .flatMap {
-                val allUniqueStarters = it.allUniqueEOGStartersOrSingles
-                val result = mutableListOf<Node>()
-                result.addAll(allUniqueStarters.filter { it !is CatchClause })
-                result.addAll(allUniqueStarters.filterIsInstance<CatchClause>())
-                result
-            }
-            .toList()
+        LeastImportTranslationUnitSorter.invoke(result).flatMap {
+            val allUniqueStarters = it.allUniqueEOGStartersOrSingles
+            val result = mutableListOf<Node>()
+            result.addAll(allUniqueStarters.filter { it !is CatchClause })
+            result.addAll(allUniqueStarters.filterIsInstance<CatchClause>())
+            result
+        }
 }
 
 /**
@@ -508,26 +505,32 @@ val KClass<out Pass<*>>.isLatePass: Boolean
 
 val KClass<out Pass<*>>.softDependencies: Set<KClass<out Pass<*>>>
     get() {
-        return this.findAnnotations<DependsOn>()
-            .filter { it.softDependency }
-            .map { it.value }
-            .toSet()
+        return this.findAnnotations<DependsOn>().mapFilteredTo(
+            mutableSetOf(),
+            { it.softDependency },
+        ) {
+            it.value
+        }
     }
 
 val KClass<out Pass<*>>.hardDependencies: Set<KClass<out Pass<*>>>
     get() {
-        return this.findAnnotations<DependsOn>()
-            .filter { !it.softDependency }
-            .map { it.value }
-            .toSet()
+        return this.findAnnotations<DependsOn>().mapFilteredTo(
+            mutableSetOf(),
+            { !it.softDependency },
+        ) {
+            it.value
+        }
     }
 
 val KClass<out Pass<*>>.softExecuteBefore: Set<KClass<out Pass<*>>>
     get() {
-        return this.findAnnotations<ExecuteBefore>()
-            .filter { it.softDependency }
-            .map { it.other }
-            .toSet()
+        return this.findAnnotations<ExecuteBefore>().mapFilteredTo(
+            mutableSetOf(),
+            { it.softDependency },
+        ) {
+            it.other
+        }
     }
 
 val KClass<out Pass<*>>.briefDescription: String
@@ -537,10 +540,12 @@ val KClass<out Pass<*>>.briefDescription: String
 
 val KClass<out Pass<*>>.hardExecuteBefore: Set<KClass<out Pass<*>>>
     get() {
-        return this.findAnnotations<ExecuteBefore>()
-            .filter { !it.softDependency }
-            .map { it.other }
-            .toSet()
+        return this.findAnnotations<ExecuteBefore>().mapFilteredTo(
+            mutableSetOf(),
+            { !it.softDependency },
+        ) {
+            it.other
+        }
     }
 
 /**

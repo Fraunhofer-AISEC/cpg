@@ -48,8 +48,9 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.LatticeElement
 import de.fraunhofer.aisec.cpg.helpers.Util.infoWithFileLocation
+import de.fraunhofer.aisec.cpg.helpers.flatMapNotNull
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
-import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
@@ -69,17 +70,19 @@ typealias PowersetLatticeTypeLattice = PowersetLattice<Type>
 
 typealias PowersetLatticeTypeElement = PowersetLattice.Element<Type>
 
-typealias ScopeToDeclarationLattice = MapLattice<Scope, PowersetLatticeDeclarationElement>
+typealias ScopeToDeclarationLattice = ConcurrentMapLattice<Scope, PowersetLatticeDeclarationElement>
 
-typealias ScopeToDeclarationElement = MapLattice.Element<Scope, PowersetLatticeDeclarationElement>
+typealias ScopeToDeclarationElement =
+    ConcurrentMapLattice.Element<Scope, PowersetLatticeDeclarationElement>
 
-typealias NodeToDeclarationLattice = MapLattice<Node, PowersetLatticeDeclarationElement>
+typealias NodeToDeclarationLattice = ConcurrentMapLattice<Node, PowersetLatticeDeclarationElement>
 
-typealias NodeToDeclarationElement = MapLattice.Element<Node, PowersetLatticeDeclarationElement>
+typealias NodeToDeclarationElement =
+    ConcurrentMapLattice.Element<Node, PowersetLatticeDeclarationElement>
 
-typealias NodeToTypeLattice = MapLattice<Node, PowersetLatticeTypeElement>
+typealias NodeToTypeLattice = ConcurrentMapLattice<Node, PowersetLatticeTypeElement>
 
-typealias NodeToTypeElement = MapLattice.Element<Node, PowersetLatticeTypeElement>
+typealias NodeToTypeElement = ConcurrentMapLattice.Element<Node, PowersetLatticeTypeElement>
 
 typealias DeclarationStateElement =
     TripleLattice.Element<ScopeToDeclarationElement, NodeToDeclarationElement, NodeToTypeElement>
@@ -363,7 +366,7 @@ private fun SymbolResolver.handleReference(
         state.pushType(
             lattice,
             node,
-            *candidates.mapNotNull { state.types[it]?.toSet() }.flatten().toTypedArray(),
+            *candidates.flatMapNotNull { state.types[it]?.toSet() }.toTypedArray(),
         )
 
     return state
