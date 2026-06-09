@@ -42,7 +42,6 @@ import java.net.URI
 import kotlin.collections.plusAssign
 import kotlin.math.min
 import uniffi.rustast.RsAst
-import uniffi.rustast.RsItem
 import uniffi.rustast.RsPath
 import uniffi.rustast.RsType
 import uniffi.rustast.parseRustCode
@@ -102,11 +101,6 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
                 }
                 else -> log.warn("Not handling ${rsItem.javaClass.simpleName}.")
             }
-        }
-
-        rsRustFile?.let {
-            it.items.forEach { it is RsItem }
-            it.items.forEach { item -> println("Item: $item type: ${item}") }
         }
 
         return tud

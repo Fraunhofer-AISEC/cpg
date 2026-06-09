@@ -55,6 +55,7 @@ import uniffi.rustast.RsMacroExpr
 import uniffi.rustast.RsMatchArm
 import uniffi.rustast.RsMatchExpr
 import uniffi.rustast.RsMethodCallExpr
+import uniffi.rustast.RsParenExpr
 import uniffi.rustast.RsPathExpr
 import uniffi.rustast.RsPrefixExpr
 import uniffi.rustast.RsRangeExpr
@@ -84,7 +85,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.PathExpr -> handlePathExpr(node.v1)
             is RsExpr.BinExpr -> handleBinExpr(node.v1)
             is RsExpr.PrefixExpr -> handlePrefixExpr(node.v1)
-            is RsExpr.ParenExpr -> handleNode(node.v1.expr.first())
+            is RsExpr.ParenExpr -> handleParenExpr(node.v1)
             is RsExpr.RecordExpr -> handleRecordExpr(node.v1)
             is RsExpr.IfExpr -> handleIfExpr(node.v1)
             is RsExpr.LetExpr -> handleLetExpr(node.v1)
@@ -671,6 +672,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     fun handleUnderscoreExpr(underscoreExpr: RsUnderscoreExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.UnderscoreExpr(underscoreExpr))
+        return newEmpty(raw)
+    }
+
+    fun handleParenExpr(parenExpr: RsParenExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ParenExpr(parenExpr))
+
+        parenExpr.expr.firstOrNull()?.let {
+            return handleNode(it)
+        }
         return newEmpty(raw)
     }
 
