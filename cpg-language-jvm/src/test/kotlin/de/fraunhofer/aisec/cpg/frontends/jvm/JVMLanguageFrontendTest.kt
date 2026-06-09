@@ -585,7 +585,8 @@ class JVMLanguageFrontendTest {
         assertTrue(numericLiterals.isNotEmpty(), "Should have numeric literals")
 
         // Verify different literal types exist by checking the overall set
-        val literalTypes = literals.map { it.value?.javaClass?.simpleName ?: "null" }.toSet()
+        val literalTypes =
+            literals.mapTo(mutableSetOf()) { it.value?.javaClass?.simpleName ?: "null" }
         assertTrue(literalTypes.size >= 2, "Should have multiple types of literals")
     }
 

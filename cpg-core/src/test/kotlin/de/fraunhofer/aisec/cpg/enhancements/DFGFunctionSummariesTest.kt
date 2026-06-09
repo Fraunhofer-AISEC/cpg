@@ -29,19 +29,23 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
+import de.fraunhofer.aisec.cpg.graph.expressions.ParameterMemoryValue
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import java.io.File
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -151,8 +155,12 @@ class DFGFunctionSummariesTest {
         val listAddAllTwoArgs = code.methods["test.List.addAll"]
         assertNotNull(listAddAllTwoArgs)
         assertEquals(2, listAddAllTwoArgs.parameters.size)
+        // The param flows to this, and to all uses after
         assertEquals(
-            setOf<Node>(listAddAllTwoArgs.receiver!!),
+            setOf<Node>(
+                listAddAllTwoArgs.receiver!!,
+                code.calls("print").single().arguments.single(),
+            ),
             listAddAllTwoArgs.parameters[1].nextDFG,
         )
         // No flow from param0 or receiver specified => Should be empty and differ from default
@@ -211,7 +219,8 @@ class DFGFunctionSummariesTest {
             verySpecialListAddAllSpecializedArgs.parameters[1].nextDFG,
         )
 
-        // Not specified => Default behavior (param0 and param1 and receiver to method declaration).
+        // Not specified => Default behavior (param0 and param1 and receiver to method
+        // declaration).
         val randomTypeAddAllTwoArgs = code.methods["random.Type.addAll"]
         assertNotNull(randomTypeAddAllTwoArgs)
         assertEquals(2, randomTypeAddAllTwoArgs.parameters.size)
@@ -236,7 +245,14 @@ class DFGFunctionSummariesTest {
         val memcpy = dfgTest.functions["memcpy"]
         assertNotNull(memcpy)
         val param0 = memcpy.parameters[0]
+        val param0PMV =
+            param0.fullMemoryValues.filterIsInstance<ParameterMemoryValue>().singleOrNull()
+        assertNotNull(param0PMV)
+        val param0DerefPMV = param0.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(param0DerefPMV)
         val param1 = memcpy.parameters[1]
+        val param1DerefPMV = param1.memoryValues.singleOrNull { it.name.localName == "derefvalue" }
+        assertNotNull(param1DerefPMV)
 
         val call = main.calls["memcpy"]
         assertNotNull(call)
@@ -245,41 +261,111 @@ class DFGFunctionSummariesTest {
         assertNotNull(argA)
         /*
         The flows should be as follows:
-        Variable["a"] -> Reference["a" (argument of call)] -CallingContextIn-> Parameter -CallingContextOut-> Reference["a" (return)]
+        Variable["a"] -CallingContextIn-> ParameterMemoryvalue["memcpy.param0.derefvalue"] -CallingContextOut-> Reference["a" (return)]
          */
 
         assertEquals(1, argA.nextDFG.size)
-        assertEquals(1, argA.prevDFG.size)
+        // The MemoryAddress a
+        assertEquals(1, argA.prevFullDFG.size)
+        assertEquals(1, argA.prevDFGEdges.filter { it.derefDepth != null }.size)
 
         val nextDfg = argA.nextDFGEdges.single()
         assertEquals(
-            call,
-            ((nextDfg as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.call,
+            mutableListOf(call),
+            ((nextDfg as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.calls,
         )
         assertEquals(param0, nextDfg.end)
 
         val variableA = main.variables["a"]
         assertNotNull(variableA)
-        assertEquals(mutableSetOf<Node>(variableA), argA.prevDFG)
+        assertNotNull(variableA.memoryAddresses.firstOrNull())
+        assertEquals(
+            mutableSetOf<Node>(variableA.memoryAddresses.first()),
+            argA.prevFullDFG.toMutableSet(),
+        )
 
-        val prevDfgOfParam0 = param0.prevDFGEdges.singleOrNull { it !is ContextSensitiveDataflow }
-        assertNotNull(prevDfgOfParam0)
-        assertEquals(param1, prevDfgOfParam0.start)
+        val prevDfgOfParam0Deref =
+            param0DerefPMV.prevDFGEdges.singleOrNull { it !is ContextSensitiveDataflow }
+        assertNotNull(prevDfgOfParam0Deref)
+        assertEquals(param1DerefPMV, prevDfgOfParam0Deref.start)
 
         val returnA = main.allChildren<Return>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)
 
-        assertEquals(mutableSetOf<Node>(returnA), param0.nextDFG)
+        val literal5 = main.literals.first { it.value?.equals(5) == true }
+        assertNotNull(literal5)
 
-        // Check that also the CallingContext property is set correctly
-        val nextDfgOfParam0 =
-            param0.nextDFGEdges.singleOrNull {
-                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.call ==
-                    call
+        // Check that also the CallingContext property (in and out) is set correctly
+        val valA = dfgTest.variables["a"]
+        assertNotNull(valA)
+        val memcpySrcDerefPMV =
+            dfgTest.functions("memcpy").single().parameters.first().memoryValues.singleOrNull {
+                it.name.localName == "derefvalue"
             }
-        assertEquals(returnA, nextDfgOfParam0?.end)
+        assertNotNull(memcpySrcDerefPMV)
+
+        val nextDfgOfValA =
+            valA.nextDFGEdges?.singleOrNull {
+                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.calls ==
+                    listOf(call)
+            }
+        assertEquals(memcpySrcDerefPMV, nextDfgOfValA?.end)
+
+        val nextDFGOfPMV =
+            memcpySrcDerefPMV.nextDFGEdges.singleOrNull() {
+                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.calls ==
+                    listOf(call)
+            }
+        val returnedA = dfgTest.returns.single().returnValues.single()
+        assertEquals(returnedA, nextDFGOfPMV?.end)
     }
 
+    @Test
+    fun testLanguageHierarchyMatching() {
+        val config =
+            TranslationConfiguration.builder()
+                .registerLanguage<TestLanguageWithColon>()
+                .registerFunctionSummaries(File("src/test/resources/function-dfg.yml"))
+                .inferenceConfiguration(
+                    InferenceConfiguration.builder()
+                        .inferDfgForUnresolvedCalls(true)
+                        .inferFunctions(true)
+                        .build()
+                )
+                .defaultPasses()
+                .build()
+
+        val dfgTest =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("DfgInferredCall.c") {
+                        function("main", t("int")) {
+                            body {
+                                declare { variable("a", t("int")) { literal(7, t("char")) } }
+                                declare { variable("b", t("int")) { literal(5, t("char")) } }
+                                call("memcpy") {
+                                    ref("a").pointerReference()
+                                    ref("b").pointerReference()
+                                    literal(1, t("int"))
+                                }
+                                returnStmt { ref("a") }
+                            }
+                        }
+                    }
+                }
+            }
+
+        val memcpy = dfgTest.functions["memcpy"]
+        assertNotNull(memcpy)
+        assertTrue(
+            memcpy.functionSummary.isNotEmpty(),
+            "Expected memcpy to have a non-empty function summary",
+        )
+    }
+
+    @Ignore(
+        "We keep this ignored for now as the DFGPass does not draw these edges anymore, this should be done by the PointsToPass. In the future, the DFGPass could still draw the edges and the PtP could remove them again to have a more lightweight but less precise version of the DFG"
+    )
     @Test
     fun testPropagateArgumentsControlFlowInsensitive() {
         // We don't use the ControlFlowSensitiveDFGPass here to check the method
@@ -318,8 +404,8 @@ class DFGFunctionSummariesTest {
 
         val nextDfg =
             argA.nextDFGEdges.singleOrNull {
-                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.call ==
-                    call
+                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.calls ==
+                    setOf(call)
             }
         assertNotNull(nextDfg)
         assertEquals(param0, nextDfg.end)
@@ -342,8 +428,8 @@ class DFGFunctionSummariesTest {
         // Check that also the CallingContext property is set correctly
         val nextDfgOfParam0 =
             param0.nextDFGEdges.singleOrNull {
-                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.call ==
-                    call
+                ((it as? ContextSensitiveDataflow)?.callingContext as? CallingContextOut)?.calls ==
+                    setOf(call)
             }
         assertEquals(argA, nextDfgOfParam0?.end)
     }
@@ -369,9 +455,9 @@ class DFGFunctionSummariesTest {
                     .build()
             /*
             int main() {
-              char *a = 7;
-              char *b = 5;
-              memcpy(a, b, 1);
+              int a = 7;
+              int b = 5;
+              memcpy(&a, &b, 1);
               return a;
             }
              */
@@ -380,17 +466,13 @@ class DFGFunctionSummariesTest {
                     translationUnit("DfgInferredCall.c") {
                         function("main", t("int")) {
                             body {
-                                declare {
-                                    variable("a", t("char").pointer()) { literal(7, t("char")) }
-                                }
+                                declare { variable("a", t("int")) { literal(7, t("char")) } }
 
-                                declare {
-                                    variable("b", t("char").pointer()) { literal(5, t("char")) }
-                                }
+                                declare { variable("b", t("int")) { literal(5, t("char")) } }
 
                                 call("memcpy") {
-                                    ref("a")
-                                    ref("b")
+                                    ref("a").pointerReference()
+                                    ref("b").pointerReference()
                                     literal(1, t("int"))
                                 }
 

@@ -199,7 +199,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         val callee = newMemberAccess(invokeExpr.methodSignature.name, base)
 
         val call = newMemberCall(callee, rawNode = invokeExpr)
-        call.arguments = invokeExpr.args.mapNotNull { handle(it) }.toMutableList()
+        call.arguments = invokeExpr.args.mapNotNullTo(mutableListOf()) { handle(it) }
 
         return call
     }
@@ -229,7 +229,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
             construct.callee = newReference(Name("<init>", type.name))
             construct.type = type
 
-            construct.arguments = invokeExpr.args.mapNotNull { handle(it) }.toMutableList()
+            construct.arguments = invokeExpr.args.mapNotNullTo(mutableListOf()) { handle(it) }
 
             construct
         } else {
@@ -245,7 +245,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         // sure ow to model this
         val callee = dynamicInvokeExpr.methodSignature.toStaticRef()
         val call = newCall(callee, rawNode = dynamicInvokeExpr)
-        call.arguments = dynamicInvokeExpr.args.mapNotNull { handle(it) }.toMutableList()
+        call.arguments = dynamicInvokeExpr.args.mapNotNullTo(mutableListOf()) { handle(it) }
         call.type = frontend.typeOf(dynamicInvokeExpr.methodSignature.type)
 
         return call
@@ -255,7 +255,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         val ref = staticInvokeExpr.methodSignature.toStaticRef()
 
         val call = newCall(ref, rawNode = staticInvokeExpr)
-        call.arguments = staticInvokeExpr.args.mapNotNull { handle(it) }.toMutableList()
+        call.arguments = staticInvokeExpr.args.mapNotNullTo(mutableListOf()) { handle(it) }
         call.type = frontend.typeOf(staticInvokeExpr.type)
 
         return call
@@ -280,7 +280,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
     private fun handleNewMultiArrayExpr(newMultiArrayExpr: JNewMultiArrayExpr): ArrayConstruction {
         val new = newArrayConstruction(rawNode = newMultiArrayExpr)
         new.type = frontend.typeOf(newMultiArrayExpr.type)
-        new.dimensions = newMultiArrayExpr.sizes.mapNotNull { handle(it) }.toMutableList()
+        new.dimensions = newMultiArrayExpr.sizes.mapNotNullTo(mutableListOf()) { handle(it) }
 
         return new
     }

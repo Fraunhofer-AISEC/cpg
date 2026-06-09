@@ -43,23 +43,75 @@ Copy the example configuration:
 cp codyze-console/src/main/resources/application.conf.example codyze-console/src/main/resources/application.conf
 ```
 
-Then edit `application.conf` and set the `client` field of the provider:
+Then edit `application.conf` and configure the clients you want to use under `llm.clients`:
 
 ```hocon
 llm {
-  client = "ollama"
+  clients {
+    ollama {
+      baseUrl = "http://localhost:11434"
+    }
 
-  ollama {
-    baseUrl = "http://localhost:11434"
-    model = "llama3"
+    openai {
+      baseUrl = "https://api.openai.com"
+      apiKeyEnv = "CODYZE_OPENAI_API_KEY"
+    }
+
+    gemini {
+      baseUrl = "https://generativelanguage.googleapis.com/v1beta"
+      apiKeyEnv = "CODYZE_GEMINI_API_KEY"
+    }
   }
-
-  # ... other providers are preconfigured as placeholders.
 }
 ```
 
-Currently, only Gemini and OpenAI-compatible endpoints are supported. The predefined clients (`ollama`, `vLLM`, `mlx`, etc.) use all the same OpenAI-compatible client internally. They are intended for testing and development and allows to switch between different server URLs without reconfiguring every time.
+Each entry defines a `baseUrl` and, if the provider requires authentication, an `apiKeyEnv` that names the environment variable holding the key. The model itself is no longer set in the config, instead it can be selected in the chat UI.
+
+Currently, only Gemini and OpenAI-compatible endpoints are supported.
 
 ### 3. MCP Server
 
 When `cpg-mcp` is enabled, the MCP server is automatically started on port `8081`. The AI chat connects to it as an MCP client to access the CPG tools (e.g., listing functions, records, and calls).
+
+## Architecture
+
+The following diagram shows the interaction between the main components during a chat request:
+
+```
+Frontend            Backend              LLM               MCP Server
+(Svelte)           (ChatService)      (Gemini/OpenAI)       (cpg-mcp)
+   |                    |                    |                   |
+   | POST /api/chat     |                    |                   |
+   | {messages}         |                    |                   |
+   |------------------->|                    |                   |
+   |                    |                    |                   |
+   |                    |  sendPrompt()      |                   |
+   |                    |  (messages + tools)|                   |
+   |                    |------------------->|                   |
+   |                    |                    |                   |
+   |                    |   "call tool X     |                   |
+   |                    |    with args Y"    |                   |
+   |                    |<-------------------|                   |
+   |                    |                    |                   |
+   |                    |  mcp.callTool(X, Y)                    |
+   |                    |--------------------------------------> |
+   |                    |                    |                   |
+   |                    |                         tool result    |
+   |                    |<-------------------------------------- |
+   |                    |                    |                   |
+   |   tool_result      |                    |                   |
+   |<-------------------|                    |                   |
+   |                    |                    |                   |
+   |                    |  sendPrompt()      |                   |
+   |                    |  (+ tool results)  |                   |
+   |                    |------------------->|                   |
+   |                    |                    |                   |
+   |                    |   text response    |                   |
+   |                    |<-------------------|                   |
+   |                    |                    |                   |
+   |       text         |                    |                   |
+   |<-------------------|                    |                   |
+```
+
+The LLM decides which tools to call and the backend executes the tool calls on the MCP server, and streams results back to both the 
+LLM (for the next iteration) and the frontend. This loop continues until the LLM responds with text instead of tool calls.

@@ -58,7 +58,7 @@ class For : Loop(), BranchingNode, StatementHolder {
     var iterationStatementEdge = astOptionalEdgeOf<Expression>()
     var iterationStatement by unwrapping(For::iterationStatementEdge)
 
-    override val branchedBy
+    override val branchedBy: AstNode?
         get() = condition ?: conditionDeclaration
 
     override var statementEdges: AstEdges<Expression, AstEdge<Expression>>

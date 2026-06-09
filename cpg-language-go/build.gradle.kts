@@ -1,3 +1,5 @@
+import de.undercouch.gradle.tasks.download.Download
+
 /*
  * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
@@ -23,7 +25,6 @@
  *                    \______/ \__|       \______/
  *
  */
-import de.undercouch.gradle.tasks.download.Download
 
 plugins {
     id("cpg.frontend-conventions")

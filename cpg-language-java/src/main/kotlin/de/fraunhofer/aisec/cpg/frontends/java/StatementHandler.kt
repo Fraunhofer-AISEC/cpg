@@ -466,9 +466,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val tryStatement = newTry(rawNode = stmt)
         frontend.scopeManager.enterScope(tryStatement)
         val resources =
-            tryStmt.resources
-                .mapNotNull { ctx -> frontend.expressionHandler.handle(ctx) }
-                .toMutableList()
+            tryStmt.resources.mapNotNullTo(mutableListOf()) { ctx ->
+                frontend.expressionHandler.handle(ctx)
+            }
         val tryBlock = handleBlock(tryStmt.tryBlock)
         val catchClauses = tryStmt.catchClauses.map(::handleCatchClause).toMutableList()
         val finallyBlock = tryStmt.finallyBlock.map(::handleBlock).orElse(null)

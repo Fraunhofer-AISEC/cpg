@@ -3,7 +3,7 @@
 
   interface Props {
     finding: string;
-    kind: string | null;
+    kind?: string;
     line: number;
     lineHeight: number;
     offsetTop: number;
