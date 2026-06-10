@@ -65,10 +65,10 @@ mavenPublishing {
 
 dependencies {
     implementation(libs.mcp)
-    implementation(libs.ktor.server.cio)
-    implementation(libs.ktor.serialization.kotlinx.json)
-    implementation(libs.ktor.server.cors)
-    implementation(libs.ktor.server.content.negotiation)
+    api(libs.ktor.server.cio)
+    api(libs.ktor.serialization.kotlinx.json)
+    api(libs.ktor.server.cors)
+    api(libs.ktor.server.content.negotiation)
 
     // Test dependencies
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
