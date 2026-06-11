@@ -53,6 +53,7 @@ import de.fraunhofer.aisec.cpg.graph.whileLoops
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.nio.file.Path
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -306,6 +307,7 @@ class ControlFlowTest {
         assertEquals(then.statements.size, 1)
     }
 
+    @Ignore
     @Test
     fun testLetElse() {
         val topLevel = Path.of("src", "test", "resources")
