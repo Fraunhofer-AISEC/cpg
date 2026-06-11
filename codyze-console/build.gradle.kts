@@ -66,6 +66,8 @@ node {
     nodeProjectDir.set(file("${project.projectDir.resolve("src/main/webapp")}"))
 }
 
+val pnpmInstall = tasks.getByName<PnpmTask>("pnpmInstall") { args.addAll("--yes") }
+
 val pnpmBuild by
     tasks.registering(PnpmTask::class) {
         inputs.file("src/main/webapp/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
