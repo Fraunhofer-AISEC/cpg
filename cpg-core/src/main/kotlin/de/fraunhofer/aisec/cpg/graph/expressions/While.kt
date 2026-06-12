@@ -28,9 +28,16 @@ package de.fraunhofer.aisec.cpg.graph.expressions
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
+import de.fraunhofer.aisec.cpg.graph.HasLocals
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.persistence.Relationship
@@ -41,7 +48,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Represents a conditional loop statement of the form: `while(...){...}`. The loop body is executed
  * until condition evaluates to false for the first time.
  */
-class While : Loop(), BranchingNode, ArgumentHolder {
+class While : Loop(), BranchingNode, ArgumentHolder, DeclarationHolder, HasLocals {
     @Relationship(value = "CONDITION_DECLARATION")
     var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
     /** C++ allows defining a declaration instead of a pure logical expression as condition */
@@ -81,10 +88,12 @@ class While : Loop(), BranchingNode, ArgumentHolder {
 
         return super.equals(other) &&
             conditionDeclaration == other.conditionDeclaration &&
-            condition == other.condition
+            condition == other.condition &&
+            propertyEqualsList(localEdges, other.localEdges)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), conditionDeclaration, condition)
+    override fun hashCode() =
+        Objects.hash(super.hashCode(), conditionDeclaration, condition, locals)
 
     override fun getStartingPrevEOG(): Collection<Node> {
         val astChildren = this.allChildren<Node> { true }
@@ -96,4 +105,21 @@ class While : Loop(), BranchingNode, ArgumentHolder {
     override fun getExitNextEOG(): Collection<Node> {
         return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
     }
+
+    @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
+    override var localEdges = astEdgesOf<ValueDeclaration>()
+
+    /** Virtual property to access [localEdges] without property edges. */
+    override var locals by unwrapping(While::localEdges)
+
+    override fun addDeclaration(declaration: Declaration) {
+        if (declaration is Variable) {
+            addIfNotContains(localEdges, declaration)
+        } else if (declaration is Function) {
+            addIfNotContains(localEdges, declaration)
+        }
+    }
+
+    override val declarations: List<Declaration>
+        get() = locals
 }

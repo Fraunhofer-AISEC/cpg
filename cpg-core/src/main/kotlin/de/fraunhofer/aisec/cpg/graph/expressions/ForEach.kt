@@ -26,6 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -39,7 +44,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Represent a for statement of the form `for(variable ... iterable){...}` that executes the loop
  * body for each instance of an element in `iterable` that is temporarily stored in `variable`.
  */
-class ForEach : Loop(), BranchingNode, StatementHolder {
+class ForEach : Loop(), BranchingNode, StatementHolder, DeclarationHolder, HasLocals {
 
     @Relationship("VARIABLE")
     var variableEdge =
@@ -93,10 +98,13 @@ class ForEach : Loop(), BranchingNode, StatementHolder {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ForEach) return false
-        return super.equals(other) && variable == other.variable && iterable == other.iterable
+        return super.equals(other) &&
+            variable == other.variable &&
+            iterable == other.iterable &&
+            propertyEqualsList(localEdges, other.localEdges)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable)
+    override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, locals)
 
     override fun getStartingPrevEOG(): Collection<Node> {
         val astChildren = this.allChildren<Node> { true }
@@ -108,4 +116,21 @@ class ForEach : Loop(), BranchingNode, StatementHolder {
     override fun getExitNextEOG(): Collection<Node> {
         return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
     }
+
+    @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
+    override var localEdges = astEdgesOf<ValueDeclaration>()
+
+    /** Virtual property to access [localEdges] without property edges. */
+    override var locals by unwrapping(ForEach::localEdges)
+
+    override fun addDeclaration(declaration: Declaration) {
+        if (declaration is Variable) {
+            addIfNotContains(localEdges, declaration)
+        } else if (declaration is Function) {
+            addIfNotContains(localEdges, declaration)
+        }
+    }
+
+    override val declarations: List<Declaration>
+        get() = locals
 }

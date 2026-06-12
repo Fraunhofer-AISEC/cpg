@@ -29,8 +29,11 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Operator
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
@@ -45,7 +48,21 @@ import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+
+interface HasLocals {
+    /**
+     * A list of local variables (or other values) associated to this statement, defined by their
+     * [ValueDeclaration] extracted from Block because `for`, `while`, `if`, and `switch` can
+     * declare locals in their condition or initializers.
+     */
+    @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
+    var localEdges: AstEdges<ValueDeclaration, AstEdge<ValueDeclaration>>
+
+    /** Virtual property to access [localEdges] without property edges. */
+    var locals: MutableList<ValueDeclaration>
+}
 
 /**
  * Represents that this node (potentially) makes use of the given memory addresses e.g. to load or

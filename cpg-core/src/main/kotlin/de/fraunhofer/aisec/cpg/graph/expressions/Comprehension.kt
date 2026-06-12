@@ -27,9 +27,17 @@ package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
+import de.fraunhofer.aisec.cpg.graph.HasLocals
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.persistence.Relationship
@@ -37,7 +45,7 @@ import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** This class holds the variable, iterable and predicate of the [CollectionComprehension]. */
-class Comprehension : Expression(), ArgumentHolder {
+class Comprehension : Expression(), ArgumentHolder, DeclarationHolder, HasLocals {
     @Relationship("VARIABLE")
     var variableEdge =
         astEdgeOf<Expression>(
@@ -80,10 +88,11 @@ class Comprehension : Expression(), ArgumentHolder {
         return super.equals(other) &&
             variable == other.variable &&
             iterable == other.iterable &&
-            predicate == other.predicate
+            predicate == other.predicate &&
+            propertyEqualsList(localEdges, other.localEdges)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, predicate)
+    override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable, predicate, locals)
 
     override fun addArgument(expression: Expression) {
         if (this.variable is ProblemExpression) {
@@ -126,4 +135,21 @@ class Comprehension : Expression(), ArgumentHolder {
     override fun getExitNextEOG(): Collection<Node> {
         return this.nextEOG.filter { it !in iterable.allChildren<Node> { true } }
     }
+
+    @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
+    override var localEdges = astEdgesOf<ValueDeclaration>()
+
+    /** Virtual property to access [localEdges] without property edges. */
+    override var locals by unwrapping(Comprehension::localEdges)
+
+    override fun addDeclaration(declaration: Declaration) {
+        if (declaration is Variable) {
+            addIfNotContains(localEdges, declaration)
+        } else if (declaration is Function) {
+            addIfNotContains(localEdges, declaration)
+        }
+    }
+
+    override val declarations: List<Declaration>
+        get() = locals
 }

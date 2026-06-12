@@ -26,8 +26,15 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
+import de.fraunhofer.aisec.cpg.graph.HasLocals
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.persistence.Relationship
@@ -38,7 +45,7 @@ import java.util.Objects
  * and default statements. Break statements break out of the switch and labeled breaks in Java are
  * handled properly.
  */
-class Switch : Expression(false), BranchingNode {
+class Switch : Expression(false), BranchingNode, DeclarationHolder, HasLocals {
 
     @Relationship(value = "SELECTOR") var selectorEdge = astOptionalEdgeOf<Expression>()
     /** Selector that determines the case/default statement of the subsequent execution */
@@ -71,7 +78,8 @@ class Switch : Expression(false), BranchingNode {
             initializerStatement == other.initializerStatement &&
             selectorDeclaration == other.selectorDeclaration &&
             selector == other.selector &&
-            statement == other.statement
+            statement == other.statement &&
+            propertyEqualsList(localEdges, other.localEdges)
     }
 
     override fun hashCode() =
@@ -81,6 +89,7 @@ class Switch : Expression(false), BranchingNode {
             selectorDeclaration,
             selector,
             statement,
+            locals,
         )
 
     override fun getStartingPrevEOG(): Collection<Node> {
@@ -93,4 +102,21 @@ class Switch : Expression(false), BranchingNode {
     override fun getExitNextEOG(): Collection<Node> {
         return this.statement?.getExitNextEOG() ?: this.nextEOG
     }
+
+    @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
+    override var localEdges = astEdgesOf<ValueDeclaration>()
+
+    /** Virtual property to access [localEdges] without property edges. */
+    override var locals by unwrapping(Switch::localEdges)
+
+    override fun addDeclaration(declaration: Declaration) {
+        if (declaration is Variable) {
+            addIfNotContains(localEdges, declaration)
+        } else if (declaration is Function) {
+            addIfNotContains(localEdges, declaration)
+        }
+    }
+
+    override val declarations: List<Declaration>
+        get() = locals
 }

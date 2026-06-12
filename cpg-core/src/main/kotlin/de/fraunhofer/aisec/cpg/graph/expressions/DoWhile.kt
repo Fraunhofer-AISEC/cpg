@@ -26,8 +26,16 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
+import de.fraunhofer.aisec.cpg.graph.HasLocals
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.persistence.Relationship
@@ -38,7 +46,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Represents a conditional loop statement of the form: `do{...}while(...)`. Where the body, usually
  * a [Block], is executed and re-executed if the [condition] evaluates to true.
  */
-class DoWhile : Loop(), ArgumentHolder {
+class DoWhile : Loop(), ArgumentHolder, DeclarationHolder, HasLocals {
     @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /**
      * The loop condition that is evaluated after the loop statement and may trigger reevaluation.
@@ -70,10 +78,12 @@ class DoWhile : Loop(), ArgumentHolder {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is DoWhile) return false
-        return super.equals(other) && condition == other.condition
+        return super.equals(other) &&
+            condition == other.condition &&
+            propertyEqualsList(localEdges, other.localEdges)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), condition)
+    override fun hashCode() = Objects.hash(super.hashCode(), condition, locals)
 
     override fun getStartingPrevEOG(): Collection<Node> {
         return statement?.getStartingPrevEOG()?.filter { it != this }
@@ -84,4 +94,21 @@ class DoWhile : Loop(), ArgumentHolder {
     override fun getExitNextEOG(): Collection<Node> {
         return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
     }
+
+    @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
+    override var localEdges = astEdgesOf<ValueDeclaration>()
+
+    /** Virtual property to access [localEdges] without property edges. */
+    override var locals by unwrapping(DoWhile::localEdges)
+
+    override fun addDeclaration(declaration: Declaration) {
+        if (declaration is Variable) {
+            addIfNotContains(localEdges, declaration)
+        } else if (declaration is Function) {
+            addIfNotContains(localEdges, declaration)
+        }
+    }
+
+    override val declarations: List<Declaration>
+        get() = locals
 }
