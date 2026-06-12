@@ -67,4 +67,33 @@ class EdgeListTest {
             assertEquals<List<Node>>(listOf(node2, node4, node3), unwrapped)
         }
     }
+
+    @Test
+    fun testCompactStorageTransitions() {
+        with(TestLanguageFrontend()) {
+            val owner = newLiteral(0)
+            val n1 = newLiteral(1)
+            val n2 = newLiteral(2)
+            val n3 = newLiteral(3)
+
+            val list = AstEdges<AstNode, AstEdge<AstNode>>(thisRef = owner)
+            assertEquals(0, list.size)
+
+            list += n1
+            assertEquals<List<Node>>(listOf(n1), list.unwrap())
+
+            list += n2
+            assertEquals<List<Node>>(listOf(n1, n2), list.unwrap())
+
+            list.removeAt(0)
+            assertEquals<List<Node>>(listOf(n2), list.unwrap())
+
+            list += n3
+            assertEquals<List<Node>>(listOf(n2, n3), list.unwrap())
+
+            list.clear()
+            assertEquals(0, list.size)
+            assertEquals(emptyList(), list.unwrap())
+        }
+    }
 }

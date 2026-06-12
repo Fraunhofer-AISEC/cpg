@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.evaluation
 
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
@@ -297,8 +298,11 @@ class MultiValueEvaluator : ValueEvaluator() {
         if (loop == null || loop.condition !is BinaryOperator) return setOf()
 
         var loopVar: Any? =
-            evaluateInternal(loop.initializerStatement?.declarations?.first(), depth) as? Number
-                ?: return setOf()
+            evaluateInternal(
+                (loop.initializerStatement as? DeclarationHolder)?.declarations?.first(),
+                depth,
+            )
+                as? Number ?: return setOf()
 
         val cond = loop.condition as BinaryOperator
         val result = mutableSetOf<Any?>()

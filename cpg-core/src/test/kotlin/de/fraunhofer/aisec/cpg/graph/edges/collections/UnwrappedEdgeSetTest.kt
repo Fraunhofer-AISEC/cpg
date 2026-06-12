@@ -49,4 +49,36 @@ class UnwrappedEdgeSetTest {
             assertEquals(dfgSet, nodeSet)
         }
     }
+
+    @Test
+    fun testCompactStorageTransitions() {
+        with(TestLanguageFrontend()) {
+            val node1 = newLiteral(1)
+            val node2 = newLiteral(2)
+            val node3 = newLiteral(3)
+
+            assertEquals(0, node1.nextDFGEdges.size)
+            assertEquals(0, node1.nextDFG.size)
+
+            node1.nextDFG += node2
+            assertEquals(1, node1.nextDFGEdges.size)
+            assertEquals(setOf<Node>(node2), node1.nextDFG.toSet())
+            assertEquals(setOf<Node>(node1), node2.prevDFG.toSet())
+
+            node1.nextDFG += node3
+            assertEquals(2, node1.nextDFGEdges.size)
+            assertEquals(setOf<Node>(node2, node3), node1.nextDFG.toSet())
+            assertEquals(setOf<Node>(node1), node2.prevDFG.toSet())
+            assertEquals(setOf<Node>(node1), node3.prevDFG.toSet())
+
+            node1.nextDFG.remove(node2)
+            assertEquals(1, node1.nextDFGEdges.size)
+            assertEquals(setOf<Node>(node3), node1.nextDFG.toSet())
+            assertEquals(0, node2.prevDFG.size)
+
+            node1.nextDFG.clear()
+            assertEquals(0, node1.nextDFGEdges.size)
+            assertEquals(0, node3.prevDFG.size)
+        }
+    }
 }

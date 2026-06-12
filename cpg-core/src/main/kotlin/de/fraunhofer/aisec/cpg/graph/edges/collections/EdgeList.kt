@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.edges.collections
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import java.util.function.Predicate
+import kotlin.collections.AbstractMutableList
 
 /** This class extends a list of edges. This allows us to use lists of edges more conveniently. */
 abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
@@ -44,50 +45,165 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
      * operations to a larger list.
      */
     initialCapacity: Int = 1,
-) : ArrayList<EdgeType>(initialCapacity), EdgeCollection<NodeType, EdgeType> {
+) : AbstractMutableList<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
+
+    // Draft: compact 0/1/many storage to avoid allocating an ArrayList per node in the common case.
+    private var first: EdgeType? = null
+    private var many: MutableList<EdgeType>? = null
+    private var cachedCapacity: Int = initialCapacity
+
+    override val size: Int
+        get() = many?.size ?: if (first == null) 0 else 1
+
+    override fun get(index: Int): EdgeType {
+        return when {
+            many != null -> many!![index]
+            index == 0 && first != null -> first!!
+            else -> throw IndexOutOfBoundsException("Index: $index, Size: $size")
+        }
+    }
 
     override fun add(element: EdgeType): Boolean {
-        // Make sure, the index is always set
         if (element.index == null) {
             element.index = this.size
         }
 
-        val ok = super<ArrayList>.add(element)
-        if (ok) {
-            handleOnAdd(element)
+        when {
+            many != null -> many!!.add(element)
+            first == null -> first = element
+            else -> {
+                many =
+                    ArrayList<EdgeType>(maxOf(cachedCapacity, 2)).also {
+                        it.add(first!!)
+                        it.add(element)
+                    }
+                first = null
+            }
         }
-        return ok
+
+        handleOnAdd(element)
+        return true
     }
 
-    override fun remove(element: EdgeType): Boolean {
-        val ok = super<ArrayList>.remove(element)
-        if (ok) {
-            handleOnRemove(element)
+    override fun add(index: Int, element: EdgeType) {
+        if (index < 0 || index > size) {
+            throw IndexOutOfBoundsException("Index: $index, Size: $size")
         }
-        return ok
-    }
 
-    override fun removeAll(elements: Collection<EdgeType>): Boolean {
-        val ok = super.removeAll(elements.toSet())
-        if (ok) {
-            elements.forEach { handleOnRemove(it) }
+        when {
+            many != null -> many!!.add(index, element)
+            first == null -> {
+                if (index != 0) throw IndexOutOfBoundsException("Index: $index, Size: $size")
+                first = element
+            }
+            else -> {
+                val prev = first!!
+                many =
+                    ArrayList<EdgeType>(maxOf(cachedCapacity, 2)).also {
+                        if (index == 0) {
+                            it.add(element)
+                            it.add(prev)
+                        } else {
+                            it.add(prev)
+                            it.add(element)
+                        }
+                    }
+                first = null
+            }
         }
-        return ok
+
+        handleOnAdd(element)
+        updateIndicesFrom(index)
     }
 
     override fun removeAt(index: Int): EdgeType {
-        val edge = super.removeAt(index)
-        handleOnRemove(edge)
-        return edge
+        if (index < 0 || index >= size) {
+            throw IndexOutOfBoundsException("Index: $index, Size: $size")
+        }
+
+        val removed =
+            when {
+                many != null -> {
+                    val r = many!!.removeAt(index)
+                    if (many!!.size == 1) {
+                        first = many!![0]
+                        many = null
+                    }
+                    r
+                }
+                else -> {
+                    val r = first!!
+                    first = null
+                    r
+                }
+            }
+
+        handleOnRemove(removed)
+        updateIndicesFrom(index)
+        return removed
+    }
+
+    override fun set(index: Int, element: EdgeType): EdgeType {
+        if (index < 0 || index >= size) {
+            throw IndexOutOfBoundsException("Index: $index, Size: $size")
+        }
+
+        return when {
+            many != null -> {
+                val prev = many!![index]
+                many!![index] = element
+                prev
+            }
+            else -> {
+                val prev = first!!
+                first = element
+                prev
+            }
+        }
+    }
+
+    override fun remove(element: EdgeType): Boolean {
+        val idx = indexOf(element)
+        if (idx == -1) {
+            return false
+        }
+
+        removeAt(idx)
+        return true
+    }
+
+    override fun removeAll(elements: Collection<EdgeType>): Boolean {
+        if (elements.isEmpty() || isEmpty()) {
+            return false
+        }
+
+        val toRemove = elements.toSet()
+        var changed = false
+
+        for (i in size - 1 downTo 0) {
+            if (this[i] in toRemove) {
+                removeAt(i)
+                changed = true
+            }
+        }
+
+        return changed
+    }
+
+    override fun clear() {
+        if (isEmpty()) {
+            return
+        }
+
+        val edges = this.toList()
+        first = null
+        many = null
+        edges.forEach { handleOnRemove(it) }
     }
 
     override fun removeIf(predicate: Predicate<in EdgeType>): Boolean {
-        val edges = filter { predicate.test(it) }
-        val ok = super<ArrayList>.removeIf(predicate)
-        if (ok) {
-            edges.forEach { handleOnRemove(it) }
-        }
-        return ok
+        val toRemove = this.filter { predicate.test(it) }
+        return removeAll(toRemove)
     }
 
     /** Replaces the first occurrence of an edge with [old] with a new edge to [new]. */
@@ -101,13 +217,6 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         return false
     }
 
-    override fun clear() {
-        // Make a copy of our edges so we can pass a copy to our on-remove handler
-        val edges = this.toList()
-        super.clear()
-        edges.forEach { handleOnRemove(it) }
-    }
-
     /**
      * This function creates a new edge (of [EdgeType]) to/from the specified node [target]
      * (depending on [outgoing]) and adds it to the specified index in the list.
@@ -116,20 +225,6 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         val edge = createEdge(target, init, this.outgoing)
 
         return add(index, edge)
-    }
-
-    override fun add(index: Int, element: EdgeType) {
-        // Make sure, the index is always set
-        element.index = this.size
-
-        super<ArrayList>.add(index, element)
-
-        handleOnAdd(element)
-
-        // We need to re-compute all edges with an index > inserted index
-        for (i in index until this.size) {
-            this[i].index = i
-        }
     }
 
     override fun toNodeCollection(predicate: ((EdgeType) -> Boolean)?): List<NodeType> {
@@ -162,5 +257,15 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
 
     override fun hashCode(): Int {
         return internalHashcode(this, outgoing)
+    }
+
+    private fun updateIndicesFrom(startIndex: Int) {
+        if (startIndex < 0) {
+            return
+        }
+
+        for (i in startIndex until size) {
+            this[i].index = i
+        }
     }
 }
