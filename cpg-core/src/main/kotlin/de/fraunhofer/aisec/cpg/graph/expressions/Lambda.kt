@@ -26,8 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
@@ -39,7 +42,15 @@ import de.fraunhofer.aisec.cpg.persistence.Relationship
  * This expression denotes the usage of an anonymous / lambda function. It connects the inner
  * anonymous function to the user of a lambda function with an expression.
  */
-class Lambda : Expression(), HasType.TypeObserver {
+class Lambda : Expression(), DeclarationHolder, HasType.TypeObserver {
+
+    @Relationship("DECLARATIONS") var declarationEdges = astEdgesOf<Variable>()
+
+    override fun addDeclaration(declaration: Declaration) {
+        (declaration as? Variable)?.let { this.declarations.add(it) }
+    }
+
+    override var declarations by unwrapping(Lambda::declarationEdges)
 
     /**
      * If [areVariablesMutable] is false, only the (outer) variables in this list can be modified
