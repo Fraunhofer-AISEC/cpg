@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.HasLocals
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.addIfNotContains
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
@@ -50,7 +51,7 @@ class Comprehension : Expression(), ArgumentHolder, DeclarationHolder, HasLocals
     var variableEdge =
         astEdgeOf<Expression>(
             of = ProblemExpression("Missing variableEdge in ${this::class}"),
-            onChanged = { _, new -> (new?.end as? Expression)?.access = AccessValues.WRITE },
+            onChanged = { _, new -> new?.end?.access = AccessValues.WRITE },
         )
 
     /**

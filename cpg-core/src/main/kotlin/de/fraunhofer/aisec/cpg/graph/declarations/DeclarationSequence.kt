@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
+import de.fraunhofer.aisec.cpg.graph.addIfNotContains
 
 /**
  * This represents a sequence of one or more declaration(s). The purpose of this node is primarily
