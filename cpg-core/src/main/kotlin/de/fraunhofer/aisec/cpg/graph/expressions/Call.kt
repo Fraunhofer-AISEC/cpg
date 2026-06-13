@@ -60,7 +60,11 @@ open class Call :
     @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
     var invokeEdges: Invokes<Function> =
-        Invokes<Function>(this, mirrorProperty = Function::calledByEdges, outgoing = true)
+        Invokes<Function>(
+            this,
+            mirroredCollection = { (it as Function).calledByEdges },
+            outgoing = true,
+        )
         protected set
 
     /**

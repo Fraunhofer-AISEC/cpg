@@ -50,7 +50,7 @@ class NamespaceScope(astNode: Namespace) : NameScope(astNode) {
      */
     @Relationship(value = "IMPORTS_SCOPE", direction = Relationship.Direction.INCOMING)
     val importedByEdges: Imports =
-        Imports(this, mirrorProperty = Scope::importedScopeEdges, outgoing = false)
+        Imports(this, mirroredCollection = { (it as Scope).importedScopeEdges }, outgoing = false)
 
     /** Virtual property for accessing [importedScopeEdges] without property edges. */
     val importedBy: MutableSet<Scope> by unwrappingIncoming(NamespaceScope::importedByEdges)

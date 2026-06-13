@@ -121,7 +121,7 @@ abstract class Expression(usedAsExpression: Boolean = true) :
     override var memoryValueEdges =
         Dataflows<Node>(
             this,
-            mirrorProperty = HasMemoryValue::memoryValueUsageEdges,
+            mirroredCollection = { (it as HasMemoryValue).memoryValueUsageEdges },
             outgoing = false,
         )
     override var memoryValues by unwrapping(Expression::memoryValueEdges)
@@ -129,13 +129,20 @@ abstract class Expression(usedAsExpression: Boolean = true) :
     /** Where the memory value of this Expression is used. */
     @Relationship
     override var memoryValueUsageEdges =
-        Dataflows<Node>(this, mirrorProperty = HasMemoryValue::memoryValueEdges, outgoing = true)
+        Dataflows<Node>(
+            this,
+            mirroredCollection = { (it as HasMemoryValue).memoryValueEdges },
+            outgoing = true,
+        )
     override var memoryValueUsages by unwrapping(Expression::memoryValueUsageEdges)
 
     /** Each Expression also has a MemoryAddress. */
     @Relationship
     override var memoryAddressEdges =
-        memoryAddressEdgesOf(mirrorProperty = MemoryAddress::usageEdges, outgoing = true)
+        memoryAddressEdgesOf(
+            mirroredCollection = { (it as MemoryAddress).usageEdges },
+            outgoing = true,
+        )
     override var memoryAddresses by unwrapping(Expression::memoryAddressEdges)
 
     override fun toString(): String {

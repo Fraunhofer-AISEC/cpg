@@ -45,7 +45,10 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
      * operations to a larger list.
      */
     initialCapacity: Int = 1,
-) : AbstractMutableList<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
+) :
+    AbstractMutableList<EdgeType>(),
+    EdgeCollection<NodeType, EdgeType>,
+    MirrorBacklinkCollection<EdgeType> {
 
     // Draft: compact 0/1/many storage to avoid allocating an ArrayList per node in the common case.
     private val storage =
@@ -64,6 +67,35 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun add(element: EdgeType): Boolean {
+        addWithoutHooks(element)
+        handleOnAdd(element)
+        return true
+    }
+
+    override fun addMirrorBacklink(element: EdgeType): Boolean {
+        if (containsMirrorBacklinkByIdentity(element)) {
+            return false
+        }
+
+        addWithoutHooks(element)
+        return true
+    }
+
+    override fun containsMirrorBacklinkByIdentity(element: EdgeType): Boolean {
+        return indexOfIdentity(element) != -1
+    }
+
+    override fun removeMirrorBacklink(element: EdgeType): Boolean {
+        val idx = indexOfIdentity(element)
+        if (idx == -1) {
+            return false
+        }
+
+        removeAtWithoutHooks(idx)
+        return true
+    }
+
+    private fun addWithoutHooks(element: EdgeType) {
         if (element.index == null) {
             element.index = this.size
         }
@@ -75,9 +107,6 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
                 storage.ensureMany(maxOf(cachedCapacity, 2)).add(element)
             }
         }
-
-        handleOnAdd(element)
-        return true
     }
 
     override fun add(index: Int, element: EdgeType) {
@@ -110,6 +139,13 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
             throw IndexOutOfBoundsException("Index: $index, Size: $size")
         }
 
+        val removed = removeAtWithoutHooks(index)
+
+        handleOnRemove(removed)
+        return removed
+    }
+
+    private fun removeAtWithoutHooks(index: Int): EdgeType {
         val removed =
             when {
                 storage.many != null -> {
@@ -127,7 +163,6 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
                 }
             }
 
-        handleOnRemove(removed)
         updateIndicesFrom(index)
         return removed
     }
@@ -244,6 +279,14 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
 
     override fun hashCode(): Int {
         return internalHashcode(this, outgoing)
+    }
+
+    private fun indexOfIdentity(element: EdgeType): Int {
+        return when {
+            storage.many != null -> storage.many!!.indexOfFirst { it === element }
+            storage.first === element -> 0
+            else -> -1
+        }
     }
 
     private fun updateIndicesFrom(startIndex: Int) {

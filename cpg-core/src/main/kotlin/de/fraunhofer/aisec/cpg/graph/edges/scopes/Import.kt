@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import kotlin.reflect.KProperty
 
 /**
  * The style of the import. This can be used to distinguish between different import modes, such as
@@ -85,7 +84,7 @@ class Import(start: Scope, end: NamespaceScope, var declaration: ImportNode? = n
 /** A container to manage [Import] edges. */
 class Imports(
     thisRef: Node,
-    override var mirrorProperty: KProperty<MutableCollection<Import>>,
+    override var mirroredCollection: (Node) -> MutableCollection<Import>,
     outgoing: Boolean = true,
 ) :
     EdgeSet<NamespaceScope, Import>(

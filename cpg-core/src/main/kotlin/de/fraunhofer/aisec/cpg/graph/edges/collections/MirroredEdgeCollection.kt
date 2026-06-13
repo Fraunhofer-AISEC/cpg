@@ -27,7 +27,15 @@ package de.fraunhofer.aisec.cpg.graph.edges.collections
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import kotlin.reflect.KProperty
+
+/** Internal operations for mirroring without recursively triggering hooks. */
+internal interface MirrorBacklinkCollection<ElementType> {
+    fun addMirrorBacklink(element: ElementType): Boolean
+
+    fun removeMirrorBacklink(element: ElementType): Boolean
+
+    fun containsMirrorBacklinkByIdentity(element: ElementType): Boolean
+}
 
 /**
  * This interface can be used for edge collections, which "mirror" its content to another property.
@@ -35,20 +43,18 @@ import kotlin.reflect.KProperty
  */
 interface MirroredEdgeCollection<NodeType : Node, PropertyEdgeType : Edge<NodeType>> :
     EdgeCollection<NodeType, PropertyEdgeType> {
-    var mirrorProperty: KProperty<MutableCollection<PropertyEdgeType>>
+    /** Provides direct access to the mirrored collection without reflection. */
+    var mirroredCollection: (Node) -> MutableCollection<PropertyEdgeType>
 
     override fun handleOnRemove(edge: PropertyEdgeType) {
         // Handle our mirror property.
-        if (outgoing) {
-            var prevOfNext = mirrorProperty.call(edge.end)
-            if (edge in prevOfNext) {
-                prevOfNext.remove(edge)
-            }
-        } else {
-            var nextOfPrev = mirrorProperty.call(edge.start)
-            if (edge in nextOfPrev) {
-                nextOfPrev.remove(edge)
-            }
+        val mirror = if (outgoing) mirroredCollection(edge.end) else mirroredCollection(edge.start)
+
+        @Suppress("UNCHECKED_CAST")
+        if (mirror is MirrorBacklinkCollection<*>) {
+            (mirror as MirrorBacklinkCollection<PropertyEdgeType>).removeMirrorBacklink(edge)
+        } else if (edge in mirror) {
+            mirror.remove(edge)
         }
 
         // Execute any remaining pre actions
@@ -56,22 +62,21 @@ interface MirroredEdgeCollection<NodeType : Node, PropertyEdgeType : Edge<NodeTy
     }
 
     /**
-     * Adds this particular edge to its [mirrorProperty]. We need the information if this is an
+     * Adds this particular edge to its mirror collection. We need the information if this is an
      * [outgoing] or incoming edge collection.
      */
     override fun handleOnAdd(edge: PropertyEdgeType) {
-        // Handle our mirror property. We add some extra "in" checks here, otherwise things will
-        // loop.
-        if (outgoing) {
-            var prevOfNext = mirrorProperty.call(edge.end)
-            if (edge !in prevOfNext) {
-                prevOfNext.add(edge)
+        // Handle our mirror collection.
+        val mirror = if (outgoing) mirroredCollection(edge.end) else mirroredCollection(edge.start)
+
+        @Suppress("UNCHECKED_CAST")
+        if (mirror is MirrorBacklinkCollection<*>) {
+            val backlink = mirror as MirrorBacklinkCollection<PropertyEdgeType>
+            if (!backlink.containsMirrorBacklinkByIdentity(edge)) {
+                backlink.addMirrorBacklink(edge)
             }
-        } else {
-            var nextOfPrev = mirrorProperty.call(edge.start)
-            if (edge !in nextOfPrev) {
-                nextOfPrev.add(edge)
-            }
+        } else if (edge !in mirror) {
+            mirror.add(edge)
         }
 
         // Execute any remaining post actions

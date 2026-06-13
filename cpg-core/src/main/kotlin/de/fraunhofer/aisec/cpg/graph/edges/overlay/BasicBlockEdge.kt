@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
-import kotlin.reflect.KProperty
 
 /**
  * An edge representing that a [Node] belongs to a [BasicBlock] or the basic block contains the
@@ -56,7 +55,7 @@ class BasicBlockEdge(start: Node, end: Node) : Edge<Node>(start, end) {
  */
 class BasicBlockEdgeList<NodeType : Node>(
     thisRef: Node,
-    override var mirrorProperty: KProperty<MutableCollection<BasicBlockEdge>>,
+    override var mirroredCollection: (Node) -> MutableCollection<BasicBlockEdge>,
     outgoing: Boolean = true,
 ) :
     EdgeList<Node, BasicBlockEdge>(thisRef = thisRef, init = ::BasicBlockEdge, outgoing = outgoing),

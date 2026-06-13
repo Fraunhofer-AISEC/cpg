@@ -111,21 +111,25 @@ abstract class Node() :
     @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(EvaluationOrderGraphPass::class)
     var prevEOGEdges: EvaluationOrders<Node> =
-        EvaluationOrders<Node>(this, mirrorProperty = Node::nextEOGEdges, outgoing = false)
+        EvaluationOrders<Node>(this, mirroredCollection = { it.nextEOGEdges }, outgoing = false)
         protected set
 
     /** Outgoing control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(EvaluationOrderGraphPass::class)
     var nextEOGEdges: EvaluationOrders<Node> =
-        EvaluationOrders<Node>(this, mirrorProperty = Node::prevEOGEdges, outgoing = true)
+        EvaluationOrders<Node>(this, mirroredCollection = { it.prevEOGEdges }, outgoing = true)
         protected set
 
     /** The [BasicBlockEdgeList] leading to the basic block this node belongs to. */
     @Relationship(value = "BB", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(BasicBlockCollectorPass::class)
     var basicBlockEdges: BasicBlockEdgeList<Node> =
-        BasicBlockEdgeList<Node>(this, mirrorProperty = BasicBlock::nodeEdges, outgoing = true)
+        BasicBlockEdgeList<Node>(
+            this,
+            mirroredCollection = { (it as BasicBlock).nodeEdges },
+            outgoing = true,
+        )
         protected set
 
     /** The basic block this node belongs to. */
@@ -138,7 +142,7 @@ abstract class Node() :
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
     var nextCDGEdges: ControlDependences<Node> =
-        ControlDependences(this, mirrorProperty = Node::prevCDGEdges, outgoing = true)
+        ControlDependences(this, mirroredCollection = { it.prevCDGEdges }, outgoing = true)
         protected set
 
     var nextCDG by unwrapping(Node::nextCDGEdges)
@@ -150,7 +154,7 @@ abstract class Node() :
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
     var prevCDGEdges: ControlDependences<Node> =
-        ControlDependences<Node>(this, mirrorProperty = Node::nextCDGEdges, outgoing = false)
+        ControlDependences<Node>(this, mirroredCollection = { it.nextCDGEdges }, outgoing = false)
         protected set
 
     var prevCDG by unwrapping(Node::prevCDGEdges)
@@ -167,7 +171,7 @@ abstract class Node() :
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
     var prevDFGEdges: Dataflows<Node> =
-        Dataflows<Node>(this, mirrorProperty = Node::nextDFGEdges, outgoing = false)
+        Dataflows<Node>(this, mirroredCollection = { it.nextDFGEdges }, outgoing = false)
         protected set
 
     /** Virtual property for accessing [prevDFGEdges] without property edges. */
@@ -200,7 +204,7 @@ abstract class Node() :
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
     var nextDFGEdges: Dataflows<Node> =
-        Dataflows<Node>(this, mirrorProperty = Node::prevDFGEdges, outgoing = true)
+        Dataflows<Node>(this, mirroredCollection = { it.prevDFGEdges }, outgoing = true)
         protected set
 
     /** Virtual property for accessing [nextDFGEdges] without property edges. */
@@ -233,7 +237,7 @@ abstract class Node() :
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
     var nextPDGEdges: ProgramDependences<Node> =
-        ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = true)
+        ProgramDependences<Node>(this, mirroredCollection = { it.prevPDGEdges }, outgoing = true)
         protected set
 
     var nextPDG by unwrapping(Node::nextPDGEdges)
@@ -242,7 +246,7 @@ abstract class Node() :
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
     var prevPDGEdges: ProgramDependences<Node> =
-        ProgramDependences<Node>(this, mirrorProperty = Node::nextPDGEdges, outgoing = false)
+        ProgramDependences<Node>(this, mirroredCollection = { it.nextPDGEdges }, outgoing = false)
         protected set
 
     var prevPDG by unwrapping(Node::prevPDGEdges)
@@ -292,7 +296,11 @@ abstract class Node() :
 
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
     val overlayEdges: Overlays =
-        Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
+        Overlays(
+            this,
+            mirroredCollection = { (it as OverlayNode).underlyingNodeEdge },
+            outgoing = true,
+        )
     var overlays by unwrapping(Node::overlayEdges)
 
     /**

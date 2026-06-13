@@ -43,7 +43,10 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     // We explicitly set the capacity to 1, as we expect that most nodes will only have one edge of
     // a given type. This is a common case for many edge types in the CPG, and setting the initial
     // capacity to 1 can save memory in these cases.
-) : AbstractMutableSet<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
+) :
+    AbstractMutableSet<EdgeType>(),
+    EdgeCollection<NodeType, EdgeType>,
+    MirrorBacklinkCollection<EdgeType> {
 
     // Draft: compact 0/1/many storage to avoid eagerly allocating a HashSet for singleton cases.
     private val storage = CompactEdgeStorage<EdgeType, MutableSet<EdgeType>> { cap -> HashSet(cap) }
@@ -52,23 +55,40 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
         get() = storage.size
 
     override fun add(element: EdgeType): Boolean {
+        val ok = addWithoutHooks(element)
+        if (ok) {
+            handleOnAdd(element)
+        }
+        return ok
+    }
+
+    override fun addMirrorBacklink(element: EdgeType): Boolean {
+        return addWithoutHooks(element)
+    }
+
+    override fun containsMirrorBacklinkByIdentity(element: EdgeType): Boolean {
+        return when {
+            storage.many != null -> storage.many!!.any { it === element }
+            else -> storage.first === element
+        }
+    }
+
+    override fun removeMirrorBacklink(element: EdgeType): Boolean {
+        return removeByIdentityWithoutHooks(element)
+    }
+
+    private fun addWithoutHooks(element: EdgeType): Boolean {
         return when {
             storage.many != null -> {
-                val ok = storage.many!!.add(element)
-                if (ok) {
-                    handleOnAdd(element)
-                }
-                ok
+                storage.many!!.add(element)
             }
             storage.first == null -> {
                 storage.first = element
-                handleOnAdd(element)
                 true
             }
             storage.first == element -> false
             else -> {
                 storage.ensureMany(2).add(element)
-                handleOnAdd(element)
                 true
             }
         }
@@ -88,18 +108,51 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun remove(element: EdgeType): Boolean {
+        val ok = removeByEqualityWithoutHooks(element)
+        if (ok) {
+            handleOnRemove(element)
+        }
+        return ok
+    }
+
+    private fun removeByEqualityWithoutHooks(element: EdgeType): Boolean {
         return when {
             storage.many != null -> {
                 val ok = storage.many!!.remove(element)
                 if (ok) {
-                    handleOnRemove(element)
                     compactManyIfPossible()
                 }
                 ok
             }
             storage.first == element -> {
                 storage.first = null
-                handleOnRemove(element)
+                true
+            }
+            else -> false
+        }
+    }
+
+    private fun removeByIdentityWithoutHooks(element: EdgeType): Boolean {
+        return when {
+            storage.many != null -> {
+                val it = storage.many!!.iterator()
+                var removed = false
+                while (it.hasNext()) {
+                    if (it.next() === element) {
+                        it.remove()
+                        removed = true
+                        break
+                    }
+                }
+
+                if (removed) {
+                    compactManyIfPossible()
+                }
+
+                removed
+            }
+            storage.first === element -> {
+                storage.first = null
                 true
             }
             else -> false
