@@ -48,17 +48,17 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
 ) : AbstractMutableList<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
 
     // Draft: compact 0/1/many storage to avoid allocating an ArrayList per node in the common case.
-    private var first: EdgeType? = null
-    private var many: MutableList<EdgeType>? = null
+    private val storage =
+        CompactEdgeStorage<EdgeType, MutableList<EdgeType>> { cap -> ArrayList(cap) }
     private var cachedCapacity: Int = initialCapacity
 
     override val size: Int
-        get() = many?.size ?: if (first == null) 0 else 1
+        get() = storage.size
 
     override fun get(index: Int): EdgeType {
         return when {
-            many != null -> many!![index]
-            index == 0 && first != null -> first!!
+            storage.many != null -> storage.many!![index]
+            index == 0 && storage.first != null -> storage.first!!
             else -> throw IndexOutOfBoundsException("Index: $index, Size: $size")
         }
     }
@@ -69,15 +69,10 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         }
 
         when {
-            many != null -> many!!.add(element)
-            first == null -> first = element
+            storage.many != null -> storage.many!!.add(element)
+            storage.first == null -> storage.first = element
             else -> {
-                many =
-                    ArrayList<EdgeType>(maxOf(cachedCapacity, 2)).also {
-                        it.add(first!!)
-                        it.add(element)
-                    }
-                first = null
+                storage.ensureMany(maxOf(cachedCapacity, 2)).add(element)
             }
         }
 
@@ -91,24 +86,18 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         }
 
         when {
-            many != null -> many!!.add(index, element)
-            first == null -> {
+            storage.many != null -> storage.many!!.add(index, element)
+            storage.first == null -> {
                 if (index != 0) throw IndexOutOfBoundsException("Index: $index, Size: $size")
-                first = element
+                storage.first = element
             }
             else -> {
-                val prev = first!!
-                many =
-                    ArrayList<EdgeType>(maxOf(cachedCapacity, 2)).also {
-                        if (index == 0) {
-                            it.add(element)
-                            it.add(prev)
-                        } else {
-                            it.add(prev)
-                            it.add(element)
-                        }
-                    }
-                first = null
+                val created = storage.ensureMany(maxOf(cachedCapacity, 2))
+                if (index == 0) {
+                    created.add(0, element)
+                } else {
+                    created.add(element)
+                }
             }
         }
 
@@ -123,17 +112,17 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
 
         val removed =
             when {
-                many != null -> {
-                    val r = many!!.removeAt(index)
-                    if (many!!.size == 1) {
-                        first = many!![0]
-                        many = null
+                storage.many != null -> {
+                    val r = storage.many!!.removeAt(index)
+                    if (storage.many!!.size == 1) {
+                        storage.first = storage.many!![0]
+                        storage.many = null
                     }
                     r
                 }
                 else -> {
-                    val r = first!!
-                    first = null
+                    val r = storage.first!!
+                    storage.first = null
                     r
                 }
             }
@@ -149,14 +138,14 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         }
 
         return when {
-            many != null -> {
-                val prev = many!![index]
-                many!![index] = element
+            storage.many != null -> {
+                val prev = storage.many!![index]
+                storage.many!![index] = element
                 prev
             }
             else -> {
-                val prev = first!!
-                first = element
+                val prev = storage.first!!
+                storage.first = element
                 prev
             }
         }
@@ -195,9 +184,7 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
             return
         }
 
-        val edges = this.toList()
-        first = null
-        many = null
+        val edges = storage.clearAndSnapshot()
         edges.forEach { handleOnRemove(it) }
     }
 

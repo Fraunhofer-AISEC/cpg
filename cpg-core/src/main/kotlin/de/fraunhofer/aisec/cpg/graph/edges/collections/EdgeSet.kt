@@ -46,34 +46,28 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
 ) : AbstractMutableSet<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
 
     // Draft: compact 0/1/many storage to avoid eagerly allocating a HashSet for singleton cases.
-    private var first: EdgeType? = null
-    private var many: MutableSet<EdgeType>? = null
+    private val storage = CompactEdgeStorage<EdgeType, MutableSet<EdgeType>> { cap -> HashSet(cap) }
 
     override val size: Int
-        get() = many?.size ?: if (first == null) 0 else 1
+        get() = storage.size
 
     override fun add(element: EdgeType): Boolean {
         return when {
-            many != null -> {
-                val ok = many!!.add(element)
+            storage.many != null -> {
+                val ok = storage.many!!.add(element)
                 if (ok) {
                     handleOnAdd(element)
                 }
                 ok
             }
-            first == null -> {
-                first = element
+            storage.first == null -> {
+                storage.first = element
                 handleOnAdd(element)
                 true
             }
-            first == element -> false
+            storage.first == element -> false
             else -> {
-                many =
-                    HashSet<EdgeType>(2).also {
-                        it.add(first!!)
-                        it.add(element)
-                    }
-                first = null
+                storage.ensureMany(2).add(element)
                 handleOnAdd(element)
                 true
             }
@@ -81,30 +75,30 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun iterator(): MutableIterator<EdgeType> {
-        val singleton = first
-        return if (many != null) {
-            ManyIterator(many!!.iterator())
+        val singleton = storage.first
+        return if (storage.many != null) {
+            ManyIterator(storage.many!!.iterator())
         } else {
             SingletonIterator(singleton)
         }
     }
 
     override fun contains(element: EdgeType): Boolean {
-        return many?.contains(element) ?: (first == element)
+        return storage.many?.contains(element) ?: (storage.first == element)
     }
 
     override fun remove(element: EdgeType): Boolean {
         return when {
-            many != null -> {
-                val ok = many!!.remove(element)
+            storage.many != null -> {
+                val ok = storage.many!!.remove(element)
                 if (ok) {
                     handleOnRemove(element)
                     compactManyIfPossible()
                 }
                 ok
             }
-            first == element -> {
-                first = null
+            storage.first == element -> {
+                storage.first = null
                 handleOnRemove(element)
                 true
             }
@@ -143,9 +137,7 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
         }
 
         // Make a copy of our edges so we can pass a copy to our on-remove handler
-        val edges = this.toSet()
-        first = null
-        many = null
+        val edges = storage.clearAndSnapshot()
         edges.forEach { handleOnRemove(it) }
     }
 
@@ -174,14 +166,7 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     private fun compactManyIfPossible() {
-        val current = many ?: return
-        when (current.size) {
-            0 -> many = null
-            1 -> {
-                first = current.first()
-                many = null
-            }
-        }
+        storage.compactManyToSingleton { it.firstOrNull() }
     }
 
     private inner class ManyIterator(private val delegate: MutableIterator<EdgeType>) :
@@ -229,7 +214,7 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
                 throw IllegalStateException("next() must be called before remove()")
             }
 
-            first = null
+            storage.first = null
             handleOnRemove(edge)
             canRemove = false
         }
