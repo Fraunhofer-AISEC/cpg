@@ -554,7 +554,12 @@ class Context(
     var steps: Int = 0,
 ) : HasAssumptions {
 
-    override val assumptions: MutableSet<Assumption> = mutableSetOf()
+    private var assumptionsStorage: MutableSet<Assumption>? = null
+
+    override val assumptions: MutableSet<Assumption>
+        get() {
+            return assumptionsStorage ?: mutableSetOf<Assumption>().also { assumptionsStorage = it }
+        }
 
     fun clone(): Context {
         return Context(indexStack = indexStack.clone(), callStack = callStack.clone(), steps)
