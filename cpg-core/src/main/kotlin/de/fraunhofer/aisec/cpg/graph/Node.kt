@@ -251,7 +251,13 @@ abstract class Node() :
 
     var prevPDG by unwrapping(Node::prevPDGEdges)
 
-    @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
+    @DoNotPersist @JsonIgnore private var assumptionsStorage: MutableSet<Assumption>? = null
+
+    @DoNotPersist
+    override val assumptions: MutableSet<Assumption>
+        get() {
+            return assumptionsStorage ?: mutableSetOf<Assumption>().also { assumptionsStorage = it }
+        }
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
@@ -292,7 +298,16 @@ abstract class Node() :
      * Additional problem nodes. These nodes represent problems which occurred during processing of
      * a node (i.e. only partially processed).
      */
-    val additionalProblems: MutableSet<ProblemNode> = mutableSetOf()
+    @DoNotPersist @JsonIgnore private var additionalProblemsStorage: MutableSet<ProblemNode>? = null
+
+    val additionalProblems: MutableSet<ProblemNode>
+        get() {
+            return additionalProblemsStorage
+                ?: mutableSetOf<ProblemNode>().also { additionalProblemsStorage = it }
+        }
+
+    val hasAdditionalProblems: Boolean
+        get() = additionalProblemsStorage?.isNotEmpty() == true
 
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
     val overlayEdges: Overlays =
@@ -308,7 +323,8 @@ abstract class Node() :
      * Currently, of the [Component].
      */
     override fun relevantAssumptions(): Set<Assumption> {
-        return super.relevantAssumptions() + (component?.relevantAssumptions() ?: emptySet())
+        val localAssumptions = assumptionsStorage?.toSet() ?: emptySet()
+        return localAssumptions + (component?.relevantAssumptions() ?: emptySet())
     }
 
     /**

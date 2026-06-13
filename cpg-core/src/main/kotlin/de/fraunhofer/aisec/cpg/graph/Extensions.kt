@@ -1580,13 +1580,12 @@ inline fun <reified T : Scope> Scope.firstScopeParentOrNull(
  */
 val AstNode?.problems: List<ProblemNode>
     get() {
-        val relevantNodes =
-            this.allChildren<Node> { it is ProblemNode || it.additionalProblems.isNotEmpty() }
+        val relevantNodes = this.allChildren<Node> { it is ProblemNode || it.hasAdditionalProblems }
 
         val result = mutableListOf<ProblemNode>()
 
         relevantNodes.forEach {
-            if (it.additionalProblems.isNotEmpty()) {
+            if (it.hasAdditionalProblems) {
                 result += it.additionalProblems
             }
             if (it is ProblemNode) {
