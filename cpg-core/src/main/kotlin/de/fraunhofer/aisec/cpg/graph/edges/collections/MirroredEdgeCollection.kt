@@ -53,6 +53,8 @@ interface MirroredEdgeCollection<NodeType : Node, PropertyEdgeType : Edge<NodeTy
         @Suppress("UNCHECKED_CAST")
         if (mirror is MirrorBacklinkCollection<*>) {
             (mirror as MirrorBacklinkCollection<PropertyEdgeType>).removeMirrorBacklink(edge)
+        } else if (mirror is EdgeCollection<*, *>) {
+            (mirror as EdgeCollection<NodeType, PropertyEdgeType>).removeByIdentity(edge)
         } else if (edge in mirror) {
             mirror.remove(edge)
         }
@@ -74,6 +76,11 @@ interface MirroredEdgeCollection<NodeType : Node, PropertyEdgeType : Edge<NodeTy
             val backlink = mirror as MirrorBacklinkCollection<PropertyEdgeType>
             if (!backlink.containsMirrorBacklinkByIdentity(edge)) {
                 backlink.addMirrorBacklink(edge)
+            }
+        } else if (mirror is EdgeCollection<*, *>) {
+            val edgeCollection = mirror as EdgeCollection<NodeType, PropertyEdgeType>
+            if (!edgeCollection.containsByIdentity(edge)) {
+                edgeCollection.add(edge)
             }
         } else if (edge !in mirror) {
             mirror.add(edge)

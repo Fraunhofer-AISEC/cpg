@@ -30,9 +30,12 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class EdgeListTest {
     @Test
@@ -94,6 +97,30 @@ class EdgeListTest {
             list.clear()
             assertEquals(0, list.size)
             assertEquals(emptyList(), list.unwrap())
+        }
+    }
+
+    @Test
+    fun testIdentityBasedOperations() {
+        with(TestLanguageFrontend()) {
+            val owner = newLiteral(0)
+            val target = newLiteral(1)
+
+            val list = owner.nextEOGEdges
+            val edge1 = EvaluationOrder(owner, target)
+            val edge2 = EvaluationOrder(owner, target)
+
+            list.add(edge1)
+
+            // Identity checks must distinguish object instances.
+            assertTrue(list.containsByIdentity(edge1))
+            assertFalse(list.containsByIdentity(edge2))
+
+            assertFalse(list.removeByIdentity(edge2))
+            assertEquals(1, list.size)
+
+            assertTrue(list.removeByIdentity(edge1))
+            assertEquals(0, list.size)
         }
     }
 }

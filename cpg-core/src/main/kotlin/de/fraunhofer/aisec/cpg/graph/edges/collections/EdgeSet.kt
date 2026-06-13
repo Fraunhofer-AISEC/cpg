@@ -73,8 +73,20 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
         }
     }
 
+    override fun containsByIdentity(edge: EdgeType): Boolean {
+        return containsMirrorBacklinkByIdentity(edge)
+    }
+
     override fun removeMirrorBacklink(element: EdgeType): Boolean {
         return removeByIdentityWithoutHooks(element)
+    }
+
+    override fun removeByIdentity(edge: EdgeType): Boolean {
+        val removed = removeByIdentityWithoutHooks(edge)
+        if (removed) {
+            handleOnRemove(edge)
+        }
+        return removed
     }
 
     private fun addWithoutHooks(element: EdgeType): Boolean {

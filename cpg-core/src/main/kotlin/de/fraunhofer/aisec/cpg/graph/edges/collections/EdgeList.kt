@@ -85,6 +85,10 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         return indexOfIdentity(element) != -1
     }
 
+    override fun containsByIdentity(edge: EdgeType): Boolean {
+        return indexOfIdentity(edge) != -1
+    }
+
     override fun removeMirrorBacklink(element: EdgeType): Boolean {
         val idx = indexOfIdentity(element)
         if (idx == -1) {
@@ -92,6 +96,16 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         }
 
         removeAtWithoutHooks(idx)
+        return true
+    }
+
+    override fun removeByIdentity(edge: EdgeType): Boolean {
+        val idx = indexOfIdentity(edge)
+        if (idx == -1) {
+            return false
+        }
+
+        removeAt(idx)
         return true
     }
 
