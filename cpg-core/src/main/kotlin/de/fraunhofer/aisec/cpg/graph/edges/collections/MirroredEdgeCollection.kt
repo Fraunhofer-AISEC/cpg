@@ -82,8 +82,6 @@ interface MirroredEdgeCollection<NodeType : Node, PropertyEdgeType : Edge<NodeTy
             if (!edgeCollection.containsByIdentity(edge)) {
                 edgeCollection.add(edge)
             }
-        } else if (edge !in mirror) {
-            mirror.add(edge)
         }
 
         // Execute any remaining post actions

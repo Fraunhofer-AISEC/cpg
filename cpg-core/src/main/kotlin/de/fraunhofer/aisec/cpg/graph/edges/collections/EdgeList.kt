@@ -77,7 +77,7 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
             return false
         }
 
-        addWithoutHooks(element)
+        add(element)
         return true
     }
 

@@ -63,7 +63,7 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun addMirrorBacklink(element: EdgeType): Boolean {
-        return addWithoutHooks(element)
+        return add(element)
     }
 
     override fun containsMirrorBacklinkByIdentity(element: EdgeType): Boolean {

@@ -306,6 +306,7 @@ abstract class Node() :
                 ?: mutableSetOf<ProblemNode>().also { additionalProblemsStorage = it }
         }
 
+    @DoNotPersist
     val hasAdditionalProblems: Boolean
         get() = additionalProblemsStorage?.isNotEmpty() == true
 
