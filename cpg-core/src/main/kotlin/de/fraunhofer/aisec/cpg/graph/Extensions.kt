@@ -359,12 +359,14 @@ class FulfilledAndFailedPaths(
 fun Node.followPrevFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    detectRecursiveRevisits: Boolean = false,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followDFGEdgesUntilHit(
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        detectRecursiveRevisits = detectRecursiveRevisits,
         earlyTermination = earlyTermination,
         predicate = predicate,
         direction = Backward(GraphToFollow.DFG),
@@ -445,6 +447,7 @@ fun Node.collectAllPrevDFGPaths(): List<NodePath> {
 fun Node.followEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    detectRecursiveRevisits: Boolean = false,
     direction: AnalysisDirection = Forward(GraphToFollow.EOG),
     vararg sensitivities: AnalysisSensitivity = FilterUnreachableEOG + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
@@ -464,6 +467,7 @@ fun Node.followEOGEdgesUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        detectRecursiveRevisits = detectRecursiveRevisits,
         earlyTermination = earlyTermination,
         predicate = predicate,
     )
@@ -514,6 +518,7 @@ fun Node.followEOGEdgesUntilHit(
 fun Node.followDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    detectRecursiveRevisits: Boolean = false,
     direction: AnalysisDirection = Forward(GraphToFollow.DFG),
     vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
@@ -534,6 +539,7 @@ fun Node.followDFGEdgesUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        detectRecursiveRevisits = detectRecursiveRevisits,
         ctx = ctx,
         earlyTermination = earlyTermination,
         predicate = predicate,
@@ -641,6 +647,25 @@ class SimpleStack<T> {
             }
         }
         return true
+    }
+
+    fun endsWith(other: SimpleStack<T>): Boolean {
+        if (other.depth > this.depth) {
+            return false
+        }
+
+        val offset = this.depth - other.depth
+        for ((idx, elem) in other.deque.withIndex()) {
+            if (elem != this.deque.getOrNull(idx + offset)) {
+                return false
+            }
+        }
+
+        return true
+    }
+
+    fun isStrictExtensionOf(other: SimpleStack<T>): Boolean {
+        return this.depth > other.depth && this.endsWith(other)
     }
 
     operator fun contains(elem: T): Boolean {
@@ -856,6 +881,7 @@ fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<NodePath
 fun Node.followNextPDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    detectRecursiveRevisits: Boolean = false,
     interproceduralAnalysis: Boolean = false,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
@@ -873,6 +899,7 @@ fun Node.followNextPDGUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        detectRecursiveRevisits = detectRecursiveRevisits,
         earlyTermination = earlyTermination,
         predicate = predicate,
     )
@@ -907,6 +934,7 @@ fun Node.followNextPDGUntilHit(
 fun Node.followNextCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    detectRecursiveRevisits: Boolean = false,
     interproceduralAnalysis: Boolean = false,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
@@ -920,10 +948,11 @@ fun Node.followNextCDGUntilHit(
                     (it as? Edge<Node>)?.let { element -> nextEdges.add(element) }
                 }
             }
-            nextEdges.map { Triple(it.end, it, ctx) }
+            nextEdges.map { edge -> Triple(edge.end, edge, ctx) }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        detectRecursiveRevisits = detectRecursiveRevisits,
         earlyTermination = earlyTermination,
         predicate = predicate,
     )
@@ -961,6 +990,7 @@ fun Node.followNextCDGUntilHit(
 fun Node.followPrevPDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    detectRecursiveRevisits: Boolean = false,
     interproceduralAnalysis: Boolean = false,
     interproceduralMaxDepth: Int? = null,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
@@ -988,6 +1018,7 @@ fun Node.followPrevPDGUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        detectRecursiveRevisits = detectRecursiveRevisits,
         earlyTermination = earlyTermination,
         predicate = predicate,
     )
@@ -1025,6 +1056,7 @@ fun Node.followPrevPDGUntilHit(
 fun Node.followPrevCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    detectRecursiveRevisits: Boolean = false,
     interproceduralAnalysis: Boolean = false,
     interproceduralMaxDepth: Int? = null,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
@@ -1052,6 +1084,7 @@ fun Node.followPrevCDGUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        detectRecursiveRevisits = detectRecursiveRevisits,
         earlyTermination = earlyTermination,
         predicate = predicate,
     )
@@ -1077,6 +1110,9 @@ fun Node.followPrevCDGUntilHit(
  * @param findAllPossiblePaths If `true` (the default), every possible path through the graph is
  *   explored, even if a node has already been visited via a different path. Set to `false` to visit
  *   each `(Node, Context)` pair only once, which is faster but may miss some paths.
+ * @param stopAfterHit If `true` stops when the first node is visited which fulfills [predicate].
+ *   This is an early termination criteria and we may not find all nodes fulfilling [predicate] but
+ *   only a single one.
  * @param ctx The initial [Context] for the traversal (index stack, call stack, step counter).
  *   Usually the default value suffices; supply a custom context e.g. when the analysis should start
  *   inside a specific call stack.
@@ -1098,7 +1134,8 @@ fun Node.followXUntilHit(
         ) -> Collection<Triple<Node, Edge<Node>, Context>>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    continueAfterHit: Boolean = false,
+    stopAfterHit: Boolean = false,
+    detectRecursiveRevisits: Boolean = false,
     ctx: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean,
     predicate: (Node) -> Boolean,
@@ -1127,6 +1164,14 @@ fun Node.followXUntilHit(
         val currentEdge = currentPath.last().second
         val currentContext = currentPath.last().third
         alreadySeenNodes.add(Triple(currentNode, currentEdge, currentContext))
+        if (
+            findAllPossiblePaths &&
+                alreadySeenNodes.any { it.first === currentNode && it.second === currentEdge }
+        ) {
+            // We already check the subsequent paths for the same node and edge, so we can skip this
+            // one.
+            continue
+        }
         val currentPathNodes = currentPath.map { it.first }
         val currentPathEdges = currentPath.mapNotNull { it.second }
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
@@ -1145,6 +1190,10 @@ fun Node.followXUntilHit(
         }
 
         for ((nextNode, edge, newContext) in nextNodes) {
+            val revisitsCurrentPath =
+                isNodeWithCallStackInPath(nextNode, newContext, currentPath) ||
+                    (detectRecursiveRevisits &&
+                        isRecursiveNodeWithCallStackInPath(nextNode, newContext, currentPath))
             // Copy the path for each outgoing edge and add the next node
             if (predicate(nextNode)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
@@ -1153,6 +1202,10 @@ fun Node.followXUntilHit(
                     NodePath(currentPathNodes + nextNode, currentPathEdges + edge)
                         .addAssumptionDependence(currentPath.map { it.third } + newContext)
                 fulfilledPaths.add(nodePath)
+                if (!stopAfterHit) {
+                    return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
+                }
+
                 continue // Don't add this path anymore. The requirement is satisfied.
             }
             if (earlyTermination(nextNode, currentContext)) {
@@ -1166,7 +1219,7 @@ fun Node.followXUntilHit(
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
             if (
-                !isNodeWithCallStackInPath(nextNode, newContext, currentPath) &&
+                !revisitsCurrentPath &&
                     // A hack that tries to ensure that we are not running in circles: Watch out if
                     // the top of the newContext and the currentPath callStack are the same and not
                     // null, this could indicate a loop
@@ -1225,7 +1278,24 @@ fun isNodeWithCallStackInPath(
     context: Context,
     path: Collection<Triple<Node, Edge<Node>?, Context>>,
 ): Boolean {
-    return path.any { it.first == node && context.callStack == it.third.callStack }
+    return path.any { it.first == node && (context.callStack == it.third.callStack) }
+}
+
+/**
+ * Checks whether [node] was already seen on the current path with a call stack that is a strict
+ * suffix of the current one. This indicates that we re-entered the same node recursively without
+ * unwinding to the earlier calling context first.
+ */
+fun isRecursiveNodeWithCallStackInPath(
+    node: Node,
+    context: Context,
+    path: Collection<Triple<Node, Edge<Node>?, Context>>,
+): Boolean {
+    return path.any {
+        it.first == node &&
+            it.third.callStack.depth > 0 &&
+            context.callStack.isStrictExtensionOf(it.third.callStack)
+    }
 }
 
 /**
@@ -1257,12 +1327,14 @@ fun isNodeWithCallStackInPath(
 fun Node.followNextFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    detectRecursiveRevisits: Boolean = false,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followDFGEdgesUntilHit(
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        detectRecursiveRevisits = detectRecursiveRevisits,
         earlyTermination = earlyTermination,
         predicate = predicate,
         direction = Forward(GraphToFollow.DFG),
