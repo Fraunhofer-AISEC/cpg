@@ -1163,15 +1163,15 @@ fun Node.followXUntilHit(
         val currentNode = currentPath.last().first
         val currentEdge = currentPath.last().second
         val currentContext = currentPath.last().third
-        alreadySeenNodes.add(Triple(currentNode, currentEdge, currentContext))
         if (
-            findAllPossiblePaths &&
+            !findAllPossiblePaths &&
                 alreadySeenNodes.any { it.first === currentNode && it.second === currentEdge }
         ) {
             // We already check the subsequent paths for the same node and edge, so we can skip this
             // one.
             continue
         }
+        alreadySeenNodes.add(Triple(currentNode, currentEdge, currentContext))
         val currentPathNodes = currentPath.map { it.first }
         val currentPathEdges = currentPath.mapNotNull { it.second }
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
@@ -1190,10 +1190,6 @@ fun Node.followXUntilHit(
         }
 
         for ((nextNode, edge, newContext) in nextNodes) {
-            val revisitsCurrentPath =
-                isNodeWithCallStackInPath(nextNode, newContext, currentPath) ||
-                    (detectRecursiveRevisits &&
-                        isRecursiveNodeWithCallStackInPath(nextNode, newContext, currentPath))
             // Copy the path for each outgoing edge and add the next node
             if (predicate(nextNode)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
@@ -1202,7 +1198,7 @@ fun Node.followXUntilHit(
                     NodePath(currentPathNodes + nextNode, currentPathEdges + edge)
                         .addAssumptionDependence(currentPath.map { it.third } + newContext)
                 fulfilledPaths.add(nodePath)
-                if (!stopAfterHit) {
+                if (stopAfterHit) {
                     return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
                 }
 
@@ -1216,6 +1212,10 @@ fun Node.followXUntilHit(
                 )
                 continue // Don't add this path anymore. We already failed.
             }
+            val revisitsCurrentPath =
+                isNodeWithCallStackInPath(nextNode, newContext, currentPath) ||
+                    (detectRecursiveRevisits &&
+                        isRecursiveNodeWithCallStackInPath(nextNode, newContext, currentPath))
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
             if (
@@ -1278,7 +1278,7 @@ fun isNodeWithCallStackInPath(
     context: Context,
     path: Collection<Triple<Node, Edge<Node>?, Context>>,
 ): Boolean {
-    return path.any { it.first == node && (context.callStack == it.third.callStack) }
+    return path.any { it.first == node && context.callStack == it.third.callStack }
 }
 
 /**
