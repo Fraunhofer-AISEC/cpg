@@ -60,7 +60,9 @@ class Passes {
                                         thenStmt { ref("y").inc() }
                                         elseStmt { ref("y").dec() }
                                     }
-                                    memberCall("println", member("out", ref("System"))) { ref("y") }
+                                    memberCall("println", member("out") { ref("System") }) {
+                                        ref("y")
+                                    }
                                     returnStmt {}
                                 }
                             }
@@ -79,7 +81,9 @@ class Passes {
                                         thenStmt { ref("y").inc() }
                                         elseStmt { ref("y").dec() }
                                     }
-                                    memberCall("println", member("out", ref("System"))) { ref("y") }
+                                    memberCall("println", member("out") { ref("System") }) {
+                                        ref("y")
+                                    }
                                     returnStmt {}
                                 }
                             }
@@ -98,7 +102,9 @@ class Passes {
                                         thenStmt { ref("y").inc() }
                                         elseStmt { ref("y").dec() }
                                     }
-                                    memberCall("println", member("out", ref("System"))) { ref("y") }
+                                    memberCall("println", member("out") { ref("System") }) {
+                                        ref("y")
+                                    }
                                     returnStmt {}
                                 }
                             }
@@ -117,7 +123,9 @@ class Passes {
                                         thenStmt { ref("y").inc() }
                                         elseStmt { ref("y").dec() }
                                     }
-                                    memberCall("println", member("out", ref("System"))) { ref("y") }
+                                    memberCall("println", member("out") { ref("System") }) {
+                                        ref("y")
+                                    }
                                     returnStmt {}
                                 }
                             }
@@ -138,7 +146,9 @@ class Passes {
                                         elseStmt { ref("y").dec() }
                                     }
                                     ref("z") assign literal(10, t("int"))
-                                    memberCall("println", member("out", ref("System"))) { ref("y") }
+                                    memberCall("println", member("out") { ref("System") }) {
+                                        ref("y")
+                                    }
                                     returnStmt {}
                                 }
                             }
@@ -159,7 +169,9 @@ class Passes {
                                         elseStmt { ref("y").dec() }
                                     }
                                     ref("z") assign literal(3, t("int"))
-                                    memberCall("println", member("out", ref("System"))) { ref("y") }
+                                    memberCall("println", member("out") { ref("System") }) {
+                                        ref("y")
+                                    }
                                     returnStmt {}
                                 }
                             }
@@ -178,7 +190,9 @@ class Passes {
                                         thenStmt { ref("y").inc() }
                                         elseStmt { ref("y").dec() }
                                     }
-                                    memberCall("println", member("out", ref("System"))) { ref("y") }
+                                    memberCall("println", member("out") { ref("System") }) {
+                                        ref("y")
+                                    }
                                     returnStmt {}
                                 }
                             }
@@ -192,13 +206,13 @@ class Passes {
                                     whileStmt {
                                         whileCondition { ref("x") }
                                         loopBody {
-                                            memberCall("println", member("out", ref("System"))) {
+                                            memberCall("println", member("out") { ref("System") }) {
                                                 literal("Cool loop", t("string"))
                                             }
                                         }
                                     }
 
-                                    memberCall("println", member("out", ref("System"))) {
+                                    memberCall("println", member("out") { ref("System") }) {
                                         literal("After cool loop", t("string"))
                                     }
                                     returnStmt {}
@@ -214,14 +228,14 @@ class Passes {
                                     whileStmt {
                                         whileCondition { ref("x") }
                                         loopBody {
-                                            memberCall("println", member("out", ref("System"))) {
+                                            memberCall("println", member("out") { ref("System") }) {
                                                 literal("Cool loop", t("string"))
                                             }
                                             ref("x") assign literal(false, t("boolean"))
                                         }
                                     }
 
-                                    memberCall("println", member("out", ref("System"))) {
+                                    memberCall("println", member("out") { ref("System") }) {
                                         literal("After cool loop", t("string"))
                                     }
                                     returnStmt {}
@@ -233,13 +247,13 @@ class Passes {
                                     whileStmt {
                                         whileCondition { literal(false, t("boolean")) }
                                         loopBody {
-                                            memberCall("println", member("out", ref("System"))) {
+                                            memberCall("println", member("out") { ref("System") }) {
                                                 literal("Cool loop", t("string"))
                                             }
                                         }
                                     }
 
-                                    memberCall("println", member("out", ref("System"))) {
+                                    memberCall("println", member("out") { ref("System") }) {
                                         literal("After cool loop", t("string"))
                                     }
                                     returnStmt {}
@@ -253,13 +267,13 @@ class Passes {
                                     whileStmt {
                                         whileCondition { ref("x") le literal(2, t("int")) }
                                         loopBody {
-                                            memberCall("println", member("out", ref("System"))) {
+                                            memberCall("println", member("out") { ref("System") }) {
                                                 literal("Cool loop", t("string"))
                                             }
                                         }
                                     }
 
-                                    memberCall("println", member("out", ref("System"))) {
+                                    memberCall("println", member("out") { ref("System") }) {
                                         literal("After cool loop", t("string"))
                                     }
                                     returnStmt {}
@@ -273,13 +287,13 @@ class Passes {
                                     whileStmt {
                                         whileCondition { ref("x") gt literal(3, t("int")) }
                                         loopBody {
-                                            memberCall("println", member("out", ref("System"))) {
+                                            memberCall("println", member("out") { ref("System") }) {
                                                 literal("Cool loop", t("string"))
                                             }
                                         }
                                     }
 
-                                    memberCall("println", member("out", ref("System"))) {
+                                    memberCall("println", member("out") { ref("System") }) {
                                         literal("After cool loop", t("string"))
                                     }
                                     returnStmt {}
@@ -297,14 +311,14 @@ class Passes {
                                     whileStmt {
                                         whileCondition { ref("y") le literal(2, t("int")) }
                                         loopBody {
-                                            memberCall("println", member("out", ref("System"))) {
+                                            memberCall("println", member("out") { ref("System") }) {
                                                 literal("Cool loop", t("string"))
                                             }
                                             ref("y") assign memberCall("nextUInt", ref("URandomKt"))
                                         }
                                     }
 
-                                    memberCall("println", member("out", ref("System"))) {
+                                    memberCall("println", member("out") { ref("System") }) {
                                         literal("After cool loop", t("string"))
                                     }
                                     returnStmt {}
