@@ -1103,20 +1103,25 @@ fun Expression.line(i: Int): Expression {
     return this
 }
 
+private object DiscardHolder : Holder<Expression> {
+    override fun replace(old: Expression, new: Expression) = false
+
+    override fun plusAssign(node: Expression) {}
+}
+
 /**
  * Creates a new [MemberAccess] in the Fluent Node DSL and invokes [ArgumentHolder.addArgument] of
  * the nearest enclosing [Holder], but only if it is an [ArgumentHolder]. If the [name] doesn't
  * already contain a fqn, we add an implicit "this" as base.
- *
- * The [base] is an optional lambda that produces the base expression. Using a lambda defers
- * evaluation so the base expression is produced after [member] has started executing, preventing it
- * from eagerly attaching to the wrong [ArgumentHolder].
  */
 context(holder: Holder<out Expression>)
 fun LanguageFrontend<*, *>.member(
     name: CharSequence,
     operatorCode: String = ".",
-    base: (() -> Expression)? = null,
+    base:
+        (context(Holder<out Expression>)
+        () -> Expression)? =
+        null,
 ): MemberAccess {
     val parsedName = parseName(name)
     val type =
@@ -1131,7 +1136,8 @@ fun LanguageFrontend<*, *>.member(
             scopeType
         }
     val memberBase =
-        base?.invoke() ?: this.memberOrRef(parsedName.parent ?: this.parseName("this"), type)
+        base?.let { with(DiscardHolder) { it() } }
+            ?: this.memberOrRef(parsedName.parent ?: this.parseName("this"), type)
 
     val node =
         newMemberAccess(name, memberBase, operatorCode = operatorCode).apply {
@@ -1140,11 +1146,6 @@ fun LanguageFrontend<*, *>.member(
 
     if (holder is ArgumentHolder) {
         holder += node
-        // base?.invoke() runs with the outer holder in context, so ref() / member() inside
-        // the lambda eagerly attach memberBase to holder. Remove that phantom attachment.
-        if (base != null) {
-            holder -= memberBase
-        }
     }
 
     return node
