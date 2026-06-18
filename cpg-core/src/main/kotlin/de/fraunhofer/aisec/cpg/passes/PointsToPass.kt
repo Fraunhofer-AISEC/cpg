@@ -1531,17 +1531,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // of the argDerefVal, we simply fetch the last write for the
                 // argVal from the declarationState and add the properties
                 // TODO: what if argVal is global?
-                val tmp =
-                    retDoubleState.declarationsState[argVal]?.third?.mapTo(
-                        PowersetLattice.Element()
-                    ) {
-                        NodeWithPropertiesKey(
-                            it.node,
-                            equalLinkedHashSetOf(callingContext, true in it.properties),
-                        )
-                    } ?: PowersetLattice.Element()
-                if (tmp.isEmpty() && arg is PointerReference) doubleState.getLastWrites(arg.input)
-                else tmp
+                retDoubleState.declarationsState[argVal]?.third?.mapTo(PowersetLattice.Element()) {
+                    NodeWithPropertiesKey(
+                        it.node,
+                        equalLinkedHashSetOf(callingContext, true in it.properties),
+                    )
+                }
+                    ?: (arg as? PointerReference)?.let {
+                        doubleState.getLastWrites(it.input).mapTo(PowersetLattice.Element()) {
+                            NodeWithPropertiesKey(
+                                it.node,
+                                equalLinkedHashSetOf(callingContext, true in it.properties),
+                            )
+                        }
+                    }
+                    ?: PowersetLattice.Element()
             }
         // Also draw the edges for the (deref)derefvalues if we have
         // any and are dealing with a pointer parameter (AKA memoryValue is

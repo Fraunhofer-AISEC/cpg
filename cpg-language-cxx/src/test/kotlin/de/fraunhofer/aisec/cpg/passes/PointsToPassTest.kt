@@ -5042,12 +5042,25 @@ class PointsToPassTest {
                         "derefvalue"
                 }
                 ?.start
+        assertNotNull(printfDerefPMV)
 
         // We expect a DFG edge to have 2 nextFullDFGs: To the arg and to the derefPMVfrom the
         // global var to the derefPMV
         assertEquals(
             setOf(printfDerefPMV, (printfArg as? PointerReference)?.input),
             variable.nextFullDFG.toSet(),
+        )
+
+        // The DerefPMV of printf has one prevDFG to the global var, this one is ContextSensitive
+        assertEquals(1, printfDerefPMV.prevDFG.size)
+        assertEquals(
+            variable,
+            printfDerefPMV.prevDFGEdges
+                .singleOrNull {
+                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.singleOrNull() ==
+                        printfCall
+                }
+                ?.start,
         )
     }
 }
