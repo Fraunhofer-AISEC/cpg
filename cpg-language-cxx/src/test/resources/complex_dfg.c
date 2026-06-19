@@ -12,10 +12,8 @@ int func3(int *p){
 
 int func2(int* p) {
   for (int j=0; j<10; j++) {
-    (*p)++;
-  }
-  if (*p < 50) 
     func3(p);
+  }
 }
 
 int func1(int* p) {
