@@ -587,18 +587,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // Then the memoryValues
             if (key is HasMemoryValue && value.second.isNotEmpty()) {
                 value.second.forEach { (v, properties) ->
-                    var granularity = default()
-                    var shortFS = false
-                    properties.forEach { p ->
-                        when (p) {
-                            // String indicated a partial target
-                            is String -> granularity = PartialDataflowGranularity(p)
-                            // Boolean says if this is a shortFS or not
-                            is Boolean -> shortFS = p
-                            else -> TODO()
+                    // We already added the parameters value in initializeParameters, so we skip
+                    // that now
+                    if (v !is Parameter) {
+                        var granularity = default()
+                        var shortFS = false
+                        properties.forEach { p ->
+                            when (p) {
+                                // String indicated a partial target
+                                is String -> granularity = PartialDataflowGranularity(p)
+                                // Boolean says if this is a shortFS or not
+                                is Boolean -> shortFS = p
+                                else -> TODO()
+                            }
                         }
+                        key.memoryValueEdges += Dataflow(v, key, granularity, shortFS)
                     }
-                    key.memoryValueEdges += Dataflow(v, key, granularity, shortFS)
                 }
             }
 
@@ -935,15 +939,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         mutableSetOf(
                                             NodeWithPropertiesKey(
                                                 matchingDeclarations,
-                                                // Add the parameter
-                                                // index to indicate
-                                                // to the
-                                                // calculatePrevDFGs
-                                                // function that we
-                                                // need to replace
-                                                // the
-                                                // value of the call
-                                                // argument
+                                                // Add the parameter index to indicate to the
+                                                // calculatePrevDFGs function that we need to
+                                                // replace the value of the call argument
                                                 equalLinkedHashSetOf(
                                                     matchingDeclarations.argumentIndex
                                                 ),
@@ -1920,6 +1918,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     private suspend fun calculateFunctionSummaries(invoke: Function): Function? {
+        fun addDummyFS() {
+            if (log.isTraceEnabled) {
+                log.trace("Creating dummy function summary")
+            }
+            val newValues = ConcurrentHashMap.newKeySet<FSEntry>()
+            invoke.parameters.forEach { newValues.add(FSEntry(0, it, 1, "", isDummy = true)) }
+            val entries = identitySetOf<Node>()
+            if (invoke.returns.isNotEmpty()) entries.addAll(invoke.returns) else entries.add(invoke)
+            entries.forEach { entry -> invoke.functionSummary.put(entry, newValues) }
+            if (log.isTraceEnabled) {
+                log.trace("Finished creating dummy function summary")
+            }
+        }
+
         if (invoke.functionSummary.isEmpty()) {
             if (invoke.hasBody()) {
                 if (log.isTraceEnabled) {
@@ -1970,28 +1982,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     log.error(
                         "Cannot calculate functionSummary for ${invoke.name.localName} as it's recursively called. callChain: ${functionSummaryAnalysisChain.map{it.name.localName}}"
                     )
-                    invoke.functionSummary.put(
-                        newLiteral("dummy"),
-                        ConcurrentHashMap.newKeySet<FSEntry>(),
-                    )
-                    return null
+                    addDummyFS()
                 }
             } else {
                 // Add a dummy function summary so that we don't try this every time
                 // In this dummy, all parameters point either to returns if we have any, or the
                 // Function itself
-                if (log.isTraceEnabled) {
-                    log.trace("Creating dummy function summary")
-                }
-                val newValues = ConcurrentHashMap.newKeySet<FSEntry>()
-                invoke.parameters.forEach { newValues.add(FSEntry(0, it, 1, "")) }
-                val entries = identitySetOf<Node>()
-                if (invoke.returns.isNotEmpty()) entries.addAll(invoke.returns)
-                else entries.add(invoke)
-                entries.forEach { entry -> invoke.functionSummary.put(entry, newValues) }
-                if (log.isTraceEnabled) {
-                    log.trace("Finished creating dummy function summary")
-                }
+                addDummyFS()
             }
         }
         return invoke
@@ -3208,6 +3205,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             PowersetLattice.Element(),
                         ),
                     )
+                // Additionally, directly add the value to the node. This is necessary on recursive
+                // calls, when we are not yet finished with acceptInternal of one function, but we
+                // already need to fetch the PMVs because we have a recursive call while handling
+                // the function
+                src.memoryValueEdges += Dataflow(pmv, src)
             } else {
                 // Link the PMVs with each other so that we can find them. This is
                 // especially important outside the respective function where we
@@ -3249,6 +3251,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             PowersetLattice.Element(),
                         ),
                     )
+                // Here again, directly add the value to the param to be able to access it directly
+                // instead of having to wait until acceptInternal is finished
+                param.memoryValueEdges +=
+                    Dataflow(pmv, param, granularity = PartialDataflowGranularity(pmvName))
             }
 
             // Update the states
