@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.Invoke
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.expressions.ParameterMemoryValue
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import kotlin.collections.mapNotNull
@@ -448,7 +449,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                             currentNode is HasMemoryValue &&
                             currentNode.memoryValueUsages.any { it != currentNode }
                     )
-                        currentNode.memoryValueUsageEdges.map { edge -> Pair(edge, ctx) }
+                        currentNode.memoryValueUsageEdges.map { edge -> Pair(edge, ctx.clone()) }
                     else
                         filterEdges(
                             currentNode = currentNode,
@@ -591,10 +592,12 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                 // We follow the memoryValues if there are any that aren't the node itself.
                 // Otherwise, we take the DFG
                 val edges =
-                    if (
-                        Implicit !in sensitivities &&
-                            currentNode is HasMemoryValue &&
-                            currentNode.memoryValues.any { it != currentNode }
+                    if (Implicit !in sensitivities && currentNode is Reference /*&&
+                            currentNode.memoryValues.any {
+                                */
+                    /*it != currentNode &&*/
+                    /* it.astParent != null
+                    }*/
                     ) {
                         currentNode.memoryValueEdges
                             .mapNotNull { mV ->
@@ -609,7 +612,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                                                 (mV.start as? ParameterMemoryValue)?.name?.parent
                                 )
                                     null
-                                else Pair(mV, ctx)
+                                else Pair(mV, ctx.clone())
                             }
                             .sortedBy { it.first.hashCode() }
                     } else
