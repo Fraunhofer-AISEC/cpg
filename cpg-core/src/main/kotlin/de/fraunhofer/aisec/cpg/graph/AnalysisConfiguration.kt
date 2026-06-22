@@ -41,8 +41,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Invoke
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
-import de.fraunhofer.aisec.cpg.graph.expressions.ParameterMemoryValue
-import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import kotlin.collections.mapNotNull
@@ -200,14 +198,13 @@ class InterproceduralWithDfgTermination(
 }
 
 /**
- * Used to determine which subgraph will be followed. Currently, we support the [DFG], [EOG] and
- * [MVG]. Note that this may be used to follow other edges as well (e.g. the PDG for DFG and
- * [Invoke] edges for EOG).
+ * Used to determine which subgraph will be followed. Currently, we support the [DFG] and [EOG].
+ * Note that this may be used to follow other edges as well (e.g. the PDG for DFG and [Invoke] edges
+ * for EOG).
  */
 enum class GraphToFollow {
     DFG,
     EOG,
-    MVG,
 }
 
 /**
@@ -438,33 +435,6 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                         .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
                 }
             }
-
-            GraphToFollow.MVG -> {
-                // The forward edges of the MVG are the memoryValueUsageEdges. So as for backward,
-                // we check if there are any values that aren't the node itself, and if not, we fall
-                // back to the DFG
-                val edges =
-                    if (
-                        Implicit !in sensitivities &&
-                            currentNode is HasMemoryValue &&
-                            currentNode.memoryValueUsages.any { it != currentNode }
-                    )
-                        currentNode.memoryValueUsageEdges.map { edge -> Pair(edge, ctx.clone()) }
-                    else
-                        filterEdges(
-                            currentNode = currentNode,
-                            edges =
-                                if (Implicit in sensitivities) currentNode.nextPDGEdges
-                                else currentNode.nextDFGEdges,
-                            ctx = ctx,
-                            scope = scope,
-                            path = path,
-                            loopingPaths = loopingPaths,
-                            sensitivities = sensitivities,
-                        )
-
-                edges.map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
-            }
         }
     }
 
@@ -474,9 +444,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
 
     override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
         return when (graphToFollow) {
-            // Since the MVG can fall back on the DFG, they have the same behavior
-            GraphToFollow.DFG,
-            GraphToFollow.MVG -> {
+            GraphToFollow.DFG -> {
                 edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn
             }
             GraphToFollow.EOG -> {
@@ -487,9 +455,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
 
     override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
         return when (graphToFollow) {
-            // Since the MVG can fall back on the DFG, they have the same behavior
-            GraphToFollow.DFG,
-            GraphToFollow.MVG -> {
+            GraphToFollow.DFG -> {
                 edge is ContextSensitiveDataflow && edge.callingContext is CallingContextOut
             }
 
@@ -587,49 +553,6 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                         .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
                 }
             }
-
-            GraphToFollow.MVG -> {
-                // We follow the memoryValues if there are any that aren't the node itself.
-                // Otherwise, we take the DFG
-                val edges =
-                    if (Implicit !in sensitivities && currentNode is Reference /*&&
-                            currentNode.memoryValues.any {
-                                */
-                    /*it != currentNode &&*/
-                    /* it.astParent != null
-                    }*/
-                    ) {
-                        currentNode.memoryValueEdges
-                            .mapNotNull { mV ->
-                                if (
-                                    mV.start === currentNode ||
-                                        "deref" +
-                                            (currentNode as? ParameterMemoryValue)
-                                                ?.name
-                                                ?.localName ==
-                                            (mV.start as? ParameterMemoryValue)?.name?.localName &&
-                                            (currentNode as? ParameterMemoryValue)?.name?.parent ==
-                                                (mV.start as? ParameterMemoryValue)?.name?.parent
-                                )
-                                    null
-                                else Pair(mV, ctx.clone())
-                            }
-                            .sortedBy { it.first.hashCode() }
-                    } else
-                        filterEdges(
-                            currentNode = currentNode,
-                            edges =
-                                if (Implicit in sensitivities) currentNode.prevPDGEdges
-                                else currentNode.prevDFGEdges,
-                            ctx = ctx,
-                            scope = scope,
-                            path = path,
-                            loopingPaths = loopingPaths,
-                            sensitivities = sensitivities,
-                        )
-
-                edges.map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
-            }
         }
     }
 
@@ -639,9 +562,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
 
     override fun edgeRequiresCallPush(currentNode: Node, edge: Edge<Node>): Boolean {
         return when (graphToFollow) {
-            // Since the MVG can fall back on the DFG, they have the same behavior
-            GraphToFollow.DFG,
-            GraphToFollow.MVG -> {
+            GraphToFollow.DFG -> {
                 edge is ContextSensitiveDataflow && edge.callingContext is CallingContextOut
             }
 
@@ -653,9 +574,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
 
     override fun edgeRequiresCallPop(currentNode: Node, edge: Edge<Node>): Boolean {
         return when (graphToFollow) {
-            // Since the MVG can fall back on the DFG, they have the same behavior
-            GraphToFollow.DFG,
-            GraphToFollow.MVG -> {
+            GraphToFollow.DFG -> {
                 edge is ContextSensitiveDataflow && edge.callingContext is CallingContextIn
             }
 

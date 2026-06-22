@@ -1180,9 +1180,7 @@ fun Node.followXUntilHit(
                         (!isNodeWithCallStackInPath(nextNode, newContext, alreadySeenNodes) &&
                             worklist.none { isNodeWithCallStackInPath(nextNode, newContext, it) }))
             ) {
-                worklist.add(
-                    currentPath.toMutableList() + Triple(nextNode, edge, newContext.clone().inc())
-                )
+                worklist.add(currentPath.toMutableList() + Triple(nextNode, edge, newContext.inc()))
             } else {
                 // There's a loop.
                 loopingPaths.add(
