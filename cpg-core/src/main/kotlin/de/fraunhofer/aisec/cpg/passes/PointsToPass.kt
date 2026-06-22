@@ -1143,7 +1143,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 is Return -> handleReturn(lattice, currentNode, doubleState)
 
                 is Expression -> {
-                    if (currentNode.usedAsExpression || currentNode is BinaryOperator)
+                    if (currentNode.usedAsExpression)
                         handleExpression(lattice, currentNode, doubleState)
                     else doubleState
                 }
