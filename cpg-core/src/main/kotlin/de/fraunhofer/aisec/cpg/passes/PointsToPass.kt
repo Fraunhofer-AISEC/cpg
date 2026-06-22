@@ -885,7 +885,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     value.followDFGEdgesUntilHit(
                         collectFailedPaths = false,
                         findAllPossiblePaths = false,
-                        direction = Backward(GraphToFollow.MVG),
+                        direction = Backward(GraphToFollow.DFG),
                         sensitivities = OnlyFullDFG + FieldSensitive + ContextSensitive,
                         // We need to search interprocedural here.
                         // In order this acceptable also in larger graphs, we limit the maxCallDepth
