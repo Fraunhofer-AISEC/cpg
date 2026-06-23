@@ -69,7 +69,7 @@ ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 
 mcp = {module = "io.modelcontextprotocol:kotlin-sdk", version = "0.13.0"}
-mcp-client = {module = "io.modelcontextprotocol:kotlin-sdk-client", version = "0.11.0"}
+mcp-client = {module = "io.modelcontextprotocol:kotlin-sdk-client", version = "0.13.0"}
 mcp-testing = {module = "io.modelcontextprotocol:kotlin-sdk-testing", version = "0.11.0"}
 
 # test
