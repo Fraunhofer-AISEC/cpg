@@ -10,7 +10,7 @@ slf4j = "2.0.16"
 clikt = "5.1.0"
 kaml = "0.104.0"
 sarif4k = "0.7.0"
-ktor = "3.3.3"
+ktor = "3.5.0"
 node = "22.14.0"
 deno-plugin = "0.1.5"
 
@@ -70,7 +70,7 @@ ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 
 mcp = {module = "io.modelcontextprotocol:kotlin-sdk", version = "0.13.0"}
 mcp-client = {module = "io.modelcontextprotocol:kotlin-sdk-client", version = "0.13.0"}
-mcp-testing = {module = "io.modelcontextprotocol:kotlin-sdk-testing", version = "0.11.0"}
+mcp-testing = {module = "io.modelcontextprotocol:kotlin-sdk-testing", version = "0.13.0"}
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.14.1"}
@@ -79,7 +79,7 @@ mockito = { module = "org.mockito:mockito-core", version = "5.23.0"}
 # plugins needed for build.gradle.kts in buildSrc
 publish-central = { module = "com.vanniktech:gradle-maven-publish-plugin", version.ref = "publish" }
 kotlin-gradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
-dokka-gradle = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version = "2.2.0" } # the dokka plugin is slightly behind the main Kotlin release cycle
+dokka-gradle = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version = "2.1.0" } # the dokka plugin is slightly behind the main Kotlin release cycle
 dokka-versioning = { module = "org.jetbrains.dokka:versioning-plugin", version = "2.2.0"}
 kover-gradle = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version = "0.9.3" }
 spotless-gradle = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
