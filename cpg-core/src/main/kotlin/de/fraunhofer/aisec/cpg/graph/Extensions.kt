@@ -447,6 +447,7 @@ fun Node.collectAllPrevDFGPaths(): List<NodePath> {
 fun Node.followEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    stopAfterHit: Boolean = false,
     detectRecursiveRevisits: Boolean = false,
     direction: AnalysisDirection = Forward(GraphToFollow.EOG),
     vararg sensitivities: AnalysisSensitivity = FilterUnreachableEOG + ContextSensitive,
@@ -454,7 +455,7 @@ fun Node.followEOGEdgesUntilHit(
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return this.followXUntilHit(
+    return this.followXUntilHit2(
         x = { currentNode, ctx, path, loopingPaths ->
             direction.pickNextStep(
                 currentNode,
@@ -468,6 +469,7 @@ fun Node.followEOGEdgesUntilHit(
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
         detectRecursiveRevisits = detectRecursiveRevisits,
+        stopAfterHit = stopAfterHit,
         earlyTermination = earlyTermination,
         predicate = predicate,
     )
@@ -518,6 +520,7 @@ fun Node.followEOGEdgesUntilHit(
 fun Node.followDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    stopAfterHit: Boolean = false,
     detectRecursiveRevisits: Boolean = false,
     direction: AnalysisDirection = Forward(GraphToFollow.DFG),
     vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
@@ -526,7 +529,7 @@ fun Node.followDFGEdgesUntilHit(
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return this.followXUntilHit(
+    return this.followXUntilHit2(
         x = { currentNode, ctx, path, loopingPaths ->
             direction.pickNextStep(
                 currentNode,
@@ -543,6 +546,7 @@ fun Node.followDFGEdgesUntilHit(
         ctx = ctx,
         earlyTermination = earlyTermination,
         predicate = predicate,
+        stopAfterHit = stopAfterHit,
     )
 }
 
@@ -881,12 +885,13 @@ fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<NodePath
 fun Node.followNextPDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    stopAfterHit: Boolean = false,
     detectRecursiveRevisits: Boolean = false,
     interproceduralAnalysis: Boolean = false,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit(
+    return followXUntilHit2(
         x = { currentNode, ctx, _, _ ->
             val nextEdges = currentNode.nextPDGEdges.toMutableList()
             if (interproceduralAnalysis) {
@@ -902,6 +907,7 @@ fun Node.followNextPDGUntilHit(
         detectRecursiveRevisits = detectRecursiveRevisits,
         earlyTermination = earlyTermination,
         predicate = predicate,
+        stopAfterHit = stopAfterHit,
     )
 }
 
@@ -934,12 +940,13 @@ fun Node.followNextPDGUntilHit(
 fun Node.followNextCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    stopAfterHit: Boolean = false,
     detectRecursiveRevisits: Boolean = false,
     interproceduralAnalysis: Boolean = false,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit(
+    return followXUntilHit2(
         x = { currentNode, ctx, _, _ ->
             val nextEdges: MutableList<Edge<Node>> = currentNode.nextCDGEdges.toMutableList()
             if (interproceduralAnalysis) {
@@ -955,6 +962,7 @@ fun Node.followNextCDGUntilHit(
         detectRecursiveRevisits = detectRecursiveRevisits,
         earlyTermination = earlyTermination,
         predicate = predicate,
+        stopAfterHit = stopAfterHit,
     )
 }
 
@@ -990,13 +998,14 @@ fun Node.followNextCDGUntilHit(
 fun Node.followPrevPDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    stopAfterHit: Boolean = false,
     detectRecursiveRevisits: Boolean = false,
     interproceduralAnalysis: Boolean = false,
     interproceduralMaxDepth: Int? = null,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit(
+    return followXUntilHit2(
         x = { currentNode, ctx, _, _ ->
             val nextEdges = currentNode.prevPDGEdges.toMutableList()
             if (interproceduralAnalysis) {
@@ -1021,6 +1030,7 @@ fun Node.followPrevPDGUntilHit(
         detectRecursiveRevisits = detectRecursiveRevisits,
         earlyTermination = earlyTermination,
         predicate = predicate,
+        stopAfterHit = stopAfterHit,
     )
 }
 
@@ -1056,13 +1066,14 @@ fun Node.followPrevPDGUntilHit(
 fun Node.followPrevCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    stopAfterHit: Boolean = false,
     detectRecursiveRevisits: Boolean = false,
     interproceduralAnalysis: Boolean = false,
     interproceduralMaxDepth: Int? = null,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    return followXUntilHit(
+    return followXUntilHit2(
         x = { currentNode, ctx, _, _ ->
             val nextEdges: MutableList<Edge<Node>> = currentNode.prevCDGEdges.toMutableList()
             if (interproceduralAnalysis) {
@@ -1087,6 +1098,7 @@ fun Node.followPrevCDGUntilHit(
         detectRecursiveRevisits = detectRecursiveRevisits,
         earlyTermination = earlyTermination,
         predicate = predicate,
+        stopAfterHit = stopAfterHit,
     )
 }
 
@@ -1145,12 +1157,27 @@ fun Node.followXUntilHit(
     val fulfilledPaths = mutableListOf<NodePath>()
     // failedPaths: All the paths which do not satisfy "predicate"
     val failedPaths = mutableListOf<Pair<FailureReason, NodePath>>()
-    val loopingPaths: MutableSet<NodePath> = ConcurrentHashMap.newKeySet()
+    val trackLoopingPaths = collectFailedPaths
+    val loopingPaths: MutableSet<NodePath> =
+        if (trackLoopingPaths) {
+            ConcurrentHashMap.newKeySet()
+        } else {
+            object : MutableSet<NodePath> by mutableSetOf() {
+                override fun add(element: NodePath): Boolean = false
+
+                override fun addAll(elements: Collection<NodePath>): Boolean = false
+            }
+        }
     // The list of paths where we're not done yet.
     val worklist = identitySetOf<List<Triple<Node, Edge<Node>?, Context>>>()
     worklist.add(listOf(Triple(this, null, ctx))) // We start only with the "from" node (=this)
 
-    val alreadySeenNodes = mutableSetOf<Triple<Node, Edge<Node>?, Context>>()
+    val alreadySeenNodes =
+        if (findAllPossiblePaths) {
+            null
+        } else {
+            mutableSetOf<Triple<Node, Edge<Node>?, Context>>()
+        }
     // First check if the current node satisfies the predicate.
     // If it does, we consider this path fulfilled and skip further traversal.
     if (predicate(this)) {
@@ -1165,13 +1192,17 @@ fun Node.followXUntilHit(
         val currentContext = currentPath.last().third
         if (
             !findAllPossiblePaths &&
-                alreadySeenNodes.any { it.first === currentNode && it.second === currentEdge }
+                alreadySeenNodes?.any {
+                    it.first === currentNode &&
+                        it.second === currentEdge &&
+                        it.third.callStack === currentContext.callStack
+                } == true
         ) {
             // We already check the subsequent paths for the same node and edge, so we can skip this
             // one.
             continue
         }
-        alreadySeenNodes.add(Triple(currentNode, currentEdge, currentContext))
+        alreadySeenNodes?.add(Triple(currentNode, currentEdge, currentContext))
         val currentPathNodes = currentPath.map { it.first }
         val currentPathEdges = currentPath.mapNotNull { it.second }
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
@@ -1230,19 +1261,418 @@ fun Node.followXUntilHit(
                         newContext.callStack.top == null ||
                         newContext.callStack == currentPath.last().third.callStack) &&
                     (findAllPossiblePaths ||
-                        (!isNodeWithCallStackInPath(nextNode, newContext, alreadySeenNodes) &&
-                            worklist.none { isNodeWithCallStackInPath(nextNode, newContext, it) }))
+                        (!isNodeWithCallStackInPath(
+                            nextNode,
+                            newContext,
+                            alreadySeenNodes.orEmpty(),
+                        ) && worklist.none { isNodeWithCallStackInPath(nextNode, newContext, it) }))
             ) {
                 worklist.add(currentPath.toMutableList() + Triple(nextNode, edge, newContext.inc()))
             } else {
                 // There's a loop.
-                loopingPaths.add(
-                    NodePath(currentPathNodes + nextNode, currentPathEdges + edge)
-                        .addAssumptionDependence(currentPath.map { it.third } + newContext)
-                )
+                if (trackLoopingPaths) {
+                    loopingPaths.add(
+                        NodePath(currentPathNodes + nextNode, currentPathEdges + edge)
+                            .addAssumptionDependence(currentPath.map { it.third } + newContext)
+                    )
+                }
             }
         }
     }
+
+    val failedLoops =
+        if (trackLoopingPaths) {
+            loopingPaths.mapFilteredTo(
+                mutableSetOf(),
+                { path ->
+                    fulfilledPaths.none {
+                        it.nodes.size > path.nodes.size &&
+                            it.nodes.subList(0, path.nodes.size - 1) == path.nodes
+                    } &&
+                        failedPaths.none {
+                            it.second.nodes.size > path.nodes.size &&
+                                it.second.nodes.subList(0, path.nodes.size - 1) == path.nodes
+                        }
+                },
+            ) {
+                FailureReason.PATH_ENDED to it
+            }
+        } else {
+            emptySet()
+        }
+
+    return FulfilledAndFailedPaths(
+        fulfilledPaths,
+        (failedPaths + failedLoops).toSet().map { Pair(it.first, it.second) },
+    )
+}
+
+private class TraversalState(node: Node, context: Context) {
+    private val nodeRef: Node = node
+    private val nodeIdentity: Int = System.identityHashCode(node)
+    private val indexStackSnapshot: SimpleStack<IndexedDataflowGranularity> =
+        context.indexStack.clone()
+    private val callStackSnapshot: SimpleStack<Call> = context.callStack.clone()
+
+    override fun equals(other: Any?): Boolean {
+        return other is TraversalState &&
+            other.nodeRef === nodeRef &&
+            other.indexStackSnapshot == indexStackSnapshot &&
+            other.callStackSnapshot == callStackSnapshot
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(nodeIdentity, indexStackSnapshot, callStackSnapshot)
+    }
+}
+
+private data class RelativePath(
+    val nodes: List<Node>,
+    val edges: List<Edge<Node>>,
+    val contexts: List<Context>,
+) {
+    fun prepend(node: Node, edge: Edge<Node>, context: Context): RelativePath {
+        return RelativePath(listOf(node) + nodes, listOf(edge) + edges, listOf(context) + contexts)
+    }
+
+    fun toNodePath(): NodePath {
+        return NodePath(nodes, edges).addAssumptionDependence(contexts)
+    }
+}
+
+private data class RelativeResult(
+    val fulfilled: MutableList<RelativePath> = mutableListOf(),
+    val failed: MutableList<Pair<FailureReason, RelativePath>> = mutableListOf(),
+)
+
+internal fun <T> identifyStronglyConnectedComponentsTarjan(
+    nodes: Collection<T>,
+    successors: (T) -> Collection<T>,
+): List<Set<T>> {
+    var indexCounter = 0
+    val index = mutableMapOf<T, Int>()
+    val lowLink = mutableMapOf<T, Int>()
+    val stack = ArrayDeque<T>()
+    val onStack = mutableSetOf<T>()
+    val components = mutableListOf<Set<T>>()
+
+    fun strongConnect(v: T) {
+        index[v] = indexCounter
+        lowLink[v] = indexCounter
+        indexCounter++
+        stack.addFirst(v)
+        onStack.add(v)
+
+        for (w in successors(v)) {
+            if (w !in index) {
+                strongConnect(w)
+                lowLink[v] = minOf(lowLink.getValue(v), lowLink.getValue(w))
+            } else if (w in onStack) {
+                lowLink[v] = minOf(lowLink.getValue(v), index.getValue(w))
+            }
+        }
+
+        if (lowLink.getValue(v) == index.getValue(v)) {
+            val component = mutableSetOf<T>()
+            while (true) {
+                val w = stack.removeFirst()
+                onStack.remove(w)
+                component += w
+                if (w == v) {
+                    break
+                }
+            }
+            components += component
+        }
+    }
+
+    for (node in nodes) {
+        if (node !in index) {
+            strongConnect(node)
+        }
+    }
+
+    return components
+}
+
+/**
+ * Context-sensitive traversal variant with merge-point memoization.
+ *
+ * In contrast to [followXUntilHit], this version memoizes completed states `(node, context)` and
+ * reuses their already computed tails for subsequent visits. This avoids recomputing equivalent
+ * subgraphs while still revisiting the same node if the context differs.
+ */
+fun Node.followXUntilHit2(
+    x:
+        (
+            Node, Context, List<Triple<Node, Edge<Node>?, Context>>, MutableSet<NodePath>,
+        ) -> Collection<Triple<Node, Edge<Node>, Context>>,
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    stopAfterHit: Boolean = false,
+    detectRecursiveRevisits: Boolean = false,
+    ctx: Context = Context(steps = 0),
+    earlyTermination: (Node, Context) -> Boolean,
+    predicate: (Node) -> Boolean,
+): FulfilledAndFailedPaths {
+    // The original iterative algorithm performs better for exhaustive path enumeration.
+    if (findAllPossiblePaths) {
+        return followXUntilHit(
+            x = x,
+            collectFailedPaths = collectFailedPaths,
+            findAllPossiblePaths = true,
+            stopAfterHit = stopAfterHit,
+            detectRecursiveRevisits = detectRecursiveRevisits,
+            ctx = ctx,
+            earlyTermination = earlyTermination,
+            predicate = predicate,
+        )
+    }
+
+    val useSccStrategy = false
+    if (!useSccStrategy) {
+        return followXUntilHit(
+            x = x,
+            collectFailedPaths = collectFailedPaths,
+            findAllPossiblePaths = false,
+            stopAfterHit = stopAfterHit,
+            detectRecursiveRevisits = detectRecursiveRevisits,
+            ctx = ctx,
+            earlyTermination = earlyTermination,
+            predicate = predicate,
+        )
+    }
+
+    val loopingPaths: MutableSet<NodePath> = ConcurrentHashMap.newKeySet()
+
+    data class StateTransition(
+        val target: TraversalState,
+        val edge: Edge<Node>,
+        val targetNode: Node,
+        val targetContext: Context,
+    )
+
+    data class StateRecord(
+        val node: Node,
+        val context: Context,
+        val representativePath: List<Triple<Node, Edge<Node>?, Context>>,
+        val outgoing: MutableList<StateTransition> = mutableListOf(),
+        val directFulfilled: MutableList<RelativePath> = mutableListOf(),
+        val directFailed: MutableList<Pair<FailureReason, RelativePath>> = mutableListOf(),
+    )
+
+    fun loopGuardTriggered(
+        nextNode: Node,
+        nextContext: Context,
+        currentPath: List<Triple<Node, Edge<Node>?, Context>>,
+    ): Boolean {
+        val revisitsCurrentPath =
+            isNodeWithCallStackInPath(nextNode, nextContext, currentPath) ||
+                (detectRecursiveRevisits &&
+                    isRecursiveNodeWithCallStackInPath(nextNode, nextContext, currentPath))
+
+        // Keep legacy call-stack loop heuristics because a few analyses rely on this behavior.
+        val suspiciousCallStackLoop =
+            nextContext.callStack.clone().isLoop() ||
+                (nextContext.callStack.top == currentPath.last().third.callStack.top &&
+                    nextContext.callStack.top != null &&
+                    nextContext.callStack != currentPath.last().third.callStack)
+
+        return revisitsCurrentPath || suspiciousCallStackLoop
+    }
+
+    val initialContext = ctx.clone()
+    val initialPath = listOf(Triple(this, null, initialContext))
+    val initialState = TraversalState(this, initialContext)
+
+    val records = mutableMapOf<TraversalState, StateRecord>()
+    val expandedStates = mutableSetOf<TraversalState>()
+    val stateWorklist = ArrayDeque<List<Triple<Node, Edge<Node>?, Context>>>()
+    stateWorklist.addFirst(initialPath)
+
+    var earlyHit: NodePath? = null
+
+    while (stateWorklist.isNotEmpty()) {
+        val currentPath = stateWorklist.removeFirst()
+        val (currentNode, _, currentContext) = currentPath.last()
+        val currentState = TraversalState(currentNode, currentContext)
+
+        val record =
+            records.getOrPut(currentState) { StateRecord(currentNode, currentContext, currentPath) }
+
+        if (currentState in expandedStates) {
+            continue
+        }
+        expandedStates += currentState
+
+        val nextNodes = x(currentNode, currentContext, currentPath, loopingPaths)
+        if (nextNodes.isEmpty() && collectFailedPaths) {
+            record.directFailed +=
+                FailureReason.PATH_ENDED to
+                    RelativePath(
+                        nodes = listOf(currentNode),
+                        edges = emptyList(),
+                        contexts = listOf(currentContext),
+                    )
+        }
+
+        for ((nextNode, edge, nextContextRaw) in nextNodes) {
+            val nextContext = nextContextRaw.clone().inc()
+
+            if (predicate(nextNode)) {
+                val hitPath =
+                    NodePath(
+                            currentPath.map { it.first } + nextNode,
+                            currentPath.mapNotNull { it.second } + edge,
+                        )
+                        .addAssumptionDependence(currentPath.map { it.third } + nextContext)
+                record.directFulfilled +=
+                    RelativePath(
+                        nodes = listOf(currentNode, nextNode),
+                        edges = listOf(edge),
+                        contexts = listOf(currentContext, nextContext),
+                    )
+                if (stopAfterHit) {
+                    earlyHit = hitPath
+                    break
+                }
+                continue
+            }
+
+            if (earlyTermination(nextNode, currentContext)) {
+                record.directFailed +=
+                    FailureReason.HIT_EARLY_TERMINATION to
+                        RelativePath(
+                            nodes = listOf(currentNode, nextNode),
+                            edges = listOf(edge),
+                            contexts = listOf(currentContext, nextContext),
+                        )
+                continue
+            }
+
+            val loopsHere = loopGuardTriggered(nextNode, nextContext, currentPath)
+            if (loopsHere) {
+                loopingPaths +=
+                    NodePath(
+                            currentPath.map { it.first } + nextNode,
+                            currentPath.mapNotNull { it.second } + edge,
+                        )
+                        .addAssumptionDependence(currentPath.map { it.third } + nextContext)
+                continue
+            }
+
+            val nextState = TraversalState(nextNode, nextContext)
+            record.outgoing += StateTransition(nextState, edge, nextNode, nextContext)
+
+            if (nextState !in records) {
+                val nextPath = currentPath + Triple(nextNode, edge, nextContext)
+                records[nextState] = StateRecord(nextNode, nextContext, nextPath)
+                stateWorklist.addFirst(nextPath)
+            }
+        }
+
+        if (earlyHit != null) {
+            break
+        }
+    }
+
+    if (earlyHit != null) {
+        return FulfilledAndFailedPaths(listOf(earlyHit), emptyList())
+    }
+
+    val stateGraph =
+        records.mapValues { (_, rec) -> rec.outgoing.mapTo(mutableSetOf()) { it.target } }
+    val sccs = identifyStronglyConnectedComponentsTarjan(records.keys) { stateGraph[it].orEmpty() }
+    val componentOf = mutableMapOf<TraversalState, Int>()
+    sccs.forEachIndexed { idx, component -> component.forEach { componentOf[it] = idx } }
+
+    val componentGraph = mutableMapOf<Int, MutableSet<Int>>()
+    for ((state, rec) in records) {
+        val srcComp = componentOf.getValue(state)
+        val outgoingComps = componentGraph.getOrPut(srcComp) { mutableSetOf() }
+        rec.outgoing.forEach {
+            val dstComp = componentOf.getValue(it.target)
+            if (srcComp != dstComp) {
+                outgoingComps += dstComp
+            }
+        }
+    }
+
+    val visitedComps = mutableSetOf<Int>()
+    val topoOrder = mutableListOf<Int>()
+
+    fun visitComponent(compId: Int) {
+        if (!visitedComps.add(compId)) {
+            return
+        }
+        componentGraph[compId].orEmpty().forEach { visitComponent(it) }
+        topoOrder += compId
+    }
+
+    sccs.indices.forEach { visitComponent(it) }
+
+    val stateResults = mutableMapOf<TraversalState, RelativeResult>()
+
+    for (compId in topoOrder) {
+        val statesInComp = sccs[compId]
+        val localMemo = mutableMapOf<TraversalState, RelativeResult>()
+
+        fun evalState(state: TraversalState, active: MutableSet<TraversalState>): RelativeResult {
+            localMemo[state]?.let {
+                return it
+            }
+            if (!active.add(state)) {
+                return RelativeResult()
+            }
+
+            val rec = records.getValue(state)
+            val result =
+                RelativeResult(
+                    fulfilled = rec.directFulfilled.toMutableList(),
+                    failed = rec.directFailed.toMutableList(),
+                )
+
+            for (transition in rec.outgoing) {
+                val target = transition.target
+                if (target in active) {
+                    loopingPaths +=
+                        NodePath(
+                                rec.representativePath.map { it.first } + transition.targetNode,
+                                rec.representativePath.mapNotNull { it.second } + transition.edge,
+                            )
+                            .addAssumptionDependence(
+                                rec.representativePath.map { it.third } + transition.targetContext
+                            )
+                    continue
+                }
+
+                val childResult =
+                    if (target in statesInComp) {
+                        evalState(target, active)
+                    } else {
+                        stateResults[target] ?: RelativeResult()
+                    }
+
+                childResult.fulfilled.forEach {
+                    result.fulfilled += it.prepend(rec.node, transition.edge, rec.context)
+                }
+                childResult.failed.forEach { (reason, path) ->
+                    result.failed += reason to path.prepend(rec.node, transition.edge, rec.context)
+                }
+            }
+
+            active.remove(state)
+            localMemo[state] = result
+            return result
+        }
+
+        statesInComp.forEach { state -> stateResults[state] = evalState(state, mutableSetOf()) }
+    }
+
+    val relativeResult = stateResults[initialState] ?: RelativeResult()
+
+    val fulfilledPaths = relativeResult.fulfilled.map { it.toNodePath() }
+    val failedPaths = relativeResult.failed.map { (reason, path) -> reason to path.toNodePath() }
 
     val failedLoops =
         loopingPaths.mapFilteredTo(
@@ -1264,6 +1694,33 @@ fun Node.followXUntilHit(
     return FulfilledAndFailedPaths(
         fulfilledPaths,
         (failedPaths + failedLoops).toSet().map { Pair(it.first, it.second) },
+    )
+}
+
+/** Temporary alias for callers that accidentally used the historic typo in the symbol name. */
+@Suppress("unused")
+fun Node.followXUnitlHit2(
+    x:
+        (
+            Node, Context, List<Triple<Node, Edge<Node>?, Context>>, MutableSet<NodePath>,
+        ) -> Collection<Triple<Node, Edge<Node>, Context>>,
+    collectFailedPaths: Boolean = true,
+    findAllPossiblePaths: Boolean = true,
+    stopAfterHit: Boolean = false,
+    detectRecursiveRevisits: Boolean = false,
+    ctx: Context = Context(steps = 0),
+    earlyTermination: (Node, Context) -> Boolean,
+    predicate: (Node) -> Boolean,
+): FulfilledAndFailedPaths {
+    return followXUntilHit2(
+        x = x,
+        collectFailedPaths = collectFailedPaths,
+        findAllPossiblePaths = findAllPossiblePaths,
+        stopAfterHit = stopAfterHit,
+        detectRecursiveRevisits = detectRecursiveRevisits,
+        ctx = ctx,
+        earlyTermination = earlyTermination,
+        predicate = predicate,
     )
 }
 
