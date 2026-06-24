@@ -1445,6 +1445,11 @@ fun Node.followXUntilHit2(
 
     val loopingPaths: MutableSet<NodePath> = ConcurrentHashMap.newKeySet()
 
+    // TODO: When pushing stuff on the stack, we should store the "alternative" (without pushing).
+    // If we see an edge for a second time AND there is something on the stack, we pop the element
+    // from the stack and take the corresponding "alternative". If the stack is empty, we simply
+    // stop with that path (it's a loop).
+
     data class StateTransition(
         val target: TraversalState,
         val edge: Edge<Node>,
