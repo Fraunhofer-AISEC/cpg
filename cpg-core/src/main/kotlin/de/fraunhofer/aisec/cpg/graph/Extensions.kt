@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -407,6 +408,15 @@ fun Node.collectAllPrevDFGPaths(): List<NodePath> {
         .failed
         .map { it.second }
 }
+
+data class ReachingWrite(
+    val source: Node,
+    val granularity: Granularity,
+    val functionSummary: Boolean,
+)
+
+fun Node.reachingWrites(): List<ReachingWrite> =
+    this.prevDFGEdges.map { ReachingWrite(it.start, it.granularity, it.functionSummary) }
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
