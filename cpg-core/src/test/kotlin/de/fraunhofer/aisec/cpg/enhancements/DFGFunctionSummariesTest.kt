@@ -155,8 +155,12 @@ class DFGFunctionSummariesTest {
         val listAddAllTwoArgs = code.methods["test.List.addAll"]
         assertNotNull(listAddAllTwoArgs)
         assertEquals(2, listAddAllTwoArgs.parameters.size)
+        // The param flows to this, and to all uses after
         assertEquals(
-            setOf<Node>(listAddAllTwoArgs.receiver!!),
+            setOf<Node>(
+                listAddAllTwoArgs.receiver!!,
+                code.calls("print").single().arguments.single(),
+            ),
             listAddAllTwoArgs.parameters[1].nextDFG,
         )
         // No flow from param0 or receiver specified => Should be empty and differ from default
