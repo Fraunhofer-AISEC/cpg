@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsNewParse
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Modfile
@@ -52,6 +53,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
+import java.nio.file.Path
 
 /**
  * A language frontend for the [GoLanguage]. It makes use the internal
@@ -65,9 +67,10 @@ import java.net.URI
     old = EvaluationOrderGraphPass::class,
     with = GoEvaluationOrderGraphPass::class,
 )
-@SupportsParallelParsing(false)
+@SupportsParallelParsing(true)
 class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageFrontend>) :
-    LanguageFrontend<GoStandardLibrary.Ast.Node, GoStandardLibrary.Ast.Expr>(ctx, language) {
+    LanguageFrontend<GoStandardLibrary.Ast.Node, GoStandardLibrary.Ast.Expr>(ctx, language),
+    SupportsNewParse {
 
     private var currentFileSet: GoStandardLibrary.Ast.FileSet? = null
     private var currentModule: GoStandardLibrary.Modfile.File? = null
@@ -251,6 +254,17 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
         tu.addDeclaration(p)
 
         return tu
+    }
+
+    @Throws(TranslationException::class)
+    override fun parse(content: String, path: Path?): TranslationUnit {
+        // Delegate to the file-based parse method
+        // The Go parser reads from the file directly, so we need the path
+        return if (path != null) {
+            parse(path.toFile())
+        } else {
+            throw TranslationException("Go frontend requires a file path for parsing")
+        }
     }
 
     override fun typeOf(type: GoStandardLibrary.Ast.Expr): Type {
