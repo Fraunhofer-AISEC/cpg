@@ -1894,7 +1894,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // If we have nothing, the last write is probably the Function
         if (lastWrites.isEmpty()) ret.add(NodeWithPropertiesKey(invoke, equalLinkedHashSetOf()))
         lastWrites.forEach { (lw, properties) ->
-           // If the lastWrite is a Record, that's a hint from the functionSummary that we have a
+            // If the lastWrite is a Record, that's a hint from the functionSummary that we have a
             // write to the base. Since we didn't know the base yet when creating the
             // functionSummary, we fetch it now
             val prev = if (lw is Record && srcNode is Node) srcNode else lw
