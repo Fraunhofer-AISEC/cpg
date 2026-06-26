@@ -125,7 +125,11 @@ object SubgraphWalker {
 
                 when (obj) {
                     is EdgeCollection<*, *> -> {
-                        obj.toNodeCollection({ it is AstEdge<*> }).filterIsInstanceTo(children)
+                        for (edge in obj) {
+                            if (edge is AstEdge<*>) {
+                                children.add(edge.end)
+                            }
+                        }
                     }
                     else -> {
                         throw AnnotationFormatError(
