@@ -689,7 +689,7 @@ class GoLanguageFrontendTest : BaseTest() {
             val tus = app.translationUnits
 
             // fetch the function declaration from the struct TU
-            val tu2 = tus[1]
+            val tu2 = tus.single { it.name.toString() == "struct.go" }
 
             val p2 = tu2.namespaces["p"]
             assertNotNull(p2)
@@ -702,7 +702,7 @@ class GoLanguageFrontendTest : BaseTest() {
             assertNotNull(newMyStruct)
 
             // and compare it with the call TU
-            val tu = tus[0]
+            val tu = tus.single { it.name.toString() == "call.go" }
 
             val p = tu.namespaces["p"]
             assertNotNull(p)
