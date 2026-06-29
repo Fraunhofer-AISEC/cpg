@@ -37,9 +37,9 @@ import de.fraunhofer.aisec.cpg.graph.expressions.CatchClause
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
-import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.helpers.orderEOGStartersBasedOnDependencies
+import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
@@ -395,7 +395,6 @@ fun executePass(
                 ctx,
                 prototype.sort(result),
                 result,
-                executedFrontends,
                 callbacks,
             )
         is ComponentPass ->
@@ -404,7 +403,6 @@ fun executePass(
                 ctx,
                 prototype.sort(result),
                 result,
-                executedFrontends,
                 callbacks,
             )
         is TranslationUnitPass ->
@@ -414,7 +412,6 @@ fun executePass(
                 // Execute them in the "sorted" order (if available)
                 prototype.sort(result),
                 result,
-                executedFrontends,
                 callbacks,
             )
         is EOGStarterPass -> {
@@ -427,7 +424,6 @@ fun executePass(
                     prototype.sort(result)
                 },
                 result,
-                executedFrontends,
                 callbacks,
             )
         }
@@ -448,10 +444,9 @@ inline fun <reified T : Node> consumeTargets(
     ctx: TranslationContext,
     targets: Collection<T>,
     result: TranslationResult,
-    executedFrontends: Collection<LanguageFrontend<*, *>>,
     callbacks: Collection<TranslationProgressCallback>? = null,
 ) {
-    targets.forEach { consumeTarget(cls, ctx, it, executedFrontends) }
+    targets.forEach { consumeTarget(cls, ctx, it) }
     callbacks?.forEach { callback ->
         runCatching { callback.afterPass(cls, ctx, result, targets) }
             .onFailure {
