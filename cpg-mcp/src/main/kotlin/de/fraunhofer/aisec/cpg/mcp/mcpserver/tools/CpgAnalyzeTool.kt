@@ -504,7 +504,6 @@ inline fun <reified T : Node> runPassForNodeInternal(
                         nodeToPass.computeIfAbsent(it) { mutableSetOf() }.add(actualClass)
                     },
                 result = result,
-                executedFrontends = ctx.executedFrontends,
             )
             messages +=
                 "Ran pass ${actualClass.simpleName} on nodes ${nodesToAnalyze.map { it.id.toString() }}."
