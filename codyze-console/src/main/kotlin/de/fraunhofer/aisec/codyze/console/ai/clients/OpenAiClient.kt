@@ -34,23 +34,26 @@ import io.ktor.utils.io.*
 import io.modelcontextprotocol.kotlin.sdk.types.Tool
 import kotlinx.serialization.json.*
 
-/** OpenAI-compatible API client (Ollama, vLLM, MLX) */
+/** OpenAI-compatible API client (Ollama, vLLM, MLX, etc.) */
 class OpenAiClient(
     private val httpClient: HttpClient,
     private val model: String,
     private val baseUrl: String,
+    private val apiKey: String? = null,
 ) : LlmClient {
     override val modelName: String = model
 
     override suspend fun sendPrompt(
         userMessage: String,
+        systemPrompt: String,
         conversationHistory: List<ChatMessageJSON>,
         tools: List<Tool>,
         toolCallHistory: List<List<ToolCallWithResult>>?,
         onText: suspend (String) -> Unit,
         onReasoning: suspend (String) -> Unit,
     ): List<ToolCall> {
-        val messages = buildMessages(userMessage, conversationHistory, toolCallHistory)
+        val messages =
+            buildMessages(userMessage, conversationHistory, toolCallHistory, systemPrompt)
         val openAiTools = convertToolDefinitions(tools)
 
         val request =
@@ -61,6 +64,7 @@ class OpenAiClient(
         httpClient
             .preparePost("$baseUrl/v1/chat/completions") {
                 contentType(ContentType.Application.Json)
+                apiKey?.let { headers.append(HttpHeaders.Authorization, "Bearer $it") }
                 setBody(request)
             }
             .execute { response ->
@@ -101,9 +105,10 @@ class OpenAiClient(
         userMessage: String,
         conversationHistory: List<ChatMessageJSON>,
         toolCallHistory: List<List<ToolCallWithResult>>?,
+        systemPrompt: String,
     ): List<OpenAiMessage> {
         val messages = mutableListOf<OpenAiMessage>()
-        messages += OpenAiMessage(role = "system", content = JsonPrimitive(SYSTEM_PROMPT))
+        messages += OpenAiMessage(role = "system", content = JsonPrimitive(systemPrompt))
         conversationHistory.dropLast(1).forEach { msg ->
             if (msg.content.isNotBlank()) {
                 messages += OpenAiMessage(role = msg.role, content = JsonPrimitive(msg.content))
@@ -210,7 +215,7 @@ class OpenAiClient(
      * ```
      *
      * See
-     * [OpenAI streaming events]https://developers.openai.com/api/reference/resources/chat/subresources/completions/streaming-events"></a>
+     * [OpenAI streaming events](https://developers.openai.com/api/reference/resources/chat/subresources/completions/streaming-events)
      * See [OpenAI Streaming API](https://developers.openai.com/api/docs/guides/streaming-responses)
      */
     private suspend fun handleStreamingResponse(

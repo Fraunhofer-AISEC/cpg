@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.PassConfiguration
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
@@ -40,7 +41,8 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
  * of a [TaggingContext] into the state of the [EOGConceptPass].
  */
 @DependsOn(SymbolResolver::class)
-@DependsOn(ControlFlowSensitiveDFGPass::class)
+@DependsOn(ControlFlowSensitiveDFGPass::class, true)
+@DependsOn(PointsToPass::class, true)
 @Description("Tags overlay nodes to underlying nodes based on a tagging context.")
 open class TagOverlaysPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 

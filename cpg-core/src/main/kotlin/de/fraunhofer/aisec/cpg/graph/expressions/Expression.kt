@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
@@ -37,7 +38,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
+import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -45,19 +49,20 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.NodeEntity
-import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.Transient
 
 /**
+ * Represents one expression. It is used as a base class for multiple different types of
+ * expressions. The only constraint is, that each expression has a type. The result of an expression
+ * can also be ignored, e.g. terminated with ; to make it a statement.
+ *
  * This [Node] is the most basic node type that represents source code elements which represents
  * executable code.
  */
-@NodeEntity
 abstract class Expression(usedAsExpression: Boolean = true) :
-    AstNode(), DeclarationHolder, HasType {
+    AstNode(), DeclarationHolder, HasType, HasMemoryAddress, HasMemoryValue {
 
     /**
      * This property specifies that this node is used as an expression. Depending on the language,
@@ -66,6 +71,8 @@ abstract class Expression(usedAsExpression: Boolean = true) :
      * or an empty value and type. Depending on the node, type the default will be true or false.
      */
     open var usedAsExpression = true
+
+    @DoNotPersist override var observerEnabled: Boolean = true
 
     init {
         this.usedAsExpression = usedAsExpression
@@ -90,9 +97,7 @@ abstract class Expression(usedAsExpression: Boolean = true) :
     /** Virtual property to access [localEdges] without property edges. */
     var locals by unwrapping(Expression::localEdges)
 
-    @DoNotPersist override var observerEnabled: Boolean = true
-
-    @Transient override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
+    @DoNotPersist override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
     override var language: Language<*> = UnknownLanguage
         set(value) {
@@ -130,6 +135,28 @@ abstract class Expression(usedAsExpression: Boolean = true) :
             field = value
             informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
+
+    /** Each Expression also has a MemoryValue. */
+    @Relationship
+    override var memoryValueEdges =
+        Dataflows<Node>(
+            this,
+            mirrorProperty = HasMemoryValue::memoryValueUsageEdges,
+            outgoing = false,
+        )
+    override var memoryValues by unwrapping(Expression::memoryValueEdges)
+
+    /** Where the memory value of this Expression is used. */
+    @Relationship
+    override var memoryValueUsageEdges =
+        Dataflows<Node>(this, mirrorProperty = HasMemoryValue::memoryValueEdges, outgoing = true)
+    override var memoryValueUsages by unwrapping(Expression::memoryValueUsageEdges)
+
+    /** Each Expression also has a MemoryAddress. */
+    @Relationship
+    override var memoryAddressEdges =
+        memoryAddressEdgesOf(mirrorProperty = MemoryAddress::usageEdges, outgoing = true)
+    override var memoryAddresses by unwrapping(Expression::memoryAddressEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

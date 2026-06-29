@@ -27,18 +27,19 @@ package de.fraunhofer.aisec.cpg.graph.edges.flows
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.PointerAccess
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
-import de.fraunhofer.aisec.cpg.helpers.neo4j.DataflowGranularityConverter
+import de.fraunhofer.aisec.cpg.persistence.Convert
+import de.fraunhofer.aisec.cpg.persistence.converters.DataflowGranularityConverter
 import java.util.Objects
 import kotlin.reflect.KProperty
-import org.neo4j.ogm.annotation.*
-import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /**
  * The granularity of the data-flow, e.g., whether the flow contains the whole object, or just a
@@ -56,9 +57,18 @@ sealed interface Granularity
 data object FullDataflowGranularity : Granularity
 
 /**
+ * This dataflow granularity denotes that the value or address of a pointer is flowing from
+ * [Dataflow.start] to [Dataflow.end].
+ */
+data class PointerDataflowGranularity(
+    /** Does the Dataflow affect the pointer's address or its value? */
+    val pointerTarget: PointerAccess
+) : Granularity
+
+/**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
- * [Dataflow.end] but only parts of it. Common examples include [MemberAccess]s, array or tuple
- * accesses. This class should allow
+ * [Dataflow.end] but only parts of it. Common examples include [MemberAccess]s, array, pointer
+ * dereference values or tuple accesses. This class should allow
  */
 open class PartialDataflowGranularity<T>(
     /** The target that is affected by this partial dataflow. */
@@ -127,6 +137,14 @@ fun <T> partial(identifier: T): PartialDataflowGranularity<T> {
 }
 
 /**
+ * Creates a new [PointerDataflowGranularity]. The [ValueAccess] is specified if the pointer's value
+ * is accessed, or its address.
+ */
+fun pointer(access: PointerAccess): PointerDataflowGranularity {
+    return PointerDataflowGranularity(access)
+}
+
+/**
  * Creates a new [IndexedDataflowGranularity]. The [idx] is the index that is used for the partial
  * dataflow. An example is the access to an array or tuple element, or a [Variable] for a [Tuple].
  */
@@ -146,7 +164,6 @@ fun indexed(idx: String): StringIndexedDataflowGranularity {
  * This edge class defines a flow of data between [start] and [end]. The flow can have a certain
  * [granularity].
  */
-@RelationshipEntity
 open class Dataflow(
     start: Node,
     end: Node,
@@ -154,46 +171,89 @@ open class Dataflow(
     @Convert(DataflowGranularityConverter::class)
     @JsonIgnore
     var granularity: Granularity = default(),
+    open val functionSummary: Boolean = false,
+    open val derefDepth: PointerAccess? = null,
 ) : ProgramDependence(start, end, DependenceType.DATA) {
     override var labels = super.labels.plus("DFG")
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Dataflow) return false
-        return this.granularity == other.granularity && super.equals(other)
+        return this.granularity == other.granularity &&
+            this.derefDepth == other.derefDepth &&
+            super.equals(other)
     }
 
     override fun hashCode(): Int {
         var result = super.hashCode()
         result = 31 * result + granularity.hashCode()
+        result = 31 * result + derefDepth.hashCode()
         return result
     }
 }
 
 sealed interface CallingContext {
     /** The call expression that affects this dataflow edge. */
-    val call: Call
+    val calls: MutableList<Call>
 }
 
-class CallingContextIn(override val call: Call) : CallingContext
+private fun callsEqualByIdentity(left: List<Call>, right: List<Call>): Boolean {
+    if (left === right) return true
+    if (left.size != right.size) return false
+    for (i in left.indices) {
+        if (left[i] !== right[i]) return false
+    }
+    return true
+}
+
+private fun callsIdentityHash(calls: List<Call>): Int {
+    var result = 1
+    for (call in calls) {
+        result = 31 * result + System.identityHashCode(call)
+    }
+    return result
+}
+
+class CallingContextIn(override val calls: MutableList<Call>) : CallingContext {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CallingContextIn) return false
+        return callsEqualByIdentity(this.calls, other.calls)
+    }
+
+    override fun hashCode(): Int {
+        return 31 * callsIdentityHash(calls)
+    }
+}
 
 class CallingContextOut(
     /** The call expression that affects this dataflow edge. */
-    override val call: Call
-) : CallingContext
+    override val calls: MutableList<Call>
+) : CallingContext {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CallingContextOut) return false
+        return callsEqualByIdentity(this.calls, other.calls)
+    }
+
+    override fun hashCode(): Int {
+        return 31 * callsIdentityHash(calls)
+    }
+}
 
 /**
  * This edge class defines a flow of data between [start] and [end]. The flow must have a
  * [callingContext] which allows for a context-sensitive dataflow analysis. This edge can also have
  * a certain [granularity].
  */
-@RelationshipEntity
 class ContextSensitiveDataflow(
     start: Node,
     end: Node,
     /** The granularity of this dataflow. */
     granularity: Granularity = default(),
     val callingContext: CallingContext,
+    override val functionSummary: Boolean = false,
+    override val derefDepth: PointerAccess? = null,
 ) : Dataflow(start, end, granularity) {
 
     override fun equals(other: Any?): Boolean {
@@ -226,12 +286,28 @@ class Dataflows<T : Node>(
         node: T,
         granularity: Granularity = default(),
         callingContext: CallingContext,
+        functionSummary: Boolean = false,
+        derefDepth: PointerAccess? = null,
     ) {
         val edge =
             if (outgoing) {
-                ContextSensitiveDataflow(thisRef, node, granularity, callingContext)
+                ContextSensitiveDataflow(
+                    thisRef,
+                    node,
+                    granularity,
+                    callingContext,
+                    functionSummary,
+                    derefDepth,
+                )
             } else {
-                ContextSensitiveDataflow(node, thisRef, granularity, callingContext)
+                ContextSensitiveDataflow(
+                    node,
+                    thisRef,
+                    granularity,
+                    callingContext,
+                    functionSummary,
+                    derefDepth,
+                )
             }
 
         this.add(edge)

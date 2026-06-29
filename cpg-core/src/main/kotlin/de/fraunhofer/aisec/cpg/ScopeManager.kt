@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
@@ -158,9 +159,11 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     // The only way to do this, is to filter for the particular
                     // scope (the value of the map) and return the keys (the nodes)
                     val keys =
-                        manager.scopeMap
-                            .filter { it.value.astNode == entry.value.astNode }
-                            .map { it.key }
+                        manager.scopeMap.entries.mapFiltered({
+                            it.value.astNode == entry.value.astNode
+                        }) {
+                            it.key
+                        }
 
                     // now, we redirect it to the existing scope
                     keys.forEach { manager.scopeMap[it] = existing }
@@ -583,7 +586,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     .lookupSymbol(part.localName, languageOnly = language) {
                         it is Namespace || it is Record || it is Typedef
                     }
-                    .map {
+                    .mapTo(mutableSetOf()) {
                         // If it is a typedef, we need to use the type's name instead of the
                         // declaration's name. Otherwise, we just take the name of the declaration
                         // to look up the corresponding scope.
@@ -594,7 +597,6 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                                 it.name
                             }]
                     }
-                    .toSet()
                     .singleOrNull()
         }
 

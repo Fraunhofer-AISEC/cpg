@@ -46,21 +46,19 @@ import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
-import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
+import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
+import de.fraunhofer.aisec.cpg.persistence.converters.LocationConverter
+import de.fraunhofer.aisec.cpg.persistence.converters.NameConverter
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import kotlin.uuid.Uuid
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
-import org.neo4j.ogm.annotation.GeneratedValue
-import org.neo4j.ogm.annotation.Id
-import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.Transient
-import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -157,7 +155,7 @@ abstract class Node() :
 
     var prevCDG by unwrapping(Node::prevCDGEdges)
 
-    @DoNotPersist @Transient @JsonIgnore var astParent: AstNode? = null
+    @DoNotPersist @JsonIgnore var astParent: AstNode? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
@@ -167,42 +165,68 @@ abstract class Node() :
 
     /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     var prevDFGEdges: Dataflows<Node> =
         Dataflows<Node>(this, mirrorProperty = Node::nextDFGEdges, outgoing = false)
         protected set
 
     /** Virtual property for accessing [prevDFGEdges] without property edges. */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     var prevDFG by unwrapping(Node::prevDFGEdges)
 
     /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
     @DoNotPersist
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val prevFullDFG: List<Node>
         get() {
-            return prevDFGEdges
-                .filter { it.granularity is FullDataflowGranularity }
-                .map { it.start }
+            return prevDFGEdges.mapFiltered({
+                it.granularity is FullDataflowGranularity &&
+                    !it.functionSummary &&
+                    it.derefDepth == null
+            }) {
+                it.start
+            }
+        }
+
+    /** Virtual property for accessing [prevDFGEdges] that are [functionSummary]-edges. */
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    val prevFunctionSummaryDFG: List<Node>
+        get() {
+            return prevDFGEdges.mapFiltered({ it.functionSummary }) { it.start }
         }
 
     /** Outgoing data flow edges */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
     var nextDFGEdges: Dataflows<Node> =
         Dataflows<Node>(this, mirrorProperty = Node::prevDFGEdges, outgoing = true)
         protected set
 
     /** Virtual property for accessing [nextDFGEdges] without property edges. */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     var nextDFG by unwrapping(Node::nextDFGEdges)
 
     /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
     @DoNotPersist
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val nextFullDFG: List<Node>
         get() {
-            return nextDFGEdges.filter { it.granularity is FullDataflowGranularity }.map { it.end }
+            return nextDFGEdges.mapFiltered({
+                it.granularity is FullDataflowGranularity &&
+                    !it.functionSummary &&
+                    it.derefDepth == null
+            }) {
+                it.end
+            }
+        }
+
+    /** Virtual property for accessing [nextDFGEdges] that are [functionSummary]-edges. */
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    val nextFunctionSummaryDFG: List<Node>
+        get() {
+            return nextDFGEdges.mapFiltered({ it.functionSummary }) { it.end }
         }
 
     /** Outgoing Program Dependence Edges. */
@@ -241,7 +265,7 @@ abstract class Node() :
     var isImplicit = false
 
     /** Required field for persistence. It contains the node ID. */
-    @DoNotPersist @Id @GeneratedValue var legacyId: Long = NodeIdGenerator.next()
+    @DoNotPersist var legacyId: Long = NodeIdGenerator.next()
 
     /**
      * A (more or less) unique identifier for this node. It is a [Uuid] derived from

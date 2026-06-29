@@ -90,10 +90,11 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                     it.type == "Constructor" ||
                     it.type == "MethodDeclaration"
             }
-            ?.mapNotNull { this.handle(it) }
-            ?.map {
-                this.frontend.scopeManager.addDeclaration(it)
-                record.addDeclaration(it)
+            ?.forEach {
+                this.handle(it)?.let { decl ->
+                    this.frontend.scopeManager.addDeclaration(decl)
+                    record.addDeclaration(decl)
+                }
             }
 
         this.frontend.scopeManager.leaveScope(record)

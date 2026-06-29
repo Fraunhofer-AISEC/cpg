@@ -70,6 +70,9 @@ class TestCommon {
                 "EOG",
                 "FIRST_BASIC_BLOCK",
                 "LANGUAGE",
+                "MEMORY_ADDRESS",
+                "MEMORY_VALUE",
+                "MEMORY_VALUE_USAGE",
                 "OVERLAY",
                 "OVERRIDES",
                 "PARAMETERS",
@@ -100,7 +103,6 @@ class TestCommon {
                 "OVERLAY",
                 "PDG",
                 "SCOPE",
-                "USED_LANGUAGES",
             ),
             relationships.keys.sorted(),
         )

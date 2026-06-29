@@ -65,7 +65,7 @@ mavenPublishing {
 
 dependencies {
     implementation(libs.mcp)
-    implementation(libs.ktor.server.cio)
+    api(libs.ktor.server.cio)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.cors)
     implementation(libs.ktor.server.content.negotiation)
@@ -84,6 +84,9 @@ dependencies {
     integrationTestImplementation(libs.kotlin.reflect)
     implementation(libs.reflections)
     integrationTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    // parsing YAML files
+    implementation(libs.jacksonyml)
+
     integrationTestImplementation(libs.mcp)
     integrationTestImplementation(libs.mcp.testing)
     integrationTestImplementation(libs.ktor.serialization.kotlinx.json)

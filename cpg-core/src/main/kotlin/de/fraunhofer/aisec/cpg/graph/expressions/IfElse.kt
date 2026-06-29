@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.commonType
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -35,10 +36,10 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 import kotlin.collections.ifEmpty
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
 class IfElse : Expression(false), BranchingNode, ArgumentHolder, HasType.TypeObserver {
@@ -57,7 +58,7 @@ class IfElse : Expression(false), BranchingNode, ArgumentHolder, HasType.TypeObs
     /** The condition to be evaluated. */
     var condition by unwrapping(IfElse::conditionEdge)
 
-    override val branchedBy
+    override val branchedBy: AstNode?
         get() = condition ?: conditionDeclaration
 
     /** C++ constexpr construct. */

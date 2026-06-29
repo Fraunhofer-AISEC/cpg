@@ -30,10 +30,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
-import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.LanguageTrait
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.expressions.CatchClause
@@ -41,17 +38,18 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
+import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
+import de.fraunhofer.aisec.cpg.helpers.orderEOGStartersBasedOnDependencies
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLast
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
-import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.function.Consumer
 import kotlin.reflect.KClass
-import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.isSubclassOf
@@ -95,6 +93,7 @@ abstract class TranslationUnitPass(
 abstract class EOGStarterPass(
     ctx: TranslationContext,
     sort: Sorter<Node> = EOGStarterLeastTUImportSorter,
+    val orderDependencies: Boolean = false,
 ) : Pass<Node>(ctx, sort)
 
 open class PassConfiguration
@@ -126,9 +125,9 @@ object LeastImportComponentSorter : Sorter<Component>() {
  */
 object LeastImportTranslationUnitSorter : Sorter<TranslationUnit>() {
     override fun invoke(result: TranslationResult): List<TranslationUnit> =
-        LeastImportComponentSorter.invoke(result)
-            .flatMap { (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(it).asSequence() }
-            .toList()
+        LeastImportComponentSorter.invoke(result).flatMap {
+            (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(it).asSequence()
+        }
 }
 
 /**
@@ -138,9 +137,7 @@ object LeastImportTranslationUnitSorter : Sorter<TranslationUnit>() {
  */
 object EOGStarterLeastTUImportSorter : Sorter<Node>() {
     override fun invoke(result: TranslationResult): List<Node> =
-        LeastImportTranslationUnitSorter.invoke(result)
-            .flatMap { it.allUniqueEOGStartersOrSingles }
-            .toList()
+        LeastImportTranslationUnitSorter.invoke(result).flatMap { it.allUniqueEOGStartersOrSingles }
 }
 
 /**
@@ -152,15 +149,13 @@ object EOGStarterLeastTUImportSorter : Sorter<Node>() {
  */
 object EOGStarterLeastTUImportCatchLastSorter : Sorter<Node>() {
     override fun invoke(result: TranslationResult): List<Node> =
-        LeastImportTranslationUnitSorter.invoke(result)
-            .flatMap {
-                val allUniqueStarters = it.allUniqueEOGStartersOrSingles
-                val result = mutableListOf<Node>()
-                result.addAll(allUniqueStarters.filter { it !is CatchClause })
-                result.addAll(allUniqueStarters.filterIsInstance<CatchClause>())
-                result
-            }
-            .toList()
+        LeastImportTranslationUnitSorter.invoke(result).flatMap {
+            val allUniqueStarters = it.allUniqueEOGStartersOrSingles
+            val result = mutableListOf<Node>()
+            result.addAll(allUniqueStarters.filter { it !is CatchClause })
+            result.addAll(allUniqueStarters.filterIsInstance<CatchClause>())
+            result
+        }
 }
 
 /**
@@ -209,21 +204,6 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort
     open fun finalCleanup() {}
 
     /**
-     * Check if the pass requires a specific language frontend and if that frontend has been
-     * executed.
-     *
-     * @return true, if the pass does not require a specific language frontend or if it matches the
-     *   [RequiredFrontend]
-     */
-    fun runsWithCurrentFrontend(usedFrontends: Collection<LanguageFrontend<*, *>>): Boolean {
-        val requiredFrontend = this::class.findAnnotation<RequiredFrontend>() ?: return true
-        for (used in usedFrontends) {
-            if (used::class == requiredFrontend.value) return true
-        }
-        return false
-    }
-
-    /**
      * Checks, if the pass requires a specific [LanguageTrait] and if the current target of the pass
      * has this trait.
      *
@@ -243,6 +223,33 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort
         }
 
         return true
+    }
+
+    /**
+     * Checks, if the pass requires a specific [Language] and if the current target of the pass has
+     * that language. If multiple [RequiresLanguage] annotations are present, the pass will run if
+     * the target's language matches *any* of them (OR logic).
+     *
+     * @return true, if the pass does not require a specific language or if the target's language
+     *   matches any of the [RequiresLanguage] annotations.
+     */
+    fun runsWithTargetLanguage(language: Language<*>?): Boolean {
+        val requiresLanguages = this::class.findAnnotations<RequiresLanguage>()
+        if (requiresLanguages.isEmpty()) {
+            return true
+        }
+
+        if (language == null) {
+            return false
+        }
+
+        // Return true if the language is one of the required languages - or if it is one of the
+        // multiple languages
+        return if (language is MultipleLanguages) {
+            requiresLanguages.any { language::class.isSubclassOf(it.value) }
+        } else {
+            requiresLanguages.any { language::class.isSubclassOf(it.value) }
+        }
     }
 
     companion object {
@@ -414,7 +421,11 @@ fun executePass(
             consumeTargets(
                 (prototype as EOGStarterPass)::class,
                 ctx,
-                prototype.sort(result),
+                if (prototype.orderDependencies) {
+                    orderEOGStartersBasedOnDependencies(prototype.sort(result))
+                } else {
+                    prototype.sort(result)
+                },
                 result,
                 executedFrontends,
                 callbacks,
@@ -464,7 +475,6 @@ inline fun <reified T : Node> consumeTarget(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     target: T,
-    executedFrontends: Collection<LanguageFrontend<*, *>>,
 ): Pass<T>? {
     val language = target.language
 
@@ -472,8 +482,9 @@ inline fun <reified T : Node> consumeTarget(
 
     val pass = realClass.primaryConstructor?.call(ctx)
     if (
-        pass?.runsWithCurrentFrontend(executedFrontends) == true &&
-            pass.runsWithLanguageTrait(language)
+        pass != null &&
+            pass.runsWithLanguageTrait(language) &&
+            pass.runsWithTargetLanguage(language)
     ) {
         pass.accept(target)
         pass.cleanup()
@@ -518,26 +529,32 @@ val KClass<out Pass<*>>.isLatePass: Boolean
 
 val KClass<out Pass<*>>.softDependencies: Set<KClass<out Pass<*>>>
     get() {
-        return this.findAnnotations<DependsOn>()
-            .filter { it.softDependency }
-            .map { it.value }
-            .toSet()
+        return this.findAnnotations<DependsOn>().mapFilteredTo(
+            mutableSetOf(),
+            { it.softDependency },
+        ) {
+            it.value
+        }
     }
 
 val KClass<out Pass<*>>.hardDependencies: Set<KClass<out Pass<*>>>
     get() {
-        return this.findAnnotations<DependsOn>()
-            .filter { !it.softDependency }
-            .map { it.value }
-            .toSet()
+        return this.findAnnotations<DependsOn>().mapFilteredTo(
+            mutableSetOf(),
+            { !it.softDependency },
+        ) {
+            it.value
+        }
     }
 
 val KClass<out Pass<*>>.softExecuteBefore: Set<KClass<out Pass<*>>>
     get() {
-        return this.findAnnotations<ExecuteBefore>()
-            .filter { it.softDependency }
-            .map { it.other }
-            .toSet()
+        return this.findAnnotations<ExecuteBefore>().mapFilteredTo(
+            mutableSetOf(),
+            { it.softDependency },
+        ) {
+            it.other
+        }
     }
 
 val KClass<out Pass<*>>.briefDescription: String
@@ -547,10 +564,12 @@ val KClass<out Pass<*>>.briefDescription: String
 
 val KClass<out Pass<*>>.hardExecuteBefore: Set<KClass<out Pass<*>>>
     get() {
-        return this.findAnnotations<ExecuteBefore>()
-            .filter { !it.softDependency }
-            .map { it.other }
-            .toSet()
+        return this.findAnnotations<ExecuteBefore>().mapFilteredTo(
+            mutableSetOf(),
+            { !it.softDependency },
+        ) {
+            it.other
+        }
     }
 
 /**

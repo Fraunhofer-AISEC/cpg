@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.edges.collections
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KProperty
-import org.neo4j.ogm.annotation.Transient
 
 /**
  * An intelligent [MutableSet] wrapper around an [EdgeSet] which supports iterating, adding and
@@ -49,7 +49,7 @@ class UnwrappedEdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     /** See [UnwrappedEdgeList.Delegate], but as a [MutableSet] instead of [MutableList]. */
-    @Transient
+    @DoNotPersist
     inner class Delegate<ThisType : Node>() {
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): MutableSet<NodeType> {
             return this@UnwrappedEdgeSet
@@ -61,7 +61,7 @@ class UnwrappedEdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     /** See [UnwrappedEdgeList.IncomingDelegate], but as a [MutableSet] instead of [MutableList]. */
-    @Transient
+    @DoNotPersist
     inner class IncomingDelegate<ThisType : Node, IncomingType>() {
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): MutableSet<IncomingType> {
             @Suppress("UNCHECKED_CAST")

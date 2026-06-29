@@ -1,17 +1,19 @@
 <script lang="ts">
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
+  import SessionBar from './SessionBar.svelte';
   import CodeItemList, { isCodeItemContent } from './widgets/CodeItemList.svelte';
   import DfgFlowWidget from './widgets/DfgFlowWidget.svelte';
+  import ToolResultBlock from './widgets/ToolResultBlock.svelte';
   import { CodeViewer, FileTree } from '$lib/components/analysis';
-  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, McpCapabilities, ComponentJSON } from '$lib/types';
+  import { agentSession } from '$lib/stores/agentSession.svelte';
+  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage, ComponentJSON, ConceptSuggestionItem, Model } from '$lib/types';
 
   let selectedNode = $state<NodeJSON | null>(null);
   let selectedTranslationUnit = $state<TranslationUnitJSON | null>(null);
   let selectedComponentName = $state<string | null>(null);
   let overlayNodes = $state<NodeJSON[]>([]);
   let astNodes = $state<NodeJSON[]>([]);
-  let showCodePanel = $derived(selectedTranslationUnit !== null);
   let fileTreeCollapsed = $state(false);
   let nodesPanelCollapsed = $state(false);
 
@@ -60,7 +62,12 @@
     selectedNode = null;
     const comp = findComponentForTu(unit.id);
     selectedComponentName = comp?.name ?? null;
-    if (comp) loadNodes(comp.name, unit.id);
+    if (comp) {
+      loadNodes(comp.name, unit.id);
+    } else {
+      overlayNodes = [];
+      astNodes = [];
+    }
   }
 
   function closeCodePanel() {
@@ -78,7 +85,7 @@
     ) ?? null;
   }
 
-  const selectedComponent = $derived((): ComponentJSON | null => {
+  const selectedComponent: ComponentJSON | null = $derived.by(() => {
     if (!selectedTranslationUnit || !analysisResult) return null;
     return findComponentForTu(selectedTranslationUnit.id);
   });
@@ -89,13 +96,16 @@
     isLoading: boolean;
     streamingContent: string;
     isThinking: boolean;
+    models?: Model[];
+    selectedModel?: Model | null;
     analysisResult?: AnalysisResultJSON | null;
-    mcpCapabilities?: McpCapabilities | null;
+    suggestions?: ConceptSuggestionItem[];
+    onApplySuggestions?: (accepted: ConceptSuggestionItem[]) => Promise<void> | void;
     onSendMessage: () => void;
     onReset: () => void;
     onMessageChange: (message: string) => void;
+    onModelSelect?: (model: Model) => void;
     onPromptSelect?: (name: string, args: Record<string, string>) => void;
-    onOpenMcpModal?: () => void;
   }
 
   let {
@@ -104,16 +114,74 @@
     isLoading,
     streamingContent,
     isThinking,
+    models = [],
+    selectedModel = null,
     analysisResult,
-    mcpCapabilities,
+    suggestions = $bindable([]),
+    onApplySuggestions,
     onSendMessage,
     onReset,
     onMessageChange,
+    onModelSelect,
     onPromptSelect,
-    onOpenMcpModal
   }: Props = $props();
 
+  async function handleApplyAndReload(accepted: ConceptSuggestionItem[]) {
+    await onApplySuggestions?.(accepted);
+    if (selectedComponentName && selectedTranslationUnit) {
+      await loadNodes(selectedComponentName, selectedTranslationUnit.id);
+    }
+  }
+
+  let showCodePanel = $derived(selectedTranslationUnit !== null || suggestions.length > 0);
   let displayContent = $derived(streamingContent.trim().length > 0 ? streamingContent : '');
+  let tusWithSuggestions = $state<Set<string>>(new Set());
+
+
+  // When suggestions arrive, resolve which TUs contain the referenced nodes
+  $effect(() => {
+    if (suggestions.length === 0 || !analysisResult) {
+      tusWithSuggestions = new Set();
+      return;
+    }
+
+    const nodeIds = new Set(
+      suggestions.flatMap(s => [
+        s.suggestion.nodeId,
+        ...s.operations.map(o => o.operation.nodeId)
+      ])
+    );
+
+    resolveTusForNodeIds(nodeIds);
+  });
+
+  async function resolveTusForNodeIds(nodeIds: Set<string>) {
+    const result = new Set<string>();
+    for (const comp of analysisResult?.components ?? []) {
+      for (const tu of comp.translationUnits) {
+        const nodes: NodeJSON[] = await fetch(
+          `/api/component/${comp.name}/translation-unit/${tu.id}/ast-nodes`
+        ).then(r => r.json()).catch(() => []);
+        if (nodes.some(n => nodeIds.has(n.id))) {
+          result.add(tu.id);
+        }
+      }
+    }
+    tusWithSuggestions = result;
+  }
+
+  // Auto-select the first translation unit with suggestions when resolved
+  $effect(() => {
+    if (tusWithSuggestions.size > 0 && !selectedTranslationUnit && analysisResult) {
+      for (const comp of analysisResult.components) {
+        const tu = comp.translationUnits.find(tu => tusWithSuggestions.has(tu.id));
+        if (tu) {
+          handleFileSelect(tu);
+          return;
+        }
+      }
+    }
+  });
 
   let messagesContainer: HTMLDivElement;
   let shouldAutoScroll = $state(true);
@@ -158,9 +226,9 @@
 
 <div class="flex h-full bg-gray-50">
   <!-- Chat Container -->
-  <div class="flex flex-col transition-all duration-300 {showCodePanel ? 'w-[45%]' : 'w-full'}">
+  <div class="flex flex-col min-w-0 min-h-0 transition-[width] duration-300 {showCodePanel ? 'w-[45%]' : 'w-full'}">
     <!-- Messages Container -->
-    <div class="flex-1 overflow-y-auto" bind:this={messagesContainer} onscroll={handleScroll}>
+    <div class="flex-1 overflow-y-auto" style="transform: translateZ(0);" bind:this={messagesContainer} onscroll={handleScroll}>
       <div class="mx-auto max-w-6xl">
         {#each messages as message}
           {#if message.role === 'user'}
@@ -172,7 +240,7 @@
               </div>
             </div>
           {:else}
-            <div class="px-6 py-6">
+            <div class="{message.contentType === 'tool-result' ? 'px-6 py-1' : 'px-6 py-6'}">
               {#if message.reasoning}
                 <div class="mb-2 inline-block">
                   <button
@@ -198,23 +266,10 @@
                 </div>
               {/if}
               {#if message.contentType === 'tool-result' && message.toolResult}
-                {#if message.toolResult.toolName === 'cpg_dfg_backward'}
-                  <DfgFlowWidget content={message.toolResult.content} />
-                {:else if isCodeItemContent(message.toolResult.content)}
-                  <CodeItemList data={message.toolResult} onItemClick={handleNodeClick} />
-                {:else}
-                  <div class="my-2 overflow-hidden rounded-lg border border-gray-200 bg-white">
-                    <div class="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-3">
-                      {#if message.toolResult.toolName}
-                        <span class="font-mono text-sm font-semibold text-gray-700">{message.toolResult.toolName}</span>
-                      {/if}
-                      {#if message.toolResult.isError}
-                        <span class="rounded bg-red-100 px-2 py-1 text-xs font-semibold uppercase text-red-800">Error</span>
-                      {/if}
-                    </div>
-                    <pre class="m-0 overflow-x-auto whitespace-pre-wrap wrap-break-word p-4 font-mono text-sm text-gray-700">{typeof message.toolResult.content === 'string' ? message.toolResult.content : JSON.stringify(message.toolResult.content, null, 2)}</pre>
-                  </div>
-                {/if}
+                <ToolResultBlock
+                  toolResult={message.toolResult}
+                  onItemClick={handleNodeClick}
+                />
               {:else if message.content}
                 <div class="prose prose-sm max-w-4xl text-gray-800">
                   <MarkdownRenderer content={message.content} />
@@ -251,39 +306,34 @@
           value={currentMessage}
           onSend={onSendMessage}
           onValueChange={onMessageChange}
-          placeholder="Ask me about your codebase..."
-          disabled={isLoading}
-          prompts={mcpCapabilities?.prompts}
+          placeholder={!selectedModel ? 'No LLM provider configured — check application.conf' : 'Ask me about your codebase...'}
+          disabled={isLoading || !selectedModel}
+          prompts={agentSession.mcpCapabilities?.prompts}
           onPromptSelect={onPromptSelect}
           onNewChat={onReset}
         />
-        {#if mcpCapabilities && onOpenMcpModal}
-          <div class="mt-1.5 flex items-center gap-1.5">
-            <button
-              class="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700"
-              onclick={onOpenMcpModal}
-              title="MCP Server"
-            >
-              <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-              {mcpCapabilities.serverName}
-            </button>
-          </div>
-        {/if}
+        <div class="mt-1.5">
+          <SessionBar
+            {models}
+            {selectedModel}
+            {onModelSelect}
+          />
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Code Panel: FileTree + CodeViewer -->
   {#if showCodePanel && selectedTranslationUnit}
-    <div class="flex flex-1 overflow-hidden rounded-xl shadow-lg mx-2 my-2 border border-gray-200 bg-white" style="animation: slideIn 0.3s ease-out">
+    <div class="flex flex-1 min-w-0 min-h-0 overflow-hidden rounded-xl shadow-lg mx-2 my-2 border border-gray-200 bg-white">
 
-      {#if selectedComponent()}
+      {#if selectedComponent}
         <FileTree
-          component={selectedComponent()!}
+          component={selectedComponent}
           currentUnitId={selectedTranslationUnit.id}
           onFileSelect={handleFileSelect}
           bind:collapsed={fileTreeCollapsed}
-          hideHeader={true}
+          conceptSuggestions={tusWithSuggestions}
         />
       {/if}
 
@@ -294,7 +344,8 @@
         highlightLine={selectedNode?.startLine ?? undefined}
         bind:nodePanelCollapsed={nodesPanelCollapsed}
         onClose={closeCodePanel}
-        hideControls={true}
+        bind:suggestions
+        onApplySuggestions={handleApplyAndReload}
       />
 
     </div>

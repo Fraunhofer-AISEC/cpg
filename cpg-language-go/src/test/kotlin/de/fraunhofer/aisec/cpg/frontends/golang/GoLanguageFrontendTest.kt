@@ -308,6 +308,14 @@ class GoLanguageFrontendTest : BaseTest() {
         zero = result.variables["submodule.Zero"]
         assertNotNull(zero)
         assertRefersTo(key, zero)
+
+        val floatUnderscore = p.variables["floatUnderscore"]
+        assertNotNull(floatUnderscore)
+        assertLiteralValue(224_617.445_991_228, floatUnderscore.initializer)
+
+        val intUnderscore = p.variables["intUnderscore"]
+        assertNotNull(intUnderscore)
+        assertLiteralValue(1_000_000, intUnderscore.initializer)
     }
 
     @Test
@@ -1000,8 +1008,7 @@ class GoLanguageFrontendTest : BaseTest() {
                     "func_linux_arm64.go",
                     "cmd/buildtags/main.go",
                 )
-                .map { topLevel.resolve(it).toFile() }
-                .toMutableList()
+                .mapTo(mutableListOf()) { topLevel.resolve(it).toFile() }
 
         // add the std lib
         files += stdLib.resolve("fmt").toFile()

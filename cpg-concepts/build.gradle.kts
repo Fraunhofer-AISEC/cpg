@@ -49,8 +49,10 @@ dependencies {
     findProject(":cpg-language-ini")?.also { integrationTestImplementation(it) }
     integrationTestImplementation(projects.cpgAnalysis)
 
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+
     // concept generator deps
-    implementation("com.squareup:kotlinpoet:2.2.0")
+    implementation("com.squareup:kotlinpoet:2.3.0")
     // owl-api
     implementation("net.sourceforge.owlapi:owlapi-distribution:4.5.4")
     implementation("net.sourceforge.owlapi:org.semanticweb.hermit:1.3.8.413")

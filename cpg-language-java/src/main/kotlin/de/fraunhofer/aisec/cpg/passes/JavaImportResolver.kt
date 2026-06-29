@@ -26,14 +26,14 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Enumeration
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguage
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
@@ -46,7 +46,7 @@ import java.util.regex.Pattern
  * We need to remove this class and use [ImportResolver] and [Import] instead.
  */
 @DependsOn(TypeHierarchyResolver::class)
-@RequiredFrontend(JavaLanguageFrontend::class)
+@RequiresLanguage(JavaLanguage::class)
 @Description("Pass that resolves Java imports.")
 open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val records: MutableList<Record> = ArrayList()
@@ -59,7 +59,10 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     override fun accept(component: Component) {
         for (tu in component.translationUnits) {
-            findImportables(tu)
+            // Just an extra-check for safety, if we have multiple languages in the same component
+            if (tu.language is JavaLanguage) {
+                findImportables(tu)
+            }
         }
         for (recordDecl in records) {
             val imports = getDeclarationsForTypeNames(recordDecl.importStatements)
@@ -107,11 +110,12 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     protected fun getDeclarationsForTypeNames(targetTypes: List<String>): MutableSet<Declaration> {
-        return targetTypes.mapNotNull { importables[it] }.toMutableSet()
+        return targetTypes.mapNotNullTo(mutableSetOf()) { importables[it] }
     }
 
     protected fun getOrCreateMembers(base: Record, name: String): Set<ValueDeclaration> {
-        val memberMethods = base.methods.filter { it.name.localName.endsWith(name) }.toMutableSet()
+        val memberMethods =
+            base.methods.filterTo(mutableSetOf()) { it.name.localName.endsWith(name) }
 
         // add methods from superclasses
         memberMethods.addAll(

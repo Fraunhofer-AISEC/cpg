@@ -158,7 +158,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         return newField(
             field.name,
             frontend.typeOf(field.type),
-            field.modifiers.map { it.name.lowercase() }.toSet(),
+            field.modifiers.mapTo(mutableSetOf()) { it.name.lowercase() },
             rawNode = field,
         )
     }

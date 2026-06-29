@@ -36,13 +36,11 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.NodeEntity
-import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration who has a type. */
-@NodeEntity
-abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
+abstract class ValueDeclaration : Declaration(), HasType {
 
     @DoNotPersist override var observerEnabled: Boolean = true
 
@@ -75,8 +73,6 @@ abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
                 addAssignedType(value)
             }
         }
-
-    override var aliases = mutableSetOf<HasAliases>()
 
     override var assignedTypes: Set<Type> = mutableSetOf()
         set(value) {

@@ -1,3 +1,5 @@
+import de.undercouch.gradle.tasks.download.Download
+
 /*
  * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
@@ -23,7 +25,6 @@
  *                    \______/ \__|       \______/
  *
  */
-import de.undercouch.gradle.tasks.download.Download
 
 plugins {
     id("cpg.frontend-conventions")
@@ -45,7 +46,7 @@ dependencies {
 tasks {
     val downloadLibGoAST by
         registering(Download::class) {
-            val version = "v0.0.5"
+            val version = "v0.0.7"
 
             src(
                 listOf(

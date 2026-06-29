@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * This node represents the initialization of an "aggregate" object, such as an array or a struct or
@@ -110,7 +110,7 @@ class InitializerList : Expression(), ArgumentHolder, HasType.TypeObserver {
         // if we are initializing an array
         val type = type
         if (type is PointerType && type.pointerOrigin == PointerType.PointerOrigin.ARRAY) {
-            addAssignedTypes(assignedTypes.map { it.array() }.toSet())
+            addAssignedTypes(assignedTypes.mapTo(mutableSetOf()) { it.array() })
         }
     }
 

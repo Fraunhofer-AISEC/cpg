@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents the subscription or access of an array of the form `array[index]`, where both `array`
@@ -100,7 +100,7 @@ class Subscription : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder
             return
         }
 
-        addAssignedTypes(assignedTypes.map { getSubscriptType(it) }.toSet())
+        addAssignedTypes(assignedTypes.mapTo(mutableSetOf()) { getSubscriptType(it) })
     }
 
     override fun addArgument(expression: Expression) {

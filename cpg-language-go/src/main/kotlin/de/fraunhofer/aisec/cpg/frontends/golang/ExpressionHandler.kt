@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
 import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.PointerDereference
 import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.expressions.Range
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
@@ -114,6 +115,8 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
                 type = primitiveType("int")
             }
             FLOAT -> {
+                // Get rid of all underscores
+                rawValue = rawValue.replace("_", "")
                 value = rawValue.toDouble()
                 type = primitiveType("float64")
             }
@@ -390,11 +393,11 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         return ase
     }
 
-    private fun handleStarExpr(starExpr: GoStandardLibrary.Ast.StarExpr): UnaryOperator {
-        val op = newUnaryOperator("*", postfix = false, prefix = false, rawNode = starExpr)
-        op.input = handle(starExpr.x)
-
-        return op
+    private fun handleStarExpr(starExpr: GoStandardLibrary.Ast.StarExpr): PointerDereference {
+        val input = handle(starExpr.x)
+        return newPointerDereference(input.name, unknownType(), rawNode = starExpr).apply {
+            this.input = input
+        }
     }
 
     private fun handleTypeAssertExpr(

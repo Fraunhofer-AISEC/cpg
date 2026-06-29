@@ -102,11 +102,9 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         // and a container named JsxAttributes, with JsxAttribute nodes
         tag.expressions =
-            node
-                .firstChild("JsxAttributes")
-                ?.children
-                ?.mapNotNull { this.handle(it) }
-                ?.toMutableList() ?: mutableListOf()
+            node.firstChild("JsxAttributes")?.children?.mapNotNullTo(mutableListOf()) {
+                this.handle(it)
+            } ?: mutableListOf()
 
         return tag
     }
@@ -115,7 +113,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val jsx = newExpressionList(rawNode = node)
 
         jsx.expressions =
-            node.children?.mapNotNull { this.handle(it) }?.toMutableList() ?: mutableListOf()
+            node.children?.mapNotNullTo(mutableListOf()) { this.handle(it) } ?: mutableListOf()
 
         return jsx
     }
@@ -161,7 +159,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
         val ile = newInitializerList(unknownType(), rawNode = node)
 
         ile.initializers =
-            node.children?.mapNotNull { this.handle(it) }?.toMutableList() ?: mutableListOf()
+            node.children?.mapNotNullTo(mutableListOf()) { this.handle(it) } ?: mutableListOf()
 
         return ile
     }
