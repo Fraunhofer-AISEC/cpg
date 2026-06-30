@@ -111,6 +111,7 @@ open class QueryTree<T>(
 
             // Update the ID whenever the value changes
             id = computeId()
+            checkForSuppression()
         }
 
     /** The value of the [QueryTree] is the result of the query evaluation. */
