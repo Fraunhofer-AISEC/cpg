@@ -130,18 +130,13 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
     fun handleLetElse(letStmt: RsLetStmt, blockExpr: RsBlockExpr, raw: RsAst.RustStmt): Expression {
 
-        val patternResult =
+        val variableDeconstruction =
             letStmt.pat?.let { frontend.patternHandler.handle(RsAst.RustPat(it)) }
                 ?: newProblemExpression("Pattern cannot be parsed.", rawNode = raw)
 
-        val declarations = patternResult.nodes.filterIsInstance<DeclarationStatement>()
+        letStmt.ty?.let { variableDeconstruction.type = frontend.typeOf(it) }
 
-        val variableDeconstruction =
-            newObjectDeconstruction(raw).also { obj ->
-                letStmt.ty?.let { obj.type = frontend.typeOf(it) }
-                    ?: run { obj.type = unknownType() }
-                declarations.forEach { declStmt -> obj.components += declStmt }
-            }
+        val declarations = variableDeconstruction.nodes.filterIsInstance<DeclarationStatement>()
 
         // Handle the pattern, extract the variable declarations, put them into an object
         // deconstruction,

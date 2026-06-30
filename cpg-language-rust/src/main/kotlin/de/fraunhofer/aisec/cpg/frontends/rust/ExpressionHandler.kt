@@ -672,7 +672,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     fun handleUnderscoreExpr(underscoreExpr: RsUnderscoreExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.UnderscoreExpr(underscoreExpr))
-        return newEmpty(raw)
+        return newEmpty(raw).also { it.usedAsExpression = true }
     }
 
     fun handleParenExpr(parenExpr: RsParenExpr): Expression {
@@ -681,7 +681,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         parenExpr.expr.firstOrNull()?.let {
             return handleNode(it)
         }
-        return newEmpty(raw)
+        return newEmpty(raw).also { it.usedAsExpression = true }
     }
 
     fun handleTryExpr(tryExpr: RsTryExpr): Expression {
@@ -714,7 +714,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                                         val variable = newVariable(rawNode = raw, name = "val")
                                         declaration.declarations += variable
 
-                                        variable.initializer = newEmpty(raw)
+                                        variable.initializer =
+                                            newEmpty(raw).also { it.usedAsExpression = true }
                                         frontend.scopeManager.addDeclaration(variable)
                                     }
                             }
@@ -735,7 +736,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                                         declaration.usedAsExpression = true
                                         val variable = newVariable(rawNode = raw, name = "err")
                                         declaration.declarations += variable
-                                        variable.initializer = newEmpty(raw)
+                                        variable.initializer =
+                                            newEmpty(raw).also { it.usedAsExpression = true }
                                         frontend.scopeManager.addDeclaration(variable)
                                     }
                             }

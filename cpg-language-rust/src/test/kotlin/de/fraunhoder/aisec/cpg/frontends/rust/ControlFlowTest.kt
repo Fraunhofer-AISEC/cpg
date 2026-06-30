@@ -53,7 +53,6 @@ import de.fraunhofer.aisec.cpg.graph.whileLoops
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.nio.file.Path
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -307,7 +306,6 @@ class ControlFlowTest {
         assertEquals(then.statements.size, 1)
     }
 
-    @Ignore
     @Test
     fun testLetElse() {
         val topLevel = Path.of("src", "test", "resources")
@@ -352,17 +350,20 @@ class ControlFlowTest {
 
         breakStmt.expr.refs.forEach { assertTrue(case.variables.contains(it.refersTo)) }
 
-        assertInstanceOf<Assign>(letElse1.astParent)
+        val oDec = case.caseExpression
 
-        val assign = letElse1.astParent as Assign
-        assertInstanceOf<ObjectDeconstruction>(assign.lhs.first())
-
-        val oDec = assign.lhs.first() as ObjectDeconstruction
         assertEquals(oDec.variables.size, 1)
         assertEquals(oDec.variables.first().name.toString(), "value")
 
         // Collect all literals reachable from the reference after the let else
-        val reference = function.body?.astChildren?.filterIsInstance<Reference>()?.firstOrNull()
+        val reference =
+            function.body
+                ?.astChildren
+                ?.filterIsInstance<Call>()
+                ?.firstOrNull()
+                ?.astChildren
+                ?.filterIsInstance<Reference>()
+                ?.firstOrNull()
         assertNotNull(reference)
         val reachableDFG =
             reference
