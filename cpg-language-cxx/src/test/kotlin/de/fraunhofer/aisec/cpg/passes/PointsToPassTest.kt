@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
+import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
@@ -5004,6 +5005,28 @@ class PointsToPassTest {
                 base.prevFunctionSummaryDFG.toSet(),
             )
         }
+    }
+
+    @Test
+    fun testDerefPMVsOfRecursiveFunctions() {
+        val file = File("src/test/resources/complex_dfg.c")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(result)
+
+        // Functions
+        val func2 = result.functions("func2").single { it.body != null }
+        val func3 = result.functions("func3").single { it.body != null }
+
+        // Params and PMVs
+        val func2Param = func2.parameters.single()
+        val func2DerefPMV = func2Param.memoryValues.single { it.name.localName == "derefvalue" }
+
+        // actual tests
+        assertEquals(2, func2DerefPMV.prevDFG.size)
+        assertContains(func2DerefPMV.prevFullDFG, func3.allChildren<UnaryOperator>().single().input)
     }
 
     @Test
