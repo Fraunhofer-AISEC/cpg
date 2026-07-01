@@ -1919,17 +1919,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     private suspend fun calculateFunctionSummaries(invoke: Function): Function? {
         fun addDummyFS() {
-            if (log.isTraceEnabled) {
-                log.trace("Creating dummy function summary")
-            }
             val newValues = ConcurrentHashMap.newKeySet<FSEntry>()
             invoke.parameters.forEach { newValues.add(FSEntry(0, it, 1, "", isDummy = true)) }
             val entries = identitySetOf<Node>()
             if (invoke.returns.isNotEmpty()) entries.addAll(invoke.returns) else entries.add(invoke)
             entries.forEach { entry -> invoke.functionSummary.put(entry, newValues) }
-            if (log.isTraceEnabled) {
-                log.trace("Finished creating dummy function summary")
-            }
         }
 
         if (invoke.functionSummary.isEmpty()) {
