@@ -42,9 +42,16 @@ import kotlin.uuid.Uuid
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
+/**
+ * The MCP-facing representation of a single [de.fraunhofer.aisec.cpg.graph.ReachingWrite]: [node]
+ * is the writing node, [granularity] is its [Granularity] rendered as a short tag (see [toTag]),
+ * and [functionSummary] mirrors whether the underlying edge came from a cross-function summary
+ * rather than a direct write in this scope.
+ */
 @Serializable
 data class LastWriteInfo(val node: NodeInfo, val granularity: String, val functionSummary: Boolean)
 
+/** Renders a [Granularity] as a short string tag for the LLM-facing JSON response. */
 private fun Granularity.toTag(): String =
     when (this) {
         is FullDataflowGranularity -> "full"
@@ -52,6 +59,11 @@ private fun Granularity.toTag(): String =
         is PointerDataflowGranularity -> "pointer:${this.pointerTarget}"
     }
 
+/**
+ * Resolves [payload]'s node ID and returns its reaching writes via
+ * [de.fraunhofer.aisec.cpg.graph.reachingWrites]. Kept as a plain function, separate from
+ * [addGetLastWriteTool], so it's testable without going through the MCP [Server] transport.
+ */
 fun getLastWrite(result: TranslationResult, payload: CpgIdPayload): CallToolResult {
     val startId = Uuid.parse(payload.id)
     val startNode =
@@ -80,9 +92,12 @@ fun Server.addGetLastWriteTool() {
 
       Reads the node's materialized prevDFG edges directly (already computed by PointsToPass's
       kill/union analysis across all control-flow branches), so it returns every write that could
-      reach this point, not just one example path. Each result includes the writing node, its
-      dataflow granularity (full/partial/pointer), and whether it came from a cross-function
-      summary rather than a direct write in this scope.
+      reach this point, not just one example path. If a variable is written on two branches of an
+      if/else and read after the merge, both writes come back, not just one (a "may" analysis).
+      Unlike cpg_dfg_backward, which walks every node in every backward DFG path, this only returns
+      the immediate one-hop set. Each result includes the writing node, its dataflow granularity
+      (full/partial/pointer), and whether it came from a cross-function summary rather than a
+      direct write in this scope.
 
       Example usage:
       - "What are all the writes that could have produced this value?"
