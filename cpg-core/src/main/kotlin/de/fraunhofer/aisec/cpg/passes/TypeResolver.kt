@@ -94,9 +94,15 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      * @param type The type to handle.
      */
     private fun handleType(type: Type) {
+        // Only ObjectTypes can be resolved to a declaration or trigger a record inference; any
+        // other kind (FunctionPointerType, ParameterizedType, …) has nothing to look up. Without
+        // the parentheses, Kotlin's `&&`/`||` precedence lets a non-ObjectType with GUESSED
+        // origin through, causing spurious "trying to infer a record declaration of a non-object
+        // type" errors from Inference.inferRecordDeclaration.
         if (
-            type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED ||
-                type.typeOrigin == Type.Origin.GUESSED
+            type is ObjectType &&
+                (type.typeOrigin == Type.Origin.UNRESOLVED ||
+                    type.typeOrigin == Type.Origin.GUESSED)
         ) {
             resolveType(type)
         }

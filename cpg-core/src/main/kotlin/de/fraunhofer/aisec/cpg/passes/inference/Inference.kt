@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
-import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import java.util.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -391,11 +390,20 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         }
 
         if (type !is ObjectType) {
-            errorWithFileLocation(
+            // Defensive — callers of tryRecordInference filter for ObjectType, so this branch
+            // should be unreachable via normal flow. Kept as a safety net and logged at debug
+            // level so it doesn't drown real errors when it does trip.
+            debugWithFileLocation(
                 locationHint,
                 log,
-                "Trying to infer a record declaration of a non-object type. Not sure what to do? Should we change the type?",
+                "Skipping record inference for non-object type ${type.name}",
             )
+            return null
+        }
+        // Empty-named types (e.g. an anonymous struct that a typedef points to) have no lookup
+        // target and no meaningful name to give the inferred record. Silently skip — otherwise we
+        // synthesize a phantom Record with an empty name that no reference will ever resolve to.
+        if (type.name.localName.isEmpty()) {
             return null
         }
 

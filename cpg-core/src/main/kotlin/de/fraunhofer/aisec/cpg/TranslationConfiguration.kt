@@ -170,7 +170,6 @@ private constructor(
      * still run in a single thread. This speeds up initial parsing but makes sure that further
      * graph enrichment algorithms remain correct.
      */
-
     val useParallelFrontends: Boolean
 
     /**
