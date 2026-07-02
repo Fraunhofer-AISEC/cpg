@@ -134,6 +134,13 @@ private constructor(
     val exclusionPatternsByRegex: List<Regex>,
     /** Whether the type propagation system using [TypeObserver] should be disabled. */
     val disableTypeObserver: Boolean,
+    /**
+     * If true, the C/C++ frontend prepends a small compiler-intrinsic prelude to every translation
+     * unit (e.g. `typedef char * __builtin_va_list;`) so that references to clang/gcc built-ins
+     * that no real header defines can be resolved. Off by default — it adds one implicit
+     * declaration per TU, which many existing tests count against.
+     */
+    val injectCompilerBuiltins: Boolean = false,
 ) {
     /** This list contains all languages which we want to translate. */
     @JsonIgnore val languages: Set<KClass<out Language<*>>>
@@ -163,6 +170,7 @@ private constructor(
      * still run in a single thread. This speeds up initial parsing but makes sure that further
      * graph enrichment algorithms remain correct.
      */
+
     val useParallelFrontends: Boolean
 
     /**
@@ -283,6 +291,7 @@ private constructor(
         private val exclusionPatternsByRegex = mutableListOf<Regex>()
         private val exclusionPatternsByString = mutableListOf<String>()
         private var disableTypeObserver = false
+        private var injectCompilerBuiltins = false
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -739,6 +748,17 @@ private constructor(
             return this
         }
 
+        /**
+         * If true, the C/C++ frontend prepends a compiler-intrinsic prelude to every translation
+         * unit so that references to clang/gcc built-ins (e.g. `__builtin_va_list`) resolve to real
+         * typedefs instead of being inferred as bogus structs. Adds a small number of implicit
+         * declarations per TU.
+         */
+        fun injectCompilerBuiltins(b: Boolean): Builder {
+            injectCompilerBuiltins = b
+            return this
+        }
+
         @Throws(ConfigurationException::class)
         fun build(): TranslationConfiguration {
             registerExtraFrontendPasses()
@@ -772,6 +792,7 @@ private constructor(
                 exclusionPatternsByString,
                 exclusionPatternsByRegex,
                 disableTypeObserver,
+                injectCompilerBuiltins,
             )
         }
 

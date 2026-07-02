@@ -431,20 +431,26 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             else ->
                 Util.errorWithFileLocation(frontend, ctx, log, "unknown operator {}", ctx.operator)
         }
-        if (operatorCode == "&") {
-            return newPointerReference(handle(ctx.operand)?.name, unknownType(), rawNode = ctx)
-                .apply {
-                    if (input != null) {
-                        this.input = input
-                    }
-                }
-        } else if (operatorCode == "*") {
-            return newPointerDereference(handle(ctx.operand)?.name, unknownType(), rawNode = ctx)
-                .apply {
-                    if (input != null) {
-                        this.input = input
-                    }
-                }
+        if (operatorCode == "&" || operatorCode == "*") {
+            // PointerReference / PointerDereference are Reference subclasses, so the name we
+            // hand in is fed into symbol resolution. Only meaningful when the operand is itself
+            // a Reference (`*x`, `*p->f`, `&x`); for arbitrary sub-expressions like `*(p++)` we
+            // must pass a null name, otherwise the SymbolResolver looks up nonsense like "++"
+            // and infers a phantom global variable.
+            //
+            // We also reuse the already-computed `input` node — calling handle(ctx.operand) a
+            // second time creates a duplicate, orphaned subtree.
+            val operand = input
+            val refName = (operand as? Reference)?.name
+            if (operatorCode == "&") {
+                val ref = newPointerReference(refName, unknownType(), rawNode = ctx)
+                if (operand != null) ref.input = operand
+                return ref
+            } else {
+                val deref = newPointerDereference(refName, unknownType(), rawNode = ctx)
+                if (operand != null) deref.input = operand
+                return deref
+            }
         } else {
             val unaryOperator =
                 newUnaryOperator(

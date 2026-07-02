@@ -57,9 +57,9 @@ import org.eclipse.cdt.core.dom.parser.AbstractCLikeLanguage
 import org.eclipse.cdt.core.index.IIndexFileLocation
 import org.eclipse.cdt.core.model.ILanguage
 import org.eclipse.cdt.core.parser.DefaultLogService
+import org.eclipse.cdt.core.parser.ExtendedScannerInfo
 import org.eclipse.cdt.core.parser.FileContent
 import org.eclipse.cdt.core.parser.IncludeFileContentProvider
-import org.eclipse.cdt.core.parser.ScannerInfo
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 import org.eclipse.cdt.internal.core.dom.parser.ASTTranslationUnit
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTSimpleDeclSpecifier
@@ -234,7 +234,20 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
                 ?.let { symbols.putAll(it) }
         }
 
-        val scannerInfo = ScannerInfo(symbols, includePaths.toTypedArray())
+        // Optionally prepend our compiler-intrinsic prelude the same way
+        // `clang -include cpg_builtins.h` would, so implicit typedefs like __builtin_va_list are
+        // resolved to real types instead of being inferred as bogus structs. Opt-in via
+        // `TranslationConfiguration.injectCompilerBuiltins` because it adds implicit declarations
+        // to every translation unit.
+        val includeFiles: Array<String> =
+            if (config.injectCompilerBuiltins) arrayOf(builtinsHeaderPath) else emptyArray()
+        val scannerInfo =
+            ExtendedScannerInfo(
+                symbols,
+                includePaths.toTypedArray(),
+                /* macroFiles = */ emptyArray(),
+                includeFiles,
+            )
         val log = DefaultLogService()
         val opts = ILanguage.OPTION_PARSE_INACTIVE_CODE // | ILanguage.OPTION_ADD_COMMENTS;
         return try {
@@ -802,6 +815,23 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend::class.java)
+
+        /**
+         * Absolute path to a temporary copy of `cpg_builtins.h`, extracted lazily from the
+         * classpath so CDT's scanner can prepend it to every translation unit through
+         * [ExtendedScannerInfo.getIncludeFiles].
+         *
+         * We can't hand CDT a classpath URL directly, but a one-time extraction to a temp file
+         * (removed on JVM exit) is enough because CDT only needs the file to exist at parse time.
+         */
+        private val builtinsHeaderPath: String by lazy {
+            val tmp = File.createTempFile("cpg_builtins_", ".h").apply { deleteOnExit() }
+            val resource =
+                CXXLanguageFrontend::class.java.getResourceAsStream("cpg_builtins.h")
+                    ?: error("cpg_builtins.h resource missing from cpg-language-cxx classpath")
+            resource.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+            tmp.absolutePath
+        }
 
         private fun explore(node: IASTNode, indent: Int) {
             val children = node.children
