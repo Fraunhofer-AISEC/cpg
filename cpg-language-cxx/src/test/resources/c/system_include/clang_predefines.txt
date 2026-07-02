@@ -86,7 +86,6 @@
 #define __ATOMIC_SEQ_CST 5
 #define __BIGGEST_ALIGNMENT__ 8
 #define __BITINT_MAXWIDTH__ 128
-#define __BLOCKS__ 1
 #define __BOOL_WIDTH__ 1
 #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 #define __CHAR16_TYPE__ unsigned short

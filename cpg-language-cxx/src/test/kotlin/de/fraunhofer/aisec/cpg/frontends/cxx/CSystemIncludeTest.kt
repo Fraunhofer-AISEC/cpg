@@ -67,17 +67,31 @@ internal class CSystemIncludeTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val printfCall = result.calls["printf"]
-        assertNotNull(printfCall, "expected a call to printf in hello.c")
-        assertTrue(
-            printfCall.invokes.isNotEmpty(),
-            "printf call did not resolve to any declaration",
-        )
-        val printfDecl = printfCall.invokes.single()
-        assertFalse(
-            printfDecl.isInferred,
-            "printf should be resolved to the declaration from stdio.h, not inferred",
-        )
+        // Every call in hello.c should resolve to the *real* declaration from its respective
+        // system header (not an inferred stand-in). Covering one function per header keeps the
+        // guardrail broad without becoming a tautology.
+        val expectedResolvedCalls =
+            mapOf(
+                "printf" to "stdio.h",
+                "malloc" to "stdlib.h",
+                "free" to "stdlib.h",
+                "strlen" to "string.h",
+                "strcpy" to "string.h",
+                "sqrt" to "math.h",
+            )
+        for ((callName, header) in expectedResolvedCalls) {
+            val call = result.calls[callName]
+            assertNotNull(call, "expected a call to $callName from <$header> in hello.c")
+            assertTrue(
+                call.invokes.isNotEmpty(),
+                "$callName call did not resolve to any declaration",
+            )
+            val decl = call.invokes.single()
+            assertFalse(
+                decl.isInferred,
+                "$callName should resolve to the real declaration in <$header>, not be inferred",
+            )
+        }
 
         // Every reference in the translation unit tree should have been resolved by the
         // SymbolResolver. Any leftover null refersTo is a "symbol resolver error" for our purposes.
@@ -97,14 +111,27 @@ internal class CSystemIncludeTest : BaseTest() {
         )
 
         // Inferred declarations mean the SymbolResolver could not find a real one and had to
-        // synthesize a stand-in. The only one we accept from a real stdio.h chain is
-        // `struct __sFILEX;` — a forward-declared opaque struct in _stdio.h whose body is
-        // deliberately hidden (private ABI, defined only inside Apple's libc, never in the SDK
-        // headers). Any other inferred declaration — an anonymous record, a phantom variable
-        // named `++`, a `__builtin_va_list` "struct", a synthetic `struct::struct` constructor
-        // in C — is a precision regression.
+        // synthesize a stand-in. The allow-list below enumerates the ones we knowingly accept
+        // from the macOS system-header chain — everything else (an anonymous record, a phantom
+        // variable named `++`, a `__builtin_va_list` "struct", a synthetic `struct::struct`
+        // constructor in C, …) is a precision regression.
         val inferredDecls = result.allChildren<Declaration> { it.isInferred }
-        val allowedInferredNames = setOf("__sFILEX")
+        val allowedInferredNames =
+            setOf(
+                // Opaque forward-declarations whose bodies deliberately never ship in the SDK
+                // headers (private ABI, defined only inside Apple's libc/libmalloc).
+                "__sFILEX", // <stdio.h> — extension part of FILE
+                "_malloc_zone_t", // <malloc/_malloc.h> — pulled in by <stdlib.h>
+                // CDT parser quirk: prototypes like `int radixsort(..., unsigned __endbyte);` in
+                // _stdlib.h use a single-word `unsigned` (== `unsigned int`) plus a parameter
+                // name, and CDT classifies the parameter name as an unknown type — we then infer
+                // a Record for it. Not a symbol-resolver bug per se, but not trivially fixable
+                // in the parser layer either. Allow-listed so the test stays useful as a
+                // resolver-regression canary.
+                "__endbyte",
+                "__minval",
+                "__maxval",
+            )
         val unexpected = inferredDecls.filter { it.name.toString() !in allowedInferredNames }
         assertTrue(
             unexpected.isEmpty(),
