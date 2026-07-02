@@ -380,10 +380,46 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         val root = type.root
         val ancestors = root.ancestors
         val superTypes = ancestors.map(Type.Ancestor::type)
+        // Collect any typedef/alias types related to the supertypes. This helps in cases where
+        // a super type may be reachable through an alias defined in the respective scope.
+        val aliases =
+            superTypes
+                .flatMap { superType ->
+                    superType.scope
+                        ?.typedefs
+                        ?.map { it.value }
+                        ?.mapNotNull { typedef ->
+                            when {
+                                typedef.type == superType -> typedef.alias
+                                typedef.alias == superType -> typedef.type
+                                else -> null
+                            }
+                        } ?: emptyList()
+                }
+                .distinct()
+        // This may need an iterative resolution process, when a supertype has an alias that has a
+        // supertype, that has an alias etc.
 
-        return if (targetType.root in superTypes) {
-            // Find depth
-            val depth = ancestors.firstOrNull { it.type == targetType.root }?.depth
+        // Candidates are the direct supertypes plus any aliases; keep distinct to avoid duplicates
+        val candidates = (superTypes + aliases).distinct()
+
+        return if (targetType.root in candidates) {
+            // Find matching ancestor to determine depth. Prefer a direct ancestor match; if the
+            // target is an alias, try to find the ancestor that declared the alias.
+            val matchedAncestor =
+                ancestors.firstOrNull { it.type == targetType.root }
+                    // If the
+                    ?: ancestors.firstOrNull { ancestor ->
+                        ancestor.type.scope
+                            ?.typedefs
+                            ?.map { it.value }
+                            ?.any { typedef ->
+                                // typedef.alias or typedef.type may match the target root
+                                typedef.alias == targetType.root || typedef.type == targetType.root
+                            } ?: false
+                    }
+
+            val depth = matchedAncestor?.depth
             if (depth == null) {
                 // This should not happen
                 CastNotPossible
