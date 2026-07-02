@@ -43,9 +43,10 @@ import org.junit.jupiter.api.condition.OS
  *
  * The macOS Command Line Tools SDK is fixed at
  * `/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk`, which is a stable symlink to whatever
- * concrete SDK is installed. The clang preprocessor predefines are checked in at
- * `src/test/resources/c/system_include/clang_predefines.txt` so the test does not shell out to the
- * host toolchain.
+ * concrete SDK is installed. The clang preprocessor predefines are checked in per (OS, arch) tuple
+ * — currently `src/test/resources/c/system_include/darwin-arm64/clang_predefines.txt` — so the test
+ * does not shell out to the host toolchain. Add a sibling folder (e.g. `darwin-x86_64`) if we ever
+ * want to also cover a different architecture.
  */
 internal class CSystemIncludeTest : BaseTest() {
 
@@ -54,7 +55,8 @@ internal class CSystemIncludeTest : BaseTest() {
     @EnabledIf("macOSSdkAvailable")
     fun testPrintfWithSystemStdio() {
         val file = File("src/test/resources/c/system_include/hello.c")
-        val predefinesFile = File("src/test/resources/c/system_include/clang_predefines.txt")
+        val predefinesFile =
+            File("src/test/resources/c/system_include/darwin-arm64/clang_predefines.txt")
 
         val predefines = parseClangPredefines(predefinesFile)
 
@@ -146,9 +148,23 @@ internal class CSystemIncludeTest : BaseTest() {
         private const val MACOS_SDK_INCLUDE_PATH =
             "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include"
 
+        /**
+         * True only when we can safely run this test:
+         * - the macOS Command Line Tools / Xcode SDK is installed (usual dev-machine case), AND
+         * - the current process is running on Apple silicon.
+         *
+         * The predefines snapshot we ship is captured from `clang -E -dM -x c /dev/null` on
+         * `arm64-apple-darwin`; feeding it to a preprocessor on a different architecture would
+         * fabricate the wrong `__ARM_*` / `__x86_64__` / `__LP64__` layout and the test would
+         * exercise a fiction. Skip cleanly instead.
+         */
         @JvmStatic
         @Suppress("unused") // used by @EnabledIf
-        fun macOSSdkAvailable(): Boolean = File("$MACOS_SDK_INCLUDE_PATH/stdio.h").isFile
+        fun macOSSdkAvailable(): Boolean {
+            val arch = System.getProperty("os.arch").orEmpty()
+            val isAppleSilicon = arch == "aarch64" || arch == "arm64"
+            return isAppleSilicon && File("$MACOS_SDK_INCLUDE_PATH/stdio.h").isFile
+        }
 
         private val DEFINE_PATTERN = Regex("""^#define\s+(\S+)(?:\s+(.*))?$""")
 
