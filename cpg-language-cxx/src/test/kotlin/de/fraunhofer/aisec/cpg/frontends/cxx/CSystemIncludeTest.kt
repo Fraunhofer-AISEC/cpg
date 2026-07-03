@@ -43,10 +43,10 @@ import org.junit.jupiter.api.condition.OS
  *
  * The macOS Command Line Tools SDK is fixed at
  * `/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk`, which is a stable symlink to whatever
- * concrete SDK is installed. The clang preprocessor predefines are checked in per (OS, arch) tuple
- * — currently `src/test/resources/c/system_include/darwin-arm64/clang_predefines.txt` — so the test
- * does not shell out to the host toolchain. Add a sibling folder (e.g. `darwin-x86_64`) if we ever
- * want to also cover a different architecture.
+ * concrete SDK is installed. The clang preprocessor predefines and compiler-intrinsic typedefs live
+ * inside the frontend itself as classpath resources under `builtins/darwin-arm64/cpg_builtins.h`
+ * (with cross-target pieces in a sibling `builtins/common.h`); the test only has to enable the
+ * feature via `.injectCompilerBuiltins("darwin-arm64")`.
  */
 internal class CSystemIncludeTest : BaseTest() {
 
@@ -55,17 +55,12 @@ internal class CSystemIncludeTest : BaseTest() {
     @EnabledIf("macOSSdkAvailable")
     fun testPrintfWithSystemStdio() {
         val file = File("src/test/resources/c/system_include/hello.c")
-        val predefinesFile =
-            File("src/test/resources/c/system_include/darwin-arm64/clang_predefines.txt")
-
-        val predefines = parseClangPredefines(predefinesFile)
 
         val result =
             analyze(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CLanguage>()
-                it.symbols(predefines)
                 it.includePath(MACOS_SDK_INCLUDE_PATH)
-                it.injectCompilerBuiltins(true)
+                it.injectCompilerBuiltins("darwin-arm64")
             }
         assertNotNull(result)
 
@@ -164,17 +159,6 @@ internal class CSystemIncludeTest : BaseTest() {
             val arch = System.getProperty("os.arch").orEmpty()
             val isAppleSilicon = arch == "aarch64" || arch == "arm64"
             return isAppleSilicon && File("$MACOS_SDK_INCLUDE_PATH/stdio.h").isFile
-        }
-
-        private val DEFINE_PATTERN = Regex("""^#define\s+(\S+)(?:\s+(.*))?$""")
-
-        private fun parseClangPredefines(file: File): Map<String, String> {
-            require(file.isFile) { "clang predefines file not found: $file" }
-            return file.useLines { lines ->
-                lines
-                    .mapNotNull { DEFINE_PATTERN.matchEntire(it) }
-                    .associate { m -> m.groupValues[1] to m.groupValues[2] }
-            }
         }
     }
 }

@@ -48,6 +48,7 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.lang.reflect.Field
 import java.lang.reflect.Method as ReflectMethod
+import java.nio.file.Files
 import java.nio.file.Path
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTReferenceOperator
@@ -235,12 +236,27 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
         }
 
         // Optionally prepend our compiler-intrinsic prelude the same way
-        // `clang -include cpg_builtins.h` would, so implicit typedefs like __builtin_va_list are
-        // resolved to real types instead of being inferred as bogus structs. Opt-in via
-        // `TranslationConfiguration.injectCompilerBuiltins` because it adds implicit declarations
-        // to every translation unit.
+        // `clang -include <target>/cpg_builtins.h` would, so implicit typedefs like
+        // __builtin_va_list and clang preprocessor predefines are visible without shelling out to
+        // the host toolchain. Opt-in via `TranslationConfiguration.injectCompilerBuiltins`
+        // because it adds implicit declarations to every translation unit.
         val includeFiles: Array<String> =
-            if (config.injectCompilerBuiltins) arrayOf(builtinsHeaderPath) else emptyArray()
+            config.injectCompilerBuiltins?.let { target ->
+                val targetFile = File(builtinsRoot, "$target/cpg_builtins.h")
+                if (targetFile.isFile) {
+                    // Add the builtins root so a target-specific `cpg_builtins.h` can
+                    // `#include <common.h>` and pick up cross-target pieces.
+                    includePaths.add(builtinsRoot.absolutePath)
+                    arrayOf(targetFile.absolutePath)
+                } else {
+                    LOGGER.warn(
+                        "Compiler-builtins target '{}' not found on classpath (expected {}), skipping prelude injection",
+                        target,
+                        targetFile.absolutePath,
+                    )
+                    null
+                }
+            } ?: emptyArray()
         val scannerInfo =
             ExtendedScannerInfo(
                 symbols,
@@ -817,20 +833,35 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
         private val LOGGER = LoggerFactory.getLogger(CXXLanguageFrontend::class.java)
 
         /**
-         * Absolute path to a temporary copy of `cpg_builtins.h`, extracted lazily from the
-         * classpath so CDT's scanner can prepend it to every translation unit through
-         * [ExtendedScannerInfo.getIncludeFiles].
+         * Set of classpath-relative resource paths (relative to the frontend package) that make up
+         * the compiler-builtins tree. Extracted verbatim to a temp directory the first time an
+         * `injectCompilerBuiltins(...)` parse runs, so CDT can `-include` a per-target
+         * `cpg_builtins.h` that itself `#include <common.h>`s the shared pieces.
          *
-         * We can't hand CDT a classpath URL directly, but a one-time extraction to a temp file
-         * (removed on JVM exit) is enough because CDT only needs the file to exist at parse time.
+         * When a new target is added (e.g. `builtins/linux-x86_64/cpg_builtins.h`), append its path
+         * here so it gets extracted at runtime.
          */
-        private val builtinsHeaderPath: String by lazy {
-            val tmp = File.createTempFile("cpg_builtins_", ".h").apply { deleteOnExit() }
-            val resource =
-                CXXLanguageFrontend::class.java.getResourceAsStream("cpg_builtins.h")
-                    ?: error("cpg_builtins.h resource missing from cpg-language-cxx classpath")
-            resource.use { input -> tmp.outputStream().use { input.copyTo(it) } }
-            tmp.absolutePath
+        private val BUILTIN_RESOURCES =
+            listOf("builtins/common.h", "builtins/darwin-arm64/cpg_builtins.h")
+
+        /**
+         * Absolute path to the `builtins/` root of the extracted classpath tree. The extraction
+         * happens once per JVM (lazy) into a temp directory that is deleted on JVM exit — CDT can
+         * only open real files, not classpath URLs, so we materialise the tree on disk while
+         * preserving the directory structure for relative `#include` resolution.
+         */
+        private val builtinsRoot: File by lazy {
+            val tmp = Files.createTempDirectory("cpg-builtins-").toFile().apply { deleteOnExit() }
+            for (path in BUILTIN_RESOURCES) {
+                val out = File(tmp, path)
+                out.parentFile.mkdirs()
+                out.deleteOnExit()
+                val stream =
+                    CXXLanguageFrontend::class.java.getResourceAsStream(path)
+                        ?: error("Builtins resource missing from classpath: $path")
+                stream.use { input -> out.outputStream().use { input.copyTo(it) } }
+            }
+            File(tmp, "builtins")
         }
 
         private fun explore(node: IASTNode, indent: Int) {

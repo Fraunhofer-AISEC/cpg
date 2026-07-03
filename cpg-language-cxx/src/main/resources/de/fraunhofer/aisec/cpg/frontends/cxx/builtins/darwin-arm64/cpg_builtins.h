@@ -1,3 +1,23 @@
+/*
+ * Compiler-intrinsic prelude for the arm64-apple-darwin target.
+ *
+ * Structure:
+ *  1. Preprocessor predefines — a snapshot of
+ *     `clang -E -dM -x c /dev/null` on arm64-apple-darwin. These are the
+ *     macros clang injects into every TU before any user code runs.
+ *     Regenerate with:
+ *         clang -E -dM -x c /dev/null | sort
+ *  2. Arch-specific typedefs — kept next to the predefines because on
+ *     Apple silicon `__builtin_va_list` is just a `char *` (all variadic
+ *     args go on the stack), which differs from other ABIs.
+ *  3. Cross-target common builtins (typedefs + function prototypes) via
+ *     the sibling common.h.
+ */
+#ifndef _CPG_BUILTINS_DARWIN_ARM64_H
+#define _CPG_BUILTINS_DARWIN_ARM64_H
+
+/* --- 1. clang preprocessor predefines (arm64-apple-darwin) ---------------- */
+
 #define TARGET_IPHONE_SIMULATOR 0
 #define TARGET_OS_ARROW 1
 #define TARGET_OS_BRIDGE 0
@@ -476,3 +496,15 @@
 #define __strong 
 #define __unsafe_unretained 
 #define __weak __attribute__((objc_gc(weak)))
+
+/* --- 2. arm64-apple-darwin ABI: va_list is a plain stack pointer --------- */
+/* Verified via `clang -Xclang -ast-dump`:
+ *     TypedefDecl implicit referenced __builtin_va_list 'char *'
+ */
+typedef char *__builtin_va_list;
+typedef char *__builtin_ms_va_list;
+
+/* --- 3. Cross-target common builtins ------------------------------------- */
+#include <common.h>
+
+#endif /* _CPG_BUILTINS_DARWIN_ARM64_H */
