@@ -29,10 +29,10 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
+import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIf
 import org.junit.jupiter.api.condition.EnabledOnOs
 import org.junit.jupiter.api.condition.OS
@@ -91,10 +91,11 @@ internal class CSystemIncludeTest : BaseTest() {
         }
 
         // Every reference in the translation unit tree should have been resolved by the
-        // SymbolResolver. Any leftover null refersTo is a "symbol resolver error" for our purposes.
-        // PointerDereference / PointerReference are Reference subclasses only for historical
-        // reasons; they represent `*expr` / `&expr` expressions, not symbol lookups, so the
-        // resolver deliberately doesn't touch them.
+        // SymbolResolver. Any leftover null refersTo is a "symbol resolver error" for our
+        // purposes — except for PointerDereference / PointerReference nodes that wrap a
+        // non-Reference sub-expression (e.g. `*(_p++)`): the frontend deliberately leaves those
+        // nameless and SymbolResolver's empty-name guard early-returns without setting refersTo.
+        // Filter them out of the assertion so the check doesn't fire on that legitimate case.
         val unresolved =
             result.refs.filter {
                 it.refersTo == null &&
