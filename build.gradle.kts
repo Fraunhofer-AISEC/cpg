@@ -129,6 +129,12 @@ val enableINIFrontend: Boolean by extra {
 }
 project.logger.lifecycle("INI frontend is ${if (enableINIFrontend) "enabled" else "disabled"}")
 
+val enablePHPFrontend: Boolean by extra {
+    val enablePHPFrontend: String? by project
+    enablePHPFrontend.toBoolean()
+}
+project.logger.lifecycle("PHP frontend is ${if (enablePHPFrontend) "enabled" else "disabled"}")
+
 val enableMCPModule: Boolean by extra {
     val enableMCPModule: String? by project
     enableMCPModule.toBoolean()
