@@ -2,7 +2,8 @@
   "extends": [
     "config:recommended",
     "schedule:weekly",
-    ":enableVulnerabilityAlerts"
+    ":enableVulnerabilityAlerts",
+    "security:minimumReleaseAgeNpm"
   ],
   "patch": {
     "enabled": false
