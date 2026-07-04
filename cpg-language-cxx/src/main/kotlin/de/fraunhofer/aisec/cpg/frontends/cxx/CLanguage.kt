@@ -29,6 +29,12 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.project.ComponentDefinition
+import de.fraunhofer.aisec.cpg.project.ComponentDetector
+import de.fraunhofer.aisec.cpg.project.DetectionResult
+import de.fraunhofer.aisec.cpg.project.ProjectDetector
+import de.fraunhofer.aisec.cpg.project.TargetEnvironment
+import java.nio.file.Path
 import kotlin.reflect.KClass
 
 const val CONST = "const"
@@ -42,7 +48,21 @@ open class CLanguage :
     HasElaboratedTypeSpecifier,
     HasShortCircuitOperators,
     HasGlobalVariables,
-    HasGlobalFunctions {
+    HasGlobalFunctions,
+    ComponentDetector,
+    ProjectDetector {
+
+    override fun detectComponents(
+        directory: Path,
+        environment: TargetEnvironment,
+    ): List<ComponentDefinition> {
+        return detectCxxComponents(directory)
+    }
+
+    override fun detect(directory: Path, environment: TargetEnvironment): DetectionResult? {
+        return detectCxxSettings(directory)
+    }
+
     override val fileExtensions = listOf("c", "h")
     override val namespaceDelimiter = "::"
     @DoNotPersist
