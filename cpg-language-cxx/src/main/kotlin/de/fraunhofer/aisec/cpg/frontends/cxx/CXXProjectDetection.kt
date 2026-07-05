@@ -38,17 +38,28 @@ private val log = LoggerFactory.getLogger(CLanguage::class.java)
 /** The file name of a JSON compilation database, as emitted by CMake, bear and others. */
 private const val COMPILE_COMMANDS = "compile_commands.json"
 
+/** Returns the path to a [COMPILE_COMMANDS] file in [directory] or its `build` folder, if any. */
+private fun findCompilationDatabase(directory: Path): Path? {
+    return sequenceOf(
+            directory.resolve(COMPILE_COMMANDS),
+            directory.resolve("build").resolve(COMPILE_COMMANDS),
+        )
+        .firstOrNull { it.exists() }
+}
+
 /**
- * Detects components based on a [COMPILE_COMMANDS] file directly inside [directory]. The
+ * Detects components based on a [COMPILE_COMMANDS] file in [directory] or its `build` folder. The
  * compilation database groups its entries into components (e.g., based on CMake targets or the
- * directory layout), which we translate into [ComponentDefinition]s.
+ * directory layout), which we translate into [ComponentDefinition]s rooted in [directory].
+ *
+ * Note: Looking into the `build` folder means that a database in `<project>/build` yields
+ * components both when visiting `<project>` (rooted there) and later when the directory walk enters
+ * `build` (rooted in `build`). Since the walk visits parents first and components are de-duplicated
+ * by name, the ones rooted in the project directory win, which keeps translation unit names
+ * relative to the project rather than to `build`.
  */
 internal fun detectCxxComponents(directory: Path): List<ComponentDefinition> {
-    val file = directory.resolve(COMPILE_COMMANDS)
-    if (!file.exists()) {
-        return listOf()
-    }
-
+    val file = findCompilationDatabase(directory) ?: return listOf()
     val db = tryLoadCompilationDatabase(file) ?: return listOf()
     return db.components.map { (name, files) ->
         ComponentDefinition(name, root = directory, sources = files.map(File::toPath))
@@ -61,13 +72,7 @@ internal fun detectCxxComponents(directory: Path): List<ComponentDefinition> {
  * frontend.
  */
 internal fun detectCxxSettings(directory: Path): DetectionResult? {
-    val file =
-        sequenceOf(
-                directory.resolve(COMPILE_COMMANDS),
-                directory.resolve("build").resolve(COMPILE_COMMANDS),
-            )
-            .firstOrNull { it.exists() } ?: return null
-
+    val file = findCompilationDatabase(directory) ?: return null
     val db = tryLoadCompilationDatabase(file) ?: return null
     return DetectionResult(
         detector = COMPILE_COMMANDS,

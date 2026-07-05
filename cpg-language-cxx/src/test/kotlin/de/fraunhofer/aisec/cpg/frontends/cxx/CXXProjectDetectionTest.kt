@@ -36,6 +36,39 @@ import org.junit.jupiter.api.io.TempDir
 
 class CXXProjectDetectionTest {
     @Test
+    fun testDetectCompilationDatabaseInBuildFolder(@TempDir tmp: Path) {
+        val src = tmp.resolve("src/libfoo")
+        src.createDirectories()
+        src.resolve("foo.c").writeText("int foo() { return 1; }")
+
+        tmp.resolve("build").createDirectories()
+        tmp.resolve("build/compile_commands.json")
+            .writeText(
+                """
+                [
+                  {
+                    "directory": "$src",
+                    "command": "gcc -c foo.c",
+                    "file": "$src/foo.c",
+                    "output": "foo.o"
+                  }
+                ]
+                """
+                    .trimIndent()
+            )
+
+        val project = Project.from(tmp) { registerLanguage<CLanguage>() }
+
+        // The component must be rooted in the project directory, not in "build", so that
+        // translation unit names stay relative to the project
+        val component = project.components.singleOrNull()
+        assertNotNull(component)
+        assertEquals("libfoo", component.name)
+        assertEquals(tmp, component.root)
+        assertEquals(tmp.toFile(), project.config.topLevels["libfoo"])
+    }
+
+    @Test
     fun testDetectCompilationDatabase(@TempDir tmp: Path) {
         val libFoo = tmp.resolve("src/libfoo")
         val tool = tmp.resolve("src/tool")
