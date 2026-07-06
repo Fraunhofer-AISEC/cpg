@@ -80,7 +80,7 @@ importers:
         version: 4.4.4(picomatch@4.0.4)(svelte@5.55.7(@typescript-eslint/types@8.57.1))(typescript@5.9.3)
       svelte-highlight:
         specifier: ^7.9.0
-        version: 7.9.0
+        version: 7.14.0
       tailwindcss:
         specifier: ^4.1.18
         version: 4.1.18
@@ -1386,8 +1386,8 @@ packages:
       svelte:
         optional: true
 
-  svelte-highlight@7.9.0:
-    resolution: {integrity: sha512-226LBTtvTnM2L2JkQq8mZeKEeMfPLYyta7VxZatFT4UPX5zdHEerKeMTvrfbxm7MVTWc7TPThsNoVdhWC177KQ==}
+  svelte-highlight@7.14.0:
+    resolution: {integrity: sha512-Wlumufd+C0y+AFpyqmco6/nMWFWfvIzNHiKXfft3KcrUpei3pD8Sty76qCAQLJP3IfKFmHMqrO2T6BfUiRM8gA==}
 
   svelte@5.55.7:
     resolution: {integrity: sha512-ymI5ykLPwIHW839E053FQbI1G+jnRFJEw3Kv5Y4njixVWywQBx+NUFpkkKyk5LIb36Fg9DVXSYpqiGekLD0hyw==}
@@ -2566,9 +2566,10 @@ snapshots:
     optionalDependencies:
       svelte: 5.55.7(@typescript-eslint/types@8.57.1)
 
-  svelte-highlight@7.9.0:
+  svelte-highlight@7.14.0:
     dependencies:
       highlight.js: 11.11.1
+      magic-string: 0.30.21
 
   svelte@5.55.7(@typescript-eslint/types@8.57.1):
     dependencies:
