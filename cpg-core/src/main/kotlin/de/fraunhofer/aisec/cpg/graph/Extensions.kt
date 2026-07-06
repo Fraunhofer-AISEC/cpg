@@ -1048,7 +1048,7 @@ fun Node.followPrevCDGUntilHit(
                     } ?: listOf()
                 )
             }
-            nextEdges.map { edge -> Triple(edge.start, edge, ctx) }
+            nextEdges.map { edge -> Triple(edge.end, edge, ctx) }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,

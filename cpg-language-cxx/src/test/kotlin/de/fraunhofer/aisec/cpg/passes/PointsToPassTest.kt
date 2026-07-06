@@ -5008,31 +5008,6 @@ class PointsToPassTest {
     }
 
     @Test
-    fun testBrokenType() {
-        val file =
-            File(
-                "/home/moe/projects/2025-cpg-tool-comparison/checker/extern/juliet-test-suite-c-476/testcases/CWE476_NULL_Pointer_Dereference/CWE476_NULL_Pointer_Dereference__int64_t_01.c"
-            )
-        val tu =
-            analyze(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage<CLanguage>()
-                it.registerPass<ControlDependenceGraphPass>()
-                //                it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
-            }
-        assertNotNull(tu)
-        val node =
-            tu.allChildren<Reference> {
-                    it.name.localName == "data" &&
-                        it.location?.region?.startLine == 59 &&
-                        it !is PointerDereference
-                }
-                .single()
-        val paths = node.collectAllPrevCDGPaths(false)
-        println()
-    }
-
-    @Test
     fun testDerefPMVsOfRecursiveFunctions() {
         val file = File("src/test/resources/complex_dfg.c")
         val result =
