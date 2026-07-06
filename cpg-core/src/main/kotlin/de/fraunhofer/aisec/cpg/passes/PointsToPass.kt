@@ -515,7 +515,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 }
                 return
             }
-            
+
             log.info(
                 "Analyzing function ${node.name}. Complexity: ${
                             NumberFormat.getNumberInstance(Locale.US).format(c)
