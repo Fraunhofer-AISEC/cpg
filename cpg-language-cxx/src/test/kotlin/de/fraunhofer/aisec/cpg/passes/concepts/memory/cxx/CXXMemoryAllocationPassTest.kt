@@ -129,10 +129,14 @@ class CXXMemoryAllocationPassTest {
     /** A non-allocator call (e.g. `printf`) should not get an Allocate overlay. */
     @Test
     fun testNoOverlayForUnrelatedCall() {
-        tu.calls
-            .filter { it.name.toString() !in setOf("malloc", "calloc", "realloc") }
-            .forEach { call ->
-                assertNull(call.overlays.filterIsInstance<Allocate>().firstOrNull())
-            }
+        val unrelatedCalls =
+            tu.calls.filter { it.name.toString() !in setOf("malloc", "calloc", "realloc") }
+        kotlin.test.assertTrue(
+            unrelatedCalls.isNotEmpty(),
+            "test TU should contain at least one non-allocator call",
+        )
+        unrelatedCalls.forEach { call ->
+            assertNull(call.overlays.filterIsInstance<Allocate>().firstOrNull())
+        }
     }
 }

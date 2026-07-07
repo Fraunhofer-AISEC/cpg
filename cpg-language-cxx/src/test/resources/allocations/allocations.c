@@ -21,3 +21,7 @@ void realloc_constant(void) {
 void malloc_unknown_size(int n) {
     char *p = malloc(n);
 }
+
+void non_allocator_call(void) {
+    (void)rand();
+}

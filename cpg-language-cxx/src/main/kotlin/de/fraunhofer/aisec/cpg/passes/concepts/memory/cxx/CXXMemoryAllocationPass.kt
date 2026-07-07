@@ -114,7 +114,10 @@ class CXXMemoryAllocationPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 val count = call.arguments.getOrNull(0)
                 val elemSize = call.arguments.getOrNull(1)
                 if (count != null && elemSize != null) {
-                    call.newBinaryOperator("*").apply {
+                    newBinaryOperator("*").apply {
+                        isImplicit = true
+                        code = call.code
+                        location = call.location
                         lhs = count
                         rhs = elemSize
                     }
