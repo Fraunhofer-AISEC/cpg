@@ -42,6 +42,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -105,6 +106,8 @@ class CXXMemoryAllocationPassTest {
         assertEquals(8L, (countLit.value as Number).toLong())
         // rhs is `sizeof(int)`; we don't constant-evaluate types here, just check the structure.
         assertNotNull(sizeBin.rhs)
+        assertIs<Variable>(allocate.what)
+        assertEquals("p", (allocate.what as Variable).name.localName)
     }
 
     /** `realloc(p, 32)` → size is argument 1 (the new size), not the old buffer. */
@@ -113,6 +116,8 @@ class CXXMemoryAllocationPassTest {
         val allocate = allocateIn("realloc_constant", "realloc")
         val sizeLit = assertIs<Literal<*>>(allocate.size)
         assertEquals(32L, (sizeLit.value as Number).toLong())
+        assertIs<Variable>(allocate.what)
+        assertEquals("p", (allocate.what as Variable).name.localName)
     }
 
     /**
@@ -124,18 +129,17 @@ class CXXMemoryAllocationPassTest {
         val allocate = allocateIn("malloc_unknown_size", "malloc")
         val sizeRef = assertIs<Reference>(allocate.size)
         assertEquals("n", sizeRef.name.localName)
+        assertIs<Variable>(allocate.what)
+        assertEquals("p", (allocate.what as Variable).name.localName)
     }
 
-    /** A non-allocator call (e.g. `printf`) should not get an Allocate overlay. */
+    /** A non-allocator call (e.g. `free`) should not get an Allocate overlay. */
     @Test
     fun testNoOverlayForUnrelatedCall() {
-        val unrelatedCalls =
-            tu.calls.filter { it.name.toString() !in setOf("malloc", "calloc", "realloc") }
-        kotlin.test.assertTrue(
-            unrelatedCalls.isNotEmpty(),
-            "test TU should contain at least one non-allocator call",
-        )
-        unrelatedCalls.forEach { call ->
+        val unrelated =
+            tu.calls.filter { it.name.toString() !in CXXMemoryAllocationPass.RECOGNIZED_ALLOCATORS }
+        assertTrue(unrelated.isNotEmpty(), "fixture must contain at least one non-allocator call")
+        unrelated.forEach { call ->
             assertNull(call.overlays.filterIsInstance<Allocate>().firstOrNull())
         }
     }

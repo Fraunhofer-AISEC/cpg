@@ -148,7 +148,7 @@ class ArrayValue : Value<LatticeInterval> {
                 }
             }
             is Call -> {
-                // Read the allocation size from an attached [Allocate] concept overlay; a
+                // Read the allocation size in bytes from an attached [Allocate] concept overlay; a
                 // language-specific concept pass (e.g. CXXMemoryAllocationPass) is responsible
                 // for recognising allocator calls per language and populating this. Without a
                 // concept attached we can't tell whether the call is even an allocator.

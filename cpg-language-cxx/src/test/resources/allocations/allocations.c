@@ -25,3 +25,8 @@ void malloc_unknown_size(int n) {
 void non_allocator_call(void) {
     (void)rand();
 }
+
+void free_call(void) {
+    char *p = malloc(16);
+    free(p);
+}

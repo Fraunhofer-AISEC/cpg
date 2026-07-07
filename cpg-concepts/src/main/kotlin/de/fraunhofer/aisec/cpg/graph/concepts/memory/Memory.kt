@@ -73,10 +73,10 @@ open class Allocate(
     /** A reference to [what] is allocated, e.g., a variable. */
     var what: Node?,
     /**
-     * The expression that determines the size of the allocation, if known. For example, the `N`
-     * argument of `malloc(N)`, the product `M * N` of `calloc(M, N)`, or the dimension expression
-     * of `new T[N]`. `null` when the size couldn't be derived statically (e.g. for managed
-     * constructors that don't carry an explicit size).
+     * The expression that determines the allocation size **in bytes**, if known. For example, the
+     * `N` argument of `malloc(N)`, the product `M * N` of `calloc(M, N)`, or — for `new T[N]` — the
+     * synthesised expression `sizeof(T) * N`. `null` when the size couldn't be derived statically
+     * (e.g. for managed constructors that don't carry an explicit size argument).
      */
     var size: Expression? = null,
 ) : MemoryOperation(underlyingNode = underlyingNode, concept = concept) {

@@ -67,11 +67,16 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 )
 class CXXMemoryAllocationPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
+    companion object {
+        val RECOGNIZED_ALLOCATORS = setOf("malloc", "calloc", "realloc")
+    }
+
     override fun handleNode(node: Node, tu: TranslationUnit) {
         if (node is Call) handleCall(node)
     }
 
     private fun handleCall(call: Call) {
+        if (call.name.toString() !in RECOGNIZED_ALLOCATORS) return
         val size = allocationSizeOf(call) ?: return
         val concept = unmanagedMemoryConcept(call) ?: return
         newAllocate(
@@ -95,17 +100,22 @@ class CXXMemoryAllocationPass(ctx: TranslationContext) : ConceptPass(ctx) {
      * [newMemory].
      */
     private fun unmanagedMemoryConcept(call: Call): Memory? {
-        val component = call.component ?: return null
+        val component = call.component
+        if (component == null) {
+            log.warn("Call {} has no component; skipping Allocate overlay", call.name)
+            return null
+        }
         return component.conceptNodes.filterIsInstance<Memory>().firstOrNull {
             it.mode == MemoryManagementMode.UNMANAGED
         } ?: newMemory(component, mode = MemoryManagementMode.UNMANAGED, connect = true)
     }
 
     /**
-     * The expression that determines how many bytes the call allocates, or `null` if the call isn't
-     * a recognised allocator. For `calloc(M, N)` the total is the product `M * N`, so we synthesise
-     * a [BinaryOperator] (`*`) over the two arguments — `ValueEvaluator` will constant-fold it when
-     * both operands are literals.
+     * The expression that determines how many bytes the call allocates. Only called for names in
+     * [RECOGNIZED_ALLOCATORS]. For `calloc(M, N)` the total is the product `M * N`, so we
+     * synthesise a [BinaryOperator] (`*`) over the two arguments — `ValueEvaluator` will
+     * constant-fold it when both operands are literals. Returns `null` when the expected arguments
+     * are absent (malformed AST).
      */
     private fun allocationSizeOf(call: Call): Expression? =
         when (call.name.toString()) {
@@ -121,10 +131,16 @@ class CXXMemoryAllocationPass(ctx: TranslationContext) : ConceptPass(ctx) {
                         lhs = count
                         rhs = elemSize
                     }
-                } else null
+                } else {
+                    log.warn(
+                        "calloc call {} is missing arguments; skipping Allocate overlay",
+                        call.name,
+                    )
+                    null
+                }
             }
             "realloc" -> call.arguments.getOrNull(1)
-            else -> null
+            else -> null // unreachable: only called after RECOGNIZED_ALLOCATORS guard in handleCall
         }
 
     /**
