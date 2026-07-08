@@ -208,11 +208,9 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     .fulfilled
             val loggers =
                 fulfilledPaths
-                    .map { path ->
-                        path.nodes.last()
-                    } // we're interested in the last node of the path, i.e. the node connected to
-                    // the [LogGet] node
-                    .flatMap { it.overlays } // move to the "overlays" world
+                    // we're interested in the last node of the path, i.e. the node connected to
+                    // the [LogGet] node and move to the "overlays" world
+                    .flatMap { path -> path.nodes.last().overlays }
                     .filterIsInstance<LogGet>() // discard not-relevant overlays
                     .mapNotNull {
                         it.concept as? Logging

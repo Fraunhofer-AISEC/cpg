@@ -1008,8 +1008,7 @@ class GoLanguageFrontendTest : BaseTest() {
                     "func_linux_arm64.go",
                     "cmd/buildtags/main.go",
                 )
-                .map { topLevel.resolve(it).toFile() }
-                .toMutableList()
+                .mapTo(mutableListOf()) { topLevel.resolve(it).toFile() }
 
         // add the std lib
         files += stdLib.resolve("fmt").toFile()

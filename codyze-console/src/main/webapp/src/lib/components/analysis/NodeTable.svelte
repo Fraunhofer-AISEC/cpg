@@ -3,13 +3,12 @@
   import type { NodeJSON } from '$lib/types';
 
   interface Props {
-    title: string;
     nodes: FlattenedNode[];
     highlightedNode: NodeJSON | null;
     nodeClick: (node: NodeJSON) => void;
   }
 
-  let { title, nodes, highlightedNode = $bindable(), nodeClick }: Props = $props();
+  let { nodes, highlightedNode = $bindable(), nodeClick }: Props = $props();
 
   function typeColor(type: string): string {
     if (/Decl/i.test(type)) return 'bg-blue-100 text-blue-700';
@@ -22,12 +21,6 @@
 </script>
 
 <div class="flex flex-col h-full text-xs">
-  <!-- Header -->
-  <div class="sticky top-0 z-10 flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
-    <span class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{title}</span>
-    <span class="rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-semibold text-gray-500">{nodes.length}</span>
-  </div>
-
   {#if nodes.length === 0}
     <p class="p-4 text-center text-gray-400 italic">No nodes</p>
   {:else}

@@ -432,7 +432,6 @@ internal fun Pass<*>.tryScopeInference(scopeName: Name, source: Node): Declarati
  * This function should solely be used in [tryMethodInference].
  */
 private fun methodExists(type: ObjectType, name: String): Boolean {
-    val types = type.ancestors.map { it.type }
-    val methods = types.map { it.recordDeclaration }.flatMap { it.methods }
+    val methods = type.ancestors.flatMap { it.type.recordDeclaration.methods }
     return methods.any { it.name.localName == name }
 }

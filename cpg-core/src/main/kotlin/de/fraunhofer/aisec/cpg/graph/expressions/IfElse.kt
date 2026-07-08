@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.commonType
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -57,7 +58,7 @@ class IfElse : Expression(false), BranchingNode, ArgumentHolder, HasType.TypeObs
     /** The condition to be evaluated. */
     var condition by unwrapping(IfElse::conditionEdge)
 
-    override val branchedBy
+    override val branchedBy: AstNode?
         get() = condition ?: conditionDeclaration
 
     /** C++ constexpr construct. */

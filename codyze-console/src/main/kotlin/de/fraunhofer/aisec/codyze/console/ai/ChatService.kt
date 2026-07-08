@@ -28,6 +28,12 @@ package de.fraunhofer.aisec.codyze.console.ai
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import de.fraunhofer.aisec.codyze.console.ai.clients.*
+import de.fraunhofer.aisec.codyze.console.ai.skills.ACTIVATE_SKILL_TOOL_NAME
+import de.fraunhofer.aisec.codyze.console.ai.skills.SkillLoader
+import de.fraunhofer.aisec.codyze.console.ai.skills.buildActivateSkillTool
+import de.fraunhofer.aisec.codyze.console.ai.skills.buildSkillCatalog
+import de.fraunhofer.aisec.codyze.console.ai.skills.defaultSkillDirectories
+import de.fraunhofer.aisec.codyze.console.ai.skills.wrapActivatedSkill
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
@@ -46,9 +52,11 @@ import org.slf4j.LoggerFactory
 /** ChatService manages LLM client configuration and provides an API for chat interactions. */
 class ChatService(
     private val httpClient: HttpClient,
-    private val llm: LlmClient,
+    private val llmProviderConfig: LlmProviderConfig,
     private val mcpServerUrl: String,
 ) {
+    suspend fun listAvailableProviders(): List<LlmProviderWithModels> =
+        llmProviderConfig.listAvailableProviders()
 
     private val mcp: Client =
         Client(
@@ -67,6 +75,82 @@ class ChatService(
         tools = mcp.listTools().tools
         prompts = mcp.listPrompts().prompts
         resources = mcp.listResources().resources
+    }
+
+    private val skillLoader = SkillLoader(defaultSkillDirectories)
+    private var skills: List<Skill> = skillLoader.discoverSkills()
+
+    /** Maximum number of tool call iterations before responding a text message. */
+    private val maxToolIterations = 50
+
+    /** Return the discovered skills. */
+    fun getSkills(): List<Skill> = skills
+
+    /** Process a chat query using the LLM with MCP tool support */
+    fun chat(request: ChatRequestJSON): Flow<String> = channelFlow {
+        // Used if the LLM needs more time for a "cold-start"
+        send(Events.keepalive())
+
+        val userMessage = request.messages.lastOrNull()?.content ?: ""
+        val conversationHistory = request.messages
+
+        val llm =
+            llmProviderConfig.clientFor(request.client, request.model)
+                ?: run {
+                    send(Events.text("Unknown or unavailable LLM client"))
+                    return@channelFlow
+                }
+
+        try {
+            val toolCallHistory = mutableListOf<List<ToolCallWithResult>>()
+            var iteration = 0
+
+            val allTools = tools + listOfNotNull(buildActivateSkillTool(skills))
+            val systemPrompt = buildSystemPrompt(skills)
+
+            var toolCalls =
+                llm.sendPrompt(
+                    userMessage = userMessage,
+                    systemPrompt = systemPrompt,
+                    conversationHistory = conversationHistory,
+                    tools = allTools,
+                    onText = { text -> send(Events.text(text)) },
+                    onReasoning = { thought -> send(Events.reasoning(thought)) },
+                )
+
+            while (toolCalls.isNotEmpty() && iteration < maxToolIterations) {
+                iteration++
+                val roundtripResults =
+                    toolCalls.map { toolCall ->
+                        val result = executeToolCall(toolCall) { jsonEvent -> send(jsonEvent) }
+                        ToolCallWithResult(toolCall, result)
+                    }
+                toolCallHistory.add(roundtripResults)
+
+                toolCalls =
+                    llm.sendPrompt(
+                        userMessage = userMessage,
+                        systemPrompt = systemPrompt,
+                        conversationHistory = conversationHistory,
+                        toolCallHistory = toolCallHistory,
+                        tools = allTools,
+                        onText = { text -> send(Events.text(text)) },
+                        onReasoning = { thought -> send(Events.reasoning(thought)) },
+                    )
+            }
+        } catch (e: Exception) {
+            log.error("Chat error: {}", e.message, e)
+            send(Events.text("Error: ${e.message}"))
+        }
+    }
+
+    /**
+     * Compose the system prompt sent to the LLM: the base prompt followed by the skill catalog when
+     * skills are available.
+     */
+    private fun buildSystemPrompt(skills: List<Skill>): String {
+        val catalog = buildSkillCatalog(skills) ?: return SYSTEM_PROMPT
+        return "$SYSTEM_PROMPT\n\n$catalog"
     }
 
     /** Return the MCP capabilities: tools, prompts, and resources. */
@@ -131,61 +215,6 @@ class ChatService(
         }
     }
 
-    /** Maximum number of tool call iterations before responding a text message. */
-    private val maxToolIterations = 8
-
-    /** Process a chat query using the LLM with MCP tool support */
-    fun chat(request: ChatRequestJSON): Flow<String> = channelFlow {
-        // Used if the LLM needs more time for a "cold-start"
-        send(Events.keepalive())
-
-        val userMessage = request.messages.lastOrNull()?.content ?: ""
-        val conversationHistory = request.messages
-
-        try {
-            val toolCallHistory = mutableListOf<List<ToolCallWithResult>>()
-            var iteration = 0
-
-            var toolCalls =
-                llm.sendPrompt(
-                    userMessage = userMessage,
-                    conversationHistory = conversationHistory,
-                    tools = tools,
-                    onText = { text -> send(Events.text(text)) },
-                    onReasoning = { thought -> send(Events.reasoning(thought)) },
-                )
-            log.info(
-                "Initial prompt returned {} tool calls: {}",
-                toolCalls.size,
-                toolCalls.map { it.name },
-            )
-
-            while (toolCalls.isNotEmpty() && iteration < maxToolIterations) {
-                iteration++
-                log.info("Agent: Round {}: executing {}", iteration, toolCalls.map { it.name })
-                val roundtripResults =
-                    toolCalls.map { toolCall ->
-                        val result = executeToolCall(toolCall) { jsonEvent -> send(jsonEvent) }
-                        ToolCallWithResult(toolCall, result)
-                    }
-                toolCallHistory.add(roundtripResults)
-
-                toolCalls =
-                    llm.sendPrompt(
-                        userMessage = userMessage,
-                        conversationHistory = conversationHistory,
-                        toolCallHistory = toolCallHistory,
-                        tools = tools,
-                        onText = { text -> send(Events.text(text)) },
-                        onReasoning = { thought -> send(Events.reasoning(thought)) },
-                    )
-            }
-        } catch (e: Exception) {
-            log.error("Chat error: {}", e.message, e)
-            send(Events.text("Error: ${e.message}"))
-        }
-    }
-
     /**
      * Parse a list of text content items from an MCP tool result into a [JsonElement]. JSON strings
      * are parsed into their structured form; plain text is wrapped as [JsonPrimitive]. A single
@@ -214,6 +243,15 @@ class ChatService(
         return try {
             val arguments = Json.parseToJsonElement(toolCall.arguments).jsonObject
 
+            if (toolCall.name == ACTIVATE_SKILL_TOOL_NAME) {
+                val skillName = arguments["name"]?.jsonPrimitive?.contentOrNull
+                val skill = skills.find { it.name == skillName }
+                val resultText =
+                    skill?.let { wrapActivatedSkill(it) } ?: "Unknown skill: $skillName"
+                emit(Events.toolResult(toolCall.name, JsonPrimitive(resultText)))
+                return resultText
+            }
+
             val result = mcp.callTool(name = toolCall.name, arguments = arguments)
             val contentTexts = result.content.mapNotNull { (it as? TextContent)?.text }
             val resultText = contentTexts.joinToString("\n")
@@ -231,6 +269,13 @@ class ChatService(
         }
     }
 
+    /** Call an MCP tool directly and return the result as a parsed JSON element. */
+    suspend fun callTool(name: String, arguments: JsonObject): JsonElement {
+        val result = mcp.callTool(name = name, arguments = arguments)
+        val contentTexts = result.content.mapNotNull { (it as? TextContent)?.text }
+        return parseToolResultContent(contentTexts)
+    }
+
     fun close() {
         httpClient.close()
     }
@@ -240,7 +285,7 @@ class ChatService(
 
         fun createIfConfigExist(): ChatService? {
             val config = ConfigFactory.load()
-            if (!config.hasPath("llm.client")) {
+            if (!config.hasPath("llm.clients")) {
                 log.warn(
                     "No application.conf found, AI chat features disabled. " +
                         "Copy application.conf.example to application.conf to enable them."
@@ -251,9 +296,6 @@ class ChatService(
         }
 
         private fun fromConfig(config: Config): ChatService {
-            val llmProvider = config.getString("llm.client")
-            val llmModel = config.getString("llm.$llmProvider.model")
-            val llmBaseUrl = config.getString("llm.$llmProvider.baseUrl")
             val mcpServerUrl = config.getString("mcp.serverUrl")
 
             val httpClient =
@@ -274,20 +316,9 @@ class ChatService(
                     }
                 }
 
-            val llmClient: LlmClient =
-                when (llmProvider) {
-                    "gemini" -> {
-                        val apiKey =
-                            System.getenv("GEMINI_API_KEY")
-                                ?: throw IllegalStateException("GEMINI_API_KEY not set")
-                        GeminiClient(httpClient, llmModel, apiKey, llmBaseUrl)
-                    }
-                    else -> OpenAiClient(httpClient, llmModel, llmBaseUrl)
-                }
-
             return ChatService(
                 httpClient = httpClient,
-                llm = llmClient,
+                llmProviderConfig = config.toLlmProviderConfig(httpClient),
                 mcpServerUrl = mcpServerUrl,
             )
         }

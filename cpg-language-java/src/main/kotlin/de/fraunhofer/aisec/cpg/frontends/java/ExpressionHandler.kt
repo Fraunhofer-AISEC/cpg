@@ -31,30 +31,19 @@ import com.github.javaparser.ast.expr.Expression as JPExpression
 import com.github.javaparser.resolution.UnsolvedSymbolException
 import com.github.javaparser.resolution.declarations.ResolvedFieldDeclaration
 import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration
+import com.github.javaparser.resolution.types.ResolvedPrimitiveType
+import com.github.javaparser.resolution.types.ResolvedType
+import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
-import de.fraunhofer.aisec.cpg.graph.expressions.Assign
-import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.expressions.Call
-import de.fraunhofer.aisec.cpg.graph.expressions.Conditional
-import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
-import de.fraunhofer.aisec.cpg.graph.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
-import de.fraunhofer.aisec.cpg.graph.expressions.New
-import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
-import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.function.Supplier
-import kotlin.collections.set
 import kotlin.jvm.optionals.getOrNull
 import org.slf4j.LoggerFactory
 
@@ -239,11 +228,24 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // this is to get information about system types, as long as we are not fully doing that on
         // our own.
         try {
-            val symbol = fieldAccessExpr.resolve()
-            fieldType = frontend.typeOf(symbol.type)
+            var scopeType: ResolvedType =
+                JavaParserFacade.get(frontend.nativeTypeResolver)
+                    .getType(fieldAccessExpr.getScope())
 
-            if (symbol.isField) {
-                baseType = objectType(symbol.asField().declaringType().qualifiedName)
+            if (scopeType.isConstraint) {
+                scopeType = scopeType.asConstraintType().bound
+            }
+
+            if (scopeType.isArray() && fieldAccessExpr.getNameAsString().equals("length")) {
+                fieldType = frontend.typeOf(ResolvedPrimitiveType.INT)
+                baseType = frontend.typeOf(scopeType.asArrayType().componentType)
+            } else {
+                val symbol = fieldAccessExpr.resolve()
+                fieldType = frontend.typeOf(symbol.type)
+
+                if (symbol.isField) {
+                    baseType = objectType(symbol.asField().declaringType().qualifiedName)
+                }
             }
         } catch (_: UnsolvedSymbolException) {}
 

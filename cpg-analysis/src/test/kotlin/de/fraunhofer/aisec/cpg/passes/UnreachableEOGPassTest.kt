@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.testcases.Passes
 import kotlin.test.*
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
@@ -65,9 +66,11 @@ class UnreachableEOGPassTest {
         val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
+        val condition = ifStatement.condition
+        assertNotNull(condition)
         // Check if the then-branch is set as reachable including all the edges until reaching the
         // print
-        val thenDecl = ifStatement.nextEOGEdges[0]
+        val thenDecl = condition.nextEOGEdges[0]
         assertFalse(thenDecl.unreachable)
         assertEquals(1, thenDecl.end.nextEOGEdges.size)
         // The "++"
@@ -84,7 +87,7 @@ class UnreachableEOGPassTest {
 
         // Check if the else-branch is set as unreachable including all the edges until reaching the
         // print
-        val elseDecl = ifStatement.nextEOGEdges[1]
+        val elseDecl = condition.nextEOGEdges[1]
         assertTrue(elseDecl.unreachable)
         assertEquals(1, elseDecl.end.nextEOGEdges.size)
         // The "--"
@@ -115,8 +118,11 @@ class UnreachableEOGPassTest {
         val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
-        assertFalse(ifStatement.nextEOGEdges[1].unreachable)
-        assertTrue(ifStatement.nextEOGEdges[0].unreachable)
+        val condition = ifStatement.condition
+        assertNotNull(condition)
+
+        assertFalse(condition.nextEOGEdges[1].unreachable)
+        assertTrue(condition.nextEOGEdges[0].unreachable)
     }
 
     @Test
@@ -127,8 +133,10 @@ class UnreachableEOGPassTest {
         val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
-        assertFalse(ifStatement.nextEOGEdges[0].unreachable)
-        assertTrue(ifStatement.nextEOGEdges[1].unreachable)
+        val condition = ifStatement.condition
+        assertNotNull(condition)
+        assertFalse(condition.nextEOGEdges[0].unreachable)
+        assertTrue(condition.nextEOGEdges[1].unreachable)
     }
 
     @Test
@@ -139,8 +147,10 @@ class UnreachableEOGPassTest {
         val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
-        assertFalse(ifStatement.nextEOGEdges[1].unreachable)
-        assertTrue(ifStatement.nextEOGEdges[0].unreachable)
+        val condition = ifStatement.condition
+        assertNotNull(condition)
+        assertFalse(condition.nextEOGEdges[1].unreachable)
+        assertTrue(condition.nextEOGEdges[0].unreachable)
     }
 
     @Test
@@ -151,8 +161,11 @@ class UnreachableEOGPassTest {
         val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
-        assertFalse(whileStatement.nextEOGEdges[0].unreachable)
-        assertTrue(whileStatement.nextEOGEdges[1].unreachable)
+        val condition = whileStatement.condition
+        assertNotNull(condition)
+
+        assertFalse(condition.nextEOGEdges[0].unreachable)
+        assertTrue(condition.nextEOGEdges[1].unreachable)
     }
 
     @Test
@@ -163,8 +176,11 @@ class UnreachableEOGPassTest {
         val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
-        assertFalse(whileStatement.nextEOGEdges[0].unreachable)
-        assertFalse(whileStatement.nextEOGEdges[1].unreachable)
+        val condition = whileStatement.condition
+        assertNotNull(condition)
+
+        assertFalse(condition.nextEOGEdges[0].unreachable)
+        assertFalse(condition.nextEOGEdges[1].unreachable)
     }
 
     @Test
@@ -175,8 +191,11 @@ class UnreachableEOGPassTest {
         val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
-        assertFalse(whileStatement.nextEOGEdges[0].unreachable)
-        assertTrue(whileStatement.nextEOGEdges[1].unreachable)
+        val condition = whileStatement.condition
+        assertNotNull(condition)
+
+        assertFalse(condition.nextEOGEdges[0].unreachable)
+        assertTrue(condition.nextEOGEdges[1].unreachable)
     }
 
     @Test
@@ -187,8 +206,11 @@ class UnreachableEOGPassTest {
         val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
-        assertFalse(whileStatement.nextEOGEdges[1].unreachable)
-        assertTrue(whileStatement.nextEOGEdges[0].unreachable)
+        val condition = whileStatement.condition
+        assertNotNull(condition)
+
+        assertFalse(condition.nextEOGEdges[1].unreachable)
+        assertTrue(condition.nextEOGEdges[0].unreachable)
     }
 
     @Test
@@ -198,9 +220,11 @@ class UnreachableEOGPassTest {
 
         val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
+        val condition = whileStatement.condition
+        assertNotNull(condition)
 
-        assertFalse(whileStatement.nextEOGEdges[1].unreachable)
-        assertTrue(whileStatement.nextEOGEdges[0].unreachable)
+        assertFalse(condition.nextEOGEdges[1].unreachable)
+        assertTrue(condition.nextEOGEdges[0].unreachable)
     }
 
     @Test
@@ -210,51 +234,56 @@ class UnreachableEOGPassTest {
 
         val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
-
-        assertFalse(whileStatement.nextEOGEdges[1].unreachable)
-        assertFalse(whileStatement.nextEOGEdges[0].unreachable)
+        val condition = whileStatement.condition
+        assertNotNull(condition)
+        assertFalse(condition.nextEOGEdges[1].unreachable)
+        assertFalse(condition.nextEOGEdges[0].unreachable)
     }
 
     @Test
     fun testReachabilityLattice() {
-        val lattice = ReachabilityLattice()
-        val bottom = lattice.bottom
-        assertEquals(Reachability.BOTTOM, bottom.reachability)
-        val unreachable = ReachabilityLattice.Element(Reachability.UNREACHABLE)
-        val reachable = ReachabilityLattice.Element(Reachability.REACHABLE)
-        val reachable2 = lattice.duplicate(reachable)
-        assertNotSame(reachable, reachable2)
-        assertEquals(reachable, reachable2)
-        assertEquals(setOf(bottom, unreachable, reachable), lattice.elements)
+        runBlocking {
+            val lattice = ReachabilityLattice()
+            val bottom = lattice.bottom
+            assertEquals(Reachability.BOTTOM, bottom.reachability)
+            val unreachable = ReachabilityLattice.Element(Reachability.UNREACHABLE)
+            val reachable = ReachabilityLattice.Element(Reachability.REACHABLE)
+            val reachable2 = lattice.duplicate(reachable)
+            assertNotSame(reachable, reachable2)
+            assertEquals(reachable, reachable2)
+            assertEquals(setOf(bottom, unreachable, reachable), lattice.elements)
 
-        assertEquals(bottom, lattice.glb(bottom, unreachable))
-        assertEquals(bottom, lattice.glb(bottom, reachable))
-        assertEquals(unreachable, lattice.glb(unreachable, reachable))
-        assertEquals(reachable, lattice.glb(reachable, reachable2))
-        assertEquals(bottom, lattice.glb(unreachable, bottom))
-        assertEquals(bottom, lattice.glb(reachable, bottom))
-        assertEquals(unreachable, lattice.glb(reachable, unreachable))
-        assertEquals(reachable, lattice.glb(reachable, reachable2))
+            assertEquals(bottom, lattice.glb(bottom, unreachable))
+            assertEquals(bottom, lattice.glb(bottom, reachable))
+            assertEquals(unreachable, lattice.glb(unreachable, reachable))
+            assertEquals(reachable, lattice.glb(reachable, reachable2))
+            assertEquals(bottom, lattice.glb(unreachable, bottom))
+            assertEquals(bottom, lattice.glb(reachable, bottom))
+            assertEquals(unreachable, lattice.glb(reachable, unreachable))
+            assertEquals(reachable, lattice.glb(reachable, reachable2))
 
-        assertEquals(unreachable, lattice.lub(bottom, unreachable))
-        assertEquals(reachable, lattice.lub(bottom, reachable))
-        assertEquals(reachable, lattice.lub(unreachable, reachable))
-        assertEquals(reachable, lattice.lub(reachable, reachable2))
-        assertEquals(unreachable, lattice.lub(unreachable, bottom))
-        assertEquals(reachable, lattice.lub(reachable, bottom))
-        assertEquals(reachable, lattice.lub(reachable, unreachable))
-        assertEquals(reachable, lattice.lub(reachable, reachable2))
+            assertEquals(unreachable, runBlocking { lattice.lub(bottom, unreachable) })
+            assertEquals(reachable, runBlocking { lattice.lub(bottom, reachable) })
+            assertEquals(reachable, runBlocking { lattice.lub(unreachable, reachable) })
+            assertEquals(reachable, runBlocking { lattice.lub(reachable, reachable2) })
+            assertEquals(unreachable, runBlocking { lattice.lub(unreachable, bottom) })
+            assertEquals(reachable, runBlocking { lattice.lub(reachable, bottom) })
+            assertEquals(reachable, runBlocking { lattice.lub(reachable, unreachable) })
+            assertEquals(reachable, runBlocking { lattice.lub(reachable, reachable2) })
 
-        assertEquals(Order.LESSER, lattice.compare(bottom, unreachable))
-        assertEquals(Order.LESSER, lattice.compare(bottom, reachable))
-        assertEquals(Order.LESSER, lattice.compare(unreachable, reachable))
-        assertEquals(Order.EQUAL, lattice.compare(bottom, bottom.duplicate()))
-        assertEquals(Order.EQUAL, lattice.compare(unreachable, unreachable.duplicate()))
-        assertEquals(Order.EQUAL, lattice.compare(reachable, reachable2))
-        assertEquals(Order.GREATER, lattice.compare(unreachable, bottom))
-        assertEquals(Order.GREATER, lattice.compare(reachable, bottom))
-        assertEquals(Order.GREATER, lattice.compare(reachable, unreachable))
+            assertEquals(Order.LESSER, lattice.compare(bottom, unreachable))
+            assertEquals(Order.LESSER, lattice.compare(bottom, reachable))
+            assertEquals(Order.LESSER, lattice.compare(unreachable, reachable))
+            assertEquals(Order.EQUAL, lattice.compare(bottom, bottom.duplicate()))
+            assertEquals(Order.EQUAL, lattice.compare(unreachable, unreachable.duplicate()))
+            assertEquals(Order.EQUAL, lattice.compare(reachable, reachable2))
+            assertEquals(Order.GREATER, lattice.compare(unreachable, bottom))
+            assertEquals(Order.GREATER, lattice.compare(reachable, bottom))
+            assertEquals(Order.GREATER, lattice.compare(reachable, unreachable))
 
-        assertThrows<IllegalArgumentException> { bottom.compare(PowersetLattice.Element<String>()) }
+            assertThrows<IllegalArgumentException> {
+                bottom.compare(PowersetLattice.Element<String>())
+            }
+        }
     }
 }

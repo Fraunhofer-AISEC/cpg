@@ -4,11 +4,12 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "generate:completions": "node scripts/generate-cpg-completions.mjs",
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "node scripts/generate-cpg-completions.mjs && vite build",
     "preview": "vite preview",
-    "prepare": "svelte-kit sync || echo ''",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "prepare": "node scripts/generate-cpg-completions.mjs && (svelte-kit sync || echo '')",
+    "check": "node scripts/generate-cpg-completions.mjs && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "format": "prettier --write .",
     "lint": "prettier --check . && eslint ."
@@ -31,7 +32,7 @@
     "inter-ui": "^4.1.1",
     "prettier": "^3.8.1",
     "prettier-plugin-svelte": "^3.4.1",
-    "prettier-plugin-tailwindcss": "^0.7.2",
+    "prettier-plugin-tailwindcss": "^0.8.0",
     "svelte": "^5.50.2",
     "svelte-check": "^4.3.6",
     "svelte-highlight": "^7.9.0",
@@ -42,7 +43,8 @@
   },
   "dependencies": {
     "chart.js": "^4.5.1",
-    "marked": "^16.3.0"
+    "marked": "^16.3.0",
+    "monaco-editor": "^0.55.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

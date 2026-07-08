@@ -110,11 +110,12 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     protected fun getDeclarationsForTypeNames(targetTypes: List<String>): MutableSet<Declaration> {
-        return targetTypes.mapNotNull { importables[it] }.toMutableSet()
+        return targetTypes.mapNotNullTo(mutableSetOf()) { importables[it] }
     }
 
     protected fun getOrCreateMembers(base: Record, name: String): Set<ValueDeclaration> {
-        val memberMethods = base.methods.filter { it.name.localName.endsWith(name) }.toMutableSet()
+        val memberMethods =
+            base.methods.filterTo(mutableSetOf()) { it.name.localName.endsWith(name) }
 
         // add methods from superclasses
         memberMethods.addAll(

@@ -32,12 +32,15 @@ import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
+import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.assertNotNull
+import org.junit.jupiter.api.assertInstanceOf
 
 class ControlDependenceGraphPassTest {
     @Test
@@ -48,6 +51,7 @@ class ControlDependenceGraphPassTest {
         assertNotNull(main)
         val if0 = (main.body as Block).statements[1]
         assertNotNull(if0)
+        assertInstanceOf<IfElse>(if0)
         assertEquals(1, if0.prevCDG.size)
         assertTrue(main in if0.prevCDG)
 
@@ -55,7 +59,8 @@ class ControlDependenceGraphPassTest {
             result.assignments.firstOrNull { 1 == (it.value as? Literal<*>)?.value }?.start
         assertNotNull(assignment1)
         assertEquals(1, assignment1.prevCDG.size)
-        assertTrue(if0 in assignment1.prevCDG)
+        val branchingNodes = listOfNotNull(if0.condition, if0.conditionDeclaration)
+        branchingNodes.forEach { assertTrue(it in assignment1.prevCDG) }
 
         val print0 =
             result.calls("printf").first {
@@ -63,7 +68,7 @@ class ControlDependenceGraphPassTest {
             }
         assertNotNull(print0)
         assertEquals(1, print0.prevCDG.size)
-        assertTrue(if0 in print0.prevCDG)
+        branchingNodes.forEach { assertTrue(it in print0.prevCDG) }
 
         val print1 =
             result.calls("printf").first {
@@ -90,6 +95,11 @@ class ControlDependenceGraphPassTest {
         assertNotNull(main)
         val forEachStmt = (main.body as Block).statements[1]
         assertNotNull(forEachStmt)
+        assertInstanceOf<ForEach>(forEachStmt)
+
+        val variableDecl = forEachStmt.variable
+        assertNotNull(variableDecl)
+
         assertEquals(1, forEachStmt.prevCDG.size)
         assertTrue(main in forEachStmt.prevCDG)
 
@@ -99,7 +109,7 @@ class ControlDependenceGraphPassTest {
             }
         assertNotNull(printInLoop)
         assertEquals(1, printInLoop.prevCDG.size)
-        assertTrue(forEachStmt in printInLoop.prevCDG)
+        assertTrue(variableDecl in printInLoop.prevCDG)
 
         val printAfterLoop =
             result.calls("printf").first {
@@ -108,7 +118,7 @@ class ControlDependenceGraphPassTest {
         assertNotNull(printAfterLoop)
         assertEquals(1, printAfterLoop.prevCDG.size)
         assertTrue(main in printAfterLoop.prevCDG)
-        assertFalse(forEachStmt in printAfterLoop.prevCDG)
+        assertFalse(variableDecl in printAfterLoop.prevCDG)
     }
 
     @Test
@@ -231,8 +241,8 @@ class ControlDependenceGraphPassTest {
                                 body {
                                     declare { variable("i", t("int")) { literal(0, t("int")) } }
                                     forEachStmt {
-                                        declare { variable("loopVar", t("string")) }
-                                        call("magicFunction")
+                                        variable = declare { variable("loopVar", t("string")) }
+                                        iterable = call("magicFunction")
                                         loopBody {
                                             call("printf") {
                                                 literal("loop: \${}\n", t("string"))
