@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CXXExtraPass
 import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
+import de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx.CXXMemoryAllocationPass
 import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -83,6 +84,7 @@ import org.slf4j.LoggerFactory
  */
 @RegisterExtraPass(DynamicInvokeResolver::class)
 @RegisterExtraPass(CXXExtraPass::class)
+@RegisterExtraPass(CXXMemoryAllocationPass::class)
 open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLanguageFrontend>) :
     LanguageFrontend<IASTNode, IASTTypeId>(ctx, language) {
 

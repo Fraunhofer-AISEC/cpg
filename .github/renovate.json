@@ -27,6 +27,10 @@
       "addLabels": [
         "npm"
       ]
+    },
+    {
+      "matchFileNames": ["codyze-console/**/webapp/**"],
+      "groupName": "Codyze Console WebApp dependencies"
     }
   ]
 }
