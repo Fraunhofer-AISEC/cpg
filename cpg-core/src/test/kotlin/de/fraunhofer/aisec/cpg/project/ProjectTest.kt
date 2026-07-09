@@ -132,13 +132,33 @@ class ProjectTest {
 
         val project =
             Project.from(tmp) {
-                registerLanguage<DetectingTestLanguage>()
-                component("backend", root = tmp)
+                // Explicit components disable auto-detection entirely.
+                languages { use<DetectingTestLanguage>() }
+                components { component("backend", root = tmp) }
             }
 
         assertEquals(listOf("backend"), project.components.map { it.name })
-        // Detection results are still recorded for inspection
+        assertTrue(project.detectionResults.isEmpty())
+    }
+
+    @Test
+    fun testDetectionRunsAlongsideExplicitComponents(@TempDir tmp: Path) {
+        tmp.resolve("test.mod").writeText("module test")
+
+        val project =
+            Project.from(tmp) {
+                // default() keeps auto-detection running even with an explicit component.
+                languages { use<DetectingTestLanguage>() }
+                components {
+                    default()
+                    component("backend", root = tmp)
+                }
+            }
+
+        // Detection results are still recorded when default() is used.
         assertEquals(1, project.detectionResults.size)
+        // Explicit component wins over the detected one.
+        assertEquals(listOf("backend"), project.components.map { it.name })
     }
 
     @Test
@@ -166,8 +186,9 @@ class ProjectTest {
 
         val project =
             Project.from(tmp) {
-                registerLanguage<DetectingTestLanguage>()
-                autoDetect = false
+                // An explicit empty components block disables auto-detection.
+                languages { use<DetectingTestLanguage>() }
+                components {}
             }
 
         assertTrue(project.detectionResults.isEmpty())

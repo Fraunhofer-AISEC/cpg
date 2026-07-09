@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.passes.Pass
 import java.nio.file.Path
 import kotlin.io.path.isDirectory
 import kotlin.reflect.KClass
@@ -55,22 +56,28 @@ class ComponentDefinition(
  * components and filtered), and the [TargetEnvironment] it is assumed to run on. From this, the
  * lower-level [TranslationConfiguration] is derived automatically.
  *
- * The simplest usages are:
+ * The simplest usage is a fully automatic analysis — an empty block is enough:
  * ```kotlin
- * val result = Project.from(Path("main.cpp")).analyze()
- * val result = Project.from(Path("/path/to/repo")).analyze()
+ * val result = project(Path("/path/to/repo")) { }.analyze()
  * ```
  *
- * More control is available through the builder DSL:
+ * This **auto-mode** uses all default languages available on the classpath, all default passes, and
+ * runs every registered [ComponentDetector] and [ProjectDetector] to auto-detect the project
+ * structure. Specifying a block *overrides* the respective defaults:
  * ```kotlin
  * val project =
  *     project(Path("/path/to/repo")) {
- *         exclude("tests")
- *         environment {
- *             os = OperatingSystem.LINUX
- *             architecture = Architecture.ARM64
- *         }
- *         component("backend", root = Path("/path/to/repo/services/backend"))
+ *         // Only Go is registered; no other language is considered.
+ *         languages { use<GoLanguage>() }
+ *
+ *         // Default languages plus Go (when Go is not already in the defaults).
+ *         languages { default(); use<GoLanguage>() }
+ *
+ *         // No default passes; only the explicitly listed ones run.
+ *         passes { use<SymbolResolver>() }
+ *
+ *         // Auto-detect components AND add an extra explicit one.
+ *         components { default(); component("extra", root = Path("extra")) }
  *     }
  * val result = project.analyze()
  * ```
@@ -105,7 +112,7 @@ internal constructor(
         /**
          * Fully qualified class names of all known languages. They are registered if they are
          * available on the classpath and if no language was explicitly registered with
-         * [ProjectBuilder.registerLanguage].
+         * [LanguagesBuilder.use].
          */
         val defaultLanguages =
             listOf(
@@ -140,8 +147,137 @@ fun project(path: Path, configure: ProjectBuilder.() -> Unit = {}): Project {
 }
 
 /**
+ * Controls which languages are registered for a [Project].
+ *
+ * **Auto-mode** (no `languages {}` block): all languages from [Project.defaultLanguages] that are
+ * present on the classpath are used.
+ *
+ * **Explicit block**: only the languages added with [use] are registered, unless [default] is also
+ * called to include the defaults.
+ *
+ * ```kotlin
+ * // Only Go — no other language.
+ * languages { use<GoLanguage>() }
+ *
+ * // Default languages plus Go.
+ * languages { default(); use<GoLanguage>() }
+ * ```
+ */
+class LanguagesBuilder {
+    @PublishedApi internal val explicit = mutableSetOf<KClass<out Language<*>>>()
+    internal var includeDefaults = false
+
+    /** Includes all languages from [Project.defaultLanguages] that are on the classpath. */
+    fun default() {
+        includeDefaults = true
+    }
+
+    /** Registers language [T]. */
+    inline fun <reified T : Language<*>> use() {
+        explicit += T::class
+    }
+
+    /** Registers language [clazz]. */
+    fun use(clazz: KClass<out Language<*>>) {
+        explicit += clazz
+    }
+}
+
+/**
+ * Controls which passes are registered for a [Project].
+ *
+ * **Auto-mode** (no `passes {}` block): the default passes (see
+ * [TranslationConfiguration.Builder.defaultPasses]) are registered.
+ *
+ * **Explicit block**: only the passes added with [use] are registered, unless [default] is also
+ * called to include the defaults.
+ *
+ * ```kotlin
+ * // Only SymbolResolver — no other pass.
+ * passes { use<SymbolResolver>() }
+ *
+ * // Default passes plus a custom one.
+ * passes { default(); use<MyCustomPass>() }
+ * ```
+ */
+class PassesBuilder {
+    internal var includeDefaults = false
+    @PublishedApi internal val explicit = mutableListOf<KClass<out Pass<*>>>()
+
+    /** Includes all default passes (see [TranslationConfiguration.Builder.defaultPasses]). */
+    fun default() {
+        includeDefaults = true
+    }
+
+    /** Registers pass [T]. */
+    inline fun <reified T : Pass<*>> use() {
+        explicit += T::class
+    }
+
+    /** Registers pass [clazz]. */
+    fun use(clazz: KClass<out Pass<*>>) {
+        explicit += clazz
+    }
+}
+
+/**
+ * Controls how the components of a [Project] are determined.
+ *
+ * **Auto-mode** (no `components {}` block): [ComponentDetector]s and [ProjectDetector]s from all
+ * registered languages are run automatically. If no detector finds anything, a single default
+ * component spanning the whole project directory is used.
+ *
+ * **Explicit block**: only the components added with [component] are used; detectors do **not** run
+ * unless [default] is called. [default] and [detector] can be combined with explicit [component]
+ * definitions.
+ *
+ * ```kotlin
+ * // Only an explicit "backend" component; no auto-detection.
+ * components { component("backend", root = Path("services/backend")) }
+ *
+ * // Auto-detect everything and additionally add an explicit component.
+ * components { default(); component("extra", root = Path("extra")) }
+ *
+ * // Auto-detect using a custom standalone detector.
+ * components { detector(DirectoryComponentDetector("services")) }
+ * ```
+ */
+class ComponentsBuilder {
+    internal val explicit = mutableListOf<ComponentDefinition>()
+    internal val detectors = mutableListOf<Detector>()
+    internal var includeAutoDetect = false
+
+    /**
+     * Enables auto-detection: runs [ComponentDetector]s and [ProjectDetector]s from all registered
+     * languages and any [detector]s added to this block.
+     */
+    fun default() {
+        includeAutoDetect = true
+    }
+
+    /**
+     * Adds a standalone [Detector] to this block. Also enables auto-detection ([default] is implied
+     * when a detector is added).
+     */
+    fun detector(detector: Detector) {
+        detectors += detector
+        includeAutoDetect = true
+    }
+
+    /** Adds an explicit component definition. */
+    fun component(name: String, root: Path, sources: List<Path> = listOf(root)) {
+        explicit += ComponentDefinition(name, root, sources)
+    }
+}
+
+/**
  * Collects all user-supplied configuration for a [Project] and resolves it into an immutable
  * [Project], including the derived [TranslationConfiguration].
+ *
+ * Leaving a block uncalled enables **auto-mode** for that aspect of the project:
+ * - No `languages {}` → all [Project.defaultLanguages] present on the classpath.
+ * - No `passes {}` → the default pass pipeline.
+ * - No `components {}` → detectors from all registered languages run automatically.
  */
 class ProjectBuilder(
     /** The path to the project: either a single source file or a directory. */
@@ -150,24 +286,12 @@ class ProjectBuilder(
     /** The name of the project. Defaults to the file or directory name of [path]. */
     var name: String = path.fileName?.toString() ?: DEFAULT_APPLICATION_NAME
 
-    /**
-     * Whether [ComponentDetector]s and [ProjectDetector]s should auto-detect the project structure
-     * and settings. Only applies if [path] is a directory.
-     */
-    var autoDetect: Boolean = true
-
-    /**
-     * Whether the default passes (see [TranslationConfiguration.Builder.defaultPasses]) should be
-     * registered. Disable this only if you want to work with the raw AST or register a completely
-     * custom set of passes with [translation].
-     */
-    var defaultPasses: Boolean = true
-
-    private val components = mutableListOf<ComponentDefinition>()
+    private var languagesBuilder: LanguagesBuilder? = null
+    private var passesBuilder: PassesBuilder? = null
+    private var componentsBuilder: ComponentsBuilder? = null
+    private val standaloneDetectors = mutableListOf<Detector>()
     private val excludesByString = mutableListOf<String>()
     private val excludesByRegex = mutableListOf<Regex>()
-    private val languages = mutableSetOf<KClass<out Language<*>>>()
-    private val detectors = mutableListOf<Detector>()
     private val configModifiers = mutableListOf<(TranslationConfiguration.Builder) -> Unit>()
     private var environment = TargetEnvironment.host()
 
@@ -179,11 +303,32 @@ class ProjectBuilder(
     }
 
     /**
-     * Adds a component to the project. If no component is defined (and none is auto-detected), a
-     * single default component spanning the whole [path] is created.
+     * Configures which languages are registered. Calling this block switches from auto-mode (all
+     * default languages) to explicit mode; use [LanguagesBuilder.default] to re-include the
+     * defaults.
      */
-    fun component(name: String, root: Path = path, sources: List<Path> = listOf(root)) {
-        components += ComponentDefinition(name, root, sources)
+    fun languages(init: LanguagesBuilder.() -> Unit) {
+        val builder = languagesBuilder ?: LanguagesBuilder().also { languagesBuilder = it }
+        builder.init()
+    }
+
+    /**
+     * Configures which passes are registered. Calling this block switches from auto-mode (default
+     * pass pipeline) to explicit mode; use [PassesBuilder.default] to re-include the defaults.
+     */
+    fun passes(init: PassesBuilder.() -> Unit) {
+        val builder = passesBuilder ?: PassesBuilder().also { passesBuilder = it }
+        builder.init()
+    }
+
+    /**
+     * Configures how components are determined. Calling this block switches from auto-mode (run all
+     * language-based detectors) to explicit mode; use [ComponentsBuilder.default] to re-enable
+     * auto-detection.
+     */
+    fun components(init: ComponentsBuilder.() -> Unit) {
+        val builder = componentsBuilder ?: ComponentsBuilder().also { componentsBuilder = it }
+        builder.init()
     }
 
     /** Excludes files and directories matching the given [patterns] from the analysis. */
@@ -197,25 +342,39 @@ class ProjectBuilder(
     }
 
     /**
-     * Explicitly registers a [Language]. If no language is registered explicitly, all languages in
-     * [Project.defaultLanguages] that are available on the classpath are used.
+     * Adds a standalone [Detector] (a [ComponentDetector] and/or [ProjectDetector]) that is not
+     * tied to a [Language], such as the [DirectoryComponentDetector]. Standalone detectors run
+     * before the language-based ones, so they take precedence in case of conflicts.
+     *
+     * This is equivalent to `components { detector(detector) }`.
      */
-    fun registerLanguage(clazz: KClass<out Language<*>>) {
-        languages += clazz
+    fun detector(detector: Detector) {
+        standaloneDetectors += detector
     }
 
-    /** Explicitly registers a [Language]. */
+    /**
+     * Explicitly registers a [Language]. Equivalent to `languages { use(clazz) }`.
+     *
+     * Calling this method implicitly switches languages from auto-mode to explicit mode, so only
+     * the registered languages (plus any loaded via [LanguagesBuilder.default]) are used.
+     */
+    fun registerLanguage(clazz: KClass<out Language<*>>) {
+        languages { use(clazz) }
+    }
+
+    /** Explicitly registers a [Language]. Equivalent to `languages { use<T>() }`. */
     inline fun <reified T : Language<*>> registerLanguage() {
         registerLanguage(T::class)
     }
 
     /**
-     * Adds a standalone [Detector] (a [ComponentDetector] and/or [ProjectDetector]) that is not
-     * tied to a [Language], such as the [DirectoryComponentDetector]. Standalone detectors run
-     * before the language-based ones, so they take precedence in case of conflicts.
+     * Adds an explicit component definition. Equivalent to `components { component(...) }`.
+     *
+     * Calling this method implicitly switches components from auto-mode to explicit mode. Combine
+     * with `components { default() }` to keep auto-detection alongside the explicit component.
      */
-    fun detector(detector: Detector) {
-        detectors += detector
+    fun component(name: String, root: Path = path, sources: List<Path> = listOf(root)) {
+        components { component(name, root, sources) }
     }
 
     /**
@@ -229,31 +388,41 @@ class ProjectBuilder(
 
     /** Resolves this builder into a [Project], running project auto-detection if enabled. */
     internal fun resolve(): Project {
-        val languages = languages.ifEmpty { loadDefaultLanguages() }
+        val languages = resolveLanguages()
 
-        // Standalone detectors run before language-based ones, so they win in case of conflicts
-        val allDetectors =
-            if (path.isDirectory() && autoDetect) {
-                detectors + languages.mapNotNull { instantiate(it) }.filterIsInstance<Detector>()
-            } else {
-                listOf()
+        // Determine whether language-based detectors should run.
+        val cb = componentsBuilder
+        val languageAutoDetect = path.isDirectory() && (cb == null || cb.includeAutoDetect)
+
+        // Collect detectors: standalone (always) + language-based (only in auto-detect mode).
+        val allDetectors = buildList {
+            if (path.isDirectory()) {
+                // Standalone detectors from the top-level builder and from the components block run
+                // regardless of auto-mode, since the user explicitly added them.
+                addAll(standaloneDetectors)
+                addAll(cb?.detectors ?: emptyList())
             }
+            if (languageAutoDetect) {
+                addAll(languages.mapNotNull { instantiate(it) }.filterIsInstance<Detector>())
+            }
+        }
 
         val detectionResults = detectSettings(allDetectors.filterIsInstance<ProjectDetector>())
 
-        // Explicitly configured components always win over detected ones. If neither exist, we
-        // create a single default component spanning the whole path.
+        // Explicit components win over detected ones. If neither exist, use a single default
+        // component spanning the whole path.
+        val explicitComponents = cb?.explicit ?: emptyList()
         val components =
-            components.ifEmpty {
+            explicitComponents.ifEmpty {
                 detectComponents(allDetectors.filterIsInstance<ComponentDetector>()).ifEmpty {
                     defaultComponents()
                 }
             }
 
         val builder = TranslationConfiguration.builder().targetEnvironment(environment)
-        if (defaultPasses) {
-            builder.defaultPasses()
-        }
+
+        resolvePasses(builder)
+
         languages.forEach { builder.registerLanguage(it) }
 
         builder.softwareComponents(
@@ -283,6 +452,27 @@ class ProjectBuilder(
             detectionResults = detectionResults,
             config = builder.build(),
         )
+    }
+
+    private fun resolveLanguages(): Set<KClass<out Language<*>>> {
+        return when (val lb = languagesBuilder) {
+            null -> loadDefaultLanguages()
+            else ->
+                buildSet {
+                    if (lb.includeDefaults) addAll(loadDefaultLanguages())
+                    addAll(lb.explicit)
+                }
+        }
+    }
+
+    private fun resolvePasses(builder: TranslationConfiguration.Builder) {
+        when (val pb = passesBuilder) {
+            null -> builder.defaultPasses()
+            else -> {
+                if (pb.includeDefaults) builder.defaultPasses()
+                pb.explicit.forEach { builder.registerPass(it) }
+            }
+        }
     }
 
     /**
