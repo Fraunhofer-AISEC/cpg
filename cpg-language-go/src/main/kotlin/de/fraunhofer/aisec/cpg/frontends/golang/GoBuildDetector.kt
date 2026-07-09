@@ -26,9 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.project.ComponentDefinition
-import de.fraunhofer.aisec.cpg.project.ComponentDetector
 import de.fraunhofer.aisec.cpg.project.DetectionResult
-import de.fraunhofer.aisec.cpg.project.ProjectDetector
+import de.fraunhofer.aisec.cpg.project.Detector
 import de.fraunhofer.aisec.cpg.project.TargetEnvironment
 import java.io.File
 import java.nio.file.Path
@@ -55,81 +54,57 @@ import org.slf4j.LoggerFactory
 class GoBuildDetector(
     /** Additional build tags to pass to `go list` and the build constraint evaluation. */
     private val extraTags: List<String> = listOf()
-) : ComponentDetector, ProjectDetector {
+) : Detector {
 
     /** The Go installation root, determined by `go env GOROOT`. */
     private val goRoot: File? by lazy {
         runGo(listOf("go", "env", "GOROOT"), directory = null)?.firstOrNull()?.let(::File)
     }
 
-    override fun detectComponents(
-        directory: Path,
-        environment: TargetEnvironment,
-    ): List<ComponentDefinition> {
-        val goMod = directory.resolve("go.mod")
-        if (!goMod.exists()) {
-            return listOf()
-        }
-
-        val module = parseGoMod(goMod)
-        val symbols = symbols(module, environment)
-        val topLevel = directory.toFile()
-        val stdLib = goRoot?.resolve("src") ?: return listOf()
-        val deps = goList(topLevel, environment) ?: return listOf()
-
-        log.debug("Identified {} package dependencies (stdlib only)", deps.size)
-
-        // Build directories out of deps
-        val dirs =
-            deps.mapNotNull {
-                if (!it.contains(".")) {
-                    // without a dot, it is a stdlib package
-                    stdLib.resolve(it)
-                } else if (it.startsWith("vendor")) {
-                    // if the dependency path starts with "vendor", then it is a dependency that is
-                    // vendored within the standard library (and not in the project). we don't
-                    // really include these for now since they blow up the stdlib
-                    null
-                } else if (module != null && it.startsWith(module.path)) {
-                    topLevel.resolve(it.substringAfter(module.path))
-                } else {
-                    // for all other dependencies, we try whether they are vendored within the
-                    // current project. Note, this differs from the above case, where a dependency
-                    // is vendored in the stdlib.
-                    topLevel.resolve("vendor").resolve(it)
-                }
-            }
-
-        var files = dirs.flatMap { gatherGoFiles(it, false) }.toMutableList()
-        // add cmd folder
-        files += gatherGoFiles(topLevel.resolve("cmd"))
-
-        // Pre-filter any files we are not building anyway based on our symbols
-        val sources = files.filter { shouldBeBuild(it, symbols) }.map(File::toPath)
-
-        return listOf(
-            ComponentDefinition(
-                name = module?.name ?: directory.name,
-                root = directory,
-                sources = sources,
-            )
-        )
-    }
-
-    override fun detect(directory: Path, environment: TargetEnvironment): DetectionResult? {
-        val goMod = directory.resolve("go.mod")
+    override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
+        val goMod = root.resolve("go.mod")
         if (!goMod.exists()) {
             return null
         }
 
         val module = parseGoMod(goMod)
+        val syms = symbols(module, environment)
+        val topLevel = root.toFile()
         val stdLib = goRoot?.resolve("src") ?: return null
+        val deps = goList(topLevel, environment) ?: return null
+
+        log.debug("Identified {} package dependencies (stdlib only)", deps.size)
+
+        val dirs =
+            deps.mapNotNull {
+                if (!it.contains(".")) {
+                    stdLib.resolve(it)
+                } else if (it.startsWith("vendor")) {
+                    null
+                } else if (module != null && it.startsWith(module.path)) {
+                    topLevel.resolve(it.substringAfter(module.path))
+                } else {
+                    topLevel.resolve("vendor").resolve(it)
+                }
+            }
+
+        var files = dirs.flatMap { gatherGoFiles(it, false) }.toMutableList()
+        files += gatherGoFiles(topLevel.resolve("cmd"))
+        val sources = files.filter { shouldBeBuild(it, syms) }.map(File::toPath)
 
         return DetectionResult(
             detector = "go-build",
-            symbols = symbols(module, environment),
+            components =
+                listOf(
+                    ComponentDefinition(
+                        name = module?.name ?: root.name,
+                        root = root,
+                        sources = sources,
+                    )
+                ),
+            symbols = syms,
             includePaths =
-                listOfNotNull(stdLib.toPath(), directory.resolve("vendor").takeIf { it.exists() }),
+                listOfNotNull(stdLib.toPath(), root.resolve("vendor").takeIf { it.exists() }),
             notes = listOf("using Go standard library at $stdLib"),
         )
     }

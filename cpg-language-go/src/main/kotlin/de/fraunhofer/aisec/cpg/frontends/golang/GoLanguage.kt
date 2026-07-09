@@ -33,10 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
-import de.fraunhofer.aisec.cpg.project.ComponentDefinition
-import de.fraunhofer.aisec.cpg.project.ComponentDetector
 import de.fraunhofer.aisec.cpg.project.DetectionResult
-import de.fraunhofer.aisec.cpg.project.ProjectDetector
+import de.fraunhofer.aisec.cpg.project.Detector
 import de.fraunhofer.aisec.cpg.project.TargetEnvironment
 import java.nio.file.Path
 import kotlin.math.max
@@ -50,18 +48,10 @@ open class GoLanguage :
     HasFirstClassFunctions,
     HasAnonymousIdentifier,
     HasFunctionStyleCasts,
-    ComponentDetector,
-    ProjectDetector {
+    Detector {
 
-    override fun detectComponents(
-        directory: Path,
-        environment: TargetEnvironment,
-    ): List<ComponentDefinition> {
-        return detectGoModule(directory)
-    }
-
-    override fun detect(directory: Path, environment: TargetEnvironment): DetectionResult? {
-        return detectGoSettings(directory, environment)
+    override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
+        return detectGo(root, environment)
     }
 
     override val fileExtensions = listOf("go")

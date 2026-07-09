@@ -401,11 +401,10 @@ class ProjectBuilder(
         val cb = componentsBuilder
         val languageAutoDetect = path.isDirectory() && (cb == null || cb.includeAutoDetect)
 
-        // Collect detectors: standalone (always) + language-based (only in auto-detect mode).
+        // Collect detectors: standalone (always present when path is a directory) + language-based
+        // (only in auto-detect mode). Each detector is called once on the project root.
         val allDetectors = buildList {
             if (path.isDirectory()) {
-                // Standalone detectors from the top-level builder and from the components block run
-                // regardless of auto-mode, since the user explicitly added them.
                 addAll(standaloneDetectors)
                 addAll(cb?.detectors ?: emptyList())
             }
@@ -414,17 +413,16 @@ class ProjectBuilder(
             }
         }
 
-        val detectionResults = detectSettings(allDetectors.filterIsInstance<ProjectDetector>())
+        // Run every detector once on the project root and deduplicate by detector name.
+        val detectionResults = runDetectors(allDetectors)
 
-        // Explicit components win over detected ones. If neither exist, use a single default
-        // component spanning the whole path.
+        // Explicit components win over detected ones; fall back to a single default component.
         val explicitComponents = cb?.explicit ?: emptyList()
+        val detectedComponents = detectionResults.flatMap { it.components }.distinctBy { it.name }
         val components =
-            explicitComponents.ifEmpty {
-                detectComponents(allDetectors.filterIsInstance<ComponentDetector>()).ifEmpty {
-                    defaultComponents()
-                }
-            }
+            explicitComponents.ifEmpty { detectedComponents.ifEmpty { defaultComponents() } }
+
+        components.forEach { log.info("Component '{}' rooted at {}", it.name, it.root) }
 
         val builder = TranslationConfiguration.builder().targetEnvironment(environment)
 
@@ -461,6 +459,24 @@ class ProjectBuilder(
         )
     }
 
+    /**
+     * Runs all [detectors] on the project root. Each detector is called once; results are
+     * deduplicated by [DetectionResult.detector] name so that two related detectors (e.g.,
+     * `CLanguage` and `CPPLanguage` sharing the same C/C++ detection logic) only contribute one
+     * result.
+     */
+    private fun runDetectors(detectors: List<Detector>): List<DetectionResult> {
+        return detectors
+            .mapNotNull { detector ->
+                val result = detector.detect(path, environment)
+                if (result != null) {
+                    log.info("Project detection ({}): {}", result.detector, result)
+                }
+                result
+            }
+            .distinctBy { it.detector }
+    }
+
     private fun resolveLanguages(): Set<KClass<out Language<*>>> {
         return when (val lb = languagesBuilder) {
             null -> detectLanguages()
@@ -480,51 +496,6 @@ class ProjectBuilder(
                 pb.explicit.forEach { builder.registerPass(it) }
             }
         }
-    }
-
-    /**
-     * Runs all [ProjectDetector]s on the project directory. If several detectors report a result
-     * with the same [DetectionResult.detector] name (e.g., two related languages sharing detection
-     * logic), only the first result is kept.
-     */
-    private fun detectSettings(detectors: List<ProjectDetector>): List<DetectionResult> {
-        return detectors
-            .mapNotNull { detector ->
-                val result = detector.detect(path, environment)
-                if (result != null) {
-                    log.info("Project detection ({}): {}", result.detector, result)
-                }
-                result
-            }
-            .distinctBy { it.detector }
-    }
-
-    /**
-     * Walks the project directory tree and asks each [ComponentDetector] for components rooted in
-     * the visited directories. Hidden directories and common dependency folders (such as `vendor`
-     * or `node_modules`) are skipped. If several detectors report components with the same name,
-     * only the first one is kept.
-     */
-    private fun detectComponents(detectors: List<ComponentDetector>): List<ComponentDefinition> {
-        if (detectors.isEmpty()) {
-            return listOf()
-        }
-
-        val components =
-            path
-                .toFile()
-                .walkTopDown()
-                .onEnter { !it.name.startsWith(".") && it.name !in skippedDirectories }
-                .filter { it.isDirectory }
-                .flatMap { dir ->
-                    detectors.flatMap { it.detectComponents(dir.toPath(), environment) }
-                }
-                .distinctBy { it.name }
-                .toList()
-
-        components.forEach { log.info("Detected component '{}' rooted at {}", it.name, it.root) }
-
-        return components
     }
 
     private fun defaultComponents(): List<ComponentDefinition> {
@@ -575,7 +546,7 @@ class ProjectBuilder(
         return path
             .toFile()
             .walkTopDown()
-            .onEnter { !it.name.startsWith(".") && it.name !in skippedDirectories }
+            .onEnter { !it.name.startsWith(".") && it.name !in SKIPPED_DIRECTORIES }
             .filter { it.isFile }
             .mapNotNullTo(mutableSetOf()) { file ->
                 file.extension.lowercase().takeIf { it.isNotEmpty() }
@@ -607,8 +578,5 @@ class ProjectBuilder(
 
     companion object {
         private val log = LoggerFactory.getLogger(ProjectBuilder::class.java)
-
-        /** Directory names that are never entered during component detection. */
-        private val skippedDirectories = setOf("vendor", "node_modules", "testdata")
     }
 }

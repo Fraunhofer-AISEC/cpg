@@ -40,25 +40,15 @@ import kotlin.test.assertTrue
 import org.junit.jupiter.api.io.TempDir
 
 /** A [TestLanguage] that detects projects marked by a `test.mod` file. */
-class DetectingTestLanguage : TestLanguage(), ComponentDetector, ProjectDetector {
-    override fun detectComponents(
-        directory: Path,
-        environment: TargetEnvironment,
-    ): List<ComponentDefinition> {
-        if (!directory.resolve("test.mod").exists()) {
-            return listOf()
-        }
-
-        return listOf(ComponentDefinition("module", root = directory))
-    }
-
-    override fun detect(directory: Path, environment: TargetEnvironment): DetectionResult? {
-        if (!directory.resolve("test.mod").exists()) {
+class DetectingTestLanguage : TestLanguage(), Detector {
+    override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
+        if (!root.resolve("test.mod").exists()) {
             return null
         }
 
         return DetectionResult(
             detector = "test.mod",
+            components = listOf(ComponentDefinition("module", root = root)),
             symbols = mapOf("TEST_OS" to environment.os.name.lowercase()),
             notes = listOf("found test.mod"),
         )

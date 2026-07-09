@@ -48,34 +48,21 @@ private fun findCompilationDatabase(directory: Path): Path? {
 }
 
 /**
- * Detects components based on a [COMPILE_COMMANDS] file in [directory] or its `build` folder. The
- * compilation database groups its entries into components (e.g., based on CMake targets or the
- * directory layout), which we translate into [ComponentDefinition]s rooted in [directory].
- *
- * Note: Looking into the `build` folder means that a database in `<project>/build` yields
- * components both when visiting `<project>` (rooted there) and later when the directory walk enters
- * `build` (rooted in `build`). Since the walk visits parents first and components are de-duplicated
- * by name, the ones rooted in the project directory win, which keeps translation unit names
- * relative to the project rather than to `build`.
+ * Detects C/C++ project structure and settings in one pass. Looks for a [COMPILE_COMMANDS] file in
+ * [root] or its `build` folder. If found, the database supplies per-file include paths and
+ * preprocessor defines, and its targets are translated into [ComponentDefinition]s rooted in
+ * [root]. Returns `null` if no compilation database is found.
  */
-internal fun detectCxxComponents(directory: Path): List<ComponentDefinition> {
-    val file = findCompilationDatabase(directory) ?: return listOf()
-    val db = tryLoadCompilationDatabase(file) ?: return listOf()
-    return db.components.map { (name, files) ->
-        ComponentDefinition(name, root = directory, sources = files.map(File::toPath))
-    }
-}
-
-/**
- * Detects a compilation database for the project, either directly in [directory] or in its `build`
- * folder. The database supplies per-file include paths and preprocessor defines to the C/C++
- * frontend.
- */
-internal fun detectCxxSettings(directory: Path): DetectionResult? {
-    val file = findCompilationDatabase(directory) ?: return null
+internal fun detectCxx(root: Path): DetectionResult? {
+    val file = findCompilationDatabase(root) ?: return null
     val db = tryLoadCompilationDatabase(file) ?: return null
+    val components =
+        db.components.map { (name, files) ->
+            ComponentDefinition(name, root = root, sources = files.map(File::toPath))
+        }
     return DetectionResult(
         detector = COMPILE_COMMANDS,
+        components = components,
         compilationDatabase = db,
         notes = listOf("using compilation database at $file with ${db.size} entries"),
     )

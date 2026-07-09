@@ -29,9 +29,11 @@ import de.fraunhofer.aisec.cpg.project.Architecture
 import de.fraunhofer.aisec.cpg.project.ComponentDefinition
 import de.fraunhofer.aisec.cpg.project.DetectionResult
 import de.fraunhofer.aisec.cpg.project.OperatingSystem
+import de.fraunhofer.aisec.cpg.project.SKIPPED_DIRECTORIES
 import de.fraunhofer.aisec.cpg.project.TargetEnvironment
 import java.nio.file.Path
 import kotlin.io.path.exists
+import kotlin.io.path.isDirectory
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
 import kotlin.io.path.readLines
@@ -102,38 +104,39 @@ internal fun parseGoMod(goMod: Path): GoModule? {
 }
 
 /**
- * Detects a Go module in [directory] by looking for a `go.mod` file. The component is named after
- * the last segment of the module path.
+ * Detects Go project structure and settings in one pass. Walks [root] looking for `go.mod` files
+ * (each one becomes a component) and derives `GOOS`/`GOARCH` symbols from the target [environment].
+ * Returns `null` if [root] does not look like a Go project at all.
  */
-internal fun detectGoModule(directory: Path): List<ComponentDefinition> {
-    val goMod = directory.resolve("go.mod")
-    if (!goMod.exists()) {
-        return listOf()
-    }
+internal fun detectGo(root: Path, environment: TargetEnvironment): DetectionResult? {
+    // Walk for go.mod files to find all modules (supports monorepos with multiple modules).
+    val moduleRoots =
+        root
+            .toFile()
+            .walkTopDown()
+            .onEnter { !it.name.startsWith(".") && it.name !in SKIPPED_DIRECTORIES }
+            .filter { it.name == "go.mod" && it.isFile }
+            .map { it.parentFile.toPath() }
+            .toList()
 
-    return listOf(
-        ComponentDefinition(name = parseGoMod(goMod)?.name ?: directory.name, root = directory)
-    )
-}
-
-/**
- * Detects Go-wide project settings: if [directory] looks like a Go project (it contains a `go.mod`,
- * a `go.work` or Go source files), the `GOOS` and `GOARCH` symbols are derived from the target
- * [environment] so that build constraints are evaluated for the correct target rather than the
- * machine the analysis runs on.
- */
-internal fun detectGoSettings(directory: Path, environment: TargetEnvironment): DetectionResult? {
     val looksLikeGo =
-        directory.resolve("go.mod").exists() ||
-            directory.resolve("go.work").exists() ||
-            directory.listDirectoryEntries("*.go").isNotEmpty()
-    if (!looksLikeGo) {
-        return null
-    }
+        moduleRoots.isNotEmpty() ||
+            root.resolve("go.work").exists() ||
+            (root.isDirectory() && root.listDirectoryEntries("*.go").isNotEmpty())
+
+    if (!looksLikeGo) return null
+
+    val components =
+        moduleRoots.map { moduleRoot ->
+            val goMod = moduleRoot.resolve("go.mod")
+            ComponentDefinition(
+                name = parseGoMod(goMod)?.name ?: moduleRoot.name,
+                root = moduleRoot,
+            )
+        }
 
     val symbols = mutableMapOf<String, String>()
     val notes = mutableListOf<String>()
-
     environment.os.goos?.let {
         symbols["GOOS"] = it
         notes += "derived GOOS=$it from target environment"
@@ -143,5 +146,10 @@ internal fun detectGoSettings(directory: Path, environment: TargetEnvironment): 
         notes += "derived GOARCH=$it from target environment"
     }
 
-    return DetectionResult(detector = "go", symbols = symbols, notes = notes)
+    return DetectionResult(
+        detector = "go",
+        components = components,
+        symbols = symbols,
+        notes = notes,
+    )
 }
