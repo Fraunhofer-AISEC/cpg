@@ -62,8 +62,8 @@ class ComponentDefinition(
  * ```
  *
  * This **auto-mode** uses all default languages available on the classpath, all default passes, and
- * runs every registered [ComponentDetector] and [ProjectDetector] to auto-detect the project
- * structure. Specifying a block *overrides* the respective defaults:
+ * runs every registered [Detector] to auto-detect the project structure. Specifying a block
+ * *overrides* the respective defaults:
  * ```kotlin
  * val project =
  *     project(Path("/path/to/repo")) {
@@ -82,11 +82,11 @@ class ComponentDefinition(
  * val result = project.analyze()
  * ```
  *
- * When a project is created from a directory, all registered languages that implement
- * [ComponentDetector] or [ProjectDetector] are asked to auto-detect the project structure
- * (components such as Go modules or compilation database targets) and project-wide settings
- * (symbols, include paths, a compilation database). The outcome is recorded in [components] and
- * [detectionResults] so that it can be inspected before the analysis is started.
+ * When a project is created from a directory, every registered language that implements [Detector]
+ * is called once on the project root to auto-detect components (e.g., Go modules, compilation
+ * database targets) and project-wide settings (symbols, include paths, a compilation database). The
+ * outcome is recorded in [components] and [detectionResults] so that it can be inspected before the
+ * analysis is started.
  */
 class Project
 internal constructor(

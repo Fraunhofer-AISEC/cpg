@@ -135,7 +135,7 @@ project(path) {
 }
 ```
 
-The environment is forwarded to [project detectors][2] so they can derive the correct build
+The environment is forwarded to [detectors][2] so they can derive the correct build
 constraints (e.g., `GOOS`/`GOARCH` symbols for Go).
 
 ## Exclusions
@@ -182,4 +182,4 @@ val result = p.analyze()
 ```
 
 [1]: ../../API/de.fraunhofer.aisec.cpg.project/-directory-component-detector/index.html
-[2]: ../../API/de.fraunhofer.aisec.cpg.project/-project-detector/index.html
+[2]: ../../API/de.fraunhofer.aisec.cpg.project/-detector/index.html
