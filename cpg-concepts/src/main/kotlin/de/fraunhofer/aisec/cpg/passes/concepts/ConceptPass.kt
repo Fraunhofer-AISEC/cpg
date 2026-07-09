@@ -70,7 +70,7 @@ abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
      * Gets concept of type [T] for this [TranslationUnit] or creates a new one if it does not
      * exist.
      */
-    internal inline fun <reified T : Concept> TranslationUnit.getConceptOrCreate(
+    protected inline fun <reified T : Concept> TranslationUnit.getConceptOrCreate(
         noinline init: ((T) -> Unit)? = null
     ): T {
         var concept = this.conceptNodes.filterIsInstance<T>().singleOrNull()
