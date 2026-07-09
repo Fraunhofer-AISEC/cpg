@@ -290,6 +290,13 @@ class ProjectBuilder(
     private var passesBuilder: PassesBuilder? = null
     private var componentsBuilder: ComponentsBuilder? = null
     private val standaloneDetectors = mutableListOf<Detector>()
+
+    /**
+     * Overrides the set of candidate languages used by [detectLanguages]. Setting this is only
+     * intended for tests that need to inject specific language classes without depending on the
+     * classpath contents of [Project.defaultLanguages].
+     */
+    internal var defaultLanguagesOverride: Set<KClass<out Language<*>>>? = null
     private val excludesByString = mutableListOf<String>()
     private val excludesByRegex = mutableListOf<Regex>()
     private val configModifiers = mutableListOf<(TranslationConfiguration.Builder) -> Unit>()
@@ -456,10 +463,10 @@ class ProjectBuilder(
 
     private fun resolveLanguages(): Set<KClass<out Language<*>>> {
         return when (val lb = languagesBuilder) {
-            null -> loadDefaultLanguages()
+            null -> detectLanguages()
             else ->
                 buildSet {
-                    if (lb.includeDefaults) addAll(loadDefaultLanguages())
+                    if (lb.includeDefaults) addAll(detectLanguages())
                     addAll(lb.explicit)
                 }
         }
@@ -535,17 +542,58 @@ class ProjectBuilder(
         }
     }
 
-    private fun loadDefaultLanguages(): Set<KClass<out Language<*>>> {
-        return Project.defaultLanguages
-            .mapNotNull {
-                try {
-                    @Suppress("UNCHECKED_CAST")
-                    Class.forName(it).kotlin as? KClass<out Language<*>>
-                } catch (_: ClassNotFoundException) {
-                    null
-                }
+    /**
+     * Loads all languages from [Project.defaultLanguages] that are on the classpath, then filters
+     * them down to those that can actually handle files in [path]:
+     * - A language with no declared [Language.fileExtensions] is always included (it uses its own
+     *   detection logic, e.g. [ComponentDetector]).
+     * - A language with declared extensions is only included when at least one file with a matching
+     *   extension exists anywhere under [path].
+     *
+     * Falls back to loading all available languages when [path] is not a directory (single-file
+     * projects) or when the directory walk produces no extensions at all.
+     */
+    private fun detectLanguages(): Set<KClass<out Language<*>>> {
+        val allAvailable = loadDefaultLanguages()
+        if (!path.isDirectory()) return allAvailable
+
+        val presentExtensions = scanExtensions()
+        if (presentExtensions.isEmpty()) return allAvailable
+
+        return allAvailable
+            .filter { clazz ->
+                val lang = instantiate(clazz) ?: return@filter false
+                // No declared extensions → always activate (language uses its own detection)
+                lang.fileExtensions.isEmpty() ||
+                    lang.fileExtensions.any { it.lowercase() in presentExtensions }
             }
             .toSet()
+    }
+
+    /** Collects every unique (lowercased) file extension found under [path]. */
+    private fun scanExtensions(): Set<String> {
+        return path
+            .toFile()
+            .walkTopDown()
+            .onEnter { !it.name.startsWith(".") && it.name !in skippedDirectories }
+            .filter { it.isFile }
+            .mapNotNullTo(mutableSetOf()) { file ->
+                file.extension.lowercase().takeIf { it.isNotEmpty() }
+            }
+    }
+
+    private fun loadDefaultLanguages(): Set<KClass<out Language<*>>> {
+        return defaultLanguagesOverride
+            ?: Project.defaultLanguages
+                .mapNotNull {
+                    try {
+                        @Suppress("UNCHECKED_CAST")
+                        Class.forName(it).kotlin as? KClass<out Language<*>>
+                    } catch (_: ClassNotFoundException) {
+                        null
+                    }
+                }
+                .toSet()
     }
 
     private fun instantiate(clazz: KClass<out Language<*>>): Language<*>? {

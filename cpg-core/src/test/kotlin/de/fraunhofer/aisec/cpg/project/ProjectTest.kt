@@ -181,6 +181,53 @@ class ProjectTest {
     }
 
     @Test
+    fun testLanguageAutoDetection(@TempDir tmp: Path) {
+        // FooLanguage handles .foo, BarLanguage handles .bar. Only .foo files exist.
+        class FooLanguage : TestLanguage() {
+            override val fileExtensions = listOf("foo")
+        }
+        class BarLanguage : TestLanguage() {
+            override val fileExtensions = listOf("bar")
+        }
+
+        tmp.resolve("main.foo").writeText("")
+
+        // Auto-mode: no languages {} block. The builder is given a custom available set so the
+        // test does not depend on what language modules are on the classpath.
+        val project =
+            ProjectBuilder(tmp)
+                .apply { defaultLanguagesOverride = setOf(FooLanguage::class, BarLanguage::class) }
+                .resolve()
+
+        // Only FooLanguage should be registered because no .bar file exists.
+        assertEquals(setOf(FooLanguage::class), project.config.languages)
+    }
+
+    @Test
+    fun testLanguageAutoDetectionAlwaysIncludesExtensionlessLanguages(@TempDir tmp: Path) {
+        // A language with no declared extensions is always included regardless of what's in the
+        // dir.
+        class NoExtLanguage : TestLanguage() {
+            override val fileExtensions = listOf<String>()
+        }
+        class FooLanguage : TestLanguage() {
+            override val fileExtensions = listOf("foo")
+        }
+
+        tmp.resolve("unrelated.xyz").writeText("")
+
+        val project =
+            ProjectBuilder(tmp)
+                .apply {
+                    defaultLanguagesOverride = setOf(NoExtLanguage::class, FooLanguage::class)
+                }
+                .resolve()
+
+        // NoExtLanguage is always active; FooLanguage is not because no .foo file exists.
+        assertEquals(setOf(NoExtLanguage::class), project.config.languages)
+    }
+
+    @Test
     fun testAutoDetectCanBeDisabled(@TempDir tmp: Path) {
         tmp.resolve("test.mod").writeText("module test")
 
