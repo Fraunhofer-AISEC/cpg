@@ -33,7 +33,6 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureResult
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.getAncestors
 import de.fraunhofer.aisec.cpg.graph.AstNode
@@ -42,7 +41,6 @@ import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.builder.assign
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
@@ -377,28 +375,19 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
             return CastNotPossible
         }
 
-        // Retrieve all ancestor types of our type (more concretely of the root type)
-        val root = type.root
-        val ancestors = expandTypeHierarchy(root)
-
-        ancestors
-            .firstOrNull { it.type == targetType.root }
-            ?.let {
-                return ImplicitCast(it.depth)
-            }
-
-        return CastNotPossible
+        return matchWithTypeExpansion(type.root, targetType)
     }
 
-    private fun expandTypeHierarchy(type: Type): List<Type.Ancestor> {
-        val allTypes = mutableListOf<Type.Ancestor>()
-        val root = type.root
-        val ancestors = root.ancestors.toMutableList()
-        val worklist = ancestors
-        allTypes.addAll(worklist)
+    private fun matchWithTypeExpansion(type: Type, targetType: Type): CastResult {
+        val seenList = mutableListOf<Type.Ancestor>()
+        val worklist = mutableListOf(Type.Ancestor(type.root, 0))
+        seenList.addAll(worklist)
         while (worklist.isNotEmpty()) {
             val current = worklist.removeAt(0)
             val currentType = current.type
+            if (currentType == targetType.root) {
+                return ImplicitCast(current.depth)
+            }
             // See if it has an alias, if not we are done
             // If it has one or more aliases, resolve them and add the resolved type and its
             // ancestors with
@@ -419,14 +408,14 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
             reachableAliases
                 .flatMap { it.getAncestors(current.depth) }
                 .forEach {
-                    if (it !in allTypes) {
-                        allTypes.add(it)
+                    if (it !in seenList) {
+                        seenList.add(it)
                         worklist.add(it)
                     }
                 }
         }
 
-        return allTypes
+        return CastNotPossible
     }
 
     /**
