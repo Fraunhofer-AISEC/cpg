@@ -55,6 +55,7 @@ fun configureServer(
         this.addOrUpdateConcept()
         this.suggestLLMConceptsAndOperations()
         this.addLLMConceptAndOperations()
+        this.addQueryTools()
         // PROMPTS
         this.addSuggestConceptsPrompt()
         this

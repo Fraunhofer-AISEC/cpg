@@ -1,0 +1,15 @@
+- functionDeclaration:
+    language: CLanguage
+    methodName: free
+  dataFlows:
+    - from: freedMemory
+      to: param0.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: free
+  dataFlows:
+    - from: freedMemory
+      to: param0.deref
+      dfgType: full

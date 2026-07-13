@@ -39,6 +39,8 @@ import kotlin.collections.forEach
 
 private const val DEBUG_PARSER = true
 
+const val FUNCTION_SUMMARIES_FILE = "cpg-mcp/src/main/resources/functionSummaries.yml"
+
 /** Checks if all elements in the parameter are a valid file and returns a list of files. */
 private fun getFilesOfList(filenames: Collection<String>): List<File> {
     val filePaths = filenames.map { Paths.get(it).toAbsolutePath().normalize().toFile() }
@@ -93,6 +95,11 @@ fun setupTranslationConfiguration(
         translationConfiguration.registerPass<ControlDependenceGraphPass>()
         translationConfiguration.registerPass<ProgramDependenceGraphPass>()
         translationConfiguration.registerPass<PythonFileConceptPass>()
+
+        val functionSummaries = File(FUNCTION_SUMMARIES_FILE)
+        if (functionSummaries.exists()) {
+            translationConfiguration.registerFunctionSummaries(functionSummaries)
+        }
     }
 
     translationConfiguration.registerPass(PrepareSerialization::class)
