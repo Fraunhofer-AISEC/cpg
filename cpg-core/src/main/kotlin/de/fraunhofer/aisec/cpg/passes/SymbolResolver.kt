@@ -556,8 +556,19 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         )
                     for (missingParam in missingNewParams) {
                         if (missingParam != null) {
+                            // duplicate node to prevent changes through the reference
+                            val node: AstNode =
+                                when (missingParam) {
+                                    is Literal<*> -> {
+                                        missingParam.duplicate(true)
+                                    }
+                                    is TypeExpression -> {
+                                        missingParam.duplicate(true)
+                                    }
+                                    else -> missingParam
+                                }
                             constructExpression.addTemplateParameter(
-                                missingParam,
+                                node,
                                 Template.TemplateInitialization.DEFAULT,
                             )
                         }

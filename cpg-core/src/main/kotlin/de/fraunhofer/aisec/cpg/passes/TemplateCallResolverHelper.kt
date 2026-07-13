@@ -28,8 +28,11 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.builder.div
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.duplicate
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.objectType
@@ -142,8 +145,19 @@ fun SymbolResolver.applyMissingParams(
                 // If default is a previously defined template argument that has been explicitly
                 // passed
                 templateParametersExplicitInitialization[missingParam]?.let {
+                    // duplicate node to prevent changes through the reference
+                    val node: AstNode =
+                        when (it) {
+                            is Literal<*> -> {
+                                it.duplicate(true)
+                            }
+                            is TypeExpression -> {
+                                it.duplicate(true)
+                            }
+                            else -> it
+                        }
                     constructExpression.addTemplateParameter(
-                        it,
+                        node,
                         Template.TemplateInitialization.DEFAULT,
                     )
                 }
@@ -161,8 +175,19 @@ fun SymbolResolver.applyMissingParams(
             } else if (missingParam in templateParameterRealDefaultInitialization) {
                 // Add default of template parameter to construct declaration
                 templateParameterRealDefaultInitialization[missingParam]?.let {
+                    // duplicate node to prevent changes through the reference
+                    val node: AstNode =
+                        when (it) {
+                            is Literal<*> -> {
+                                it.duplicate(true)
+                            }
+                            is TypeExpression -> {
+                                it.duplicate(true)
+                            }
+                            else -> it
+                        }
                     constructExpression.addTemplateParameter(
-                        it,
+                        node,
                         Template.TemplateInitialization.DEFAULT,
                     )
                 }
