@@ -405,7 +405,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
                         }
                     } ?: emptyList()
 
-            reachableAliases
+            (reachableAliases + currentType)
                 .flatMap { it.getAncestors(current.depth) }
                 .forEach {
                     if (it !in seenList) {
