@@ -160,14 +160,14 @@ class UnresolvedDFGPassTest {
                                 receiver = newVariable("this", t("DfgUnresolvedCalls"))
                                 param("i", t("int"))
                                 body {
-                                    member("i", ref("this")) assign { ref("i") }
+                                    member("i") { ref("this") } assign { ref("i") }
                                     returnStmt { isImplicit = true }
                                 }
                             }
                             method("knownFunction", t("int")) {
                                 receiver = newVariable("this", t("DfgUnresolvedCalls"))
                                 param("arg", t("int"))
-                                body { returnStmt { member("i", ref("this")) + ref("arg") } }
+                                body { returnStmt { member("i") { ref("this") } + ref("arg") } }
                             }
 
                             // The main method

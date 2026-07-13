@@ -395,8 +395,8 @@ class GraphExamples {
                                         t("T").reference(PointerType.PointerOrigin.POINTER),
                                     )
                                 }
-                                member("value", ref("node"), "->") assign literal(42, t("int"))
-                                member("next", ref("node"), "->") assign ref("node")
+                                member("value", "->") { ref("node") } assign literal(42, t("int"))
+                                member("next", "->") { ref("node") } assign ref("node")
                                 memberCall(
                                     "dump",
                                     ref("node"),
@@ -425,8 +425,8 @@ class GraphExamples {
                         function("main", t("int")) {
                             body {
                                 declare { variable("node", t("T")) }
-                                member("value", ref("node")) assign literal(42, t("int"))
-                                member("next", ref("node")) assign { reference(ref("node")) }
+                                member("value") { ref("node") } assign literal(42, t("int"))
+                                member("next") { ref("node") } assign { reference(ref("node")) }
                                 returnStmt { isImplicit = true }
                             }
                         }
@@ -577,7 +577,7 @@ class GraphExamples {
                                     declare {
                                         variable("field", t("int")) { literal(43, t("int")) }
                                     }
-                                    returnStmt { member("field", ref("this")) }
+                                    returnStmt { member("field") { ref("this") } }
                                 }
                             }
                         }
@@ -823,16 +823,15 @@ class GraphExamples {
                                     declare { variable("a", t("int")) { literal(1, t("int")) } }
                                     ifStmt {
                                         condition {
-                                            member("length", ref("args")) gt literal(3, t("int"))
+                                            member("length") { ref("args") } gt literal(3, t("int"))
                                         }
                                         thenStmt { ref("a") assign literal(2, t("int")) }
                                         elseStmt {
                                             memberCall(
                                                 "println",
-                                                member(
-                                                    "out",
-                                                    ref("System") { isStaticAccess = true },
-                                                ),
+                                                member("out") {
+                                                    ref("System") { isStaticAccess = true }
+                                                },
                                             ) {
                                                 ref("a")
                                             }
@@ -854,7 +853,7 @@ class GraphExamples {
                                             new { construct("ControlFlowSensitiveDFGIfMerge") }
                                         }
                                     }
-                                    member("bla", ref("obj")) assign literal(3, t("int"))
+                                    member("bla") { ref("obj") } assign literal(3, t("int"))
                                     returnStmt { isImplicit = true }
                                 }
                             }
@@ -913,10 +912,9 @@ class GraphExamples {
                                             default()
                                             memberCall(
                                                 "println",
-                                                member(
-                                                    "out",
-                                                    ref("System") { isStaticAccess = true },
-                                                ),
+                                                member("out") {
+                                                    ref("System") { isStaticAccess = true }
+                                                },
                                             ) {
                                                 ref("a")
                                             }
@@ -952,7 +950,7 @@ class GraphExamples {
                                     declare { variable("a", t("int")) { literal(1, t("int")) } }
                                     ifStmt {
                                         condition {
-                                            member("length", ref("args")) gt literal(3, t("int"))
+                                            member("length") { ref("args") } gt literal(3, t("int"))
                                         }
                                         thenStmt { ref("a") assign literal(2, t("int")) }
                                         elseStmt {
@@ -1005,12 +1003,11 @@ class GraphExamples {
                                                             elseStmt {
                                                                 memberCall(
                                                                     "println",
-                                                                    member(
-                                                                        "out",
+                                                                    member("out") {
                                                                         ref("System") {
                                                                             isStaticAccess = true
-                                                                        },
-                                                                    ),
+                                                                        }
+                                                                    },
                                                                 ) {
                                                                     ref("a")
                                                                 }
@@ -1023,10 +1020,9 @@ class GraphExamples {
                                                 }
                                                 memberCall(
                                                     "println",
-                                                    member(
-                                                        "out",
-                                                        ref("System") { isStaticAccess = true },
-                                                    ),
+                                                    member("out") {
+                                                        ref("System") { isStaticAccess = true }
+                                                    },
                                                 ) {
                                                     ref("a")
                                                 }
@@ -1037,7 +1033,7 @@ class GraphExamples {
 
                                     memberCall(
                                         "println",
-                                        member("out", ref("System") { isStaticAccess = true }),
+                                        member("out") { ref("System") { isStaticAccess = true } },
                                     ) {
                                         ref("a")
                                     }
@@ -1078,10 +1074,9 @@ class GraphExamples {
                                                 elseStmt {
                                                     memberCall(
                                                         "println",
-                                                        member(
-                                                            "out",
-                                                            ref("System") { isStaticAccess = true },
-                                                        ),
+                                                        member("out") {
+                                                            ref("System") { isStaticAccess = true }
+                                                        },
                                                     ) {
                                                         ref("a")
                                                     }
@@ -1194,7 +1189,9 @@ class GraphExamples {
                                     body {
                                         memberCall(
                                             "println",
-                                            member("out", ref("System") { isStaticAccess = true }),
+                                            member("out") {
+                                                ref("System") { isStaticAccess = true }
+                                            },
                                         ) {
                                             literal("Hello world")
                                         }
@@ -1253,7 +1250,7 @@ class GraphExamples {
                                 body {
                                     memberCall(
                                         "println",
-                                        member("out", ref("System") { isStaticAccess = true }),
+                                        member("out") { ref("System") { isStaticAccess = true } },
                                     ) {
                                         ref("s")
                                     }
@@ -1310,7 +1307,7 @@ class GraphExamples {
                                 body {
                                     memberCall(
                                         "println",
-                                        member("out", ref("System") { isStaticAccess = true }),
+                                        member("out") { ref("System") { isStaticAccess = true } },
                                     ) {
                                         call("this.toString")
                                     }
@@ -1477,26 +1474,21 @@ class GraphExamples {
 
                                 // Call doSomething on field1 of s1
                                 call("doSomething") {
-                                        member("field1", ref("s1", makeMagic = false).line(11))
-                                            .line(11)
+                                        member("field1") { ref("s1").line(11) }.line(11)
                                     }
                                     .line(11)
 
                                 // Set field1 of both s1 and s2, to literal 1 and 2 respectively
-                                member("field1", ref("s1", makeMagic = false).line(13))
-                                    .line(13) assign literal(1)
-                                member("field1", ref("s2", makeMagic = false).line(14))
-                                    .line(14) assign literal(2)
+                                member("field1") { ref("s1").line(13) }.line(13) assign literal(1)
+                                member("field1") { ref("s2").line(14) }.line(14) assign literal(2)
 
                                 // Call doSomething on field1 of s1 and s2
                                 call("doSomething") {
-                                        member("field1", ref("s1", makeMagic = false).line(15))
-                                            .line(15)
+                                        member("field1") { ref("s1").line(15) }.line(15)
                                     }
                                     .line(15)
                                 call("doSomething") {
-                                        member("field1", ref("s2", makeMagic = false).line(16))
-                                            .line(16)
+                                        member("field1") { ref("s2").line(16) }.line(16)
                                     }
                                     .line(16)
                             }
@@ -1543,18 +1535,13 @@ class GraphExamples {
                             body {
                                 declare { variable("o", t("outer")) }
 
-                                member(
-                                        "field",
-                                        member("in", ref("o", makeMagic = false).line(13)).line(13),
-                                    )
+                                member("field") { member("in") { ref("o").line(13) }.line(13) }
                                     .line(13) assign literal(1)
 
                                 call("doSomething") {
-                                        member(
-                                                "field",
-                                                member("in", ref("o", makeMagic = false).line(15))
-                                                    .line(15),
-                                            )
+                                        member("field") {
+                                                member("in") { ref("o").line(15) }.line(15)
+                                            }
                                             .line(15)
                                     }
                                     .line(15)
