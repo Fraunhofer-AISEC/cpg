@@ -62,31 +62,6 @@ class SymbolResolverTest {
     }
 
     @Test
-    fun testBrokenType() {
-        val file =
-            File(
-                "/home/kweiss/coding/2025-cpg-tool-comparison/checker/extern/juliet-test-suite-c-uafminimal/"
-            )
-        val tu =
-            analyze(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage<CLanguage>()
-                // it.registerPass<PointsToPass>()
-                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
-            }
-
-        assertNotNull(tu)
-        val function =
-            tu.functions
-                .filter { it.name.contains("CWE416_Use_After_Free__malloc_free_long_63b_badSink") }
-                .firstOrNull()
-        assertNotNull(function)
-        val param = function.parameters.firstOrNull()
-        assertNotNull(param)
-        assertTrue(param.type is PointerType)
-        assertTrue((param.type as PointerType).elementType.name.contains("long"))
-    }
-
-    @Test
     fun testMemberCalls() {
         val file = File("src/test/resources/cxx/symbols/member_calls.cpp")
         val result =
