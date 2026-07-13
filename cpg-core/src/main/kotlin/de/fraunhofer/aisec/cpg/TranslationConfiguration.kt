@@ -606,12 +606,14 @@ private constructor(
             registerPass<SymbolResolver>()
             registerPass<ImportResolver>()
             registerPass<DFGPass>()
-            registerPass<DynamicInvokeResolver>()
             registerPass<EvaluationOrderGraphPass>() // creates EOG
             registerPass<TypeResolver>()
 
             if (enablePointsToPass) registerPass<PointsToPass>()
-            else registerPass<ControlFlowSensitiveDFGPass>()
+            else {
+                registerPass<ControlFlowSensitiveDFGPass>()
+                registerPass<DynamicInvokeResolver>()
+            }
 
             registerPass<ResolveCallAmbiguityPass>()
             registerPass<ResolveMemberAmbiguityPass>()

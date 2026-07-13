@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.UnknownMemoryValue
+import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -1719,6 +1720,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val mapDstToSrc = ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>()
         val addEntryToMapCache = AddEntryToMapCache()
 
+        // If the call is a function pointer and we don't yet have invokes edges we try to fetch
+        // them
+        // now
+        addDynamicInvokesEdges(currentNode, doubleState)
+
         // The toIdentitySet avoids having the same elements multiple times
         var invokes = currentNode.invokes.toIdentitySet()
         // If we have multiple functions with the same name and the same signature and one has an
@@ -3279,6 +3285,56 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             addresses = identitySetOf(pmv)
         }
         return doubleState
+    }
+}
+
+/* If a call doesn't have any invokes edges and could be a FunctionPointer, this function tries to identify possible
+invokes edges and adds them to the call
+*/
+private fun addDynamicInvokesEdges(call: Call, doubleState: PointsToState.Element) {
+    if (call.invokes.isNotEmpty()) return
+    val callee = call.callee
+    val expr =
+        if (
+            (callee.type is FunctionPointerType ||
+                ((callee as? Reference)?.refersTo is Parameter ||
+                    (callee as? Reference)?.refersTo is Variable))
+        ) {
+            callee
+        } else if (callee is BinaryOperator && callee.rhs.type is FunctionPointerType) {
+            callee.rhs
+        } else return
+
+    // Fetch all the memory values for the callee that could be the invokes edge, e.g. are
+    // either a Function or a Variable
+    val pointerType = getFunctionPointerType(expr) ?: return
+    val currentNodeValues = doubleState.getValues(expr, expr)
+    val candidates =
+        currentNodeValues.mapNotNull {
+            if (it.second || (it.first !is Variable && it.first !is Function)) null else it.first
+        }
+    val invocationCandidates = mutableListOf<Function>()
+    // For those candidates, check if we have any that have a matching signature
+    candidates.forEach { curr ->
+        val isLambda = curr is Variable && curr.initializer is Lambda
+        val currentFunction =
+            if (isLambda) {
+                (curr.initializer as Lambda).function
+            } else {
+                curr
+            }
+        if (
+            currentFunction is Function &&
+                matchInvokesCandidateSignature(currentFunction, pointerType, isLambda)
+        )
+            invocationCandidates.add(currentFunction)
+    }
+    // If we found invocation candidates in the currentNode's memory values, we add them and
+    // continue. Otherwise, we have to try harder by searching the DFG from the values to also
+    // include other functions
+    if (invocationCandidates.isNotEmpty()) {
+        call.invokes = invocationCandidates
+        call.invokeEdges.forEach { it.dynamicInvoke = true }
     }
 }
 

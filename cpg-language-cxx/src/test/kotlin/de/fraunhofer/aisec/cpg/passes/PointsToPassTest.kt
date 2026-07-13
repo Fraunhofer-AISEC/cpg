@@ -5086,4 +5086,39 @@ class PointsToPassTest {
                 ?.start,
         )
     }
+
+    @Test
+    fun testFunctionPointer() {
+        val file = File("src/test/resources/pointsToPass/function_pointer.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<PointsToPass>()
+            }
+        assertNotNull(tu)
+
+        // functions
+        val mainFunc = tu.functions("main").single()
+        val incpFunc = tu.functions("incp").single()
+
+        // calls
+        val funcPtrCall = mainFunc.calls[1]
+        assertNotNull(funcPtrCall)
+
+        // params and pmvs
+        val incpParam = incpFunc.parameters.single()
+        val incpDerefPMV =
+            incpParam.memoryValues.single {
+                (it as? ParameterMemoryValue)?.name?.localName == "derefvalue"
+            }
+
+        // actual tests
+        // Check if we were able to correctly resolve the function pointer
+        assertEquals(incpFunc, funcPtrCall.invokes.single())
+        // Also check if we have the expected incoming DFG edges
+        // We expect an edge from the arg to the param
+        assertEquals(funcPtrCall.arguments.single(), incpParam.prevFullDFG.single())
+        // And an edge from i to the deref PMV
+        assertEquals(tu.variables("i").single(), incpDerefPMV.prevFullDFG.single())
+    }
 }
