@@ -25,10 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.BooleanType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
 import kotlin.test.Test
@@ -57,6 +59,31 @@ class SymbolResolverTest {
 
         val unaryOp = result.allChildren<UnaryOperator>().firstOrNull()
         assertNotNull(unaryOp)
+    }
+
+    @Test
+    fun testBrokenType() {
+        val file =
+            File(
+                "/home/kweiss/coding/2025-cpg-tool-comparison/checker/extern/juliet-test-suite-c-uafminimal/"
+            )
+        val tu =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                // it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+
+        assertNotNull(tu)
+        val function =
+            tu.functions
+                .filter { it.name.contains("CWE416_Use_After_Free__malloc_free_long_63b_badSink") }
+                .firstOrNull()
+        assertNotNull(function)
+        val param = function.parameters.firstOrNull()
+        assertNotNull(param)
+        assertTrue(param.type is PointerType)
+        assertTrue((param.type as PointerType).elementType.name.contains("long"))
     }
 
     @Test
