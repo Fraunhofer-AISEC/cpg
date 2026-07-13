@@ -40,7 +40,7 @@ internal class TypeTests : BaseTest() {
 
     @Test
     fun testFooCallAndParamType() {
-        val file = File("src/test/resources/types/longtype.cpp")
+        val file = File("src/test/resources/longtype.cpp")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
