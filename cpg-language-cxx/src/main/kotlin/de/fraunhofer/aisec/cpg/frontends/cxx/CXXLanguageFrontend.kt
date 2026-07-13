@@ -701,12 +701,12 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
      * `long **` as t_unspecified with one of the flags below set to true.
      */
     public fun isImplicitModifiedBaseType(specifier: CASTSimpleDeclSpecifier): Boolean {
-        return specifier.isLong ||
-            specifier.isShort ||
+        return specifier.isShort ||
             specifier.isSigned ||
             specifier.isUnsigned ||
             specifier.isComplex ||
-            specifier.isImaginary
+            specifier.isImaginary ||
+            specifier.isLong
     }
 
     /**
