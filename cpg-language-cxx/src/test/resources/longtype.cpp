@@ -1,5 +1,4 @@
-void foo(long **dataPtr) {
-}
+void foo(long **dataPtr);
 
 int main() {
     long value = 42;

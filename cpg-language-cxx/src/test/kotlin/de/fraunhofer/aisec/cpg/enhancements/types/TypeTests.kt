@@ -66,7 +66,7 @@ internal class TypeTests : BaseTest() {
         assertIs<Call>(actualCall)
 
         // The function's first parameter should be a pointer-to-pointer to 'long'
-        val param = foo.parameters.firstOrNull()
+        val param = foo.parameters["dataPtr"]
         assertNotNull(param)
 
         val paramType = param.type as PointerType
