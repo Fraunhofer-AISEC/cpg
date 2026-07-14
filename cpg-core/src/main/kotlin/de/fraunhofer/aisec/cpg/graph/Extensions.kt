@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Usage
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -1048,7 +1049,9 @@ fun Node.followPrevCDGUntilHit(
                     } ?: listOf()
                 )
             }
-            nextEdges.map { edge -> Triple(edge.end, edge, ctx) }
+            // For some reason, the Usage edge needs the opposite direction to the CDG edge. It does
+            // make sense, but it's not intuitive and never will be.
+            nextEdges.map { edge -> Triple(if (edge is Usage) edge.end else edge.start, edge, ctx) }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
