@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
@@ -38,17 +37,12 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
-import de.fraunhofer.aisec.cpg.graph.types.ProblemType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.functional.CPU_CORES
 import de.fraunhofer.aisec.cpg.helpers.functional.MIN_CHUNK_SIZE
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.mapFiltered
 import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
-import de.fraunhofer.aisec.cpg.matchesSignature
-import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 import java.util.Objects
 import java.util.concurrent.ConcurrentHashMap
@@ -1965,60 +1959,4 @@ suspend fun <T> Collection<T>.forEachMaybeParallel(
                 .joinAll()
         }
     }
-}
-
-/*
-harmonize all types to the FunctionPointerType. In the future, we want to get rid of FunctionPointerType and only deal with FunctionTypes.
- */
-fun getFunctionPointerType(expr: Expression): FunctionPointerType? {
-    return when (val type = expr.type) {
-        is FunctionType -> {
-            when (val pointerType = type.pointer()) {
-                is FunctionPointerType -> pointerType
-                is ProblemType -> {
-                    log.warn("Function has unexpected type: ProblemType; ignore call")
-                    null
-                }
-                else -> {
-                    log.warn("Unexpected function type: ${pointerType}; ignore call")
-                    null
-                }
-            }
-        }
-        is FunctionPointerType -> type
-        else -> {
-            // some languages allow other types to derive from a function type, in this case
-            // we need to look for a super type
-            val superType = type.superTypes.singleOrNull()
-            if (superType is FunctionType) {
-                superType.pointer() as FunctionPointerType
-            } else {
-                null
-            }
-        }
-    }
-}
-
-/*
-Checks if a given function could be called with a function pointer
-returns: false if the function does not match the signature of the callee, or true if it does match
-*/
-fun matchInvokesCandidateSignature(
-    currentFunction: Function,
-    pointerType: FunctionPointerType,
-    isLambda: Boolean,
-): Boolean {
-    // Even if it is a function declaration, the dataflow might just come from a
-    // situation where the target of a fptr is passed through via a return value. Keep
-    // searching if return type or signature don't match
-    val functionPointerType = currentFunction.type.pointer()
-    return if (
-        isLambda &&
-            currentFunction.returnTypes.isEmpty() &&
-            currentFunction.matchesSignature(pointerType.parameters) != IncompatibleSignature
-    ) {
-        true
-    } else if (functionPointerType == pointerType) {
-        true
-    } else false
 }
