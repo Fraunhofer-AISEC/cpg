@@ -97,9 +97,11 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handleCall(call: Call) {
         val callee = call.callee
         if (
-            callee.type is FunctionPointerType ||
-                ((callee as? Reference)?.refersTo is Parameter ||
-                    (callee as? Reference)?.refersTo is Variable)
+            // Only try to resolve if the PointsToPass did not manage to find any invokes edge
+            call.invokes.isEmpty() &&
+                (callee.type is FunctionPointerType ||
+                    ((callee as? Reference)?.refersTo is Parameter ||
+                        (callee as? Reference)?.refersTo is Variable))
         ) {
             handleCallee(call, callee)
         }
@@ -112,7 +114,12 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun handleMemberCall(call: MemberCall) {
         val callee = call.callee
-        if (callee is BinaryOperator && callee.rhs.type is FunctionPointerType) {
+        // Only try to resolve if the PointsToPass did not manage to find any invokes edge
+        if (
+            call.invokes.isEmpty() &&
+                callee is BinaryOperator &&
+                callee.rhs.type is FunctionPointerType
+        ) {
             handleCallee(call, callee.rhs)
         }
     }
