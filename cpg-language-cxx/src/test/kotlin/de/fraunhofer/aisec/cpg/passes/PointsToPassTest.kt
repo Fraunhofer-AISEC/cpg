@@ -5119,15 +5119,14 @@ class PointsToPassTest {
         assertEquals(incpFunc, funcPtrCall1.invokes.single())
         // Also check if we have the expected incoming DFG edges
         // We expect an edge from the arg to the param
-        assertEquals(funcPtrCall1.arguments.single(), incpParam.prevFullDFG.single())
-        // And an edge from i to the deref PMV
+        assertContains(incpParam.prevFullDFG, funcPtrCall1.arguments.single())
+        // And an edge from i to the deref PMV. Here we only have 1, b/c only the PtP managed to
+        // only resolve the invokes edge for the call in Line 17, not in Line 8, so it only drew one
+        // prevDFG edge
         assertEquals(tu.variables("i").single(), incpDerefPMV.prevFullDFG.single())
 
         // The second one is trickier b/c the call in Line 8 does not have any usable memory values
         // For this one, we rely on the DynamicInvokesResolver
-        // TODO: currently, the CDT provides us with an incorrent name for the first parameter of
-        // exec_func_ptr, leading to a missing DFG edge, leading to an inferred invokes edge
-        // instead. Waiting for fix
-        //        assertEquals(incpFunc, funcPtrCall2.invokes.single())
+        assertEquals(incpFunc, funcPtrCall2.invokes.single())
     }
 }
