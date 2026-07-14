@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.newMemberCall
 import de.fraunhofer.aisec.cpg.graph.newNew
 import de.fraunhofer.aisec.cpg.graph.newProblemExpression
 import de.fraunhofer.aisec.cpg.graph.newReference
+import de.fraunhofer.aisec.cpg.graph.newUnaryOperator
 import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -51,6 +52,8 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             is Csharp.AST.IdentifierNameSyntax -> handleIdentifierName(node)
             is Csharp.AST.LiteralExpressionSyntax -> handleLiteralExpression(node)
             is Csharp.AST.BinaryExpressionSyntax -> handleBinaryExpression(node)
+            is Csharp.AST.PrefixUnaryExpressionSyntax -> handlePrefixUnaryExpression(node)
+            is Csharp.AST.PostfixUnaryExpressionSyntax -> handlePostfixUnaryExpression(node)
             is Csharp.AST.AssignmentExpressionSyntax -> handleAssignmentExpression(node)
             is Csharp.AST.InvocationExpressionSyntax -> handleInvocationExpression(node)
             is Csharp.AST.MemberAccessExpressionSyntax -> handleMemberAccessExpression(node)
@@ -82,6 +85,44 @@ class ExpressionHandler(frontend: CSharpLanguageFrontend) :
             this.lhs = handle(node.left)
             this.rhs = handle(node.right)
         }
+    }
+
+    /**
+     * Translates a [PrefixUnaryExpressionSyntax][Csharp.AST.PrefixUnaryExpressionSyntax] (e.g.
+     * `++a`) into a [UnaryOperator].
+     *
+     * C# spec:
+     * [Unary operators](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#129-unary-operators)
+     */
+    private fun handlePrefixUnaryExpression(
+        node: Csharp.AST.PrefixUnaryExpressionSyntax
+    ): UnaryOperator {
+        return newUnaryOperator(
+                operatorCode = node.operatorToken,
+                postfix = false,
+                prefix = true,
+                rawNode = node,
+            )
+            .apply { this.input = handle(node.operand) }
+    }
+
+    /**
+     * Translates a [PostfixUnaryExpressionSyntax][Csharp.AST.PostfixUnaryExpressionSyntax] (e.g.
+     * `a++`, `a--`) into a [UnaryOperator].
+     *
+     * C# spec:
+     * [Postfix increment and decrement operators](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/expressions#12816-postfix-increment-and-decrement-operators)
+     */
+    private fun handlePostfixUnaryExpression(
+        node: Csharp.AST.PostfixUnaryExpressionSyntax
+    ): UnaryOperator {
+        return newUnaryOperator(
+                operatorCode = node.operatorToken,
+                postfix = true,
+                prefix = false,
+                rawNode = node,
+            )
+            .apply { this.input = handle(node.operand) }
     }
 
     /**

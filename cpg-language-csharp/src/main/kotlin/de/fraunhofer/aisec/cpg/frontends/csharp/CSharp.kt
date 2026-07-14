@@ -742,6 +742,8 @@ interface Csharp : Library {
                             else -> LiteralExpressionSyntax(nativeValue)
                         }
                     "BinaryExpressionSyntax" -> BinaryExpressionSyntax(nativeValue)
+                    "PrefixUnaryExpressionSyntax" -> PrefixUnaryExpressionSyntax(nativeValue)
+                    "PostfixUnaryExpressionSyntax" -> PostfixUnaryExpressionSyntax(nativeValue)
                     "IdentifierNameSyntax" -> IdentifierNameSyntax(nativeValue)
                     "AssignmentExpressionSyntax" -> AssignmentExpressionSyntax(nativeValue)
                     "MemberAccessExpressionSyntax" -> MemberAccessExpressionSyntax(nativeValue)
@@ -797,6 +799,28 @@ interface Csharp : Library {
             val left: ExpressionSyntax by lazy { INSTANCE.GetBinaryExpressionLeft(this) }
             val operatorToken: String by lazy { INSTANCE.GetBinaryExpressionOperator(this) }
             val right: ExpressionSyntax by lazy { INSTANCE.GetBinaryExpressionRight(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`PrefixUnaryExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.prefixunaryexpressionsyntax)
+         * class.
+         */
+        class PrefixUnaryExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val operatorToken: String by lazy { INSTANCE.GetPrefixUnaryExpressionOperator(this) }
+            val operand: ExpressionSyntax by lazy { INSTANCE.GetPrefixUnaryExpressionOperand(this) }
+        }
+
+        /**
+         * Represents the Roslyn
+         * [`PostfixUnaryExpressionSyntax`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.csharp.syntax.postfixunaryexpressionsyntax)
+         * class.
+         */
+        class PostfixUnaryExpressionSyntax(p: Pointer? = Pointer.NULL) : ExpressionSyntax(p) {
+            val operand: ExpressionSyntax by lazy {
+                INSTANCE.GetPostfixUnaryExpressionOperand(this)
+            }
+            val operatorToken: String by lazy { INSTANCE.GetPostfixUnaryExpressionOperator(this) }
         }
 
         /**
@@ -1125,6 +1149,18 @@ interface Csharp : Library {
     fun GetBinaryExpressionOperator(handle: AST.BinaryExpressionSyntax): String
 
     fun GetBinaryExpressionRight(handle: AST.BinaryExpressionSyntax): AST.ExpressionSyntax
+
+    fun GetPrefixUnaryExpressionOperand(
+        handle: AST.PrefixUnaryExpressionSyntax
+    ): AST.ExpressionSyntax
+
+    fun GetPrefixUnaryExpressionOperator(handle: AST.PrefixUnaryExpressionSyntax): String
+
+    fun GetPostfixUnaryExpressionOperand(
+        handle: AST.PostfixUnaryExpressionSyntax
+    ): AST.ExpressionSyntax
+
+    fun GetPostfixUnaryExpressionOperator(handle: AST.PostfixUnaryExpressionSyntax): String
 
     fun GetCode(handle: AST.Node): String
 

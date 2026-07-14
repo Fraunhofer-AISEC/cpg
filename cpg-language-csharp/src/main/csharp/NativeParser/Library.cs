@@ -558,6 +558,30 @@ public static class Library
         return Marshal.StringToCoTaskMemUTF8(((BinaryExpressionSyntax)Nodes[handlePtr]).OperatorToken.Text);
     }
 
+    [UnmanagedCallersOnly(EntryPoint = "GetPrefixUnaryExpressionOperand")]
+    public static IntPtr GetPrefixUnaryExpressionOperand(IntPtr handlePtr)
+    {
+        return Register(((PrefixUnaryExpressionSyntax)Nodes[handlePtr]).Operand);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetPrefixUnaryExpressionOperator")]
+    public static IntPtr GetPrefixUnaryExpressionOperator(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((PrefixUnaryExpressionSyntax)Nodes[handlePtr]).OperatorToken.Text);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetPostfixUnaryExpressionOperand")]
+    public static IntPtr GetPostfixUnaryExpressionOperand(IntPtr handlePtr)
+    {
+        return Register(((PostfixUnaryExpressionSyntax)Nodes[handlePtr]).Operand);
+    }
+
+    [UnmanagedCallersOnly(EntryPoint = "GetPostfixUnaryExpressionOperator")]
+    public static IntPtr GetPostfixUnaryExpressionOperator(IntPtr handlePtr)
+    {
+        return Marshal.StringToCoTaskMemUTF8(((PostfixUnaryExpressionSyntax)Nodes[handlePtr]).OperatorToken.Text);
+    }
+
     [UnmanagedCallersOnly(EntryPoint = "GetIdentifierNameSyntaxIdentifier")]
     public static IntPtr GetIdentifierNameSyntaxIdentifier(IntPtr handlePtr)
     {
