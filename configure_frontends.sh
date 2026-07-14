@@ -63,6 +63,6 @@ setProperty "enableJVMFrontend" $answerJVM
 answerINI=$(ask "Do you want to enable the INI frontend? (currently $(getProperty "enableINIFrontend"))")
 setProperty "enableINIFrontend" $answerINI
 answerCsharp=$(ask "Do you want to enable the C# frontend? (currently $(getProperty "enableCSharpFrontend"))")
-setProperty "enableCSharpFrontend" answerCsharp
+setProperty "enableCSharpFrontend" $answerCsharp
 answerMCP=$(ask "Do you want to enable the MCP module? (currently $(getProperty "enableMCPModule"))")
 setProperty "enableMCPModule" $answerMCP
