@@ -697,6 +697,19 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
     }
 
     /**
+     * These checks are necessary because CDT will represent implicit ints with modifiers, e.g.
+     * `long **` as t_unspecified with one of the flags below set to true.
+     */
+    public fun isImplicitModifiedBaseType(specifier: CASTSimpleDeclSpecifier): Boolean {
+        return specifier.isShort ||
+            specifier.isSigned ||
+            specifier.isUnsigned ||
+            specifier.isComplex ||
+            specifier.isImaginary ||
+            specifier.isLong
+    }
+
+    /**
      * This is a little helper function, primarily used by [typeOf]. It's primary purpose is to
      * "adjust" the [incoming] type based on the [declarator]. This is needed because the type
      * information in C/C++ are split into a declarator and declaration specifiers.
@@ -737,7 +750,8 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
                     // CDT is not able to handle this correctly
                     if (
                         specifier is CASTSimpleDeclSpecifier &&
-                            specifier.type == IASTDeclSpecifier.sc_unspecified &&
+                            specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
+                            !isImplicitModifiedBaseType(specifier) &&
                             it.declarator.name.toString() != ""
                     ) {
                         typeOf(it.declarator.name)
