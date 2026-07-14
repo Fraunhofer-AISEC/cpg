@@ -1720,9 +1720,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val mapDstToSrc = ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>()
         val addEntryToMapCache = AddEntryToMapCache()
 
-        // If the call is a function pointer and we don't yet have invokes edges we try to fetch
-        // them
-        // now
+        // If the call is a function pointer, and we don't yet have invokes edges we try to fetch
+        // them now
         addDynamicInvokesEdges(currentNode, doubleState)
 
         // The toIdentitySet avoids having the same elements multiple times

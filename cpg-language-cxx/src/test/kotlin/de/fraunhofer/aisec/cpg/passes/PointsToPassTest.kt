@@ -5100,10 +5100,12 @@ class PointsToPassTest {
         // functions
         val mainFunc = tu.functions("main").single()
         val incpFunc = tu.functions("incp").single()
+        val execFuncPtrFunc = tu.functions("exec_func_ptr").single()
 
         // calls
-        val funcPtrCall = mainFunc.calls[1]
-        assertNotNull(funcPtrCall)
+        val funcPtrCall1 = mainFunc.calls[1]
+        assertNotNull(funcPtrCall1)
+        val funcPtrCall2 = execFuncPtrFunc.calls.single()
 
         // params and pmvs
         val incpParam = incpFunc.parameters.single()
@@ -5114,11 +5116,15 @@ class PointsToPassTest {
 
         // actual tests
         // Check if we were able to correctly resolve the function pointer
-        assertEquals(incpFunc, funcPtrCall.invokes.single())
+        assertEquals(incpFunc, funcPtrCall1.invokes.single())
         // Also check if we have the expected incoming DFG edges
         // We expect an edge from the arg to the param
-        assertEquals(funcPtrCall.arguments.single(), incpParam.prevFullDFG.single())
+        assertEquals(funcPtrCall1.arguments.single(), incpParam.prevFullDFG.single())
         // And an edge from i to the deref PMV
         assertEquals(tu.variables("i").single(), incpDerefPMV.prevFullDFG.single())
+
+        // The second one is trickier b/c the call in Line 8 does not have any usable memory values
+        // so we have to traverse the DFG
+        assertEquals(incpFunc, funcPtrCall2.invokes.single())
     }
 }
