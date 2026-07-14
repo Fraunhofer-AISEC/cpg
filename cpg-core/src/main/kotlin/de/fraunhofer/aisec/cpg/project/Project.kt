@@ -223,9 +223,9 @@ class PassesBuilder {
 /**
  * Controls how the components of a [Project] are determined.
  *
- * **Auto-mode** (no `components {}` block): [ComponentDetector]s and [ProjectDetector]s from all
- * registered languages are run automatically. If no detector finds anything, a single default
- * component spanning the whole project directory is used.
+ * **Auto-mode** (no `components {}` block): [Detector]s from all registered languages are run
+ * automatically. If no detector finds anything, a single default component spanning the whole
+ * project directory is used.
  *
  * **Explicit block**: only the components added with [component] are used; detectors do **not** run
  * unless [default] is called. [default] and [detector] can be combined with explicit [component]
@@ -248,8 +248,8 @@ class ComponentsBuilder {
     internal var includeAutoDetect = false
 
     /**
-     * Enables auto-detection: runs [ComponentDetector]s and [ProjectDetector]s from all registered
-     * languages and any [detector]s added to this block.
+     * Enables auto-detection: runs [Detector]s from all registered languages and any [detector]s
+     * added to this block.
      */
     fun default() {
         includeAutoDetect = true
@@ -349,9 +349,9 @@ class ProjectBuilder(
     }
 
     /**
-     * Adds a standalone [Detector] (a [ComponentDetector] and/or [ProjectDetector]) that is not
-     * tied to a [Language], such as the [DirectoryComponentDetector]. Standalone detectors run
-     * before the language-based ones, so they take precedence in case of conflicts.
+     * Adds a standalone [Detector] that is not tied to a [Language], such as the
+     * [DirectoryComponentDetector]. Standalone detectors run before the language-based ones, so
+     * they take precedence in case of conflicts.
      *
      * This is equivalent to `components { detector(detector) }`.
      */
@@ -517,7 +517,7 @@ class ProjectBuilder(
      * Loads all languages from [Project.defaultLanguages] that are on the classpath, then filters
      * them down to those that can actually handle files in [path]:
      * - A language with no declared [Language.fileExtensions] is always included (it uses its own
-     *   detection logic, e.g. [ComponentDetector]).
+     *   detection logic, e.g. [Detector]).
      * - A language with declared extensions is only included when at least one file with a matching
      *   extension exists anywhere under [path].
      *

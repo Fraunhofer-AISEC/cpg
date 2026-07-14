@@ -152,7 +152,11 @@ class GoBuildDetector(
             environment?.architecture?.goarch?.let { pb.environment()["GOARCH"] = it }
 
             val proc = pb.start()
-            proc.waitFor(5, TimeUnit.MINUTES)
+            if (!proc.waitFor(5, TimeUnit.MINUTES)) {
+                proc.destroyForcibly()
+                log.warn("'{}' timed out after 5 minutes", command.joinToString(" "))
+                return null
+            }
             if (proc.exitValue() != 0) {
                 log.warn(
                     "'{}' failed: {}",

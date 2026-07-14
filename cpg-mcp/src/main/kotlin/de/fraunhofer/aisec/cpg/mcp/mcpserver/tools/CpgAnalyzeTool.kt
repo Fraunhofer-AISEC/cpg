@@ -176,7 +176,7 @@ fun runCpgAnalyze(
 
     val project =
         Project.from(path) {
-            if (!runPasses) passes { }
+            if (!runPasses) passes {}
             translation {
                 it.debugParser(true)
                 it.loadIncludes(true)

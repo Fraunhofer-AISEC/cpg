@@ -19,9 +19,10 @@ The simplest possible analysis — pass a directory and get a result:
 val result = project(Path("/path/to/repo")) { }.analyze()
 ```
 
-This **auto-mode** uses every language frontend available on the classpath, the full default pass
-pipeline, and runs all registered auto-detectors to discover the project structure (Go modules,
-C/C++ compilation databases, etc.).
+This **auto-mode** activates the language frontends whose file extensions are found in the project
+directory, runs the full default pass pipeline, and runs all registered auto-detectors to discover
+the project structure (Go modules, C/C++ compilation databases, etc.) — see
+[How auto-detection works](#how-auto-detection-works) below for details.
 
 For a single file you don't need a project at all:
 
@@ -36,7 +37,7 @@ same pattern:
 
 | Block | Not called | Called without `default()` | Called with `default()` |
 |---|---|---|---|
-| `languages {}` | All default languages on the classpath | Only the listed languages | Default languages + listed languages |
+| `languages {}` | Default languages whose extensions are found in the project | Only the listed languages | Default languages (filtered) + listed languages |
 | `passes {}` | Default pass pipeline | Only the listed passes | Default passes + listed passes |
 | `components {}` | Language detectors run, auto-detect | Explicit components only, no detection | Auto-detect + explicit components |
 
@@ -105,6 +106,23 @@ project(path) {
     components { }
 }
 ```
+
+### How auto-detection works
+
+Two independent mechanisms feed into auto-mode:
+
+- **Language auto-detection** scans the project directory for file extensions (skipping dot-
+  directories and a fixed skip-list — `vendor`, `node_modules`, `testdata`) and only registers a
+  default language if a matching extension was found. Languages without declared file extensions
+  (e.g., Go, C/C++) are always registered, since they rely on their own [`Detector`][2] logic
+  instead. If the scan finds no extensions at all (or `path` is not a directory), every default
+  language is registered as a fallback.
+- **Component/settings auto-detection** runs every registered [`Detector`][2] — one per language
+  that implements it, plus any standalone ones added with `detector()` — exactly once on the
+  project root. Each call returns a single [`DetectionResult`][3] with the components it found plus
+  optional symbols, include paths, and a compilation database; results with the same detector name
+  are deduplicated, and everything is merged into the resolved `Project` unless the user already
+  configured a conflicting value explicitly.
 
 ### Standalone detectors
 
@@ -183,3 +201,4 @@ val result = p.analyze()
 
 [1]: ../../API/de.fraunhofer.aisec.cpg.project/-directory-component-detector/index.html
 [2]: ../../API/de.fraunhofer.aisec.cpg.project/-detector/index.html
+[3]: ../../API/de.fraunhofer.aisec.cpg.project/-detection-result/index.html
