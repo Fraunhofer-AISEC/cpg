@@ -428,7 +428,8 @@ fun Server.addRunPass() {
                 if (passToExecute !in nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
                     // Execute the pass for the node
                     ctx?.let { ctx ->
-                        val passResult = runPassForNode(node, passToExecute, ctx)
+                        val passResult =
+                            runPassForNode(nodeToPass, result, node, passToExecute, ctx)
                         if (passResult.success) {
                             executedPasses.add(TextContent(passResult.message))
                         } else {
@@ -471,9 +472,12 @@ data class PassExecutionResult(val success: Boolean, val message: String)
  * provided [TranslationContext] [ctx]. As a [Pass] has to work on one or multiple nodes, one can
  * provide the list of nodes where the pass should start using the [preList]. If [preList] is not
  * provided, it collects nodes of type [T] starting from the given [node] (either the node itself,
- * its first parent of type [T], or all children of type [T]).
+ * its first parent of type [T], or all children of type [T]). We pass [nodeToPass] to allow
+ * extending the server.
  */
-inline fun <reified T : Node> runPassForNode(
+inline fun <reified T : Node> runPassForNodeInternal(
+    nodeToPass: IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>,
+    result: TranslationResult,
     node: Node,
     passClass: KClass<out Pass<T>>,
     ctx: TranslationContext,
@@ -499,7 +503,7 @@ inline fun <reified T : Node> runPassForNode(
                     nodes.filter {
                         nodeToPass.computeIfAbsent(it) { mutableSetOf() }.add(actualClass)
                     },
-                executedFrontends = ctx.executedFrontends,
+                result = result,
             )
             messages +=
                 "Ran pass ${actualClass.simpleName} on nodes ${nodesToAnalyze.map { it.id.toString() }}."
@@ -530,6 +534,8 @@ inline fun <reified T : Node> runPassForNode(
  * Returns a [CallToolResult] if there was an error during execution, otherwise returns null.
  */
 fun runPassForNode(
+    nodeToPass: IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>,
+    result: TranslationResult,
     node: Node,
     passClass: KClass<out Pass<*>>,
     ctx: TranslationContext,
@@ -543,13 +549,19 @@ fun runPassForNode(
 
     return when (prototype) {
         is TranslationResultPass -> {
-            runPassForNode<TranslationResult>(node, prototype::class, ctx)
+            runPassForNodeInternal<TranslationResult>(
+                nodeToPass,
+                result,
+                node,
+                prototype::class,
+                ctx,
+            )
         }
         is ComponentPass -> {
-            runPassForNode<Component>(node, prototype::class, ctx)
+            runPassForNodeInternal<Component>(nodeToPass, result, node, prototype::class, ctx)
         }
         is TranslationUnitPass -> {
-            runPassForNode<TranslationUnit>(node, prototype::class, ctx)
+            runPassForNodeInternal<TranslationUnit>(nodeToPass, result, node, prototype::class, ctx)
         }
         is EOGStarterPass -> {
             val eogStarters = listOfNotNull((node as? EOGStarterHolder) as? Node).toMutableList()
@@ -562,7 +574,14 @@ fun runPassForNode(
                             it is EOGStarterHolder && it.prevEOG.isEmpty()
                         }
                 )
-            runPassForNode<Node>(node, prototype::class, ctx, preList = eogStarters)
+            runPassForNodeInternal<Node>(
+                nodeToPass,
+                result,
+                node,
+                prototype::class,
+                ctx,
+                preList = eogStarters,
+            )
         }
     }
 }
