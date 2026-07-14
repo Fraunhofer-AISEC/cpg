@@ -3329,8 +3329,7 @@ private fun addDynamicInvokesEdges(call: Call, doubleState: PointsToState.Elemen
             invocationCandidates.add(currentFunction)
     }
     // If we found invocation candidates in the currentNode's memory values, we add them and
-    // continue. Otherwise, we have to try harder by searching the DFG from the values to also
-    // include other functions
+    // continue.
     if (invocationCandidates.isNotEmpty()) {
         call.invokes = invocationCandidates
         call.invokeEdges.forEach { it.dynamicInvoke = true }

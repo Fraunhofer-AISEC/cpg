@@ -42,10 +42,10 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.getFunctionPointerType
-import de.fraunhofer.aisec.cpg.graph.matchInvokesCandidateSignature
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
+import de.fraunhofer.aisec.cpg.helpers.functional.getFunctionPointerType
+import de.fraunhofer.aisec.cpg.helpers.functional.matchInvokesCandidateSignature
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -97,9 +97,11 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handleCall(call: Call) {
         val callee = call.callee
         if (
-            callee.type is FunctionPointerType ||
-                ((callee as? Reference)?.refersTo is Parameter ||
-                    (callee as? Reference)?.refersTo is Variable)
+            // Only try to resolve if the PointsToPass did not manage to find any invokes edge
+            call.invokes.isEmpty() &&
+                (callee.type is FunctionPointerType ||
+                    ((callee as? Reference)?.refersTo is Parameter ||
+                        (callee as? Reference)?.refersTo is Variable))
         ) {
             handleCallee(call, callee)
         }
@@ -112,7 +114,12 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun handleMemberCall(call: MemberCall) {
         val callee = call.callee
-        if (callee is BinaryOperator && callee.rhs.type is FunctionPointerType) {
+        // Only try to resolve if the PointsToPass did not manage to find any invokes edge
+        if (
+            call.invokes.isEmpty() &&
+                callee is BinaryOperator &&
+                callee.rhs.type is FunctionPointerType
+        ) {
             handleCallee(call, callee.rhs)
         }
     }
@@ -178,7 +185,8 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             prevDFGToPush.forEach(Consumer(work::push))
         }
 
-        call.invokes = invocationCandidates
+        // The PointsToPass may have already added some invokes edges, make sure to keep those
+        call.invokes += invocationCandidates
         call.invokeEdges.forEach { it.dynamicInvoke = true }
 
         // We have to update the dfg edges because this call could now be resolved (which was not

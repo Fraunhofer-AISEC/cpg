@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.newParameter
 import java.util.function.Supplier
-import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier
 import org.eclipse.cdt.core.dom.ast.IASTParameterDeclaration
+import org.eclipse.cdt.core.dom.ast.IASTSimpleDeclSpecifier
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTParameterDeclaration
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTSimpleDeclSpecifier
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTParameterDeclaration
@@ -67,8 +67,14 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
         val type =
             if (
                 specifier is CASTSimpleDeclSpecifier &&
-                    specifier.type == IASTDeclSpecifier.sc_unspecified
+                    specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
+                    !frontend.isImplicitModifiedBaseType(specifier) &&
+                    ctx.declarator.name.toString() != ""
             ) {
+                // CDT sometimes represents unnamed/unknown-typed parameters with an
+                // unspecified simple-decl-specifier. In that case, treat this as an
+                // unnamed parameter and derive the type from the declarator name (as
+                // a fallback), matching the similar guard in CXXLanguageFrontend.
                 name = ""
                 frontend.typeOf(ctx.declarator.name)
             } else {
