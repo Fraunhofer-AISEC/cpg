@@ -178,7 +178,8 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             prevDFGToPush.forEach(Consumer(work::push))
         }
 
-        call.invokes = invocationCandidates
+        // The PointsToPass may have already added some invokes edges, make sure to keep those
+        call.invokes += invocationCandidates
         call.invokeEdges.forEach { it.dynamicInvoke = true }
 
         // We have to update the dfg edges because this call could now be resolved (which was not
