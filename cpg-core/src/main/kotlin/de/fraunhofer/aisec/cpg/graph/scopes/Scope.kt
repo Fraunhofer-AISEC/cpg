@@ -153,7 +153,7 @@ sealed class Scope(
      * can be used for additional filtering.
      *
      * By default, the lookup algorithm will go to the [Scope.parent] if no match was found in the
-     * current scope. This behaviour can be turned off with [qualifiedLookup]. This is useful for
+     * current scope. This behavior can be turned off with [qualifiedLookup]. This is useful for
      * qualified lookups, where we want to stay in our lookup-scope.
      *
      * We need to consider the language trait [HasImplicitReceiver] here as well. If the language

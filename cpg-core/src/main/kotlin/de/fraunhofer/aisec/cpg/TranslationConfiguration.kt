@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.TranslationContext.EmptyTranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
+import de.fraunhofer.aisec.cpg.frontends.ForeignFunctionInterface
 import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
 import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
@@ -114,6 +115,7 @@ private constructor(
     /** This list contains the files with function summaries which should be considered. */
     val functionSummaries: DFGFunctionSummaries,
     languages: Set<KClass<out Language<*>>>,
+    languageInterfaces: Set<KClass<out ForeignFunctionInterface<out Language<*>, out Language<*>>>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
     disableCleanup: Boolean,
@@ -137,6 +139,11 @@ private constructor(
 ) {
     /** This list contains all languages which we want to translate. */
     @JsonIgnore val languages: Set<KClass<out Language<*>>>
+
+    /** This list contains all language interfaces. */
+    @JsonIgnore
+    val languageInterfaces:
+        Set<KClass<out ForeignFunctionInterface<out Language<*>, out Language<*>>>>
 
     /**
      * Switch off cleaning up TypeManager memory after analysis.
@@ -207,6 +214,7 @@ private constructor(
     init {
         this.registeredPasses = passes
         this.languages = languages
+        this.languageInterfaces = languageInterfaces
         // Make sure to init this AFTER sourceLocations has been set
         this.codeInNodes = codeInNodes
         this.processAnnotations = processAnnotations
@@ -248,6 +256,8 @@ private constructor(
     class Builder {
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
         private val languages = mutableSetOf<KClass<out Language<*>>>()
+        private val languageInterfaces =
+            mutableSetOf<KClass<out ForeignFunctionInterface<out Language<*>, out Language<*>>>>()
         private var topLevels = mutableMapOf<String, File>()
         private var debugParser = false
         private var failOnError = false
@@ -475,6 +485,22 @@ private constructor(
         /** Registers an additional [Language]. */
         inline fun <reified T : Language<*>> registerLanguage(): Builder {
             registerLanguage(T::class)
+            return this
+        }
+
+        /** Registers an additional [ForeignFunctionInterface] by its [KClass]. */
+        fun <
+            T : ForeignFunctionInterface<out Language<*>, out Language<*>>
+        > registerLanguageInterface(clazz: KClass<T>): Builder {
+            languageInterfaces.add(clazz)
+            return this
+        }
+
+        /** Registers an additional [ForeignFunctionInterface] */
+        inline fun <
+            reified T : ForeignFunctionInterface<out Language<*>, out Language<*>>
+        > registerLanguageInterface(): Builder {
+            registerLanguageInterface(T::class)
             return this
         }
 
@@ -757,6 +783,7 @@ private constructor(
                 replacedPasses,
                 DFGFunctionSummaries.fromFiles(functionSummaries),
                 languages,
+                languageInterfaces,
                 codeInNodes,
                 processAnnotations,
                 disableCleanup,
