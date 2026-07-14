@@ -50,7 +50,15 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleParameter(ctx: IASTParameterDeclaration): Parameter {
-        var name = ctx.declarator.name.toString()
+        val declaredNameNode =
+            when {
+                ctx.declarator.name.toString().isNotEmpty() -> ctx.declarator.name
+                ctx.declarator.nestedDeclarator?.name?.toString()?.isNotEmpty() == true ->
+                    ctx.declarator.nestedDeclarator.name
+                else -> ctx.declarator.name
+            }
+
+        var name = declaredNameNode.toString()
         val specifier = ctx.declSpecifier
 
         // Parse the type. If we are running into the situation where the declSpecifier is
