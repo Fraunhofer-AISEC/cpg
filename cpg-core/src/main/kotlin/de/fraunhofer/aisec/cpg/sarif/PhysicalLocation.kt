@@ -29,6 +29,7 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Path
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 /** A SARIF compatible location referring to a location, i.e. file and region within the file. */
 class PhysicalLocation(uri: URI?, region: Region) {
@@ -52,13 +53,28 @@ class PhysicalLocation(uri: URI?, region: Region) {
         }
 
         override fun hashCode() = Objects.hashCode(fileName)
+
+        companion object {
+            private val unknown = ArtifactLocation(null)
+            private val cache = ConcurrentHashMap<URI, ArtifactLocation>()
+
+            /**
+             * Returns a (shared) [ArtifactLocation] for [uri]. Since an [ArtifactLocation] is
+             * immutable and value-equal by [uri], and every node in a file shares the same URI, we
+             * intern one instance per URI instead of reconstructing a wrapper (and recomputing
+             * [fileName]) for every located node. The cache is bounded by the number of distinct
+             * files, not nodes.
+             */
+            fun of(uri: URI?): ArtifactLocation =
+                if (uri == null) unknown else cache.computeIfAbsent(uri) { ArtifactLocation(it) }
+        }
     }
 
     var artifactLocation: ArtifactLocation
     var region: Region
 
     init {
-        artifactLocation = ArtifactLocation(uri)
+        artifactLocation = ArtifactLocation.of(uri)
         this.region = region
     }
 
