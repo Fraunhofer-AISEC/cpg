@@ -77,6 +77,44 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      */
     private val nameScopeMap: MutableMap<Name, NameScope> = mutableMapOf()
 
+    /**
+     * Caches the result of [lookupSymbolByName] (for calls without a custom [predicate], which
+     * cannot be cached safely). [lookupSymbolByName] can be called repeatedly for the same symbol
+     * (e.g. once per reference to the same variable, or once per candidate scope during ambiguous
+     * call/member resolution), and walking the scope chain for every single call is unnecessarily
+     * expensive.
+     *
+     * The cache is invalidated wholesale (see [symbolTableGeneration]) whenever a symbol table is
+     * mutated (see [invalidateSymbolLookupCache]), rather than per-entry, to keep invalidation
+     * trivially correct. This is cheap in practice because virtually all symbol table mutations
+     * happen while the language frontend is still building the AST, before any of the passes that
+     * call [lookupSymbolByName] (e.g. [SymbolResolver]) run.
+     */
+    private val symbolLookupCache: MutableMap<SymbolLookupCacheKey, List<Declaration>> =
+        mutableMapOf()
+
+    /** See [symbolLookupCache]. Bumped by [invalidateSymbolLookupCache]. */
+    private var symbolTableGeneration: Int = 0
+
+    /** The [symbolTableGeneration] that [symbolLookupCache] was last cleared for. */
+    private var symbolLookupCacheGeneration: Int = -1
+
+    /**
+     * Must be called whenever a symbol table (i.e. [Scope.symbols] or [Scope.wildcardImports]) is
+     * mutated, so that [symbolLookupCache] does not serve stale results.
+     */
+    internal fun invalidateSymbolLookupCache() {
+        symbolTableGeneration++
+    }
+
+    private data class SymbolLookupCacheKey(
+        val scope: Scope?,
+        val symbol: Symbol,
+        val language: Language<*>,
+        val qualifiedLookup: Boolean,
+        val replaceImports: Boolean,
+    )
+
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean
         get() = this.firstScopeOrNull { it is FunctionScope } != null
@@ -129,6 +167,10 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * @param toMerge The scope managers to merge into this one
      */
     fun mergeFrom(toMerge: Collection<ScopeManager>) {
+        // Merging combines symbol tables from several scope managers into this one, so any cached
+        // lookups may no longer be valid.
+        invalidateSymbolLookupCache()
+
         val globalScopes = toMerge.map { it.globalScope }
         val currGlobalScope = scopeMap[null]
         if (currGlobalScope !is GlobalScope) {
@@ -786,6 +828,31 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             n = extractedScope.adjustedName
         }
 
+        // A custom predicate is a per-call lambda and cannot be safely used as (or compared
+        // through)
+        // a cache key, so we only cache the common case where no predicate is given.
+        val cacheKey =
+            if (predicate == null) {
+                SymbolLookupCacheKey(
+                    scope = scope ?: startScope,
+                    symbol = n.localName,
+                    language = language,
+                    qualifiedLookup = scope != null,
+                    replaceImports = replaceImports,
+                )
+            } else {
+                null
+            }
+        if (cacheKey != null) {
+            if (symbolLookupCacheGeneration != symbolTableGeneration) {
+                symbolLookupCache.clear()
+                symbolLookupCacheGeneration = symbolTableGeneration
+            }
+            symbolLookupCache[cacheKey]?.let {
+                return it
+            }
+        }
+
         // We need to differentiate between a qualified and unqualified lookup. We have a qualified
         // lookup, if the scope is not null. In this case we need to stay within the specified scope
         val list =
@@ -826,6 +893,10 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     it.remove()
                 }
             }
+        }
+
+        if (cacheKey != null) {
+            symbolLookupCache[cacheKey] = list
         }
 
         return list

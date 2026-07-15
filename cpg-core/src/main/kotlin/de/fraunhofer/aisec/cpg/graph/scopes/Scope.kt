@@ -146,6 +146,10 @@ sealed class Scope(
             val list = symbols.computeIfAbsent(symbol) { mutableListOf() }
             list += declaration
         }
+
+        // This scope's symbol table changed, so any cached ScopeManager.lookupSymbolByName results
+        // may no longer be valid.
+        provider.ctx.scopeManager.invalidateSymbolLookupCache()
     }
 
     /**
