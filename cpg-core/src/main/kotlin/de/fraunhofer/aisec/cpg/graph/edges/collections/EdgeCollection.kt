@@ -116,6 +116,24 @@ interface EdgeCollection<NodeType : Node, EdgeType : Edge<NodeType>> : MutableCo
         return any { if (outgoing) it.end == target else it.start == target }
     }
 
+    /** Identity-based variant of [contains], matching only the same edge instance. */
+    fun containsByIdentity(edge: EdgeType): Boolean {
+        return this.any { it === edge }
+    }
+
+    /** Identity-based variant of [remove], removing only the same edge instance. */
+    fun removeByIdentity(edge: EdgeType): Boolean {
+        val iterator = this.iterator()
+        while (iterator.hasNext()) {
+            if (iterator.next() === edge) {
+                iterator.remove()
+                return true
+            }
+        }
+
+        return false
+    }
+
     operator fun plusAssign(end: NodeType) {
         add(end)
     }

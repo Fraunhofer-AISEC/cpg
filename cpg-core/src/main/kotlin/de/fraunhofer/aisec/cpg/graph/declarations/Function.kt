@@ -85,7 +85,7 @@ open class Function :
      */
     @Relationship(value = "INVOKES", direction = Relationship.Direction.INCOMING)
     val calledByEdges: Invokes<Function> =
-        Invokes<Function>(this, Call::invokeEdges, outgoing = false)
+        Invokes<Function>(this, mirroredCollection = { (it as Call).invokeEdges }, outgoing = false)
 
     /** Virtual property for accessing [calledByEdges] without property edges. */
     val calledBy: MutableList<Call> by unwrappingIncoming(Function::calledByEdges)

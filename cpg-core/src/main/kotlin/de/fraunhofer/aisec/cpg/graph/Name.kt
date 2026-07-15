@@ -69,8 +69,16 @@ class Name(
      * this is basically a cache for [toString]. Otherwise, we would need to call [toString] a lot
      * of times, to implement the necessary functions for [CharSequence].
      */
-    private val fullName: String by lazy {
-        (if (parent != null) parent.toString() + delimiter else "") + localName
+    private var qualifiedFullNameCache: String? = null
+
+    private fun fullName(): String {
+        // Most names are unqualified, so avoid any extra cache object/value in this hot case.
+        if (parent == null) {
+            return localName
+        }
+
+        return qualifiedFullNameCache
+            ?: (parent.toString() + delimiter + localName).also { qualifiedFullNameCache = it }
     }
 
     public override fun clone(): Name = Name(localName, parent?.clone(), delimiter)
@@ -93,13 +101,14 @@ class Name(
      * Returns the string representation of this name using a fully qualified name notation with the
      * specified [delimiter].
      */
-    override fun toString() = fullName
+    override fun toString() = fullName()
 
-    override val length = fullName.length
+    override val length: Int
+        get() = fullName().length
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other is String) return this.fullName == other
+        if (other is String) return this.toString() == other
         if (other is Name)
             return localName == other.localName &&
                 parent == other.parent &&
@@ -108,12 +117,12 @@ class Name(
         return false
     }
 
-    override fun get(index: Int) = fullName[index]
+    override fun get(index: Int) = fullName()[index]
 
     override fun hashCode() = Objects.hash(localName, parent, delimiter)
 
     override fun subSequence(startIndex: Int, endIndex: Int): CharSequence =
-        fullName.subSequence(startIndex, endIndex)
+        fullName().subSequence(startIndex, endIndex)
 
     /**
      * Determines if this name ends with the [ending] (i.e., the localNames match until the [ending]
@@ -141,7 +150,7 @@ class Name(
         Name(localName.replace(oldValue, newValue), parent, delimiter)
 
     /** Compare names according to the string representation of the [fullName]. */
-    override fun compareTo(other: Name) = fullName.compareTo(other.toString())
+    override fun compareTo(other: Name) = toString().compareTo(other.toString())
 
     /**
      * A name can be considered as "qualified", if it has any specified [parent]. Otherwise, only

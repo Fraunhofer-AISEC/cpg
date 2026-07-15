@@ -103,7 +103,11 @@ sealed class Scope(
     @Relationship(value = "IMPORTS_SCOPE", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(ImportResolver::class)
     val importedScopeEdges =
-        Imports(this, mirrorProperty = NamespaceScope::importedByEdges, outgoing = true)
+        Imports(
+            this,
+            mirroredCollection = { (it as NamespaceScope).importedByEdges },
+            outgoing = true,
+        )
 
     /** Virtual property for accessing [importedScopeEdges] without property edges. */
     val importedScopes by unwrapping(Scope::importedScopeEdges)

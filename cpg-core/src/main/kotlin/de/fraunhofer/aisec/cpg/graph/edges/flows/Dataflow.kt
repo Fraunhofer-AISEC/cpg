@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.converters.DataflowGranularityConverter
 import java.util.Objects
-import kotlin.reflect.KProperty
 
 /**
  * The granularity of the data-flow, e.g., whether the flow contains the whole object, or just a
@@ -272,7 +271,7 @@ class ContextSensitiveDataflow(
 /** This class represents a container of [Dataflow] property edges in a [thisRef]. */
 class Dataflows<T : Node>(
     thisRef: Node,
-    override var mirrorProperty: KProperty<MutableCollection<Dataflow>>,
+    override var mirroredCollection: (Node) -> MutableCollection<Dataflow>,
     outgoing: Boolean,
 ) :
     EdgeSet<Node, Dataflow>(thisRef = thisRef, init = ::Dataflow, outgoing = outgoing),

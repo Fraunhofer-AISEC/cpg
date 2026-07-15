@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.LOGGER
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.getCodeOfSubregion
@@ -154,6 +155,18 @@ fun Node.applyMetadata(
                 defaultNamespace
             }
         this.name = this.newName(name, doNotPrependNamespace, namespace)
+
+        // For most references, code and name are the same token. If their textual value matches,
+        // reuse the name string instance to avoid duplicate string objects.
+        if (this is Reference) {
+            val currentCode = this.code
+            if (currentCode != null) {
+                val nameAsString = this.name.toString()
+                if (currentCode == nameAsString) {
+                    this.code = nameAsString
+                }
+            }
+        }
     }
 
     // Disable the type observer if the config says so.

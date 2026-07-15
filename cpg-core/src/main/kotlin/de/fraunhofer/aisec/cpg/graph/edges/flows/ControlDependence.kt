@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
-import kotlin.reflect.KProperty
 
 /**
  * An edge in a Control Dependence Graph (CDG). Denotes that the [start] node exercises control
@@ -66,13 +65,13 @@ class ControlDependence(
 class ControlDependences<NodeType : Node> :
     EdgeList<Node, ControlDependence>, MirroredEdgeCollection<Node, ControlDependence> {
 
-    override var mirrorProperty: KProperty<MutableCollection<ControlDependence>>
+    override var mirroredCollection: (Node) -> MutableCollection<ControlDependence>
 
     constructor(
         thisRef: Node,
-        mirrorProperty: KProperty<MutableCollection<ControlDependence>>,
+        mirroredCollection: (Node) -> MutableCollection<ControlDependence>,
         outgoing: Boolean,
     ) : super(thisRef = thisRef, init = ::ControlDependence, outgoing = outgoing) {
-        this.mirrorProperty = mirrorProperty
+        this.mirroredCollection = mirroredCollection
     }
 }

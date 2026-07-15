@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -56,7 +57,12 @@ import org.slf4j.LoggerFactory
  * from the (first) rhs to the [Assign] itself.
  */
 class Assign :
-    Expression(false), AssignmentHolder, ArgumentHolder, HasType.TypeObserver, HasOperatorCode {
+    Expression(false),
+    AssignmentHolder,
+    ArgumentHolder,
+    HasType.TypeObserver,
+    DeclarationHolder,
+    HasOperatorCode {
 
     override var operatorCode: String = "="
 
@@ -154,6 +160,11 @@ class Assign :
         }
 
     @Relationship("DECLARATIONS") var declarationEdges = astEdgesOf<Variable>()
+
+    override fun addDeclaration(declaration: Declaration) {
+        (declaration as? Variable)?.let { this.declarations.add(it) }
+    }
+
     /**
      * Some languages, such as Go explicitly allow the definition / declaration of variables in the
      * assignment (known as a "short assignment"). Some languages, such as Python even implicitly

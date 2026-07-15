@@ -31,6 +31,55 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 
+fun <T> addIfNotContains(collection: MutableCollection<T>, declaration: T) {
+    if (!collection.contains(declaration)) {
+        collection.add(declaration)
+    }
+}
+
+fun <T : AstNode, P : AstEdge<T>> addIfNotContains(collection: AstEdges<T, P>, declaration: T) {
+    addIfNotContains(collection, declaration, true)
+}
+
+fun <T : AstNode, P : Edge<T>> addIfNotContains(collection: EdgeList<T, P>, declaration: T) {
+    addIfNotContains(collection, declaration, true)
+}
+
+/**
+ * Adds a declaration to a collection of property edges, which contain the declarations
+ *
+ * @param collection the collection
+ * @param declaration the declaration
+ * @param <T> the type of the declaration
+ * @param outgoing whether the property is outgoing </T>
+ */
+fun <T : Node, P : Edge<T>> addIfNotContains(
+    collection: EdgeList<T, out P>,
+    declaration: T,
+    outgoing: Boolean,
+) {
+    var contains = false
+    for (element in collection) {
+        if (outgoing) {
+            if (element.end == declaration) {
+                contains = true
+                break
+            }
+        } else {
+            if (element.start == declaration) {
+                contains = true
+                break
+            }
+        }
+    }
+
+    if (contains) {
+        return
+    }
+
+    collection.add(declaration)
+}
+
 interface DeclarationHolder {
     /**
      * Adds the specified declaration to this declaration holder. Ideally, the declaration holder
@@ -39,55 +88,6 @@ interface DeclarationHolder {
      * @param declaration the declaration
      */
     fun addDeclaration(declaration: Declaration)
-
-    fun <T : Declaration> addIfNotContains(collection: MutableCollection<T>, declaration: T) {
-        if (!collection.contains(declaration)) {
-            collection.add(declaration)
-        }
-    }
-
-    fun <T : AstNode, P : AstEdge<T>> addIfNotContains(collection: AstEdges<T, P>, declaration: T) {
-        addIfNotContains(collection, declaration, true)
-    }
-
-    fun <T : AstNode, P : Edge<T>> addIfNotContains(collection: EdgeList<T, P>, declaration: T) {
-        addIfNotContains(collection, declaration, true)
-    }
-
-    /**
-     * Adds a declaration to a collection of property edges, which contain the declarations
-     *
-     * @param collection the collection
-     * @param declaration the declaration
-     * @param <T> the type of the declaration
-     * @param outgoing whether the property is outgoing </T>
-     */
-    fun <T : Node, P : Edge<T>> addIfNotContains(
-        collection: EdgeList<T, out P>,
-        declaration: T,
-        outgoing: Boolean,
-    ) {
-        var contains = false
-        for (element in collection) {
-            if (outgoing) {
-                if (element.end == declaration) {
-                    contains = true
-                    break
-                }
-            } else {
-                if (element.start == declaration) {
-                    contains = true
-                    break
-                }
-            }
-        }
-
-        if (contains) {
-            return
-        }
-
-        collection.add(declaration)
-    }
 
     val declarations: List<Declaration>
 }

@@ -555,7 +555,12 @@ class Context(
     var steps: Int = 0,
 ) : HasAssumptions {
 
-    override val assumptions: MutableSet<Assumption> = mutableSetOf()
+    private var assumptionsStorage: MutableSet<Assumption>? = null
+
+    override val assumptions: MutableSet<Assumption>
+        get() {
+            return assumptionsStorage ?: mutableSetOf<Assumption>().also { assumptionsStorage = it }
+        }
 
     fun clone(): Context {
         return Context(indexStack = indexStack.clone(), callStack = callStack.clone(), steps)
@@ -1583,13 +1588,12 @@ inline fun <reified T : Scope> Scope.firstScopeParentOrNull(
  */
 val AstNode?.problems: List<ProblemNode>
     get() {
-        val relevantNodes =
-            this.allChildren<Node> { it is ProblemNode || it.additionalProblems.isNotEmpty() }
+        val relevantNodes = this.allChildren<Node> { it is ProblemNode || it.hasAdditionalProblems }
 
         val result = mutableListOf<ProblemNode>()
 
         relevantNodes.forEach {
-            if (it.additionalProblems.isNotEmpty()) {
+            if (it.hasAdditionalProblems) {
                 result += it.additionalProblems
             }
             if (it is ProblemNode) {

@@ -64,7 +64,7 @@ abstract class Declaration : AstNode(), HasModifiers, HasMemoryAddress, HasMemor
     @Relationship
     override var memoryAddressEdges: MemoryAddressEdges =
         memoryAddressEdgesOf(
-            mirrorProperty = MemoryAddress::usageEdges,
+            mirroredCollection = { (it as MemoryAddress).usageEdges },
             outgoing = true,
             onAdd = { toAdd ->
                 if (this.memoryAddressEdges.size > 1) {
@@ -79,7 +79,11 @@ abstract class Declaration : AstNode(), HasModifiers, HasMemoryAddress, HasMemor
     /** Where the memory value of this declaration is used. */
     @Relationship
     override var memoryValueUsageEdges =
-        Dataflows<Node>(this, mirrorProperty = HasMemoryValue::memoryValueEdges, outgoing = true)
+        Dataflows<Node>(
+            this,
+            mirroredCollection = { (it as HasMemoryValue).memoryValueEdges },
+            outgoing = true,
+        )
     override var memoryValueUsages by unwrapping(Declaration::memoryValueUsageEdges)
 
     /** Each Declaration can also have a MemoryValue. */
@@ -87,7 +91,7 @@ abstract class Declaration : AstNode(), HasModifiers, HasMemoryAddress, HasMemor
     override var memoryValueEdges =
         Dataflows<Node>(
             this,
-            mirrorProperty = HasMemoryValue::memoryValueUsageEdges,
+            mirroredCollection = { (it as HasMemoryValue).memoryValueUsageEdges },
             outgoing = false,
         )
     override var memoryValues by unwrapping(Declaration::memoryValueEdges)

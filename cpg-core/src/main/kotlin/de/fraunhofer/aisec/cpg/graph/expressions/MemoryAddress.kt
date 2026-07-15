@@ -44,7 +44,7 @@ open class MemoryAddress(override var name: Name, open var isGlobal: Boolean = f
     @Relationship
     open var usageEdges =
         memoryAddressEdgesOf(
-            mirrorProperty = HasMemoryAddress::memoryAddressEdges,
+            mirroredCollection = { (it as HasMemoryAddress).memoryAddressEdges },
             outgoing = false,
         )
     open var usages by unwrapping(MemoryAddress::usageEdges)
@@ -65,14 +65,18 @@ open class MemoryAddress(override var name: Name, open var isGlobal: Boolean = f
     override var memoryValueEdges =
         Dataflows<Node>(
             this,
-            mirrorProperty = HasMemoryValue::memoryValueUsageEdges,
+            mirroredCollection = { (it as HasMemoryValue).memoryValueUsageEdges },
             outgoing = false,
         )
     override var memoryValues by unwrapping(MemoryAddress::memoryValueEdges)
 
     @Relationship
     override var memoryValueUsageEdges =
-        Dataflows<Node>(this, mirrorProperty = HasMemoryValue::memoryValueEdges, outgoing = true)
+        Dataflows<Node>(
+            this,
+            mirroredCollection = { (it as HasMemoryValue).memoryValueEdges },
+            outgoing = true,
+        )
     override var memoryValueUsages by unwrapping(MemoryAddress::memoryValueUsageEdges)
 }
 
@@ -88,7 +92,10 @@ class ParameterMemoryValue(override var name: Name) : MemoryAddress(name), HasMe
      * get to the parameter's address
      */
     override var memoryAddressEdges =
-        memoryAddressEdgesOf(mirrorProperty = MemoryAddress::usageEdges, outgoing = true)
+        memoryAddressEdgesOf(
+            mirroredCollection = { (it as MemoryAddress).usageEdges },
+            outgoing = true,
+        )
 
     override var memoryAddresses by unwrapping(ParameterMemoryValue::memoryAddressEdges)
 }
@@ -114,7 +121,10 @@ class UnknownMemoryValue(
     }
 
     override var memoryAddressEdges =
-        memoryAddressEdgesOf(mirrorProperty = MemoryAddress::usageEdges, outgoing = true)
+        memoryAddressEdgesOf(
+            mirroredCollection = { (it as MemoryAddress).usageEdges },
+            outgoing = true,
+        )
 
     override var memoryAddresses by unwrapping(UnknownMemoryValue::memoryAddressEdges)
 }

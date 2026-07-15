@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSingletonList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
-import kotlin.reflect.KProperty
 
 /**
  * Represents an edge in a graph specifically used for overlay purposes.
@@ -50,14 +49,14 @@ class OverlayEdge(start: Node, end: Node) : Edge<Node>(start, end) {
  *
  * @param thisRef The current node that the edge originates from or is associated with.
  * @param of The optional target node of the edge.
- * @param mirrorProperty The property representing a mutable collection of mirrored overlay edges.
+ * @param mirroredCollection Accessor for the mirrored collection of overlay edges.
  * @param outgoing A flag indicating whether the edge is outgoing (default is true).
  * @constructor Initializes the [OverlaySingleEdge] instance with the provided parameters.
  */
 class OverlaySingleEdge(
     thisRef: Node,
     of: Node?,
-    override var mirrorProperty: KProperty<MutableCollection<OverlayEdge>>,
+    override var mirroredCollection: (Node) -> MutableCollection<OverlayEdge>,
     outgoing: Boolean = true,
     onChange: ((old: OverlayEdge?, new: OverlayEdge?) -> Unit)? = null,
 ) :
@@ -76,14 +75,14 @@ class OverlaySingleEdge(
  * incoming edge handling capabilities.
  *
  * @param thisRef The reference node that the overlays are associated with.
- * @param mirrorProperty A reference to a property that mirrors the collection of overlay edges.
+ * @param mirroredCollection Accessor for the mirrored collection of overlay edges.
  * @param outgoing A boolean indicating whether the edges managed by this collection are outgoing.
  * @constructor Initializes the [Overlays] object with a reference node, a property for edge
  *   mirroring, and a direction to specify outgoing or incoming edges.
  */
 class Overlays(
     thisRef: Node,
-    override var mirrorProperty: KProperty<MutableCollection<OverlayEdge>>,
+    override var mirroredCollection: (Node) -> MutableCollection<OverlayEdge>,
     outgoing: Boolean,
 ) :
     EdgeSet<Node, OverlayEdge>(thisRef = thisRef, init = ::OverlayEdge, outgoing = outgoing),

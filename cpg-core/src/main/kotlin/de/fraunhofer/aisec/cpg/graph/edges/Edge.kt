@@ -57,7 +57,13 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
     // Node where the edge is ingoing
     @JsonBackReference var end: NodeType
 
-    @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
+    @DoNotPersist @JsonIgnore private var assumptionsStorage: MutableSet<Assumption>? = null
+
+    @DoNotPersist
+    override val assumptions: MutableSet<Assumption>
+        get() {
+            return assumptionsStorage ?: mutableSetOf<Assumption>().also { assumptionsStorage = it }
+        }
 
     constructor(start: Node, end: NodeType) {
         this.start = start

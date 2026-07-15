@@ -25,10 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
+import de.fraunhofer.aisec.cpg.graph.HasLocals
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
+import de.fraunhofer.aisec.cpg.graph.addIfNotContains
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.persistence.Relationship
@@ -39,7 +46,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * A statement which contains a list of statements. A common example is a function body within a
  * [Function].
  */
-open class Block : Expression(false), StatementHolder {
+open class Block : Expression(false), StatementHolder, DeclarationHolder, HasLocals {
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
@@ -61,10 +68,12 @@ open class Block : Expression(false), StatementHolder {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Block) return false
-        return super.equals(other) && Edge.propertyEqualsList(statementEdges, other.statementEdges)
+        return super.equals(other) &&
+            Edge.propertyEqualsList(statementEdges, other.statementEdges) &&
+            propertyEqualsList(localEdges, other.localEdges)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode())
+    override fun hashCode() = Objects.hash(super.hashCode(), locals)
 
     /** Returns the [n]-th statement in this list of statements. */
     operator fun get(n: Int): Expression {
@@ -74,4 +83,21 @@ open class Block : Expression(false), StatementHolder {
     override fun getStartingPrevEOG(): Collection<Node> {
         return this.statements.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
     }
+
+    @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
+    override var localEdges = astEdgesOf<ValueDeclaration>()
+
+    /** Virtual property to access [localEdges] without property edges. */
+    override var locals by unwrapping(Block::localEdges)
+
+    override fun addDeclaration(declaration: Declaration) {
+        if (declaration is Variable) {
+            addIfNotContains(localEdges, declaration)
+        } else if (declaration is Function) {
+            addIfNotContains(localEdges, declaration)
+        }
+    }
+
+    override val declarations: List<Declaration>
+        get() = locals
 }

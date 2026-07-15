@@ -27,6 +27,10 @@ package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -41,7 +45,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * that declares variables, can change them in an iteration statement and is executed until the
  * condition evaluates to false.
  */
-class For : Loop(), BranchingNode, StatementHolder {
+class For : Loop(), BranchingNode, StatementHolder, DeclarationHolder, HasLocals {
 
     @Relationship("INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Expression>()
@@ -99,7 +103,8 @@ class For : Loop(), BranchingNode, StatementHolder {
             initializerStatement == other.initializerStatement &&
             conditionDeclaration == other.conditionDeclaration &&
             condition == other.condition &&
-            iterationStatement == other.iterationStatement
+            iterationStatement == other.iterationStatement &&
+            propertyEqualsList(localEdges, other.localEdges)
     }
 
     override fun hashCode(): Int {
@@ -108,6 +113,7 @@ class For : Loop(), BranchingNode, StatementHolder {
             this.initializerStatement,
             this.conditionDeclaration,
             this.iterationStatement,
+            locals,
         )
     }
 
@@ -122,4 +128,21 @@ class For : Loop(), BranchingNode, StatementHolder {
     override fun getExitNextEOG(): Collection<Node> {
         return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
     }
+
+    @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
+    override var localEdges = astEdgesOf<ValueDeclaration>()
+
+    /** Virtual property to access [localEdges] without property edges. */
+    override var locals by unwrapping(For::localEdges)
+
+    override fun addDeclaration(declaration: Declaration) {
+        if (declaration is Variable) {
+            addIfNotContains(localEdges, declaration)
+        } else if (declaration is Function) {
+            addIfNotContains(localEdges, declaration)
+        }
+    }
+
+    override val declarations: List<Declaration>
+        get() = locals
 }
