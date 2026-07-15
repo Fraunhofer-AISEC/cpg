@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
-import kotlin.reflect.KProperty
 
 /**
  * An edge in our Evaluation Order Graph (EOG). It considers the order in which our AST statements
@@ -89,7 +88,7 @@ class EvaluationOrder(
  */
 class EvaluationOrders<NodeType : Node>(
     thisRef: Node,
-    override var mirrorProperty: KProperty<MutableCollection<EvaluationOrder>>,
+    override var mirroredCollection: (Node) -> MutableCollection<EvaluationOrder>,
     outgoing: Boolean = true,
 ) :
     EdgeList<Node, EvaluationOrder>(

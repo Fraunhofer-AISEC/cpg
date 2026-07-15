@@ -352,7 +352,8 @@ class LLVMIRLanguageFrontendTest {
 
         // Check that the first statement is "literal_i32_i1 val_success = literal_i32_i1(*ptr, *ptr
         // == 5)"
-        val declaration = cmpxchgStatement.statements[0].declarations[0]
+        val declaration =
+            (cmpxchgStatement.statements[0] as? DeclarationHolder)?.declarations?.firstOrNull()
         assertIs<Variable>(declaration)
         assertLocalName("val_success", declaration)
         assertLocalName("literal_i32_i1", declaration.type)

@@ -383,30 +383,35 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             )
 
             val declFromMultiplicateExpression =
-                (statements[0] as DeclarationStatement).getSingleDeclarationAs(Variable::class.java)
+                (statements[0] as? DeclarationStatement)?.getSingleDeclarationAs(
+                    Variable::class.java
+                )
             assertEquals(
                 assertResolvedType("SSL_CTX").pointer(),
-                declFromMultiplicateExpression.type,
+                declFromMultiplicateExpression?.type,
             )
             assertLocalName("ptr", declFromMultiplicateExpression)
 
             val withInitializer =
-                (statements[1] as DeclarationStatement).getSingleDeclarationAs(Variable::class.java)
-            var initializer = withInitializer.initializer
+                (statements[1] as? DeclarationStatement)?.getSingleDeclarationAs(
+                    Variable::class.java
+                )
+            var initializer = withInitializer?.initializer
             assertNotNull(initializer)
             assertTrue(initializer is Literal<*>)
             assertEquals(1, initializer.value)
 
-            val twoDeclarations = statements[2].declarations
+            val twoDeclarations = (statements[2] as? DeclarationHolder)?.declarations
+            assertNotNull(twoDeclarations)
             assertEquals(2, twoDeclarations.size)
 
-            val b = twoDeclarations[0] as Variable
-            assertNotNull(b)
+            val b = twoDeclarations[0]
+            assertIs<Variable>(b)
             assertLocalName("b", b)
             assertEquals(primitiveType("int").reference(POINTER), b.type)
 
-            val c = twoDeclarations[1] as Variable
-            assertNotNull(c)
+            val c = twoDeclarations[1]
+            assertIs<Variable>(c)
             assertLocalName("c", c)
             assertEquals(primitiveType("int"), c.type)
 
@@ -430,15 +435,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertLocalName("ptr2", pointerWithAssign)
             assertLiteralValue(null, pointerWithAssign.initializer)
 
-            val classWithVariable = statements[6].declarations
+            val classWithVariable = (statements[6] as? DeclarationHolder)?.declarations
+            assertNotNull(classWithVariable)
             assertEquals(2, classWithVariable.size)
 
-            val classA = classWithVariable[0] as Record
-            assertNotNull(classA)
+            val classA = classWithVariable[0]
+            assertIs<Record>(classA)
             assertLocalName("A", classA)
 
-            val myA = classWithVariable[1] as Variable
-            assertNotNull(myA)
+            val myA = classWithVariable[1]
+            assertIs<Variable>(myA)
             assertLocalName("myA", myA)
             assertEquals(classA, (myA.type as ObjectType).recordDeclaration)
         }

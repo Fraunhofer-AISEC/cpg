@@ -59,7 +59,7 @@ class BasicBlock() : OverlayNode() {
     @Relationship(value = "BB", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(BasicBlockCollectorPass::class)
     var nodeEdges: BasicBlockEdgeList<Node> =
-        BasicBlockEdgeList(this, mirrorProperty = Node::basicBlockEdges, outgoing = false)
+        BasicBlockEdgeList(this, mirroredCollection = { it.basicBlockEdges }, outgoing = false)
         protected set
 
     /** The nodes contained in this basic block. */

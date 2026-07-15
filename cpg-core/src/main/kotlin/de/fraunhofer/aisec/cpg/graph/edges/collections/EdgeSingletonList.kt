@@ -44,7 +44,7 @@ open class EdgeSingletonList<
     var onChanged: ((old: EdgeType?, new: EdgeType?) -> Unit)? = null,
     override var outgoing: Boolean,
     of: NullableNodeType,
-) : EdgeCollection<NodeType, EdgeType> {
+) : EdgeCollection<NodeType, EdgeType>, MirrorBacklinkCollection<EdgeType> {
 
     var element: EdgeType? =
         if (of == null) {
@@ -82,6 +82,35 @@ open class EdgeSingletonList<
                 "We cannot 'add' to a singleton edge list, that is already populated"
             )
         }
+    }
+
+    override fun addMirrorBacklink(element: EdgeType): Boolean {
+        if (this.element === element) {
+            return false
+        }
+
+        if (this.element != null) {
+            return false
+        }
+
+        this.element = element
+        onChanged?.invoke(null, this.element)
+        return true
+    }
+
+    override fun removeMirrorBacklink(element: EdgeType): Boolean {
+        if (this.element !== element) {
+            return false
+        }
+
+        val old = this.element
+        this.element = null
+        onChanged?.invoke(old, null)
+        return true
+    }
+
+    override fun containsMirrorBacklinkByIdentity(element: EdgeType): Boolean {
+        return this.element === element
     }
 
     override fun addAll(elements: Collection<EdgeType>): Boolean {

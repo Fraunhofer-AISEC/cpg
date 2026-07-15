@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.graph.expressions.MemoryAddress
-import kotlin.reflect.KProperty
 
 /** This edge class defines that [end] is a (possible) memory address of [start]. */
 open class MemoryAddressEdge(start: Node, end: MemoryAddress, var outgoing: Boolean) :
@@ -50,7 +49,7 @@ open class MemoryAddressEdge(start: Node, end: MemoryAddress, var outgoing: Bool
 /** This class represents a container of [MemoryAddressEdge] property edges in a [thisRef]. */
 class MemoryAddressEdges(
     thisRef: Node,
-    override var mirrorProperty: KProperty<MutableCollection<MemoryAddressEdge>>,
+    override var mirroredCollection: (Node) -> MutableCollection<MemoryAddressEdge>,
     outgoing: Boolean,
     onAdd: ((MemoryAddressEdge) -> Unit)? = null,
 ) :
@@ -64,13 +63,13 @@ class MemoryAddressEdges(
 
 /** Creates an [Node] container starting from this node. */
 fun Node.memoryAddressEdgesOf(
-    mirrorProperty: KProperty<MutableCollection<MemoryAddressEdge>>,
+    mirroredCollection: (Node) -> MutableCollection<MemoryAddressEdge>,
     outgoing: Boolean,
     onAdd: ((MemoryAddressEdge) -> Unit)? = null,
 ): MemoryAddressEdges {
     return MemoryAddressEdges(
         thisRef = this,
-        mirrorProperty = mirrorProperty,
+        mirroredCollection = mirroredCollection,
         outgoing = outgoing,
         onAdd = onAdd,
     )

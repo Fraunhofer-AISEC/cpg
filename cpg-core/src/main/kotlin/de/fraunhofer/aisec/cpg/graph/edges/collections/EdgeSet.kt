@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.edges.collections
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import java.util.function.Predicate
+import kotlin.collections.AbstractMutableSet
 
 /**
  * This class extends a list of property edges. This allows us to use list of property edges more
@@ -42,44 +43,166 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     // We explicitly set the capacity to 1, as we expect that most nodes will only have one edge of
     // a given type. This is a common case for many edge types in the CPG, and setting the initial
     // capacity to 1 can save memory in these cases.
-) : HashSet<EdgeType>(1), EdgeCollection<NodeType, EdgeType> {
+) :
+    AbstractMutableSet<EdgeType>(),
+    EdgeCollection<NodeType, EdgeType>,
+    MirrorBacklinkCollection<EdgeType> {
+
+    // Draft: compact 0/1/many storage to avoid eagerly allocating a HashSet for singleton cases.
+    private val storage = CompactEdgeStorage<EdgeType, MutableSet<EdgeType>> { cap -> HashSet(cap) }
+
+    override val size: Int
+        get() = storage.size
+
     override fun add(element: EdgeType): Boolean {
-        val ok = super<HashSet>.add(element)
+        val ok = addWithoutHooks(element)
         if (ok) {
             handleOnAdd(element)
         }
         return ok
     }
 
-    override fun removeIf(predicate: Predicate<in EdgeType>): Boolean {
-        val edges = filter { predicate.test(it) }
-        val ok = super<HashSet>.removeIf(predicate)
-        if (ok) {
-            edges.forEach { handleOnRemove(it) }
-        }
-        return ok
+    override fun addMirrorBacklink(element: EdgeType): Boolean {
+        return add(element)
     }
 
-    override fun removeAll(elements: Collection<EdgeType>): Boolean {
-        val ok = super.removeAll(elements.toSet())
-        if (ok) {
-            elements.forEach { handleOnRemove(it) }
+    override fun containsMirrorBacklinkByIdentity(element: EdgeType): Boolean {
+        return when {
+            storage.many != null -> storage.many!!.any { it === element }
+            else -> storage.first === element
         }
-        return ok
+    }
+
+    override fun containsByIdentity(edge: EdgeType): Boolean {
+        return containsMirrorBacklinkByIdentity(edge)
+    }
+
+    override fun removeMirrorBacklink(element: EdgeType): Boolean {
+        return removeByIdentityWithoutHooks(element)
+    }
+
+    override fun removeByIdentity(edge: EdgeType): Boolean {
+        val removed = removeByIdentityWithoutHooks(edge)
+        if (removed) {
+            handleOnRemove(edge)
+        }
+        return removed
+    }
+
+    private fun addWithoutHooks(element: EdgeType): Boolean {
+        return when {
+            storage.many != null -> {
+                storage.many!!.add(element)
+            }
+            storage.first == null -> {
+                storage.first = element
+                true
+            }
+            storage.first == element -> false
+            else -> {
+                storage.ensureMany(2).add(element)
+                true
+            }
+        }
+    }
+
+    override fun iterator(): MutableIterator<EdgeType> {
+        val singleton = storage.first
+        return if (storage.many != null) {
+            ManyIterator(storage.many!!.iterator())
+        } else {
+            SingletonIterator(singleton)
+        }
+    }
+
+    override fun contains(element: EdgeType): Boolean {
+        return storage.many?.contains(element) ?: (storage.first == element)
     }
 
     override fun remove(element: EdgeType): Boolean {
-        val ok = super<HashSet>.remove(element)
+        val ok = removeByEqualityWithoutHooks(element)
         if (ok) {
             handleOnRemove(element)
         }
         return ok
     }
 
+    private fun removeByEqualityWithoutHooks(element: EdgeType): Boolean {
+        return when {
+            storage.many != null -> {
+                val ok = storage.many!!.remove(element)
+                if (ok) {
+                    compactManyIfPossible()
+                }
+                ok
+            }
+            storage.first == element -> {
+                storage.first = null
+                true
+            }
+            else -> false
+        }
+    }
+
+    private fun removeByIdentityWithoutHooks(element: EdgeType): Boolean {
+        return when {
+            storage.many != null -> {
+                val it = storage.many!!.iterator()
+                var removed = false
+                while (it.hasNext()) {
+                    if (it.next() === element) {
+                        it.remove()
+                        removed = true
+                        break
+                    }
+                }
+
+                if (removed) {
+                    compactManyIfPossible()
+                }
+
+                removed
+            }
+            storage.first === element -> {
+                storage.first = null
+                true
+            }
+            else -> false
+        }
+    }
+
+    override fun removeIf(predicate: Predicate<in EdgeType>): Boolean {
+        val toRemove = this.filter { predicate.test(it) }
+        return removeAll(toRemove)
+    }
+
+    override fun removeAll(elements: Collection<EdgeType>): Boolean {
+        if (elements.isEmpty() || isEmpty()) {
+            return false
+        }
+
+        var changed = false
+        val toRemove = elements.toSet()
+        val it = iterator()
+
+        while (it.hasNext()) {
+            val edge = it.next()
+            if (edge in toRemove) {
+                it.remove()
+                changed = true
+            }
+        }
+
+        return changed
+    }
+
     override fun clear() {
+        if (isEmpty()) {
+            return
+        }
+
         // Make a copy of our edges so we can pass a copy to our on-remove handler
-        val edges = this.toSet()
-        super.clear()
+        val edges = storage.clearAndSnapshot()
         edges.forEach { handleOnRemove(it) }
     }
 
@@ -105,5 +228,60 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
 
     override fun hashCode(): Int {
         return internalHashcode(this, outgoing)
+    }
+
+    private fun compactManyIfPossible() {
+        storage.compactManyToSingleton { it.firstOrNull() }
+    }
+
+    private inner class ManyIterator(private val delegate: MutableIterator<EdgeType>) :
+        MutableIterator<EdgeType> {
+        private var last: EdgeType? = null
+
+        override fun hasNext(): Boolean {
+            return delegate.hasNext()
+        }
+
+        override fun next(): EdgeType {
+            return delegate.next().also { last = it }
+        }
+
+        override fun remove() {
+            val removed =
+                last ?: throw IllegalStateException("next() must be called before remove()")
+            delegate.remove()
+            handleOnRemove(removed)
+            compactManyIfPossible()
+            last = null
+        }
+    }
+
+    private inner class SingletonIterator(private val edge: EdgeType?) : MutableIterator<EdgeType> {
+        private var consumed = false
+        private var canRemove = false
+
+        override fun hasNext(): Boolean {
+            return !consumed && edge != null
+        }
+
+        override fun next(): EdgeType {
+            if (!hasNext()) {
+                throw NoSuchElementException()
+            }
+
+            consumed = true
+            canRemove = true
+            return edge!!
+        }
+
+        override fun remove() {
+            if (!canRemove || edge == null) {
+                throw IllegalStateException("next() must be called before remove()")
+            }
+
+            storage.first = null
+            handleOnRemove(edge)
+            canRemove = false
+        }
     }
 }

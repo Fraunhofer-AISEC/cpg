@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
-import kotlin.reflect.KProperty
 
 /** The types of dependences that might be represented in the CPG */
 enum class DependenceType {
@@ -49,11 +48,11 @@ enum class DependenceType {
  */
 class ProgramDependences<NodeType : Node> :
     EdgeSet<NodeType, Edge<NodeType>>, MirroredEdgeCollection<NodeType, Edge<NodeType>> {
-    override var mirrorProperty: KProperty<MutableCollection<Edge<NodeType>>>
+    override var mirroredCollection: (Node) -> MutableCollection<Edge<NodeType>>
 
     constructor(
         thisRef: Node,
-        mirrorProperty: KProperty<MutableCollection<Edge<NodeType>>>,
+        mirroredCollection: (Node) -> MutableCollection<Edge<NodeType>>,
         outgoing: Boolean,
     ) : super(
         thisRef,
@@ -64,7 +63,7 @@ class ProgramDependences<NodeType : Node> :
         },
         outgoing,
     ) {
-        this.mirrorProperty = mirrorProperty
+        this.mirroredCollection = mirroredCollection
     }
 
     override fun add(element: Edge<NodeType>): Boolean {

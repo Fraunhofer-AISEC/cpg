@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
-import kotlin.reflect.KProperty
 
 /** This edge class denotes the invocation of a [Function] by a [Call]. */
 class Invoke(
@@ -61,7 +60,7 @@ class Invoke(
 /** A container for [Usage] edges. [NodeType] is necessary for type safety. */
 class Invokes<NodeType : Function>(
     thisRef: Node,
-    override var mirrorProperty: KProperty<MutableCollection<Invoke>>,
+    override var mirroredCollection: (Node) -> MutableCollection<Invoke>,
     outgoing: Boolean = true,
 ) :
     EdgeList<Function, Invoke>(thisRef = thisRef, init = ::Invoke, outgoing = outgoing),

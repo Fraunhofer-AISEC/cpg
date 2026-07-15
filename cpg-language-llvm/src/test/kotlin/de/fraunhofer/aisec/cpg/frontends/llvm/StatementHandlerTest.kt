@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Assign
@@ -846,7 +847,8 @@ class StatementHandlerTest {
         requiresUintCast: Boolean,
     ) {
         // Check that the value is assigned to
-        val declaration = atomicrmwStatement.statements[0].declarations[0]
+        val declaration =
+            (atomicrmwStatement.statements[0] as? DeclarationHolder)?.declarations?.firstOrNull()
         assertIs<Variable>(declaration)
         assertLocalName(variableName, declaration)
         assertLocalName("i32", declaration.type)
@@ -897,7 +899,8 @@ class StatementHandlerTest {
         variableName: String,
     ) {
         // Check that the value is assigned to
-        val declaration = atomicrmwStatement.statements[0].declarations[0]
+        val declaration =
+            (atomicrmwStatement.statements[0] as? DeclarationHolder)?.declarations?.firstOrNull()
         assertIs<Variable>(declaration)
         assertLocalName(variableName, declaration)
         assertLocalName("i32", declaration.type)

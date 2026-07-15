@@ -25,14 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
 
-class ExpressionList : Expression() {
+class ExpressionList : Expression(), DeclarationHolder {
     @Relationship(value = "SUBEXPR", direction = Relationship.Direction.OUTGOING)
     var expressionEdges = astEdgesOf<Expression>()
     var expressions by unwrapping(ExpressionList::expressionEdges)
@@ -56,4 +58,10 @@ class ExpressionList : Expression() {
     override fun getStartingPrevEOG(): Collection<Node> {
         return this.expressions.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
     }
+
+    override fun addDeclaration(declaration: Declaration) {
+        declarations.add(declaration)
+    }
+
+    override val declarations: MutableList<Declaration> = mutableListOf()
 }

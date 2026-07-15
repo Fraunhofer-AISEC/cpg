@@ -48,7 +48,7 @@ abstract class OverlayNode() : Node() {
         OverlaySingleEdge(
             this,
             of = null,
-            mirrorProperty = Node::overlayEdges,
+            mirroredCollection = { it.overlayEdges },
             outgoing = false,
             onChange = this::propagateNodePropertiesFromUnderlyingNode,
         )

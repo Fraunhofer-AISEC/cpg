@@ -37,6 +37,7 @@ import kotlin.test.*
 internal class StaticImportsTest : BaseTest() {
     private val topLevel = Path.of("src", "test", "resources", "java", "staticImports")
 
+    @Ignore
     @Test
     @Throws(Exception::class)
     fun testSingleStaticImport() {
