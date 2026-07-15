@@ -9,12 +9,12 @@ pip install mcpo
 
 2. Build the CPG MCP server:
 ```bash
-./gradlew :cpg-mcp:installDist
+./gradlew :cpg-ai:installDist
 ```
 
 3. Start the proxy server:
 ```bash
-uvx mcpo --port 8000 -- /path/to/cpg-mcp/build/install/cpg-mcp/bin/cpg-mcp
+uvx mcpo --port 8000 -- /path/to/cpg-ai/build/install/cpg-ai/bin/cpg-ai
 ```
 
 5. Add to OpenWebUI:

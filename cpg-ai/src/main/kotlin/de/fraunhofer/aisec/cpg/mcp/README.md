@@ -29,7 +29,7 @@ The MCP server can be used via two transport types:
 The current implementation uses stdio since Claude Desktop only supports this transport type.
 
 ```bash
-./gradlew :cpg-mcp:installDist
+./gradlew :cpg-ai:installDist
 ```
 
 1. Open Claude Desktop
@@ -40,7 +40,7 @@ The current implementation uses stdio since Claude Desktop only supports this tr
     {
   "mcpServers": {
     "cpg": {
-      "command": "/path/to/cpg-mcp/build/install/cpg-mcp/bin/cpg-mcp"
+      "command": "/path/to/cpg-ai/build/install/cpg-ai/bin/cpg-ai"
     }
   }
 }

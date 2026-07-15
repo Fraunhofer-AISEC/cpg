@@ -25,8 +25,6 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
-import de.fraunhofer.aisec.codyze.console.ai.ChatService
-import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -47,7 +45,7 @@ private val log = LoggerFactory.getLogger("de.fraunhofer.aisec.codyze.console.Ma
  * the [configureWebconsole] function.
  */
 fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
-    val chatService: ChatService? =
+    val chatService: Any? =
         if (McpServerHelper.isEnabled) {
             runBlocking { initChatService() }
         } else {
@@ -60,8 +58,8 @@ fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
         .start(wait = true)
 }
 
-private suspend fun ConsoleService.initChatService(): ChatService? {
-    val chatService = ChatService.createIfConfigExist() ?: return null
+private suspend fun ConsoleService.initChatService(): Any? {
+    val chatService = McpServerHelper.createChatService() ?: return null
 
     McpServerHelper.startMcpServer(8081)
 
@@ -69,7 +67,7 @@ private suspend fun ConsoleService.initChatService(): ChatService? {
     if (translationResult != null) {
         McpServerHelper.setGlobalAnalysisResult(translationResult)
     }
-    chatService.connect()
+    McpServerHelper.connectChatService(chatService)
     log.info("MCP client connected")
     return chatService
 }
@@ -83,7 +81,7 @@ private suspend fun ConsoleService.initChatService(): ChatService? {
  */
 fun Application.configureWebconsole(
     service: ConsoleService = ConsoleService(),
-    chatService: ChatService? = null,
+    chatService: Any? = null,
 ) {
     install(CORS) {
         anyHost()
@@ -106,10 +104,10 @@ fun Application.configureWebconsole(
  * This function sets up the routing for the web console. It defines the API routes and static
  * resources (for serving the single-page application frontend).
  */
-fun Application.configureRouting(service: ConsoleService, chatService: ChatService? = null) {
+fun Application.configureRouting(service: ConsoleService, chatService: Any? = null) {
     routing {
         apiRoutes(service)
-        // If the cpg-mcp module is enabled, chatService won't be null, so the endpoints will be
+        // If the cpg-ai module is enabled, chatService won't be null, so the endpoints will be
         // reachable
         if (chatService != null) {
             chatRoutes(chatService)

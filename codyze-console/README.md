@@ -23,9 +23,9 @@ The web console is available at `http://localhost:8080`.
 
 ## AI Chat Features
 
-The AI chat requires the `cpg-mcp` module to be enabled and a configured LLM provider.
+The AI chat requires the `cpg-ai` module to be enabled and a configured LLM provider.
 
-### 1. Enable the `cpg-mcp` module
+### 1. Enable the `cpg-ai` module
 
 Run the configuration script:
 
@@ -33,14 +33,14 @@ Run the configuration script:
 ./configure_frontends.sh
 ```
 
-Or enable it manually by setting `enableMCPModule=true` in `gradle.properties`.
+Or enable it manually by setting `enableAIModule=true` in `gradle.properties`.
 
 ### 2. Configure your LLM provider
 
 Copy the example configuration:
 
 ```bash
-cp codyze-console/src/main/resources/application.conf.example codyze-console/src/main/resources/application.conf
+cp cpg-ai/src/main/resources/application.conf.example cpg-ai/src/main/resources/application.conf
 ```
 
 Then edit `application.conf` and configure the clients you want to use under `llm.clients`:
@@ -71,7 +71,7 @@ Currently, only Gemini and OpenAI-compatible endpoints are supported.
 
 ### 3. MCP Server
 
-When `cpg-mcp` is enabled, the MCP server is automatically started on port `8081`. The AI chat connects to it as an MCP client to access the CPG tools (e.g., listing functions, records, and calls).
+When `cpg-ai` is enabled, the MCP server is automatically started on port `8081`. The AI chat connects to it as an MCP client to access the CPG tools (e.g., listing functions, records, and calls).
 
 ## Architecture
 
@@ -79,7 +79,7 @@ The following diagram shows the interaction between the main components during a
 
 ```
 Frontend            Backend              LLM               MCP Server
-(Svelte)           (ChatService)      (Gemini/OpenAI)       (cpg-mcp)
+(Svelte)           (ChatService)      (Gemini/OpenAI)       (cpg-ai) 
    |                    |                    |                   |
    | POST /api/chat     |                    |                   |
    | {messages}         |                    |                   |

@@ -14,27 +14,19 @@ mavenPublishing {
     }
 }
 
-val mcpEnabled = findProject(":cpg-mcp") != null
-
 dependencies {
     // CPG modules
     implementation(projects.cpgConcepts)
     implementation(projects.cpgSerialization)
 
-    // MCP dependencies
-    if (mcpEnabled) {
-        implementation(project(":cpg-mcp"))
-        // MCP SDK
-        implementation(libs.mcp)
-        // MCP Client SDK - for custom MCP client implementation
-        implementation(libs.mcp.client)
-    } else {
-        // MCP SDK only available at compile time so the files in `/ai` compile,
-        compileOnly(libs.mcp)
-        compileOnly(libs.mcp.client)
-        testImplementation(libs.mcp)
-        testImplementation(libs.mcp.client)
-    }
+    // The optional `cpg-ai` module (MCP server, ChatService, ...) is never a compile-time
+    // dependency: it may not be part of the build at all (see `enableAIModule` in
+    // `gradle.properties`), so all access to it goes through reflection in [McpServerHelper].
+    // It's still needed at runtime though, so its classes are on the classpath for that
+    // reflection to find - hence runtimeOnly (and the findProject guard, since directly
+    // referencing the project would fail the build entirely if it isn't included).
+    findProject(":cpg-ai")?.also { runtimeOnly(it) }
+    implementation(libs.kotlin.reflect)
 
     // Ktor server dependencies
     implementation(libs.bundles.ktor)

@@ -43,8 +43,10 @@ application {
 
 mavenPublishing {
     pom {
-        name.set("Code Property Graph - MCP Server")
-        description.set("An Application to expose the Code Property Graph library via MCP.")
+        name.set("Code Property Graph - AI")
+        description.set(
+            "AI components for the Code Property Graph, such as an MCP server, skills, and chat integration."
+        )
         withXml {
             // Modify the XML to exclude dependencies that start with "cpg-language-".
             // This is necessary because we do not want to "leak" the dependency to our dynamically
@@ -65,10 +67,13 @@ mavenPublishing {
 
 dependencies {
     implementation(libs.mcp)
+    implementation(libs.mcp.client)
     api(libs.ktor.server.cio)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.cors)
     implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.bundles.ktor.client)
+    implementation(libs.kotlinx.serialization.json)
 
     // Test dependencies
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")

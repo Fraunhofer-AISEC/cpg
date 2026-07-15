@@ -54,9 +54,9 @@ val enableINIFrontend: Boolean by extra {
     val enableINIFrontend: String? by settings
     enableINIFrontend.toBoolean()
 }
-val enableMCPModule: Boolean by extra {
-    val enableMCPModule: String? by settings
-    enableMCPModule.toBoolean()
+val enableAIModule: Boolean by extra {
+    val enableAIModule: String? by settings
+    enableAIModule.toBoolean()
 }
 
 if (enableJavaFrontend) include(":cpg-language-java")
@@ -68,7 +68,7 @@ if (enableTypeScriptFrontend) include(":cpg-language-typescript")
 if (enableRubyFrontend) include(":cpg-language-ruby")
 if (enableJVMFrontend) include(":cpg-language-jvm")
 if (enableINIFrontend) include(":cpg-language-ini")
-if (enableMCPModule) include(":cpg-mcp")
+if (enableAIModule) include(":cpg-ai")
 
 
 kover {

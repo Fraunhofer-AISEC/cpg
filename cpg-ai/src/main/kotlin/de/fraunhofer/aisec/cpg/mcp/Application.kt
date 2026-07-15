@@ -46,7 +46,7 @@ import kotlinx.io.asSource
 import kotlinx.io.buffered
 import org.slf4j.LoggerFactory
 
-class Application : CliktCommand(name = "cpg-mcp") {
+class Application : CliktCommand(name = "cpg-ai") {
     private val log = LoggerFactory.getLogger(Application::class.java)
 
     private val ssePort by

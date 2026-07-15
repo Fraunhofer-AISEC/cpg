@@ -25,9 +25,6 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
-import de.fraunhofer.aisec.codyze.console.ai.ChatRequestJSON
-import de.fraunhofer.aisec.codyze.console.ai.ChatService
-import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import io.ktor.http.*
@@ -287,14 +284,18 @@ fun Routing.apiRoutes(service: ConsoleService) {
     }
 }
 
-/** Chat and MCP routes — only registered when [ChatService] is available. */
-fun Route.chatRoutes(chatService: ChatService) {
+/**
+ * Chat and MCP routes — only registered when a `ChatService` instance (created via
+ * [McpServerHelper.createChatService]) is available. [chatService] is an opaque instance from the
+ * optional `cpg-ai` module; all calls go through [McpServerHelper].
+ */
+fun Route.chatRoutes(chatService: Any) {
     route("/api/chat") {
         post {
-            val request = call.receive<ChatRequestJSON>()
+            val request = call.receive<JsonObject>()
             call.respondTextWriter(contentType = ContentType.Text.EventStream) {
                 try {
-                    chatService.chat(request).collect { chunk ->
+                    McpServerHelper.chat(chatService, request).collect { chunk ->
                         try {
                             chunk.split("\n").forEach { line -> write("data: $line\n") }
                             write("\n")
@@ -315,26 +316,26 @@ fun Route.chatRoutes(chatService: ChatService) {
             }
         }
 
-        get("/providers") { call.respond(chatService.listAvailableProviders()) }
+        get("/providers") { call.respond(McpServerHelper.listAvailableProviders(chatService)) }
 
-        get("/mcp/capabilities") { call.respond(chatService.getMcpCapabilities()) }
+        get("/mcp/capabilities") { call.respond(McpServerHelper.getMcpCapabilities(chatService)) }
 
         post("/mcp/prompts/{name}") {
             val name =
                 call.parameters["name"] ?: return@post call.respond(HttpStatusCode.BadRequest)
             val arguments = call.receiveNullable<Map<String, String>>() ?: emptyMap()
-            call.respond(chatService.getPrompt(name, arguments))
+            call.respond(McpServerHelper.getPrompt(chatService, name, arguments))
         }
 
         post("/mcp/tools/{toolName}") {
             val toolName =
                 call.parameters["toolName"] ?: return@post call.respond(HttpStatusCode.BadRequest)
             val body = call.receive<JsonObject>()
-            val result = chatService.callTool(toolName, body)
+            val result = McpServerHelper.callTool(chatService, toolName, body)
             call.respond(result)
         }
 
-        get("/skills") { call.respond(chatService.getSkills()) }
+        get("/skills") { call.respond(McpServerHelper.getSkills(chatService)) }
     }
 }
 

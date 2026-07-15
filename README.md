@@ -174,9 +174,9 @@ Through the `JepSingleton`, the CPG library will look for well known paths on Li
 
 For parsing TypeScript, the necessary TypeScript-based code can be found in the `src/main/nodejs` directory of the `cpg-language-typescript` submodule. Gradle should build the script automatically. The bundles script will be placed inside the jar's resources and should work out of the box.
 
-#### MCP
+#### AI
 
-[Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro) functionality is provided via the optional `cpg-mcp` module. It can be enabled/disabled via the `gradle.properties` setting `enableMCPModule`.
+[Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro) functionality, together with other AI components such as skills and chat integration, is provided via the optional `cpg-ai` module. It can be enabled/disabled via the `gradle.properties` setting `enableAIModule`.
 
 ### Code Style
 

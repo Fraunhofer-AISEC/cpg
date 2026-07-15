@@ -60,7 +60,7 @@ fun configureServer(
         this
     }
 ): Server {
-    val info = Implementation(name = "cpg-mcp-server", version = "1.0.0")
+    val info = Implementation(name = "cpg-ai-server", version = "1.0.0")
 
     val options =
         ServerOptions(
