@@ -224,6 +224,15 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val helperType = ref.resolutionHelper?.type
         val record = scopeManager.currentRecord
 
+        // An empty local name means the reference has no lookup target. This happens for
+        // PointerDereference / PointerReference nodes wrapping a non-Reference operand (e.g.
+        // `*(p++)`, `&(a + 1)`), where the frontend deliberately leaves the name null instead
+        // of leaking the inner operator's code as a fake symbol name. Skipping avoids the
+        // "unresolved symbol" and phantom-Variable inference that would follow.
+        if (ref.name.localName.isEmpty()) {
+            return
+        }
+
         // Ignore references to anonymous identifiers, if the language supports it (e.g., the _
         // identifier in Go)
         if (
@@ -710,10 +719,17 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 ) != IncompatibleSignature
             }
 
-        return constructorCandidate
-            ?: recordDeclaration
-                .startInference(ctx)
-                ?.createInferredConstructor(constructExpression.signature)
+        if (constructorCandidate != null) return constructorCandidate
+
+        // Only languages that actually have classes have constructors. In C we still generate
+        // Construction nodes (e.g. for compound-literal / brace-init struct construction), but
+        // it makes no sense to synthesize a `struct::struct` method on top of the record — no
+        // real callsite ever invokes one.
+        if (recordDeclaration.language !is HasClasses) return null
+
+        return recordDeclaration
+            .startInference(ctx)
+            ?.createInferredConstructor(constructExpression.signature)
     }
 
     companion object {

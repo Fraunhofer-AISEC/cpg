@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.ResolveInFrontend
+import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -431,7 +432,10 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         processMembers(recordDeclaration, ctx)
 
-        if (recordDeclaration.constructors.isEmpty()) {
+        // Constructors are only meaningful in languages that actually have classes (C++). Adding
+        // an implicit default constructor to every C struct pollutes the graph with a
+        // synthetic `struct::struct` node that no real code ever calls.
+        if (frontend.language is HasClasses && recordDeclaration.constructors.isEmpty()) {
             // create an implicit constructor declaration with the same name as the record
             val constructorDeclaration =
                 newConstructor(recordDeclaration.name.localName, recordDeclaration)

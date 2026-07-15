@@ -93,6 +93,12 @@ fun Pass<*>.tryNamespaceInference(name: Name, source: Node): Namespace? {
  * not possible, or if it was turned off in the [InferenceConfiguration].
  */
 internal fun Pass<*>.tryRecordInference(type: Type, source: Node): Record? {
+    // Only object types can be represented by a Record; anything else (FunctionPointerType,
+    // ParameterizedType, ...) has no meaningful record to infer. Callers pass in "unknown" types
+    // opportunistically, so treat this as an expected no-op rather than an error condition —
+    // Inference.inferRecordDeclaration used to log an ERROR here, which is misleading noise.
+    if (type !is ObjectType) return null
+
     val kind =
         if (type.language is HasStructs) {
             "struct"

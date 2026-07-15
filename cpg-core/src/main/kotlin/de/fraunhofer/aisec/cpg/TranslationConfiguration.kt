@@ -134,6 +134,22 @@ private constructor(
     val exclusionPatternsByRegex: List<Regex>,
     /** Whether the type propagation system using [TypeObserver] should be disabled. */
     val disableTypeObserver: Boolean,
+    /**
+     * When non-null, the C/C++ frontend prepends a compiler-intrinsic prelude to every translation
+     * unit (via CDT's `ExtendedScannerInfo` include-files mechanism, equivalent to `clang
+     * -include`) so that references to clang/gcc built-ins that no real header defines can be
+     * resolved.
+     *
+     * The value names one of the target folders under
+     * `cpg-language-cxx/src/main/resources/de/fraunhofer/aisec/cpg/frontends/cxx/builtins/` (e.g.
+     * `"darwin-arm64"`). Each target folder contains a `cpg_builtins.h` with the OS/arch's
+     * preprocessor predefines and typedefs, and shares a sibling `common.h` with cross-target
+     * pieces. Passing a target that has no matching folder logs a warning and skips the injection.
+     *
+     * Off by default because the prelude adds implicit declarations to every TU, which some
+     * existing tests count against.
+     */
+    val injectCompilerBuiltins: String? = null,
 ) {
     /** This list contains all languages which we want to translate. */
     @JsonIgnore val languages: Set<KClass<out Language<*>>>
@@ -283,6 +299,7 @@ private constructor(
         private val exclusionPatternsByRegex = mutableListOf<Regex>()
         private val exclusionPatternsByString = mutableListOf<String>()
         private var disableTypeObserver = false
+        private var injectCompilerBuiltins: String? = null
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -739,6 +756,21 @@ private constructor(
             return this
         }
 
+        /**
+         * Enable prepending a compiler-intrinsic prelude to every C/C++ translation unit for the
+         * given target (e.g. `"darwin-arm64"`). The [target] names a folder under the frontend's
+         * classpath resource tree `builtins/`, whose `cpg_builtins.h` will be included by the
+         * parser before any user code. Pass `null` (the default) to disable.
+         *
+         * Enables references to clang/gcc built-ins (e.g. `__builtin_va_list`) to resolve to real
+         * typedefs / prototypes instead of being inferred as bogus structs. Adds a small number of
+         * implicit declarations per TU.
+         */
+        fun injectCompilerBuiltins(target: String?): Builder {
+            injectCompilerBuiltins = target
+            return this
+        }
+
         @Throws(ConfigurationException::class)
         fun build(): TranslationConfiguration {
             registerExtraFrontendPasses()
@@ -772,6 +804,7 @@ private constructor(
                 exclusionPatternsByString,
                 exclusionPatternsByRegex,
                 disableTypeObserver,
+                injectCompilerBuiltins,
             )
         }
 
