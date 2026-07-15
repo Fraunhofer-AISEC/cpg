@@ -73,8 +73,23 @@ abstract class Node() :
     HasScope,
     HasAssumptions {
 
+    /**
+     * Caches the (structural) [hashCode]. A value of `0` means "not yet computed" (a genuine
+     * hashCode of `0` is harmless: it simply recomputes on the next call). [hashCode] depends only
+     * on [name], [location] and the constant runtime class, so the [name] and [location] setters
+     * invalidate this cache. This is safe because [Name] is immutable and no [PhysicalLocation] is
+     * mutated in place in the codebase, so those setters observe every change. With the cache, the
+     * value returned is always identical to the live computation.
+     */
+    @DoNotPersist @JsonIgnore private var cachedHashCode: Int = 0
+
     /** This property holds the full name using our new [Name] class. */
-    @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
+    @Convert(NameConverter::class)
+    override var name: Name = Name(EMPTY_NAME)
+        set(value) {
+            field = value
+            cachedHashCode = 0
+        }
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
@@ -106,7 +121,12 @@ abstract class Node() :
     /** Optional comment of this node. */
     var comment: String? = null
 
-    @Convert(LocationConverter::class) override var location: PhysicalLocation? = null
+    @Convert(LocationConverter::class)
+    override var location: PhysicalLocation? = null
+        set(value) {
+            field = value
+            cachedHashCode = 0
+        }
 
     /** Incoming control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
@@ -439,7 +459,16 @@ abstract class Node() :
      * location already when creating the node.
      */
     override fun hashCode(): Int {
-        return Objects.hash(name, location, this.javaClass.name)
+        // Cached (see [cachedHashCode]); invalidated by the [name]/[location] setters. This is
+        // called very frequently (every structural HashMap/HashSet operation on a node), so
+        // avoiding
+        // the recomputation - and the varargs array [Objects.hash] allocates - is worthwhile.
+        var h = cachedHashCode
+        if (h == 0) {
+            h = Objects.hash(name, location, this.javaClass.name)
+            cachedHashCode = h
+        }
+        return h
     }
 
     /** Returns the starting point of the EOG outside this node and its children. */
