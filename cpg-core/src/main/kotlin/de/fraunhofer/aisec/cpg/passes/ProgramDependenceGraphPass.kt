@@ -63,6 +63,15 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
                     // We filter all prevDFGEdges if the condition affects the variable of t and
                     // if there's a flow from the prevDFGEdge's node through the condition to t.
                     val prevDFGToConsider = mutableListOf<Dataflow>()
+                    // The reference children of the branching conditions depend only on t.prevCDG,
+                    // which is constant across all of t's prevDFG edges. Compute them once
+                    // (unfiltered)
+                    // and apply the per-prevDFG-node filter below, instead of re-walking each
+                    // condition's subtree for every prevDFG edge.
+                    val conditionReferences =
+                        t.prevCDG.flatMap {
+                            (it as? BranchingNode)?.branchedBy?.allChildren<Reference>() ?: listOf()
+                        }
                     t.prevDFGEdges.forEach { prevDfgEdge ->
                         val prevDfgNode = prevDfgEdge.start
                         // The prevDfgNode also flows into the condition. This is suspicious because
@@ -70,12 +79,7 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
                         // is more relevant.
                         if (prevDfgNode is Reference || prevDfgNode is ValueDeclaration) {
                             val cdgConditionChildren =
-                                t.prevCDG.flatMap {
-                                    (it as? BranchingNode)?.branchedBy?.allChildren<Reference> { c
-                                        ->
-                                        c in prevDfgNode.nextDFG
-                                    } ?: listOf()
-                                }
+                                conditionReferences.filter { c -> c in prevDfgNode.nextDFG }
                             if (
                                 cdgConditionChildren.isNotEmpty() &&
                                     cdgConditionChildren.all {
