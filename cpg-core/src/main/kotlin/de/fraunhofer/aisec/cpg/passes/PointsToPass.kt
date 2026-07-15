@@ -505,13 +505,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val max = passConfig<Configuration>()?.maxComplexity
             val c = node.body?.cyclomaticComplexity() ?: 0
             if (max != null && c > max) {
-                //                if (log.isTraceEnabled) {
                 log.info(
                     "Ignoring function ${node.name} because its complexity (${
                                 NumberFormat.getNumberInstance(Locale.US).format(c)
                             }) is greater than the configured maximum (${max})"
                 )
-                //                }
                 // Add an empty function Summary so that we don't try again
                 node.functionSummary.computeIfAbsent(Return()) {
                     ConcurrentHashMap.newKeySet<FSEntry>()
@@ -519,13 +517,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 return
             }
 
-            //            if (log.isTraceEnabled) {
             log.info(
                 "Analyzing function ${node.name}. Complexity: ${
                             NumberFormat.getNumberInstance(Locale.US).format(c)
                         }. (Function $analyzedFunctionCount / $totalFunctionCount)"
             )
-            //            }
         } else {
             if (log.isTraceEnabled) {
                 log.trace("Analyzing EOGStarterHolder ${node.name}. Complexity unknown")
