@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.test.assertInvokes
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
 import kotlin.collections.singleOrNull
@@ -5103,7 +5104,7 @@ class PointsToPassTest {
         val execFuncPtrFunc = tu.functions("exec_func_ptr").single()
 
         // calls
-        val funcPtrCall1 = mainFunc.calls[1]
+        val funcPtrCall1 = mainFunc.calls.getOrNull(1)
         assertNotNull(funcPtrCall1)
         val funcPtrCall2 = execFuncPtrFunc.calls.single()
 
@@ -5116,17 +5117,17 @@ class PointsToPassTest {
 
         // actual tests
         // Check if we were able to correctly resolve the function pointer
-        assertEquals(incpFunc, funcPtrCall1.invokes.single())
+        assertInvokes(funcPtrCall1, incpFunc)
         // Also check if we have the expected incoming DFG edges
         // We expect an edge from the arg to the param
         assertContains(incpParam.prevFullDFG, funcPtrCall1.arguments.single())
-        // And an edge from i to the deref PMV. Here we only have 1, b/c only the PtP managed to
+        // And an edge from i to the deref PMV. Here we only have 1, b/c the PtP managed to
         // only resolve the invokes edge for the call in Line 17, not in Line 8, so it only drew one
         // prevDFG edge
         assertEquals(tu.variables("i").single(), incpDerefPMV.prevFullDFG.single())
 
         // The second one is trickier b/c the call in Line 8 does not have any usable memory values
         // For this one, we rely on the DynamicInvokesResolver
-        assertEquals(incpFunc, funcPtrCall2.invokes.single())
+        assertInvokes(funcPtrCall2, incpFunc)
     }
 }

@@ -3287,9 +3287,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 }
 
-/* If a call doesn't have any invokes edges and could be a FunctionPointer, this function tries to identify possible
-invokes edges and adds them to the call
-*/
+/**
+ * If a call doesn't have any invokes edges and could be a FunctionPointer, this function tries to
+ * identify possible invokes edges and adds them to the call
+ */
 private fun addDynamicInvokesEdges(call: Call, doubleState: PointsToState.Element) {
     if (call.invokes.isNotEmpty()) return
     val callee = call.callee

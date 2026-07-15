@@ -35,9 +35,9 @@ import de.fraunhofer.aisec.cpg.graph.types.ProblemType
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 
-/*
-harmonize all types to the FunctionPointerType. In the future, we want to get rid of FunctionPointerType and
-only deal with FunctionTypes.
+/**
+ * harmonize all types to the FunctionPointerType. In the future, we want to get rid of
+ * FunctionPointerType and only deal with FunctionTypes.
  */
 fun getFunctionPointerType(expr: Expression): FunctionPointerType? {
     return when (val type = expr.type) {
@@ -68,10 +68,10 @@ fun getFunctionPointerType(expr: Expression): FunctionPointerType? {
     }
 }
 
-/*
-Checks if a given function could be called with a function pointer
-returns: false if the function does not match the signature of the callee, or true if it does match
-*/
+/**
+ * Checks if a given function could be called with a function pointer returns: false if the function
+ * does not match the signature of the callee, or true if it does match
+ */
 fun matchInvokesCandidateSignature(
     currentFunction: Function,
     pointerType: FunctionPointerType,
