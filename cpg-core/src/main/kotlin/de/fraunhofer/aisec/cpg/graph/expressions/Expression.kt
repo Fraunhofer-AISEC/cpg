@@ -37,12 +37,12 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
 import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -152,27 +152,78 @@ abstract class Expression(usedAsExpression: Boolean = true) :
             informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
 
+    // The memory-model edge containers below are backed lazily: they are only populated by the
+    // DFG/PointsTo passes and stay empty on the majority of expressions, yet were eagerly
+    // constructed (3 wrapper objects per expression). They are not part of equals/hashCode, so
+    // lazy-on-access is safe. The unwrapped views are @DoNotPersist, matching the previous
+    // `by unwrapping` delegates.
+    private var _memoryValueEdges: Dataflows<Node>? = null
+
     /** Each Expression also has a MemoryValue. */
     @Relationship
-    override var memoryValueEdges =
-        Dataflows<Node>(
-            this,
-            mirrorProperty = HasMemoryValue::memoryValueUsageEdges,
-            outgoing = false,
-        )
-    override var memoryValues by unwrapping(Expression::memoryValueEdges)
+    override var memoryValueEdges: Dataflows<Node>
+        get() =
+            _memoryValueEdges
+                ?: Dataflows<Node>(
+                        this,
+                        mirrorProperty = HasMemoryValue::memoryValueUsageEdges,
+                        outgoing = false,
+                    )
+                    .also { _memoryValueEdges = it }
+        set(value) {
+            _memoryValueEdges = value
+        }
+
+    @DoNotPersist
+    override var memoryValues: MutableSet<Node>
+        get() = memoryValueEdges.unwrap()
+        set(value) {
+            memoryValueEdges.resetTo(value)
+        }
+
+    private var _memoryValueUsageEdges: Dataflows<Node>? = null
 
     /** Where the memory value of this Expression is used. */
     @Relationship
-    override var memoryValueUsageEdges =
-        Dataflows<Node>(this, mirrorProperty = HasMemoryValue::memoryValueEdges, outgoing = true)
-    override var memoryValueUsages by unwrapping(Expression::memoryValueUsageEdges)
+    override var memoryValueUsageEdges: Dataflows<Node>
+        get() =
+            _memoryValueUsageEdges
+                ?: Dataflows<Node>(
+                        this,
+                        mirrorProperty = HasMemoryValue::memoryValueEdges,
+                        outgoing = true,
+                    )
+                    .also { _memoryValueUsageEdges = it }
+        set(value) {
+            _memoryValueUsageEdges = value
+        }
+
+    @DoNotPersist
+    override var memoryValueUsages: MutableSet<Node>
+        get() = memoryValueUsageEdges.unwrap()
+        set(value) {
+            memoryValueUsageEdges.resetTo(value)
+        }
+
+    private var _memoryAddressEdges: MemoryAddressEdges? = null
 
     /** Each Expression also has a MemoryAddress. */
     @Relationship
-    override var memoryAddressEdges =
-        memoryAddressEdgesOf(mirrorProperty = MemoryAddress::usageEdges, outgoing = true)
-    override var memoryAddresses by unwrapping(Expression::memoryAddressEdges)
+    override var memoryAddressEdges: MemoryAddressEdges
+        get() =
+            _memoryAddressEdges
+                ?: memoryAddressEdgesOf(mirrorProperty = MemoryAddress::usageEdges, outgoing = true)
+                    .also { _memoryAddressEdges = it }
+        set(value) {
+            _memoryAddressEdges = value
+        }
+
+    @DoNotPersist
+    override var memoryAddresses: MutableSet<MemoryAddress>
+        get() = memoryAddressEdges.unwrap()
+        set(value) {
+            memoryAddressEdges.resetTo(value)
+        }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

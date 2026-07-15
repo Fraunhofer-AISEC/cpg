@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
 import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -57,40 +56,90 @@ abstract class Declaration : AstNode(), HasModifiers, HasMemoryAddress, HasMemor
             return this.name.localName
         }
 
+    // The memory-model edge containers below are backed lazily: only populated by the DFG/PointsTo
+    // passes and empty on most declarations, yet were eagerly constructed (3 wrapper objects per
+    // declaration). Not part of equals/hashCode, so lazy-on-access is safe. The unwrapped views are
+    // @DoNotPersist, matching the previous `by unwrapping` delegates.
+    private var _memoryAddressEdges: MemoryAddressEdges? = null
+
     /**
      * Each Declaration allocates new memory, AKA a new address, so we create a new MemoryAddress
      * node. Should only be a single address!
      */
     @Relationship
-    override var memoryAddressEdges: MemoryAddressEdges =
-        memoryAddressEdgesOf(
-            mirrorProperty = MemoryAddress::usageEdges,
-            outgoing = true,
-            onAdd = { toAdd ->
-                if (this.memoryAddressEdges.size > 1) {
-                    log.error(
-                        "A declaration should have only a single address but we have ${this.memoryAddressEdges.size}."
+    override var memoryAddressEdges: MemoryAddressEdges
+        get() =
+            _memoryAddressEdges
+                ?: memoryAddressEdgesOf(
+                        mirrorProperty = MemoryAddress::usageEdges,
+                        outgoing = true,
+                        onAdd = { toAdd ->
+                            if (this.memoryAddressEdges.size > 1) {
+                                log.error(
+                                    "A declaration should have only a single address but we have ${this.memoryAddressEdges.size}."
+                                )
+                            }
+                        },
                     )
-                }
-            },
-        )
-    override var memoryAddresses by unwrapping(Declaration::memoryAddressEdges)
+                    .also { _memoryAddressEdges = it }
+        set(value) {
+            _memoryAddressEdges = value
+        }
+
+    @DoNotPersist
+    override var memoryAddresses: MutableSet<MemoryAddress>
+        get() = memoryAddressEdges.unwrap()
+        set(value) {
+            memoryAddressEdges.resetTo(value)
+        }
+
+    private var _memoryValueUsageEdges: Dataflows<Node>? = null
 
     /** Where the memory value of this declaration is used. */
     @Relationship
-    override var memoryValueUsageEdges =
-        Dataflows<Node>(this, mirrorProperty = HasMemoryValue::memoryValueEdges, outgoing = true)
-    override var memoryValueUsages by unwrapping(Declaration::memoryValueUsageEdges)
+    override var memoryValueUsageEdges: Dataflows<Node>
+        get() =
+            _memoryValueUsageEdges
+                ?: Dataflows<Node>(
+                        this,
+                        mirrorProperty = HasMemoryValue::memoryValueEdges,
+                        outgoing = true,
+                    )
+                    .also { _memoryValueUsageEdges = it }
+        set(value) {
+            _memoryValueUsageEdges = value
+        }
+
+    @DoNotPersist
+    override var memoryValueUsages: MutableSet<Node>
+        get() = memoryValueUsageEdges.unwrap()
+        set(value) {
+            memoryValueUsageEdges.resetTo(value)
+        }
+
+    private var _memoryValueEdges: Dataflows<Node>? = null
 
     /** Each Declaration can also have a MemoryValue. */
     @Relationship
-    override var memoryValueEdges =
-        Dataflows<Node>(
-            this,
-            mirrorProperty = HasMemoryValue::memoryValueUsageEdges,
-            outgoing = false,
-        )
-    override var memoryValues by unwrapping(Declaration::memoryValueEdges)
+    override var memoryValueEdges: Dataflows<Node>
+        get() =
+            _memoryValueEdges
+                ?: Dataflows<Node>(
+                        this,
+                        mirrorProperty = HasMemoryValue::memoryValueUsageEdges,
+                        outgoing = false,
+                    )
+                    .also { _memoryValueEdges = it }
+        set(value) {
+            _memoryValueEdges = value
+        }
+
+    @DoNotPersist
+    override var memoryValues: MutableSet<Node>
+        get() = memoryValueEdges.unwrap()
+        set(value) {
+            memoryValueEdges.resetTo(value)
+        }
 
     /**
      * Returns the [Scope] that this [Declaration] declares (if it does). For example, for a
