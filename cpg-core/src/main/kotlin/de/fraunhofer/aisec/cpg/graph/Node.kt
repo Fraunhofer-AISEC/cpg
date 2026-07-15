@@ -47,6 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.mapFiltered
+import de.fraunhofer.aisec.cpg.helpers.smallMutableSetOf
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -247,7 +248,7 @@ abstract class Node() :
 
     var prevPDG by unwrapping(Node::prevPDGEdges)
 
-    @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
+    @DoNotPersist override val assumptions: MutableSet<Assumption> = smallMutableSetOf()
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
@@ -288,7 +289,7 @@ abstract class Node() :
      * Additional problem nodes. These nodes represent problems which occurred during processing of
      * a node (i.e. only partially processed).
      */
-    val additionalProblems: MutableSet<ProblemNode> = mutableSetOf()
+    val additionalProblems: MutableSet<ProblemNode> = smallMutableSetOf()
 
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
     val overlayEdges: Overlays =
