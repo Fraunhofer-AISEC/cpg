@@ -57,7 +57,15 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
     // Node where the edge is ingoing
     @JsonBackReference var end: NodeType
 
-    @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
+    // Backed lazily: edges are the most numerous objects in the graph and almost none of them
+    // carry assumptions (which are only populated/read by the opt-in assumption analysis, never on
+    // the hot edge-construction path). Allocating the set only on first use avoids a per-edge
+    // allocation. Not part of equals/hashCode.
+    private var _assumptions: MutableSet<Assumption>? = null
+
+    @DoNotPersist
+    override val assumptions: MutableSet<Assumption>
+        get() = _assumptions ?: mutableSetOf<Assumption>().also { _assumptions = it }
 
     constructor(start: Node, end: NodeType) {
         this.start = start

@@ -34,7 +34,12 @@ import kotlin.reflect.KProperty
 /** This edge class defines that [end] is a (possible) memory address of [start]. */
 open class MemoryAddressEdge(start: Node, end: MemoryAddress, var outgoing: Boolean) :
     Edge<MemoryAddress>(start, end) {
-    override var labels = setOf("MemoryAddress")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [MemoryAddressEdge]s (see [Edge.labels]). */
+        val LABELS = setOf("MemoryAddress")
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -174,7 +174,12 @@ open class Dataflow(
     open val functionSummary: Boolean = false,
     open val derefDepth: PointerAccess? = null,
 ) : ProgramDependence(start, end, DependenceType.DATA) {
-    override var labels = super.labels.plus("DFG")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [Dataflow] edges (see [Edge.labels]). */
+        val LABELS = ProgramDependence.LABELS + "DFG"
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

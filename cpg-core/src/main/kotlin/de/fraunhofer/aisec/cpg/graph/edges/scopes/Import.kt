@@ -72,7 +72,12 @@ enum class ImportStyle {
 class Import(start: Scope, end: NamespaceScope, var declaration: ImportNode? = null) :
     Edge<NamespaceScope>(start, end) {
 
-    override var labels = setOf("SCOPE_IMPORT")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [Import] edges (see [Edge.labels]). */
+        val LABELS = setOf("SCOPE_IMPORT")
+    }
 
     val style: ImportStyle?
         get() = declaration?.style

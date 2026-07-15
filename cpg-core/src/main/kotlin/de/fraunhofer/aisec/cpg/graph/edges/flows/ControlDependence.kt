@@ -38,16 +38,20 @@ import kotlin.reflect.KProperty
 class ControlDependence(
     start: Node,
     end: Node,
-    /** A set of [EvaluationOrder.branch] values. */
-    var branches: Set<Boolean> =
-        HashSet(
-            1
-        ), // We set the capacity to 1, as the node depends on the true or false branch, never both.
-    // This means, the maximum size of the set is 1, and we can save some memory by setting
-    // the initial capacity to 1.
+    /**
+     * A set of [EvaluationOrder.branch] values. Defaults to the shared empty set: the [branches] a
+     * CDG edge actually depends on are assigned via the edge builder, so most default instances
+     * would otherwise pay for an empty [HashSet].
+     */
+    var branches: Set<Boolean> = emptySet(),
 ) : ProgramDependence(start, end, DependenceType.CONTROL) {
 
-    override var labels = super.labels.plus("CDG")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [ControlDependence] edges (see [Edge.labels]). */
+        val LABELS = ProgramDependence.LABELS + "CDG"
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
