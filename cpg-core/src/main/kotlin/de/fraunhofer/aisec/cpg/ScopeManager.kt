@@ -107,6 +107,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         symbolTableGeneration++
     }
 
+    /** The key identifying a cached [lookupSymbolByName] result in [symbolLookupCache]. */
     private data class SymbolLookupCacheKey(
         val scope: Scope?,
         val symbol: Symbol,

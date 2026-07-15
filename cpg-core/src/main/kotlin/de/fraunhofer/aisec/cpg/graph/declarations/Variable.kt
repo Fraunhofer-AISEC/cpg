@@ -47,14 +47,17 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 /** Represents the declaration of a local variable. */
 open class Variable : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
 
+    /** Lazy backing field for [templateParameterEdges]. */
+    private var _templateParameterEdges: AstEdges<AstNode, AstEdge<AstNode>>? = null
+
     /**
      * We need a way to store the templateParameters that a [Variable] might have before the
      * [Construction] is created.
+     *
+     * The backing container is allocated lazily on first access: template parameters are rare, and
+     * [astEdgesOf] eagerly allocates a backing array. The container is not part of
+     * [equals]/[hashCode], so lazy-on-access is safe.
      */
-    // Backed lazily: template parameters are rare, and [astEdgesOf] eagerly allocates a backing
-    // array. The container is not part of [equals]/[hashCode], so lazy-on-access is safe.
-    private var _templateParameterEdges: AstEdges<AstNode, AstEdge<AstNode>>? = null
-
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
     var templateParameterEdges: AstEdges<AstNode, AstEdge<AstNode>>
         get() =
@@ -63,6 +66,7 @@ open class Variable : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
             _templateParameterEdges = value
         }
 
+    /** Virtual property for accessing [templateParameterEdges] as plain nodes. */
     @DoNotPersist
     var templateParameters: MutableList<AstNode>
         get() = templateParameterEdges.unwrap()

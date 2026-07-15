@@ -56,15 +56,17 @@ abstract class Declaration : AstNode(), HasModifiers, HasMemoryAddress, HasMemor
             return this.name.localName
         }
 
-    // The memory-model edge containers below are backed lazily: only populated by the DFG/PointsTo
-    // passes and empty on most declarations, yet were eagerly constructed (3 wrapper objects per
-    // declaration). Not part of equals/hashCode, so lazy-on-access is safe. The unwrapped views are
-    // @DoNotPersist, matching the previous `by unwrapping` delegates.
+    /** Lazy backing field for [memoryAddressEdges]. */
     private var _memoryAddressEdges: MemoryAddressEdges? = null
 
     /**
      * Each Declaration allocates new memory, AKA a new address, so we create a new MemoryAddress
      * node. Should only be a single address!
+     *
+     * This and the other two memory-model containers ([memoryValueUsageEdges], [memoryValueEdges])
+     * are only populated by the DFG and points-to passes and stay empty on most declarations. Their
+     * backing containers are therefore allocated lazily on first access. They are not part of
+     * [equals]/[hashCode], so lazy-on-access is safe.
      */
     @Relationship
     override var memoryAddressEdges: MemoryAddressEdges
@@ -86,6 +88,7 @@ abstract class Declaration : AstNode(), HasModifiers, HasMemoryAddress, HasMemor
             _memoryAddressEdges = value
         }
 
+    /** Virtual property for accessing [memoryAddressEdges] as plain nodes. */
     @DoNotPersist
     override var memoryAddresses: MutableSet<MemoryAddress>
         get() = memoryAddressEdges.unwrap()
@@ -93,9 +96,13 @@ abstract class Declaration : AstNode(), HasModifiers, HasMemoryAddress, HasMemor
             memoryAddressEdges.resetTo(value)
         }
 
+    /** Lazy backing field for [memoryValueUsageEdges]. */
     private var _memoryValueUsageEdges: Dataflows<Node>? = null
 
-    /** Where the memory value of this declaration is used. */
+    /**
+     * Where the memory value of this declaration is used (allocated lazily, see
+     * [memoryAddressEdges]).
+     */
     @Relationship
     override var memoryValueUsageEdges: Dataflows<Node>
         get() =
@@ -110,6 +117,7 @@ abstract class Declaration : AstNode(), HasModifiers, HasMemoryAddress, HasMemor
             _memoryValueUsageEdges = value
         }
 
+    /** Virtual property for accessing [memoryValueUsageEdges] as plain nodes. */
     @DoNotPersist
     override var memoryValueUsages: MutableSet<Node>
         get() = memoryValueUsageEdges.unwrap()
@@ -117,9 +125,12 @@ abstract class Declaration : AstNode(), HasModifiers, HasMemoryAddress, HasMemor
             memoryValueUsageEdges.resetTo(value)
         }
 
+    /** Lazy backing field for [memoryValueEdges]. */
     private var _memoryValueEdges: Dataflows<Node>? = null
 
-    /** Each Declaration can also have a MemoryValue. */
+    /**
+     * Each Declaration can also have a MemoryValue (allocated lazily, see [memoryAddressEdges]).
+     */
     @Relationship
     override var memoryValueEdges: Dataflows<Node>
         get() =
@@ -134,6 +145,7 @@ abstract class Declaration : AstNode(), HasModifiers, HasMemoryAddress, HasMemor
             _memoryValueEdges = value
         }
 
+    /** Virtual property for accessing [memoryValueEdges] as plain nodes. */
     @DoNotPersist
     override var memoryValues: MutableSet<Node>
         get() = memoryValueEdges.unwrap()

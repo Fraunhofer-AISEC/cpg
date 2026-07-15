@@ -93,10 +93,16 @@ open class Record :
     /** Virtual property to directly access the nodes in [recordEdges]. */
     var records by unwrapping(Record::recordEdges)
 
-    // Backed lazily: templates are rare, and [astEdgesOf] eagerly allocates a backing array. The
-    // container is not part of [equals]/[hashCode], so lazy-on-access is safe.
+    /** Lazy backing field for [templateEdges]. */
     private var _templateEdges: AstEdges<Template, AstEdge<Template>>? = null
 
+    /**
+     * The [Template]s declared in this record.
+     *
+     * The backing container is allocated lazily on first access: templates are rare, and
+     * [astEdgesOf] eagerly allocates a backing array. The container is not part of
+     * [equals]/[hashCode], so lazy-on-access is safe.
+     */
     @Relationship(value = "TEMPLATES", direction = Relationship.Direction.OUTGOING)
     var templateEdges: AstEdges<Template, AstEdge<Template>>
         get() = _templateEdges ?: astEdgesOf<Template>().also { _templateEdges = it }
@@ -104,6 +110,7 @@ open class Record :
             _templateEdges = value
         }
 
+    /** Virtual property for accessing [templateEdges] as plain nodes. */
     @DoNotPersist
     val templates: MutableList<Template>
         get() = templateEdges.unwrap()

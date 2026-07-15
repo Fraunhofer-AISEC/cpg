@@ -86,18 +86,20 @@ abstract class Expression(usedAsExpression: Boolean = true) :
      */
     open var access: AccessValues = AccessValues.READ
 
+    /** Lazy backing field for [localEdges]. */
+    private var _localEdges: AstEdges<ValueDeclaration, AstEdge<ValueDeclaration>>? = null
+
     /**
      * A list of local variables (or other values) associated to this statement, defined by their
      * [ValueDeclaration] extracted from Block because `for`, `while`, `if`, and `switch` can
      * declare locals in their condition or initializers.
      *
+     * The backing container is allocated lazily on first access: most expressions declare no
+     * locals, and [astEdgesOf] eagerly allocates a backing array. See [localsEqual] and [hashCode],
+     * which avoid forcing this allocation during structural comparisons.
+     *
      * TODO: This is actually an AST node just for a subset of nodes, i.e. initializers in for-loops
      */
-    // Backed lazily: most expressions declare no locals, and [astEdgesOf] eagerly allocates a
-    // backing array. See [localsEqual]/[hashCode], which avoid forcing this allocation during
-    // structural comparisons.
-    private var _localEdges: AstEdges<ValueDeclaration, AstEdge<ValueDeclaration>>? = null
-
     @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
     var localEdges: AstEdges<ValueDeclaration, AstEdge<ValueDeclaration>>
         get() = _localEdges ?: astEdgesOf<ValueDeclaration>().also { _localEdges = it }
@@ -152,14 +154,17 @@ abstract class Expression(usedAsExpression: Boolean = true) :
             informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
 
-    // The memory-model edge containers below are backed lazily: they are only populated by the
-    // DFG/PointsTo passes and stay empty on the majority of expressions, yet were eagerly
-    // constructed (3 wrapper objects per expression). They are not part of equals/hashCode, so
-    // lazy-on-access is safe. The unwrapped views are @DoNotPersist, matching the previous
-    // `by unwrapping` delegates.
+    /** Lazy backing field for [memoryValueEdges]. */
     private var _memoryValueEdges: Dataflows<Node>? = null
 
-    /** Each Expression also has a MemoryValue. */
+    /**
+     * Each Expression also has a MemoryValue.
+     *
+     * This and the other two memory-model containers ([memoryValueUsageEdges],
+     * [memoryAddressEdges]) are only populated by the DFG and points-to passes and stay empty on
+     * the majority of expressions. Their backing containers are therefore allocated lazily on first
+     * access. They are not part of [equals]/[hashCode], so lazy-on-access is safe.
+     */
     @Relationship
     override var memoryValueEdges: Dataflows<Node>
         get() =
@@ -174,6 +179,7 @@ abstract class Expression(usedAsExpression: Boolean = true) :
             _memoryValueEdges = value
         }
 
+    /** Virtual property for accessing [memoryValueEdges] as plain nodes. */
     @DoNotPersist
     override var memoryValues: MutableSet<Node>
         get() = memoryValueEdges.unwrap()
@@ -181,9 +187,12 @@ abstract class Expression(usedAsExpression: Boolean = true) :
             memoryValueEdges.resetTo(value)
         }
 
+    /** Lazy backing field for [memoryValueUsageEdges]. */
     private var _memoryValueUsageEdges: Dataflows<Node>? = null
 
-    /** Where the memory value of this Expression is used. */
+    /**
+     * Where the memory value of this Expression is used (allocated lazily, see [memoryValueEdges]).
+     */
     @Relationship
     override var memoryValueUsageEdges: Dataflows<Node>
         get() =
@@ -198,6 +207,7 @@ abstract class Expression(usedAsExpression: Boolean = true) :
             _memoryValueUsageEdges = value
         }
 
+    /** Virtual property for accessing [memoryValueUsageEdges] as plain nodes. */
     @DoNotPersist
     override var memoryValueUsages: MutableSet<Node>
         get() = memoryValueUsageEdges.unwrap()
@@ -205,9 +215,10 @@ abstract class Expression(usedAsExpression: Boolean = true) :
             memoryValueUsageEdges.resetTo(value)
         }
 
+    /** Lazy backing field for [memoryAddressEdges]. */
     private var _memoryAddressEdges: MemoryAddressEdges? = null
 
-    /** Each Expression also has a MemoryAddress. */
+    /** Each Expression also has a MemoryAddress (allocated lazily, see [memoryValueEdges]). */
     @Relationship
     override var memoryAddressEdges: MemoryAddressEdges
         get() =
@@ -218,6 +229,7 @@ abstract class Expression(usedAsExpression: Boolean = true) :
             _memoryAddressEdges = value
         }
 
+    /** Virtual property for accessing [memoryAddressEdges] as plain nodes. */
     @DoNotPersist
     override var memoryAddresses: MutableSet<MemoryAddress>
         get() = memoryAddressEdges.unwrap()

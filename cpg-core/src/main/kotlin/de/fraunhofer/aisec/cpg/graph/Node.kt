@@ -152,16 +152,17 @@ abstract class Node() :
     /** The basic block this node belongs to. */
     var basicBlock by unwrapping(Node::basicBlockEdges)
 
+    /** Lazy backing field for [nextCDGEdges]. */
+    private var _nextCDGEdges: ControlDependences<Node>? = null
+
     /**
      * The nodes which are control-flow dominated, i.e., the children of the Control Dependence
      * Graph (CDG).
+     *
+     * The backing container is allocated lazily on first access: CDG edges are only populated by
+     * the optional [ControlDependenceGraphPass] and stay empty on the vast majority of nodes. The
+     * container is not part of [equals]/[hashCode], so lazy-on-access is safe.
      */
-    // CDG/PDG/overlay edge containers are backed lazily: they are only populated by optional passes
-    // (CDG/PDG passes, concept/overlay passes) and stay empty on the vast majority of nodes.
-    // Allocating the container only on first use avoids that per-node cost. They are not part of
-    // [equals]/[hashCode], so lazy-on-access is safe.
-    private var _nextCDGEdges: ControlDependences<Node>? = null
-
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
     var nextCDGEdges: ControlDependences<Node>
@@ -177,16 +178,20 @@ abstract class Node() :
             _nextCDGEdges = value
         }
 
+    /** Virtual property for accessing [nextCDGEdges] as plain nodes. */
     @DoNotPersist
     val nextCDG: MutableList<Node>
         get() = nextCDGEdges.unwrap()
 
+    /** Lazy backing field for [prevCDGEdges]. */
+    private var _prevCDGEdges: ControlDependences<Node>? = null
+
     /**
      * The nodes which dominate this node via the control-flow, i.e., the parents of the Control
      * Dependence Graph (CDG).
+     *
+     * The backing container is allocated lazily on first access (see [nextCDGEdges]).
      */
-    private var _prevCDGEdges: ControlDependences<Node>? = null
-
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
     var prevCDGEdges: ControlDependences<Node>
@@ -202,6 +207,7 @@ abstract class Node() :
             _prevCDGEdges = value
         }
 
+    /** Virtual property for accessing [prevCDGEdges] as plain nodes. */
     @DoNotPersist
     val prevCDG: MutableList<Node>
         get() = prevCDGEdges.unwrap()
@@ -280,9 +286,16 @@ abstract class Node() :
             return nextDFGEdges.mapFiltered({ it.functionSummary }) { it.end }
         }
 
-    /** Outgoing Program Dependence Edges. */
+    /** Lazy backing field for [nextPDGEdges]. */
     private var _nextPDGEdges: ProgramDependences<Node>? = null
 
+    /**
+     * Outgoing Program Dependence Edges.
+     *
+     * The backing container is allocated lazily on first access: PDG edges are only populated by
+     * the optional [ProgramDependenceGraphPass] and stay empty on the vast majority of nodes. The
+     * container is not part of [equals]/[hashCode], so lazy-on-access is safe.
+     */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
     var nextPDGEdges: ProgramDependences<Node>
@@ -298,13 +311,19 @@ abstract class Node() :
             _nextPDGEdges = value
         }
 
+    /** Virtual property for accessing [nextPDGEdges] as plain nodes. */
     @DoNotPersist
     val nextPDG: MutableSet<Node>
         get() = nextPDGEdges.unwrap()
 
-    /** Incoming Program Dependence Edges. */
+    /** Lazy backing field for [prevPDGEdges]. */
     private var _prevPDGEdges: ProgramDependences<Node>? = null
 
+    /**
+     * Incoming Program Dependence Edges.
+     *
+     * The backing container is allocated lazily on first access (see [nextPDGEdges]).
+     */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
     var prevPDGEdges: ProgramDependences<Node>
@@ -320,6 +339,7 @@ abstract class Node() :
             _prevPDGEdges = value
         }
 
+    /** Virtual property for accessing [prevPDGEdges] as plain nodes. */
     @DoNotPersist
     val prevPDG: MutableSet<Node>
         get() = prevPDGEdges.unwrap()
@@ -367,8 +387,15 @@ abstract class Node() :
      */
     val additionalProblems: MutableSet<ProblemNode> = smallMutableSetOf()
 
+    /** Lazy backing field for [overlayEdges]. */
     private var _overlayEdges: Overlays? = null
 
+    /**
+     * The [OverlayNode]s attached to this node.
+     *
+     * The backing container is allocated lazily on first access: overlays are only added by
+     * (optional) concept/overlay passes and stay empty on the vast majority of nodes.
+     */
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
     val overlayEdges: Overlays
         get() =
@@ -376,6 +403,7 @@ abstract class Node() :
                 ?: Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
                     .also { _overlayEdges = it }
 
+    /** Virtual property for accessing [overlayEdges] as plain nodes. */
     @DoNotPersist
     val overlays: MutableSet<Node>
         get() = overlayEdges.unwrap()

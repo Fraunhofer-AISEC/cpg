@@ -57,15 +57,15 @@ abstract class AstNode : Node() {
     var astChildren: List<AstNode> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
+    /** Lazy backing field for [annotationEdges]. */
+    private var _annotationEdges: AstEdges<Annotation, AstEdge<Annotation>>? = null
+
     /**
      * List of [Annotation]s associated with that node.
      *
-     * Backed lazily: annotations are absent on the overwhelming majority of nodes, and [astEdgesOf]
-     * eagerly allocates a backing array. Allocating the edge container only on first use avoids
-     * that cost per node.
+     * The backing container is allocated lazily on first access: annotations are absent on the
+     * overwhelming majority of nodes, and [astEdgesOf] eagerly allocates a backing array.
      */
-    private var _annotationEdges: AstEdges<Annotation, AstEdge<Annotation>>? = null
-
     @Relationship("ANNOTATIONS")
     var annotationEdges: AstEdges<Annotation, AstEdge<Annotation>>
         get() = _annotationEdges ?: astEdgesOf<Annotation>().also { _annotationEdges = it }
@@ -73,6 +73,7 @@ abstract class AstNode : Node() {
             _annotationEdges = value
         }
 
+    /** Virtual property for accessing [annotationEdges] as plain nodes. */
     @DoNotPersist
     var annotations: MutableList<Annotation>
         get() = annotationEdges.unwrap()
