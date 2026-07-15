@@ -27,10 +27,12 @@ package de.fraunhofer.aisec.cpg.graph
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 
 /**
@@ -55,9 +57,28 @@ abstract class AstNode : Node() {
     var astChildren: List<AstNode> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
-    /** List of [Annotation]s associated with that node. */
-    @Relationship("ANNOTATIONS") var annotationEdges = astEdgesOf<Annotation>()
-    var annotations by unwrapping(AstNode::annotationEdges)
+    /**
+     * List of [Annotation]s associated with that node.
+     *
+     * Backed lazily: annotations are absent on the overwhelming majority of nodes, and [astEdgesOf]
+     * eagerly allocates a backing array. Allocating the edge container only on first use avoids
+     * that cost per node.
+     */
+    private var _annotationEdges: AstEdges<Annotation, AstEdge<Annotation>>? = null
+
+    @Relationship("ANNOTATIONS")
+    var annotationEdges: AstEdges<Annotation, AstEdge<Annotation>>
+        get() = _annotationEdges ?: astEdgesOf<Annotation>().also { _annotationEdges = it }
+        set(value) {
+            _annotationEdges = value
+        }
+
+    @DoNotPersist
+    var annotations: MutableList<Annotation>
+        get() = annotationEdges.unwrap()
+        set(value) {
+            annotationEdges.resetTo(value)
+        }
 
     override fun disconnectFromGraph() {
         super.disconnectFromGraph()

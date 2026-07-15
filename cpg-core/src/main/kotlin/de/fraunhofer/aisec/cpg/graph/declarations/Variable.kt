@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -38,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.persistence.Relationship
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -48,9 +51,24 @@ open class Variable : ValueDeclaration(), HasInitializer, HasType.TypeObserver {
      * We need a way to store the templateParameters that a [Variable] might have before the
      * [Construction] is created.
      */
+    // Backed lazily: template parameters are rare, and [astEdgesOf] eagerly allocates a backing
+    // array. The container is not part of [equals]/[hashCode], so lazy-on-access is safe.
+    private var _templateParameterEdges: AstEdges<AstNode, AstEdge<AstNode>>? = null
+
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    var templateParameterEdges = astEdgesOf<AstNode>()
-    var templateParameters by unwrapping(Variable::templateParameterEdges)
+    var templateParameterEdges: AstEdges<AstNode, AstEdge<AstNode>>
+        get() =
+            _templateParameterEdges ?: astEdgesOf<AstNode>().also { _templateParameterEdges = it }
+        set(value) {
+            _templateParameterEdges = value
+        }
+
+    @DoNotPersist
+    var templateParameters: MutableList<AstNode>
+        get() = templateParameterEdges.unwrap()
+        set(value) {
+            templateParameterEdges.resetTo(value)
+        }
 
     /** Determines if this is a global variable. */
     val isGlobal: Boolean

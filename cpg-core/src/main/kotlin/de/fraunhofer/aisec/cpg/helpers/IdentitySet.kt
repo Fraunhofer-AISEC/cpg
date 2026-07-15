@@ -48,22 +48,31 @@ import java.util.function.Predicate
  * The magic size of 16 comes from the implementation of Java and is randomly chosen. The
  * [expectedMaxSize] should be 2^n but this will be enforced internally anyway.
  */
-open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
+open class IdentitySet<T>(private val expectedMaxSize: Int = 16) : MutableSet<T> {
     /**
      * The backing hashmap for our set. The [IdentityHashMap] offers reference-equality for keys and
      * values. In this case we use it to determine, if a node is already in our set or not. The
      * value of the map is not used and is always true. A [Boolean] is used because it seems to be
      * the smallest data type possible.
      *
-     * The map is twice the [expectedMaxSize] to avoid resizing too often which is expensive.
+     * It is allocated lazily on the first insertion: a great many [IdentitySet]s (e.g. every node's
+     * `typeObservers`) stay empty for their whole lifetime, and an [IdentityHashMap] eagerly
+     * allocates its backing table in its constructor. Keeping this `null` until something is added
+     * avoids that allocation for the empty case. The map is sized to twice the [expectedMaxSize] to
+     * avoid resizing too often, which is expensive.
      */
-    private val map: IdentityHashMap<T, Int> = IdentityHashMap(expectedMaxSize * 2)
+    private var map: IdentityHashMap<T, Int>? = null
     private val counter = AtomicInteger()
+
+    /** Returns the backing map, allocating it on first use. */
+    private fun ensureMap(): IdentityHashMap<T, Int> {
+        return map ?: IdentityHashMap<T, Int>(expectedMaxSize * 2).also { map = it }
+    }
 
     override operator fun contains(element: T): Boolean {
         // We are using the backing reference-equality based map to check, if the element is already
         // in the set.
-        return map.containsKey(element)
+        return map?.containsKey(element) == true
     }
 
     override fun equals(other: Any?): Boolean {
@@ -75,7 +84,7 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
     override fun add(element: T): Boolean {
         // Since we are a Set, we only want to add elements that are not already there
         if (!contains(element)) {
-            map[element] = counter.addAndGet(1)
+            ensureMap()[element] = counter.addAndGet(1)
             return true
         }
 
@@ -87,23 +96,29 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
      * should only be used if this set is empty!
      */
     open fun addAllWithoutCheck(elements: IdentitySet<T>) {
+        if (elements.isEmpty()) {
+            return
+        }
         // We rely on the input set and add everything without checking if an element is already
         // present.
+        val backing = ensureMap()
         for (element in elements) {
-            map[element] = counter.addAndGet(1)
+            backing[element] = counter.addAndGet(1)
         }
     }
 
     override fun containsAll(elements: Collection<T>): Boolean {
-        return elements.all { map.containsKey(it) }
+        val backing = map ?: return elements.isEmpty()
+        return elements.all { backing.containsKey(it) }
     }
 
     override fun isEmpty(): Boolean {
-        return map.isEmpty()
+        return map?.isEmpty() != false
     }
 
     override fun iterator(): MutableIterator<T> {
-        return map.keys.iterator()
+        @Suppress("UNCHECKED_CAST")
+        return map?.keys?.iterator() ?: (EmptyMutableIterator as MutableIterator<T>)
     }
 
     /**
@@ -112,7 +127,7 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
      * according to their "closeness" to the root AST node.
      */
     open fun toSortedList(): List<T> {
-        return map.entries.sortedBy { it.value }.map { it.key }
+        return map?.entries?.sortedBy { it.value }?.map { it.key } ?: listOf()
     }
 
     override fun addAll(elements: Collection<T>): Boolean {
@@ -129,11 +144,11 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
     }
 
     override fun clear() {
-        map.clear()
+        map?.clear()
     }
 
     override fun remove(element: T): Boolean {
-        return map.remove(element) != null
+        return map?.remove(element) != null
     }
 
     override fun removeAll(elements: Collection<T>): Boolean {
@@ -154,11 +169,11 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
     }
 
     override fun hashCode(): Int {
-        return map.hashCode()
+        return map?.hashCode() ?: 0
     }
 
     override val size: Int
-        get() = map.size
+        get() = map?.size ?: 0
 }
 
 open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
@@ -275,6 +290,15 @@ open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
 
     override val size: Int
         get() = map.size
+}
+
+/** A shared, allocation-free empty [MutableIterator], used for empty [IdentitySet]s. */
+private object EmptyMutableIterator : MutableIterator<Any?> {
+    override fun hasNext() = false
+
+    override fun next(): Any? = throw NoSuchElementException()
+
+    override fun remove() = throw IllegalStateException()
 }
 
 fun <T> identitySetOf(vararg elements: T): IdentitySet<T> {

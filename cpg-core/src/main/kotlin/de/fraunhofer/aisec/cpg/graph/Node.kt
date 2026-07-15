@@ -136,25 +136,55 @@ abstract class Node() :
      * The nodes which are control-flow dominated, i.e., the children of the Control Dependence
      * Graph (CDG).
      */
+    // CDG/PDG/overlay edge containers are backed lazily: they are only populated by optional passes
+    // (CDG/PDG passes, concept/overlay passes) and stay empty on the vast majority of nodes.
+    // Allocating the container only on first use avoids that per-node cost. They are not part of
+    // [equals]/[hashCode], so lazy-on-access is safe.
+    private var _nextCDGEdges: ControlDependences<Node>? = null
+
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
-    var nextCDGEdges: ControlDependences<Node> =
-        ControlDependences(this, mirrorProperty = Node::prevCDGEdges, outgoing = true)
-        protected set
+    var nextCDGEdges: ControlDependences<Node>
+        get() =
+            _nextCDGEdges
+                ?: ControlDependences<Node>(
+                        this,
+                        mirrorProperty = Node::prevCDGEdges,
+                        outgoing = true,
+                    )
+                    .also { _nextCDGEdges = it }
+        protected set(value) {
+            _nextCDGEdges = value
+        }
 
-    var nextCDG by unwrapping(Node::nextCDGEdges)
+    @DoNotPersist
+    val nextCDG: MutableList<Node>
+        get() = nextCDGEdges.unwrap()
 
     /**
      * The nodes which dominate this node via the control-flow, i.e., the parents of the Control
      * Dependence Graph (CDG).
      */
+    private var _prevCDGEdges: ControlDependences<Node>? = null
+
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
-    var prevCDGEdges: ControlDependences<Node> =
-        ControlDependences<Node>(this, mirrorProperty = Node::nextCDGEdges, outgoing = false)
-        protected set
+    var prevCDGEdges: ControlDependences<Node>
+        get() =
+            _prevCDGEdges
+                ?: ControlDependences<Node>(
+                        this,
+                        mirrorProperty = Node::nextCDGEdges,
+                        outgoing = false,
+                    )
+                    .also { _prevCDGEdges = it }
+        protected set(value) {
+            _prevCDGEdges = value
+        }
 
-    var prevCDG by unwrapping(Node::prevCDGEdges)
+    @DoNotPersist
+    val prevCDG: MutableList<Node>
+        get() = prevCDGEdges.unwrap()
 
     @DoNotPersist @JsonIgnore var astParent: AstNode? = null
 
@@ -231,22 +261,48 @@ abstract class Node() :
         }
 
     /** Outgoing Program Dependence Edges. */
+    private var _nextPDGEdges: ProgramDependences<Node>? = null
+
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
-    var nextPDGEdges: ProgramDependences<Node> =
-        ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = true)
-        protected set
+    var nextPDGEdges: ProgramDependences<Node>
+        get() =
+            _nextPDGEdges
+                ?: ProgramDependences<Node>(
+                        this,
+                        mirrorProperty = Node::prevPDGEdges,
+                        outgoing = true,
+                    )
+                    .also { _nextPDGEdges = it }
+        protected set(value) {
+            _nextPDGEdges = value
+        }
 
-    var nextPDG by unwrapping(Node::nextPDGEdges)
+    @DoNotPersist
+    val nextPDG: MutableSet<Node>
+        get() = nextPDGEdges.unwrap()
 
     /** Incoming Program Dependence Edges. */
+    private var _prevPDGEdges: ProgramDependences<Node>? = null
+
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
-    var prevPDGEdges: ProgramDependences<Node> =
-        ProgramDependences<Node>(this, mirrorProperty = Node::nextPDGEdges, outgoing = false)
-        protected set
+    var prevPDGEdges: ProgramDependences<Node>
+        get() =
+            _prevPDGEdges
+                ?: ProgramDependences<Node>(
+                        this,
+                        mirrorProperty = Node::nextPDGEdges,
+                        outgoing = false,
+                    )
+                    .also { _prevPDGEdges = it }
+        protected set(value) {
+            _prevPDGEdges = value
+        }
 
-    var prevPDG by unwrapping(Node::prevPDGEdges)
+    @DoNotPersist
+    val prevPDG: MutableSet<Node>
+        get() = prevPDGEdges.unwrap()
 
     @DoNotPersist override val assumptions: MutableSet<Assumption> = smallMutableSetOf()
 
@@ -291,10 +347,18 @@ abstract class Node() :
      */
     val additionalProblems: MutableSet<ProblemNode> = smallMutableSetOf()
 
+    private var _overlayEdges: Overlays? = null
+
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
-    val overlayEdges: Overlays =
-        Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
-    var overlays by unwrapping(Node::overlayEdges)
+    val overlayEdges: Overlays
+        get() =
+            _overlayEdges
+                ?: Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
+                    .also { _overlayEdges = it }
+
+    @DoNotPersist
+    val overlays: MutableSet<Node>
+        get() = overlayEdges.unwrap()
 
     /**
      * Adds the [assumptions] attached to the [Node] and of relevant supernodes in the AST.
@@ -316,10 +380,12 @@ abstract class Node() :
     open fun disconnectFromGraph() {
         nextDFGEdges.clear()
         prevDFGEdges.clear()
-        prevCDGEdges.clear()
-        nextCDGEdges.clear()
-        prevPDGEdges.clear()
-        nextPDGEdges.clear()
+        // The CDG/PDG/overlay containers are lazily allocated; only clear them if they were ever
+        // populated, so disconnecting does not allocate empty containers just to clear them.
+        _prevCDGEdges?.clear()
+        _nextCDGEdges?.clear()
+        _prevPDGEdges?.clear()
+        _nextPDGEdges?.clear()
         nextEOGEdges.clear()
         prevEOGEdges.clear()
 
@@ -327,7 +393,7 @@ abstract class Node() :
             underlyingNodeEdge.clear()
         }
 
-        this.overlayEdges.clear()
+        _overlayEdges?.clear()
     }
 
     override fun toString(): String {
