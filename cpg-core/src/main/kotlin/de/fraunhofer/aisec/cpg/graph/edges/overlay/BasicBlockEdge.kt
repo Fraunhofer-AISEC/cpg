@@ -47,7 +47,12 @@ class BasicBlockEdge(start: Node, end: Node) : Edge<Node>(start, end) {
         return super.hashCode()
     }
 
-    override var labels = setOf("BB")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [BasicBlockEdge]s (see [Edge.labels]). */
+        val LABELS = setOf("BB")
+    }
 }
 
 /**

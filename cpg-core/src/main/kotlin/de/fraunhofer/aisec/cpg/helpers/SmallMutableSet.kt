@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,36 +23,20 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.edges.collections
-
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import java.util.function.Predicate
+package de.fraunhofer.aisec.cpg.helpers
 
 /**
- * This class extends a set of property edges. This allows us to use sets of property edges more
- * conveniently.
- *
- * Measurements across representative test corpora show that the overwhelming majority of edge sets
- * (evaluation order, dataflow, control- and program-dependence, overlays, ...) hold either 0, 1 or
- * 2 elements per node, with a long tail of much larger sets for a small minority of nodes (e.g. a
- * branch condition that control-depends hundreds of statements). A plain [HashSet] pays for a full
- * hash table entry ([java.util.HashMap.Node], i.e. hash + key + value + next pointer) per element
- * even when there is only one. To avoid that overhead for the common case, this class stores up to
- * two elements directly in fields and only falls back to a real [HashSet] once a third distinct
- * element is added.
+ * A [MutableSet] optimized for fields that are empty for the overwhelming majority of instances and
+ * hold only one or two elements otherwise (e.g. [de.fraunhofer.aisec.cpg.graph.Node.assumptions] or
+ * [de.fraunhofer.aisec.cpg.graph.Node.additionalProblems], which measurements show are empty for
+ * 98%+ of nodes). Elements are stored directly in two fields, avoiding the overhead of a
+ * [HashMap.Node] hash-table entry per element that a plain [HashSet] would pay even for a single
+ * element. Only once a third distinct element is added does this fall back to a real [HashSet].
  */
-abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
-    override var thisRef: Node,
-    override var init: (start: Node, end: NodeType) -> EdgeType,
-    override var outgoing: Boolean = true,
-    override var onAdd: ((EdgeType) -> Unit)? = null,
-    override var onRemove: ((EdgeType) -> Unit)? = null,
-) : AbstractMutableSet<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
-
-    private var elem0: EdgeType? = null
-    private var elem1: EdgeType? = null
-    private var overflow: HashSet<EdgeType>? = null
+class SmallMutableSet<T : Any> : MutableSet<T> {
+    private var elem0: T? = null
+    private var elem1: T? = null
+    private var overflow: HashSet<T>? = null
 
     override val size: Int
         get() {
@@ -66,14 +50,15 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
         return elem0 == null && elem1 == null && overflow.isNullOrEmpty()
     }
 
-    override fun contains(element: EdgeType): Boolean {
+    override fun contains(element: T): Boolean {
         return elem0 == element || elem1 == element || overflow?.contains(element) == true
     }
 
-    override fun iterator(): MutableIterator<EdgeType> = EdgeSetIterator()
+    override fun containsAll(elements: Collection<T>): Boolean {
+        return elements.all { contains(it) }
+    }
 
-    /** Mutates the backing storage only, without triggering [onAdd]/[onRemove] notifications. */
-    private fun addInternal(element: EdgeType): Boolean {
+    override fun add(element: T): Boolean {
         if (contains(element)) return false
         return when {
             elem0 == null -> {
@@ -84,14 +69,21 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
                 elem1 = element
                 true
             }
-            else -> {
-                val of = overflow ?: HashSet<EdgeType>().also { overflow = it }
-                of.add(element)
-            }
+            else -> (overflow ?: HashSet<T>().also { overflow = it }).add(element)
         }
     }
 
-    private fun removeInternal(element: EdgeType): Boolean {
+    override fun addAll(elements: Collection<T>): Boolean {
+        var modified = false
+        for (e in elements) {
+            if (add(e)) {
+                modified = true
+            }
+        }
+        return modified
+    }
+
+    override fun remove(element: T): Boolean {
         return when {
             elem0 == element -> {
                 elem0 = null
@@ -111,87 +103,55 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
         }
     }
 
-    override fun add(element: EdgeType): Boolean {
-        val ok = addInternal(element)
-        if (ok) {
-            handleOnAdd(element)
-        }
-        return ok
-    }
-
-    override fun remove(element: EdgeType): Boolean {
-        val ok = removeInternal(element)
-        if (ok) {
-            handleOnRemove(element)
-        }
-        return ok
-    }
-
-    override fun removeIf(predicate: Predicate<in EdgeType>): Boolean {
-        val edges = filter { predicate.test(it) }
-        var ok = false
-        for (edge in edges) {
-            if (removeInternal(edge)) {
-                ok = true
+    override fun removeAll(elements: Collection<T>): Boolean {
+        var modified = false
+        for (e in elements) {
+            if (remove(e)) {
+                modified = true
             }
         }
-        if (ok) {
-            edges.forEach { handleOnRemove(it) }
-        }
-        return ok
+        return modified
     }
 
-    override fun removeAll(elements: Collection<EdgeType>): Boolean {
-        var ok = false
-        for (edge in elements.toSet()) {
-            if (removeInternal(edge)) {
-                ok = true
+    override fun retainAll(elements: Collection<T>): Boolean {
+        var modified = false
+        val it = iterator()
+        while (it.hasNext()) {
+            if (it.next() !in elements) {
+                it.remove()
+                modified = true
             }
         }
-        if (ok) {
-            elements.forEach { handleOnRemove(it) }
-        }
-        return ok
+        return modified
     }
 
     override fun clear() {
-        // Make a copy of our edges so we can pass a copy to our on-remove handler
-        val edges = this.toSet()
         elem0 = null
         elem1 = null
         overflow = null
-        edges.forEach { handleOnRemove(it) }
     }
 
-    override fun toNodeCollection(predicate: ((EdgeType) -> Boolean)?): MutableSet<NodeType> {
-        return internalToNodeCollection(this, outgoing, predicate, ::HashSet)
-    }
-
-    /**
-     * Returns an [UnwrappedEdgeSet] magic container which holds a structure that provides easy
-     * access to the "target" nodes without edge information.
-     */
-    override fun unwrap(): UnwrappedEdgeSet<NodeType, EdgeType> {
-        return UnwrappedEdgeSet(this)
-    }
+    override fun iterator(): MutableIterator<T> = SmallMutableSetIterator()
 
     override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is EdgeSet<*, *>) return false
-
-        // Otherwise, try to compare the contents of the lists with the propertyEquals method
-        return this.containsAll(other)
+        if (other === this) return true
+        if (other !is Set<*>) return false
+        return this.size == other.size && this.containsAll(other)
     }
 
     override fun hashCode(): Int {
-        return internalHashcode(this, outgoing)
+        var hash = 0
+        for (e in this) {
+            hash += e.hashCode()
+        }
+        return hash
     }
 
-    private inner class EdgeSetIterator : MutableIterator<EdgeType> {
+    private inner class SmallMutableSetIterator : MutableIterator<T> {
         /** 0: about to yield [elem0], 1: about to yield [elem1], 2: yielding [overflow]. */
         private var stage = 0
-        private var overflowIterator: MutableIterator<EdgeType>? = null
-        private var lastReturned: EdgeType? = null
+        private var overflowIterator: MutableIterator<T>? = null
+        private var lastReturned: T? = null
         private var lastFromOverflow = false
 
         private fun skipEmptyStages() {
@@ -199,7 +159,7 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
             if (stage == 1 && elem1 == null) stage = 2
         }
 
-        private fun ensureOverflowIterator(): MutableIterator<EdgeType>? {
+        private fun ensureOverflowIterator(): MutableIterator<T>? {
             var it = overflowIterator
             if (it == null) {
                 it = overflow?.iterator()
@@ -217,7 +177,7 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
             }
         }
 
-        override fun next(): EdgeType {
+        override fun next(): T {
             skipEmptyStages()
             return when (stage) {
                 0 -> {
@@ -245,10 +205,6 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
         }
 
         override fun remove() {
-            // Note: like the previous HashSet-based implementation, removal via the iterator does
-            // not trigger the onRemove notification (unlike remove()/removeAll()/clear() below,
-            // which do) - this matches the behavior of java.util.HashSet's iterator, which
-            // EdgeSet used to inherit from directly.
             val value = lastReturned ?: throw IllegalStateException("next() has not been called")
             if (lastFromOverflow) {
                 overflowIterator?.remove()
@@ -264,3 +220,6 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
         }
     }
 }
+
+/** Returns a new empty [SmallMutableSet]. See its documentation for the intended use case. */
+fun <T : Any> smallMutableSetOf(): MutableSet<T> = SmallMutableSet()

@@ -42,8 +42,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.helpers.flatMapNotNull
-import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
+import de.fraunhofer.aisec.cpg.helpers.functional.PersistentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
@@ -437,13 +437,13 @@ private fun IfElse.allBranchesFromMyThenBranchGoThrough(node: Node?): Boolean {
 }
 
 typealias PrevEOGLatticeElement =
-    ConcurrentMapLattice.Element<Node, PowersetLattice.Element<BasicBlock>>
+    PersistentMapLattice.Element<Node, PowersetLattice.Element<BasicBlock>>
 
-typealias PrevEOGLattice = ConcurrentMapLattice<Node, PowersetLattice.Element<BasicBlock>>
+typealias PrevEOGLattice = PersistentMapLattice<Node, PowersetLattice.Element<BasicBlock>>
 
-typealias PrevEOGStateElement = ConcurrentMapLattice.Element<BasicBlock, PrevEOGLatticeElement>
+typealias PrevEOGStateElement = PersistentMapLattice.Element<BasicBlock, PrevEOGLatticeElement>
 
-typealias PrevEOGState = ConcurrentMapLattice<BasicBlock, PrevEOGLatticeElement>
+typealias PrevEOGState = PersistentMapLattice<BasicBlock, PrevEOGLatticeElement>
 
 suspend fun PrevEOGState.push(
     currentElement: PrevEOGStateElement,

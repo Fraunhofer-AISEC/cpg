@@ -47,6 +47,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.mapFiltered
+import de.fraunhofer.aisec.cpg.helpers.smallMutableSetOf
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -72,8 +73,23 @@ abstract class Node() :
     HasScope,
     HasAssumptions {
 
+    /**
+     * Caches the (structural) [hashCode]. A value of `0` means "not yet computed" (a genuine
+     * hashCode of `0` is harmless: it simply recomputes on the next call). [hashCode] depends only
+     * on [name], [location] and the constant runtime class, so the [name] and [location] setters
+     * invalidate this cache. This is safe because [Name] is immutable and no [PhysicalLocation] is
+     * mutated in place in the codebase, so those setters observe every change. With the cache, the
+     * value returned is always identical to the live computation.
+     */
+    @DoNotPersist @JsonIgnore private var cachedHashCode: Int = 0
+
     /** This property holds the full name using our new [Name] class. */
-    @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
+    @Convert(NameConverter::class)
+    override var name: Name = Name(EMPTY_NAME)
+        set(value) {
+            field = value
+            cachedHashCode = 0
+        }
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases
@@ -105,7 +121,12 @@ abstract class Node() :
     /** Optional comment of this node. */
     var comment: String? = null
 
-    @Convert(LocationConverter::class) override var location: PhysicalLocation? = null
+    @Convert(LocationConverter::class)
+    override var location: PhysicalLocation? = null
+        set(value) {
+            field = value
+            cachedHashCode = 0
+        }
 
     /** Incoming control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
@@ -121,39 +142,93 @@ abstract class Node() :
         EvaluationOrders<Node>(this, mirrorProperty = Node::prevEOGEdges, outgoing = true)
         protected set
 
-    /** The [BasicBlockEdgeList] leading to the basic block this node belongs to. */
+    /** Lazy backing field for [basicBlockEdges]. */
+    private var _basicBlockEdges: BasicBlockEdgeList<Node>? = null
+
+    /**
+     * The [BasicBlockEdgeList] leading to the basic block this node belongs to.
+     *
+     * The backing container is allocated lazily on first access: basic blocks are only populated by
+     * the optional [BasicBlockCollectorPass] and stay empty on the vast majority of nodes. The
+     * container is not part of [equals]/[hashCode], so lazy-on-access is safe.
+     */
     @Relationship(value = "BB", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(BasicBlockCollectorPass::class)
-    var basicBlockEdges: BasicBlockEdgeList<Node> =
-        BasicBlockEdgeList<Node>(this, mirrorProperty = BasicBlock::nodeEdges, outgoing = true)
-        protected set
+    var basicBlockEdges: BasicBlockEdgeList<Node>
+        get() =
+            _basicBlockEdges
+                ?: BasicBlockEdgeList<Node>(
+                        this,
+                        mirrorProperty = BasicBlock::nodeEdges,
+                        outgoing = true,
+                    )
+                    .also { _basicBlockEdges = it }
+        protected set(value) {
+            _basicBlockEdges = value
+        }
 
     /** The basic block this node belongs to. */
     var basicBlock by unwrapping(Node::basicBlockEdges)
 
+    /** Lazy backing field for [nextCDGEdges]. */
+    private var _nextCDGEdges: ControlDependences<Node>? = null
+
     /**
      * The nodes which are control-flow dominated, i.e., the children of the Control Dependence
      * Graph (CDG).
+     *
+     * The backing container is allocated lazily on first access: CDG edges are only populated by
+     * the optional [ControlDependenceGraphPass] and stay empty on the vast majority of nodes. The
+     * container is not part of [equals]/[hashCode], so lazy-on-access is safe.
      */
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
-    var nextCDGEdges: ControlDependences<Node> =
-        ControlDependences(this, mirrorProperty = Node::prevCDGEdges, outgoing = true)
-        protected set
+    var nextCDGEdges: ControlDependences<Node>
+        get() =
+            _nextCDGEdges
+                ?: ControlDependences<Node>(
+                        this,
+                        mirrorProperty = Node::prevCDGEdges,
+                        outgoing = true,
+                    )
+                    .also { _nextCDGEdges = it }
+        protected set(value) {
+            _nextCDGEdges = value
+        }
 
-    var nextCDG by unwrapping(Node::nextCDGEdges)
+    /** Virtual property for accessing [nextCDGEdges] as plain nodes. */
+    @DoNotPersist
+    val nextCDG: MutableList<Node>
+        get() = nextCDGEdges.unwrap()
+
+    /** Lazy backing field for [prevCDGEdges]. */
+    private var _prevCDGEdges: ControlDependences<Node>? = null
 
     /**
      * The nodes which dominate this node via the control-flow, i.e., the parents of the Control
      * Dependence Graph (CDG).
+     *
+     * The backing container is allocated lazily on first access (see [nextCDGEdges]).
      */
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
-    var prevCDGEdges: ControlDependences<Node> =
-        ControlDependences<Node>(this, mirrorProperty = Node::nextCDGEdges, outgoing = false)
-        protected set
+    var prevCDGEdges: ControlDependences<Node>
+        get() =
+            _prevCDGEdges
+                ?: ControlDependences<Node>(
+                        this,
+                        mirrorProperty = Node::nextCDGEdges,
+                        outgoing = false,
+                    )
+                    .also { _prevCDGEdges = it }
+        protected set(value) {
+            _prevCDGEdges = value
+        }
 
-    var prevCDG by unwrapping(Node::prevCDGEdges)
+    /** Virtual property for accessing [prevCDGEdges] as plain nodes. */
+    @DoNotPersist
+    val prevCDG: MutableList<Node>
+        get() = prevCDGEdges.unwrap()
 
     @DoNotPersist @JsonIgnore var astParent: AstNode? = null
 
@@ -229,25 +304,65 @@ abstract class Node() :
             return nextDFGEdges.mapFiltered({ it.functionSummary }) { it.end }
         }
 
-    /** Outgoing Program Dependence Edges. */
+    /** Lazy backing field for [nextPDGEdges]. */
+    private var _nextPDGEdges: ProgramDependences<Node>? = null
+
+    /**
+     * Outgoing Program Dependence Edges.
+     *
+     * The backing container is allocated lazily on first access: PDG edges are only populated by
+     * the optional [ProgramDependenceGraphPass] and stay empty on the vast majority of nodes. The
+     * container is not part of [equals]/[hashCode], so lazy-on-access is safe.
+     */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
-    var nextPDGEdges: ProgramDependences<Node> =
-        ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = true)
-        protected set
+    var nextPDGEdges: ProgramDependences<Node>
+        get() =
+            _nextPDGEdges
+                ?: ProgramDependences<Node>(
+                        this,
+                        mirrorProperty = Node::prevPDGEdges,
+                        outgoing = true,
+                    )
+                    .also { _nextPDGEdges = it }
+        protected set(value) {
+            _nextPDGEdges = value
+        }
 
-    var nextPDG by unwrapping(Node::nextPDGEdges)
+    /** Virtual property for accessing [nextPDGEdges] as plain nodes. */
+    @DoNotPersist
+    val nextPDG: MutableSet<Node>
+        get() = nextPDGEdges.unwrap()
 
-    /** Incoming Program Dependence Edges. */
+    /** Lazy backing field for [prevPDGEdges]. */
+    private var _prevPDGEdges: ProgramDependences<Node>? = null
+
+    /**
+     * Incoming Program Dependence Edges.
+     *
+     * The backing container is allocated lazily on first access (see [nextPDGEdges]).
+     */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
-    var prevPDGEdges: ProgramDependences<Node> =
-        ProgramDependences<Node>(this, mirrorProperty = Node::nextPDGEdges, outgoing = false)
-        protected set
+    var prevPDGEdges: ProgramDependences<Node>
+        get() =
+            _prevPDGEdges
+                ?: ProgramDependences<Node>(
+                        this,
+                        mirrorProperty = Node::nextPDGEdges,
+                        outgoing = false,
+                    )
+                    .also { _prevPDGEdges = it }
+        protected set(value) {
+            _prevPDGEdges = value
+        }
 
-    var prevPDG by unwrapping(Node::prevPDGEdges)
+    /** Virtual property for accessing [prevPDGEdges] as plain nodes. */
+    @DoNotPersist
+    val prevPDG: MutableSet<Node>
+        get() = prevPDGEdges.unwrap()
 
-    @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
+    @DoNotPersist override val assumptions: MutableSet<Assumption> = smallMutableSetOf()
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
@@ -288,12 +403,28 @@ abstract class Node() :
      * Additional problem nodes. These nodes represent problems which occurred during processing of
      * a node (i.e. only partially processed).
      */
-    val additionalProblems: MutableSet<ProblemNode> = mutableSetOf()
+    val additionalProblems: MutableSet<ProblemNode> = smallMutableSetOf()
 
+    /** Lazy backing field for [overlayEdges]. */
+    private var _overlayEdges: Overlays? = null
+
+    /**
+     * The [OverlayNode]s attached to this node.
+     *
+     * The backing container is allocated lazily on first access: overlays are only added by
+     * (optional) concept/overlay passes and stay empty on the vast majority of nodes.
+     */
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
-    val overlayEdges: Overlays =
-        Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
-    var overlays by unwrapping(Node::overlayEdges)
+    val overlayEdges: Overlays
+        get() =
+            _overlayEdges
+                ?: Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
+                    .also { _overlayEdges = it }
+
+    /** Virtual property for accessing [overlayEdges] as plain nodes. */
+    @DoNotPersist
+    val overlays: MutableSet<Node>
+        get() = overlayEdges.unwrap()
 
     /**
      * Adds the [assumptions] attached to the [Node] and of relevant supernodes in the AST.
@@ -315,10 +446,12 @@ abstract class Node() :
     open fun disconnectFromGraph() {
         nextDFGEdges.clear()
         prevDFGEdges.clear()
-        prevCDGEdges.clear()
-        nextCDGEdges.clear()
-        prevPDGEdges.clear()
-        nextPDGEdges.clear()
+        // The CDG/PDG/overlay containers are lazily allocated; only clear them if they were ever
+        // populated, so disconnecting does not allocate empty containers just to clear them.
+        _prevCDGEdges?.clear()
+        _nextCDGEdges?.clear()
+        _prevPDGEdges?.clear()
+        _nextPDGEdges?.clear()
         nextEOGEdges.clear()
         prevEOGEdges.clear()
 
@@ -326,7 +459,7 @@ abstract class Node() :
             underlyingNodeEdge.clear()
         }
 
-        this.overlayEdges.clear()
+        _overlayEdges?.clear()
     }
 
     override fun toString(): String {
@@ -372,7 +505,16 @@ abstract class Node() :
      * location already when creating the node.
      */
     override fun hashCode(): Int {
-        return Objects.hash(name, location, this.javaClass.name)
+        // Cached (see [cachedHashCode]); invalidated by the [name]/[location] setters. This is
+        // called very frequently (every structural HashMap/HashSet operation on a node), so
+        // avoiding
+        // the recomputation - and the varargs array [Objects.hash] allocates - is worthwhile.
+        var h = cachedHashCode
+        if (h == 0) {
+            h = Objects.hash(name, location, this.javaClass.name)
+            cachedHashCode = h
+        }
+        return h
     }
 
     /** Returns the starting point of the EOG outside this node and its children. */

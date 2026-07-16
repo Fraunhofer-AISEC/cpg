@@ -174,7 +174,12 @@ open class Dataflow(
     open val functionSummary: Boolean = false,
     open val derefDepth: PointerAccess? = null,
 ) : ProgramDependence(start, end, DependenceType.DATA) {
-    override var labels = super.labels.plus("DFG")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [Dataflow] edges (see [Edge.labels]). */
+        val LABELS = ProgramDependence.LABELS + "DFG"
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -329,3 +334,13 @@ class Dataflows<T : Node>(
         }
     }
 }
+
+/**
+ * Creates a [Dataflows] container starting from this node, mirrored to [mirrorProperty]. This is
+ * the counterpart of [memoryAddressEdgesOf] and keeps the lazily-allocated memory-model dataflow
+ * getters (e.g. `memoryValueEdges`) to a single line.
+ */
+fun Node.dataflowsOf(
+    mirrorProperty: KProperty<MutableCollection<Dataflow>>,
+    outgoing: Boolean,
+): Dataflows<Node> = Dataflows(thisRef = this, mirrorProperty = mirrorProperty, outgoing = outgoing)
