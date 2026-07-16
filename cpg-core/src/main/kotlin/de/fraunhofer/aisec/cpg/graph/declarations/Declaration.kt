@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.HasModifiers
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
+import de.fraunhofer.aisec.cpg.graph.edges.flows.dataflowsOf
 import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
 import de.fraunhofer.aisec.cpg.graph.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -107,12 +108,9 @@ abstract class Declaration : AstNode(), HasModifiers, HasMemoryAddress, HasMemor
     override var memoryValueUsageEdges: Dataflows<Node>
         get() =
             _memoryValueUsageEdges
-                ?: Dataflows<Node>(
-                        this,
-                        mirrorProperty = HasMemoryValue::memoryValueEdges,
-                        outgoing = true,
-                    )
-                    .also { _memoryValueUsageEdges = it }
+                ?: dataflowsOf(HasMemoryValue::memoryValueEdges, outgoing = true).also {
+                    _memoryValueUsageEdges = it
+                }
         set(value) {
             _memoryValueUsageEdges = value
         }
@@ -135,12 +133,9 @@ abstract class Declaration : AstNode(), HasModifiers, HasMemoryAddress, HasMemor
     override var memoryValueEdges: Dataflows<Node>
         get() =
             _memoryValueEdges
-                ?: Dataflows<Node>(
-                        this,
-                        mirrorProperty = HasMemoryValue::memoryValueUsageEdges,
-                        outgoing = false,
-                    )
-                    .also { _memoryValueEdges = it }
+                ?: dataflowsOf(HasMemoryValue::memoryValueUsageEdges, outgoing = false).also {
+                    _memoryValueEdges = it
+                }
         set(value) {
             _memoryValueEdges = value
         }

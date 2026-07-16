@@ -334,3 +334,13 @@ class Dataflows<T : Node>(
         }
     }
 }
+
+/**
+ * Creates a [Dataflows] container starting from this node, mirrored to [mirrorProperty]. This is
+ * the counterpart of [memoryAddressEdgesOf] and keeps the lazily-allocated memory-model dataflow
+ * getters (e.g. `memoryValueEdges`) to a single line.
+ */
+fun Node.dataflowsOf(
+    mirrorProperty: KProperty<MutableCollection<Dataflow>>,
+    outgoing: Boolean,
+): Dataflows<Node> = Dataflows(thisRef = this, mirrorProperty = mirrorProperty, outgoing = outgoing)
