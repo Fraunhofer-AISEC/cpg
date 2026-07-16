@@ -176,7 +176,7 @@ For parsing TypeScript, the necessary TypeScript-based code can be found in the 
 
 #### AI
 
-[Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro) functionality, together with other AI components such as skills and chat integration, is provided via the optional `cpg-ai` module. It can be enabled/disabled via the `gradle.properties` setting `enableAIModule`.
+[Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro) functionality, together with other AI components such as skills and chat integration, is provided via the optional `cpg-ai` module. It can be enabled/disabled via the `gradle.properties` setting `enableAIModule`. Note that `codyze-console` has a hard build dependency on `cpg-ai`, so `enableAIModule=true` is required to build it.
 
 ### Code Style
 

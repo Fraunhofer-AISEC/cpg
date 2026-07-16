@@ -18,15 +18,16 @@ dependencies {
     // CPG modules
     implementation(projects.cpgConcepts)
     implementation(projects.cpgSerialization)
-
-    // The optional `cpg-ai` module (MCP server, ChatService, ...) is never a compile-time
-    // dependency: it may not be part of the build at all (see `enableAIModule` in
-    // `gradle.properties`), so all access to it goes through reflection in [McpServerHelper].
-    // It's still needed at runtime though, so its classes are on the classpath for that
-    // reflection to find - hence runtimeOnly (and the findProject guard, since directly
-    // referencing the project would fail the build entirely if it isn't included).
-    findProject(":cpg-ai")?.also { runtimeOnly(it) }
-    implementation(libs.kotlin.reflect)
+    // cpg-ai (MCP server, ChatService, ...) is a real, mandatory dependency of codyze-console,
+    // but the module itself stays optional at the settings.gradle.kts level (like the language
+    // frontends) for consumers who don't need it. Fail clearly if someone tries to build
+    // codyze-console without it, rather than a cryptic "project not found" error.
+    implementation(
+        findProject(":cpg-ai")
+            ?: error(
+                "codyze-console requires the cpg-ai module; set enableAIModule=true in gradle.properties"
+            )
+    )
 
     // Ktor server dependencies
     implementation(libs.bundles.ktor)

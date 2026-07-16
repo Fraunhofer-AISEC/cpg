@@ -66,7 +66,9 @@ mavenPublishing {
 }
 
 dependencies {
-    implementation(libs.mcp)
+    // api, not implementation: the Server type (from Application.kt/McpServer.kt) is part of this
+    // module's public API surface, which codyze-console calls directly.
+    api(libs.mcp)
     implementation(libs.mcp.client)
     api(libs.ktor.server.cio)
     implementation(libs.ktor.serialization.kotlinx.json)

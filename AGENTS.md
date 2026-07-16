@@ -94,11 +94,10 @@ codyze-console is a full-stack web application with a Ktor backend and a Svelte 
 
 | File / Package | Responsibility |
 |---|---|
-| `Main.kt` | Ktor/Netty entry point (port 8080), optionally starts MCP server on port 8081 |
+| `Main.kt` | Ktor/Netty entry point (port 8080), starts the MCP server on port 8081 |
 | `Router.kt` | REST API routes (`/api/analyze`, `/api/chat`, `/api/querytrees`, etc.) |
 | `ConsoleService.kt` | Core business logic: CPG analysis, QueryTree caching, concept management |
 | `Nodes.kt` | JSON serialization models and CPG node-to-JSON conversion |
-| `McpServerHelper.kt` | Reflection-based bridge to the optional `cpg-ai` module (`McpServer`, `ChatService`); loads it dynamically so `cpg-ai` remains an optional dependency |
 
 The AI chat/tool-calling implementation itself (`ChatService`, LLM clients, skills) lives in the `cpg-ai` module, not in `codyze-console`:
 
@@ -122,11 +121,12 @@ The AI chat/tool-calling implementation itself (`ChatService`, LLM clients, skil
 
 #### MCP Integration
 
-codyze-console acts as both **MCP server host** and **MCP client**, entirely through the `cpg-ai` module:
-- It starts the MCP server on port 8081 (via reflection, so `cpg-ai` is an optional dependency)
+codyze-console acts as both **MCP server host** and **MCP client**, entirely through the `cpg-ai` module, which it depends on directly (no reflection):
+- It starts the MCP server on port 8081 via `runHttpMcpServerUsingKtorPlugin`
 - `ChatService` connects to it as a client using `StreamableHttpClientTransport`
-- After analysis, the global `TranslationResult` is injected into the MCP server so tools can access the CPG
-- Since `codyze-console` never imports `cpg-ai` types directly, all of the above is bridged through `McpServerHelper` (reflection, with `kotlin-reflect`'s `callSuspend` for suspend calls)
+- After analysis, the global `TranslationResult` is injected into the MCP server (`globalAnalysisResult` in `cpg.ai.mcp.mcpserver.tools`) so tools can access the CPG
+
+`cpg-ai` is optional at the `settings.gradle.kts` level (`enableAIModule` in `gradle.properties`, like the language frontends), but codyze-console requires it to compile - if the module is disabled, building codyze-console fails with a clear error rather than degrading gracefully.
 
 ### Frontend (`codyze-console/src/main/webapp/src/`)
 

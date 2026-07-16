@@ -280,29 +280,6 @@ class ChatService(
         httpClient.close()
     }
 
-    /**
-     * JSON-friendly wrapper around [chat]. Callers outside this module (e.g. `codyze-console`,
-     * which may build without this optional module and thus cannot depend on [ChatRequestJSON]
-     * directly) can invoke this via reflection using only [JsonObject], which is always on their
-     * classpath.
-     */
-    fun chatJson(requestJson: JsonObject): Flow<String> =
-        chat(Json.decodeFromJsonElement(requestJson))
-
-    /** JSON-friendly wrapper around [listAvailableProviders]. */
-    suspend fun listAvailableProvidersJson(): JsonElement =
-        Json.encodeToJsonElement(listAvailableProviders())
-
-    /** JSON-friendly wrapper around [getMcpCapabilities]. */
-    fun getMcpCapabilitiesJson(): JsonElement = Json.encodeToJsonElement(getMcpCapabilities())
-
-    /** JSON-friendly wrapper around [getPrompt]. */
-    suspend fun getPromptJson(name: String, arguments: Map<String, String>): JsonElement =
-        Json.encodeToJsonElement(getPrompt(name, arguments))
-
-    /** JSON-friendly wrapper around [getSkills]. */
-    fun getSkillsJson(): JsonElement = Json.encodeToJsonElement(getSkills())
-
     companion object {
         private val log = LoggerFactory.getLogger(ChatService::class.java)
 

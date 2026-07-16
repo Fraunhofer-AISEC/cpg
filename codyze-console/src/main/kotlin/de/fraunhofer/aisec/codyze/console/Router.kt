@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.cpg.ai.ChatRequestJSON
+import de.fraunhofer.aisec.cpg.ai.ChatService
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import io.ktor.http.*
@@ -62,7 +64,7 @@ import kotlinx.serialization.json.JsonObject
  * - POST `/api/concept`: Adds a concept node to the current
  *   [de.fraunhofer.aisec.codyze.AnalysisResult]
  */
-fun Routing.apiRoutes(service: ConsoleService) {
+fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
     // The API routes are prefixed with /api
     route("/api") {
         // The endpoint to analyze a project
@@ -249,7 +251,7 @@ fun Routing.apiRoutes(service: ConsoleService) {
         }
 
         // Feature flags endpoint
-        get("/features") { call.respond(mapOf("mcpEnabled" to McpServerHelper.isEnabled)) }
+        get("/features") { call.respond(mapOf("mcpEnabled" to chatEnabled)) }
 
         // The endpoint to get a QueryTree with its parent IDs for tree expansion
         get("/querytrees/{queryTreeId}/parents") {
@@ -284,18 +286,14 @@ fun Routing.apiRoutes(service: ConsoleService) {
     }
 }
 
-/**
- * Chat and MCP routes — only registered when a `ChatService` instance (created via
- * [McpServerHelper.createChatService]) is available. [chatService] is an opaque instance from the
- * optional `cpg-ai` module; all calls go through [McpServerHelper].
- */
-fun Route.chatRoutes(chatService: Any) {
+/** Chat and MCP routes — only registered when [ChatService] is available. */
+fun Route.chatRoutes(chatService: ChatService) {
     route("/api/chat") {
         post {
-            val request = call.receive<JsonObject>()
+            val request = call.receive<ChatRequestJSON>()
             call.respondTextWriter(contentType = ContentType.Text.EventStream) {
                 try {
-                    McpServerHelper.chat(chatService, request).collect { chunk ->
+                    chatService.chat(request).collect { chunk ->
                         try {
                             chunk.split("\n").forEach { line -> write("data: $line\n") }
                             write("\n")
@@ -316,26 +314,26 @@ fun Route.chatRoutes(chatService: Any) {
             }
         }
 
-        get("/providers") { call.respond(McpServerHelper.listAvailableProviders(chatService)) }
+        get("/providers") { call.respond(chatService.listAvailableProviders()) }
 
-        get("/mcp/capabilities") { call.respond(McpServerHelper.getMcpCapabilities(chatService)) }
+        get("/mcp/capabilities") { call.respond(chatService.getMcpCapabilities()) }
 
         post("/mcp/prompts/{name}") {
             val name =
                 call.parameters["name"] ?: return@post call.respond(HttpStatusCode.BadRequest)
             val arguments = call.receiveNullable<Map<String, String>>() ?: emptyMap()
-            call.respond(McpServerHelper.getPrompt(chatService, name, arguments))
+            call.respond(chatService.getPrompt(name, arguments))
         }
 
         post("/mcp/tools/{toolName}") {
             val toolName =
                 call.parameters["toolName"] ?: return@post call.respond(HttpStatusCode.BadRequest)
             val body = call.receive<JsonObject>()
-            val result = McpServerHelper.callTool(chatService, toolName, body)
+            val result = chatService.callTool(toolName, body)
             call.respond(result)
         }
 
-        get("/skills") { call.respond(McpServerHelper.getSkills(chatService)) }
+        get("/skills") { call.respond(chatService.getSkills()) }
     }
 }
 
