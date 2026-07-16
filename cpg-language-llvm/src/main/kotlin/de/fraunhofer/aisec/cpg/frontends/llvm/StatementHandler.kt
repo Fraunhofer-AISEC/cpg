@@ -1206,7 +1206,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val newArrayDecl = declarationOrNot(frontend.getOperandValueAtIndex(instr, 0), instr)
         compoundStatement.statements += newArrayDecl
 
-        val decl = newArrayDecl.declarations[0] as? Variable
+        val decl = (newArrayDecl as? DeclarationHolder)?.declarations?.get(0) as? Variable
         val arrayExpr = newSubscription(rawNode = instr)
         arrayExpr.arrayExpression =
             newReference(

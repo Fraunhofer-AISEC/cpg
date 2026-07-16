@@ -30,17 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.AstNode
-import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
-import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
-import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
 import de.fraunhofer.aisec.cpg.graph.edges.flows.dataflowsOf
 import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
@@ -53,7 +44,6 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.persistence.Relationship
-import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
@@ -65,7 +55,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * executable code.
  */
 abstract class Expression(usedAsExpression: Boolean = true) :
-    AstNode(), DeclarationHolder, HasType, HasMemoryAddress, HasMemoryValue {
+    AstNode(), HasType, HasMemoryAddress, HasMemoryValue {
 
     /**
      * This property specifies that this node is used as an expression. Depending on the language,
@@ -86,35 +76,6 @@ abstract class Expression(usedAsExpression: Boolean = true) :
      * modeling and determine the dataflow direction
      */
     open var access: AccessValues = AccessValues.READ
-
-    /** Lazy backing field for [localEdges]. */
-    private var _localEdges: AstEdges<ValueDeclaration, AstEdge<ValueDeclaration>>? = null
-
-    /**
-     * A list of local variables (or other values) associated to this statement, defined by their
-     * [ValueDeclaration] extracted from Block because `for`, `while`, `if`, and `switch` can
-     * declare locals in their condition or initializers.
-     *
-     * The backing container is allocated lazily on first access: most expressions declare no
-     * locals, and [astEdgesOf] eagerly allocates a backing array. See [localsEqual] and [hashCode],
-     * which avoid forcing this allocation during structural comparisons.
-     *
-     * TODO: This is actually an AST node just for a subset of nodes, i.e. initializers in for-loops
-     */
-    @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
-    var localEdges: AstEdges<ValueDeclaration, AstEdge<ValueDeclaration>>
-        get() = _localEdges ?: astEdgesOf<ValueDeclaration>().also { _localEdges = it }
-        set(value) {
-            _localEdges = value
-        }
-
-    /** Virtual property to access [localEdges] without property edges. */
-    @DoNotPersist
-    var locals: MutableList<ValueDeclaration>
-        get() = localEdges.unwrap()
-        set(value) {
-            localEdges.resetTo(value)
-        }
 
     @DoNotPersist override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
@@ -242,37 +203,16 @@ abstract class Expression(usedAsExpression: Boolean = true) :
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Expression) return false
-        return super.equals(other) && localsEqual(other) && type == other.type
-    }
-
-    /**
-     * Compares the locals of `this` and [other] without forcing allocation of the lazily-created
-     * [localEdges] container when both sides are empty (the common case).
-     */
-    private fun localsEqual(other: Expression): Boolean {
-        val thisEmpty = _localEdges?.isEmpty() != false
-        val otherEmpty = other._localEdges?.isEmpty() != false
-        if (thisEmpty && otherEmpty) return true
-        return locals == other.locals && propertyEqualsList(localEdges, other.localEdges)
+        return super.equals(other) && type == other.type
     }
 
     override fun hashCode(): Int {
-        // Exactly matches the previous `Objects.hash(super.hashCode(), locals)`. An empty unwrapped
-        // locals collection hashes to `Objects.hash(collection.size)` == `Objects.hash(0)` == 31
-        // (see UnwrappedEdgeCollection.hashCode); using that constant for the empty case avoids
-        // forcing the lazy [localEdges] container to be allocated during hashing.
-        val localsHash = if (_localEdges?.isEmpty() != false) 31 else locals.hashCode()
-        return 31 * (31 + super.hashCode()) + localsHash
+        // `locals` moved to the few DeclarationHolder subclasses and is no longer part of the
+        // generic expression identity. This reproduces the historical value
+        // `Objects.hash(super.hashCode(), locals)` for the (now universal) empty-locals case, so
+        // expression node ids stay stable across this refactor. `type` is part of equals but
+        // deliberately excluded from the hash because it is mutated by the type passes, and a
+        // node's hash must stay stable while it is used as a map key.
+        return 31 * (31 + super.hashCode()) + 31
     }
-
-    override fun addDeclaration(declaration: Declaration) {
-        if (declaration is Variable) {
-            addIfNotContains(localEdges, declaration)
-        } else if (declaration is Function) {
-            addIfNotContains(localEdges, declaration)
-        }
-    }
-
-    override val declarations: List<Declaration>
-        get() = locals
 }

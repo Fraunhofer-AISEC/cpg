@@ -846,7 +846,7 @@ class StatementHandlerTest {
         requiresUintCast: Boolean,
     ) {
         // Check that the value is assigned to
-        val declaration = atomicrmwStatement.statements[0].declarations[0]
+        val declaration = (atomicrmwStatement.statements[0] as DeclarationStatement).declarations[0]
         assertIs<Variable>(declaration)
         assertLocalName(variableName, declaration)
         assertLocalName("i32", declaration.type)
@@ -897,7 +897,7 @@ class StatementHandlerTest {
         variableName: String,
     ) {
         // Check that the value is assigned to
-        val declaration = atomicrmwStatement.statements[0].declarations[0]
+        val declaration = (atomicrmwStatement.statements[0] as DeclarationStatement).declarations[0]
         assertIs<Variable>(declaration)
         assertLocalName(variableName, declaration)
         assertLocalName("i32", declaration.type)
