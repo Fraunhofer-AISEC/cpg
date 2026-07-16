@@ -44,7 +44,7 @@ object McpServerHelper {
     /** Check if the `cpg-ai` module is available on the classpath. */
     val isEnabled: Boolean by lazy {
         try {
-            Class.forName("de.fraunhofer.aisec.cpg.mcp.ApplicationKt")
+            Class.forName("de.fraunhofer.aisec.cpg.ai.mcp.ApplicationKt")
             true
         } catch (_: ClassNotFoundException) {
             false
@@ -58,10 +58,10 @@ object McpServerHelper {
 
         try {
             log.info("Starting MCP server with streamable HTTP on port {}...", port)
-            val mcpServerKt = Class.forName("de.fraunhofer.aisec.cpg.mcp.mcpserver.McpServerKt")
+            val mcpServerKt = Class.forName("de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.McpServerKt")
             val server = mcpServerKt.getMethod("configureDefaultServer").invoke(null)
 
-            val appKt = Class.forName("de.fraunhofer.aisec.cpg.mcp.ApplicationKt")
+            val appKt = Class.forName("de.fraunhofer.aisec.cpg.ai.mcp.ApplicationKt")
             val runServer = appKt.methods.first { it.name == "runHttpMcpServerUsingKtorPlugin" }
             runServer.invoke(null, port, "0.0.0.0", server, false)
         } catch (e: Exception) {
@@ -77,7 +77,7 @@ object McpServerHelper {
 
         try {
             val toolsClass =
-                Class.forName("de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.CpgAnalyzeToolKt")
+                Class.forName("de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.CpgAnalyzeToolKt")
             val setResult = toolsClass.getMethod("setGlobalAnalysisResult", result.javaClass)
             setResult.invoke(null, result)
         } catch (e: Exception) {
@@ -95,8 +95,7 @@ object McpServerHelper {
         }
 
         return try {
-            val chatServiceClass =
-                Class.forName("de.fraunhofer.aisec.codyze.console.ai.ChatService")
+            val chatServiceClass = Class.forName("de.fraunhofer.aisec.cpg.ai.ChatService")
             val companion = chatServiceClass.getField("Companion").get(null)
             companion.javaClass.getMethod("createIfConfigExist").invoke(companion)
         } catch (e: Exception) {

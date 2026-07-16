@@ -104,12 +104,13 @@ The AI chat/tool-calling implementation itself (`ChatService`, LLM clients, skil
 
 | File / Package (in `cpg-ai`) | Responsibility |
 |---|---|
-| `console/ai/ChatService.kt` | Loads LLM config from HOCON, runs the agentic tool-calling loop, MCP client connection |
-| `console/ai/ChatModels.kt` | Data classes for chat/MCP request and response JSON |
-| `console/ai/clients/LlmClient.kt` | Provider-agnostic LLM interface (`sendPrompt` -> `List<ToolCall>`) |
-| `console/ai/clients/OpenAiClient.kt` | OpenAI-compatible client (also works with Ollama, vLLM, MLX) |
-| `console/ai/clients/GeminiClient.kt` | Google Gemini API client |
-| `console/ai/skills/SkillLoader.kt` | Discovers and parses skill definitions |
+| `ai/ChatService.kt` | Loads LLM config from HOCON, runs the agentic tool-calling loop, MCP client connection |
+| `ai/ChatModels.kt` | Data classes for chat/MCP request and response JSON |
+| `ai/clients/LlmClient.kt` | Provider-agnostic LLM interface (`sendPrompt` -> `List<ToolCall>`) |
+| `ai/clients/OpenAiClient.kt` | OpenAI-compatible client (also works with Ollama, vLLM, MLX) |
+| `ai/clients/GeminiClient.kt` | Google Gemini API client |
+| `ai/skills/SkillLoader.kt` | Discovers and parses skill definitions |
+| `ai/mcp/` | The MCP server itself (see below) |
 
 #### AI Agent Data Flow
 

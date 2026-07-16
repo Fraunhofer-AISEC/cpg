@@ -33,7 +33,7 @@ plugins {
 }
 
 application {
-    mainClass.set("de.fraunhofer.aisec.cpg.mcp.ApplicationKt")
+    mainClass.set("de.fraunhofer.aisec.cpg.ai.mcp.ApplicationKt")
     // Since we are potentially persisting deeply nested graphs, we need to increase the stack and
     // heap size.
     // Note, that if you are running this IntelliJ, you might need to manually specify this as VM
