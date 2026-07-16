@@ -29,8 +29,13 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Usages
+import de.fraunhofer.aisec.cpg.graph.edges.flows.dataflowsOf
+import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
@@ -40,7 +45,7 @@ import de.fraunhofer.aisec.cpg.persistence.Relationship
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** A declaration who has a type. */
-abstract class ValueDeclaration : Declaration(), HasType {
+abstract class ValueDeclaration : Declaration(), HasType, HasMemoryAddress, HasMemoryValue {
 
     @DoNotPersist override var observerEnabled: Boolean = true
 
@@ -82,6 +87,100 @@ abstract class ValueDeclaration : Declaration(), HasType {
 
             field = value
             informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
+        }
+
+    /** Lazy backing field for [memoryAddressEdges]. */
+    private var _memoryAddressEdges: MemoryAddressEdges? = null
+
+    /**
+     * Each value declaration allocates new memory, AKA a new address, so we create a new
+     * MemoryAddress node. Should only be a single address!
+     *
+     * This and the other two memory-model containers ([memoryValueUsageEdges], [memoryValueEdges])
+     * are only populated by the DFG and points-to passes and stay empty on most declarations. Their
+     * backing containers are therefore allocated lazily on first access. They are not part of
+     * [equals]/[hashCode], so lazy-on-access is safe. These members live on [ValueDeclaration] (not
+     * the more general [Declaration]) because only value-carrying declarations ever hold a memory
+     * address or value.
+     */
+    @Relationship
+    override var memoryAddressEdges: MemoryAddressEdges
+        get() =
+            _memoryAddressEdges
+                ?: memoryAddressEdgesOf(
+                        mirrorProperty = MemoryAddress::usageEdges,
+                        outgoing = true,
+                        onAdd = { toAdd ->
+                            if (this.memoryAddressEdges.size > 1) {
+                                log.error(
+                                    "A declaration should have only a single address but we have ${this.memoryAddressEdges.size}."
+                                )
+                            }
+                        },
+                    )
+                    .also { _memoryAddressEdges = it }
+        set(value) {
+            _memoryAddressEdges = value
+        }
+
+    /** Virtual property for accessing [memoryAddressEdges] as plain nodes. */
+    @DoNotPersist
+    override var memoryAddresses: MutableSet<MemoryAddress>
+        get() = memoryAddressEdges.unwrap()
+        set(value) {
+            memoryAddressEdges.resetTo(value)
+        }
+
+    /** Lazy backing field for [memoryValueUsageEdges]. */
+    private var _memoryValueUsageEdges: Dataflows<Node>? = null
+
+    /**
+     * Where the memory value of this declaration is used (allocated lazily, see
+     * [memoryAddressEdges]).
+     */
+    @Relationship
+    override var memoryValueUsageEdges: Dataflows<Node>
+        get() =
+            _memoryValueUsageEdges
+                ?: dataflowsOf(HasMemoryValue::memoryValueEdges, outgoing = true).also {
+                    _memoryValueUsageEdges = it
+                }
+        set(value) {
+            _memoryValueUsageEdges = value
+        }
+
+    /** Virtual property for accessing [memoryValueUsageEdges] as plain nodes. */
+    @DoNotPersist
+    override var memoryValueUsages: MutableSet<Node>
+        get() = memoryValueUsageEdges.unwrap()
+        set(value) {
+            memoryValueUsageEdges.resetTo(value)
+        }
+
+    /** Lazy backing field for [memoryValueEdges]. */
+    private var _memoryValueEdges: Dataflows<Node>? = null
+
+    /**
+     * Each value declaration can also have a MemoryValue (allocated lazily, see
+     * [memoryAddressEdges]).
+     */
+    @Relationship
+    override var memoryValueEdges: Dataflows<Node>
+        get() =
+            _memoryValueEdges
+                ?: dataflowsOf(HasMemoryValue::memoryValueUsageEdges, outgoing = false).also {
+                    _memoryValueEdges = it
+                }
+        set(value) {
+            _memoryValueEdges = value
+        }
+
+    /** Virtual property for accessing [memoryValueEdges] as plain nodes. */
+    @DoNotPersist
+    override var memoryValues: MutableSet<Node>
+        get() = memoryValueEdges.unwrap()
+        set(value) {
+            memoryValueEdges.resetTo(value)
         }
 
     /**
