@@ -31,8 +31,11 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The translation context holds all necessary managers and configurations needed during the
@@ -62,6 +65,23 @@ open class TranslationContext(
      * (through individual contexts) and then finally merged into a final one.
      */
     val scopeManager: ScopeManager = ScopeManager(this)
+
+    /**
+     * A per-context cache of non-generic [ObjectType]s, keyed by their defining [Scope] and (local)
+     * name. It lets the frontend reuse a single [ObjectType] instance for repeated references to
+     * the same named type within the same scope, instead of allocating a fresh one per use (see
+     * [de.fraunhofer.aisec.cpg.graph.objectType]).
+     *
+     * Sharing is sound because a type's resolution (its [ObjectType.recordDeclaration], fully
+     * qualified name and supertypes, set by the [de.fraunhofer.aisec.cpg.passes.TypeResolver]) is
+     * fully determined by its name and [Scope]; all references with the same `(scope, name)`
+     * resolve identically. It is conservatively scoped: distinct scopes never share, and because
+     * each parallel translation context has its own global scope, types are never shared across
+     * contexts or, for non-global scopes, across translation units.
+     */
+    @DoNotPersist
+    val objectTypeCache: ConcurrentHashMap<Scope, ConcurrentHashMap<String, ObjectType>> =
+        ConcurrentHashMap()
 
     /**
      * Set of files, that are available for additional analysis. They are not the primary subjects

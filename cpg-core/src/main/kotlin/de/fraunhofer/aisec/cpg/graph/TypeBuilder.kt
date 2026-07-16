@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.types.*
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Creates a new [UnknownType] and sets the appropriate language, if this [MetadataProvider]
@@ -92,8 +93,36 @@ fun LanguageProvider.objectType(
         return builtIn
     }
 
-    // Otherwise, we either need to create the type because of the generics or because we do not
-    // know the type yet.
+    // Conservative interning: for a non-generic named type we reuse a single ObjectType instance
+    // per
+    // (scope, name) within the current translation context (see
+    // TranslationContext.objectTypeCache).
+    // Every reference to the same named type in the same scope resolves identically, so sharing one
+    // instance avoids allocating a fresh, redundant ObjectType for each use. Types with generics,
+    // or
+    // created without a scope/context, keep their previous fresh-per-call behavior.
+    val scope = (this as? ScopeProvider)?.scope
+    val ctx = (this as? ContextProvider)?.ctx
+    if (generics.isEmpty() && scope != null && ctx != null) {
+        return ctx.objectTypeCache
+            .computeIfAbsent(scope) { ConcurrentHashMap() }
+            .computeIfAbsent(name.toString()) { createObjectType(name, generics, rawNode) }
+    }
+
+    return createObjectType(name, generics, rawNode)
+}
+
+/**
+ * Creates a fresh [ObjectType] with the given [name] and [generics] and applies the usual metadata
+ * (scope, code, location). We only refer to the type by its local name, because we treat types as
+ * sort of references when creating them and resolve them later. Callers should prefer [objectType],
+ * which additionally interns simple named types.
+ */
+private fun LanguageProvider.createObjectType(
+    name: CharSequence,
+    generics: List<Type>,
+    rawNode: Any?,
+): ObjectType {
     val type =
         ObjectType(
             typeName = name,
@@ -102,11 +131,7 @@ fun LanguageProvider.objectType(
             mutable = true,
             language = language,
         )
-    // Apply our usual metadata, such as scope, code, location, if we have any. Make sure only
-    // to refer by the local name because we will treat types as sort of references when
-    // creating them and resolve them later.
     type.applyMetadata(this, name, rawNode = rawNode, doNotPrependNamespace = true)
-
     return type
 }
 
