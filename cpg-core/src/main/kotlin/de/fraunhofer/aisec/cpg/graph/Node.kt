@@ -142,12 +142,30 @@ abstract class Node() :
         EvaluationOrders<Node>(this, mirrorProperty = Node::prevEOGEdges, outgoing = true)
         protected set
 
-    /** The [BasicBlockEdgeList] leading to the basic block this node belongs to. */
+    /** Lazy backing field for [basicBlockEdges]. */
+    private var _basicBlockEdges: BasicBlockEdgeList<Node>? = null
+
+    /**
+     * The [BasicBlockEdgeList] leading to the basic block this node belongs to.
+     *
+     * The backing container is allocated lazily on first access: basic blocks are only populated by
+     * the optional [BasicBlockCollectorPass] and stay empty on the vast majority of nodes. The
+     * container is not part of [equals]/[hashCode], so lazy-on-access is safe.
+     */
     @Relationship(value = "BB", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(BasicBlockCollectorPass::class)
-    var basicBlockEdges: BasicBlockEdgeList<Node> =
-        BasicBlockEdgeList<Node>(this, mirrorProperty = BasicBlock::nodeEdges, outgoing = true)
-        protected set
+    var basicBlockEdges: BasicBlockEdgeList<Node>
+        get() =
+            _basicBlockEdges
+                ?: BasicBlockEdgeList<Node>(
+                        this,
+                        mirrorProperty = BasicBlock::nodeEdges,
+                        outgoing = true,
+                    )
+                    .also { _basicBlockEdges = it }
+        protected set(value) {
+            _basicBlockEdges = value
+        }
 
     /** The basic block this node belongs to. */
     var basicBlock by unwrapping(Node::basicBlockEdges)
