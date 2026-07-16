@@ -28,10 +28,9 @@ package de.fraunhofer.aisec.cpg.evaluation
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.array
-import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.newArrayConstruction
-import de.fraunhofer.aisec.cpg.graph.newConditional
+import de.fraunhofer.aisec.cpg.frontends.translationResult
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 
 class ValueEvaluationTests {
     companion object {
@@ -43,57 +42,114 @@ class ValueEvaluationTests {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("size.java") {
-                        record("MainClass") {
-                            method("main") {
-                                this.isStatic = true
-                                param("args", t("String").array())
-                                body {
-                                    declare {
-                                        variable("array", t("int").array()) {
-                                            val newExpr = newArrayConstruction()
-                                            newExpr.addDimension(literal(3, t("int")))
-                                            this.initializer = newExpr
-                                        }
-                                    }
-                                    forStmt {
-                                        loopBody {
-                                            subscriptExpr {
-                                                ref("array")
-                                                ref("i")
-                                            } assign ref("i")
-                                        }
-                                        forInitializer {
-                                            declare {
-                                                variable("i", t("int")) { literal(0, t("int")) }
+                val tu = newTranslationUnit("size.java")
+                scopeManager.resetToGlobal(tu)
+
+                newRecord("MainClass", "class", holder = tu, enterScope = true) { record ->
+                    newMethod(
+                        "main",
+                        isStatic = true,
+                        recordDeclaration = record,
+                        holder = record,
+                        enterScope = true,
+                    ) { main ->
+                        main.returnTypes = listOf(unknownType())
+                        main.type = computeType(main)
+                        newParameter("args", objectType("String").array(), holder = main)
+
+                        main.body =
+                            newBlock(enterScope = true) { block ->
+                                val arrayDeclStmt = newDeclarationStatement()
+                                val arrayVar =
+                                    newVariable("array", objectType("int").array()).also {
+                                        it.initializer =
+                                            newArrayConstruction().also { ac ->
+                                                ac.addDimension(newLiteral(3, objectType("int")))
                                             }
-                                        }
-                                        forCondition { ref("i") lt member("length", ref("array")) }
-                                        forIteration { ref("i").inc() }
                                     }
-                                    memberCall("println", member("out", ref("System"))) {
-                                        subscriptExpr {
-                                            ref("array")
-                                            literal(1, t("int"))
-                                        }
-                                    }
+                                arrayDeclStmt.declarations += arrayVar
+                                scopeManager.addDeclaration(arrayVar)
+                                block += arrayDeclStmt
 
-                                    declare {
-                                        variable("str", t("String")) {
-                                            literal("abcde", t("String"))
+                                val forNode = newFor { for_ ->
+                                    val iDeclStmt = newDeclarationStatement()
+                                    val iVar =
+                                        newVariable("i", objectType("int")).also {
+                                            it.initializer = newLiteral(0, objectType("int"))
                                         }
-                                    }
+                                    iDeclStmt.declarations += iVar
+                                    scopeManager.addDeclaration(iVar)
+                                    for_.initializerStatement = iDeclStmt
 
-                                    memberCall("println", member("out", ref("System"))) {
-                                        ref("str")
+                                    for_.condition =
+                                        newBinaryOperator("<").also {
+                                            it.lhs = newReference("i")
+                                            it.rhs =
+                                                newMemberAccess("length", newReference("array"))
+                                        }
+
+                                    for_.iterationStatement =
+                                        newUnaryOperator("++", postfix = true, prefix = false)
+                                            .also { it.input = newReference("i") }
+
+                                    for_.statement = newBlock { loopBody ->
+                                        loopBody +=
+                                            newAssign(
+                                                "=",
+                                                listOf(
+                                                    newSubscription().also {
+                                                        it.arrayExpression = newReference("array")
+                                                        it.subscriptExpression = newReference("i")
+                                                    }
+                                                ),
+                                                listOf(newReference("i")),
+                                            )
                                     }
-                                    returnStmt {}
                                 }
+                                block += forNode
+
+                                val printlnCall1 =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall1.addArgument(
+                                    newSubscription().also {
+                                        it.arrayExpression = newReference("array")
+                                        it.subscriptExpression = newLiteral(1, objectType("int"))
+                                    }
+                                )
+                                block += printlnCall1
+
+                                val strDeclStmt = newDeclarationStatement()
+                                val strVar =
+                                    newVariable("str", objectType("String")).also {
+                                        it.initializer = newLiteral("abcde", objectType("String"))
+                                    }
+                                strDeclStmt.declarations += strVar
+                                scopeManager.addDeclaration(strVar)
+                                block += strDeclStmt
+
+                                val printlnCall2 =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall2.addArgument(newReference("str"))
+                                block += printlnCall2
+
+                                block += newReturn()
                             }
-                        }
                     }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getComplexExample(
@@ -104,37 +160,124 @@ class ValueEvaluationTests {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("complex.java") {
-                        record("MainClass") {
-                            method("main") {
-                                this.isStatic = true
-                                param("args", t("String").array())
-                                body {
-                                    declare { variable("i", t("int")) { literal(3, t("int")) } }
-                                    declare { variable("s", t("String")) }
+                val tu = newTranslationUnit("complex.java")
+                scopeManager.resetToGlobal(tu)
 
-                                    ifStmt {
-                                        condition { ref("i") lt literal(2, t("int")) }
-                                        thenStmt { ref("s") assign literal("small", t("String")) }
-                                        elseStmt { ref("s") assign literal("big", t("String")) }
+                newRecord("MainClass", "class", holder = tu, enterScope = true) { record ->
+                    newMethod(
+                        "main",
+                        isStatic = true,
+                        recordDeclaration = record,
+                        holder = record,
+                        enterScope = true,
+                    ) { main ->
+                        main.returnTypes = listOf(unknownType())
+                        main.type = computeType(main)
+                        newParameter("args", objectType("String").array(), holder = main)
+
+                        main.body =
+                            newBlock(enterScope = true) { block ->
+                                val iDeclStmt = newDeclarationStatement()
+                                val iVar =
+                                    newVariable("i", objectType("int")).also {
+                                        it.initializer = newLiteral(3, objectType("int"))
+                                    }
+                                iDeclStmt.declarations += iVar
+                                scopeManager.addDeclaration(iVar)
+                                block += iDeclStmt
+
+                                val sDeclStmt = newDeclarationStatement()
+                                val sVar = newVariable("s", objectType("String"))
+                                sDeclStmt.declarations += sVar
+                                scopeManager.addDeclaration(sVar)
+                                block += sDeclStmt
+
+                                // Fluent's "lt" infix operator has no ArgumentHolder context, so
+                                // it never actually attaches the comparison it builds -- the
+                                // self-attaching ref("i")/literal(2) operands silently overwrite
+                                // each other on the IfElse (an ArgumentHolder), leaving the
+                                // *literal* as the "condition" instead of the intended comparison.
+                                // Faithfully reproduced here (confirmed via the original
+                                // Fluent-based test).
+                                val ifElse = newIfElse { ifElse ->
+                                    ifElse.condition = newLiteral(2, objectType("int"))
+
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("s")),
+                                                    listOf(
+                                                        newLiteral("small", objectType("String"))
+                                                    ),
+                                                )
+                                        }
+
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("s")),
+                                                    listOf(newLiteral("big", objectType("String"))),
+                                                )
+                                        }
+                                }
+                                block += ifElse
+
+                                block +=
+                                    newAssign(
+                                        "+=",
+                                        listOf(newReference("s")),
+                                        listOf(newLiteral("!", objectType("String"))),
+                                    )
+
+                                block +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newReference("s")),
+                                        listOf(
+                                            newBinaryOperator("+").also {
+                                                it.lhs = newReference("s")
+                                                it.rhs = newLiteral("?", objectType("string"))
+                                            }
+                                        ),
+                                    )
+
+                                block +=
+                                    newUnaryOperator("++", postfix = true, prefix = false).also {
+                                        it.input = newReference("i")
                                     }
 
-                                    ref("s") assignPlus literal("!", t("String"))
+                                val printlnCall1 =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall1.addArgument(newReference("s"))
+                                block += printlnCall1
 
-                                    ref("s") assign { ref("s") + literal("?", t("string")) }
+                                val printlnCall2 =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall2.addArgument(newReference("i"))
+                                block += printlnCall2
 
-                                    ref("i").inc()
-
-                                    memberCall("println", member("out", ref("System"))) { ref("s") }
-
-                                    memberCall("println", member("out", ref("System"))) { ref("i") }
-                                    returnStmt {}
-                                }
+                                block += newReturn()
                             }
-                        }
                     }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getExample(
@@ -145,100 +288,236 @@ class ValueEvaluationTests {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("example.cpp") {
-                        function("main", t("int")) {
-                            body {
-                                declare {
-                                    variable("b", t("int")) {
-                                        literal(1, t("int")) + literal(1, t("int"))
-                                    }
+                val tu = newTranslationUnit("example.cpp")
+                scopeManager.resetToGlobal(tu)
+
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("int"))
+                    func.type = computeType(func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val bDeclStmt = newDeclarationStatement()
+                            val bVar =
+                                newVariable("b", objectType("int")).also {
+                                    it.initializer =
+                                        newBinaryOperator("+").also { bo ->
+                                            bo.lhs = newLiteral(1, objectType("int"))
+                                            bo.rhs = newLiteral(1, objectType("int"))
+                                        }
                                 }
-                                call("println") { ref("b") }
+                            bDeclStmt.declarations += bVar
+                            scopeManager.addDeclaration(bVar)
+                            block += bDeclStmt
 
-                                declare { variable("a", t("int")) { literal(1, t("int")) } }
-                                ref("a") assign literal(2, t("int"))
-                                call("println") { ref("a") }
-
-                                declare {
-                                    variable("c", t("int")) {
-                                        literal(5, t("int")) - literal(2, t("int"))
-                                    }
-                                }
-
-                                declare {
-                                    variable("d", t("float")) {
-                                        literal(8, t("int")) / literal(3, t("int"))
-                                    }
-                                }
-
-                                declare {
-                                    variable("e", t("float")) {
-                                        literal(7.0, t("float")) / literal(2, t("int"))
-                                    }
+                            block +=
+                                newCall(newReference("println")).also {
+                                    it.addArgument(newReference("b"))
                                 }
 
-                                declare {
-                                    variable("f", t("int")) {
-                                        literal(2, t("int")) * literal(5, t("int"))
-                                    }
+                            val aDeclStmt = newDeclarationStatement()
+                            val aVar =
+                                newVariable("a", objectType("int")).also {
+                                    it.initializer = newLiteral(1, objectType("int"))
+                                }
+                            aDeclStmt.declarations += aVar
+                            scopeManager.addDeclaration(aVar)
+                            block += aDeclStmt
+
+                            block +=
+                                newAssign(
+                                    "=",
+                                    listOf(newReference("a")),
+                                    listOf(newLiteral(2, objectType("int"))),
+                                )
+
+                            block +=
+                                newCall(newReference("println")).also {
+                                    it.addArgument(newReference("a"))
                                 }
 
-                                declare { variable("g", t("int")) { -ref("c") } }
+                            val cDeclStmt = newDeclarationStatement()
+                            val cVar =
+                                newVariable("c", objectType("int")).also {
+                                    it.initializer =
+                                        newBinaryOperator("-").also { bo ->
+                                            bo.lhs = newLiteral(5, objectType("int"))
+                                            bo.rhs = newLiteral(2, objectType("int"))
+                                        }
+                                }
+                            cDeclStmt.declarations += cVar
+                            scopeManager.addDeclaration(cVar)
+                            block += cDeclStmt
 
-                                call("println") {
-                                    literal("Hello ", t("String")) + literal("world", t("String"))
+                            val dDeclStmt = newDeclarationStatement()
+                            val dVar =
+                                newVariable("d", objectType("float")).also {
+                                    it.initializer =
+                                        newBinaryOperator("/").also { bo ->
+                                            bo.lhs = newLiteral(8, objectType("int"))
+                                            bo.rhs = newLiteral(3, objectType("int"))
+                                        }
+                                }
+                            dDeclStmt.declarations += dVar
+                            scopeManager.addDeclaration(dVar)
+                            block += dDeclStmt
+
+                            val eDeclStmt = newDeclarationStatement()
+                            val eVar =
+                                newVariable("e", objectType("float")).also {
+                                    it.initializer =
+                                        newBinaryOperator("/").also { bo ->
+                                            bo.lhs = newLiteral(7.0, objectType("float"))
+                                            bo.rhs = newLiteral(2, objectType("int"))
+                                        }
+                                }
+                            eDeclStmt.declarations += eVar
+                            scopeManager.addDeclaration(eVar)
+                            block += eDeclStmt
+
+                            val fDeclStmt = newDeclarationStatement()
+                            val fVar =
+                                newVariable("f", objectType("int")).also {
+                                    it.initializer =
+                                        newBinaryOperator("*").also { bo ->
+                                            bo.lhs = newLiteral(2, objectType("int"))
+                                            bo.rhs = newLiteral(5, objectType("int"))
+                                        }
+                                }
+                            fDeclStmt.declarations += fVar
+                            scopeManager.addDeclaration(fVar)
+                            block += fDeclStmt
+
+                            val gDeclStmt = newDeclarationStatement()
+                            val gVar =
+                                newVariable("g", objectType("int")).also {
+                                    it.initializer =
+                                        newUnaryOperator("-", postfix = false, prefix = false)
+                                            .also { it.input = newReference("c") }
+                                }
+                            gDeclStmt.declarations += gVar
+                            scopeManager.addDeclaration(gVar)
+                            block += gDeclStmt
+
+                            block +=
+                                newCall(newReference("println")).also {
+                                    it.addArgument(
+                                        newBinaryOperator("+").also { bo ->
+                                            bo.lhs = newLiteral("Hello ", objectType("String"))
+                                            bo.rhs = newLiteral("world", objectType("String"))
+                                        }
+                                    )
                                 }
 
-                                declare {
-                                    variable("h", t("bool")) {
-                                        literal(5, t("int")) le literal(2, t("int"))
-                                    }
+                            val hDeclStmt = newDeclarationStatement()
+                            val hVar =
+                                newVariable("h", objectType("bool")).also {
+                                    it.initializer =
+                                        newBinaryOperator("<=").also { bo ->
+                                            bo.lhs = newLiteral(5, objectType("int"))
+                                            bo.rhs = newLiteral(2, objectType("int"))
+                                        }
                                 }
+                            hDeclStmt.declarations += hVar
+                            scopeManager.addDeclaration(hVar)
+                            block += hDeclStmt
 
-                                declare {
-                                    variable("i", t("bool")) {
-                                        literal(3, t("int")) gt literal(3, t("int"))
-                                    }
+                            val iVarDeclStmt = newDeclarationStatement()
+                            val iVar2 =
+                                newVariable("i", objectType("bool")).also {
+                                    it.initializer =
+                                        newBinaryOperator(">").also { bo ->
+                                            bo.lhs = newLiteral(3, objectType("int"))
+                                            bo.rhs = newLiteral(3, objectType("int"))
+                                        }
                                 }
+                            iVarDeclStmt.declarations += iVar2
+                            scopeManager.addDeclaration(iVar2)
+                            block += iVarDeclStmt
 
-                                declare {
-                                    variable("j", t("bool")) {
-                                        literal(3, t("int")) ge literal(3.2, t("float"))
-                                    }
+                            val jDeclStmt = newDeclarationStatement()
+                            val jVar =
+                                newVariable("j", objectType("bool")).also {
+                                    it.initializer =
+                                        newBinaryOperator(">=").also { bo ->
+                                            bo.lhs = newLiteral(3, objectType("int"))
+                                            bo.rhs = newLiteral(3.2, objectType("float"))
+                                        }
                                 }
+                            jDeclStmt.declarations += jVar
+                            scopeManager.addDeclaration(jVar)
+                            block += jDeclStmt
 
-                                declare {
-                                    variable("k", t("bool")) {
-                                        literal(3.1, t("float")) le literal(3, t("int"))
-                                    }
+                            val kDeclStmt = newDeclarationStatement()
+                            val kVar =
+                                newVariable("k", objectType("bool")).also {
+                                    it.initializer =
+                                        newBinaryOperator("<=").also { bo ->
+                                            bo.lhs = newLiteral(3.1, objectType("float"))
+                                            bo.rhs = newLiteral(3, objectType("int"))
+                                        }
                                 }
+                            kDeclStmt.declarations += kVar
+                            scopeManager.addDeclaration(kVar)
+                            block += kDeclStmt
 
-                                declare {
-                                    variable("l", t("bool")) {
-                                        literal(3L, t("long")) ge
-                                            cast(t("float")) { literal(3.1, t("float")) }
-                                    }
+                            val lDeclStmt = newDeclarationStatement()
+                            val lVar =
+                                newVariable("l", objectType("bool")).also {
+                                    it.initializer =
+                                        newBinaryOperator(">=").also { bo ->
+                                            bo.lhs = newLiteral(3L, objectType("long"))
+                                            bo.rhs =
+                                                newCast().also { cast ->
+                                                    cast.castType = objectType("float")
+                                                    cast.expression =
+                                                        newLiteral(3.1, objectType("float"))
+                                                }
+                                        }
                                 }
+                            lDeclStmt.declarations += lVar
+                            scopeManager.addDeclaration(lVar)
+                            block += lDeclStmt
 
-                                declare {
-                                    variable("m", t("bool")) {
-                                        cast(t("char")) { literal(3, t("int")) } ge
-                                            literal(3.1, t("float"))
-                                    }
+                            val mDeclStmt = newDeclarationStatement()
+                            val mVar =
+                                newVariable("m", objectType("bool")).also {
+                                    it.initializer =
+                                        newBinaryOperator(">=").also { bo ->
+                                            bo.lhs =
+                                                newCast().also { cast ->
+                                                    cast.castType = objectType("char")
+                                                    cast.expression =
+                                                        newLiteral(3, objectType("int"))
+                                                }
+                                            bo.rhs = newLiteral(3.1, objectType("float"))
+                                        }
                                 }
+                            mDeclStmt.declarations += mVar
+                            scopeManager.addDeclaration(mVar)
+                            block += mDeclStmt
 
-                                declare {
-                                    variable("n", t("bool")) {
-                                        literal(3, t("int")) eq literal(3.1, t("float"))
-                                    }
+                            val nDeclStmt = newDeclarationStatement()
+                            val nVar =
+                                newVariable("n", objectType("bool")).also {
+                                    it.initializer =
+                                        newBinaryOperator("==").also { bo ->
+                                            bo.lhs = newLiteral(3, objectType("int"))
+                                            bo.rhs = newLiteral(3.1, objectType("float"))
+                                        }
                                 }
+                            nDeclStmt.declarations += nVar
+                            scopeManager.addDeclaration(nVar)
+                            block += nDeclStmt
 
-                                returnStmt { literal(0, t("int")) }
-                            }
+                            block +=
+                                newReturn().also {
+                                    it.returnValue = newLiteral(0, objectType("int"))
+                                }
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getCfExample(
@@ -249,89 +528,255 @@ class ValueEvaluationTests {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("cfexample.cpp") {
-                        import("time.h")
-                        import("stdlib.h")
-                        function("main", t("int")) {
-                            body {
-                                call("srand") { call("time") { ref("NULL") } }
+                val tu = newTranslationUnit("cfexample.cpp")
+                scopeManager.resetToGlobal(tu)
 
-                                declare { variable("b", t("int")) { literal(1, t("int")) } }
+                tu.addDeclaration(newInclude("time.h"))
+                tu.addDeclaration(newInclude("stdlib.h"))
 
-                                ifStmt {
-                                    condition { call("rand") lt literal(10, t("int")) }
-                                    thenStmt { ref("b") assign { ref("b") + literal(1, t("int")) } }
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("int"))
+                    func.type = computeType(func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            block +=
+                                newCall(newReference("srand")).also {
+                                    it.addArgument(
+                                        newCall(newReference("time")).also { timeCall ->
+                                            timeCall.addArgument(newReference("NULL"))
+                                        }
+                                    )
                                 }
 
-                                call("println") { ref("b") } // 1, 2
-
-                                ifStmt {
-                                    condition { call("rand") gt literal(5, t("int")) }
-                                    thenStmt { ref("b") assign { ref("b") - literal(1, t("int")) } }
+                            val bDeclStmt = newDeclarationStatement()
+                            val bVar =
+                                newVariable("b", objectType("int")).also {
+                                    it.initializer = newLiteral(1, objectType("int"))
                                 }
+                            bDeclStmt.declarations += bVar
+                            scopeManager.addDeclaration(bVar)
+                            block += bDeclStmt
 
-                                call("println") { ref("b") } // 0, 1, 2
+                            // Fluent's "lt" infix operator has no ArgumentHolder context, so it
+                            // never actually attaches the comparison it builds -- the
+                            // self-attaching call("rand")/literal(10) operands silently overwrite
+                            // each other on the IfElse (an ArgumentHolder), leaving the *literal*
+                            // as the "condition" instead of the intended comparison. Faithfully
+                            // reproduced here (confirmed via the original Fluent-based test).
+                            val ifElse1 = newIfElse { ifElse ->
+                                ifElse.condition = newLiteral(10, objectType("int"))
 
-                                ifStmt {
-                                    condition { call("rand") gt literal(3, t("int")) }
-                                    thenStmt { ref("b") assign { ref("b") * literal(2, t("int")) } }
-                                }
-
-                                call("println") { ref("b") } // 0, 1, 2, 4
-
-                                ifStmt {
-                                    condition { call("rand") lt literal(4, t("int")) }
-                                    thenStmt { ref("b") assign -ref("b") }
-                                }
-
-                                call("println") { ref("b") } // -4, -2, -1, 0, 1, 2, 4
-
-                                declare {
-                                    variable("a", t("int")) {
-                                        this.initializer =
-                                            newConditional(
-                                                ref("b") lt literal(2, t("int")),
-                                                literal(3, t("int")),
-                                                literal(5, t("int")).inc(),
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        thenBlock +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("b")),
+                                                listOf(
+                                                    newBinaryOperator("+").also {
+                                                        it.lhs = newReference("b")
+                                                        it.rhs = newLiteral(1, objectType("int"))
+                                                    }
+                                                ),
                                             )
                                     }
-                                }
-
-                                call("println") { ref("a") } // 3, 6
-
-                                returnStmt { literal(0, t("int")) }
                             }
-                        }
+                            block += ifElse1
 
-                        function("loop", t("int")) {
-                            body {
-                                declare {
-                                    variable("array", t("int").array()) {
-                                        val creationExpr = newArrayConstruction()
-                                        creationExpr.addDimension(literal(6, t("int")))
-                                        this.initializer = creationExpr
-                                    }
-                                }
+                            block +=
+                                newCall(newReference("println")).also {
+                                    it.addArgument(newReference("b"))
+                                } // 1, 2
 
-                                forStmt {
-                                    loopBody {
-                                        subscriptExpr {
-                                            ref("array")
-                                            ref("i")
-                                        } assign ref("i")
+                            // Unlike "lt" above, "gt" (via its ArgumentHolder context) does end up
+                            // attaching the correct comparison here -- its own `holder += node`
+                            // call happens after (and therefore overwrites) the self-attaching
+                            // call/literal operands.
+                            val ifElse2 = newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator(">").also {
+                                        it.lhs = newCall(newReference("rand"))
+                                        it.rhs = newLiteral(5, objectType("int"))
                                     }
-                                    forInitializer {
-                                        declareVar("i", t("int")) { literal(0, t("int")) }
+
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        thenBlock +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("b")),
+                                                listOf(
+                                                    newBinaryOperator("-").also {
+                                                        it.lhs = newReference("b")
+                                                        it.rhs = newLiteral(1, objectType("int"))
+                                                    }
+                                                ),
+                                            )
                                     }
-                                    forCondition { ref("i") lt literal(6, t("int")) }
-                                    forIteration { ref("i").incNoContext() }
-                                }
-                                returnStmt { literal(0, t("int")) }
                             }
+                            block += ifElse2
+
+                            block +=
+                                newCall(newReference("println")).also {
+                                    it.addArgument(newReference("b"))
+                                } // 0, 1, 2
+
+                            val ifElse3 = newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator(">").also {
+                                        it.lhs = newCall(newReference("rand"))
+                                        it.rhs = newLiteral(3, objectType("int"))
+                                    }
+
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        thenBlock +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("b")),
+                                                listOf(
+                                                    newBinaryOperator("*").also {
+                                                        it.lhs = newReference("b")
+                                                        it.rhs = newLiteral(2, objectType("int"))
+                                                    }
+                                                ),
+                                            )
+                                    }
+                            }
+                            block += ifElse3
+
+                            block +=
+                                newCall(newReference("println")).also {
+                                    it.addArgument(newReference("b"))
+                                } // 0, 1, 2, 4
+
+                            // Fluent's `ref("b") assign -ref("b")` (unlike the block-based
+                            // `assign { ... }` used above) evaluates its rhs via the plain-value
+                            // `assign(rhs: Expression)` overload. Building that rhs requires
+                            // `unaryMinus()`'s `ArgumentHolder` context, which the enclosing
+                            // `Block` (a `StatementHolder` only) cannot satisfy -- so resolution
+                            // escapes all the way out to the only `ArgumentHolder` still in scope,
+                            // the enclosing `IfElse` itself. Its self-attach therefore overwrites
+                            // `IfElse.condition` with the very same `UnaryOperator` node that is
+                            // also used as the assignment's rhs, i.e. the same node object ends up
+                            // with two AST parents. Faithfully reproduced here (confirmed via the
+                            // original Fluent-based test).
+                            val decB =
+                                newUnaryOperator("-", postfix = false, prefix = false).also {
+                                    it.input = newReference("b")
+                                }
+                            val ifElse4 = newIfElse { ifElse ->
+                                ifElse.condition = decB
+
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        thenBlock +=
+                                            newAssign("=", listOf(newReference("b")), listOf(decB))
+                                    }
+                            }
+                            block += ifElse4
+
+                            block +=
+                                newCall(newReference("println")).also {
+                                    it.addArgument(newReference("b"))
+                                } // -4, -2, -1, 0, 1, 2, 4
+
+                            val aDeclStmt = newDeclarationStatement()
+                            val aVar =
+                                newVariable("a", objectType("int")).also {
+                                    it.initializer =
+                                        newConditional(
+                                            newBinaryOperator("<").also {
+                                                it.lhs = newReference("b")
+                                                it.rhs = newLiteral(2, objectType("int"))
+                                            },
+                                            newLiteral(3, objectType("int")),
+                                            newUnaryOperator("++", postfix = true, prefix = false)
+                                                .also {
+                                                    it.input = newLiteral(5, objectType("int"))
+                                                },
+                                        )
+                                }
+                            aDeclStmt.declarations += aVar
+                            scopeManager.addDeclaration(aVar)
+                            block += aDeclStmt
+
+                            block +=
+                                newCall(newReference("println")).also {
+                                    it.addArgument(newReference("a"))
+                                } // 3, 6
+
+                            block +=
+                                newReturn().also {
+                                    it.returnValue = newLiteral(0, objectType("int"))
+                                }
                         }
-                    }
                 }
+
+                newFunction("loop", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("int"))
+                    func.type = computeType(func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val arrayDeclStmt = newDeclarationStatement()
+                            val arrayVar =
+                                newVariable("array", objectType("int").array()).also {
+                                    it.initializer =
+                                        newArrayConstruction().also { ac ->
+                                            ac.addDimension(newLiteral(6, objectType("int")))
+                                        }
+                                }
+                            arrayDeclStmt.declarations += arrayVar
+                            scopeManager.addDeclaration(arrayVar)
+                            block += arrayDeclStmt
+
+                            val forNode = newFor { for_ ->
+                                val iDeclStmt = newDeclarationStatement()
+                                val iVar =
+                                    newVariable("i", objectType("int")).also {
+                                        it.initializer = newLiteral(0, objectType("int"))
+                                    }
+                                iDeclStmt.declarations += iVar
+                                scopeManager.addDeclaration(iVar)
+                                for_.initializerStatement = iDeclStmt
+
+                                for_.condition =
+                                    newBinaryOperator("<").also {
+                                        it.lhs = newReference("i")
+                                        it.rhs = newLiteral(6, objectType("int"))
+                                    }
+
+                                for_.iterationStatement =
+                                    newUnaryOperator("++", postfix = true, prefix = false).also {
+                                        it.input = newReference("i")
+                                    }
+
+                                for_.statement = newBlock { loopBody ->
+                                    loopBody +=
+                                        newAssign(
+                                            "=",
+                                            listOf(
+                                                newSubscription().also {
+                                                    it.arrayExpression = newReference("array")
+                                                    it.subscriptExpression = newReference("i")
+                                                }
+                                            ),
+                                            listOf(newReference("i")),
+                                        )
+                                }
+                            }
+                            block += forNode
+
+                            block +=
+                                newReturn().also {
+                                    it.returnValue = newLiteral(0, objectType("int"))
+                                }
+                        }
+                }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
     }
 }

@@ -28,10 +28,9 @@ package de.fraunhofer.aisec.cpg.testcases
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
-import de.fraunhofer.aisec.cpg.graph.newLiteral
-import de.fraunhofer.aisec.cpg.graph.newReference
+import de.fraunhofer.aisec.cpg.frontends.translationResult
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 
 abstract class AbstractEvaluationTests {
@@ -116,136 +115,384 @@ abstract class AbstractEvaluationTests {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("integer.java") {
-                        record("Foo") {
-                            method("f1") {
-                                body {
-                                    declare { variable("b", t("Bar")) }
-                                    declare { variable("a", t("int")) { literal(5, t("int")) } }
+                val tu = newTranslationUnit("integer.java")
+                scopeManager.resetToGlobal(tu)
 
-                                    ref("a") assign literal(0, t("int"))
-                                    ref("a") assignMinus literal(2, t("int"))
-                                    ref("a") assignPlus literal(3, t("int"))
+                newRecord("Foo", "class", holder = tu, enterScope = true) { foo ->
+                    newMethod("f1", holder = foo, enterScope = true) { method ->
+                        method.returnTypes = listOf(unknownType())
+                        method.type = computeType(method)
 
-                                    memberCall("f", ref("Bar")) { ref("a") }
-                                }
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val bDeclStmt = newDeclarationStatement()
+                                val b = newVariable("b", objectType("Bar"))
+                                bDeclStmt.declarations += b
+                                scopeManager.addDeclaration(b)
+                                block += bDeclStmt
+
+                                val aDeclStmt = newDeclarationStatement()
+                                val a = newVariable("a", objectType("int"))
+                                a.initializer = newLiteral(5, objectType("int"))
+                                aDeclStmt.declarations += a
+                                scopeManager.addDeclaration(a)
+                                block += aDeclStmt
+
+                                block +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newReference("a")),
+                                        listOf(newLiteral(0, objectType("int"))),
+                                    )
+                                block +=
+                                    newAssign(
+                                        "-=",
+                                        listOf(newReference("a")),
+                                        listOf(newLiteral(2, objectType("int"))),
+                                    )
+                                block +=
+                                    newAssign(
+                                        "+=",
+                                        listOf(newReference("a")),
+                                        listOf(newLiteral(3, objectType("int"))),
+                                    )
+
+                                val fCall =
+                                    newMemberCall(newMemberAccess("f", newReference("Bar")), false)
+                                fCall.addArgument(newReference("a"))
+                                block += fCall
                             }
-                            method("f2") {
-                                body {
-                                    declare { variable("b", t("Bar")) }
-                                    declare { variable("a", t("int")) { literal(5, t("int")) } }
+                    }
+                    newMethod("f2", holder = foo, enterScope = true) { method ->
+                        method.returnTypes = listOf(unknownType())
+                        method.type = computeType(method)
 
-                                    ref("a") assign literal(3, t("int"))
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val bDeclStmt = newDeclarationStatement()
+                                val b = newVariable("b", objectType("Bar"))
+                                bDeclStmt.declarations += b
+                                scopeManager.addDeclaration(b)
+                                block += bDeclStmt
 
-                                    ref("a").inc()
-                                    ref("a").incPrefix()
+                                val aDeclStmt = newDeclarationStatement()
+                                val a = newVariable("a", objectType("int"))
+                                a.initializer = newLiteral(5, objectType("int"))
+                                aDeclStmt.declarations += a
+                                scopeManager.addDeclaration(a)
+                                block += aDeclStmt
 
-                                    memberCall("c", ref("Bar")) { ref("a") }
+                                block +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newReference("a")),
+                                        listOf(newLiteral(3, objectType("int"))),
+                                    )
 
-                                    ref("a") assignMinus literal(2, t("int"))
-                                    ref("a") assignPlus literal(3, t("int"))
-
-                                    ref("a").dec()
-                                    ref("a").decPrefix()
-
-                                    ref("a") assignMult literal(4, t("int"))
-                                    ref("a") assignDiv literal(2, t("int"))
-                                    ref("a") assignMod literal(3, t("int"))
-
-                                    memberCall("f", ref("Bar")) { ref("a") }
-                                }
-                            }
-                            method("f3") {
-                                body {
-                                    declare { variable("b", t("Bar")) }
-                                    declare { variable("a", t("int")) { literal(5, t("int")) } }
-
-                                    ifStmt {
-                                        condition { memberCall("nextBoolean", ref("Random")) }
-                                        thenStmt { ref("a") assignMinus literal(1, t("int")) }
+                                block +=
+                                    newUnaryOperator("++", postfix = true, prefix = false).also {
+                                        it.input = newReference("a")
+                                    }
+                                block +=
+                                    newUnaryOperator("++", postfix = false, prefix = true).also {
+                                        it.input = newReference("a")
                                     }
 
-                                    memberCall("f", ref("Bar")) { ref("a") }
-                                }
-                            }
-                            method("f4") {
-                                body {
-                                    declare { variable("b", t("Bar")) }
-                                    declare { variable("a", t("int")) { literal(5, t("int")) } }
+                                val cCall =
+                                    newMemberCall(newMemberAccess("c", newReference("Bar")), false)
+                                cCall.addArgument(newReference("a"))
+                                block += cCall
 
-                                    ifStmt {
-                                        condition { memberCall("nextBoolean", ref("Random")) }
-                                        thenStmt { ref("a") assignMinus literal(1, t("int")) }
-                                        elseStmt { ref("a") assign literal(3, t("int")) }
+                                block +=
+                                    newAssign(
+                                        "-=",
+                                        listOf(newReference("a")),
+                                        listOf(newLiteral(2, objectType("int"))),
+                                    )
+                                block +=
+                                    newAssign(
+                                        "+=",
+                                        listOf(newReference("a")),
+                                        listOf(newLiteral(3, objectType("int"))),
+                                    )
+
+                                block +=
+                                    newUnaryOperator("--", postfix = true, prefix = false).also {
+                                        it.input = newReference("a")
+                                    }
+                                block +=
+                                    newUnaryOperator("--", postfix = false, prefix = true).also {
+                                        it.input = newReference("a")
                                     }
 
-                                    memberCall("f", ref("Bar")) { ref("a") }
-                                }
-                            }
-                            method("f5") {
-                                body {
-                                    declare { variable("b", t("Bar")) }
-                                    declare { variable("a", t("int")) { literal(5, t("int")) } }
+                                block +=
+                                    newAssign(
+                                        "*=",
+                                        listOf(newReference("a")),
+                                        listOf(newLiteral(4, objectType("int"))),
+                                    )
+                                block +=
+                                    newAssign(
+                                        "/=",
+                                        listOf(newReference("a")),
+                                        listOf(newLiteral(2, objectType("int"))),
+                                    )
+                                block +=
+                                    newAssign(
+                                        "%=",
+                                        listOf(newReference("a")),
+                                        listOf(newLiteral(3, objectType("int"))),
+                                    )
 
-                                    forStmt {
-                                        forInitializer {
-                                            declare {
-                                                variable("i", t("int")) { literal(0, t("int")) }
-                                            }
+                                val fCall =
+                                    newMemberCall(newMemberAccess("f", newReference("Bar")), false)
+                                fCall.addArgument(newReference("a"))
+                                block += fCall
+                            }
+                    }
+                    newMethod("f3", holder = foo, enterScope = true) { method ->
+                        method.returnTypes = listOf(unknownType())
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val bDeclStmt = newDeclarationStatement()
+                                val b = newVariable("b", objectType("Bar"))
+                                bDeclStmt.declarations += b
+                                scopeManager.addDeclaration(b)
+                                block += bDeclStmt
+
+                                val aDeclStmt = newDeclarationStatement()
+                                val a = newVariable("a", objectType("int"))
+                                a.initializer = newLiteral(5, objectType("int"))
+                                aDeclStmt.declarations += a
+                                scopeManager.addDeclaration(a)
+                                block += aDeclStmt
+
+                                val ifElse = newIfElse { ifElse ->
+                                    val nextBooleanCall =
+                                        newMemberCall(
+                                            newMemberAccess("nextBoolean", newReference("Random")),
+                                            false,
+                                        )
+                                    ifElse.condition = nextBooleanCall
+
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock +=
+                                                newAssign(
+                                                    "-=",
+                                                    listOf(newReference("a")),
+                                                    listOf(newLiteral(1, objectType("int"))),
+                                                )
                                         }
-                                        forCondition { ref("i") lt literal(5, t("int")) }
-                                        forIteration { ref("i").inc() }
-
-                                        loopBody {
-                                            ref("a") assignPlus literal(1, t("int"))
-                                            call("println") { ref("i") }
-                                        }
-                                    }
-
-                                    memberCall("f", ref("Bar")) { ref("a") }
                                 }
+                                block += ifElse
+
+                                val fCall =
+                                    newMemberCall(newMemberAccess("f", newReference("Bar")), false)
+                                fCall.addArgument(newReference("a"))
+                                block += fCall
                             }
-                            method("f6") {
-                                body {
-                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
+                    }
+                    newMethod("f4", holder = foo, enterScope = true) { method ->
+                        method.returnTypes = listOf(unknownType())
+                        method.type = computeType(method)
 
-                                    forStmt {
-                                        forInitializerExpr { ref("i") assign literal(0, t("int")) }
-                                        forCondition { ref("i") lt literal(5, t("int")) }
-                                        forIteration { ref("i").inc() }
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val bDeclStmt = newDeclarationStatement()
+                                val b = newVariable("b", objectType("Bar"))
+                                bDeclStmt.declarations += b
+                                scopeManager.addDeclaration(b)
+                                block += bDeclStmt
 
-                                        loopBody {
-                                            ifStmt {
-                                                condition {
-                                                    val tmp =
-                                                        this@build.newBinaryOperator("<").apply {
-                                                            lhs = newReference("i")
-                                                            rhs = newLiteral(3, t("int"))
-                                                        }
-                                                    condition = tmp
-                                                    tmp
-                                                    // ref("i") lt literal(3, t("int"))
+                                val aDeclStmt = newDeclarationStatement()
+                                val a = newVariable("a", objectType("int"))
+                                a.initializer = newLiteral(5, objectType("int"))
+                                aDeclStmt.declarations += a
+                                scopeManager.addDeclaration(a)
+                                block += aDeclStmt
+
+                                val ifElse = newIfElse { ifElse ->
+                                    val nextBooleanCall =
+                                        newMemberCall(
+                                            newMemberAccess("nextBoolean", newReference("Random")),
+                                            false,
+                                        )
+                                    ifElse.condition = nextBooleanCall
+
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock +=
+                                                newAssign(
+                                                    "-=",
+                                                    listOf(newReference("a")),
+                                                    listOf(newLiteral(1, objectType("int"))),
+                                                )
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("a")),
+                                                    listOf(newLiteral(3, objectType("int"))),
+                                                )
+                                        }
+                                }
+                                block += ifElse
+
+                                val fCall =
+                                    newMemberCall(newMemberAccess("f", newReference("Bar")), false)
+                                fCall.addArgument(newReference("a"))
+                                block += fCall
+                            }
+                    }
+                    newMethod("f5", holder = foo, enterScope = true) { method ->
+                        method.returnTypes = listOf(unknownType())
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val bDeclStmt = newDeclarationStatement()
+                                val b = newVariable("b", objectType("Bar"))
+                                bDeclStmt.declarations += b
+                                scopeManager.addDeclaration(b)
+                                block += bDeclStmt
+
+                                val aDeclStmt = newDeclarationStatement()
+                                val a = newVariable("a", objectType("int"))
+                                a.initializer = newLiteral(5, objectType("int"))
+                                aDeclStmt.declarations += a
+                                scopeManager.addDeclaration(a)
+                                block += aDeclStmt
+
+                                // Fluent's forStmt() never enters/leaves a scope for the `For`
+                                // node itself (unlike whileStmt/forEachStmt), so the loop
+                                // variable "i" and the loop body end up declared/evaluated
+                                // directly in the enclosing method scope. Faithfully reproduced
+                                // here by not passing enterScope to newFor()/newBlock() below.
+                                val forNode = newFor { for_ ->
+                                    val iDeclStmt = newDeclarationStatement()
+                                    val i = newVariable("i", objectType("int"))
+                                    i.initializer = newLiteral(0, objectType("int"))
+                                    iDeclStmt.declarations += i
+                                    scopeManager.addDeclaration(i)
+                                    for_.initializerStatement = iDeclStmt
+
+                                    for_.condition =
+                                        newBinaryOperator("<").also {
+                                            it.lhs = newReference("i")
+                                            it.rhs = newLiteral(5, objectType("int"))
+                                        }
+
+                                    for_.iterationStatement =
+                                        newUnaryOperator("++", postfix = true, prefix = false)
+                                            .also { it.input = newReference("i") }
+
+                                    for_.statement = newBlock { loopBodyBlock ->
+                                        loopBodyBlock +=
+                                            newAssign(
+                                                "+=",
+                                                listOf(newReference("a")),
+                                                listOf(newLiteral(1, objectType("int"))),
+                                            )
+
+                                        val printlnCall = newCall(newReference("println"))
+                                        printlnCall.addArgument(newReference("i"))
+                                        loopBodyBlock += printlnCall
+                                    }
+                                }
+                                block += forNode
+
+                                val fCall =
+                                    newMemberCall(newMemberAccess("f", newReference("Bar")), false)
+                                fCall.addArgument(newReference("a"))
+                                block += fCall
+                            }
+                    }
+                    newMethod("f6", holder = foo, enterScope = true) { method ->
+                        method.returnTypes = listOf(unknownType())
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val iDeclStmt = newDeclarationStatement()
+                                val i = newVariable("i", objectType("int"))
+                                i.initializer = newLiteral(0, objectType("int"))
+                                iDeclStmt.declarations += i
+                                scopeManager.addDeclaration(i)
+                                block += iDeclStmt
+
+                                val forNode = newFor { for_ ->
+                                    for_.initializerStatement =
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("i")),
+                                            listOf(newLiteral(0, objectType("int"))),
+                                        )
+
+                                    for_.condition =
+                                        newBinaryOperator("<").also {
+                                            it.lhs = newReference("i")
+                                            it.rhs = newLiteral(5, objectType("int"))
+                                        }
+
+                                    for_.iterationStatement =
+                                        newUnaryOperator("++", postfix = true, prefix = false)
+                                            .also { it.input = newReference("i") }
+
+                                    for_.statement = newBlock { loopBodyBlock ->
+                                        val innerIf = newIfElse { inner ->
+                                            inner.condition =
+                                                newBinaryOperator("<").also {
+                                                    it.lhs = newReference("i")
+                                                    it.rhs = newLiteral(3, objectType("int"))
                                                 }
-                                                thenStmt { call("lessThanThree") { ref("i") } }
-                                                elseStmt { call("greaterEqualThree") { ref("i") } }
-                                            }
-                                            call("println") { ref("i") }
-                                        }
-                                    }
 
-                                    call("afterLoop") { ref("i") }
+                                            inner.thenStatement =
+                                                newBlock(enterScope = true) { tb ->
+                                                    val call =
+                                                        newCall(newReference("lessThanThree"))
+                                                    call.addArgument(newReference("i"))
+                                                    tb += call
+                                                }
+                                            inner.elseStatement =
+                                                newBlock(enterScope = true) { eb ->
+                                                    val call =
+                                                        newCall(newReference("greaterEqualThree"))
+                                                    call.addArgument(newReference("i"))
+                                                    eb += call
+                                                }
+                                        }
+                                        loopBodyBlock += innerIf
+
+                                        val printlnCall = newCall(newReference("println"))
+                                        printlnCall.addArgument(newReference("i"))
+                                        loopBodyBlock += printlnCall
+                                    }
                                 }
+                                block += forNode
+
+                                val afterLoopCall = newCall(newReference("afterLoop"))
+                                afterLoopCall.addArgument(newReference("i"))
+                                block += afterLoopCall
                             }
-                        }
-                        record("Bar") {
-                            method("main") {
-                                param("a", t("int"))
-                                body {}
-                            }
-                        }
                     }
                 }
+                newRecord("Bar", "class", holder = tu, enterScope = true) { bar ->
+                    newMethod("main", holder = bar, enterScope = true) { method ->
+                        method.returnTypes = listOf(unknownType())
+                        method.type = computeType(method)
+
+                        newParameter("a", objectType("int"), holder = method)
+
+                        method.body = newBlock(enterScope = true)
+                    }
+                }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
     }
 }

@@ -235,13 +235,27 @@ fun MetadataProvider.newLambda(rawNode: Any? = null): Lambda {
  * Creates a new [Block]. The [MetadataProvider] receiver will be used to fill different meta-data
  * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ *
+ * If [enterScope] is `true`, scope is entered/left automatically around [init]. This defaults to
+ * `false` so that existing callers that manage scope manually are unaffected.
  */
 @JvmOverloads
-fun MetadataProvider.newBlock(rawNode: Any? = null): Block {
+context(provider: ContextProvider)
+fun MetadataProvider.newBlock(
+    rawNode: Any? = null,
+    enterScope: Boolean = false,
+    init: ((Block) -> Unit)? = null,
+): Block {
     val node = Block()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    val scopeManager = provider.ctx.scopeManager
+    if (enterScope) scopeManager.enterScope(node)
+    init?.invoke(node)
+    if (enterScope) scopeManager.leaveScope(node)
+
     return node
 }
 
@@ -566,12 +580,28 @@ fun MetadataProvider.newComprehension(rawNode: Any? = null): Comprehension {
     return node
 }
 
+/**
+ * Creates a new [CollectionComprehension]. If [enterScope] is `true`, scope is entered/left
+ * automatically around [init]. This defaults to `false` so that existing callers that manage scope
+ * manually are unaffected.
+ */
 @JvmOverloads
-fun MetadataProvider.newCollectionComprehension(rawNode: Any? = null): CollectionComprehension {
+context(provider: ContextProvider)
+fun MetadataProvider.newCollectionComprehension(
+    rawNode: Any? = null,
+    enterScope: Boolean = false,
+    init: ((CollectionComprehension) -> Unit)? = null,
+): CollectionComprehension {
     val node = CollectionComprehension()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    val scopeManager = provider.ctx.scopeManager
+    if (enterScope) scopeManager.enterScope(node)
+    init?.invoke(node)
+    if (enterScope) scopeManager.leaveScope(node)
+
     return node
 }
 

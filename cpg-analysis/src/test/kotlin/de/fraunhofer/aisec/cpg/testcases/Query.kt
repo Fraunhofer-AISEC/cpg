@@ -29,10 +29,9 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.array
-import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.newArrayConstruction
-import de.fraunhofer.aisec.cpg.graph.pointer
+import de.fraunhofer.aisec.cpg.frontends.translationResult
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 
 class Query {
     companion object {
@@ -44,54 +43,119 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        record("Dataflow") {
-                            field("attr", t("string")) {}
-                            method("toString", t("string")) {
-                                body {
-                                    returnStmt {
-                                        literal("Dataflow: attr=", t("string")) + ref("attr")
-                                    }
-                                }
-                            }
+                val tu = newTranslationUnit("Dataflow.java")
+                scopeManager.resetToGlobal(tu)
 
-                            method("test", t("string")) {
-                                body { returnStmt { literal("abcd", t("string")) } }
-                            }
+                newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
+                    newField("attr", objectType("string"), holder = record)
 
-                            method("print", void()) {
-                                param("s", t("string"))
-                                body {
-                                    memberCall("println", member("out", ref("System"))) { ref("s") }
-                                    returnStmt {}
-                                }
-                            }
+                    newMethod("toString", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(objectType("string"))
+                        method.type = computeType(method)
 
-                            method("main", void()) {
-                                isStatic = true
-                                param("args", t("string").array())
-                                body {
-                                    declare {
-                                        variable("sc", t("Dataflow")) {
-                                            new { construct("Dataflow") }
-                                        }
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val ret = newReturn()
+                                ret.returnValue =
+                                    newBinaryOperator("+").also {
+                                        it.lhs = newLiteral("Dataflow: attr=", objectType("string"))
+                                        it.rhs = newReference("attr")
                                     }
-
-                                    declare {
-                                        variable("s", t("string")) {
-                                            memberCall("toString", ref("sc"))
-                                        }
-                                    }
-                                    memberCall("print", ref("sc")) { ref("s") }
-                                    memberCall("print", ref("sc")) {
-                                        memberCall("test", ref("sc", makeMagic = false))
-                                    }
-                                }
+                                block += ret
                             }
-                        }
+                    }
+
+                    newMethod("test", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(objectType("string"))
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val ret = newReturn()
+                                ret.returnValue = newLiteral("abcd", objectType("string"))
+                                block += ret
+                            }
+                    }
+
+                    newMethod("print", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        newParameter("s", objectType("string"), holder = method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val printlnCall =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall.addArgument(newReference("s"))
+                                block += printlnCall
+
+                                block += newReturn()
+                            }
+                    }
+
+                    newMethod("main", holder = record, enterScope = true) { method ->
+                        method.isStatic = true
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        newParameter("args", objectType("string").array(), holder = method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val scDecl = newDeclarationStatement()
+                                val sc = newVariable("sc", objectType("Dataflow"))
+                                val newExpr = newNew()
+                                val construction = newConstruction("Dataflow")
+                                construction.type = objectType("Dataflow")
+                                newExpr.initializer = construction
+                                sc.initializer = newExpr
+                                scDecl.declarations += sc
+                                scopeManager.addDeclaration(sc)
+                                block += scDecl
+
+                                val sDecl = newDeclarationStatement()
+                                val s = newVariable("s", objectType("string"))
+                                s.initializer =
+                                    newMemberCall(
+                                        newMemberAccess("toString", newReference("sc")),
+                                        false,
+                                    )
+                                sDecl.declarations += s
+                                scopeManager.addDeclaration(s)
+                                block += sDecl
+
+                                val printCall =
+                                    newMemberCall(
+                                        newMemberAccess("print", newReference("sc")),
+                                        false,
+                                    )
+                                printCall.addArgument(newReference("s"))
+                                block += printCall
+
+                                val printCall2 =
+                                    newMemberCall(
+                                        newMemberAccess("print", newReference("sc")),
+                                        false,
+                                    )
+                                val testCall =
+                                    newMemberCall(
+                                        newMemberAccess("test", newReference("sc")),
+                                        false,
+                                    )
+                                printCall2.addArgument(testCall)
+                                block += printCall2
+                            }
                     }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getComplexDataflow(
@@ -103,71 +167,124 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("ComplexDataflow.java") {
-                        record("Dataflow") {
-                            field("logger", t("Logger")) {
-                                // TODO: this field is static. How do we model this?
-                                this.modifiers = setOf("static")
-                                memberCall("getLogger", ref("Logger")) {
-                                    literal("DataflowLogger", t("string"))
-                                }
-                            }
+                val tu = newTranslationUnit("ComplexDataflow.java")
+                scopeManager.resetToGlobal(tu)
 
-                            field("a", t("int")) {}
-
-                            method("highlyCriticalOperation", void()) {
-                                isStatic = true
-                                param("s", t("string"))
-                                body {
-                                    memberCall("println", member("out", ref("System"))) { ref("s") }
-                                    returnStmt {}
-                                }
-                            }
-
-                            method("main", void()) {
-                                isStatic = true
-                                param("args", t("string").array())
-                                body {
-                                    declare {
-                                        variable("sc", t("Dataflow")) {
-                                            new { construct("Dataflow") }
-                                        }
-                                    }
-
-                                    member("a", ref("sc")) assign literal(5, t("int"))
-
-                                    memberCall(
-                                        "highlyCriticalOperation",
-                                        ref("Dataflow", t("Dataflow")) {
-                                            isStatic = true
-                                            refersTo = this@record
-                                        },
-                                    ) {
-                                        this@memberCall.isStatic = true
-                                        memberCall(
-                                            "toString",
-                                            ref("Integer", t("Integer"), makeMagic = false),
-                                        ) {
-                                            this.type = t("string")
-                                            this@memberCall.isStatic = true
-                                            isStatic = true
-                                            member("a", ref("sc", makeMagic = false))
-                                        }
-                                    }
-
-                                    memberCall("log", ref("logger")) {
-                                        member("INFO", ref("Level", makeMagic = false))
-                                        literal("put ", t("string")) +
-                                            member("a", ref("sc", makeMagic = false)) +
-                                            literal(" into highlyCriticalOperation()", t("string"))
-                                    }
-                                    returnStmt {}
-                                }
-                            }
+                newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
+                    // TODO: this field is static. How do we model this?
+                    val logger =
+                        newField("logger", objectType("Logger"), holder = record).also { field ->
+                            field.modifiers = setOf("static")
+                            val getLoggerCall =
+                                newMemberCall(
+                                    newMemberAccess("getLogger", newReference("Logger")),
+                                    false,
+                                )
+                            getLoggerCall.addArgument(
+                                newLiteral("DataflowLogger", objectType("string"))
+                            )
+                            field.initializer = getLoggerCall
                         }
+
+                    newField("a", objectType("int"), holder = record)
+
+                    newMethod("highlyCriticalOperation", holder = record, enterScope = true) {
+                        method ->
+                        method.isStatic = true
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        newParameter("s", objectType("string"), holder = method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val printlnCall =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall.addArgument(newReference("s"))
+                                block += printlnCall
+
+                                block += newReturn()
+                            }
+                    }
+
+                    newMethod("main", holder = record, enterScope = true) { method ->
+                        method.isStatic = true
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        newParameter("args", objectType("string").array(), holder = method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val scDecl = newDeclarationStatement()
+                                val sc = newVariable("sc", objectType("Dataflow"))
+                                val newExpr = newNew()
+                                val construction = newConstruction("Dataflow")
+                                construction.type = objectType("Dataflow")
+                                newExpr.initializer = construction
+                                sc.initializer = newExpr
+                                scDecl.declarations += sc
+                                scopeManager.addDeclaration(sc)
+                                block += scDecl
+
+                                block +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newMemberAccess("a", newReference("sc"))),
+                                        listOf(newLiteral(5, objectType("int"))),
+                                    )
+
+                                val dataflowRef = newReference("Dataflow", objectType("Dataflow"))
+                                dataflowRef.refersTo = record
+                                val outerCall =
+                                    newMemberCall(
+                                        newMemberAccess("highlyCriticalOperation", dataflowRef),
+                                        false,
+                                    )
+                                outerCall.isStatic = true
+                                val integerRef = newReference("Integer", objectType("Integer"))
+                                val innerCall =
+                                    newMemberCall(newMemberAccess("toString", integerRef), false)
+                                innerCall.type = objectType("string")
+                                innerCall.isStatic = true
+                                innerCall.addArgument(newMemberAccess("a", newReference("sc")))
+                                outerCall.addArgument(innerCall)
+                                block += outerCall
+
+                                val logCall =
+                                    newMemberCall(
+                                        newMemberAccess("log", newReference("logger")),
+                                        false,
+                                    )
+                                logCall.addArgument(newMemberAccess("INFO", newReference("Level")))
+                                logCall.addArgument(
+                                    newBinaryOperator("+").also { outer ->
+                                        outer.lhs =
+                                            newBinaryOperator("+").also { inner ->
+                                                inner.lhs = newLiteral("put ", objectType("string"))
+                                                inner.rhs = newMemberAccess("a", newReference("sc"))
+                                            }
+                                        outer.rhs =
+                                            newLiteral(
+                                                " into highlyCriticalOperation()",
+                                                objectType("string"),
+                                            )
+                                    }
+                                )
+                                block += logCall
+
+                                block += newReturn()
+                            }
                     }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getComplexDataflow2(
@@ -181,71 +298,124 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("ComplexDataflow2.java") {
-                        record("Dataflow") {
-                            field("logger", t("Logger")) {
-                                // TODO: this field is static. How do we model this?
-                                this.modifiers = setOf("static")
-                                memberCall("getLogger", ref("Logger")) {
-                                    literal("DataflowLogger", t("string"))
-                                }
-                            }
+                val tu = newTranslationUnit("ComplexDataflow2.java")
+                scopeManager.resetToGlobal(tu)
 
-                            field("a", t("int")) {}
-
-                            method("highlyCriticalOperation", void()) {
-                                isStatic = true
-                                param("s", t("string"))
-                                body {
-                                    memberCall("println", member("out", ref("System"))) { ref("s") }
-                                    returnStmt {}
-                                }
-                            }
-
-                            method("main", void()) {
-                                isStatic = true
-                                param("args", t("string").array())
-                                body {
-                                    declare {
-                                        variable("sc", t("Dataflow")) {
-                                            new { construct("Dataflow") }
-                                        }
-                                    }
-
-                                    member("a", ref("sc")) assign literal(5, t("int"))
-
-                                    memberCall("log", ref("logger")) {
-                                        member("INFO", ref("Level", makeMagic = false))
-                                        literal("put ", t("string")) +
-                                            member("a", ref("sc", makeMagic = false)) +
-                                            literal(" into highlyCriticalOperation()", t("string"))
-                                    }
-
-                                    memberCall(
-                                        "highlyCriticalOperation",
-                                        ref("Dataflow", t("Dataflow")) {
-                                            isStatic = true
-                                            refersTo = this@record
-                                        },
-                                    ) {
-                                        this@memberCall.isStatic = true
-                                        memberCall(
-                                            "toString",
-                                            ref("Integer", t("Integer"), makeMagic = false),
-                                        ) {
-                                            this.type = t("string")
-                                            this@memberCall.isStatic = true
-                                            isStatic = true
-                                            member("a", ref("sc", makeMagic = false))
-                                        }
-                                    }
-                                    returnStmt {}
-                                }
-                            }
+                newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
+                    // TODO: this field is static. How do we model this?
+                    val logger =
+                        newField("logger", objectType("Logger"), holder = record).also { field ->
+                            field.modifiers = setOf("static")
+                            val getLoggerCall =
+                                newMemberCall(
+                                    newMemberAccess("getLogger", newReference("Logger")),
+                                    false,
+                                )
+                            getLoggerCall.addArgument(
+                                newLiteral("DataflowLogger", objectType("string"))
+                            )
+                            field.initializer = getLoggerCall
                         }
+
+                    newField("a", objectType("int"), holder = record)
+
+                    newMethod("highlyCriticalOperation", holder = record, enterScope = true) {
+                        method ->
+                        method.isStatic = true
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        newParameter("s", objectType("string"), holder = method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val printlnCall =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall.addArgument(newReference("s"))
+                                block += printlnCall
+
+                                block += newReturn()
+                            }
+                    }
+
+                    newMethod("main", holder = record, enterScope = true) { method ->
+                        method.isStatic = true
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        newParameter("args", objectType("string").array(), holder = method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val scDecl = newDeclarationStatement()
+                                val sc = newVariable("sc", objectType("Dataflow"))
+                                val newExpr = newNew()
+                                val construction = newConstruction("Dataflow")
+                                construction.type = objectType("Dataflow")
+                                newExpr.initializer = construction
+                                sc.initializer = newExpr
+                                scDecl.declarations += sc
+                                scopeManager.addDeclaration(sc)
+                                block += scDecl
+
+                                block +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newMemberAccess("a", newReference("sc"))),
+                                        listOf(newLiteral(5, objectType("int"))),
+                                    )
+
+                                val logCall =
+                                    newMemberCall(
+                                        newMemberAccess("log", newReference("logger")),
+                                        false,
+                                    )
+                                logCall.addArgument(newMemberAccess("INFO", newReference("Level")))
+                                logCall.addArgument(
+                                    newBinaryOperator("+").also { outer ->
+                                        outer.lhs =
+                                            newBinaryOperator("+").also { inner ->
+                                                inner.lhs = newLiteral("put ", objectType("string"))
+                                                inner.rhs = newMemberAccess("a", newReference("sc"))
+                                            }
+                                        outer.rhs =
+                                            newLiteral(
+                                                " into highlyCriticalOperation()",
+                                                objectType("string"),
+                                            )
+                                    }
+                                )
+                                block += logCall
+
+                                val dataflowRef = newReference("Dataflow", objectType("Dataflow"))
+                                dataflowRef.refersTo = record
+                                val outerCall =
+                                    newMemberCall(
+                                        newMemberAccess("highlyCriticalOperation", dataflowRef),
+                                        false,
+                                    )
+                                outerCall.isStatic = true
+                                val integerRef = newReference("Integer", objectType("Integer"))
+                                val innerCall =
+                                    newMemberCall(newMemberAccess("toString", integerRef), false)
+                                innerCall.type = objectType("string")
+                                innerCall.isStatic = true
+                                innerCall.addArgument(newMemberAccess("a", newReference("sc")))
+                                outerCall.addArgument(innerCall)
+                                block += outerCall
+
+                                block += newReturn()
+                            }
                     }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getComplexDataflow3(
@@ -256,73 +426,133 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("ComplexDataflow3.java") {
-                        record("Dataflow") {
-                            field("logger", t("Logger")) {
-                                // TODO: this field is static. How do we model this?
-                                this.modifiers = setOf("static")
-                                memberCall("getLogger", ref("Logger")) {
-                                    literal("DataflowLogger", t("string"))
-                                }
-                            }
+                val tu = newTranslationUnit("ComplexDataflow3.java")
+                scopeManager.resetToGlobal(tu)
 
-                            field("a", t("int")) {}
-
-                            method("highlyCriticalOperation", void()) {
-                                isStatic = true
-                                param("s", t("string"))
-                                body {
-                                    memberCall("println", member("out", ref("System"))) { ref("s") }
-                                    returnStmt {}
-                                }
-                            }
-
-                            method("main", void()) {
-                                isStatic = true
-                                param("args", t("string").array())
-                                body {
-                                    declare {
-                                        variable("sc", t("Dataflow")) {
-                                            new { construct("Dataflow") }
-                                        }
-                                    }
-
-                                    member("a", ref("sc")) assign literal(5, t("int"))
-
-                                    memberCall("log", ref("logger")) {
-                                        member("INFO", ref("Level", makeMagic = false))
-                                        literal("put ", t("string")) +
-                                            member("a", ref("a", makeMagic = false)) +
-                                            literal(" into highlyCriticalOperation()", t("string"))
-                                    }
-
-                                    member("a", ref("sc")) assign literal(3, t("int"))
-
-                                    memberCall(
-                                        "highlyCriticalOperation",
-                                        ref("Dataflow", t("Dataflow")) {
-                                            isStatic = true
-                                            refersTo = this@record
-                                        },
-                                    ) {
-                                        this@memberCall.isStatic = true
-                                        memberCall(
-                                            "toString",
-                                            ref("Integer", t("Integer"), makeMagic = false),
-                                        ) {
-                                            this.type = t("string")
-                                            this@memberCall.isStatic = true
-                                            isStatic = true
-                                            member("a", ref("sc", makeMagic = false))
-                                        }
-                                    }
-                                    returnStmt {}
-                                }
-                            }
+                newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
+                    // TODO: this field is static. How do we model this?
+                    val logger =
+                        newField("logger", objectType("Logger"), holder = record).also { field ->
+                            field.modifiers = setOf("static")
+                            val getLoggerCall =
+                                newMemberCall(
+                                    newMemberAccess("getLogger", newReference("Logger")),
+                                    false,
+                                )
+                            getLoggerCall.addArgument(
+                                newLiteral("DataflowLogger", objectType("string"))
+                            )
+                            field.initializer = getLoggerCall
                         }
+
+                    newField("a", objectType("int"), holder = record)
+
+                    newMethod("highlyCriticalOperation", holder = record, enterScope = true) {
+                        method ->
+                        method.isStatic = true
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        newParameter("s", objectType("string"), holder = method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val printlnCall =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall.addArgument(newReference("s"))
+                                block += printlnCall
+
+                                block += newReturn()
+                            }
+                    }
+
+                    newMethod("main", holder = record, enterScope = true) { method ->
+                        method.isStatic = true
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        newParameter("args", objectType("string").array(), holder = method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val scDecl = newDeclarationStatement()
+                                val sc = newVariable("sc", objectType("Dataflow"))
+                                val newExpr = newNew()
+                                val construction = newConstruction("Dataflow")
+                                construction.type = objectType("Dataflow")
+                                newExpr.initializer = construction
+                                sc.initializer = newExpr
+                                scDecl.declarations += sc
+                                scopeManager.addDeclaration(sc)
+                                block += scDecl
+
+                                block +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newMemberAccess("a", newReference("sc"))),
+                                        listOf(newLiteral(5, objectType("int"))),
+                                    )
+
+                                val logCall =
+                                    newMemberCall(
+                                        newMemberAccess("log", newReference("logger")),
+                                        false,
+                                    )
+                                logCall.addArgument(newMemberAccess("INFO", newReference("Level")))
+                                logCall.addArgument(
+                                    newBinaryOperator("+").also { outer ->
+                                        outer.lhs =
+                                            newBinaryOperator("+").also { inner ->
+                                                inner.lhs = newLiteral("put ", objectType("string"))
+                                                // Note: original uses ref("a") as base here (not
+                                                // "sc"), faithfully reproduced.
+                                                inner.rhs = newMemberAccess("a", newReference("a"))
+                                            }
+                                        outer.rhs =
+                                            newLiteral(
+                                                " into highlyCriticalOperation()",
+                                                objectType("string"),
+                                            )
+                                    }
+                                )
+                                block += logCall
+
+                                block +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newMemberAccess("a", newReference("sc"))),
+                                        listOf(newLiteral(3, objectType("int"))),
+                                    )
+
+                                val dataflowRef = newReference("Dataflow", objectType("Dataflow"))
+                                dataflowRef.refersTo = record
+                                val outerCall =
+                                    newMemberCall(
+                                        newMemberAccess("highlyCriticalOperation", dataflowRef),
+                                        false,
+                                    )
+                                outerCall.isStatic = true
+                                val integerRef = newReference("Integer", objectType("Integer"))
+                                val innerCall =
+                                    newMemberCall(newMemberAccess("toString", integerRef), false)
+                                innerCall.type = objectType("string")
+                                innerCall.isStatic = true
+                                innerCall.addArgument(newMemberAccess("a", newReference("sc")))
+                                outerCall.addArgument(innerCall)
+                                block += outerCall
+
+                                block += newReturn()
+                            }
                     }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getArray(
@@ -333,56 +563,92 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("array.cpp") {
-                        function("main", t("int")) {
-                            body {
-                                declare {
-                                    variable("c", t("char").pointer()) {
-                                        val creationExpr = newArrayConstruction()
-                                        creationExpr.addDimension(literal(4, t("int")))
-                                        creationExpr.type = t("char")
-                                        this.initializer = creationExpr
-                                    }
+                val tu = newTranslationUnit("array.cpp")
+                scopeManager.resetToGlobal(tu)
+
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("int"))
+                    func.type = computeType(func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val cDecl = newDeclarationStatement()
+                            val c = newVariable("c", objectType("char").pointer())
+                            val creationExpr = newArrayConstruction()
+                            creationExpr.addDimension(newLiteral(4, objectType("int")))
+                            creationExpr.type = objectType("char")
+                            c.initializer = creationExpr
+                            cDecl.declarations += c
+                            scopeManager.addDeclaration(c)
+                            block += cDecl
+
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(4, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val bDecl = newDeclarationStatement()
+                            val b = newVariable("b", objectType("int"))
+                            b.initializer =
+                                newBinaryOperator("+").also {
+                                    it.lhs = newReference("a")
+                                    it.rhs = newLiteral(1, objectType("int"))
                                 }
+                            bDecl.declarations += b
+                            scopeManager.addDeclaration(b)
+                            block += bDecl
 
-                                declare { variable("a", t("int")) { literal(4, t("int")) } }
-
-                                declare {
-                                    variable("b", t("int")) { ref("a") + literal(1, t("int")) }
+                            val dDecl = newDeclarationStatement()
+                            val d = newVariable("d", objectType("char"))
+                            d.initializer =
+                                newSubscription().also {
+                                    it.arrayExpression = newReference("c")
+                                    it.subscriptExpression = newReference("b")
                                 }
+                            dDecl.declarations += d
+                            scopeManager.addDeclaration(d)
+                            block += dDecl
 
-                                declare {
-                                    variable("d", t("char")) {
-                                        subscriptExpr {
-                                            ref("c")
-                                            ref("b")
-                                        }
-                                    }
-                                }
-
-                                returnStmt { literal(0, t("int")) }
-                            }
+                            val ret = newReturn()
+                            ret.returnValue = newLiteral(0, objectType("int"))
+                            block += ret
                         }
-
-                        function("some_other_function", t("char")) {
-                            declare {
-                                variable("c", t("char").pointer()) {
-                                    val creationExpr = newArrayConstruction()
-                                    creationExpr.addDimension(literal(100, t("int")))
-                                    creationExpr.type = t("char")
-                                    this.initializer = creationExpr
-                                }
-                            }
-                            returnStmt {
-                                subscriptExpr {
-                                    ref("c")
-                                    literal(0, t("int"))
-                                }
-                            }
-                        }
-                    }
                 }
+
+                // Fluent's `function()` init lambda receiver is `Function`, which is not a
+                // `StatementHolder`; the `declare{}`/`returnStmt{}` calls below (which have no
+                // enclosing `body{}` in the original) therefore fell through to the nearest
+                // actual `StatementHolder` in the lexical chain -- the enclosing
+                // `TranslationUnit` -- so they ended up attached to `tu.statements` instead of
+                // `func.body` (which is never assigned). The declaration is still scoped to this
+                // function though, since `function()` already entered its scope. Faithfully
+                // reproduced here.
+                newFunction("some_other_function", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("char"))
+                    func.type = computeType(func)
+
+                    val cDecl = newDeclarationStatement()
+                    val c = newVariable("c", objectType("char").pointer())
+                    val creationExpr = newArrayConstruction()
+                    creationExpr.addDimension(newLiteral(100, objectType("int")))
+                    creationExpr.type = objectType("char")
+                    c.initializer = creationExpr
+                    cDecl.declarations += c
+                    scopeManager.addDeclaration(c)
+                    tu.statements += cDecl
+
+                    val ret = newReturn()
+                    ret.returnValue =
+                        newSubscription().also {
+                            it.arrayExpression = newReference("c")
+                            it.subscriptExpression = newLiteral(0, objectType("int"))
+                        }
+                    tu.statements += ret
+                }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getArray2(
@@ -393,44 +659,79 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("array2.cpp") {
-                        function("main", t("int")) {
-                            body {
-                                declare {
-                                    variable("c", t("char").pointer()) {
-                                        val creationExpr = newArrayConstruction()
-                                        creationExpr.addDimension(literal(4, t("int")))
-                                        creationExpr.type = t("char")
-                                        this.initializer = creationExpr
+                val tu = newTranslationUnit("array2.cpp")
+                scopeManager.resetToGlobal(tu)
+
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("int"))
+                    func.type = computeType(func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val cDecl = newDeclarationStatement()
+                            val c = newVariable("c", objectType("char").pointer())
+                            val creationExpr = newArrayConstruction()
+                            creationExpr.addDimension(newLiteral(4, objectType("int")))
+                            creationExpr.type = objectType("char")
+                            c.initializer = creationExpr
+                            cDecl.declarations += c
+                            scopeManager.addDeclaration(c)
+                            block += cDecl
+
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(0, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val forNode = newFor { for_ ->
+                                val iDecl = newDeclarationStatement()
+                                val i = newVariable("i", objectType("int"))
+                                i.initializer = newLiteral(0, objectType("int"))
+                                iDecl.declarations += i
+                                scopeManager.addDeclaration(i)
+                                for_.initializerStatement = iDecl
+
+                                for_.condition =
+                                    newBinaryOperator("<").also {
+                                        it.lhs = newReference("i")
+                                        it.rhs = newLiteral(5, objectType("int"))
                                     }
+
+                                for_.iterationStatement =
+                                    newUnaryOperator("++", postfix = true, prefix = false).also {
+                                        it.input = newReference("i")
+                                    }
+
+                                for_.statement = newBlock { loopBodyBlock ->
+                                    loopBodyBlock +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("a")),
+                                            listOf(
+                                                newBinaryOperator("+").also {
+                                                    it.lhs = newReference("a")
+                                                    it.rhs =
+                                                        newSubscription().also { sub ->
+                                                            sub.arrayExpression = newReference("c")
+                                                            sub.subscriptExpression =
+                                                                newReference("i")
+                                                        }
+                                                }
+                                            ),
+                                        )
                                 }
-
-                                declare { variable("a", t("int")) { literal(0, t("int")) } }
-
-                                forStmt {
-                                    loopBody {
-                                        ref("a") assign
-                                            {
-                                                ref("a") +
-                                                    subscriptExpr {
-                                                        ref("c")
-                                                        ref("i")
-                                                    }
-                                            }
-                                    }
-                                    forInitializer {
-                                        declareVar("i", t("int")) { literal(0, t("int")) }
-                                    }
-                                    forCondition { ref("i") lt literal(5, t("int")) }
-                                    forIteration { ref("i").incNoContext() }
-                                }
-
-                                returnStmt { ref("a") }
                             }
+                            block += forNode
+
+                            val ret = newReturn()
+                            ret.returnValue = newReference("a")
+                            block += ret
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getArray3(
@@ -441,59 +742,108 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("array3.cpp") {
-                        function("main", t("int")) {
-                            body {
-                                declare { variable("c", t("char").pointer()) }
-                                ifStmt {
-                                    condition { literal(5, t("int")) gt literal(4, t("int")) }
-                                    thenStmt {
-                                        ref("c") assign
-                                            run {
-                                                val creationExpr = newArrayConstruction()
-                                                creationExpr.addDimension(literal(4, t("int")))
-                                                creationExpr.type = t("char")
-                                                (creationExpr)
-                                            }
-                                    }
-                                    elseStmt {
-                                        ref("c") assign
-                                            run {
-                                                val creationExpr = newArrayConstruction()
-                                                creationExpr.addDimension(literal(5, t("int")))
-                                                creationExpr.type = t("char")
-                                                (creationExpr)
-                                            }
-                                    }
-                                }
+                val tu = newTranslationUnit("array3.cpp")
+                scopeManager.resetToGlobal(tu)
 
-                                declare { variable("a", t("int")) { literal(0, t("int")) } }
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("int"))
+                    func.type = computeType(func)
 
-                                forStmt {
-                                    forInitializer {
-                                        declareVar("i", t("int")) { literal(0, t("int")) }
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val cDecl = newDeclarationStatement()
+                            val c = newVariable("c", objectType("char").pointer())
+                            cDecl.declarations += c
+                            scopeManager.addDeclaration(c)
+                            block += cDecl
+
+                            val ifElse = newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator(">").also {
+                                        it.lhs = newLiteral(5, objectType("int"))
+                                        it.rhs = newLiteral(4, objectType("int"))
                                     }
-                                    forCondition { ref("i") lt literal(5, t("int")) }
-                                    forIteration { ref("i").incNoContext() }
-
-                                    loopBody {
-                                        ref("a") assign
-                                            {
-                                                ref("a") +
-                                                    subscriptExpr {
-                                                        ref("c")
-                                                        ref("i")
-                                                    }
-                                            }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        val creationExpr = newArrayConstruction()
+                                        creationExpr.addDimension(newLiteral(4, objectType("int")))
+                                        creationExpr.type = objectType("char")
+                                        thenBlock +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("c")),
+                                                listOf(creationExpr),
+                                            )
                                     }
-                                }
-
-                                returnStmt { ref("a") }
+                                ifElse.elseStatement =
+                                    newBlock(enterScope = true) { elseBlock ->
+                                        val creationExpr = newArrayConstruction()
+                                        creationExpr.addDimension(newLiteral(5, objectType("int")))
+                                        creationExpr.type = objectType("char")
+                                        elseBlock +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("c")),
+                                                listOf(creationExpr),
+                                            )
+                                    }
                             }
+                            block += ifElse
+
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(0, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val forNode = newFor { for_ ->
+                                val iDecl = newDeclarationStatement()
+                                val i = newVariable("i", objectType("int"))
+                                i.initializer = newLiteral(0, objectType("int"))
+                                iDecl.declarations += i
+                                scopeManager.addDeclaration(i)
+                                for_.initializerStatement = iDecl
+
+                                for_.condition =
+                                    newBinaryOperator("<").also {
+                                        it.lhs = newReference("i")
+                                        it.rhs = newLiteral(5, objectType("int"))
+                                    }
+
+                                for_.iterationStatement =
+                                    newUnaryOperator("++", postfix = true, prefix = false).also {
+                                        it.input = newReference("i")
+                                    }
+
+                                for_.statement = newBlock { loopBodyBlock ->
+                                    loopBodyBlock +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("a")),
+                                            listOf(
+                                                newBinaryOperator("+").also {
+                                                    it.lhs = newReference("a")
+                                                    it.rhs =
+                                                        newSubscription().also { sub ->
+                                                            sub.arrayExpression = newReference("c")
+                                                            sub.subscriptExpression =
+                                                                newReference("i")
+                                                        }
+                                                }
+                                            ),
+                                        )
+                                }
+                            }
+                            block += forNode
+
+                            val ret = newReturn()
+                            ret.returnValue = newReference("a")
+                            block += ret
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getArrayCorrect(
@@ -504,44 +854,79 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("array_correct.cpp") {
-                        function("main", t("int")) {
-                            body {
-                                declare {
-                                    variable("c", t("char").pointer()) {
-                                        val creationExpr = newArrayConstruction()
-                                        creationExpr.addDimension(literal(4, t("int")))
-                                        creationExpr.type = t("char")
-                                        this.initializer = creationExpr
+                val tu = newTranslationUnit("array_correct.cpp")
+                scopeManager.resetToGlobal(tu)
+
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("int"))
+                    func.type = computeType(func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val cDecl = newDeclarationStatement()
+                            val c = newVariable("c", objectType("char").pointer())
+                            val creationExpr = newArrayConstruction()
+                            creationExpr.addDimension(newLiteral(4, objectType("int")))
+                            creationExpr.type = objectType("char")
+                            c.initializer = creationExpr
+                            cDecl.declarations += c
+                            scopeManager.addDeclaration(c)
+                            block += cDecl
+
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(0, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val forNode = newFor { for_ ->
+                                val iDecl = newDeclarationStatement()
+                                val i = newVariable("i", objectType("int"))
+                                i.initializer = newLiteral(0, objectType("int"))
+                                iDecl.declarations += i
+                                scopeManager.addDeclaration(i)
+                                for_.initializerStatement = iDecl
+
+                                for_.condition =
+                                    newBinaryOperator("<").also {
+                                        it.lhs = newReference("i")
+                                        it.rhs = newLiteral(4, objectType("int"))
                                     }
+
+                                for_.iterationStatement =
+                                    newUnaryOperator("++", postfix = true, prefix = false).also {
+                                        it.input = newReference("i")
+                                    }
+
+                                for_.statement = newBlock { loopBodyBlock ->
+                                    loopBodyBlock +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("a")),
+                                            listOf(
+                                                newBinaryOperator("+").also {
+                                                    it.lhs = newReference("a")
+                                                    it.rhs =
+                                                        newSubscription().also { sub ->
+                                                            sub.arrayExpression = newReference("c")
+                                                            sub.subscriptExpression =
+                                                                newReference("i")
+                                                        }
+                                                }
+                                            ),
+                                        )
                                 }
-
-                                declare { variable("a", t("int")) { literal(0, t("int")) } }
-
-                                forStmt {
-                                    loopBody {
-                                        ref("a") assign
-                                            {
-                                                ref("a") +
-                                                    subscriptExpr {
-                                                        ref("c")
-                                                        ref("i")
-                                                    }
-                                            }
-                                    }
-                                    forInitializer {
-                                        declareVar("i", t("int")) { literal(0, t("int")) }
-                                    }
-                                    forCondition { ref("i") lt literal(4, t("int")) }
-                                    forIteration { ref("i").incNoContext() }
-                                }
-
-                                returnStmt { ref("a") }
                             }
+                            block += forNode
+
+                            val ret = newReturn()
+                            ret.returnValue = newReference("a")
+                            block += ret
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getAssign(
@@ -552,21 +937,38 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("assign.cpp") {
-                        function("main", t("int")) {
-                            body {
-                                declare { variable("a", t("int")) { literal(4, t("int")) } }
-                                // TODO: There was a commented-out line. No idea what to do with it:
-                                // int a, b = 4; // this is broken, a is missing an initializer
+                val tu = newTranslationUnit("assign.cpp")
+                scopeManager.resetToGlobal(tu)
 
-                                ref("a") assign literal(3, t("int"))
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("int"))
+                    func.type = computeType(func)
 
-                                returnStmt { ref("a") }
-                            }
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(4, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+                            // TODO: There was a commented-out line. No idea what to do with it:
+                            // int a, b = 4; // this is broken, a is missing an initializer
+
+                            block +=
+                                newAssign(
+                                    "=",
+                                    listOf(newReference("a")),
+                                    listOf(newLiteral(3, objectType("int"))),
+                                )
+
+                            val ret = newReturn()
+                            ret.returnValue = newReference("a")
+                            block += ret
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getDivBy0(
@@ -577,31 +979,65 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("assign.cpp") {
-                        function("main", t("int")) {
-                            body {
-                                declare {
-                                    variable("array", t("char").array()) {
-                                        literal("hello", t("char").array())
+                val tu = newTranslationUnit("assign.cpp")
+                scopeManager.resetToGlobal(tu)
+
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("int"))
+                    func.type = computeType(func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val arrayDecl = newDeclarationStatement()
+                            val array = newVariable("array", objectType("char").array())
+                            array.initializer = newLiteral("hello", objectType("char").array())
+                            arrayDecl.declarations += array
+                            scopeManager.addDeclaration(array)
+                            block += arrayDecl
+
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("short"))
+                            a.initializer = newLiteral(2, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val ifElse = newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator("==").also {
+                                        it.lhs = newReference("array")
+                                        it.rhs = newLiteral("hello", objectType("string"))
                                     }
-                                }
-                                declare { variable("a", t("short")) { literal(2, t("int")) } }
-
-                                ifStmt {
-                                    condition { ref("array") eq literal("hello", t("string")) }
-                                    thenStmt { ref("a") assign literal(0, t("int")) }
-                                }
-
-                                declare {
-                                    variable("x", t("double")) { literal(5, t("int")) / ref("a") }
-                                }
-
-                                returnStmt { literal(0, t("int")) }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        thenBlock +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("a")),
+                                                listOf(newLiteral(0, objectType("int"))),
+                                            )
+                                    }
                             }
+                            block += ifElse
+
+                            val xDecl = newDeclarationStatement()
+                            val x = newVariable("x", objectType("double"))
+                            x.initializer =
+                                newBinaryOperator("/").also {
+                                    it.lhs = newLiteral(5, objectType("int"))
+                                    it.rhs = newReference("a")
+                                }
+                            xDecl.declarations += x
+                            scopeManager.addDeclaration(x)
+                            block += xDecl
+
+                            val ret = newReturn()
+                            ret.returnValue = newLiteral(0, objectType("int"))
+                            block += ret
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getVulnerable(
@@ -612,51 +1048,106 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("assign.cpp") {
-                        function("main", t("int")) {
-                            body {
-                                declare {
-                                    variable("array", t("char").array()) {
-                                        literal("hello", t("char").array())
+                val tu = newTranslationUnit("assign.cpp")
+                scopeManager.resetToGlobal(tu)
+
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("int"))
+                    func.type = computeType(func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val arrayDecl = newDeclarationStatement()
+                            val array = newVariable("array", objectType("char").array())
+                            array.initializer = newLiteral("hello", objectType("char").array())
+                            arrayDecl.declarations += array
+                            scopeManager.addDeclaration(array)
+                            block += arrayDecl
+
+                            val memcpyCall = newCall(newReference("memcpy"))
+                            memcpyCall.addArgument(newReference("array"))
+                            memcpyCall.addArgument(
+                                newLiteral("Hello world", objectType("char").array())
+                            )
+                            memcpyCall.addArgument(newLiteral(11, objectType("int")))
+                            block += memcpyCall
+
+                            val printfCall = newCall(newReference("printf"))
+                            printfCall.addArgument(newReference("array"))
+                            block += printfCall
+
+                            val freeCall1 = newCall(newReference("free"))
+                            freeCall1.addArgument(newReference("array"))
+                            block += freeCall1
+
+                            val freeCall2 = newCall(newReference("free"))
+                            freeCall2.addArgument(newReference("array"))
+                            block += freeCall2
+
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("short"))
+                            a.initializer = newLiteral(2, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val ifElse = newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator("==").also {
+                                        it.lhs = newReference("array")
+                                        it.rhs = newLiteral("hello", objectType("string"))
                                     }
-                                }
-                                call("memcpy") {
-                                    ref("array")
-                                    literal("Hello world", t("char").array())
-                                    literal(11, t("int"))
-                                }
-
-                                call("printf") { ref("array") }
-
-                                call("free") { ref("array") }
-
-                                call("free") { ref("array") }
-
-                                declare { variable("a", t("short")) { literal(2, t("int")) } }
-
-                                ifStmt {
-                                    condition { ref("array") eq literal("hello", t("string")) }
-                                    thenStmt { ref("a") assign literal(1, t("int")) }
-                                }
-
-                                declare {
-                                    variable("x", t("double")) { literal(5, t("int")) / ref("a") }
-                                }
-
-                                declare {
-                                    variable("b", t("int")) { literal(2147483648, t("int")) }
-                                }
-
-                                ref("b") assign literal(2147483648, t("int"))
-
-                                declare { variable("c", t("long")) { literal(-10000, t("long")) } }
-
-                                returnStmt { literal(0, t("int")) }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        thenBlock +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("a")),
+                                                listOf(newLiteral(1, objectType("int"))),
+                                            )
+                                    }
                             }
+                            block += ifElse
+
+                            val xDecl = newDeclarationStatement()
+                            val x = newVariable("x", objectType("double"))
+                            x.initializer =
+                                newBinaryOperator("/").also {
+                                    it.lhs = newLiteral(5, objectType("int"))
+                                    it.rhs = newReference("a")
+                                }
+                            xDecl.declarations += x
+                            scopeManager.addDeclaration(x)
+                            block += xDecl
+
+                            val bDecl = newDeclarationStatement()
+                            val b = newVariable("b", objectType("int"))
+                            b.initializer = newLiteral(2147483648, objectType("int"))
+                            bDecl.declarations += b
+                            scopeManager.addDeclaration(b)
+                            block += bDecl
+
+                            block +=
+                                newAssign(
+                                    "=",
+                                    listOf(newReference("b")),
+                                    listOf(newLiteral(2147483648, objectType("int"))),
+                                )
+
+                            val cDecl = newDeclarationStatement()
+                            val c = newVariable("c", objectType("long"))
+                            c.initializer = newLiteral(-10000, objectType("long"))
+                            cDecl.declarations += c
+                            scopeManager.addDeclaration(c)
+                            block += cDecl
+
+                            val ret = newReturn()
+                            ret.returnValue = newLiteral(0, objectType("int"))
+                            block += ret
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
     }
 }

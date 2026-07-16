@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import java.util.Objects
 import kotlin.test.Test
@@ -122,18 +123,34 @@ class TagOverlaysPassTest {
                         )
                 )
             ) {
-                translationResult {
-                    translationUnit {
-                        record("Encryption") {}
-                        function("main") {
-                            body {
-                                declare {
-                                    variable("key", t("string"), init = { literal("secret") })
-                                }
-                                call("encrypt") { ref("key") }
+                build {
+                    val tu = newTranslationUnit(Node.EMPTY_NAME)
+                    scopeManager.resetToGlobal(tu)
+
+                    newRecord("Encryption", "class", holder = tu, enterScope = true)
+
+                    newFunction("main", holder = tu, enterScope = true) { main ->
+                        // Replicate Fluent's function()'s unconditional return-type/computeType
+                        // wiring, even though the return type here is just the default.
+                        main.returnTypes = listOf(unknownType())
+                        main.type = computeType(main)
+
+                        main.body =
+                            newBlock(enterScope = true) { block ->
+                                val declStmt = newDeclarationStatement()
+                                val variable = newVariable("key", objectType("string"))
+                                variable.initializer = newLiteral("secret")
+                                declStmt.declarations += variable
+                                scopeManager.addDeclaration(variable)
+                                block += declStmt
+
+                                val call = newCall(newReference("encrypt"))
+                                call.addArgument(newReference("key"))
+                                block += call
                             }
-                        }
                     }
+
+                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
             }
 

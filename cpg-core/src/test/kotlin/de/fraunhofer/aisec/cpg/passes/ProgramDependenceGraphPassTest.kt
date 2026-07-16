@@ -28,10 +28,9 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.AstNode
-import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.frontends.translationResult
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.stream.Stream
@@ -114,32 +113,68 @@ class ProgramDependenceGraphPassTest {
                     it.registerPass<ProgramDependenceGraphPass>()
                 }
                 .build {
-                    translationResult {
-                        translationUnit("if.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare {
-                                        variable("i", t("int")) {
-                                            comment = "remove next"
-                                            call("rand")
-                                        }
+                    val tu = newTranslationUnit("if.cpp")
+                    scopeManager.resetToGlobal(tu)
+
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                val declStmt = newDeclarationStatement()
+                                val i =
+                                    newVariable("i", objectType("int")).also {
+                                        it.comment = "remove next"
+                                        it.initializer = newCall(newReference("rand"))
                                     }
-                                    ifStmt {
-                                        condition { ref("i") lt literal(0, t("int")) }
-                                        thenStmt {
-                                            ref("i") assign
-                                                {
-                                                    ref("i") { comment = "remove prev" } *
-                                                        literal(-1, t("int"))
-                                                }
+                                declStmt.declarations += i
+                                scopeManager.addDeclaration(i)
+                                block += declStmt
+
+                                val ifElse = newIfElse { ifElse ->
+                                    // Fluent's "lt" infix operator has no ArgumentHolder
+                                    // context, so it never actually attaches the comparison it
+                                    // builds -- the self-attaching ref("i")/literal(0) operands
+                                    // silently overwrite each other on the IfElse (an
+                                    // ArgumentHolder), leaving the *literal* as the "condition"
+                                    // instead of the intended comparison. Faithfully reproduced
+                                    // here (confirmed via the original Fluent-based test).
+                                    ifElse.condition = newLiteral(0, objectType("int"))
+
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            val assign =
+                                                newAssign(
+                                                    operatorCode = "=",
+                                                    lhs = listOf(newReference("i")),
+                                                    rhs =
+                                                        listOf(
+                                                            newBinaryOperator("*").also {
+                                                                it.lhs =
+                                                                    newReference("i").also { ref ->
+                                                                        ref.comment = "remove prev"
+                                                                    }
+                                                                it.rhs =
+                                                                    newLiteral(
+                                                                        -1,
+                                                                        objectType("int"),
+                                                                    )
+                                                            }
+                                                        ),
+                                                )
+                                            thenBlock += assign
                                         }
-                                    }
-                                    returnStmt { ref("i") }
                                 }
+                                block += ifElse
+
+                                val returnStmt = newReturn()
+                                returnStmt.returnValue = newReference("i")
+                                block += returnStmt
                             }
-                        }
                     }
+
+                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
 
         private fun getWhileLoopTest() =
@@ -150,30 +185,73 @@ class ProgramDependenceGraphPassTest {
                     it.registerPass<ProgramDependenceGraphPass>()
                 }
                 .build {
-                    translationResult {
-                        translationUnit("loop.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare {
-                                        variable("i", t("int")) {
-                                            comment = "remove next"
-                                            call("rand")
-                                        }
+                    val tu = newTranslationUnit("loop.cpp")
+                    scopeManager.resetToGlobal(tu)
+
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                val declStmt = newDeclarationStatement()
+                                val i =
+                                    newVariable("i", objectType("int")).also {
+                                        it.comment = "remove next"
+                                        it.initializer = newCall(newReference("rand"))
                                     }
-                                    whileStmt {
-                                        whileCondition { ref("i") gt literal(0, t("int")) }
-                                        loopBody {
-                                            call("printf") { literal("#", t("string")) }
-                                            ref("i") { comment = "remove prev, remove next" }.dec()
-                                        }
+                                declStmt.declarations += i
+                                scopeManager.addDeclaration(i)
+                                block += declStmt
+
+                                val whileStmt =
+                                    newWhile(enterScope = true) { w ->
+                                        // Unlike "lt" above, "gt" (via its ArgumentHolder context)
+                                        // does end up attaching the correct comparison here -- its
+                                        // own `holder += node` call happens after (and therefore
+                                        // overwrites) the self-attaching ref/literal operands.
+                                        w.condition =
+                                            newBinaryOperator(">").also {
+                                                it.lhs = newReference("i")
+                                                it.rhs = newLiteral(0, objectType("int"))
+                                            }
+                                        w.statement =
+                                            newBlock(enterScope = true) { loopBody ->
+                                                val printfCall = newCall(newReference("printf"))
+                                                printfCall.addArgument(
+                                                    newLiteral("#", objectType("string"))
+                                                )
+                                                loopBody += printfCall
+
+                                                val decOp =
+                                                    newUnaryOperator(
+                                                            "--",
+                                                            postfix = true,
+                                                            prefix = false,
+                                                        )
+                                                        .also {
+                                                            it.input =
+                                                                newReference("i").also { ref ->
+                                                                    ref.comment =
+                                                                        "remove prev, remove next"
+                                                                }
+                                                        }
+                                                loopBody += decOp
+                                            }
                                     }
-                                    call("printf") { literal("\n", t("string")) }
-                                    returnStmt { literal(0, t("int")) }
-                                }
+                                block += whileStmt
+
+                                val printfCall2 = newCall(newReference("printf"))
+                                printfCall2.addArgument(newLiteral("\n", objectType("string")))
+                                block += printfCall2
+
+                                val returnStmt = newReturn()
+                                returnStmt.returnValue = newLiteral(0, objectType("int"))
+                                block += returnStmt
                             }
-                        }
                     }
+
+                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
     }
 }

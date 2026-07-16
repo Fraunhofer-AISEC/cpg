@@ -26,15 +26,18 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithShortCircuit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
+import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -175,18 +178,48 @@ class ControlDependenceGraphPassTest {
                         .build()
                 )
                 .build {
-                    translationResult {
-                        translationUnit("if.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    call("foo") logicAnd call("bar")
-                                    call("baz") logicOr call("quux")
-                                    returnStmt { literal(1, t("int")) }
-                                }
+                    val tu = newTranslationUnit("if.cpp")
+                    scopeManager.resetToGlobal(tu)
+
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                // Fluent's logicAnd/logicOr self-attach their operands (foo()/
+                                // bar()) to the block as separate statements *and* the resulting
+                                // operator itself -- there's no removal trick for these two
+                                // operators (unlike +, -, *, etc.), so the block ends up with
+                                // [foo(), bar(), foo() && bar()], not just the operator.
+                                // Faithfully reproduced (confirmed via the original test).
+                                val fooCall = newCall(newReference("foo"))
+                                block += fooCall
+                                val barCall = newCall(newReference("bar"))
+                                block += barCall
+                                block +=
+                                    newBinaryOperator("&&").also {
+                                        it.lhs = fooCall
+                                        it.rhs = barCall
+                                    }
+
+                                val bazCall = newCall(newReference("baz"))
+                                block += bazCall
+                                val quuxCall = newCall(newReference("quux"))
+                                block += quuxCall
+                                block +=
+                                    newBinaryOperator("||").also {
+                                        it.lhs = bazCall
+                                        it.rhs = quuxCall
+                                    }
+
+                                val returnStmt = newReturn()
+                                returnStmt.returnValue = newLiteral(1, objectType("int"))
+                                block += returnStmt
                             }
-                        }
                     }
+
+                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
 
         fun getIfTest() =
@@ -197,33 +230,94 @@ class ControlDependenceGraphPassTest {
                         .registerPass<ControlDependenceGraphPass>()
                         .build()
                 )
-                .build {
-                    translationResult {
-                        translationUnit("if.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                    ifStmt {
-                                        condition { ref("i") lt literal(1, t("int")) }
-                                        thenStmt {
-                                            ref("i") assign literal(1, t("int"))
-                                            call("printf") { literal("0\n", t("string")) }
-                                        }
-                                    }
-                                    call("printf") { literal("1\n", t("string")) }
-                                    ifStmt {
-                                        condition { ref("i") gt literal(0, t("int")) }
-                                        thenStmt { ref("i") assign literal(2, t("int")) }
-                                        elseStmt { ref("i") assign literal(3, t("int")) }
-                                    }
-                                    call("printf") { literal("2\n", t("string")) }
-                                    returnStmt { ref("i") }
-                                }
+                .build { buildIfTestBody("if.cpp") }
+
+        private fun LanguageFrontend<*, *>.buildIfTestBody(tuName: String): TranslationResult {
+            val tu = newTranslationUnit(tuName)
+            scopeManager.resetToGlobal(tu)
+
+            newFunction("main", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("int"))
+                func.type = computeType(func)
+
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        val declStmt = newDeclarationStatement()
+                        val i =
+                            newVariable("i", objectType("int")).also {
+                                it.initializer = newLiteral(0, objectType("int"))
                             }
+                        declStmt.declarations += i
+                        scopeManager.addDeclaration(i)
+                        block += declStmt
+
+                        val if0 = newIfElse { ifElse ->
+                            // "lt" has no ArgumentHolder context (see note in
+                            // ProgramDependenceGraphPassTest) -- condition ends up being just
+                            // the literal, not the comparison. Faithfully reproduced.
+                            ifElse.condition = newLiteral(1, objectType("int"))
+                            ifElse.thenStatement =
+                                newBlock(enterScope = true) { thenBlock ->
+                                    thenBlock +=
+                                        newAssign(
+                                            operatorCode = "=",
+                                            lhs = listOf(newReference("i")),
+                                            rhs = listOf(newLiteral(1, objectType("int"))),
+                                        )
+
+                                    val printfCall0 = newCall(newReference("printf"))
+                                    printfCall0.addArgument(newLiteral("0\n", objectType("string")))
+                                    thenBlock += printfCall0
+                                }
                         }
+                        block += if0
+
+                        val printfCall1 = newCall(newReference("printf"))
+                        printfCall1.addArgument(newLiteral("1\n", objectType("string")))
+                        block += printfCall1
+
+                        val if1 = newIfElse { ifElse ->
+                            // "gt" DOES have ArgumentHolder context, so its own self-attach
+                            // (which happens after the operands' self-attach) correctly ends
+                            // up overwriting to become the condition.
+                            ifElse.condition =
+                                newBinaryOperator(">").also {
+                                    it.lhs = newReference("i")
+                                    it.rhs = newLiteral(0, objectType("int"))
+                                }
+                            ifElse.thenStatement =
+                                newBlock(enterScope = true) { thenBlock ->
+                                    thenBlock +=
+                                        newAssign(
+                                            operatorCode = "=",
+                                            lhs = listOf(newReference("i")),
+                                            rhs = listOf(newLiteral(2, objectType("int"))),
+                                        )
+                                }
+                            ifElse.elseStatement =
+                                newBlock(enterScope = true) { elseBlock ->
+                                    elseBlock +=
+                                        newAssign(
+                                            operatorCode = "=",
+                                            lhs = listOf(newReference("i")),
+                                            rhs = listOf(newLiteral(3, objectType("int"))),
+                                        )
+                                }
+                        }
+                        block += if1
+
+                        val printfCall2 = newCall(newReference("printf"))
+                        printfCall2.addArgument(newLiteral("2\n", objectType("string")))
+                        block += printfCall2
+
+                        val returnStmt = newReturn()
+                        returnStmt.returnValue = newReference("i")
+                        block += returnStmt
                     }
-                }
+            }
+
+            return translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
+        }
 
         fun getForEachTest() =
             testFrontend(
@@ -234,29 +328,60 @@ class ControlDependenceGraphPassTest {
                         .build()
                 )
                 .build {
-                    translationResult {
-                        translationUnit("forEach.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                    forEachStmt {
-                                        variable = declare { variable("loopVar", t("string")) }
-                                        iterable = call("magicFunction")
-                                        loopBody {
-                                            call("printf") {
-                                                literal("loop: \${}\n", t("string"))
-                                                ref("loopVar")
-                                            }
-                                        }
-                                    }
-                                    call("printf") { literal("1\n", t("string")) }
+                    val tu = newTranslationUnit("forEach.cpp")
+                    scopeManager.resetToGlobal(tu)
 
-                                    returnStmt { ref("i") }
-                                }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                val declStmt = newDeclarationStatement()
+                                val i =
+                                    newVariable("i", objectType("int")).also {
+                                        it.initializer = newLiteral(0, objectType("int"))
+                                    }
+                                declStmt.declarations += i
+                                scopeManager.addDeclaration(i)
+                                block += declStmt
+
+                                val forEach = newForEach()
+                                val loopVarDeclStmt = newDeclarationStatement()
+                                val loopVar = newVariable("loopVar", objectType("string"))
+                                loopVarDeclStmt.declarations += loopVar
+                                scopeManager.addDeclaration(loopVar)
+                                // Fluent's declare{}/call(...) self-attach to ForEach's generic
+                                // StatementHolder.statements *in addition to* the explicit
+                                // `variable =`/`iterable =` property assignment done in the
+                                // original test -- both effects are reproduced faithfully.
+                                forEach.statements += loopVarDeclStmt
+                                forEach.variable = loopVarDeclStmt
+                                val magicCall = newCall(newReference("magicFunction"))
+                                forEach.statements += magicCall
+                                forEach.iterable = magicCall
+                                forEach.statement =
+                                    newBlock(enterScope = true) { loopBody ->
+                                        val printfCall = newCall(newReference("printf"))
+                                        printfCall.addArgument(
+                                            newLiteral("loop: \${}\n", objectType("string"))
+                                        )
+                                        printfCall.addArgument(newReference("loopVar"))
+                                        loopBody += printfCall
+                                    }
+                                block += forEach
+
+                                val printfCall1 = newCall(newReference("printf"))
+                                printfCall1.addArgument(newLiteral("1\n", objectType("string")))
+                                block += printfCall1
+
+                                val returnStmt = newReturn()
+                                returnStmt.returnValue = newReference("i")
+                                block += returnStmt
                             }
-                        }
                     }
+
+                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
 
         fun getTimeoutTest() =
@@ -270,32 +395,6 @@ class ControlDependenceGraphPassTest {
                         )
                         .build()
                 )
-                .build {
-                    translationResult {
-                        translationUnit("if.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                    ifStmt {
-                                        condition { ref("i") lt literal(1, t("int")) }
-                                        thenStmt {
-                                            ref("i") assign literal(1, t("int"))
-                                            call("printf") { literal("0\n", t("string")) }
-                                        }
-                                    }
-                                    call("printf") { literal("1\n", t("string")) }
-                                    ifStmt {
-                                        condition { ref("i") gt literal(0, t("int")) }
-                                        thenStmt { ref("i") assign literal(2, t("int")) }
-                                        elseStmt { ref("i") assign literal(3, t("int")) }
-                                    }
-                                    call("printf") { literal("2\n", t("string")) }
-                                    returnStmt { ref("i") }
-                                }
-                            }
-                        }
-                    }
-                }
+                .build { buildIfTestBody("if.cpp") }
     }
 }

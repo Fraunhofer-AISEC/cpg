@@ -29,14 +29,9 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
+import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.applyWithScope
-import de.fraunhofer.aisec.cpg.graph.builder.body
-import de.fraunhofer.aisec.cpg.graph.builder.declare
-import de.fraunhofer.aisec.cpg.graph.builder.function
-import de.fraunhofer.aisec.cpg.graph.builder.problemDecl
-import de.fraunhofer.aisec.cpg.graph.builder.translationResult
-import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.problems
@@ -60,12 +55,27 @@ internal class ExtensionsTest : BaseTest() {
                 .build()
     ) =
         testFrontend(config).build {
-            translationResult {
-                translationUnit("foo.bar") {
-                    function("foo") { body { declare { problemDecl(problemDeclText) } } }
-                        .additionalProblems += ProblemExpression(problemExprText)
+            val tu = newTranslationUnit("foo.bar")
+            scopeManager.resetToGlobal(tu)
+
+            val foo =
+                newFunction("foo", holder = tu, enterScope = true) { func ->
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val declStmt = newDeclarationStatement()
+                            val problem =
+                                newProblemDeclaration(
+                                    problem = problemDeclText,
+                                    problemType = ProblemNode.ProblemType.TRANSLATION,
+                                )
+                            declStmt.declarations += problem
+                            scopeManager.addDeclaration(problem)
+                            block += declStmt
+                        }
                 }
-            }
+            foo.additionalProblems += ProblemExpression(problemExprText)
+
+            translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
         }
 
     @Test

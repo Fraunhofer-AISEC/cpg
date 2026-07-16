@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Return
  *
  * We do have some use-cases where we are a little "relaxed" about what is an argument. For example,
  * we also consider the [BinaryOperator.lhs] and [BinaryOperator.rhs] of a binary operator as
- * arguments, so we can use node builders in the Node Fluent DSL.
+ * arguments.
  */
 interface ArgumentHolder : Holder<Expression> {
 

@@ -26,39 +26,38 @@
 package de.fraunhofer.aisec.cpg.testcases
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.array
-import de.fraunhofer.aisec.cpg.graph.builder.assign
-import de.fraunhofer.aisec.cpg.graph.builder.body
-import de.fraunhofer.aisec.cpg.graph.builder.call
-import de.fraunhofer.aisec.cpg.graph.builder.condition
-import de.fraunhofer.aisec.cpg.graph.builder.declare
-import de.fraunhofer.aisec.cpg.graph.builder.elseStmt
-import de.fraunhofer.aisec.cpg.graph.builder.eq
-import de.fraunhofer.aisec.cpg.graph.builder.forEachStmt
-import de.fraunhofer.aisec.cpg.graph.builder.function
-import de.fraunhofer.aisec.cpg.graph.builder.ifStmt
-import de.fraunhofer.aisec.cpg.graph.builder.iterable
-import de.fraunhofer.aisec.cpg.graph.builder.literal
-import de.fraunhofer.aisec.cpg.graph.builder.loopBody
-import de.fraunhofer.aisec.cpg.graph.builder.param
-import de.fraunhofer.aisec.cpg.graph.builder.plus
-import de.fraunhofer.aisec.cpg.graph.builder.plusAssign
-import de.fraunhofer.aisec.cpg.graph.builder.ref
-import de.fraunhofer.aisec.cpg.graph.builder.returnStmt
-import de.fraunhofer.aisec.cpg.graph.builder.t
-import de.fraunhofer.aisec.cpg.graph.builder.thenStmt
-import de.fraunhofer.aisec.cpg.graph.builder.translationResult
-import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
-import de.fraunhofer.aisec.cpg.graph.builder.variable
-import de.fraunhofer.aisec.cpg.graph.builder.void
+import de.fraunhofer.aisec.cpg.frontends.translationResult
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
 
 class FlowQueriesTest {
 
     companion object {
+        /** Builds the `foo(arg: int): string { return toString(arg) }` helper function. */
+        private fun LanguageFrontend<*, *>.buildFoo(tu: TranslationUnit) {
+            newFunction("foo", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+
+                newParameter("arg", objectType("int"), holder = func)
+
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        val ret = newReturn()
+                        val toStringCall = newCall(newReference("toString"))
+                        toStringCall.addArgument(newReference("arg"))
+                        ret.returnValue = toStringCall
+                        block += ret
+                    }
+            }
+        }
+
         fun verySimpleDataflow(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
@@ -69,42 +68,99 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                val tu = newTranslationUnit("Dataflow.java")
+                scopeManager.resetToGlobal(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                buildFoo(tu)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) +
-                                            call("foo") { ref("a") } +
-                                            call("foo") { call("bar") }
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(incompleteType())
+                    func.type = computeType(func)
+
+                    newParameter("args", objectType("string").array(), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(5, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val bDecl = newDeclarationStatement()
+                            val b = newVariable("b", objectType("string"))
+                            val fooCallA = newCall(newReference("foo"))
+                            fooCallA.addArgument(newReference("a"))
+                            val fooCallBar = newCall(newReference("foo"))
+                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            b.initializer =
+                                newBinaryOperator("+").also { outer ->
+                                    outer.lhs =
+                                        newBinaryOperator("+").also { inner ->
+                                            inner.lhs = newLiteral("bla", objectType("string"))
+                                            inner.rhs = fooCallA
+                                        }
+                                    outer.rhs = fooCallBar
+                                }
+                            bDecl.declarations += b
+                            scopeManager.addDeclaration(b)
+                            block += bDecl
+
+                            val printA = newCall(newReference("print"))
+                            printA.addArgument(newReference("a"))
+                            block += printA
+
+                            val printB = newCall(newReference("print"))
+                            printB.addArgument(newReference("b"))
+                            block += printB
+
+                            block +=
+                                newAssign(
+                                    "+=",
+                                    listOf(newReference("b")),
+                                    listOf(newLiteral("added", objectType("string"))),
+                                )
+
+                            val ifElse = newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator("==").also {
+                                        it.lhs = newReference("b")
+                                        it.rhs = newLiteral("test", objectType("string"))
                                     }
-                                }
-                                call("print") { ref("a") }
-
-                                call("print") { ref("b") }
-
-                                ref("b") += literal("added", t("string"))
-
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt { ref("a") assign literal(10, t("int")) }
-                                    elseStmt { ref("b") assign literal("removed", t("string")) }
-                                }
-
-                                call("baz") { ref("a") + ref("b") }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        thenBlock +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("a")),
+                                                listOf(newLiteral(10, objectType("int"))),
+                                            )
+                                    }
+                                ifElse.elseStatement =
+                                    newBlock(enterScope = true) { elseBlock ->
+                                        elseBlock +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("b")),
+                                                listOf(newLiteral("removed", objectType("string"))),
+                                            )
+                                    }
                             }
+                            block += ifElse
+
+                            val bazCall = newCall(newReference("baz"))
+                            bazCall.addArgument(
+                                newBinaryOperator("+").also {
+                                    it.lhs = newReference("a")
+                                    it.rhs = newReference("b")
+                                }
+                            )
+                            block += bazCall
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun validatorDataflowLinear(
@@ -115,32 +171,59 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                val tu = newTranslationUnit("Dataflow.java")
+                scopeManager.resetToGlobal(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                buildFoo(tu)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) +
-                                            ref("a") +
-                                            call("foo") { call("bar") }
-                                    }
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(incompleteType())
+                    func.type = computeType(func)
+
+                    newParameter("args", objectType("string").array(), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(5, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val bDecl = newDeclarationStatement()
+                            val b = newVariable("b", objectType("string"))
+                            val fooCallBar = newCall(newReference("foo"))
+                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            b.initializer =
+                                newBinaryOperator("+").also { outer ->
+                                    outer.lhs =
+                                        newBinaryOperator("+").also { inner ->
+                                            inner.lhs = newLiteral("bla", objectType("string"))
+                                            inner.rhs = newReference("a")
+                                        }
+                                    outer.rhs = fooCallBar
                                 }
-                                call("print") { ref("b") }
+                            bDecl.declarations += b
+                            scopeManager.addDeclaration(b)
+                            block += bDecl
 
-                                call("baz") { ref("a") + ref("b") }
-                            }
+                            val printB = newCall(newReference("print"))
+                            printB.addArgument(newReference("b"))
+                            block += printB
+
+                            val bazCall = newCall(newReference("baz"))
+                            bazCall.addArgument(
+                                newBinaryOperator("+").also {
+                                    it.lhs = newReference("a")
+                                    it.rhs = newReference("b")
+                                }
+                            )
+                            block += bazCall
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun validatorDataflowIf(
@@ -151,37 +234,74 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                val tu = newTranslationUnit("Dataflow.java")
+                scopeManager.resetToGlobal(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                buildFoo(tu)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) +
-                                            ref("a") +
-                                            call("foo") { call("bar") }
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(incompleteType())
+                    func.type = computeType(func)
+
+                    newParameter("args", objectType("string").array(), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(5, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val bDecl = newDeclarationStatement()
+                            val b = newVariable("b", objectType("string"))
+                            val fooCallBar = newCall(newReference("foo"))
+                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            b.initializer =
+                                newBinaryOperator("+").also { outer ->
+                                    outer.lhs =
+                                        newBinaryOperator("+").also { inner ->
+                                            inner.lhs = newLiteral("bla", objectType("string"))
+                                            inner.rhs = newReference("a")
+                                        }
+                                    outer.rhs = fooCallBar
+                                }
+                            bDecl.declarations += b
+                            scopeManager.addDeclaration(b)
+                            block += bDecl
+
+                            val ifElse = newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator("==").also {
+                                        it.lhs = newReference("b")
+                                        it.rhs = newLiteral("test", objectType("string"))
                                     }
-                                }
-
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt { call("print") { ref("a") } }
-                                }
-                                call("print") { ref("b") }
-
-                                call("baz") { ref("a") + ref("b") }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        val printA = newCall(newReference("print"))
+                                        printA.addArgument(newReference("a"))
+                                        thenBlock += printA
+                                    }
                             }
+                            block += ifElse
+
+                            val printB = newCall(newReference("print"))
+                            printB.addArgument(newReference("b"))
+                            block += printB
+
+                            val bazCall = newCall(newReference("baz"))
+                            bazCall.addArgument(
+                                newBinaryOperator("+").also {
+                                    it.lhs = newReference("a")
+                                    it.rhs = newReference("b")
+                                }
+                            )
+                            block += bazCall
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun validatorDataflowIfElse(
@@ -192,38 +312,85 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                val tu = newTranslationUnit("Dataflow.java")
+                scopeManager.resetToGlobal(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                buildFoo(tu)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) +
-                                            ref("a") +
-                                            call("foo") { call("bar") }
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(incompleteType())
+                    func.type = computeType(func)
+
+                    newParameter("args", objectType("string").array(), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(5, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val bDecl = newDeclarationStatement()
+                            val b = newVariable("b", objectType("string"))
+                            val fooCallBar = newCall(newReference("foo"))
+                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            b.initializer =
+                                newBinaryOperator("+").also { outer ->
+                                    outer.lhs =
+                                        newBinaryOperator("+").also { inner ->
+                                            inner.lhs = newLiteral("bla", objectType("string"))
+                                            inner.rhs = newReference("a")
+                                        }
+                                    outer.rhs = fooCallBar
+                                }
+                            bDecl.declarations += b
+                            scopeManager.addDeclaration(b)
+                            block += bDecl
+
+                            // Fluent's `IfElse.addArgument` unconditionally does
+                            // `condition = expression` (see `IfElse.addArgument`). The original
+                            // code has a bare `call("print") { ref("b") }` written directly
+                            // inside `ifStmt {}`'s own block (not inside `thenStmt`/`elseStmt`),
+                            // which self-attaches to the IfElse the same way `condition {}`'s
+                            // "b == 'test'" did -- silently overwriting the intended condition
+                            // with the print(b) call expression. The "b == 'test'" comparison is
+                            // therefore built and then immediately discarded, never part of the
+                            // final AST. Faithfully reproduced here: we skip building the
+                            // discarded comparison and go straight to the condition that
+                            // actually survives.
+                            val ifElse = newIfElse { ifElse ->
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        val printA = newCall(newReference("print"))
+                                        printA.addArgument(newReference("a"))
+                                        thenBlock += printA
                                     }
-                                }
-
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt { call("print") { ref("a") } }
-                                    elseStmt { call("print") { ref("b") } }
-                                    call("print") { ref("b") }
-                                }
-
-                                call("baz") { ref("a") + ref("b") }
+                                ifElse.elseStatement =
+                                    newBlock(enterScope = true) { elseBlock ->
+                                        val printB = newCall(newReference("print"))
+                                        printB.addArgument(newReference("b"))
+                                        elseBlock += printB
+                                    }
+                                val printB2 = newCall(newReference("print"))
+                                printB2.addArgument(newReference("b"))
+                                ifElse.condition = printB2
                             }
+                            block += ifElse
+
+                            val bazCall = newCall(newReference("baz"))
+                            bazCall.addArgument(
+                                newBinaryOperator("+").also {
+                                    it.lhs = newReference("a")
+                                    it.rhs = newReference("b")
+                                }
+                            )
+                            block += bazCall
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun validatorDataflowLinearSimple(
@@ -234,30 +401,55 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                val tu = newTranslationUnit("Dataflow.java")
+                scopeManager.resetToGlobal(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                buildFoo(tu)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) + call("foo") { call("bar") }
-                                    }
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(incompleteType())
+                    func.type = computeType(func)
+
+                    newParameter("args", objectType("string").array(), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(5, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val bDecl = newDeclarationStatement()
+                            val b = newVariable("b", objectType("string"))
+                            val fooCallBar = newCall(newReference("foo"))
+                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            b.initializer =
+                                newBinaryOperator("+").also {
+                                    it.lhs = newLiteral("bla", objectType("string"))
+                                    it.rhs = fooCallBar
                                 }
-                                call("print") { ref("a") }
+                            bDecl.declarations += b
+                            scopeManager.addDeclaration(b)
+                            block += bDecl
 
-                                call("baz") { ref("a") + ref("b") }
-                            }
+                            val printA = newCall(newReference("print"))
+                            printA.addArgument(newReference("a"))
+                            block += printA
+
+                            val bazCall = newCall(newReference("baz"))
+                            bazCall.addArgument(
+                                newBinaryOperator("+").also {
+                                    it.lhs = newReference("a")
+                                    it.rhs = newReference("b")
+                                }
+                            )
+                            block += bazCall
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun validatorDataflowIfSimple(
@@ -268,34 +460,66 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                val tu = newTranslationUnit("Dataflow.java")
+                scopeManager.resetToGlobal(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                buildFoo(tu)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) + call("foo") { call("bar") }
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(incompleteType())
+                    func.type = computeType(func)
+
+                    newParameter("args", objectType("string").array(), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(5, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val bDecl = newDeclarationStatement()
+                            val b = newVariable("b", objectType("string"))
+                            val fooCallBar = newCall(newReference("foo"))
+                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            b.initializer =
+                                newBinaryOperator("+").also {
+                                    it.lhs = newLiteral("bla", objectType("string"))
+                                    it.rhs = fooCallBar
+                                }
+                            bDecl.declarations += b
+                            scopeManager.addDeclaration(b)
+                            block += bDecl
+
+                            val ifElse = newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator("==").also {
+                                        it.lhs = newReference("b")
+                                        it.rhs = newLiteral("test", objectType("string"))
                                     }
-                                }
-
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt { call("print") { ref("a") } }
-                                }
-
-                                call("baz") { ref("a") + ref("b") }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        val printA = newCall(newReference("print"))
+                                        printA.addArgument(newReference("a"))
+                                        thenBlock += printA
+                                    }
                             }
+                            block += ifElse
+
+                            val bazCall = newCall(newReference("baz"))
+                            bazCall.addArgument(
+                                newBinaryOperator("+").also {
+                                    it.lhs = newReference("a")
+                                    it.rhs = newReference("b")
+                                }
+                            )
+                            block += bazCall
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun validatorDataflowIfElseSimple(
@@ -306,35 +530,72 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                val tu = newTranslationUnit("Dataflow.java")
+                scopeManager.resetToGlobal(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                buildFoo(tu)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) + call("foo") { call("bar") }
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(incompleteType())
+                    func.type = computeType(func)
+
+                    newParameter("args", objectType("string").array(), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(5, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val bDecl = newDeclarationStatement()
+                            val b = newVariable("b", objectType("string"))
+                            val fooCallBar = newCall(newReference("foo"))
+                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            b.initializer =
+                                newBinaryOperator("+").also {
+                                    it.lhs = newLiteral("bla", objectType("string"))
+                                    it.rhs = fooCallBar
+                                }
+                            bDecl.declarations += b
+                            scopeManager.addDeclaration(b)
+                            block += bDecl
+
+                            val ifElse = newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator("==").also {
+                                        it.lhs = newReference("b")
+                                        it.rhs = newLiteral("test", objectType("string"))
                                     }
-                                }
-
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt { call("print") { ref("a") } }
-                                    elseStmt { call("print") { ref("a") } }
-                                }
-
-                                call("baz") { ref("a") + ref("b") }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        val printA = newCall(newReference("print"))
+                                        printA.addArgument(newReference("a"))
+                                        thenBlock += printA
+                                    }
+                                ifElse.elseStatement =
+                                    newBlock(enterScope = true) { elseBlock ->
+                                        val printA2 = newCall(newReference("print"))
+                                        printA2.addArgument(newReference("a"))
+                                        elseBlock += printA2
+                                    }
                             }
+                            block += ifElse
+
+                            val bazCall = newCall(newReference("baz"))
+                            bazCall.addArgument(
+                                newBinaryOperator("+").also {
+                                    it.lhs = newReference("a")
+                                    it.rhs = newReference("b")
+                                }
+                            )
+                            block += bazCall
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun validatorDataflowOnlyIfSink(
@@ -345,36 +606,72 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                val tu = newTranslationUnit("Dataflow.java")
+                scopeManager.resetToGlobal(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                buildFoo(tu)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) + call("foo") { call("bar") }
-                                    }
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(incompleteType())
+                    func.type = computeType(func)
+
+                    newParameter("args", objectType("string").array(), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(5, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val bDecl = newDeclarationStatement()
+                            val b = newVariable("b", objectType("string"))
+                            val fooCallBar = newCall(newReference("foo"))
+                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            b.initializer =
+                                newBinaryOperator("+").also {
+                                    it.lhs = newLiteral("bla", objectType("string"))
+                                    it.rhs = fooCallBar
                                 }
+                            bDecl.declarations += b
+                            scopeManager.addDeclaration(b)
+                            block += bDecl
 
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt {
-                                        call("print") { ref("a") }
-                                        call("baz") { ref("a") + ref("b") }
+                            val ifElse = newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator("==").also {
+                                        it.lhs = newReference("b")
+                                        it.rhs = newLiteral("test", objectType("string"))
                                     }
-                                    elseStmt { call("print") { ref("c") } }
-                                }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        val printA = newCall(newReference("print"))
+                                        printA.addArgument(newReference("a"))
+                                        thenBlock += printA
+
+                                        val bazCall = newCall(newReference("baz"))
+                                        bazCall.addArgument(
+                                            newBinaryOperator("+").also {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newReference("b")
+                                            }
+                                        )
+                                        thenBlock += bazCall
+                                    }
+                                ifElse.elseStatement =
+                                    newBlock(enterScope = true) { elseBlock ->
+                                        val printC = newCall(newReference("print"))
+                                        printC.addArgument(newReference("c"))
+                                        elseBlock += printC
+                                    }
                             }
+                            block += ifElse
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun validatorDataflowLinearWithCall(
@@ -385,32 +682,61 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                val tu = newTranslationUnit("Dataflow.java")
+                scopeManager.resetToGlobal(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                buildFoo(tu)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) +
-                                            call("foo") { ref("a") } +
-                                            call("foo") { call("bar") }
-                                    }
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(incompleteType())
+                    func.type = computeType(func)
+
+                    newParameter("args", objectType("string").array(), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(5, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val bDecl = newDeclarationStatement()
+                            val b = newVariable("b", objectType("string"))
+                            val fooCallA = newCall(newReference("foo"))
+                            fooCallA.addArgument(newReference("a"))
+                            val fooCallBar = newCall(newReference("foo"))
+                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            b.initializer =
+                                newBinaryOperator("+").also { outer ->
+                                    outer.lhs =
+                                        newBinaryOperator("+").also { inner ->
+                                            inner.lhs = newLiteral("bla", objectType("string"))
+                                            inner.rhs = fooCallA
+                                        }
+                                    outer.rhs = fooCallBar
                                 }
-                                call("print") { ref("b") }
+                            bDecl.declarations += b
+                            scopeManager.addDeclaration(b)
+                            block += bDecl
 
-                                call("baz") { ref("a") + ref("b") }
-                            }
+                            val printB = newCall(newReference("print"))
+                            printB.addArgument(newReference("b"))
+                            block += printB
+
+                            val bazCall = newCall(newReference("baz"))
+                            bazCall.addArgument(
+                                newBinaryOperator("+").also {
+                                    it.lhs = newReference("a")
+                                    it.rhs = newReference("b")
+                                }
+                            )
+                            block += bazCall
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun validatorDataflowIfWithCall(
@@ -421,37 +747,76 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                val tu = newTranslationUnit("Dataflow.java")
+                scopeManager.resetToGlobal(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                buildFoo(tu)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) +
-                                            call("foo") { ref("a") } +
-                                            call("foo") { call("bar") }
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(incompleteType())
+                    func.type = computeType(func)
+
+                    newParameter("args", objectType("string").array(), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(5, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val bDecl = newDeclarationStatement()
+                            val b = newVariable("b", objectType("string"))
+                            val fooCallA = newCall(newReference("foo"))
+                            fooCallA.addArgument(newReference("a"))
+                            val fooCallBar = newCall(newReference("foo"))
+                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            b.initializer =
+                                newBinaryOperator("+").also { outer ->
+                                    outer.lhs =
+                                        newBinaryOperator("+").also { inner ->
+                                            inner.lhs = newLiteral("bla", objectType("string"))
+                                            inner.rhs = fooCallA
+                                        }
+                                    outer.rhs = fooCallBar
+                                }
+                            bDecl.declarations += b
+                            scopeManager.addDeclaration(b)
+                            block += bDecl
+
+                            val ifElse = newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator("==").also {
+                                        it.lhs = newReference("b")
+                                        it.rhs = newLiteral("test", objectType("string"))
                                     }
-                                }
-
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt { call("print") { ref("a") } }
-                                }
-                                call("print") { ref("b") }
-
-                                call("baz") { ref("a") + ref("b") }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        val printA = newCall(newReference("print"))
+                                        printA.addArgument(newReference("a"))
+                                        thenBlock += printA
+                                    }
                             }
+                            block += ifElse
+
+                            val printB = newCall(newReference("print"))
+                            printB.addArgument(newReference("b"))
+                            block += printB
+
+                            val bazCall = newCall(newReference("baz"))
+                            bazCall.addArgument(
+                                newBinaryOperator("+").also {
+                                    it.lhs = newReference("a")
+                                    it.rhs = newReference("b")
+                                }
+                            )
+                            block += bazCall
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun validatorDataflowIfElseWithCall(
@@ -462,38 +827,82 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                val tu = newTranslationUnit("Dataflow.java")
+                scopeManager.resetToGlobal(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                buildFoo(tu)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) +
-                                            call("foo") { ref("a") } +
-                                            call("foo") { call("bar") }
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(incompleteType())
+                    func.type = computeType(func)
+
+                    newParameter("args", objectType("string").array(), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val aDecl = newDeclarationStatement()
+                            val a = newVariable("a", objectType("int"))
+                            a.initializer = newLiteral(5, objectType("int"))
+                            aDecl.declarations += a
+                            scopeManager.addDeclaration(a)
+                            block += aDecl
+
+                            val bDecl = newDeclarationStatement()
+                            val b = newVariable("b", objectType("string"))
+                            val fooCallA = newCall(newReference("foo"))
+                            fooCallA.addArgument(newReference("a"))
+                            val fooCallBar = newCall(newReference("foo"))
+                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            b.initializer =
+                                newBinaryOperator("+").also { outer ->
+                                    outer.lhs =
+                                        newBinaryOperator("+").also { inner ->
+                                            inner.lhs = newLiteral("bla", objectType("string"))
+                                            inner.rhs = fooCallA
+                                        }
+                                    outer.rhs = fooCallBar
+                                }
+                            bDecl.declarations += b
+                            scopeManager.addDeclaration(b)
+                            block += bDecl
+
+                            // Same `IfElse.addArgument` condition-overwrite quirk as in
+                            // `validatorDataflowIfElse` -- see the comment there. The bare
+                            // `call("print") { ref("b") }` written directly inside `ifStmt {}`'s
+                            // block overwrites the "b == 'test'" condition, which is therefore
+                            // built and immediately discarded in the original. Faithfully
+                            // reproduced by skipping straight to the surviving condition.
+                            val ifElse = newIfElse { ifElse ->
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        val printA = newCall(newReference("print"))
+                                        printA.addArgument(newReference("a"))
+                                        thenBlock += printA
                                     }
-                                }
-
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt { call("print") { ref("a") } }
-                                    elseStmt { call("print") { ref("b") } }
-                                    call("print") { ref("b") }
-                                }
-
-                                call("baz") { ref("a") + ref("b") }
+                                ifElse.elseStatement =
+                                    newBlock(enterScope = true) { elseBlock ->
+                                        val printB = newCall(newReference("print"))
+                                        printB.addArgument(newReference("b"))
+                                        elseBlock += printB
+                                    }
+                                val printB2 = newCall(newReference("print"))
+                                printB2.addArgument(newReference("b"))
+                                ifElse.condition = printB2
                             }
+                            block += ifElse
+
+                            val bazCall = newCall(newReference("baz"))
+                            bazCall.addArgument(
+                                newBinaryOperator("+").also {
+                                    it.lhs = newReference("a")
+                                    it.rhs = newReference("b")
+                                }
+                            )
+                            block += bazCall
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun loopDetection(
@@ -504,55 +913,125 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("a", t("void")) {
-                            param("value", t("int"))
-                            body {
-                                ifStmt {
-                                    condition { ref("i") eq literal(1, t("int")) }
-                                    thenStmt {
-                                        call("println") { literal("Then branch", t("string")) }
+                val tu = newTranslationUnit("Dataflow.java")
+                scopeManager.resetToGlobal(tu)
+
+                newFunction("a", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("void"))
+                    func.type = computeType(func)
+
+                    newParameter("value", objectType("int"), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val ifElse = newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator("==").also {
+                                        it.lhs = newReference("i")
+                                        it.rhs = newLiteral(1, objectType("int"))
                                     }
-                                    elseStmt { call("a") { literal(1, t("int")) } }
-                                }
-                                returnStmt {}
-                            }
-                        }
-
-                        function("b", t("void")) {
-                            param("value", t("int"))
-                            body {
-                                call("a") { ref("value", t("int")) }
-                                returnStmt {}
-                            }
-                        }
-
-                        function("c", t("void")) {
-                            param("value", t("int"))
-                            body {
-                                call("b") { ref("value", t("int")) }
-                                returnStmt {}
-                            }
-                        }
-
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                forEachStmt {
-                                    variable { declare { variable("i", t("int")) } }
-                                    iterable { call("range") { literal(1, t("int")) } }
-                                    loopBody {
-                                        declare { variable("temp") { literal("start") } }
-                                        call("a") { ref("i", t("int")) }
-                                        call("b") { ref("i", t("int")) }
-                                        call("c") { ref("i", t("int")) }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        val printlnCall = newCall(newReference("println"))
+                                        printlnCall.addArgument(
+                                            newLiteral("Then branch", objectType("string"))
+                                        )
+                                        thenBlock += printlnCall
                                     }
-                                }
+                                ifElse.elseStatement =
+                                    newBlock(enterScope = true) { elseBlock ->
+                                        val recCall = newCall(newReference("a"))
+                                        recCall.addArgument(newLiteral(1, objectType("int")))
+                                        elseBlock += recCall
+                                    }
                             }
+                            block += ifElse
+
+                            block += newReturn()
                         }
-                    }
                 }
+
+                newFunction("b", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("void"))
+                    func.type = computeType(func)
+
+                    newParameter("value", objectType("int"), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val aCall = newCall(newReference("a"))
+                            aCall.addArgument(newReference("value", objectType("int")))
+                            block += aCall
+
+                            block += newReturn()
+                        }
+                }
+
+                newFunction("c", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("void"))
+                    func.type = computeType(func)
+
+                    newParameter("value", objectType("int"), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val bCall = newCall(newReference("b"))
+                            bCall.addArgument(newReference("value", objectType("int")))
+                            block += bCall
+
+                            block += newReturn()
+                        }
+                }
+
+                // Fluent's `forEachStmt()` never enters/leaves a scope for the `ForEach` node
+                // itself (unlike `whileStmt`), so the loop variable "i" ends up declared
+                // directly in the enclosing method scope. Faithfully reproduced here by not
+                // passing `enterScope` to `newForEach()`/`newBlock()` below.
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(incompleteType())
+                    func.type = computeType(func)
+
+                    newParameter("args", objectType("string").array(), holder = func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val forEachNode = newForEach { forEach ->
+                                val iDeclStmt = newDeclarationStatement()
+                                val i = newVariable("i", objectType("int"))
+                                iDeclStmt.declarations += i
+                                scopeManager.addDeclaration(i)
+                                forEach.variable = iDeclStmt
+
+                                val rangeCall = newCall(newReference("range"))
+                                rangeCall.addArgument(newLiteral(1, objectType("int")))
+                                forEach.iterable = rangeCall
+
+                                forEach.statement = newBlock { loopBodyBlock ->
+                                    val tempDecl = newDeclarationStatement()
+                                    val temp = newVariable("temp")
+                                    temp.initializer = newLiteral("start")
+                                    tempDecl.declarations += temp
+                                    scopeManager.addDeclaration(temp)
+                                    loopBodyBlock += tempDecl
+
+                                    val aCall = newCall(newReference("a"))
+                                    aCall.addArgument(newReference("i", objectType("int")))
+                                    loopBodyBlock += aCall
+
+                                    val bCall = newCall(newReference("b"))
+                                    bCall.addArgument(newReference("i", objectType("int")))
+                                    loopBodyBlock += bCall
+
+                                    val cCall = newCall(newReference("c"))
+                                    cCall.addArgument(newReference("i", objectType("int")))
+                                    loopBodyBlock += cCall
+                                }
+                            }
+                            block += forEachNode
+                        }
+                }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
     }
 }

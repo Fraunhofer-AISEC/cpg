@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.builder.*
+import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
@@ -54,35 +54,113 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
 
+/**
+ * Proof-of-concept migration of the former Fluent-DSL-based tests to the plain [NodeBuilder] API
+ * (`enterScope`/`holder` parameters instead of context-receiver-resolved [Holder]s).
+ *
+ * Two things matter for correctness here, both because every [Node] already implements
+ * [MetadataProvider] (via [ScopeProvider]/[LanguageProvider]):
+ * 1. Every `init` callback takes its node as an explicit parameter (`(T) -> Unit`), never as a
+ *    receiver (`T.() -> Unit`) -- and `.also { }` (callback-style) is used instead of `.apply { }`
+ *    (receiver-style) whenever further node construction happens inside the block. A receiver
+ *    lambda would introduce the node itself as an implicit receiver, and since every node also
+ *    satisfies `MetadataProvider`/`ContextProvider`, a nested `newXYZ(...)` call could silently
+ *    resolve to that inner node instead of the outer frontend -- no compile error, just quietly
+ *    wrong `scope`.
+ * 2. All node construction happens directly inside `.build { }`, where `this` is unambiguously the
+ *    `LanguageFrontend` -- not inside `translationResult { }`'s own receiver lambda (that type is
+ *    shared with the still-Fluent-based tests, so it can't be changed here). `translationResult {
+ *    }` is only used for its trailing role: creating the `TranslationResult`/`Component` and
+ *    running passes + pseudo-location inference over the already-fully-built tree.
+ */
 class FluentTest {
     @Test
     fun test() {
         val result =
             testFrontend { it.registerLanguage<TestLanguageWithColon>() }
                 .build {
-                    translationResult {
-                        translationUnit("file.cpp") {
-                            function("main", t("int")) {
-                                param("argc", t("int"))
-                                body {
-                                    declare { variable("a", t("short")) { literal(1) } }
-                                    ifStmt {
-                                        condition { ref("argc") eq literal(1) }
-                                        thenStmt { call("printf") { literal("then") } }
-                                        elseIf {
-                                            condition { ref("argc") eq literal(1) }
-                                            thenStmt { call("printf") { literal("elseIf") } }
-                                            elseStmt { call("printf") { literal("else") } }
+                    val tu = newTranslationUnit("file.cpp")
+                    scopeManager.resetToGlobal(tu)
+
+                    val main =
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("int"))
+
+                            newParameter("argc", objectType("int"), holder = func)
+
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    val a = newVariable("a", objectType("short"))
+                                    a.initializer = newLiteral(1)
+                                    val declStmt = newDeclarationStatement()
+                                    declStmt.declarations += a
+                                    scopeManager.addDeclaration(a)
+                                    block += declStmt
+
+                                    val ifElse = newIfElse { ifElse ->
+                                        val lhs = newReference("argc")
+                                        val rhs = newLiteral(1)
+                                        ifElse.condition =
+                                            newBinaryOperator("==").also {
+                                                it.lhs = lhs
+                                                it.rhs = rhs
+                                            }
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                val printfCall = newCall(newReference("printf"))
+                                                printfCall.addArgument(newLiteral("then"))
+                                                thenBlock += printfCall
+                                            }
+                                        ifElse.elseStatement = newIfElse { elseIf ->
+                                            val elseIfLhs = newReference("argc")
+                                            val elseIfRhs = newLiteral(1)
+                                            elseIf.condition =
+                                                newBinaryOperator("==").also {
+                                                    it.lhs = elseIfLhs
+                                                    it.rhs = elseIfRhs
+                                                }
+                                            elseIf.thenStatement =
+                                                newBlock(enterScope = true) { elseIfThenBlock ->
+                                                    val printfCall = newCall(newReference("printf"))
+                                                    printfCall.addArgument(newLiteral("elseIf"))
+                                                    elseIfThenBlock += printfCall
+                                                }
+                                            elseIf.elseStatement =
+                                                newBlock(enterScope = true) { elseIfElseBlock ->
+                                                    val printfCall = newCall(newReference("printf"))
+                                                    printfCall.addArgument(newLiteral("else"))
+                                                    elseIfElseBlock += printfCall
+                                                }
                                         }
                                     }
-                                    declare { variable("some", t("SomeClass")) }
-                                    call("do") { call("some.func") }
+                                    block += ifElse
 
-                                    returnStmt { ref("a") + literal(2) }
+                                    val some = newVariable("some", objectType("SomeClass"))
+                                    val someDeclStmt = newDeclarationStatement()
+                                    someDeclStmt.declarations += some
+                                    scopeManager.addDeclaration(some)
+                                    block += someDeclStmt
+
+                                    val doCall = newCall(newReference("do"))
+                                    val memberBase = newReference("some")
+                                    val memberCall =
+                                        newMemberCall(newMemberAccess("func", memberBase), false)
+                                    doCall.addArgument(memberCall)
+                                    block += doCall
+
+                                    val returnStmt = newReturn()
+                                    val sumLhs = newReference("a")
+                                    val sumRhs = newLiteral(2)
+                                    returnStmt.returnValue =
+                                        newBinaryOperator("+").also {
+                                            it.lhs = sumLhs
+                                            it.rhs = sumRhs
+                                        }
+                                    block += returnStmt
                                 }
-                            }
                         }
-                    }
+
+                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
 
         // Let's assert that we did this correctly
@@ -206,29 +284,48 @@ class FluentTest {
                     it.registerPass<ProgramDependenceGraphPass>()
                 }
                 .build {
-                    translationResult {
-                        translationUnit("File") {
-                            function("main", t("list")) {
-                                param("argc", t("int"))
-                                body {
-                                    declare {
-                                        variable("some") {
-                                            listComp {
-                                                ref("i")
-                                                compExpr {
-                                                    ref("i")
-                                                    ref("someIterable")
-                                                    ref("i") gt literal(5, t("int"))
-                                                }
-                                            }
-                                        }
-                                    }
+                    val tu = newTranslationUnit("File")
+                    scopeManager.resetToGlobal(tu)
 
-                                    returnStmt { ref("some") }
+                    val main =
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("list"))
+                            newParameter("argc", objectType("int"), holder = func)
+
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    val some = newVariable("some")
+                                    val statementRef = newReference("i")
+                                    val variableRef = newReference("i")
+                                    val iterableRef = newReference("someIterable")
+                                    val predLhs = newReference("i")
+                                    val predRhs = newLiteral(5, objectType("int"))
+                                    val comprehension =
+                                        newComprehension().also {
+                                            it.variable = variableRef
+                                            it.iterable = iterableRef
+                                            it.predicate =
+                                                newBinaryOperator(">").also { op ->
+                                                    op.lhs = predLhs
+                                                    op.rhs = predRhs
+                                                }
+                                        }
+                                    some.initializer = newCollectionComprehension { cc ->
+                                        cc.statement = statementRef
+                                        cc.comprehensionExpressions += comprehension
+                                    }
+                                    val declStmt = newDeclarationStatement()
+                                    declStmt.declarations += some
+                                    scopeManager.addDeclaration(some)
+                                    block += declStmt
+
+                                    val returnStmt = newReturn()
+                                    returnStmt.returnValue = newReference("some")
+                                    block += returnStmt
                                 }
-                            }
                         }
-                    }
+
+                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
 
         val listComp = result.variables["some"]?.initializer
@@ -259,29 +356,53 @@ class FluentTest {
                     it.registerPass<ProgramDependenceGraphPass>()
                 }
                 .build {
-                    translationResult {
-                        translationUnit("File") {
-                            function("main", t("list")) {
-                                param("argc", t("int"))
-                                body {
-                                    declare {
-                                        variable("some") {
-                                            listComp {
-                                                ref("i")
-                                                compExpr {
-                                                    this.variable = declare { variable("i") }
-                                                    ref("someIterable")
-                                                    ref("i") gt literal(5, t("int"))
-                                                }
-                                            }
-                                        }
-                                    }
+                    val tu = newTranslationUnit("File")
+                    scopeManager.resetToGlobal(tu)
 
-                                    returnStmt { ref("some") }
+                    val main =
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("list"))
+                            newParameter("argc", objectType("int"), holder = func)
+
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    val some = newVariable("some")
+                                    val statementRef = newReference("i")
+
+                                    val i = newVariable("i")
+                                    val iDeclStmt = newDeclarationStatement()
+                                    iDeclStmt.declarations += i
+                                    scopeManager.addDeclaration(i)
+
+                                    val iterableRef = newReference("someIterable")
+                                    val predLhs = newReference("i")
+                                    val predRhs = newLiteral(5, objectType("int"))
+                                    val comprehension =
+                                        newComprehension().also {
+                                            it.variable = iDeclStmt
+                                            it.iterable = iterableRef
+                                            it.predicate =
+                                                newBinaryOperator(">").also { op ->
+                                                    op.lhs = predLhs
+                                                    op.rhs = predRhs
+                                                }
+                                        }
+                                    some.initializer = newCollectionComprehension { cc ->
+                                        cc.statement = statementRef
+                                        cc.comprehensionExpressions += comprehension
+                                    }
+                                    val declStmt = newDeclarationStatement()
+                                    declStmt.declarations += some
+                                    scopeManager.addDeclaration(some)
+                                    block += declStmt
+
+                                    val returnStmt = newReturn()
+                                    returnStmt.returnValue = newReference("some")
+                                    block += returnStmt
                                 }
-                            }
                         }
-                    }
+
+                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
 
         val listComp = result.variables["some"]?.initializer
@@ -313,32 +434,56 @@ class FluentTest {
                     it.registerPass<ProgramDependenceGraphPass>()
                 }
                 .build {
-                    translationResult {
-                        translationUnit("File") {
-                            function("main", t("list")) {
-                                param("argc", t("int"))
-                                body {
-                                    declare {
-                                        variable("some") {
-                                            listComp {
-                                                ref("i")
-                                                compExpr {
-                                                    this.variable = declare {
-                                                        variable("i")
-                                                        variable("y")
-                                                    }
-                                                    ref("someIterable")
-                                                    ref("i") gt literal(5, t("int"))
-                                                }
-                                            }
-                                        }
-                                    }
+                    val tu = newTranslationUnit("File")
+                    scopeManager.resetToGlobal(tu)
 
-                                    returnStmt { ref("some") }
+                    val main =
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("list"))
+                            newParameter("argc", objectType("int"), holder = func)
+
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    val some = newVariable("some")
+                                    val statementRef = newReference("i")
+
+                                    val i = newVariable("i")
+                                    val y = newVariable("y")
+                                    val iDeclStmt = newDeclarationStatement()
+                                    iDeclStmt.declarations += i
+                                    iDeclStmt.declarations += y
+                                    scopeManager.addDeclaration(i)
+                                    scopeManager.addDeclaration(y)
+
+                                    val iterableRef = newReference("someIterable")
+                                    val predLhs = newReference("i")
+                                    val predRhs = newLiteral(5, objectType("int"))
+                                    val comprehension =
+                                        newComprehension().also {
+                                            it.variable = iDeclStmt
+                                            it.iterable = iterableRef
+                                            it.predicate =
+                                                newBinaryOperator(">").also { op ->
+                                                    op.lhs = predLhs
+                                                    op.rhs = predRhs
+                                                }
+                                        }
+                                    some.initializer = newCollectionComprehension { cc ->
+                                        cc.statement = statementRef
+                                        cc.comprehensionExpressions += comprehension
+                                    }
+                                    val declStmt = newDeclarationStatement()
+                                    declStmt.declarations += some
+                                    scopeManager.addDeclaration(some)
+                                    block += declStmt
+
+                                    val returnStmt = newReturn()
+                                    returnStmt.returnValue = newReference("some")
+                                    block += returnStmt
                                 }
-                            }
                         }
-                    }
+
+                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
 
         val listComp = result.variables["some"]?.initializer

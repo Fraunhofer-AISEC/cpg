@@ -30,11 +30,12 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
+import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -152,65 +153,164 @@ class UnresolvedDFGPassTest {
                     )
                     .build()
             return testFrontend(config).build {
-                translationResult {
-                    translationUnit("DfgUnresolvedCalls.java") {
-                        record("DfgUnresolvedCalls") {
-                            field("i", t("int")) { modifiers = setOf("private") }
-                            constructor {
-                                receiver = newVariable("this", t("DfgUnresolvedCalls"))
-                                param("i", t("int"))
-                                body {
-                                    member("i", ref("this")) assign { ref("i") }
-                                    returnStmt { isImplicit = true }
-                                }
-                            }
-                            method("knownFunction", t("int")) {
-                                receiver = newVariable("this", t("DfgUnresolvedCalls"))
-                                param("arg", t("int"))
-                                body { returnStmt { member("i", ref("this")) + ref("arg") } }
-                            }
+                val tu = newTranslationUnit("DfgUnresolvedCalls.java")
+                scopeManager.resetToGlobal(tu)
 
-                            // The main method
-                            method("main") {
-                                this.isStatic = true
-                                param("args", t("String[]"))
-                                body {
-                                    declare {
-                                        variable("os", t("Optional", listOf(t("String")))) {
-                                            memberCall("getOptionalString", ref("RandomClass")) {
-                                                isStatic = true
-                                            }
-                                        }
-                                    }
-                                    declare {
-                                        variable("s", t("String")) { memberCall("get", ref("os")) }
-                                    }
-                                    declare {
-                                        variable("s2", t("String")) {
-                                            memberCall("get", ref("os")) { literal(4, t("int")) }
-                                        }
-                                    }
-                                    declare {
-                                        variable("duc", t("DfgUnresolvedCalls")) {
-                                            new {
-                                                construct("DfgUnresolvedCalls") {
-                                                    literal(3, t("int"))
-                                                }
-                                            }
-                                        }
-                                    }
-                                    declare {
-                                        variable("i", t("int")) {
-                                            memberCall("knownFunction", ref("duc")) {
-                                                literal(2, t("int"))
-                                            }
-                                        }
-                                    }
+                newRecord("DfgUnresolvedCalls", "class", holder = tu, enterScope = true) { record ->
+                    newField("i", objectType("int"), modifiers = setOf("private"), holder = record)
+
+                    // Fluent's constructor() attaches via record.constructors +=, not the generic
+                    // DeclarationHolder mechanism, so it's wired manually rather than via the
+                    // `holder` builder parameter.
+                    val ctor =
+                        newConstructor(record.name, record, enterScope = true) { c ->
+                            c.receiver = newVariable("this", objectType("DfgUnresolvedCalls"))
+                            newParameter("i", objectType("int"), holder = c)
+                            c.body =
+                                newBlock(enterScope = true) { block ->
+                                    val memberAccess = newMemberAccess("i", newReference("this"))
+                                    block +=
+                                        newAssign(
+                                            operatorCode = "=",
+                                            lhs = listOf(memberAccess),
+                                            rhs = listOf(newReference("i")),
+                                        )
+                                    block += newReturn().also { it.isImplicit = true }
                                 }
-                            }
                         }
+                    scopeManager.addDeclaration(ctor)
+                    record.constructors += ctor
+
+                    newMethod(
+                        "knownFunction",
+                        recordDeclaration = record,
+                        holder = record,
+                        enterScope = true,
+                    ) { m ->
+                        m.returnTypes = listOf(objectType("int"))
+                        m.type = computeType(m)
+                        m.receiver = newVariable("this", objectType("DfgUnresolvedCalls"))
+                        newParameter("arg", objectType("int"), holder = m)
+                        m.body =
+                            newBlock(enterScope = true) { block ->
+                                val returnStmt = newReturn()
+                                returnStmt.returnValue =
+                                    newBinaryOperator("+").also {
+                                        it.lhs = newMemberAccess("i", newReference("this"))
+                                        it.rhs = newReference("arg")
+                                    }
+                                block += returnStmt
+                            }
+                    }
+
+                    // The main method
+                    newMethod(
+                        "main",
+                        recordDeclaration = record,
+                        holder = record,
+                        enterScope = true,
+                    ) { m ->
+                        m.type = computeType(m)
+                        m.isStatic = true
+                        newParameter("args", objectType("String[]"), holder = m)
+                        m.body =
+                            newBlock(enterScope = true) { block ->
+                                val osDeclStmt = newDeclarationStatement()
+                                val os =
+                                    newVariable(
+                                            "os",
+                                            objectType("Optional", listOf(objectType("String"))),
+                                        )
+                                        .also {
+                                            it.initializer =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "getOptionalString",
+                                                        newReference("RandomClass"),
+                                                    ),
+                                                    true,
+                                                )
+                                        }
+                                osDeclStmt.declarations += os
+                                scopeManager.addDeclaration(os)
+                                block += osDeclStmt
+
+                                val sDeclStmt = newDeclarationStatement()
+                                val s =
+                                    newVariable("s", objectType("String")).also {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess("get", newReference("os")),
+                                                false,
+                                            )
+                                    }
+                                sDeclStmt.declarations += s
+                                scopeManager.addDeclaration(s)
+                                block += sDeclStmt
+
+                                val s2DeclStmt = newDeclarationStatement()
+                                val s2 =
+                                    newVariable("s2", objectType("String")).also {
+                                        it.initializer =
+                                            newMemberCall(
+                                                    newMemberAccess("get", newReference("os")),
+                                                    false,
+                                                )
+                                                .also { call ->
+                                                    call.addArgument(
+                                                        newLiteral(4, objectType("int"))
+                                                    )
+                                                }
+                                    }
+                                s2DeclStmt.declarations += s2
+                                scopeManager.addDeclaration(s2)
+                                block += s2DeclStmt
+
+                                val ducDeclStmt = newDeclarationStatement()
+                                val duc =
+                                    newVariable("duc", objectType("DfgUnresolvedCalls")).also {
+                                        it.initializer =
+                                            newNew().also { newExpr ->
+                                                newExpr.initializer =
+                                                    newConstruction("DfgUnresolvedCalls").also {
+                                                        construction ->
+                                                        construction.type =
+                                                            objectType("DfgUnresolvedCalls")
+                                                        construction.addArgument(
+                                                            newLiteral(3, objectType("int"))
+                                                        )
+                                                    }
+                                            }
+                                    }
+                                ducDeclStmt.declarations += duc
+                                scopeManager.addDeclaration(duc)
+                                block += ducDeclStmt
+
+                                val iDeclStmt = newDeclarationStatement()
+                                val i =
+                                    newVariable("i", objectType("int")).also {
+                                        it.initializer =
+                                            newMemberCall(
+                                                    newMemberAccess(
+                                                        "knownFunction",
+                                                        newReference("duc"),
+                                                    ),
+                                                    false,
+                                                )
+                                                .also { call ->
+                                                    call.addArgument(
+                                                        newLiteral(2, objectType("int"))
+                                                    )
+                                                }
+                                    }
+                                iDeclStmt.declarations += i
+                                scopeManager.addDeclaration(i)
+                                block += iDeclStmt
+                            }
                     }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
         }
     }

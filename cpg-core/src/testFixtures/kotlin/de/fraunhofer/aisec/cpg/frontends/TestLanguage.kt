@@ -27,11 +27,18 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
+import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.inferPseudoLocations
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import kotlin.reflect.KClass
@@ -134,3 +141,27 @@ open class TestLanguageFrontend(
 
 class TestHandler(frontend: TestLanguageFrontend) :
     Handler<Node, Any, TestLanguageFrontend>(::ProblemDeclaration, frontend)
+
+/**
+ * Creates a new [TranslationResult] with a single default [Component], runs the configured passes
+ * on it, and infers pseudo-locations for any node that doesn't have a real one (e.g. nodes built
+ * directly via node builders in a test, without a real parser). This is the harness used to build
+ * ASTs directly for unit tests, without a real [LanguageFrontend.parse].
+ */
+fun LanguageFrontend<*, *>.translationResult(
+    init: TranslationResult.() -> Unit
+): TranslationResult {
+    val node = TranslationResult(TranslationManager.builder().config(ctx.config).build(), ctx)
+    val component = Component()
+    component.name = Name(DEFAULT_APPLICATION_NAME)
+    node.addComponent(component)
+    init(node)
+
+    executePassesSequentially(ctx, node, mutableSetOf())
+
+    // Start pseudo location inference for the root node of translation, propagating to its
+    // descendents.
+    node.inferPseudoLocations()
+
+    return node
+}

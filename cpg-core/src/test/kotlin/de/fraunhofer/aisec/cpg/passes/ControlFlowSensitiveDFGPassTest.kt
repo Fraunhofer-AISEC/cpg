@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
+import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.test.*
 import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.test.*
@@ -331,28 +332,57 @@ class ControlFlowSensitiveDFGPassTest {
                     .build()
             )
             .build {
-                translationResult {
-                    translationUnit("forEach.cpp") {
-                        // The main method
-                        function("main", t("int")) {
-                            body {
-                                declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                forEachStmt {
-                                    declare { variable("loopVar", t("string")) }
-                                    call("magicFunction")
-                                    loopBody {
-                                        call("printf") {
-                                            literal("loop: \${}\n", t("string"))
-                                            ref("loopVar")
-                                        }
-                                    }
-                                }
-                                call("printf") { literal("1\n", t("string")) }
+                val tu = newTranslationUnit("forEach.cpp")
+                scopeManager.resetToGlobal(tu)
 
-                                returnStmt { ref("i") }
-                            }
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("int"))
+                    func.type = computeType(func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val declStmt = newDeclarationStatement()
+                            val i =
+                                newVariable("i", objectType("int")).also {
+                                    it.initializer = newLiteral(0, objectType("int"))
+                                }
+                            declStmt.declarations += i
+                            scopeManager.addDeclaration(i)
+                            block += declStmt
+
+                            // Note: Fluent's "forEachStmt" never enters a new scope for the
+                            // ForEach node itself, and "declare"/"call" inside its block attach to
+                            // ForEach's own (generic) StatementHolder.statements -- NOT its
+                            // dedicated .variable/.iterable properties, since those aren't used
+                            // here. Faithfully reproduced.
+                            val forEach = newForEach()
+                            val loopVarDeclStmt = newDeclarationStatement()
+                            val loopVar = newVariable("loopVar", objectType("string"))
+                            loopVarDeclStmt.declarations += loopVar
+                            scopeManager.addDeclaration(loopVar)
+                            forEach.statements += loopVarDeclStmt
+                            forEach.statements += newCall(newReference("magicFunction"))
+                            forEach.statement =
+                                newBlock(enterScope = true) { loopBody ->
+                                    val printfCall = newCall(newReference("printf"))
+                                    printfCall.addArgument(
+                                        newLiteral("loop: \${}\n", objectType("string"))
+                                    )
+                                    printfCall.addArgument(newReference("loopVar"))
+                                    loopBody += printfCall
+                                }
+                            block += forEach
+
+                            val printfCall2 = newCall(newReference("printf"))
+                            printfCall2.addArgument(newLiteral("1\n", objectType("string")))
+                            block += printfCall2
+
+                            val returnStmt = newReturn()
+                            returnStmt.returnValue = newReference("i")
+                            block += returnStmt
                         }
-                    }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 }

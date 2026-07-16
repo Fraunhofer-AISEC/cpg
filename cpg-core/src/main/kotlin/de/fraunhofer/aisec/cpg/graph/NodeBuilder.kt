@@ -28,6 +28,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -429,3 +430,74 @@ val Path.topLevel: File
         // If no top-level was found, we return the path's parent as a file
         return parent.toFile()
     }
+
+/**
+ * This function uses the partial location with the start line from node creation to further infer
+ * code start column, end-line and end-column. The inference will only be performed if the columns
+ * are still set to the invalid value of 0 -- a sign that they were not manually set.
+ *
+ * The inference of a pseudo location propagates down to the descendents. This is for two reasons:
+ * to discover descendent nodes that also need a pseudo location, and to have children with
+ * locations that the parent node can use to infer its own end-line and column.
+ */
+fun Node.inferPseudoLocations(currentFile: URI? = null, line: Int = 1, column: Int = 1) {
+    var lineCtr = line
+    var columnCtr = column
+    when (this) {
+        is TranslationResult -> {
+            this.components.forEach {
+                it.translationUnits.forEach {
+                    it.inferPseudoLocations(URI.create(it.name.toString()))
+                }
+            }
+        }
+
+        is AstNode -> {
+            // We only infer the remaining location if columns are not set to valid SARIF value.
+            val inferLocation =
+                this.location?.region?.startColumn == 0 && this.location?.region?.endColumn == 0
+            val location =
+                this.location
+                    ?: PhysicalLocation(currentFile, Region(lineCtr, columnCtr, lineCtr, columnCtr))
+
+            if (lineCtr < location.region.startLine) {
+                columnCtr = 1
+            } else if (lineCtr == location.region.startLine) {
+                columnCtr = columnCtr + 1
+            } else {
+                LOGGER.warn("Location of node {} is before current line counter {}", this, lineCtr)
+            }
+
+            if (inferLocation) {
+                this.location?.region?.startColumn = columnCtr
+            }
+
+            lineCtr = location.region.startLine
+
+            val children = this.astChildren.sortedBy { it.location?.region?.startLine ?: -1 }
+            children.forEach {
+                it.inferPseudoLocations(currentFile, lineCtr, columnCtr)
+                val childLoc = it.location
+                // This part, only works if the children are sorted according to their creation in a
+                // file and therefore
+                // children that are created later are also later in the list
+                if (childLoc != null) {
+                    lineCtr = childLoc.region.endLine
+                    columnCtr = childLoc.region.endColumn
+                }
+            }
+
+            if (inferLocation) {
+                // The end column and line are extracted from the last child according to the
+                // location
+                this.location?.region?.endLine =
+                    children.maxOfOrNull { it.location?.region?.endLine ?: -1 } ?: lineCtr
+                this.location?.region?.endColumn =
+                    (children
+                        .filter { it.location?.region?.endLine == this.location?.region?.endLine }
+                        .maxOfOrNull { it.location?.region?.endColumn ?: -1 } ?: columnCtr) + 1
+            }
+        }
+        else -> {}
+    }
+}

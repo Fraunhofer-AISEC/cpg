@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.builder.*
+import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Throw
@@ -46,20 +46,29 @@ class ThrowTest {
                         .build()
                 )
                 .build {
-                    translationResult {
-                        translationUnit("some.file") {
-                            function("foo", t("void")) {
-                                body {
-                                    `throw` {}
-                                    `throw` { call("SomeError") }
-                                    `throw` {
-                                        call("SomeError")
-                                        call("SomeError2")
-                                    }
-                                }
+                    val tu = newTranslationUnit("some.file")
+                    scopeManager.resetToGlobal(tu)
+
+                    newFunction("foo", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("void"))
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block += newThrow()
+
+                                val throwWithExc = newThrow()
+                                throwWithExc.exception = newCall(newReference("SomeError"))
+                                block += throwWithExc
+
+                                val throwWithExcAndParent = newThrow()
+                                throwWithExcAndParent.exception = newCall(newReference("SomeError"))
+                                throwWithExcAndParent.parentException =
+                                    newCall(newReference("SomeError2"))
+                                block += throwWithExcAndParent
                             }
-                        }
                     }
+
+                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
 
         // Let's assert that we did this correctly

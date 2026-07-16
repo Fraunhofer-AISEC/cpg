@@ -28,7 +28,9 @@ package de.fraunhofer.aisec.cpg.testcases
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.builder.*
+import de.fraunhofer.aisec.cpg.frontends.translationResult
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 
 class Passes {
@@ -42,277 +44,867 @@ class Passes {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Unreachability.java") {
-                        import("kotlin.random.URandomKt")
-                        record("TestClass") {
-                            method("ifBothPossible", void()) {
-                                body {
-                                    declare { variable("y", t("int")) { literal(5, t("int")) } }
-                                    declare {
-                                        variable("x", t("int")) {
-                                            memberCall("nextUInt", ref("URandomKt"))
+                val tu = newTranslationUnit("Unreachability.java")
+                scopeManager.resetToGlobal(tu)
+
+                newInclude("kotlin.random.URandomKt", holder = tu)
+
+                newRecord("TestClass", "class", holder = tu, enterScope = true) { record ->
+                    newMethod("ifBothPossible", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val yDecl = newDeclarationStatement()
+                                val y = newVariable("y", objectType("int"))
+                                y.initializer = newLiteral(5, objectType("int"))
+                                yDecl.declarations += y
+                                scopeManager.addDeclaration(y)
+                                block += yDecl
+
+                                val xDecl = newDeclarationStatement()
+                                val x = newVariable("x", objectType("int"))
+                                x.initializer =
+                                    newMemberCall(
+                                        newMemberAccess("nextUInt", newReference("URandomKt")),
+                                        false,
+                                    )
+                                xDecl.declarations += x
+                                scopeManager.addDeclaration(x)
+                                block += xDecl
+
+                                val ifElse = newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("<=").also {
+                                            it.lhs = newReference("x")
+                                            it.rhs = newReference("y")
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock +=
+                                                newUnaryOperator(
+                                                        "++",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    )
+                                                    .also { it.input = newReference("y") }
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock +=
+                                                newUnaryOperator(
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    )
+                                                    .also { it.input = newReference("y") }
+                                        }
+                                }
+                                block += ifElse
+
+                                val printlnCall =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall.addArgument(newReference("y"))
+                                block += printlnCall
+
+                                block += newReturn()
+                            }
+                    }
+
+                    newMethod("ifTrue", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val yDecl = newDeclarationStatement()
+                                val y = newVariable("y", objectType("int"))
+                                y.initializer = newLiteral(6, objectType("int"))
+                                yDecl.declarations += y
+                                scopeManager.addDeclaration(y)
+                                block += yDecl
+
+                                val xDecl = newDeclarationStatement()
+                                val x = newVariable("x", objectType("int"))
+                                x.initializer =
+                                    newMemberCall(
+                                        newMemberAccess("nextUInt", newReference("URandomKt")),
+                                        false,
+                                    )
+                                xDecl.declarations += x
+                                scopeManager.addDeclaration(x)
+                                block += xDecl
+
+                                val ifElse = newIfElse { ifElse ->
+                                    ifElse.condition = newLiteral(true, objectType("boolean"))
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock +=
+                                                newUnaryOperator(
+                                                        "++",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    )
+                                                    .also { it.input = newReference("y") }
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock +=
+                                                newUnaryOperator(
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    )
+                                                    .also { it.input = newReference("y") }
+                                        }
+                                }
+                                block += ifElse
+
+                                val printlnCall =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall.addArgument(newReference("y"))
+                                block += printlnCall
+
+                                block += newReturn()
+                            }
+                    }
+
+                    newMethod("ifFalse", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val yDecl = newDeclarationStatement()
+                                val y = newVariable("y", objectType("int"))
+                                y.initializer = newLiteral(6, objectType("int"))
+                                yDecl.declarations += y
+                                scopeManager.addDeclaration(y)
+                                block += yDecl
+
+                                val xDecl = newDeclarationStatement()
+                                val x = newVariable("x", objectType("int"))
+                                x.initializer =
+                                    newMemberCall(
+                                        newMemberAccess("nextUInt", newReference("URandomKt")),
+                                        false,
+                                    )
+                                xDecl.declarations += x
+                                scopeManager.addDeclaration(x)
+                                block += xDecl
+
+                                val ifElse = newIfElse { ifElse ->
+                                    ifElse.condition = newLiteral(false, objectType("boolean"))
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock +=
+                                                newUnaryOperator(
+                                                        "++",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    )
+                                                    .also { it.input = newReference("y") }
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock +=
+                                                newUnaryOperator(
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    )
+                                                    .also { it.input = newReference("y") }
+                                        }
+                                }
+                                block += ifElse
+
+                                val printlnCall =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall.addArgument(newReference("y"))
+                                block += printlnCall
+
+                                block += newReturn()
+                            }
+                    }
+
+                    newMethod("ifTrueComputed", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val yDecl = newDeclarationStatement()
+                                val y = newVariable("y", objectType("int"))
+                                y.initializer = newLiteral(6, objectType("int"))
+                                yDecl.declarations += y
+                                scopeManager.addDeclaration(y)
+                                block += yDecl
+
+                                val xDecl = newDeclarationStatement()
+                                val x = newVariable("x", objectType("int"))
+                                x.initializer =
+                                    newMemberCall(
+                                        newMemberAccess("nextUInt", newReference("URandomKt")),
+                                        false,
+                                    )
+                                xDecl.declarations += x
+                                scopeManager.addDeclaration(x)
+                                block += xDecl
+
+                                val ifElse = newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("<=").also {
+                                            it.lhs = newReference("y")
+                                            it.rhs = newLiteral(9, objectType("int"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock +=
+                                                newUnaryOperator(
+                                                        "++",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    )
+                                                    .also { it.input = newReference("y") }
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock +=
+                                                newUnaryOperator(
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    )
+                                                    .also { it.input = newReference("y") }
+                                        }
+                                }
+                                block += ifElse
+
+                                val printlnCall =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall.addArgument(newReference("y"))
+                                block += printlnCall
+
+                                block += newReturn()
+                            }
+                    }
+
+                    newMethod("ifTrueComputedHard", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val zDecl = newDeclarationStatement()
+                                val z = newVariable("z", objectType("int"))
+                                z.initializer = newLiteral(2, objectType("int"))
+                                zDecl.declarations += z
+                                scopeManager.addDeclaration(z)
+                                block += zDecl
+
+                                val yDecl = newDeclarationStatement()
+                                val y = newVariable("y", objectType("int"))
+                                y.initializer = newReference("z")
+                                yDecl.declarations += y
+                                scopeManager.addDeclaration(y)
+                                block += yDecl
+
+                                val xDecl = newDeclarationStatement()
+                                val x = newVariable("x", objectType("int"))
+                                x.initializer =
+                                    newMemberCall(
+                                        newMemberAccess("nextUInt", newReference("URandomKt")),
+                                        false,
+                                    )
+                                xDecl.declarations += x
+                                scopeManager.addDeclaration(x)
+                                block += xDecl
+
+                                val ifElse = newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("<=").also {
+                                            it.lhs =
+                                                newBinaryOperator("+").also { plus ->
+                                                    plus.lhs = newReference("y")
+                                                    plus.rhs = newReference("z")
+                                                }
+                                            it.rhs = newLiteral(9, objectType("int"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock +=
+                                                newUnaryOperator(
+                                                        "++",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    )
+                                                    .also { it.input = newReference("y") }
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock +=
+                                                newUnaryOperator(
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    )
+                                                    .also { it.input = newReference("y") }
+                                        }
+                                }
+                                block += ifElse
+
+                                block +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newReference("z")),
+                                        listOf(newLiteral(10, objectType("int"))),
+                                    )
+
+                                val printlnCall =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall.addArgument(newReference("y"))
+                                block += printlnCall
+
+                                block += newReturn()
+                            }
+                    }
+
+                    newMethod("ifFalseComputedHard", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val zDecl = newDeclarationStatement()
+                                val z = newVariable("z", objectType("int"))
+                                z.initializer = newLiteral(5, objectType("int"))
+                                zDecl.declarations += z
+                                scopeManager.addDeclaration(z)
+                                block += zDecl
+
+                                val yDecl = newDeclarationStatement()
+                                val y = newVariable("y", objectType("int"))
+                                y.initializer = newReference("z")
+                                yDecl.declarations += y
+                                scopeManager.addDeclaration(y)
+                                block += yDecl
+
+                                val xDecl = newDeclarationStatement()
+                                val x = newVariable("x", objectType("int"))
+                                x.initializer =
+                                    newMemberCall(
+                                        newMemberAccess("nextUInt", newReference("URandomKt")),
+                                        false,
+                                    )
+                                xDecl.declarations += x
+                                scopeManager.addDeclaration(x)
+                                block += xDecl
+
+                                val ifElse = newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("<=").also {
+                                            it.lhs =
+                                                newBinaryOperator("+").also { plus ->
+                                                    plus.lhs = newReference("y")
+                                                    plus.rhs = newReference("z")
+                                                }
+                                            it.rhs = newLiteral(9, objectType("int"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock +=
+                                                newUnaryOperator(
+                                                        "++",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    )
+                                                    .also { it.input = newReference("y") }
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock +=
+                                                newUnaryOperator(
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    )
+                                                    .also { it.input = newReference("y") }
+                                        }
+                                }
+                                block += ifElse
+
+                                block +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newReference("z")),
+                                        listOf(newLiteral(3, objectType("int"))),
+                                    )
+
+                                val printlnCall =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall.addArgument(newReference("y"))
+                                block += printlnCall
+
+                                block += newReturn()
+                            }
+                    }
+
+                    newMethod("ifFalseComputed", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val yDecl = newDeclarationStatement()
+                                val y = newVariable("y", objectType("int"))
+                                y.initializer = newLiteral(6, objectType("int"))
+                                yDecl.declarations += y
+                                scopeManager.addDeclaration(y)
+                                block += yDecl
+
+                                val xDecl = newDeclarationStatement()
+                                val x = newVariable("x", objectType("int"))
+                                x.initializer =
+                                    newMemberCall(
+                                        newMemberAccess("nextUInt", newReference("URandomKt")),
+                                        false,
+                                    )
+                                xDecl.declarations += x
+                                scopeManager.addDeclaration(x)
+                                block += xDecl
+
+                                val ifElse = newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("<=").also {
+                                            it.lhs = newReference("y")
+                                            it.rhs = newLiteral(-1, objectType("int"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock +=
+                                                newUnaryOperator(
+                                                        "++",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    )
+                                                    .also { it.input = newReference("y") }
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock +=
+                                                newUnaryOperator(
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    )
+                                                    .also { it.input = newReference("y") }
+                                        }
+                                }
+                                block += ifElse
+
+                                val printlnCall =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall.addArgument(newReference("y"))
+                                block += printlnCall
+
+                                block += newReturn()
+                            }
+                    }
+
+                    newMethod("whileTrueEndless", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val xDecl = newDeclarationStatement()
+                                val x = newVariable("x", objectType("boolean"))
+                                x.initializer = newLiteral(true, objectType("boolean"))
+                                xDecl.declarations += x
+                                scopeManager.addDeclaration(x)
+                                block += xDecl
+
+                                val whileNode =
+                                    newWhile(enterScope = true) { w ->
+                                        w.condition = newReference("x")
+                                        w.statement = newBlock { loopBodyBlock ->
+                                            val printlnCall =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "println",
+                                                        newMemberAccess(
+                                                            "out",
+                                                            newReference("System"),
+                                                        ),
+                                                    ),
+                                                    false,
+                                                )
+                                            printlnCall.addArgument(
+                                                newLiteral("Cool loop", objectType("string"))
+                                            )
+                                            loopBodyBlock += printlnCall
                                         }
                                     }
+                                block += whileNode
 
-                                    ifStmt {
-                                        condition { ref("x") le ref("y") }
-                                        thenStmt { ref("y").inc() }
-                                        elseStmt { ref("y").dec() }
-                                    }
-                                    memberCall("println", member("out", ref("System"))) { ref("y") }
-                                    returnStmt {}
-                                }
+                                val printlnCall2 =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall2.addArgument(
+                                    newLiteral("After cool loop", objectType("string"))
+                                )
+                                block += printlnCall2
+
+                                block += newReturn()
                             }
+                    }
 
-                            method("ifTrue", void()) {
-                                body {
-                                    declare { variable("y", t("int")) { literal(6, t("int")) } }
-                                    declare {
-                                        variable("x", t("int")) {
-                                            memberCall("nextUInt", ref("URandomKt"))
+                    newMethod("whileTrue", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val xDecl = newDeclarationStatement()
+                                val x = newVariable("x", objectType("boolean"))
+                                x.initializer = newLiteral(true, objectType("boolean"))
+                                xDecl.declarations += x
+                                scopeManager.addDeclaration(x)
+                                block += xDecl
+
+                                val whileNode =
+                                    newWhile(enterScope = true) { w ->
+                                        w.condition = newReference("x")
+                                        w.statement = newBlock { loopBodyBlock ->
+                                            val printlnCall =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "println",
+                                                        newMemberAccess(
+                                                            "out",
+                                                            newReference("System"),
+                                                        ),
+                                                    ),
+                                                    false,
+                                                )
+                                            printlnCall.addArgument(
+                                                newLiteral("Cool loop", objectType("string"))
+                                            )
+                                            loopBodyBlock += printlnCall
+
+                                            loopBodyBlock +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("x")),
+                                                    listOf(newLiteral(false, objectType("boolean"))),
+                                                )
                                         }
                                     }
+                                block += whileNode
 
-                                    ifStmt {
-                                        condition { literal(true, t("boolean")) }
-                                        thenStmt { ref("y").inc() }
-                                        elseStmt { ref("y").dec() }
-                                    }
-                                    memberCall("println", member("out", ref("System"))) { ref("y") }
-                                    returnStmt {}
-                                }
+                                val printlnCall2 =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall2.addArgument(
+                                    newLiteral("After cool loop", objectType("string"))
+                                )
+                                block += printlnCall2
+
+                                block += newReturn()
                             }
+                    }
 
-                            method("ifFalse", void()) {
-                                body {
-                                    declare { variable("y", t("int")) { literal(6, t("int")) } }
-                                    declare {
-                                        variable("x", t("int")) {
-                                            memberCall("nextUInt", ref("URandomKt"))
+                    newMethod("whileFalse", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val whileNode =
+                                    newWhile(enterScope = true) { w ->
+                                        w.condition = newLiteral(false, objectType("boolean"))
+                                        w.statement = newBlock { loopBodyBlock ->
+                                            val printlnCall =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "println",
+                                                        newMemberAccess(
+                                                            "out",
+                                                            newReference("System"),
+                                                        ),
+                                                    ),
+                                                    false,
+                                                )
+                                            printlnCall.addArgument(
+                                                newLiteral("Cool loop", objectType("string"))
+                                            )
+                                            loopBodyBlock += printlnCall
                                         }
                                     }
+                                block += whileNode
 
-                                    ifStmt {
-                                        condition { literal(false, t("boolean")) }
-                                        thenStmt { ref("y").inc() }
-                                        elseStmt { ref("y").dec() }
-                                    }
-                                    memberCall("println", member("out", ref("System"))) { ref("y") }
-                                    returnStmt {}
-                                }
+                                val printlnCall2 =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall2.addArgument(
+                                    newLiteral("After cool loop", objectType("string"))
+                                )
+                                block += printlnCall2
+
+                                block += newReturn()
                             }
+                    }
 
-                            method("ifTrueComputed", void()) {
-                                body {
-                                    declare { variable("y", t("int")) { literal(6, t("int")) } }
-                                    declare {
-                                        variable("x", t("int")) {
-                                            memberCall("nextUInt", ref("URandomKt"))
-                                        }
-                                    }
+                    newMethod("whileComputedTrue", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
 
-                                    ifStmt {
-                                        condition { ref("y") le literal(9, t("int")) }
-                                        thenStmt { ref("y").inc() }
-                                        elseStmt { ref("y").dec() }
-                                    }
-                                    memberCall("println", member("out", ref("System"))) { ref("y") }
-                                    returnStmt {}
-                                }
-                            }
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val xDecl = newDeclarationStatement()
+                                val x = newVariable("x", objectType("boolean"))
+                                x.initializer = newLiteral(1, objectType("int"))
+                                xDecl.declarations += x
+                                scopeManager.addDeclaration(x)
+                                block += xDecl
 
-                            method("ifTrueComputedHard", void()) {
-                                body {
-                                    declare { variable("z", t("int")) { literal(2, t("int")) } }
-                                    declare { variable("y", t("int")) { ref("z") } }
-                                    declare {
-                                        variable("x", t("int")) {
-                                            memberCall("nextUInt", ref("URandomKt"))
-                                        }
-                                    }
-
-                                    ifStmt {
-                                        condition { ref("y") + ref("z") le literal(9, t("int")) }
-                                        thenStmt { ref("y").inc() }
-                                        elseStmt { ref("y").dec() }
-                                    }
-                                    ref("z") assign literal(10, t("int"))
-                                    memberCall("println", member("out", ref("System"))) { ref("y") }
-                                    returnStmt {}
-                                }
-                            }
-
-                            method("ifFalseComputedHard", void()) {
-                                body {
-                                    declare { variable("z", t("int")) { literal(5, t("int")) } }
-                                    declare { variable("y", t("int")) { ref("z") } }
-                                    declare {
-                                        variable("x", t("int")) {
-                                            memberCall("nextUInt", ref("URandomKt"))
-                                        }
-                                    }
-
-                                    ifStmt {
-                                        condition { ref("y") + ref("z") le literal(9, t("int")) }
-                                        thenStmt { ref("y").inc() }
-                                        elseStmt { ref("y").dec() }
-                                    }
-                                    ref("z") assign literal(3, t("int"))
-                                    memberCall("println", member("out", ref("System"))) { ref("y") }
-                                    returnStmt {}
-                                }
-                            }
-
-                            method("ifFalseComputed", void()) {
-                                body {
-                                    declare { variable("y", t("int")) { literal(6, t("int")) } }
-                                    declare {
-                                        variable("x", t("int")) {
-                                            memberCall("nextUInt", ref("URandomKt"))
-                                        }
-                                    }
-
-                                    ifStmt {
-                                        condition { ref("y") le literal(-1, t("int")) }
-                                        thenStmt { ref("y").inc() }
-                                        elseStmt { ref("y").dec() }
-                                    }
-                                    memberCall("println", member("out", ref("System"))) { ref("y") }
-                                    returnStmt {}
-                                }
-                            }
-
-                            method("whileTrueEndless", void()) {
-                                body {
-                                    declare {
-                                        variable("x", t("boolean")) { literal(true, t("boolean")) }
-                                    }
-
-                                    whileStmt {
-                                        whileCondition { ref("x") }
-                                        loopBody {
-                                            memberCall("println", member("out", ref("System"))) {
-                                                literal("Cool loop", t("string"))
+                                val whileNode =
+                                    newWhile(enterScope = true) { w ->
+                                        w.condition =
+                                            newBinaryOperator("<=").also {
+                                                it.lhs = newReference("x")
+                                                it.rhs = newLiteral(2, objectType("int"))
                                             }
+                                        w.statement = newBlock { loopBodyBlock ->
+                                            val printlnCall =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "println",
+                                                        newMemberAccess(
+                                                            "out",
+                                                            newReference("System"),
+                                                        ),
+                                                    ),
+                                                    false,
+                                                )
+                                            printlnCall.addArgument(
+                                                newLiteral("Cool loop", objectType("string"))
+                                            )
+                                            loopBodyBlock += printlnCall
                                         }
                                     }
+                                block += whileNode
 
-                                    memberCall("println", member("out", ref("System"))) {
-                                        literal("After cool loop", t("string"))
-                                    }
-                                    returnStmt {}
-                                }
+                                val printlnCall2 =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall2.addArgument(
+                                    newLiteral("After cool loop", objectType("string"))
+                                )
+                                block += printlnCall2
+
+                                block += newReturn()
                             }
+                    }
 
-                            method("whileTrue", void()) {
-                                body {
-                                    declare {
-                                        variable("x", t("boolean")) { literal(true, t("boolean")) }
-                                    }
+                    newMethod("whileComputedFalse", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
 
-                                    whileStmt {
-                                        whileCondition { ref("x") }
-                                        loopBody {
-                                            memberCall("println", member("out", ref("System"))) {
-                                                literal("Cool loop", t("string"))
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val xDecl = newDeclarationStatement()
+                                val x = newVariable("x", objectType("boolean"))
+                                x.initializer = newLiteral(1, objectType("int"))
+                                xDecl.declarations += x
+                                scopeManager.addDeclaration(x)
+                                block += xDecl
+
+                                val whileNode =
+                                    newWhile(enterScope = true) { w ->
+                                        w.condition =
+                                            newBinaryOperator(">").also {
+                                                it.lhs = newReference("x")
+                                                it.rhs = newLiteral(3, objectType("int"))
                                             }
-                                            ref("x") assign literal(false, t("boolean"))
+                                        w.statement = newBlock { loopBodyBlock ->
+                                            val printlnCall =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "println",
+                                                        newMemberAccess(
+                                                            "out",
+                                                            newReference("System"),
+                                                        ),
+                                                    ),
+                                                    false,
+                                                )
+                                            printlnCall.addArgument(
+                                                newLiteral("Cool loop", objectType("string"))
+                                            )
+                                            loopBodyBlock += printlnCall
                                         }
                                     }
+                                block += whileNode
 
-                                    memberCall("println", member("out", ref("System"))) {
-                                        literal("After cool loop", t("string"))
-                                    }
-                                    returnStmt {}
-                                }
+                                val printlnCall2 =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall2.addArgument(
+                                    newLiteral("After cool loop", objectType("string"))
+                                )
+                                block += printlnCall2
+
+                                block += newReturn()
                             }
+                    }
 
-                            method("whileFalse", void()) {
-                                body {
-                                    whileStmt {
-                                        whileCondition { literal(false, t("boolean")) }
-                                        loopBody {
-                                            memberCall("println", member("out", ref("System"))) {
-                                                literal("Cool loop", t("string"))
+                    newMethod("whileUnknown", holder = record, enterScope = true) { method ->
+                        method.returnTypes = listOf(incompleteType())
+                        method.type = computeType(method)
+
+                        method.body =
+                            newBlock(enterScope = true) { block ->
+                                val yDecl = newDeclarationStatement()
+                                val y = newVariable("y", objectType("int"))
+                                y.initializer =
+                                    newMemberCall(
+                                        newMemberAccess("nextUInt", newReference("URandomKt")),
+                                        false,
+                                    )
+                                yDecl.declarations += y
+                                scopeManager.addDeclaration(y)
+                                block += yDecl
+
+                                val whileNode =
+                                    newWhile(enterScope = true) { w ->
+                                        w.condition =
+                                            newBinaryOperator("<=").also {
+                                                it.lhs = newReference("y")
+                                                it.rhs = newLiteral(2, objectType("int"))
                                             }
+                                        w.statement = newBlock { loopBodyBlock ->
+                                            val printlnCall =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "println",
+                                                        newMemberAccess(
+                                                            "out",
+                                                            newReference("System"),
+                                                        ),
+                                                    ),
+                                                    false,
+                                                )
+                                            printlnCall.addArgument(
+                                                newLiteral("Cool loop", objectType("string"))
+                                            )
+                                            loopBodyBlock += printlnCall
+
+                                            loopBodyBlock +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("y")),
+                                                    listOf(
+                                                        newMemberCall(
+                                                            newMemberAccess(
+                                                                "nextUInt",
+                                                                newReference("URandomKt"),
+                                                            ),
+                                                            false,
+                                                        )
+                                                    ),
+                                                )
                                         }
                                     }
+                                block += whileNode
 
-                                    memberCall("println", member("out", ref("System"))) {
-                                        literal("After cool loop", t("string"))
-                                    }
-                                    returnStmt {}
-                                }
+                                val printlnCall2 =
+                                    newMemberCall(
+                                        newMemberAccess(
+                                            "println",
+                                            newMemberAccess("out", newReference("System")),
+                                        ),
+                                        false,
+                                    )
+                                printlnCall2.addArgument(
+                                    newLiteral("After cool loop", objectType("string"))
+                                )
+                                block += printlnCall2
+
+                                block += newReturn()
                             }
-
-                            method("whileComputedTrue", void()) {
-                                body {
-                                    declare { variable("x", t("boolean")) { literal(1, t("int")) } }
-
-                                    whileStmt {
-                                        whileCondition { ref("x") le literal(2, t("int")) }
-                                        loopBody {
-                                            memberCall("println", member("out", ref("System"))) {
-                                                literal("Cool loop", t("string"))
-                                            }
-                                        }
-                                    }
-
-                                    memberCall("println", member("out", ref("System"))) {
-                                        literal("After cool loop", t("string"))
-                                    }
-                                    returnStmt {}
-                                }
-                            }
-
-                            method("whileComputedFalse", void()) {
-                                body {
-                                    declare { variable("x", t("boolean")) { literal(1, t("int")) } }
-
-                                    whileStmt {
-                                        whileCondition { ref("x") gt literal(3, t("int")) }
-                                        loopBody {
-                                            memberCall("println", member("out", ref("System"))) {
-                                                literal("Cool loop", t("string"))
-                                            }
-                                        }
-                                    }
-
-                                    memberCall("println", member("out", ref("System"))) {
-                                        literal("After cool loop", t("string"))
-                                    }
-                                    returnStmt {}
-                                }
-                            }
-
-                            method("whileUnknown", void()) {
-                                body {
-                                    declare {
-                                        variable("y", t("int")) {
-                                            memberCall("nextUInt", ref("URandomKt"))
-                                        }
-                                    }
-
-                                    whileStmt {
-                                        whileCondition { ref("y") le literal(2, t("int")) }
-                                        loopBody {
-                                            memberCall("println", member("out", ref("System"))) {
-                                                literal("Cool loop", t("string"))
-                                            }
-                                            ref("y") assign memberCall("nextUInt", ref("URandomKt"))
-                                        }
-                                    }
-
-                                    memberCall("println", member("out", ref("System"))) {
-                                        literal("After cool loop", t("string"))
-                                    }
-                                    returnStmt {}
-                                }
-                            }
-                        }
                     }
                 }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
     }
 }

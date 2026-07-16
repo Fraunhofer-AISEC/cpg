@@ -27,13 +27,14 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.objectType
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.Test
@@ -53,29 +54,38 @@ class TupleTest {
             )
         ) {
             val result = build {
-                translationResult {
-                    translationUnit {
-                        function(
-                            "func",
-                            returnTypes = listOf(objectType("MyClass"), objectType("error")),
-                        )
+                val tu = newTranslationUnit(Node.EMPTY_NAME)
+                scopeManager.resetToGlobal(tu)
 
-                        // I fear this is too complex for the fluent DSL; so we just use the node
-                        // builder here
-                        val tuple =
-                            newTuple(
-                                listOf(newVariable("a"), newVariable("b")),
-                                newCall(newReference("func")),
-                            )
-                        scopeManager.addDeclaration(tuple)
-                        declare { this.singleDeclaration = tuple }
-                        // declarations += tuple
-
-                        tuple.elements.forEach { scopeManager.addDeclaration(it) }
-
-                        function("main") { body { call("print") { ref("a") } } }
-                    }
+                newFunction("func", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("MyClass"), objectType("error"))
+                    func.type = computeType(func)
                 }
+
+                // I fear this was too complex for the fluent DSL; so we just use the node
+                // builder here
+                val tuple =
+                    newTuple(
+                        listOf(newVariable("a"), newVariable("b")),
+                        newCall(newReference("func")),
+                    )
+                scopeManager.addDeclaration(tuple)
+                val declStmt = newDeclarationStatement()
+                declStmt.singleDeclaration = tuple
+                tu.statements += declStmt
+
+                tuple.elements.forEach { scopeManager.addDeclaration(it) }
+
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            val printCall = newCall(newReference("print"))
+                            printCall.addArgument(newReference("a"))
+                            block += printCall
+                        }
+                }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
             val main = result.functions["main"]
@@ -136,33 +146,38 @@ class TupleTest {
             )
         ) {
             val result = build {
-                translationResult {
-                    translationUnit {
-                        function(
-                            "func",
-                            returnTypes = listOf(objectType("MyClass"), objectType("error")),
-                        )
+                val tu = newTranslationUnit(Node.EMPTY_NAME)
+                scopeManager.resetToGlobal(tu)
 
-                        function("main") {
-                            body {
-                                declare {
-                                    // I fear this is too complex for the fluent DSL; so we just use
-                                    // the node builder here
-                                    val tuple =
-                                        newTuple(
-                                            listOf(newVariable("a"), newVariable("b")),
-                                            newCall(newReference("func")),
-                                        )
-                                    scopeManager.addDeclaration(tuple)
-                                    declarations += tuple
-
-                                    tuple.elements.forEach { scopeManager.addDeclaration(it) }
-                                }
-                                call("print") { ref("a") }
-                            }
-                        }
-                    }
+                newFunction("func", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("MyClass"), objectType("error"))
+                    func.type = computeType(func)
                 }
+
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            // I fear this was too complex for the fluent DSL; so we just use
+                            // the node builder here
+                            val tuple =
+                                newTuple(
+                                    listOf(newVariable("a"), newVariable("b")),
+                                    newCall(newReference("func")),
+                                )
+                            scopeManager.addDeclaration(tuple)
+                            val declStmt = newDeclarationStatement()
+                            declStmt.declarations += tuple
+                            block += declStmt
+
+                            tuple.elements.forEach { scopeManager.addDeclaration(it) }
+
+                            val printCall = newCall(newReference("print"))
+                            printCall.addArgument(newReference("a"))
+                            block += printCall
+                        }
+                }
+
+                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
             val main = result.functions["main"]
