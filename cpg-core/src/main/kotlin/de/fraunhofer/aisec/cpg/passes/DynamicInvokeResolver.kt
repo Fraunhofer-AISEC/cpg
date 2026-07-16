@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.AstNode
@@ -43,14 +42,12 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
-import de.fraunhofer.aisec.cpg.graph.types.ProblemType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
+import de.fraunhofer.aisec.cpg.helpers.functional.getFunctionPointerType
+import de.fraunhofer.aisec.cpg.helpers.functional.matchInvokesCandidateSignature
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
-import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
@@ -100,9 +97,11 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handleCall(call: Call) {
         val callee = call.callee
         if (
-            callee.type is FunctionPointerType ||
-                ((callee as? Reference)?.refersTo is Parameter ||
-                    (callee as? Reference)?.refersTo is Variable)
+            // Only try to resolve if the PointsToPass did not manage to find any invokes edge
+            call.invokes.isEmpty() &&
+                (callee.type is FunctionPointerType ||
+                    ((callee as? Reference)?.refersTo is Parameter ||
+                        (callee as? Reference)?.refersTo is Variable))
         ) {
             handleCallee(call, callee)
         }
@@ -115,42 +114,18 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun handleMemberCall(call: MemberCall) {
         val callee = call.callee
-        if (callee is BinaryOperator && callee.rhs.type is FunctionPointerType) {
+        // Only try to resolve if the PointsToPass did not manage to find any invokes edge
+        if (
+            call.invokes.isEmpty() &&
+                callee is BinaryOperator &&
+                callee.rhs.type is FunctionPointerType
+        ) {
             handleCallee(call, callee.rhs)
         }
     }
 
     private fun handleCallee(call: Call, expr: Expression) {
-        // For now, we harmonize all types to the FunctionPointerType. In the future, we want to get
-        // rid of FunctionPointerType and only deal with FunctionTypes.
-        val pointerType: FunctionPointerType =
-            when (val type = expr.type) {
-                is FunctionType -> {
-                    when (val pointerType = type.pointer()) {
-                        is FunctionPointerType -> pointerType
-                        is ProblemType -> {
-                            log.warn("Function has unexpected type: ProblemType; ignore call")
-                            return
-                        }
-                        else -> {
-                            log.warn("Unexpected function type: ${pointerType}; ignore call")
-                            return
-                        }
-                    }
-                }
-                is FunctionPointerType -> type
-                else -> {
-                    // some languages allow other types to derive from a function type, in this case
-                    // we need to look for a super type
-                    val superType = type.superTypes.singleOrNull()
-                    if (superType is FunctionType) {
-                        superType.pointer() as FunctionPointerType
-                    } else {
-                        return
-                    }
-                }
-            }
-
+        val pointerType = getFunctionPointerType(expr) ?: return
         val invocationCandidates = mutableListOf<Function>()
         val work: Deque<Node> = ArrayDeque()
         val seen = identitySetOf<Node>()
@@ -173,16 +148,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 // Even if it is a function declaration, the dataflow might just come from a
                 // situation where the target of a fptr is passed through via a return value. Keep
                 // searching if return type or signature don't match
-                val functionPointerType = currentFunction.type.pointer()
-                if (
-                    isLambda &&
-                        currentFunction.returnTypes.isEmpty() &&
-                        currentFunction.matchesSignature(pointerType.parameters) !=
-                            IncompatibleSignature
-                ) {
-                    invocationCandidates.add(currentFunction)
-                    continue
-                } else if (functionPointerType == pointerType) {
+                if (matchInvokesCandidateSignature(currentFunction, pointerType, isLambda)) {
                     invocationCandidates.add(currentFunction)
                     // We have found a target. Don't follow this path any further, but still
                     // continue the other paths that might be left, as we could have several
