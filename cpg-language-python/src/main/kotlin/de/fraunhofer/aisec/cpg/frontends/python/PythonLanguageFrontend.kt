@@ -361,14 +361,12 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                 if (path == PythonLanguage.IDENTIFIER_INIT) {
                     previous
                 } else {
-                    val nsd = newNamespace(fqn, rawNode = pythonASTModule)
-                    nsd.path = relative?.parent?.pathString + "/" + module
-                    scopeManager.addDeclaration(nsd)
-
                     // Add the namespace to the parent namespace -- or the translation unit, if it
                     // is the top one
-                    val holder = previous ?: tud
-                    holder.addDeclaration(nsd)
+                    val nsd =
+                        newNamespace(fqn, rawNode = pythonASTModule, holder = previous ?: tud) {
+                            it.path = relative?.parent?.pathString + "/" + module
+                        }
 
                     scopeManager.enterScope(nsd)
                     nsd
