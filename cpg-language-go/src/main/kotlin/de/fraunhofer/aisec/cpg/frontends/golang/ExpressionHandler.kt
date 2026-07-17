@@ -254,7 +254,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
         // Parse and add call arguments
         for (arg in callExpr.args) {
-            call += handle(arg)
+            call.arguments += handle(arg)
         }
 
         return call
@@ -326,7 +326,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
                 // Pass the remaining arguments
                 for (expr in args.subList(1.coerceAtMost(args.size - 1), args.size - 1)) {
-                    handle(expr).let { construct += it }
+                    handle(expr).let { construct.arguments += it }
                 }
 
                 construct

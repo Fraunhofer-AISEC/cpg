@@ -254,7 +254,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
     private fun handleGoStmt(goStmt: GoStandardLibrary.Ast.GoStmt): Call {
         val ref = newReference("go")
         val call = newCall(ref, "go", rawNode = goStmt)
-        call += frontend.expressionHandler.handle(goStmt.call)
+        call.arguments += frontend.expressionHandler.handle(goStmt.call)
 
         return call
     }
