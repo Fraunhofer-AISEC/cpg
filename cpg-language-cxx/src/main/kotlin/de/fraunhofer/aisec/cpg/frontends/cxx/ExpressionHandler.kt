@@ -103,26 +103,27 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         node: CPPASTSimpleTypeConstructorExpression
     ): Expression {
         return if (node.declSpecifier is IASTSimpleDeclSpecifier) {
-            val cast = newCast(rawNode = node)
-            cast.castType = frontend.typeOf(node.declSpecifier)
+            newCast(rawNode = node) { cast ->
+                cast.castType = frontend.typeOf(node.declSpecifier)
 
-            // The actual expression that is cast is nested in an initializer. We could forward
-            // this to our initializer handler, but this would create a lot of construct expressions
-            // just for simple type casts, which we want to avoid, so we take a shortcut and do a
-            // direct unwrapping here.
-            val single =
-                (node.initializer as? ICPPASTConstructorInitializer)?.arguments?.singleOrNull()
-            cast.expression =
-                single?.let { handle(it) } ?: newProblemExpression("could not parse initializer")
-            cast
+                // The actual expression that is cast is nested in an initializer. We could forward
+                // this to our initializer handler, but this would create a lot of construct
+                // expressions just for simple type casts, which we want to avoid, so we take a
+                // shortcut and do a direct unwrapping here.
+                val single =
+                    (node.initializer as? ICPPASTConstructorInitializer)?.arguments?.singleOrNull()
+                cast.expression =
+                    single?.let { handle(it) }
+                        ?: newProblemExpression("could not parse initializer")
+            }
         } else {
             // Otherwise, we try to parse it as an initializer, which must either be an initializer
             // list expression or a constructor initializer
             val initializer = frontend.initializerHandler.handle(node.initializer)
             if (initializer is InitializerList) {
-                val construct = newConstruction(rawNode = node)
-                construct.arguments = initializer.initializers
-                construct
+                newConstruction(rawNode = node) { construct ->
+                    construct.arguments = initializer.initializers
+                }
             } else initializer ?: newProblemExpression("could not parse initializer")
         }
     }
@@ -217,10 +218,10 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleArraySubscript(ctx: IASTArraySubscriptExpression): Expression {
-        val arraySubsExpression = newSubscription(rawNode = ctx)
-        handle(ctx.arrayExpression)?.let { arraySubsExpression.arrayExpression = it }
-        handle(ctx.argument)?.let { arraySubsExpression.subscriptExpression = it }
-        return arraySubsExpression
+        return newSubscription(rawNode = ctx) { arraySubsExpression ->
+            handle(ctx.arrayExpression)?.let { arraySubsExpression.arrayExpression = it }
+            handle(ctx.argument)?.let { arraySubsExpression.subscriptExpression = it }
+        }
     }
 
     private fun handleNew(ctx: CPPASTNewExpression): Expression {
@@ -336,26 +337,25 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleDelete(ctx: CPPASTDeleteExpression): Delete {
-        val deleteExpression = newDelete(rawNode = ctx)
-        for (name in ctx.implicitDestructorNames) {
-            log.debug("Implicit constructor name {}", name)
+        return newDelete(rawNode = ctx) { deleteExpression ->
+            for (name in ctx.implicitDestructorNames) {
+                log.debug("Implicit constructor name {}", name)
+            }
+            handle(ctx.operand)?.let { deleteExpression.operands.add(it) }
         }
-        handle(ctx.operand)?.let { deleteExpression.operands.add(it) }
-        return deleteExpression
     }
 
     private fun handleCast(ctx: IASTCastExpression): Expression {
-        val castExpression = newCast(rawNode = ctx)
-        castExpression.expression =
-            handle(ctx.operand) ?: ProblemExpression("could not parse inner expression")
-        castExpression.setCastOperator(ctx.operator)
-        castExpression.castType = frontend.typeOf(ctx.typeId)
+        return newCast(rawNode = ctx) { castExpression ->
+            castExpression.expression =
+                handle(ctx.operand) ?: ProblemExpression("could not parse inner expression")
+            castExpression.setCastOperator(ctx.operator)
+            castExpression.castType = frontend.typeOf(ctx.typeId)
 
-        if (isPrimitive(castExpression.castType) || ctx.operator == 4) {
-            castExpression.type = castExpression.castType
+            if (isPrimitive(castExpression.castType) || ctx.operator == 4) {
+                castExpression.type = castExpression.castType
+            }
         }
-
-        return castExpression
     }
 
     /**
@@ -446,17 +446,16 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     }
                 }
         } else {
-            val unaryOperator =
-                newUnaryOperator(
-                    operatorCode,
-                    ctx.isPostfixOperator,
-                    !ctx.isPostfixOperator,
-                    rawNode = ctx,
-                )
-            if (input != null) {
-                unaryOperator.input = input
+            return newUnaryOperator(
+                operatorCode,
+                ctx.isPostfixOperator,
+                !ctx.isPostfixOperator,
+                rawNode = ctx,
+            ) { unaryOperator ->
+                if (input != null) {
+                    unaryOperator.input = input
+                }
             }
-            return unaryOperator
         }
     }
 
@@ -565,11 +564,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleExpressionList(exprList: IASTExpressionList): ExpressionList {
-        val expressionList = newExpressionList(rawNode = exprList)
-        for (expr in exprList.expressions) {
-            handle(expr)?.let { expressionList.expressions += it }
+        return newExpressionList(rawNode = exprList) { expressionList ->
+            for (expr in exprList.expressions) {
+                handle(expr)?.let { expressionList.expressions += it }
+            }
         }
-        return expressionList
     }
 
     private fun handleBinaryExpression(ctx: IASTBinaryExpression): Expression {
@@ -593,19 +592,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 else -> String(ASTStringUtil.getBinaryOperatorString(ctx))
             }
 
-        val binaryOperator = newBinaryOperator(operatorCode, rawNode = ctx)
-        val lhs = handle(ctx.operand1) ?: newProblemExpression("could not parse lhs")
-        val rhs =
-            if (ctx.operand2 != null) {
-                handle(ctx.operand2)
-            } else {
-                handle(ctx.initOperand2)
-            } ?: newProblemExpression("could not parse rhs")
-
-        binaryOperator.lhs = lhs
-        binaryOperator.rhs = rhs
-
-        return binaryOperator
+        return newBinaryOperator(operatorCode, rawNode = ctx) { binaryOperator ->
+            binaryOperator.lhs = handle(ctx.operand1) ?: newProblemExpression("could not parse lhs")
+            binaryOperator.rhs =
+                if (ctx.operand2 != null) {
+                    handle(ctx.operand2)
+                } else {
+                    handle(ctx.initOperand2)
+                } ?: newProblemExpression("could not parse rhs")
+        }
     }
 
     private fun handleAssignment(ctx: IASTBinaryExpression): Expression {
@@ -807,12 +802,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         val lhs =
             when (des) {
-                is CPPASTArrayDesignator -> {
-                    val sub = newSubscription()
-                    sub.arrayExpression = ref
-                    handle(des.subscriptExpression)?.let { sub.subscriptExpression = it }
-                    sub
-                }
+                is CPPASTArrayDesignator ->
+                    newSubscription { sub ->
+                        sub.arrayExpression = ref
+                        handle(des.subscriptExpression)?.let { sub.subscriptExpression = it }
+                    }
                 is CPPASTFieldDesignator -> {
                     // Then we loop through all designators and chain them. Only field designators
                     // can be chained in this way
@@ -859,23 +853,22 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         val lhs =
             when (des) {
-                is CASTArrayDesignator -> {
-                    val sub = newSubscription(rawNode = des)
-                    sub.arrayExpression = ref
-                    handle(des.subscriptExpression)?.let { sub.subscriptExpression = it }
-                    sub
-                }
-                is CASTArrayRangeDesignator -> {
-                    val sub = newSubscription(rawNode = des)
-                    sub.arrayExpression = ref
+                is CASTArrayDesignator ->
+                    newSubscription(rawNode = des) { sub ->
+                        sub.arrayExpression = ref
+                        handle(des.subscriptExpression)?.let { sub.subscriptExpression = it }
+                    }
+                is CASTArrayRangeDesignator ->
+                    newSubscription(rawNode = des) { sub ->
+                        sub.arrayExpression = ref
 
-                    val range = newRange(rawNode = des)
-                    des.rangeFloor?.let { range.floor = handle(it) }
-                    des.rangeCeiling?.let { range.ceiling = handle(it) }
-                    range.operatorCode = "..."
-                    sub.subscriptExpression = range
-                    sub
-                }
+                        sub.subscriptExpression =
+                            newRange(rawNode = des) { range ->
+                                des.rangeFloor?.let { range.floor = handle(it) }
+                                des.rangeCeiling?.let { range.ceiling = handle(it) }
+                                range.operatorCode = "..."
+                            }
+                    }
                 is CASTFieldDesignator -> {
                     // Then we loop through all designators and chain them. Only field designators
                     // can be chained in this way
@@ -906,17 +899,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     ): Construction {
         val type = frontend.typeOf(ctx.typeId)
 
-        val construct = newConstruction(type.name, rawNode = ctx)
-
-        // The only supported initializer is an initializer list
-        (ctx.initializer as? IASTInitializerList)?.let {
-            construct.arguments =
-                it.clauses
-                    .map { handle(it) ?: newProblemExpression("could not parse argument") }
-                    .toMutableList()
+        return newConstruction(type.name, rawNode = ctx) { construct ->
+            // The only supported initializer is an initializer list
+            (ctx.initializer as? IASTInitializerList)?.let {
+                construct.arguments =
+                    it.clauses
+                        .map { handle(it) ?: newProblemExpression("could not parse argument") }
+                        .toMutableList()
+            }
         }
-
-        return construct
     }
 
     private fun handleIntegerLiteral(ctx: IASTLiteralExpression): Expression {
