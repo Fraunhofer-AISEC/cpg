@@ -141,11 +141,17 @@ fun MetadataProvider.newAssert(
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newDistinctLanguageBlock(rawNode: Any? = null): DistinctLanguageBlock {
+fun MetadataProvider.newDistinctLanguageBlock(
+    rawNode: Any? = null,
+    init: ((DistinctLanguageBlock) -> Unit)? = null,
+): DistinctLanguageBlock {
     val node = DistinctLanguageBlock()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -170,11 +176,14 @@ fun MetadataProvider.newSynchronized(rawNode: Any? = null): Synchronized {
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newEmpty(rawNode: Any? = null): Empty {
+fun MetadataProvider.newEmpty(rawNode: Any? = null, init: ((Empty) -> Unit)? = null): Empty {
     val node = Empty()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -232,11 +241,14 @@ fun MetadataProvider.newIfElse(
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newLabel(rawNode: Any? = null): Label {
+fun MetadataProvider.newLabel(rawNode: Any? = null, init: ((Label) -> Unit)? = null): Label {
     val node = Label()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -246,11 +258,14 @@ fun MetadataProvider.newLabel(rawNode: Any? = null): Label {
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newGoto(rawNode: Any? = null): Goto {
+fun MetadataProvider.newGoto(rawNode: Any? = null, init: ((Goto) -> Unit)? = null): Goto {
     val node = Goto()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -369,11 +384,17 @@ fun MetadataProvider.newFor(
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newContinue(rawNode: Any? = null): Continue {
+fun MetadataProvider.newContinue(
+    rawNode: Any? = null,
+    init: ((Continue) -> Unit)? = null,
+): Continue {
     val node = Continue()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -383,11 +404,14 @@ fun MetadataProvider.newContinue(rawNode: Any? = null): Continue {
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newBreak(rawNode: Any? = null): Break {
+fun MetadataProvider.newBreak(rawNode: Any? = null, init: ((Break) -> Unit)? = null): Break {
     val node = Break()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -424,11 +448,14 @@ fun MetadataProvider.newSwitch(
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newCase(rawNode: Any? = null): Case {
+fun MetadataProvider.newCase(rawNode: Any? = null, init: ((Case) -> Unit)? = null): Case {
     val node = Case()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -438,11 +465,14 @@ fun MetadataProvider.newCase(rawNode: Any? = null): Case {
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newDefault(rawNode: Any? = null): Default {
+fun MetadataProvider.newDefault(rawNode: Any? = null, init: ((Default) -> Unit)? = null): Default {
     val node = Default()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -457,6 +487,7 @@ fun MetadataProvider.newLookupScope(
     symbols: List<Symbol>,
     targetScope: Scope?,
     rawNode: Any? = null,
+    init: ((LookupScope) -> Unit)? = null,
 ): LookupScope {
     val node = LookupScope()
     node.targetScope = targetScope
@@ -468,5 +499,8 @@ fun MetadataProvider.newLookupScope(
     }
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }

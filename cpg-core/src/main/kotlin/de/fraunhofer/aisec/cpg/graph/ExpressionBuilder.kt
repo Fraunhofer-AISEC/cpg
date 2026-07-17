@@ -45,6 +45,7 @@ fun <T, V> RawNodeTypeProvider<T>.newLiteral(
     value: V,
     type: Type = unknownType(),
     rawNode: Any? = null,
+    init: ((Literal<V>) -> Unit)? = null,
 ): Literal<V> {
     val node = Literal<V>()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -53,6 +54,9 @@ fun <T, V> RawNodeTypeProvider<T>.newLiteral(
     node.type = type
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -153,13 +157,20 @@ fun MetadataProvider.newAssign(
  * [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newNew(type: Type = unknownType(), rawNode: Any? = null): New {
+fun MetadataProvider.newNew(
+    type: Type = unknownType(),
+    rawNode: Any? = null,
+    init: ((New) -> Unit)? = null,
+): New {
     val node = New()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     node.type = type
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -330,6 +341,7 @@ fun MetadataProvider.newOperatorCall(
     operatorCode: String,
     callee: Expression?,
     rawNode: Any? = null,
+    init: ((OperatorCall) -> Unit)? = null,
 ): OperatorCall {
     val node = OperatorCall()
     node.applyMetadata(this, operatorCode, rawNode)
@@ -340,6 +352,9 @@ fun MetadataProvider.newOperatorCall(
     }
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -438,6 +453,7 @@ fun MetadataProvider.newTypeReference(
     type: Type = unknownType(),
     referencedType: Type = unknownType(),
     rawNode: Any? = null,
+    init: ((TypeReference) -> Unit)? = null,
 ): TypeReference {
     val node = TypeReference()
     node.applyMetadata(this, operatorCode, rawNode, true)
@@ -447,6 +463,9 @@ fun MetadataProvider.newTypeReference(
     node.referencedType = referencedType
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -481,6 +500,7 @@ fun MetadataProvider.newRange(
     floor: Expression? = null,
     ceiling: Expression? = null,
     rawNode: Any? = null,
+    init: ((Range) -> Unit)? = null,
 ): Range {
     val node = Range()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -489,6 +509,9 @@ fun MetadataProvider.newRange(
     node.ceiling = ceiling
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -582,11 +605,14 @@ fun MetadataProvider.newPointerDereference(
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newDelete(rawNode: Any? = null): Delete {
+fun MetadataProvider.newDelete(rawNode: Any? = null, init: ((Delete) -> Unit)? = null): Delete {
     val node = Delete()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -597,11 +623,17 @@ fun MetadataProvider.newDelete(rawNode: Any? = null): Delete {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newExpressionList(rawNode: Any? = null): ExpressionList {
+fun MetadataProvider.newExpressionList(
+    rawNode: Any? = null,
+    init: ((ExpressionList) -> Unit)? = null,
+): ExpressionList {
     val node = ExpressionList()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -680,6 +712,7 @@ fun MetadataProvider.newTypeExpression(
     name: CharSequence?,
     type: Type = unknownType(),
     rawNode: Any? = null,
+    init: ((TypeExpression) -> Unit)? = null,
 ): TypeExpression {
     val node = TypeExpression()
     node.applyMetadata(this, name, rawNode)
@@ -687,6 +720,9 @@ fun MetadataProvider.newTypeExpression(
     node.type = type
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -726,11 +762,17 @@ fun MetadataProvider.newProblemExpression(
     return node
 }
 
-fun MetadataProvider.newProblemType(rawNode: Any? = null): ProblemType {
+fun MetadataProvider.newProblemType(
+    rawNode: Any? = null,
+    init: ((ProblemType) -> Unit)? = null,
+): ProblemType {
     val node = ProblemType()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 

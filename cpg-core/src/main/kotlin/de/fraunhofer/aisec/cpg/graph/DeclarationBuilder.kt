@@ -364,6 +364,7 @@ fun MetadataProvider.newTypedef(
     alias: Type,
     rawNode: Any? = null,
     holder: DeclarationHolder? = null,
+    init: ((Typedef) -> Unit)? = null,
 ): Typedef {
     val node = Typedef()
     node.applyMetadata(this, alias.typeName, rawNode)
@@ -374,6 +375,8 @@ fun MetadataProvider.newTypedef(
     node.alias.name = node.name
 
     log(node)
+
+    init?.invoke(node)
 
     if (holder != null) {
         val scopeManager = provider.ctx.scopeManager
@@ -399,11 +402,14 @@ fun MetadataProvider.newTypeParameter(
     name: CharSequence?,
     rawNode: Any? = null,
     holder: DeclarationHolder? = null,
+    init: ((TypeParameter) -> Unit)? = null,
 ): TypeParameter {
     val node = TypeParameter()
     node.applyMetadata(this, name, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
 
     if (holder != null) {
         val scopeManager = provider.ctx.scopeManager
@@ -466,11 +472,14 @@ fun MetadataProvider.newEnumeration(
     name: CharSequence?,
     rawNode: Any? = null,
     holder: DeclarationHolder? = null,
+    init: ((Enumeration) -> Unit)? = null,
 ): Enumeration {
     val node = Enumeration()
     node.applyMetadata(this, name, rawNode)
 
     log(node)
+
+    init?.invoke(node)
 
     if (holder != null) {
         val scopeManager = provider.ctx.scopeManager
@@ -646,6 +655,7 @@ fun MetadataProvider.newProblemDeclaration(
     problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.PARSING,
     rawNode: Any? = null,
     holder: DeclarationHolder? = null,
+    init: ((ProblemDeclaration) -> Unit)? = null,
 ): ProblemDeclaration {
     val node = ProblemDeclaration()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -654,6 +664,8 @@ fun MetadataProvider.newProblemDeclaration(
     node.problemType = problemType
 
     log(node)
+
+    init?.invoke(node)
 
     if (holder != null) {
         val scopeManager = provider.ctx.scopeManager
@@ -678,12 +690,15 @@ fun MetadataProvider.newInclude(
     includeFilename: CharSequence,
     rawNode: Any? = null,
     holder: DeclarationHolder? = null,
+    init: ((Include) -> Unit)? = null,
 ): Include {
     val node = Include()
     node.applyMetadata(this, includeFilename, rawNode, true)
     node.filename = includeFilename.toString()
 
     log(node)
+
+    init?.invoke(node)
 
     if (holder != null) {
         val scopeManager = provider.ctx.scopeManager
@@ -775,6 +790,7 @@ fun MetadataProvider.newImport(
     alias: Name? = null,
     rawNode: Any? = null,
     holder: DeclarationHolder? = null,
+    init: ((Import) -> Unit)? = null,
 ): Import {
     val node = Import()
     node.applyMetadata(this, alias ?: import, rawNode, doNotPrependNamespace = true)
@@ -783,6 +799,8 @@ fun MetadataProvider.newImport(
     node.style = style
 
     log(node)
+
+    init?.invoke(node)
 
     if (holder != null) {
         val scopeManager = provider.ctx.scopeManager
