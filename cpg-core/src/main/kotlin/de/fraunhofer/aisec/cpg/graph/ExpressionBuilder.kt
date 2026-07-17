@@ -593,6 +593,7 @@ fun MetadataProvider.newPointerDereference(
     name: CharSequence?,
     type: Type = unknownType(),
     rawNode: Any? = null,
+    init: ((PointerDereference) -> Unit)? = null,
 ): PointerDereference {
     val node = PointerDereference()
     node.applyMetadata(this, name, rawNode, true)
@@ -600,6 +601,9 @@ fun MetadataProvider.newPointerDereference(
     node.type = type
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
