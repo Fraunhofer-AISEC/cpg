@@ -133,11 +133,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                     path ->
                     val fqn = previous?.name.fqn(path)
 
-                    val nsd = newNamespace(fqn, rawNode = packDecl)
-                    scopeManager.addDeclaration(nsd)
-                    val holder = previous ?: tud
-                    holder.addDeclaration(nsd)
-
+                    val nsd = newNamespace(fqn, rawNode = packDecl, holder = previous ?: tud)
                     scopeManager.enterScope(nsd)
                     nsd
                 } ?: tud
@@ -156,20 +152,16 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             // import would be visible as symbols in the whole namespace
             scopeManager.enterScope(tud)
             for (anImport in context?.imports ?: listOf()) {
-                val incl = newInclude(anImport.nameAsString)
-                scopeManager.addDeclaration(incl)
-                tud.addDeclaration(incl)
+                newInclude(anImport.nameAsString, holder = tud)
             }
 
             // We create an implicit import for "java.lang.*"
-            val decl =
-                newImport(
-                        parseName("java.lang"),
-                        style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
-                    )
-                    .implicit("import java.lang.*")
-            scopeManager.addDeclaration(decl)
-            tud.addDeclaration(decl)
+            newImport(
+                    parseName("java.lang"),
+                    style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                    holder = tud,
+                )
+                .implicit("import java.lang.*")
             scopeManager.leaveScope(tud)
 
             if (holder is Namespace) {

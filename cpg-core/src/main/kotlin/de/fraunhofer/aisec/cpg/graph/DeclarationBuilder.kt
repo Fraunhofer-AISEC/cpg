@@ -258,6 +258,7 @@ fun MetadataProvider.newParameter(
     variadic: Boolean = false,
     rawNode: Any? = null,
     holder: DeclarationHolder? = null,
+    init: ((Parameter) -> Unit)? = null,
 ): Parameter {
     val node = Parameter()
     node.applyMetadata(this, name, rawNode, doNotPrependNamespace = true)
@@ -266,6 +267,8 @@ fun MetadataProvider.newParameter(
     node.isVariadic = variadic
 
     log(node)
+
+    init?.invoke(node)
 
     if (holder != null) {
         val scopeManager = provider.ctx.scopeManager
@@ -563,11 +566,14 @@ fun MetadataProvider.newEnumConstant(
     name: CharSequence?,
     rawNode: Any? = null,
     holder: DeclarationHolder? = null,
+    init: ((EnumConstant) -> Unit)? = null,
 ): EnumConstant {
     val node = EnumConstant()
     node.applyMetadata(this, name, rawNode)
 
     log(node)
+
+    init?.invoke(node)
 
     if (holder != null) {
         val scopeManager = provider.ctx.scopeManager

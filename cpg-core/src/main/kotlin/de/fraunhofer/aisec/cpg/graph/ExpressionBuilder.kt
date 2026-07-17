@@ -247,11 +247,14 @@ fun MetadataProvider.newKeyValue(
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newLambda(rawNode: Any? = null): Lambda {
+fun MetadataProvider.newLambda(rawNode: Any? = null, init: ((Lambda) -> Unit)? = null): Lambda {
     val node = Lambda()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -412,11 +415,14 @@ fun MetadataProvider.newMemberAccess(
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newCast(rawNode: Any? = null): Cast {
+fun MetadataProvider.newCast(rawNode: Any? = null, init: ((Cast) -> Unit)? = null): Cast {
     val node = Cast()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -493,11 +499,17 @@ fun MetadataProvider.newRange(
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newArrayConstruction(rawNode: Any? = null): ArrayConstruction {
+fun MetadataProvider.newArrayConstruction(
+    rawNode: Any? = null,
+    init: ((ArrayConstruction) -> Unit)? = null,
+): ArrayConstruction {
     val node = ArrayConstruction()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -603,6 +615,7 @@ fun MetadataProvider.newExpressionList(rawNode: Any? = null): ExpressionList {
 fun MetadataProvider.newInitializerList(
     targetType: Type = unknownType(),
     rawNode: Any? = null,
+    init: ((InitializerList) -> Unit)? = null,
 ): InitializerList {
     val node = InitializerList()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -610,6 +623,9 @@ fun MetadataProvider.newInitializerList(
     node.type = targetType
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
