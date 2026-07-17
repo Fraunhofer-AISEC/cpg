@@ -166,7 +166,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
 
         if (func is Constructor) {
             (func.body as? Block)?.let { block ->
-                block +=
+                block.statements +=
                     newReturn().apply {
                         this.isImplicit = true
                         this.returnValue =

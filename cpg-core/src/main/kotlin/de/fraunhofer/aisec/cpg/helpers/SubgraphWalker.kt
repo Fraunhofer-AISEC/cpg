@@ -32,12 +32,15 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.StatementHolder
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Cast
 import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
@@ -46,9 +49,12 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Conditional
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.DoWhile
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.For
+import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.InitializerList
 import de.fraunhofer.aisec.cpg.graph.expressions.KeyValue
+import de.fraunhofer.aisec.cpg.graph.expressions.Label
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
@@ -410,8 +416,7 @@ object SubgraphWalker {
  *
  * There are different things to consider:
  * - First, this only works for a known set of node types that can hold an [Expression] as one of
- *   their AST children, or for a [StatementHolder]. Otherwise, we cannot instruct the parent to
- *   exchange the node
+ *   their AST children. Otherwise, we cannot instruct the parent to exchange the node
  * - Second, since exchanging the node has influence on their edges (such as EOG, DFG, etc.), we
  *   only support a replacement very early in the pass system. To be specific, we only allow
  *   replacement BEFORE any DFG edges are set. We are re-wiring EOG edges, but nothing else. If one
@@ -622,7 +627,13 @@ fun SubgraphWalker.ScopedWalker<Node>.replace(
                 parent.initializer = new
                 true
             }
-            is StatementHolder -> parent.replace(old, new)
+            is Record -> parent.statementEdges.replace(old, new)
+            is Namespace -> parent.statementEdges.replace(old, new)
+            is TranslationUnit -> parent.statementEdges.replace(old, new)
+            is Label -> parent.statementEdges.replace(old, new)
+            is ForEach -> parent.statementEdges.replace(old, new)
+            is Block -> parent.statementEdges.replace(old, new)
+            is For -> parent.statementEdges.replace(old, new)
             else -> {
                 Pass.log.error(
                     "Parent AST node is not an argument or statement holder. Cannot replace node. Further analysis might not be entirely accurate."

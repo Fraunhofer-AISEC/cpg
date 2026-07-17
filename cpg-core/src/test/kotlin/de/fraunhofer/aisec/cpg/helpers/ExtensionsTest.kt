@@ -70,7 +70,7 @@ internal class ExtensionsTest : BaseTest() {
                                 )
                             declStmt.declarations += problem
                             scopeManager.addDeclaration(problem)
-                            block += declStmt
+                            block.statements += declStmt
                         }
                 }
             foo.additionalProblems += ProblemExpression(problemExprText)

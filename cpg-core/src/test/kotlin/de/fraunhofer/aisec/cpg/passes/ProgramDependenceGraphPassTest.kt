@@ -130,7 +130,7 @@ class ProgramDependenceGraphPassTest {
                                     }
                                 declStmt.declarations += i
                                 scopeManager.addDeclaration(i)
-                                block += declStmt
+                                block.statements += declStmt
 
                                 val ifElse = newIfElse { ifElse ->
                                     // Fluent's "lt" infix operator has no ArgumentHolder
@@ -163,14 +163,14 @@ class ProgramDependenceGraphPassTest {
                                                             }
                                                         ),
                                                 )
-                                            thenBlock += assign
+                                            thenBlock.statements += assign
                                         }
                                 }
-                                block += ifElse
+                                block.statements += ifElse
 
                                 val returnStmt = newReturn()
                                 returnStmt.returnValue = newReference("i")
-                                block += returnStmt
+                                block.statements += returnStmt
                             }
                     }
 
@@ -202,7 +202,7 @@ class ProgramDependenceGraphPassTest {
                                     }
                                 declStmt.declarations += i
                                 scopeManager.addDeclaration(i)
-                                block += declStmt
+                                block.statements += declStmt
 
                                 val whileStmt =
                                     newWhile(enterScope = true) { w ->
@@ -220,7 +220,7 @@ class ProgramDependenceGraphPassTest {
                                                 val printfCall = newCall(newReference("printf"))
                                                 printfCall.arguments +=
                                                     newLiteral("#", objectType("string"))
-                                                loopBody += printfCall
+                                                loopBody.statements += printfCall
 
                                                 val decOp =
                                                     newUnaryOperator(
@@ -235,18 +235,18 @@ class ProgramDependenceGraphPassTest {
                                                                         "remove prev, remove next"
                                                                 }
                                                         }
-                                                loopBody += decOp
+                                                loopBody.statements += decOp
                                             }
                                     }
-                                block += whileStmt
+                                block.statements += whileStmt
 
                                 val printfCall2 = newCall(newReference("printf"))
                                 printfCall2.arguments += newLiteral("\n", objectType("string"))
-                                block += printfCall2
+                                block.statements += printfCall2
 
                                 val returnStmt = newReturn()
                                 returnStmt.returnValue = newLiteral(0, objectType("int"))
-                                block += returnStmt
+                                block.statements += returnStmt
                             }
                     }
 

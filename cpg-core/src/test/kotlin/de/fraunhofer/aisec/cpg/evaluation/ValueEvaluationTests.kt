@@ -69,7 +69,7 @@ class ValueEvaluationTests {
                                     }
                                 arrayDeclStmt.declarations += arrayVar
                                 scopeManager.addDeclaration(arrayVar)
-                                block += arrayDeclStmt
+                                block.statements += arrayDeclStmt
 
                                 val forNode = newFor { for_ ->
                                     val iDeclStmt = newDeclarationStatement()
@@ -93,7 +93,7 @@ class ValueEvaluationTests {
                                             .also { it.input = newReference("i") }
 
                                     for_.statement = newBlock { loopBody ->
-                                        loopBody +=
+                                        loopBody.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(
@@ -106,7 +106,7 @@ class ValueEvaluationTests {
                                             )
                                     }
                                 }
-                                block += forNode
+                                block.statements += forNode
 
                                 val printlnCall1 =
                                     newMemberCall(
@@ -121,7 +121,7 @@ class ValueEvaluationTests {
                                         it.arrayExpression = newReference("array")
                                         it.subscriptExpression = newLiteral(1, objectType("int"))
                                     }
-                                block += printlnCall1
+                                block.statements += printlnCall1
 
                                 val strDeclStmt = newDeclarationStatement()
                                 val strVar =
@@ -130,7 +130,7 @@ class ValueEvaluationTests {
                                     }
                                 strDeclStmt.declarations += strVar
                                 scopeManager.addDeclaration(strVar)
-                                block += strDeclStmt
+                                block.statements += strDeclStmt
 
                                 val printlnCall2 =
                                     newMemberCall(
@@ -141,9 +141,9 @@ class ValueEvaluationTests {
                                         false,
                                     )
                                 printlnCall2.arguments += newReference("str")
-                                block += printlnCall2
+                                block.statements += printlnCall2
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
                 }
@@ -183,13 +183,13 @@ class ValueEvaluationTests {
                                     }
                                 iDeclStmt.declarations += iVar
                                 scopeManager.addDeclaration(iVar)
-                                block += iDeclStmt
+                                block.statements += iDeclStmt
 
                                 val sDeclStmt = newDeclarationStatement()
                                 val sVar = newVariable("s", objectType("String"))
                                 sDeclStmt.declarations += sVar
                                 scopeManager.addDeclaration(sVar)
-                                block += sDeclStmt
+                                block.statements += sDeclStmt
 
                                 // Fluent's "lt" infix operator has no ArgumentHolder context, so
                                 // it never actually attaches the comparison it builds -- the
@@ -203,7 +203,7 @@ class ValueEvaluationTests {
 
                                     ifElse.thenStatement =
                                         newBlock(enterScope = true) { thenBlock ->
-                                            thenBlock +=
+                                            thenBlock.statements +=
                                                 newAssign(
                                                     "=",
                                                     listOf(newReference("s")),
@@ -215,7 +215,7 @@ class ValueEvaluationTests {
 
                                     ifElse.elseStatement =
                                         newBlock(enterScope = true) { elseBlock ->
-                                            elseBlock +=
+                                            elseBlock.statements +=
                                                 newAssign(
                                                     "=",
                                                     listOf(newReference("s")),
@@ -223,16 +223,16 @@ class ValueEvaluationTests {
                                                 )
                                         }
                                 }
-                                block += ifElse
+                                block.statements += ifElse
 
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "+=",
                                         listOf(newReference("s")),
                                         listOf(newLiteral("!", objectType("String"))),
                                     )
 
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "=",
                                         listOf(newReference("s")),
@@ -244,7 +244,7 @@ class ValueEvaluationTests {
                                         ),
                                     )
 
-                                block +=
+                                block.statements +=
                                     newUnaryOperator("++", postfix = true, prefix = false).also {
                                         it.input = newReference("i")
                                     }
@@ -258,7 +258,7 @@ class ValueEvaluationTests {
                                         false,
                                     )
                                 printlnCall1.arguments += newReference("s")
-                                block += printlnCall1
+                                block.statements += printlnCall1
 
                                 val printlnCall2 =
                                     newMemberCall(
@@ -269,9 +269,9 @@ class ValueEvaluationTests {
                                         false,
                                     )
                                 printlnCall2.arguments += newReference("i")
-                                block += printlnCall2
+                                block.statements += printlnCall2
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
                 }
@@ -307,9 +307,9 @@ class ValueEvaluationTests {
                                 }
                             bDeclStmt.declarations += bVar
                             scopeManager.addDeclaration(bVar)
-                            block += bDeclStmt
+                            block.statements += bDeclStmt
 
-                            block +=
+                            block.statements +=
                                 newCall(newReference("println")).also {
                                     it.arguments += newReference("b")
                                 }
@@ -321,16 +321,16 @@ class ValueEvaluationTests {
                                 }
                             aDeclStmt.declarations += aVar
                             scopeManager.addDeclaration(aVar)
-                            block += aDeclStmt
+                            block.statements += aDeclStmt
 
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(newReference("a")),
                                     listOf(newLiteral(2, objectType("int"))),
                                 )
 
-                            block +=
+                            block.statements +=
                                 newCall(newReference("println")).also {
                                     it.arguments += newReference("a")
                                 }
@@ -346,7 +346,7 @@ class ValueEvaluationTests {
                                 }
                             cDeclStmt.declarations += cVar
                             scopeManager.addDeclaration(cVar)
-                            block += cDeclStmt
+                            block.statements += cDeclStmt
 
                             val dDeclStmt = newDeclarationStatement()
                             val dVar =
@@ -359,7 +359,7 @@ class ValueEvaluationTests {
                                 }
                             dDeclStmt.declarations += dVar
                             scopeManager.addDeclaration(dVar)
-                            block += dDeclStmt
+                            block.statements += dDeclStmt
 
                             val eDeclStmt = newDeclarationStatement()
                             val eVar =
@@ -372,7 +372,7 @@ class ValueEvaluationTests {
                                 }
                             eDeclStmt.declarations += eVar
                             scopeManager.addDeclaration(eVar)
-                            block += eDeclStmt
+                            block.statements += eDeclStmt
 
                             val fDeclStmt = newDeclarationStatement()
                             val fVar =
@@ -385,7 +385,7 @@ class ValueEvaluationTests {
                                 }
                             fDeclStmt.declarations += fVar
                             scopeManager.addDeclaration(fVar)
-                            block += fDeclStmt
+                            block.statements += fDeclStmt
 
                             val gDeclStmt = newDeclarationStatement()
                             val gVar =
@@ -396,9 +396,9 @@ class ValueEvaluationTests {
                                 }
                             gDeclStmt.declarations += gVar
                             scopeManager.addDeclaration(gVar)
-                            block += gDeclStmt
+                            block.statements += gDeclStmt
 
-                            block +=
+                            block.statements +=
                                 newCall(newReference("println")).also {
                                     it.arguments +=
                                         newBinaryOperator("+").also { bo ->
@@ -418,7 +418,7 @@ class ValueEvaluationTests {
                                 }
                             hDeclStmt.declarations += hVar
                             scopeManager.addDeclaration(hVar)
-                            block += hDeclStmt
+                            block.statements += hDeclStmt
 
                             val iVarDeclStmt = newDeclarationStatement()
                             val iVar2 =
@@ -431,7 +431,7 @@ class ValueEvaluationTests {
                                 }
                             iVarDeclStmt.declarations += iVar2
                             scopeManager.addDeclaration(iVar2)
-                            block += iVarDeclStmt
+                            block.statements += iVarDeclStmt
 
                             val jDeclStmt = newDeclarationStatement()
                             val jVar =
@@ -444,7 +444,7 @@ class ValueEvaluationTests {
                                 }
                             jDeclStmt.declarations += jVar
                             scopeManager.addDeclaration(jVar)
-                            block += jDeclStmt
+                            block.statements += jDeclStmt
 
                             val kDeclStmt = newDeclarationStatement()
                             val kVar =
@@ -457,7 +457,7 @@ class ValueEvaluationTests {
                                 }
                             kDeclStmt.declarations += kVar
                             scopeManager.addDeclaration(kVar)
-                            block += kDeclStmt
+                            block.statements += kDeclStmt
 
                             val lDeclStmt = newDeclarationStatement()
                             val lVar =
@@ -475,7 +475,7 @@ class ValueEvaluationTests {
                                 }
                             lDeclStmt.declarations += lVar
                             scopeManager.addDeclaration(lVar)
-                            block += lDeclStmt
+                            block.statements += lDeclStmt
 
                             val mDeclStmt = newDeclarationStatement()
                             val mVar =
@@ -493,7 +493,7 @@ class ValueEvaluationTests {
                                 }
                             mDeclStmt.declarations += mVar
                             scopeManager.addDeclaration(mVar)
-                            block += mDeclStmt
+                            block.statements += mDeclStmt
 
                             val nDeclStmt = newDeclarationStatement()
                             val nVar =
@@ -506,9 +506,9 @@ class ValueEvaluationTests {
                                 }
                             nDeclStmt.declarations += nVar
                             scopeManager.addDeclaration(nVar)
-                            block += nDeclStmt
+                            block.statements += nDeclStmt
 
-                            block +=
+                            block.statements +=
                                 newReturn().also {
                                     it.returnValue = newLiteral(0, objectType("int"))
                                 }
@@ -538,7 +538,7 @@ class ValueEvaluationTests {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            block +=
+                            block.statements +=
                                 newCall(newReference("srand")).also {
                                     it.arguments +=
                                         newCall(newReference("time")).also { timeCall ->
@@ -553,7 +553,7 @@ class ValueEvaluationTests {
                                 }
                             bDeclStmt.declarations += bVar
                             scopeManager.addDeclaration(bVar)
-                            block += bDeclStmt
+                            block.statements += bDeclStmt
 
                             // Fluent's "lt" infix operator has no ArgumentHolder context, so it
                             // never actually attaches the comparison it builds -- the
@@ -566,7 +566,7 @@ class ValueEvaluationTests {
 
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
-                                        thenBlock +=
+                                        thenBlock.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("b")),
@@ -579,9 +579,9 @@ class ValueEvaluationTests {
                                             )
                                     }
                             }
-                            block += ifElse1
+                            block.statements += ifElse1
 
-                            block +=
+                            block.statements +=
                                 newCall(newReference("println")).also {
                                     it.arguments += newReference("b")
                                 } // 1, 2
@@ -599,7 +599,7 @@ class ValueEvaluationTests {
 
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
-                                        thenBlock +=
+                                        thenBlock.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("b")),
@@ -612,9 +612,9 @@ class ValueEvaluationTests {
                                             )
                                     }
                             }
-                            block += ifElse2
+                            block.statements += ifElse2
 
-                            block +=
+                            block.statements +=
                                 newCall(newReference("println")).also {
                                     it.arguments += newReference("b")
                                 } // 0, 1, 2
@@ -628,7 +628,7 @@ class ValueEvaluationTests {
 
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
-                                        thenBlock +=
+                                        thenBlock.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("b")),
@@ -641,9 +641,9 @@ class ValueEvaluationTests {
                                             )
                                     }
                             }
-                            block += ifElse3
+                            block.statements += ifElse3
 
-                            block +=
+                            block.statements +=
                                 newCall(newReference("println")).also {
                                     it.arguments += newReference("b")
                                 } // 0, 1, 2, 4
@@ -668,13 +668,13 @@ class ValueEvaluationTests {
 
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
-                                        thenBlock +=
+                                        thenBlock.statements +=
                                             newAssign("=", listOf(newReference("b")), listOf(decB))
                                     }
                             }
-                            block += ifElse4
+                            block.statements += ifElse4
 
-                            block +=
+                            block.statements +=
                                 newCall(newReference("println")).also {
                                     it.arguments += newReference("b")
                                 } // -4, -2, -1, 0, 1, 2, 4
@@ -697,14 +697,14 @@ class ValueEvaluationTests {
                                 }
                             aDeclStmt.declarations += aVar
                             scopeManager.addDeclaration(aVar)
-                            block += aDeclStmt
+                            block.statements += aDeclStmt
 
-                            block +=
+                            block.statements +=
                                 newCall(newReference("println")).also {
                                     it.arguments += newReference("a")
                                 } // 3, 6
 
-                            block +=
+                            block.statements +=
                                 newReturn().also {
                                     it.returnValue = newLiteral(0, objectType("int"))
                                 }
@@ -727,7 +727,7 @@ class ValueEvaluationTests {
                                 }
                             arrayDeclStmt.declarations += arrayVar
                             scopeManager.addDeclaration(arrayVar)
-                            block += arrayDeclStmt
+                            block.statements += arrayDeclStmt
 
                             val forNode = newFor { for_ ->
                                 val iDeclStmt = newDeclarationStatement()
@@ -751,7 +751,7 @@ class ValueEvaluationTests {
                                     }
 
                                 for_.statement = newBlock { loopBody ->
-                                    loopBody +=
+                                    loopBody.statements +=
                                         newAssign(
                                             "=",
                                             listOf(
@@ -764,9 +764,9 @@ class ValueEvaluationTests {
                                         )
                                 }
                             }
-                            block += forNode
+                            block.statements += forNode
 
-                            block +=
+                            block.statements +=
                                 newReturn().also {
                                     it.returnValue = newLiteral(0, objectType("int"))
                                 }

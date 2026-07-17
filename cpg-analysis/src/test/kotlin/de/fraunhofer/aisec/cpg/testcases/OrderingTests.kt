@@ -121,7 +121,7 @@ class GraphExamples {
                                 p4.initializer = construction
                                 p4Decl.declarations += p4
                                 scopeManager.addDeclaration(p4)
-                                block += p4Decl
+                                block.statements += p4Decl
 
                                 val startCall =
                                     newMemberCall(
@@ -129,7 +129,7 @@ class GraphExamples {
                                         false,
                                     )
                                 startCall.arguments += newReference("iv")
-                                block += startCall
+                                block.statements += startCall
 
                                 val finishCall =
                                     newMemberCall(
@@ -137,9 +137,9 @@ class GraphExamples {
                                         false,
                                     )
                                 finishCall.arguments += newReference("buf")
-                                block += finishCall
+                                block.statements += finishCall
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -157,7 +157,7 @@ class GraphExamples {
                                 p4.initializer = construction
                                 p4Decl.declarations += p4
                                 scopeManager.addDeclaration(p4)
-                                block += p4Decl
+                                block.statements += p4Decl
 
                                 val startCall =
                                     newMemberCall(
@@ -165,10 +165,10 @@ class GraphExamples {
                                         false,
                                     )
                                 startCall.arguments += newReference("iv")
-                                block += startCall
+                                block.statements += startCall
 
                                 // Not in the entity and therefore ignored
-                                block +=
+                                block.statements +=
                                     newMemberCall(newMemberAccess("foo", newReference("p4")), false)
 
                                 val finishCall =
@@ -177,9 +177,9 @@ class GraphExamples {
                                         false,
                                     )
                                 finishCall.arguments += newReference("buf")
-                                block += finishCall
+                                block.statements += finishCall
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -197,7 +197,7 @@ class GraphExamples {
                                 p4.initializer = construction
                                 p4Decl.declarations += p4
                                 scopeManager.addDeclaration(p4)
-                                block += p4Decl
+                                block.statements += p4Decl
 
                                 val xDecl = newDeclarationStatement()
                                 val x = newVariable("x", objectType("int"))
@@ -208,7 +208,7 @@ class GraphExamples {
                                     )
                                 xDecl.declarations += x
                                 scopeManager.addDeclaration(x)
-                                block += xDecl
+                                block.statements += xDecl
 
                                 val ifElse = newIfElse { ifElse ->
                                     ifElse.condition =
@@ -224,7 +224,7 @@ class GraphExamples {
                                                     false,
                                                 )
                                             startCall.arguments += newReference("iv")
-                                            thenBlock += startCall
+                                            thenBlock.statements += startCall
                                         }
                                     ifElse.elseStatement =
                                         newBlock(enterScope = true) { elseBlock ->
@@ -234,13 +234,13 @@ class GraphExamples {
                                                     false,
                                                 )
                                             startCall.arguments += newReference("iv")
-                                            elseBlock += startCall
+                                            elseBlock.statements += startCall
                                         }
                                 }
-                                block += ifElse
+                                block.statements += ifElse
 
                                 // Not in the entity and therefore ignored
-                                block +=
+                                block.statements +=
                                     newMemberCall(newMemberAccess("foo", newReference("p4")), false)
 
                                 val finishCall =
@@ -249,9 +249,9 @@ class GraphExamples {
                                         false,
                                     )
                                 finishCall.arguments += newReference("buf")
-                                block += finishCall
+                                block.statements += finishCall
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -269,7 +269,7 @@ class GraphExamples {
                                 p4.initializer = construction
                                 p4Decl.declarations += p4
                                 scopeManager.addDeclaration(p4)
-                                block += p4Decl
+                                block.statements += p4Decl
 
                                 // Not allowed as start
                                 val setKeyCall1 =
@@ -278,7 +278,7 @@ class GraphExamples {
                                         false,
                                     )
                                 setKeyCall1.arguments += newReference("key")
-                                block += setKeyCall1
+                                block.statements += setKeyCall1
 
                                 val startCall =
                                     newMemberCall(
@@ -286,7 +286,7 @@ class GraphExamples {
                                         false,
                                     )
                                 startCall.arguments += newReference("iv")
-                                block += startCall
+                                block.statements += startCall
 
                                 val finishCall =
                                     newMemberCall(
@@ -294,10 +294,10 @@ class GraphExamples {
                                         false,
                                     )
                                 finishCall.arguments += newReference("buf")
-                                block += finishCall
+                                block.statements += finishCall
 
                                 // Not in the entity and therefore ignored
-                                block +=
+                                block.statements +=
                                     newMemberCall(newMemberAccess("foo", newReference("p4")), false)
 
                                 val setKeyCall2 =
@@ -306,9 +306,9 @@ class GraphExamples {
                                         false,
                                     )
                                 setKeyCall2.arguments += newReference("key")
-                                block += setKeyCall2
+                                block.statements += setKeyCall2
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -326,7 +326,7 @@ class GraphExamples {
                                 p4.initializer = construction
                                 p4Decl.declarations += p4
                                 scopeManager.addDeclaration(p4)
-                                block += p4Decl
+                                block.statements += p4Decl
 
                                 val startCall =
                                     newMemberCall(
@@ -334,11 +334,11 @@ class GraphExamples {
                                         false,
                                     )
                                 startCall.arguments += newReference("iv")
-                                block += startCall
+                                block.statements += startCall
 
                                 // Missing: memberCall("finish", ref("p4")) {ref("buf")}
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -356,7 +356,7 @@ class GraphExamples {
                                 p4.initializer = construction
                                 p4Decl.declarations += p4
                                 scopeManager.addDeclaration(p4)
-                                block += p4Decl
+                                block.statements += p4Decl
 
                                 val ifElse = newIfElse { ifElse ->
                                     val nextUIntCall =
@@ -377,10 +377,10 @@ class GraphExamples {
                                                     false,
                                                 )
                                             startCall.arguments += newReference("iv")
-                                            thenBlock += startCall
+                                            thenBlock.statements += startCall
                                         }
                                 }
-                                block += ifElse
+                                block.statements += ifElse
 
                                 // start could be missing here
                                 val finishCall =
@@ -389,9 +389,9 @@ class GraphExamples {
                                         false,
                                     )
                                 finishCall.arguments += newReference("buf")
-                                block += finishCall
+                                block.statements += finishCall
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -409,7 +409,7 @@ class GraphExamples {
                                 p4.initializer = construction
                                 p4Decl.declarations += p4
                                 scopeManager.addDeclaration(p4)
-                                block += p4Decl
+                                block.statements += p4Decl
 
                                 val ifElse = newIfElse { ifElse ->
                                     ifElse.condition = newLiteral(true, objectType("boolean"))
@@ -421,7 +421,7 @@ class GraphExamples {
                                                     false,
                                                 )
                                             startCall.arguments += newReference("iv")
-                                            thenBlock += startCall
+                                            thenBlock.statements += startCall
 
                                             val finishCall =
                                                 newMemberCall(
@@ -429,10 +429,10 @@ class GraphExamples {
                                                     false,
                                                 )
                                             finishCall.arguments += newReference("buf")
-                                            thenBlock += finishCall
+                                            thenBlock.statements += finishCall
                                         }
                                 }
-                                block += ifElse
+                                block.statements += ifElse
 
                                 // Not ok because p4 is already finished
                                 val startCall2 =
@@ -441,7 +441,7 @@ class GraphExamples {
                                         false,
                                     )
                                 startCall2.arguments += newReference("iv")
-                                block += startCall2
+                                block.statements += startCall2
 
                                 val finishCall2 =
                                     newMemberCall(
@@ -449,9 +449,9 @@ class GraphExamples {
                                         false,
                                     )
                                 finishCall2.arguments += newReference("buf")
-                                block += finishCall2
+                                block.statements += finishCall2
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -461,7 +461,7 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block +=
+                                block.statements +=
                                     newBlock(enterScope = true) { nested1 ->
                                         val p4Decl = newDeclarationStatement()
                                         val p4 = newVariable("p4", objectType("Botan"))
@@ -471,7 +471,7 @@ class GraphExamples {
                                         p4.initializer = construction
                                         p4Decl.declarations += p4
                                         scopeManager.addDeclaration(p4)
-                                        nested1 += p4Decl
+                                        nested1.statements += p4Decl
 
                                         val startCall =
                                             newMemberCall(
@@ -479,10 +479,10 @@ class GraphExamples {
                                                 false,
                                             )
                                         startCall.arguments += newReference("iv")
-                                        nested1 += startCall
+                                        nested1.statements += startCall
                                     }
 
-                                block +=
+                                block.statements +=
                                     newBlock(enterScope = true) { nested2 ->
                                         val p5Decl = newDeclarationStatement()
                                         val p5 = newVariable("p5", objectType("Botan"))
@@ -492,7 +492,7 @@ class GraphExamples {
                                         p5.initializer = construction
                                         p5Decl.declarations += p5
                                         scopeManager.addDeclaration(p5)
-                                        nested2 += p5Decl
+                                        nested2.statements += p5Decl
 
                                         val finishCall =
                                             newMemberCall(
@@ -500,9 +500,9 @@ class GraphExamples {
                                                 false,
                                             )
                                         finishCall.arguments += newReference("buf")
-                                        nested2 += finishCall
+                                        nested2.statements += finishCall
 
-                                        nested2 += newReturn()
+                                        nested2.statements += newReturn()
                                     }
                             }
                     }
@@ -582,30 +582,30 @@ class GraphExamples {
                                 p1.initializer = construction
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
-                                block += p1Decl
+                                block.statements += p1Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("finish", newReference("p1")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -623,35 +623,35 @@ class GraphExamples {
                                 p1.initializer = construction
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
-                                block += p1Decl
+                                block.statements += p1Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("process", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("finish", newReference("p1")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -669,40 +669,40 @@ class GraphExamples {
                                 p1.initializer = construction
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
-                                block += p1Decl
+                                block.statements += p1Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("process", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("finish", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("reset", newReference("p1")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -720,50 +720,50 @@ class GraphExamples {
                                 p2.initializer = construction
                                 p2Decl.declarations += p2
                                 scopeManager.addDeclaration(p2)
-                                block += p2Decl
+                                block.statements += p2Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p2")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p2")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p2")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("process", newReference("p2")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("process", newReference("p2")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("process", newReference("p2")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("process", newReference("p2")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("finish", newReference("p2")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -781,50 +781,50 @@ class GraphExamples {
                                 p3.initializer = construction
                                 p3Decl.declarations += p3
                                 scopeManager.addDeclaration(p3)
-                                block += p3Decl
+                                block.statements += p3Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("process", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("finish", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("process", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("finish", newReference("p3")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -842,55 +842,55 @@ class GraphExamples {
                                 p3.initializer = construction
                                 p3Decl.declarations += p3
                                 scopeManager.addDeclaration(p3)
-                                block += p3Decl
+                                block.statements += p3Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("process", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("finish", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("process", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("finish", newReference("p3")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("reset", newReference("p3")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -908,30 +908,30 @@ class GraphExamples {
                                 p5.initializer = construction
                                 p5Decl.declarations += p5
                                 scopeManager.addDeclaration(p5)
-                                block += p5Decl
+                                block.statements += p5Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p5")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p5")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("process", newReference("p5")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("finish", newReference("p5")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -949,14 +949,14 @@ class GraphExamples {
                                 p6.initializer = construction
                                 p6Decl.declarations += p6
                                 scopeManager.addDeclaration(p6)
-                                block += p6Decl
+                                block.statements += p6Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p6")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p6")),
                                         false,
@@ -966,32 +966,32 @@ class GraphExamples {
                                     ifElse.condition = newLiteral(false, objectType("boolean"))
                                     ifElse.thenStatement =
                                         newBlock(enterScope = true) { thenBlock ->
-                                            thenBlock +=
+                                            thenBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("start", newReference("p6")),
                                                     false,
                                                 )
-                                            thenBlock +=
+                                            thenBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("process", newReference("p6")),
                                                     false,
                                                 )
-                                            thenBlock +=
+                                            thenBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("finish", newReference("p6")),
                                                     false,
                                                 )
                                         }
                                 }
-                                block += ifElse
+                                block.statements += ifElse
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("reset", newReference("p6")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -1009,48 +1009,48 @@ class GraphExamples {
                                 p6.initializer = construction
                                 p6Decl.declarations += p6
                                 scopeManager.addDeclaration(p6)
-                                block += p6Decl
+                                block.statements += p6Decl
 
                                 val whileNode =
                                     newWhile(enterScope = true) { w ->
                                         w.condition = newLiteral(true, objectType("boolean"))
                                         w.statement = newBlock { loopBodyBlock ->
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("create", newReference("p6")),
                                                     false,
                                                 )
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("init", newReference("p6")),
                                                     false,
                                                 )
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("start", newReference("p6")),
                                                     false,
                                                 )
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("process", newReference("p6")),
                                                     false,
                                                 )
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("finish", newReference("p6")),
                                                     false,
                                                 )
                                         }
                                     }
-                                block += whileNode
+                                block.statements += whileNode
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("reset", newReference("p6")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -1068,14 +1068,14 @@ class GraphExamples {
                                 p7.initializer = construction
                                 p7Decl.declarations += p7
                                 scopeManager.addDeclaration(p7)
-                                block += p7Decl
+                                block.statements += p7Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p7")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p7")),
                                         false,
@@ -1097,32 +1097,32 @@ class GraphExamples {
                                                 it.rhs = newLiteral(5, objectType("int"))
                                             }
                                         w.statement = newBlock { loopBodyBlock ->
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("start", newReference("p7")),
                                                     false,
                                                 )
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("process", newReference("p7")),
                                                     false,
                                                 )
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("finish", newReference("p7")),
                                                     false,
                                                 )
                                         }
                                     }
-                                block += whileNode
+                                block.statements += whileNode
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("reset", newReference("p7")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -1140,29 +1140,29 @@ class GraphExamples {
                                 p8.initializer = construction
                                 p8Decl.declarations += p8
                                 scopeManager.addDeclaration(p8)
-                                block += p8Decl
+                                block.statements += p8Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p8")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p8")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p8")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("process", newReference("p8")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("finish", newReference("p8")),
                                         false,
@@ -1172,32 +1172,32 @@ class GraphExamples {
                                     newWhile(enterScope = true) { w ->
                                         w.condition = newLiteral(true, objectType("boolean"))
                                         w.statement = newBlock { loopBodyBlock ->
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("start", newReference("p8")),
                                                     false,
                                                 )
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("process", newReference("p8")),
                                                     false,
                                                 )
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("finish", newReference("p8")),
                                                     false,
                                                 )
                                         }
                                     }
-                                block += whileNode
+                                block.statements += whileNode
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("reset", newReference("p8")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -1215,14 +1215,14 @@ class GraphExamples {
                                 p8.initializer = construction
                                 p8Decl.declarations += p8
                                 scopeManager.addDeclaration(p8)
-                                block += p8Decl
+                                block.statements += p8Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p8")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p8")),
                                         false,
@@ -1232,32 +1232,32 @@ class GraphExamples {
                                     newWhile(enterScope = true) { w ->
                                         w.condition = newLiteral(true, objectType("boolean"))
                                         w.statement = newBlock { loopBodyBlock ->
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("start", newReference("p8")),
                                                     false,
                                                 )
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("process", newReference("p8")),
                                                     false,
                                                 )
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("finish", newReference("p8")),
                                                     false,
                                                 )
                                         }
                                     }
-                                block += whileNode
+                                block.statements += whileNode
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("reset", newReference("p8")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -1275,14 +1275,14 @@ class GraphExamples {
                                 p6.initializer = construction
                                 p6Decl.declarations += p6
                                 scopeManager.addDeclaration(p6)
-                                block += p6Decl
+                                block.statements += p6Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p6")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p6")),
                                         false,
@@ -1291,17 +1291,17 @@ class GraphExamples {
                                 val doWhileNode =
                                     newDoWhile(enterScope = true) { d ->
                                         d.statement = newBlock { loopBodyBlock ->
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("start", newReference("p6")),
                                                     false,
                                                 )
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("process", newReference("p6")),
                                                     false,
                                                 )
-                                            loopBodyBlock +=
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess("finish", newReference("p6")),
                                                     false,
@@ -1322,15 +1322,15 @@ class GraphExamples {
                                                 it.rhs = newLiteral(5, objectType("int"))
                                             }
                                     }
-                                block += doWhileNode
+                                block.statements += doWhileNode
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("reset", newReference("p6")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -1349,9 +1349,9 @@ class GraphExamples {
                                 p1.initializer = construction
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
-                                block += p1Decl
+                                block.statements += p1Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p1")),
                                         false,
@@ -1363,20 +1363,20 @@ class GraphExamples {
                                         false,
                                     )
                                 fooCall.arguments += newReference("p1")
-                                block += fooCall
+                                block.statements += fooCall
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("finish", newReference("p1")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -1395,9 +1395,9 @@ class GraphExamples {
                                 p1.initializer = construction
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
-                                block += p1Decl
+                                block.statements += p1Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p1")),
                                         false,
@@ -1422,23 +1422,23 @@ class GraphExamples {
                                                     false,
                                                 )
                                             fooCall.arguments += newReference("p1")
-                                            thenBlock += fooCall
+                                            thenBlock.statements += fooCall
                                         }
                                 }
-                                block += ifElse
+                                block.statements += ifElse
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("finish", newReference("p1")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -1457,7 +1457,7 @@ class GraphExamples {
                                 p1.initializer = construction1
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
-                                block += p1Decl
+                                block.statements += p1Decl
 
                                 val p2Decl = newDeclarationStatement()
                                 val p2 = newVariable("p2", objectType("Botan"))
@@ -1467,14 +1467,14 @@ class GraphExamples {
                                 p2.initializer = construction2
                                 p2Decl.declarations += p2
                                 scopeManager.addDeclaration(p2)
-                                block += p2Decl
+                                block.statements += p2Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p2")),
                                         false,
@@ -1486,20 +1486,20 @@ class GraphExamples {
                                         false,
                                     )
                                 fooCall.arguments += newReference("p2")
-                                block += fooCall
+                                block.statements += fooCall
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("finish", newReference("p1")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -1511,13 +1511,13 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p1")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -1535,9 +1535,9 @@ class GraphExamples {
                                 p1.initializer = construction
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
-                                block += p1Decl
+                                block.statements += p1Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p1")),
                                         false,
@@ -1552,9 +1552,9 @@ class GraphExamples {
                                         false,
                                     )
                                 minimalInterprocUnclearArgumentCall.arguments += newReference("p1")
-                                block += minimalInterprocUnclearArgumentCall
+                                block.statements += minimalInterprocUnclearArgumentCall
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -1570,23 +1570,23 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("finish", newReference("p1")),
                                         false,
                                     )
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -1608,19 +1608,19 @@ class GraphExamples {
                                 p1.initializer = construction
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
-                                block += p1Decl
+                                block.statements += p1Decl
 
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("create", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("init", newReference("p1")),
                                         false,
                                     )
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("start", newReference("p1")),
                                         false,
@@ -1628,7 +1628,7 @@ class GraphExamples {
 
                                 val ret = newReturn()
                                 ret.returnValue = newReference("p1")
-                                block += ret
+                                block.statements += ret
                             }
                     }
                 }

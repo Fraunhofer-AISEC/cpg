@@ -56,7 +56,7 @@ import kotlin.test.*
 
 /**
  * Proof-of-concept migration of the former Fluent-DSL-based tests to the plain [NodeBuilder] API
- * (`enterScope`/`holder` parameters instead of context-receiver-resolved [Holder]s).
+ * (`enterScope`/`holder` parameters instead of context-receiver-resolved holders).
  *
  * Two things matter for correctness here, both because every [Node] already implements
  * [MetadataProvider] (via [ScopeProvider]/[LanguageProvider]):
@@ -95,7 +95,7 @@ class FluentTest {
                                     val declStmt = newDeclarationStatement()
                                     declStmt.declarations += a
                                     scopeManager.addDeclaration(a)
-                                    block += declStmt
+                                    block.statements += declStmt
 
                                     val ifElse = newIfElse { ifElse ->
                                         val lhs = newReference("argc")
@@ -109,7 +109,7 @@ class FluentTest {
                                             newBlock(enterScope = true) { thenBlock ->
                                                 val printfCall = newCall(newReference("printf"))
                                                 printfCall.arguments += newLiteral("then")
-                                                thenBlock += printfCall
+                                                thenBlock.statements += printfCall
                                             }
                                         ifElse.elseStatement = newIfElse { elseIf ->
                                             val elseIfLhs = newReference("argc")
@@ -123,30 +123,30 @@ class FluentTest {
                                                 newBlock(enterScope = true) { elseIfThenBlock ->
                                                     val printfCall = newCall(newReference("printf"))
                                                     printfCall.arguments += newLiteral("elseIf")
-                                                    elseIfThenBlock += printfCall
+                                                    elseIfThenBlock.statements += printfCall
                                                 }
                                             elseIf.elseStatement =
                                                 newBlock(enterScope = true) { elseIfElseBlock ->
                                                     val printfCall = newCall(newReference("printf"))
                                                     printfCall.arguments += newLiteral("else")
-                                                    elseIfElseBlock += printfCall
+                                                    elseIfElseBlock.statements += printfCall
                                                 }
                                         }
                                     }
-                                    block += ifElse
+                                    block.statements += ifElse
 
                                     val some = newVariable("some", objectType("SomeClass"))
                                     val someDeclStmt = newDeclarationStatement()
                                     someDeclStmt.declarations += some
                                     scopeManager.addDeclaration(some)
-                                    block += someDeclStmt
+                                    block.statements += someDeclStmt
 
                                     val doCall = newCall(newReference("do"))
                                     val memberBase = newReference("some")
                                     val memberCall =
                                         newMemberCall(newMemberAccess("func", memberBase), false)
                                     doCall.arguments += memberCall
-                                    block += doCall
+                                    block.statements += doCall
 
                                     val returnStmt = newReturn()
                                     val sumLhs = newReference("a")
@@ -156,7 +156,7 @@ class FluentTest {
                                             it.lhs = sumLhs
                                             it.rhs = sumRhs
                                         }
-                                    block += returnStmt
+                                    block.statements += returnStmt
                                 }
                         }
 
@@ -317,11 +317,11 @@ class FluentTest {
                                     val declStmt = newDeclarationStatement()
                                     declStmt.declarations += some
                                     scopeManager.addDeclaration(some)
-                                    block += declStmt
+                                    block.statements += declStmt
 
                                     val returnStmt = newReturn()
                                     returnStmt.returnValue = newReference("some")
-                                    block += returnStmt
+                                    block.statements += returnStmt
                                 }
                         }
 
@@ -394,11 +394,11 @@ class FluentTest {
                                     val declStmt = newDeclarationStatement()
                                     declStmt.declarations += some
                                     scopeManager.addDeclaration(some)
-                                    block += declStmt
+                                    block.statements += declStmt
 
                                     val returnStmt = newReturn()
                                     returnStmt.returnValue = newReference("some")
-                                    block += returnStmt
+                                    block.statements += returnStmt
                                 }
                         }
 
@@ -475,11 +475,11 @@ class FluentTest {
                                     val declStmt = newDeclarationStatement()
                                     declStmt.declarations += some
                                     scopeManager.addDeclaration(some)
-                                    block += declStmt
+                                    block.statements += declStmt
 
                                     val returnStmt = newReturn()
                                     returnStmt.returnValue = newReference("some")
-                                    block += returnStmt
+                                    block.statements += returnStmt
                                 }
                         }
 

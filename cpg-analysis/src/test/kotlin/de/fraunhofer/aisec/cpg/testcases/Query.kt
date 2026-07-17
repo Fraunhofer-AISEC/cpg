@@ -61,7 +61,7 @@ class Query {
                                         it.lhs = newLiteral("Dataflow: attr=", objectType("string"))
                                         it.rhs = newReference("attr")
                                     }
-                                block += ret
+                                block.statements += ret
                             }
                     }
 
@@ -73,7 +73,7 @@ class Query {
                             newBlock(enterScope = true) { block ->
                                 val ret = newReturn()
                                 ret.returnValue = newLiteral("abcd", objectType("string"))
-                                block += ret
+                                block.statements += ret
                             }
                     }
 
@@ -94,9 +94,9 @@ class Query {
                                         false,
                                     )
                                 printlnCall.arguments += newReference("s")
-                                block += printlnCall
+                                block.statements += printlnCall
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -118,7 +118,7 @@ class Query {
                                 sc.initializer = newExpr
                                 scDecl.declarations += sc
                                 scopeManager.addDeclaration(sc)
-                                block += scDecl
+                                block.statements += scDecl
 
                                 val sDecl = newDeclarationStatement()
                                 val s = newVariable("s", objectType("string"))
@@ -129,7 +129,7 @@ class Query {
                                     )
                                 sDecl.declarations += s
                                 scopeManager.addDeclaration(s)
-                                block += sDecl
+                                block.statements += sDecl
 
                                 val printCall =
                                     newMemberCall(
@@ -137,7 +137,7 @@ class Query {
                                         false,
                                     )
                                 printCall.arguments += newReference("s")
-                                block += printCall
+                                block.statements += printCall
 
                                 val printCall2 =
                                     newMemberCall(
@@ -150,7 +150,7 @@ class Query {
                                         false,
                                     )
                                 printCall2.arguments += testCall
-                                block += printCall2
+                                block.statements += printCall2
                             }
                     }
                 }
@@ -206,9 +206,9 @@ class Query {
                                         false,
                                     )
                                 printlnCall.arguments += newReference("s")
-                                block += printlnCall
+                                block.statements += printlnCall
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -230,9 +230,9 @@ class Query {
                                 sc.initializer = newExpr
                                 scDecl.declarations += sc
                                 scopeManager.addDeclaration(sc)
-                                block += scDecl
+                                block.statements += scDecl
 
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "=",
                                         listOf(newMemberAccess("a", newReference("sc"))),
@@ -254,7 +254,7 @@ class Query {
                                 innerCall.isStatic = true
                                 innerCall.arguments += newMemberAccess("a", newReference("sc"))
                                 outerCall.arguments += innerCall
-                                block += outerCall
+                                block.statements += outerCall
 
                                 val logCall =
                                     newMemberCall(
@@ -275,9 +275,9 @@ class Query {
                                                 objectType("string"),
                                             )
                                     }
-                                block += logCall
+                                block.statements += logCall
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
                 }
@@ -335,9 +335,9 @@ class Query {
                                         false,
                                     )
                                 printlnCall.arguments += newReference("s")
-                                block += printlnCall
+                                block.statements += printlnCall
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -359,9 +359,9 @@ class Query {
                                 sc.initializer = newExpr
                                 scDecl.declarations += sc
                                 scopeManager.addDeclaration(sc)
-                                block += scDecl
+                                block.statements += scDecl
 
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "=",
                                         listOf(newMemberAccess("a", newReference("sc"))),
@@ -387,7 +387,7 @@ class Query {
                                                 objectType("string"),
                                             )
                                     }
-                                block += logCall
+                                block.statements += logCall
 
                                 val dataflowRef = newReference("Dataflow", objectType("Dataflow"))
                                 dataflowRef.refersTo = record
@@ -404,9 +404,9 @@ class Query {
                                 innerCall.isStatic = true
                                 innerCall.arguments += newMemberAccess("a", newReference("sc"))
                                 outerCall.arguments += innerCall
-                                block += outerCall
+                                block.statements += outerCall
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
                 }
@@ -461,9 +461,9 @@ class Query {
                                         false,
                                     )
                                 printlnCall.arguments += newReference("s")
-                                block += printlnCall
+                                block.statements += printlnCall
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
 
@@ -485,9 +485,9 @@ class Query {
                                 sc.initializer = newExpr
                                 scDecl.declarations += sc
                                 scopeManager.addDeclaration(sc)
-                                block += scDecl
+                                block.statements += scDecl
 
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "=",
                                         listOf(newMemberAccess("a", newReference("sc"))),
@@ -515,9 +515,9 @@ class Query {
                                                 objectType("string"),
                                             )
                                     }
-                                block += logCall
+                                block.statements += logCall
 
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "=",
                                         listOf(newMemberAccess("a", newReference("sc"))),
@@ -539,9 +539,9 @@ class Query {
                                 innerCall.isStatic = true
                                 innerCall.arguments += newMemberAccess("a", newReference("sc"))
                                 outerCall.arguments += innerCall
-                                block += outerCall
+                                block.statements += outerCall
 
-                                block += newReturn()
+                                block.statements += newReturn()
                             }
                     }
                 }
@@ -574,14 +574,14 @@ class Query {
                             c.initializer = creationExpr
                             cDecl.declarations += c
                             scopeManager.addDeclaration(c)
-                            block += cDecl
+                            block.statements += cDecl
 
                             val aDecl = newDeclarationStatement()
                             val a = newVariable("a", objectType("int"))
                             a.initializer = newLiteral(4, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("int"))
@@ -592,7 +592,7 @@ class Query {
                                 }
                             bDecl.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDecl
+                            block.statements += bDecl
 
                             val dDecl = newDeclarationStatement()
                             val d = newVariable("d", objectType("char"))
@@ -603,11 +603,11 @@ class Query {
                                 }
                             dDecl.declarations += d
                             scopeManager.addDeclaration(d)
-                            block += dDecl
+                            block.statements += dDecl
 
                             val ret = newReturn()
                             ret.returnValue = newLiteral(0, objectType("int"))
-                            block += ret
+                            block.statements += ret
                         }
                 }
 
@@ -670,14 +670,14 @@ class Query {
                             c.initializer = creationExpr
                             cDecl.declarations += c
                             scopeManager.addDeclaration(c)
-                            block += cDecl
+                            block.statements += cDecl
 
                             val aDecl = newDeclarationStatement()
                             val a = newVariable("a", objectType("int"))
                             a.initializer = newLiteral(0, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val forNode = newFor { for_ ->
                                 val iDecl = newDeclarationStatement()
@@ -699,7 +699,7 @@ class Query {
                                     }
 
                                 for_.statement = newBlock { loopBodyBlock ->
-                                    loopBodyBlock +=
+                                    loopBodyBlock.statements +=
                                         newAssign(
                                             "=",
                                             listOf(newReference("a")),
@@ -717,11 +717,11 @@ class Query {
                                         )
                                 }
                             }
-                            block += forNode
+                            block.statements += forNode
 
                             val ret = newReturn()
                             ret.returnValue = newReference("a")
-                            block += ret
+                            block.statements += ret
                         }
                 }
 
@@ -749,7 +749,7 @@ class Query {
                             val c = newVariable("c", objectType("char").pointer())
                             cDecl.declarations += c
                             scopeManager.addDeclaration(c)
-                            block += cDecl
+                            block.statements += cDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
@@ -762,7 +762,7 @@ class Query {
                                         val creationExpr = newArrayConstruction()
                                         creationExpr.addDimension(newLiteral(4, objectType("int")))
                                         creationExpr.type = objectType("char")
-                                        thenBlock +=
+                                        thenBlock.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("c")),
@@ -774,7 +774,7 @@ class Query {
                                         val creationExpr = newArrayConstruction()
                                         creationExpr.addDimension(newLiteral(5, objectType("int")))
                                         creationExpr.type = objectType("char")
-                                        elseBlock +=
+                                        elseBlock.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("c")),
@@ -782,14 +782,14 @@ class Query {
                                             )
                                     }
                             }
-                            block += ifElse
+                            block.statements += ifElse
 
                             val aDecl = newDeclarationStatement()
                             val a = newVariable("a", objectType("int"))
                             a.initializer = newLiteral(0, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val forNode = newFor { for_ ->
                                 val iDecl = newDeclarationStatement()
@@ -811,7 +811,7 @@ class Query {
                                     }
 
                                 for_.statement = newBlock { loopBodyBlock ->
-                                    loopBodyBlock +=
+                                    loopBodyBlock.statements +=
                                         newAssign(
                                             "=",
                                             listOf(newReference("a")),
@@ -829,11 +829,11 @@ class Query {
                                         )
                                 }
                             }
-                            block += forNode
+                            block.statements += forNode
 
                             val ret = newReturn()
                             ret.returnValue = newReference("a")
-                            block += ret
+                            block.statements += ret
                         }
                 }
 
@@ -865,14 +865,14 @@ class Query {
                             c.initializer = creationExpr
                             cDecl.declarations += c
                             scopeManager.addDeclaration(c)
-                            block += cDecl
+                            block.statements += cDecl
 
                             val aDecl = newDeclarationStatement()
                             val a = newVariable("a", objectType("int"))
                             a.initializer = newLiteral(0, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val forNode = newFor { for_ ->
                                 val iDecl = newDeclarationStatement()
@@ -894,7 +894,7 @@ class Query {
                                     }
 
                                 for_.statement = newBlock { loopBodyBlock ->
-                                    loopBodyBlock +=
+                                    loopBodyBlock.statements +=
                                         newAssign(
                                             "=",
                                             listOf(newReference("a")),
@@ -912,11 +912,11 @@ class Query {
                                         )
                                 }
                             }
-                            block += forNode
+                            block.statements += forNode
 
                             val ret = newReturn()
                             ret.returnValue = newReference("a")
-                            block += ret
+                            block.statements += ret
                         }
                 }
 
@@ -945,11 +945,11 @@ class Query {
                             a.initializer = newLiteral(4, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
                             // TODO: There was a commented-out line. No idea what to do with it:
                             // int a, b = 4; // this is broken, a is missing an initializer
 
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(newReference("a")),
@@ -958,7 +958,7 @@ class Query {
 
                             val ret = newReturn()
                             ret.returnValue = newReference("a")
-                            block += ret
+                            block.statements += ret
                         }
                 }
 
@@ -987,14 +987,14 @@ class Query {
                             array.initializer = newLiteral("hello", objectType("char").array())
                             arrayDecl.declarations += array
                             scopeManager.addDeclaration(array)
-                            block += arrayDecl
+                            block.statements += arrayDecl
 
                             val aDecl = newDeclarationStatement()
                             val a = newVariable("a", objectType("short"))
                             a.initializer = newLiteral(2, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
@@ -1004,7 +1004,7 @@ class Query {
                                     }
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
-                                        thenBlock +=
+                                        thenBlock.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("a")),
@@ -1012,7 +1012,7 @@ class Query {
                                             )
                                     }
                             }
-                            block += ifElse
+                            block.statements += ifElse
 
                             val xDecl = newDeclarationStatement()
                             val x = newVariable("x", objectType("double"))
@@ -1023,11 +1023,11 @@ class Query {
                                 }
                             xDecl.declarations += x
                             scopeManager.addDeclaration(x)
-                            block += xDecl
+                            block.statements += xDecl
 
                             val ret = newReturn()
                             ret.returnValue = newLiteral(0, objectType("int"))
-                            block += ret
+                            block.statements += ret
                         }
                 }
 
@@ -1056,33 +1056,33 @@ class Query {
                             array.initializer = newLiteral("hello", objectType("char").array())
                             arrayDecl.declarations += array
                             scopeManager.addDeclaration(array)
-                            block += arrayDecl
+                            block.statements += arrayDecl
 
                             val memcpyCall = newCall(newReference("memcpy"))
                             memcpyCall.arguments += newReference("array")
                             memcpyCall.arguments +=
                                 newLiteral("Hello world", objectType("char").array())
                             memcpyCall.arguments += newLiteral(11, objectType("int"))
-                            block += memcpyCall
+                            block.statements += memcpyCall
 
                             val printfCall = newCall(newReference("printf"))
                             printfCall.arguments += newReference("array")
-                            block += printfCall
+                            block.statements += printfCall
 
                             val freeCall1 = newCall(newReference("free"))
                             freeCall1.arguments += newReference("array")
-                            block += freeCall1
+                            block.statements += freeCall1
 
                             val freeCall2 = newCall(newReference("free"))
                             freeCall2.arguments += newReference("array")
-                            block += freeCall2
+                            block.statements += freeCall2
 
                             val aDecl = newDeclarationStatement()
                             val a = newVariable("a", objectType("short"))
                             a.initializer = newLiteral(2, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
@@ -1092,7 +1092,7 @@ class Query {
                                     }
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
-                                        thenBlock +=
+                                        thenBlock.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("a")),
@@ -1100,7 +1100,7 @@ class Query {
                                             )
                                     }
                             }
-                            block += ifElse
+                            block.statements += ifElse
 
                             val xDecl = newDeclarationStatement()
                             val x = newVariable("x", objectType("double"))
@@ -1111,16 +1111,16 @@ class Query {
                                 }
                             xDecl.declarations += x
                             scopeManager.addDeclaration(x)
-                            block += xDecl
+                            block.statements += xDecl
 
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("int"))
                             b.initializer = newLiteral(2147483648, objectType("int"))
                             bDecl.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDecl
+                            block.statements += bDecl
 
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(newReference("b")),
@@ -1132,11 +1132,11 @@ class Query {
                             c.initializer = newLiteral(-10000, objectType("long"))
                             cDecl.declarations += c
                             scopeManager.addDeclaration(c)
-                            block += cDecl
+                            block.statements += cDecl
 
                             val ret = newReturn()
                             ret.returnValue = newLiteral(0, objectType("int"))
-                            block += ret
+                            block.statements += ret
                         }
                 }
 

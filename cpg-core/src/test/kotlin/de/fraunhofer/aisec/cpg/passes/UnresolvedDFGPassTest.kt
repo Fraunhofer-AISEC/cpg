@@ -169,13 +169,13 @@ class UnresolvedDFGPassTest {
                             c.body =
                                 newBlock(enterScope = true) { block ->
                                     val memberAccess = newMemberAccess("i", newReference("this"))
-                                    block +=
+                                    block.statements +=
                                         newAssign(
                                             operatorCode = "=",
                                             lhs = listOf(memberAccess),
                                             rhs = listOf(newReference("i")),
                                         )
-                                    block += newReturn().also { it.isImplicit = true }
+                                    block.statements += newReturn().also { it.isImplicit = true }
                                 }
                         }
                     scopeManager.addDeclaration(ctor)
@@ -199,7 +199,7 @@ class UnresolvedDFGPassTest {
                                         it.lhs = newMemberAccess("i", newReference("this"))
                                         it.rhs = newReference("arg")
                                     }
-                                block += returnStmt
+                                block.statements += returnStmt
                             }
                     }
 
@@ -233,7 +233,7 @@ class UnresolvedDFGPassTest {
                                         }
                                 osDeclStmt.declarations += os
                                 scopeManager.addDeclaration(os)
-                                block += osDeclStmt
+                                block.statements += osDeclStmt
 
                                 val sDeclStmt = newDeclarationStatement()
                                 val s =
@@ -246,7 +246,7 @@ class UnresolvedDFGPassTest {
                                     }
                                 sDeclStmt.declarations += s
                                 scopeManager.addDeclaration(s)
-                                block += sDeclStmt
+                                block.statements += sDeclStmt
 
                                 val s2DeclStmt = newDeclarationStatement()
                                 val s2 =
@@ -263,7 +263,7 @@ class UnresolvedDFGPassTest {
                                     }
                                 s2DeclStmt.declarations += s2
                                 scopeManager.addDeclaration(s2)
-                                block += s2DeclStmt
+                                block.statements += s2DeclStmt
 
                                 val ducDeclStmt = newDeclarationStatement()
                                 val duc =
@@ -282,7 +282,7 @@ class UnresolvedDFGPassTest {
                                     }
                                 ducDeclStmt.declarations += duc
                                 scopeManager.addDeclaration(duc)
-                                block += ducDeclStmt
+                                block.statements += ducDeclStmt
 
                                 val iDeclStmt = newDeclarationStatement()
                                 val i =
@@ -302,7 +302,7 @@ class UnresolvedDFGPassTest {
                                     }
                                 iDeclStmt.declarations += i
                                 scopeManager.addDeclaration(i)
-                                block += iDeclStmt
+                                block.statements += iDeclStmt
                             }
                     }
                 }

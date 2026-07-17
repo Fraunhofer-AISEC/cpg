@@ -81,7 +81,7 @@ class TupleTest {
                         newBlock(enterScope = true) { block ->
                             val printCall = newCall(newReference("print"))
                             printCall.arguments += newReference("a")
-                            block += printCall
+                            block.statements += printCall
                         }
                 }
 
@@ -167,13 +167,13 @@ class TupleTest {
                             scopeManager.addDeclaration(tuple)
                             val declStmt = newDeclarationStatement()
                             declStmt.declarations += tuple
-                            block += declStmt
+                            block.statements += declStmt
 
                             tuple.elements.forEach { scopeManager.addDeclaration(it) }
 
                             val printCall = newCall(newReference("print"))
                             printCall.arguments += newReference("a")
-                            block += printCall
+                            block.statements += printCall
                         }
                 }
 

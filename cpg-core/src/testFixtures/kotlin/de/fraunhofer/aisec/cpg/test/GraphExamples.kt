@@ -126,14 +126,14 @@ private fun Expression.line(tuName: String, i: Int): Expression {
 private fun LanguageFrontend<*, *>.addIfTrueBreakAndPostIf(block: Block) {
     val ifNode = newIfElse()
     ifNode.condition = newLiteral(true, objectType("bool"))
-    ifNode.thenStatement = newBlock(enterScope = true) { it += newBreak() }
-    block += ifNode
-    block += newCall(newReference("postIf"))
+    ifNode.thenStatement = newBlock(enterScope = true) { it.statements += newBreak() }
+    block.statements += ifNode
+    block.statements += newCall(newReference("postIf"))
 }
 
 /** Mirrors the recurring `loopElseStmt { call("elseCall") }` idiom used below. */
 private fun LanguageFrontend<*, *>.elseCallBlock(): Block =
-    newBlock(enterScope = true) { it += newCall(newReference("elseCall")) }
+    newBlock(enterScope = true) { it.statements += newCall(newReference("elseCall")) }
 
 /** Mirrors the removed Fluent DSL's `field` helper. */
 private fun LanguageFrontend<*, *>.addField(
@@ -186,7 +186,7 @@ private fun LanguageFrontend<*, *>.declareVariable(
     init?.invoke(v)
     declStmt.declarations += v
     scopeManager.addDeclaration(v)
-    block += declStmt
+    block.statements += declStmt
     return v
 }
 
@@ -208,7 +208,7 @@ class GraphExamples {
                     func.type = computeType(func)
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            block +=
+                            block.statements +=
                                 newReturn().also {
                                     it.returnValue = newLiteral(0, objectType("int"))
                                 }
@@ -224,7 +224,8 @@ class GraphExamples {
                                 initList.initializers = mutableListOf(dottedCall("foo"))
                                 v.initializer = initList
                             }
-                            block += newReturn().also { it.returnValue = newReference("i") }
+                            block.statements +=
+                                newReturn().also { it.returnValue = newReference("i") }
                         }
                 }
 
@@ -254,9 +255,9 @@ class GraphExamples {
                                 w1.statement = newBlock().also { addIfTrueBreakAndPostIf(it) }
                                 w1.elseStatement = elseCallBlock()
                                 scopeManager.leaveScope(w1)
-                                block += w1
+                                block.statements += w1
 
-                                block += dottedCall("postWhile")
+                                block.statements += dottedCall("postWhile")
 
                                 val w2 = newWhile()
                                 scopeManager.enterScope(w2)
@@ -264,7 +265,7 @@ class GraphExamples {
                                 w2.statement = newBlock().also { addIfTrueBreakAndPostIf(it) }
                                 w2.elseStatement = elseCallBlock()
                                 scopeManager.leaveScope(w2)
-                                block += w2
+                                block.statements += w2
                             }
                     }
                 }
@@ -295,9 +296,9 @@ class GraphExamples {
                                 d1.statement = newBlock().also { addIfTrueBreakAndPostIf(it) }
                                 d1.elseStatement = elseCallBlock()
                                 scopeManager.leaveScope(d1)
-                                block += d1
+                                block.statements += d1
 
-                                block += dottedCall("postDo")
+                                block.statements += dottedCall("postDo")
 
                                 val d2 = newDoWhile()
                                 scopeManager.enterScope(d2)
@@ -305,7 +306,7 @@ class GraphExamples {
                                 d2.statement = newBlock().also { addIfTrueBreakAndPostIf(it) }
                                 d2.elseStatement = elseCallBlock()
                                 scopeManager.leaveScope(d2)
-                                block += d2
+                                block.statements += d2
                             }
                     }
                 }
@@ -352,9 +353,9 @@ class GraphExamples {
                                     return forNode
                                 }
 
-                                block += buildFor()
-                                block += dottedCall("postFor")
-                                block += buildFor()
+                                block.statements += buildFor()
+                                block.statements += dottedCall("postFor")
+                                block.statements += buildFor()
                             }
                     }
                 }
@@ -393,9 +394,9 @@ class GraphExamples {
                                     return forEach
                                 }
 
-                                block += buildForEach()
-                                block += dottedCall("postForEach")
-                                block += buildForEach()
+                                block.statements += buildForEach()
+                                block.statements += dottedCall("postForEach")
+                                block.statements += buildForEach()
                             }
                     }
                 }
@@ -428,15 +429,19 @@ class GraphExamples {
                                 forEach1.variable =
                                     newDeclarationStatement().also { it.declarations += aVarFE }
                                 scopeManager.addDeclaration(aVarFE)
-                                forEach1.statement = newBlock().also { it += dottedCall("inBody") }
+                                forEach1.statement =
+                                    newBlock().also { it.statements += dottedCall("inBody") }
                                 forEach1.elseStatement =
-                                    newBlock(enterScope = true) { it += dottedCall("inElse") }
-                                block += forEach1
+                                    newBlock(enterScope = true) {
+                                        it.statements += dottedCall("inElse")
+                                    }
+                                block.statements += forEach1
 
                                 // declare { variable("a") { literal(1) + forStmt {...} } }
                                 val forNode = newFor()
                                 forNode.usedAsExpression = true
-                                forNode.statement = newBlock().also { it += dottedCall("bodyCall") }
+                                forNode.statement =
+                                    newBlock().also { it.statements += dottedCall("bodyCall") }
                                 val initVar =
                                     newVariable("a", objectType("int")).also {
                                         it.initializer = newLiteral(0, objectType("int"))
@@ -457,7 +462,7 @@ class GraphExamples {
                                 // also being used as an operand of `+` below -- both effects are
                                 // faithfully reproduced (the For node ends up both as a top-level
                                 // statement and nested inside the declaration's initializer).
-                                block += forNode
+                                block.statements += forNode
 
                                 declareVariable(block, "a", unknownType()) { v ->
                                     v.initializer =
@@ -472,10 +477,11 @@ class GraphExamples {
                                 scopeManager.enterScope(doNode)
                                 doNode.usedAsExpression = true
                                 doNode.condition = newLiteral(true, objectType("bool"))
-                                doNode.statement = newBlock().also { it += dottedCall("bodyCall") }
+                                doNode.statement =
+                                    newBlock().also { it.statements += dottedCall("bodyCall") }
                                 doNode.elseStatement = elseCallBlock()
                                 scopeManager.leaveScope(doNode)
-                                block += doNode
+                                block.statements += doNode
 
                                 // label("lab") { usedAsExpression = true; whileStmt {...} }
                                 val labelNode = newLabel()
@@ -486,11 +492,11 @@ class GraphExamples {
                                 whileNode.usedAsExpression = true
                                 whileNode.condition = newLiteral(true, objectType("bool"))
                                 whileNode.statement =
-                                    newBlock().also { it += dottedCall("bodyCall") }
+                                    newBlock().also { it.statements += dottedCall("bodyCall") }
                                 whileNode.elseStatement = elseCallBlock()
                                 scopeManager.leaveScope(whileNode)
                                 labelNode.subStatement = whileNode
-                                block += labelNode
+                                block.statements += labelNode
 
                                 // ifStmt { usedAsExpression = true; ... }
                                 val ifNode = newIfElse()
@@ -501,10 +507,14 @@ class GraphExamples {
                                         it.rhs = newLiteral(7, objectType("int"))
                                     }
                                 ifNode.thenStatement =
-                                    newBlock(enterScope = true) { it += dottedCall("thenCall") }
+                                    newBlock(enterScope = true) {
+                                        it.statements += dottedCall("thenCall")
+                                    }
                                 ifNode.elseStatement =
-                                    newBlock(enterScope = true) { it += dottedCall("elseCall") }
-                                block += ifNode
+                                    newBlock(enterScope = true) {
+                                        it.statements += dottedCall("elseCall")
+                                    }
+                                block.statements += ifNode
 
                                 // switchStmt(ref("someref")) { usedAsExpression = true; ... }
                                 val selector = newReference("someref")
@@ -514,11 +524,11 @@ class GraphExamples {
                                 switchNode.usedAsExpression = true
                                 switchNode.statement =
                                     newBlock().also { blk ->
-                                        blk +=
+                                        blk.statements +=
                                             newCase().also {
                                                 it.caseExpression = newReference("True")
                                             }
-                                        blk +=
+                                        blk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("a")),
@@ -529,39 +539,39 @@ class GraphExamples {
                                                     }
                                                 ),
                                             )
-                                        blk +=
+                                        blk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("c")),
                                                 listOf(newLiteral(-2, objectType("int"))),
                                             )
-                                        blk += newBreak()
-                                        blk +=
+                                        blk.statements += newBreak()
+                                        blk.statements +=
                                             newCase().also {
                                                 it.caseExpression = newReference("False")
                                             }
-                                        blk +=
+                                        blk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("a")),
                                                 listOf(newLiteral(290, objectType("int"))),
                                             )
-                                        blk +=
+                                        blk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("d")),
                                                 listOf(newLiteral(-2, objectType("int"))),
                                             )
-                                        blk +=
+                                        blk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("b")),
                                                 listOf(newLiteral(-2, objectType("int"))),
                                             )
-                                        blk += newBreak()
+                                        blk.statements += newBreak()
                                     }
                                 scopeManager.leaveScope(switchNode)
-                                block += switchNode
+                                block.statements += switchNode
 
                                 // declare { usedAsExpression = true; variable("a") { literal(42) }
                                 // }
@@ -573,7 +583,7 @@ class GraphExamples {
                                     }
                                 declStmtFinal.declarations += varFinal
                                 scopeManager.addDeclaration(varFinal)
-                                block += declStmtFinal
+                                block.statements += declStmtFinal
                             }
                     }
                 }
@@ -598,7 +608,7 @@ class GraphExamples {
                         method.type = computeType(method)
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block += dottedCall("preComprehensions")
+                                block.statements += dottedCall("preComprehensions")
 
                                 val listComp = newCollectionComprehension()
                                 listComp.statement = newReference("i")
@@ -618,9 +628,9 @@ class GraphExamples {
                                             }
                                     }
                                 listComp.comprehensionExpressions = mutableListOf(comp1, comp2)
-                                block += listComp
+                                block.statements += listComp
 
-                                block += dottedCall("postComprehensions")
+                                block.statements += dottedCall("postComprehensions")
                             }
                     }
                 }
@@ -652,20 +662,21 @@ class GraphExamples {
                                 "node",
                                 objectType("T").reference(PointerType.PointerOrigin.POINTER),
                             )
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(newMember("value", newReference("node"), "->")),
                                     listOf(newLiteral(42, objectType("int"))),
                                 )
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(newMember("next", newReference("node"), "->")),
                                     listOf(newReference("node")),
                                 )
-                            block += newMemberCall(newMemberAccess("dump", newReference("node")))
-                            block += newReturn().also { it.isImplicit = true }
+                            block.statements +=
+                                newMemberCall(newMemberAccess("dump", newReference("node")))
+                            block.statements += newReturn().also { it.isImplicit = true }
                         }
                 }
 
@@ -692,13 +703,13 @@ class GraphExamples {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             declareVariable(block, "node", objectType("T"))
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(newMember("value", newReference("node"))),
                                     listOf(newLiteral(42, objectType("int"))),
                                 )
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(newMember("next", newReference("node"))),
@@ -708,7 +719,7 @@ class GraphExamples {
                                         }
                                     ),
                                 )
-                            block += newReturn().also { it.isImplicit = true }
+                            block.statements += newReturn().also { it.isImplicit = true }
                         }
                 }
 
@@ -739,7 +750,7 @@ class GraphExamples {
                         newBlock(enterScope = true) { block ->
                             declareVariable(block, "a")
                             declareVariable(block, "b")
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(newReference("a")),
@@ -750,7 +761,7 @@ class GraphExamples {
                                         }
                                     ),
                                 )
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(newReference("b")),
@@ -793,7 +804,8 @@ class GraphExamples {
                     func.type = computeType(func)
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            block += newReturn().also { it.returnValue = dottedCall("bar") }
+                            block.statements +=
+                                newReturn().also { it.returnValue = dottedCall("bar") }
                         }
                 }
 
@@ -823,7 +835,7 @@ class GraphExamples {
                         method.type = computeType(method)
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block +=
+                                block.statements +=
                                     newReturn().also {
                                         it.returnValue =
                                             newUnaryOperator("-", false, false).also { u ->
@@ -861,7 +873,7 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 declareVariable(block, "node", objectType("java.lang.String"))
-                                block += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn().also { it.isImplicit = true }
                             }
                     }
                 }
@@ -892,7 +904,8 @@ class GraphExamples {
                         method.receiver = newVariable("this", objectType("Variables"))
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block += newReturn().also { it.returnValue = newMember("field") }
+                                block.statements +=
+                                    newReturn().also { it.returnValue = newMember("field") }
                             }
                     }
 
@@ -905,7 +918,8 @@ class GraphExamples {
                                 declareVariable(block, "local", objectType("int")) {
                                     it.initializer = newLiteral(42, objectType("int"))
                                 }
-                                block += newReturn().also { it.returnValue = newReference("local") }
+                                block.statements +=
+                                    newReturn().also { it.returnValue = newReference("local") }
                             }
                     }
 
@@ -918,7 +932,8 @@ class GraphExamples {
                                 declareVariable(block, "field", objectType("int")) {
                                     it.initializer = newLiteral(43, objectType("int"))
                                 }
-                                block += newReturn().also { it.returnValue = newReference("field") }
+                                block.statements +=
+                                    newReturn().also { it.returnValue = newReference("field") }
                             }
                     }
 
@@ -931,7 +946,7 @@ class GraphExamples {
                                 declareVariable(block, "field", objectType("int")) {
                                     it.initializer = newLiteral(43, objectType("int"))
                                 }
-                                block +=
+                                block.statements +=
                                     newReturn().also {
                                         it.returnValue = newMember("field", newReference("this"))
                                     }
@@ -961,11 +976,11 @@ class GraphExamples {
                             declareVariable(block, "i", objectType("int")) {
                                 it.initializer = newLiteral(0, objectType("int"))
                             }
-                            block +=
+                            block.statements +=
                                 newUnaryOperator("++", true, false).also {
                                     it.input = newReference("i")
                                 }
-                            block += newReturn().also { it.isImplicit = true }
+                            block.statements += newReturn().also { it.isImplicit = true }
                         }
                 }
 
@@ -991,13 +1006,13 @@ class GraphExamples {
                             declareVariable(block, "i", objectType("int")) {
                                 it.initializer = newLiteral(0, objectType("int"))
                             }
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "+=",
                                     listOf(newReference("i")),
                                     listOf(newLiteral(0, objectType("int"))),
                                 )
-                            block += newReturn().also { it.isImplicit = true }
+                            block.statements += newReturn().also { it.isImplicit = true }
                         }
                 }
 
@@ -1085,7 +1100,7 @@ class GraphExamples {
                                         it.rhs = mutableListOf(newLiteral(3, objectType("int")))
                                         it.usedAsExpression = true
                                     }
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(a1),
@@ -1100,9 +1115,9 @@ class GraphExamples {
                                 newReference("b").also {
                                     it.location = PhysicalLocation(URI(tuName), Region(6, 7, 6, 8))
                                 }
-                            block += newAssign("=", listOf(a2), listOf(b2))
+                            block.statements += newAssign("=", listOf(a2), listOf(b2))
 
-                            block += newReturn().also { it.isImplicit = true }
+                            block.statements += newReturn().also { it.isImplicit = true }
                         }
                 }
 
@@ -1151,7 +1166,7 @@ class GraphExamples {
                                 scopeManager.addDeclaration(bVar)
                                 scopeManager.addDeclaration(cVar)
                                 scopeManager.addDeclaration(dVar)
-                                block += declStmtBCD
+                                block.statements += declStmtBCD
 
                                 declareVariable(block, "sunShines", objectType("boolean")) {
                                     it.initializer = newLiteral(true, objectType("boolean"))
@@ -1165,13 +1180,13 @@ class GraphExamples {
                                     }
                                 outerIf.thenStatement =
                                     newBlock(enterScope = true) { thenBlk ->
-                                        thenBlk +=
+                                        thenBlk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("d")),
                                                 listOf(newLiteral(5, objectType("int"))),
                                             )
-                                        thenBlk +=
+                                        thenBlk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("c")),
@@ -1186,7 +1201,7 @@ class GraphExamples {
                                             }
                                         innerIf.thenStatement =
                                             newBlock(enterScope = true) { innerThen ->
-                                                innerThen +=
+                                                innerThen.statements +=
                                                     newAssign(
                                                         "=",
                                                         listOf(newReference("d")),
@@ -1198,7 +1213,7 @@ class GraphExamples {
                                                             }
                                                         ),
                                                     )
-                                                innerThen +=
+                                                innerThen.statements +=
                                                     newAssign(
                                                         "=",
                                                         listOf(newReference("a")),
@@ -1232,7 +1247,7 @@ class GraphExamples {
                                                     newLiteral(-2, objectType("int"))
                                                 elseIfNode.thenStatement =
                                                     newBlock(enterScope = true) { elseIfThen ->
-                                                        elseIfThen +=
+                                                        elseIfThen.statements +=
                                                             newAssign(
                                                                 "=",
                                                                 listOf(newReference("a")),
@@ -1249,30 +1264,30 @@ class GraphExamples {
                                                             )
                                                     }
                                             }
-                                        thenBlk += innerIf
+                                        thenBlk.statements += innerIf
                                     }
                                 outerIf.elseStatement =
                                     newBlock(enterScope = true) { elseBlk ->
-                                        elseBlk +=
+                                        elseBlk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("b")),
                                                 listOf(newLiteral(-2, objectType("int"))),
                                             )
-                                        elseBlk +=
+                                        elseBlk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("d")),
                                                 listOf(newLiteral(-2, objectType("int"))),
                                             )
-                                        elseBlk +=
+                                        elseBlk.statements +=
                                             newUnaryOperator("--", true, false).also {
                                                 it.input = newReference("a")
                                             }
                                     }
-                                block += outerIf
+                                block.statements += outerIf
 
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "=",
                                         listOf(newReference("a")),
@@ -1289,11 +1304,11 @@ class GraphExamples {
                                 scopeManager.enterScope(switchNode)
                                 switchNode.statement =
                                     newBlock().also { blk ->
-                                        blk +=
+                                        blk.statements +=
                                             newCase().also {
                                                 it.caseExpression = newReference("True")
                                             }
-                                        blk +=
+                                        blk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("a")),
@@ -1304,41 +1319,41 @@ class GraphExamples {
                                                     }
                                                 ),
                                             )
-                                        blk +=
+                                        blk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("c")),
                                                 listOf(newLiteral(-2, objectType("int"))),
                                             )
-                                        blk += newBreak()
-                                        blk +=
+                                        blk.statements += newBreak()
+                                        blk.statements +=
                                             newCase().also {
                                                 it.caseExpression = newReference("False")
                                             }
-                                        blk +=
+                                        blk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("a")),
                                                 listOf(newLiteral(290, objectType("int"))),
                                             )
-                                        blk +=
+                                        blk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("d")),
                                                 listOf(newLiteral(-2, objectType("int"))),
                                             )
-                                        blk +=
+                                        blk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("b")),
                                                 listOf(newLiteral(-2, objectType("int"))),
                                             )
-                                        blk += newBreak()
+                                        blk.statements += newBreak()
                                     }
                                 scopeManager.leaveScope(switchNode)
-                                block += switchNode
+                                block.statements += switchNode
 
-                                block += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn().also { it.isImplicit = true }
                             }
                     }
                 }
@@ -1371,7 +1386,7 @@ class GraphExamples {
                             newVariable("this", objectType("ControlFlowSensitiveDFGIfMerge"))
                         ctor.body =
                             newBlock(enterScope = true) { block ->
-                                block += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn().also { it.isImplicit = true }
                             }
                     }
 
@@ -1395,7 +1410,7 @@ class GraphExamples {
                                     }
                                 ifNode.thenStatement =
                                     newBlock(enterScope = true) { thenBlk ->
-                                        thenBlk +=
+                                        thenBlk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("a")),
@@ -1417,14 +1432,14 @@ class GraphExamples {
                                                 )
                                             )
                                         printlnCall.arguments += newReference("a")
-                                        elseBlk += printlnCall
+                                        elseBlk.statements += printlnCall
                                     }
-                                block += ifNode
+                                block.statements += ifNode
 
                                 declareVariable(block, "b", objectType("int")) {
                                     it.initializer = newReference("a")
                                 }
-                                block += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn().also { it.isImplicit = true }
                             }
                     }
 
@@ -1454,13 +1469,13 @@ class GraphExamples {
                                                     }
                                         }
                                 }
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "=",
                                         listOf(newMember("bla", newReference("obj"))),
                                         listOf(newLiteral(3, objectType("int"))),
                                     )
-                                block += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn().also { it.isImplicit = true }
                             }
                     }
                 }
@@ -1505,11 +1520,11 @@ class GraphExamples {
                                 scopeManager.enterScope(switchNode)
                                 switchNode.statement =
                                     newBlock().also { blk ->
-                                        blk +=
+                                        blk.statements +=
                                             newCase().also {
                                                 it.caseExpression = newLiteral(1, objectType("int"))
                                             }
-                                        blk +=
+                                        blk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(
@@ -1523,12 +1538,12 @@ class GraphExamples {
                                                 ),
                                                 listOf(newLiteral(10, objectType("int"))),
                                             )
-                                        blk += newBreak()
-                                        blk +=
+                                        blk.statements += newBreak()
+                                        blk.statements +=
                                             newCase().also {
                                                 it.caseExpression = newLiteral(2, objectType("int"))
                                             }
-                                        blk +=
+                                        blk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(
@@ -1542,12 +1557,12 @@ class GraphExamples {
                                                 ),
                                                 listOf(newLiteral(11, objectType("int"))),
                                             )
-                                        blk += newBreak()
-                                        blk +=
+                                        blk.statements += newBreak()
+                                        blk.statements +=
                                             newCase().also {
                                                 it.caseExpression = newLiteral(3, objectType("int"))
                                             }
-                                        blk +=
+                                        blk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(
@@ -1561,7 +1576,7 @@ class GraphExamples {
                                                 ),
                                                 listOf(newLiteral(12, objectType("int"))),
                                             )
-                                        blk += newDefault()
+                                        blk.statements += newDefault()
                                         val printlnCall =
                                             newMemberCall(
                                                 newMemberAccess(
@@ -1575,16 +1590,16 @@ class GraphExamples {
                                                 )
                                             )
                                         printlnCall.arguments += newReference("a")
-                                        blk += printlnCall
-                                        blk += newBreak()
+                                        blk.statements += printlnCall
+                                        blk.statements += newBreak()
                                     }
                                 scopeManager.leaveScope(switchNode)
-                                block += switchNode
+                                block.statements += switchNode
 
                                 declareVariable(block, "b", objectType("int")) {
                                     it.initializer = newReference("a")
                                 }
-                                block += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn().also { it.isImplicit = true }
                             }
                     }
                 }
@@ -1628,7 +1643,7 @@ class GraphExamples {
                                     }
                                 ifNode.thenStatement =
                                     newBlock(enterScope = true) { thenBlk ->
-                                        thenBlk +=
+                                        thenBlk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("a")),
@@ -1637,7 +1652,7 @@ class GraphExamples {
                                     }
                                 ifNode.elseStatement =
                                     newBlock(enterScope = true) { elseBlk ->
-                                        elseBlk +=
+                                        elseBlk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("a")),
@@ -1647,9 +1662,9 @@ class GraphExamples {
                                             it.initializer = newReference("a")
                                         }
                                     }
-                                block += ifNode
+                                block.statements += ifNode
 
-                                block += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn().also { it.isImplicit = true }
                             }
                     }
                 }
@@ -1710,7 +1725,7 @@ class GraphExamples {
                                                     }
                                                 innerIf.thenStatement =
                                                     newBlock(enterScope = true) { thenBlk ->
-                                                        thenBlk +=
+                                                        thenBlk.statements +=
                                                             newAssign(
                                                                 "=",
                                                                 listOf(newReference("a")),
@@ -1718,7 +1733,7 @@ class GraphExamples {
                                                                     newLiteral(1, objectType("int"))
                                                                 ),
                                                             )
-                                                        thenBlk +=
+                                                        thenBlk.statements +=
                                                             newContinue().also { it.label = "lab1" }
                                                     }
                                                 innerIf.elseStatement =
@@ -1738,8 +1753,8 @@ class GraphExamples {
                                                                 )
                                                             )
                                                         printlnCall.arguments += newReference("a")
-                                                        elseBlk += printlnCall
-                                                        elseBlk +=
+                                                        elseBlk.statements += printlnCall
+                                                        elseBlk.statements +=
                                                             newAssign(
                                                                 "=",
                                                                 listOf(newReference("a")),
@@ -1747,11 +1762,11 @@ class GraphExamples {
                                                                     newLiteral(2, objectType("int"))
                                                                 ),
                                                             )
-                                                        elseBlk +=
+                                                        elseBlk.statements +=
                                                             newBreak().also { it.label = "lab1" }
                                                     }
-                                                innerBody += innerIf
-                                                innerBody +=
+                                                innerBody.statements += innerIf
+                                                innerBody.statements +=
                                                     newAssign(
                                                         "=",
                                                         listOf(newReference("a")),
@@ -1759,7 +1774,7 @@ class GraphExamples {
                                                     )
                                             }
                                         scopeManager.leaveScope(innerWhile)
-                                        outerBody += innerWhile
+                                        outerBody.statements += innerWhile
 
                                         val printlnCall2 =
                                             newMemberCall(
@@ -1774,8 +1789,8 @@ class GraphExamples {
                                                 )
                                             )
                                         printlnCall2.arguments += newReference("a")
-                                        outerBody += printlnCall2
-                                        outerBody +=
+                                        outerBody.statements += printlnCall2
+                                        outerBody.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("a")),
@@ -1784,7 +1799,7 @@ class GraphExamples {
                                     }
                                 scopeManager.leaveScope(outerWhile)
                                 labelNode.subStatement = outerWhile
-                                block += labelNode
+                                block.statements += labelNode
 
                                 val printlnCall3 =
                                     newMemberCall(
@@ -1799,8 +1814,8 @@ class GraphExamples {
                                         )
                                     )
                                 printlnCall3.arguments += newReference("a")
-                                block += printlnCall3
-                                block += newReturn().also { it.isImplicit = true }
+                                block.statements += printlnCall3
+                                block.statements += newReturn().also { it.isImplicit = true }
                             }
                     }
                 }
@@ -1852,7 +1867,7 @@ class GraphExamples {
                                             }
                                         ifNode.thenStatement =
                                             newBlock(enterScope = true) { thenBlk ->
-                                                thenBlk +=
+                                                thenBlk.statements +=
                                                     newAssign(
                                                         "=",
                                                         listOf(newReference("a")),
@@ -1874,26 +1889,26 @@ class GraphExamples {
                                                         )
                                                     )
                                                 printlnCall.arguments += newReference("a")
-                                                elseBlk += printlnCall
-                                                elseBlk +=
+                                                elseBlk.statements += printlnCall
+                                                elseBlk.statements +=
                                                     newAssign(
                                                         "=",
                                                         listOf(newReference("a")),
                                                         listOf(newLiteral(2, objectType("int"))),
                                                     )
                                             }
-                                        body += ifNode
+                                        body.statements += ifNode
                                     }
                                 scopeManager.leaveScope(whileNode)
-                                block += whileNode
+                                block.statements += whileNode
 
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "=",
                                         listOf(newReference("a")),
                                         listOf(newLiteral(3, objectType("int"))),
                                     )
-                                block += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn().also { it.isImplicit = true }
                             }
                     }
                 }
@@ -1927,7 +1942,7 @@ class GraphExamples {
                                 declareVariable(block, "b", objectType("int")) {
                                     it.initializer = newLiteral(1, objectType("int"))
                                 }
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "=",
                                         listOf(newReference("a")),
@@ -1976,7 +1991,7 @@ class GraphExamples {
                                     }
                                 ifNode.thenStatement =
                                     newBlock(enterScope = true) { thenBlk ->
-                                        thenBlk +=
+                                        thenBlk.statements +=
                                             newReturn().also {
                                                 it.returnValue = newLiteral(2, objectType("int"))
                                                 it.location =
@@ -1988,7 +2003,7 @@ class GraphExamples {
                                     }
                                 ifNode.elseStatement =
                                     newBlock(enterScope = true) { elseBlk ->
-                                        elseBlk +=
+                                        elseBlk.statements +=
                                             newReturn().also {
                                                 it.returnValue = newReference("a")
                                                 it.location =
@@ -1998,9 +2013,9 @@ class GraphExamples {
                                                     )
                                             }
                                     }
-                                block += ifNode
+                                block.statements += ifNode
 
-                                block += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn().also { it.isImplicit = true }
                             }
                     }
                 }
@@ -2027,7 +2042,7 @@ class GraphExamples {
                             ctor.receiver = newVariable("this", objectType("SimpleClass"))
                             ctor.body =
                                 newBlock(enterScope = true) { block ->
-                                    block += newReturn().also { it.isImplicit = true }
+                                    block.statements += newReturn().also { it.isImplicit = true }
                                 }
                         }
 
@@ -2051,7 +2066,7 @@ class GraphExamples {
                                         )
                                     printlnCall.arguments +=
                                         newLiteral("Hello world", unknownType())
-                                    block += printlnCall
+                                    block.statements += printlnCall
 
                                     declareVariable(block, "x", objectType("int")) {
                                         it.initializer = newLiteral(0, unknownType())
@@ -2073,7 +2088,7 @@ class GraphExamples {
                                         }
                                     ifNode.thenStatement =
                                         newBlock(enterScope = true) { thenBlk ->
-                                            thenBlk +=
+                                            thenBlk.statements +=
                                                 newAssign(
                                                     "=",
                                                     listOf(newReference("x")),
@@ -2087,7 +2102,7 @@ class GraphExamples {
                                         }
                                     ifNode.elseStatement =
                                         newBlock(enterScope = true) { elseBlk ->
-                                            elseBlk +=
+                                            elseBlk.statements +=
                                                 newAssign(
                                                     "=",
                                                     listOf(newReference("x")),
@@ -2099,9 +2114,10 @@ class GraphExamples {
                                                     ),
                                                 )
                                         }
-                                    block += ifNode
+                                    block.statements += ifNode
 
-                                    block += newReturn().also { it.returnValue = newReference("x") }
+                                    block.statements +=
+                                        newReturn().also { it.returnValue = newReference("x") }
                                 }
                         }
                     }
@@ -2131,7 +2147,7 @@ class GraphExamples {
                         ctor.receiver = newVariable("this", objectType("Dataflow"))
                         ctor.body =
                             newBlock(enterScope = true) { block ->
-                                block += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn().also { it.isImplicit = true }
                             }
                     }
 
@@ -2141,7 +2157,7 @@ class GraphExamples {
                         method.receiver = newVariable("this", objectType("Dataflow"))
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block +=
+                                block.statements +=
                                     newReturn().also {
                                         it.returnValue =
                                             newBinaryOperator("+").also { op ->
@@ -2162,7 +2178,7 @@ class GraphExamples {
                         method.receiver = newVariable("this", objectType("Dataflow"))
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block +=
+                                block.statements +=
                                     newReturn().also {
                                         it.returnValue = newLiteral("abcd", unknownType())
                                     }
@@ -2189,8 +2205,8 @@ class GraphExamples {
                                         )
                                     )
                                 printlnCall.arguments += newReference("s")
-                                block += printlnCall
-                                block += newReturn().also { it.isImplicit = true }
+                                block.statements += printlnCall
+                                block.statements += newReturn().also { it.isImplicit = true }
                             }
                     }
 
@@ -2213,11 +2229,11 @@ class GraphExamples {
                                 declareVariable(block, "s", objectType("String")) {
                                     it.initializer = dottedCall("sc.toString")
                                 }
-                                block +=
+                                block.statements +=
                                     dottedCall("sc.print").also {
                                         it.arguments += newReference("s")
                                     }
-                                block +=
+                                block.statements +=
                                     dottedCall("sc.print").also {
                                         it.arguments += dottedCall("sc.toString")
                                     }
@@ -2249,7 +2265,7 @@ class GraphExamples {
                         ctor.isImplicit = true
                         ctor.body =
                             newBlock(enterScope = true) { block ->
-                                block += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn().also { it.isImplicit = true }
                             }
                     }
 
@@ -2259,7 +2275,7 @@ class GraphExamples {
                         method.receiver = newVariable("this", objectType("ShortcutClass"))
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block +=
+                                block.statements +=
                                     newReturn().also {
                                         it.returnValue =
                                             newBinaryOperator("+").also { op ->
@@ -2293,7 +2309,7 @@ class GraphExamples {
                                         )
                                     )
                                 printlnCall.arguments += dottedCall("this.toString")
-                                block += printlnCall
+                                block.statements += printlnCall
                             }
                     }
 
@@ -2320,7 +2336,7 @@ class GraphExamples {
                                             }
                                         innerIf.thenStatement =
                                             newBlock(enterScope = true) { innerThen ->
-                                                innerThen +=
+                                                innerThen.statements +=
                                                     newAssign(
                                                         "=",
                                                         listOf(newMember("attr")),
@@ -2329,25 +2345,25 @@ class GraphExamples {
                                             }
                                         innerIf.elseStatement =
                                             newBlock(enterScope = true) { innerElse ->
-                                                innerElse +=
+                                                innerElse.statements +=
                                                     newAssign(
                                                         "=",
                                                         listOf(newMember("attr")),
                                                         listOf(newLiteral(2, objectType("int"))),
                                                     )
                                             }
-                                        thenBlk += innerIf
+                                        thenBlk.statements += innerIf
                                     }
                                 outerIf.elseStatement =
                                     newBlock(enterScope = true) { elseBlk ->
-                                        elseBlk +=
+                                        elseBlk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newMember("attr")),
                                                 listOf(newReference("b")),
                                             )
                                     }
-                                block += outerIf
+                                block.statements += outerIf
                             }
                     }
 
@@ -2375,7 +2391,7 @@ class GraphExamples {
                                             }
                                         innerIf.thenStatement =
                                             newBlock(enterScope = true) { innerThen ->
-                                                innerThen +=
+                                                innerThen.statements +=
                                                     newAssign(
                                                         "=",
                                                         listOf(newReference("a")),
@@ -2384,25 +2400,25 @@ class GraphExamples {
                                             }
                                         innerIf.elseStatement =
                                             newBlock(enterScope = true) { innerElse ->
-                                                innerElse +=
+                                                innerElse.statements +=
                                                     newAssign(
                                                         "=",
                                                         listOf(newReference("a")),
                                                         listOf(newLiteral(2, objectType("int"))),
                                                     )
                                             }
-                                        thenBlk += innerIf
+                                        thenBlk.statements += innerIf
                                     }
                                 outerIf.elseStatement =
                                     newBlock(enterScope = true) { elseBlk ->
-                                        elseBlk +=
+                                        elseBlk.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("a")),
                                                 listOf(newReference("b")),
                                             )
                                     }
-                                block += outerIf
+                                block.statements += outerIf
                             }
                     }
 
@@ -2423,12 +2439,12 @@ class GraphExamples {
                                                 }
                                         }
                                 }
-                                block += dottedCall("sc.print")
-                                block +=
+                                block.statements += dottedCall("sc.print")
+                                block.statements +=
                                     dottedCall("sc.magic").also {
                                         it.arguments += newLiteral(3, objectType("int"))
                                     }
-                                block +=
+                                block.statements +=
                                     dottedCall("sc.magic2").also {
                                         it.arguments += newLiteral(5, objectType("int"))
                                     }
@@ -2483,7 +2499,7 @@ class GraphExamples {
                         method.type = computeType(method)
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block +=
+                                block.statements +=
                                     newReturn().also {
                                         it.returnValue =
                                             newConstruction(parseName("TestClass")).also { c ->
@@ -2506,7 +2522,7 @@ class GraphExamples {
                                             newMemberAccess("method1", newReference("this"))
                                         )
                                 }
-                                block +=
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("method2", newReference("variable"))
                                     )
@@ -2572,9 +2588,9 @@ class GraphExamples {
                             declStmt.declarations += s2Var
                             scopeManager.addDeclaration(s1Var)
                             scopeManager.addDeclaration(s2Var)
-                            block += declStmt
+                            block.statements += declStmt
 
-                            block +=
+                            block.statements +=
                                 newCall(newReference("doSomething"))
                                     .also {
                                         it.arguments +=
@@ -2583,7 +2599,7 @@ class GraphExamples {
                                     }
                                     .line(tuName, 11)
 
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(
@@ -2592,7 +2608,7 @@ class GraphExamples {
                                     ),
                                     listOf(newLiteral(1, unknownType())),
                                 )
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(
@@ -2602,7 +2618,7 @@ class GraphExamples {
                                     listOf(newLiteral(2, unknownType())),
                                 )
 
-                            block +=
+                            block.statements +=
                                 newCall(newReference("doSomething"))
                                     .also {
                                         it.arguments +=
@@ -2610,7 +2626,7 @@ class GraphExamples {
                                                 .line(tuName, 15)
                                     }
                                     .line(tuName, 15)
-                            block +=
+                            block.statements +=
                                 newCall(newReference("doSomething"))
                                     .also {
                                         it.arguments +=
@@ -2675,7 +2691,7 @@ class GraphExamples {
                         newBlock(enterScope = true) { block ->
                             declareVariable(block, "o", objectType("outer"))
 
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(
@@ -2689,7 +2705,7 @@ class GraphExamples {
                                     listOf(newLiteral(1, unknownType())),
                                 )
 
-                            block +=
+                            block.statements +=
                                 newCall(newReference("doSomething"))
                                     .also {
                                         it.arguments +=
@@ -2729,7 +2745,7 @@ class GraphExamples {
                             declareVariable(block, "a", objectType("short")) {
                                 it.initializer = newLiteral(42, unknownType())
                             }
-                            block +=
+                            block.statements +=
                                 newThrow().also {
                                     it.exception =
                                         dottedCall("SomeError").also { c ->

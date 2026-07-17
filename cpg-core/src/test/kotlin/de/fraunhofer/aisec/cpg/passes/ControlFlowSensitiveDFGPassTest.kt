@@ -348,7 +348,7 @@ class ControlFlowSensitiveDFGPassTest {
                                 }
                             declStmt.declarations += i
                             scopeManager.addDeclaration(i)
-                            block += declStmt
+                            block.statements += declStmt
 
                             // Note: Fluent's "forEachStmt" never enters a new scope for the
                             // ForEach node itself, and "declare"/"call" inside its block attach to
@@ -368,17 +368,17 @@ class ControlFlowSensitiveDFGPassTest {
                                     printfCall.arguments +=
                                         newLiteral("loop: \${}\n", objectType("string"))
                                     printfCall.arguments += newReference("loopVar")
-                                    loopBody += printfCall
+                                    loopBody.statements += printfCall
                                 }
-                            block += forEach
+                            block.statements += forEach
 
                             val printfCall2 = newCall(newReference("printf"))
                             printfCall2.arguments += newLiteral("1\n", objectType("string"))
-                            block += printfCall2
+                            block.statements += printfCall2
 
                             val returnStmt = newReturn()
                             returnStmt.returnValue = newReference("i")
-                            block += returnStmt
+                            block.statements += returnStmt
                         }
                 }
 

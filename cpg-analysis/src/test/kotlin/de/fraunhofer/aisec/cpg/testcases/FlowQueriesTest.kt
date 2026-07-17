@@ -53,7 +53,7 @@ class FlowQueriesTest {
                         val toStringCall = newCall(newReference("toString"))
                         toStringCall.arguments += newReference("arg")
                         ret.returnValue = toStringCall
-                        block += ret
+                        block.statements += ret
                     }
             }
         }
@@ -86,7 +86,7 @@ class FlowQueriesTest {
                             a.initializer = newLiteral(5, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
@@ -105,17 +105,17 @@ class FlowQueriesTest {
                                 }
                             bDecl.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDecl
+                            block.statements += bDecl
 
                             val printA = newCall(newReference("print"))
                             printA.arguments += newReference("a")
-                            block += printA
+                            block.statements += printA
 
                             val printB = newCall(newReference("print"))
                             printB.arguments += newReference("b")
-                            block += printB
+                            block.statements += printB
 
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "+=",
                                     listOf(newReference("b")),
@@ -130,7 +130,7 @@ class FlowQueriesTest {
                                     }
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
-                                        thenBlock +=
+                                        thenBlock.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("a")),
@@ -139,7 +139,7 @@ class FlowQueriesTest {
                                     }
                                 ifElse.elseStatement =
                                     newBlock(enterScope = true) { elseBlock ->
-                                        elseBlock +=
+                                        elseBlock.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(newReference("b")),
@@ -147,7 +147,7 @@ class FlowQueriesTest {
                                             )
                                     }
                             }
-                            block += ifElse
+                            block.statements += ifElse
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
@@ -155,7 +155,7 @@ class FlowQueriesTest {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            block += bazCall
+                            block.statements += bazCall
                         }
                 }
 
@@ -188,7 +188,7 @@ class FlowQueriesTest {
                             a.initializer = newLiteral(5, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
@@ -205,11 +205,11 @@ class FlowQueriesTest {
                                 }
                             bDecl.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDecl
+                            block.statements += bDecl
 
                             val printB = newCall(newReference("print"))
                             printB.arguments += newReference("b")
-                            block += printB
+                            block.statements += printB
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
@@ -217,7 +217,7 @@ class FlowQueriesTest {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            block += bazCall
+                            block.statements += bazCall
                         }
                 }
 
@@ -250,7 +250,7 @@ class FlowQueriesTest {
                             a.initializer = newLiteral(5, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
@@ -267,7 +267,7 @@ class FlowQueriesTest {
                                 }
                             bDecl.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDecl
+                            block.statements += bDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
@@ -279,14 +279,14 @@ class FlowQueriesTest {
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printA = newCall(newReference("print"))
                                         printA.arguments += newReference("a")
-                                        thenBlock += printA
+                                        thenBlock.statements += printA
                                     }
                             }
-                            block += ifElse
+                            block.statements += ifElse
 
                             val printB = newCall(newReference("print"))
                             printB.arguments += newReference("b")
-                            block += printB
+                            block.statements += printB
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
@@ -294,7 +294,7 @@ class FlowQueriesTest {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            block += bazCall
+                            block.statements += bazCall
                         }
                 }
 
@@ -327,7 +327,7 @@ class FlowQueriesTest {
                             a.initializer = newLiteral(5, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
@@ -344,7 +344,7 @@ class FlowQueriesTest {
                                 }
                             bDecl.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDecl
+                            block.statements += bDecl
 
                             // Fluent's `IfElse.addArgument` unconditionally does
                             // `condition = expression` (see `IfElse.addArgument`). The original
@@ -362,19 +362,19 @@ class FlowQueriesTest {
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printA = newCall(newReference("print"))
                                         printA.arguments += newReference("a")
-                                        thenBlock += printA
+                                        thenBlock.statements += printA
                                     }
                                 ifElse.elseStatement =
                                     newBlock(enterScope = true) { elseBlock ->
                                         val printB = newCall(newReference("print"))
                                         printB.arguments += newReference("b")
-                                        elseBlock += printB
+                                        elseBlock.statements += printB
                                     }
                                 val printB2 = newCall(newReference("print"))
                                 printB2.arguments += newReference("b")
                                 ifElse.condition = printB2
                             }
-                            block += ifElse
+                            block.statements += ifElse
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
@@ -382,7 +382,7 @@ class FlowQueriesTest {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            block += bazCall
+                            block.statements += bazCall
                         }
                 }
 
@@ -415,7 +415,7 @@ class FlowQueriesTest {
                             a.initializer = newLiteral(5, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
@@ -428,11 +428,11 @@ class FlowQueriesTest {
                                 }
                             bDecl.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDecl
+                            block.statements += bDecl
 
                             val printA = newCall(newReference("print"))
                             printA.arguments += newReference("a")
-                            block += printA
+                            block.statements += printA
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
@@ -440,7 +440,7 @@ class FlowQueriesTest {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            block += bazCall
+                            block.statements += bazCall
                         }
                 }
 
@@ -473,7 +473,7 @@ class FlowQueriesTest {
                             a.initializer = newLiteral(5, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
@@ -486,7 +486,7 @@ class FlowQueriesTest {
                                 }
                             bDecl.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDecl
+                            block.statements += bDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
@@ -498,10 +498,10 @@ class FlowQueriesTest {
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printA = newCall(newReference("print"))
                                         printA.arguments += newReference("a")
-                                        thenBlock += printA
+                                        thenBlock.statements += printA
                                     }
                             }
-                            block += ifElse
+                            block.statements += ifElse
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
@@ -509,7 +509,7 @@ class FlowQueriesTest {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            block += bazCall
+                            block.statements += bazCall
                         }
                 }
 
@@ -542,7 +542,7 @@ class FlowQueriesTest {
                             a.initializer = newLiteral(5, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
@@ -555,7 +555,7 @@ class FlowQueriesTest {
                                 }
                             bDecl.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDecl
+                            block.statements += bDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
@@ -567,16 +567,16 @@ class FlowQueriesTest {
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printA = newCall(newReference("print"))
                                         printA.arguments += newReference("a")
-                                        thenBlock += printA
+                                        thenBlock.statements += printA
                                     }
                                 ifElse.elseStatement =
                                     newBlock(enterScope = true) { elseBlock ->
                                         val printA2 = newCall(newReference("print"))
                                         printA2.arguments += newReference("a")
-                                        elseBlock += printA2
+                                        elseBlock.statements += printA2
                                     }
                             }
-                            block += ifElse
+                            block.statements += ifElse
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
@@ -584,7 +584,7 @@ class FlowQueriesTest {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            block += bazCall
+                            block.statements += bazCall
                         }
                 }
 
@@ -617,7 +617,7 @@ class FlowQueriesTest {
                             a.initializer = newLiteral(5, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
@@ -630,7 +630,7 @@ class FlowQueriesTest {
                                 }
                             bDecl.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDecl
+                            block.statements += bDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
@@ -642,7 +642,7 @@ class FlowQueriesTest {
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printA = newCall(newReference("print"))
                                         printA.arguments += newReference("a")
-                                        thenBlock += printA
+                                        thenBlock.statements += printA
 
                                         val bazCall = newCall(newReference("baz"))
                                         bazCall.arguments +=
@@ -650,16 +650,16 @@ class FlowQueriesTest {
                                                 it.lhs = newReference("a")
                                                 it.rhs = newReference("b")
                                             }
-                                        thenBlock += bazCall
+                                        thenBlock.statements += bazCall
                                     }
                                 ifElse.elseStatement =
                                     newBlock(enterScope = true) { elseBlock ->
                                         val printC = newCall(newReference("print"))
                                         printC.arguments += newReference("c")
-                                        elseBlock += printC
+                                        elseBlock.statements += printC
                                     }
                             }
-                            block += ifElse
+                            block.statements += ifElse
                         }
                 }
 
@@ -692,7 +692,7 @@ class FlowQueriesTest {
                             a.initializer = newLiteral(5, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
@@ -711,11 +711,11 @@ class FlowQueriesTest {
                                 }
                             bDecl.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDecl
+                            block.statements += bDecl
 
                             val printB = newCall(newReference("print"))
                             printB.arguments += newReference("b")
-                            block += printB
+                            block.statements += printB
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
@@ -723,7 +723,7 @@ class FlowQueriesTest {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            block += bazCall
+                            block.statements += bazCall
                         }
                 }
 
@@ -756,7 +756,7 @@ class FlowQueriesTest {
                             a.initializer = newLiteral(5, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
@@ -775,7 +775,7 @@ class FlowQueriesTest {
                                 }
                             bDecl.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDecl
+                            block.statements += bDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
@@ -787,14 +787,14 @@ class FlowQueriesTest {
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printA = newCall(newReference("print"))
                                         printA.arguments += newReference("a")
-                                        thenBlock += printA
+                                        thenBlock.statements += printA
                                     }
                             }
-                            block += ifElse
+                            block.statements += ifElse
 
                             val printB = newCall(newReference("print"))
                             printB.arguments += newReference("b")
-                            block += printB
+                            block.statements += printB
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
@@ -802,7 +802,7 @@ class FlowQueriesTest {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            block += bazCall
+                            block.statements += bazCall
                         }
                 }
 
@@ -835,7 +835,7 @@ class FlowQueriesTest {
                             a.initializer = newLiteral(5, objectType("int"))
                             aDecl.declarations += a
                             scopeManager.addDeclaration(a)
-                            block += aDecl
+                            block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
@@ -854,7 +854,7 @@ class FlowQueriesTest {
                                 }
                             bDecl.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDecl
+                            block.statements += bDecl
 
                             // Same `IfElse.addArgument` condition-overwrite quirk as in
                             // `validatorDataflowIfElse` -- see the comment there. The bare
@@ -867,19 +867,19 @@ class FlowQueriesTest {
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printA = newCall(newReference("print"))
                                         printA.arguments += newReference("a")
-                                        thenBlock += printA
+                                        thenBlock.statements += printA
                                     }
                                 ifElse.elseStatement =
                                     newBlock(enterScope = true) { elseBlock ->
                                         val printB = newCall(newReference("print"))
                                         printB.arguments += newReference("b")
-                                        elseBlock += printB
+                                        elseBlock.statements += printB
                                     }
                                 val printB2 = newCall(newReference("print"))
                                 printB2.arguments += newReference("b")
                                 ifElse.condition = printB2
                             }
-                            block += ifElse
+                            block.statements += ifElse
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
@@ -887,7 +887,7 @@ class FlowQueriesTest {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            block += bazCall
+                            block.statements += bazCall
                         }
                 }
 
@@ -924,18 +924,18 @@ class FlowQueriesTest {
                                         val printlnCall = newCall(newReference("println"))
                                         printlnCall.arguments +=
                                             newLiteral("Then branch", objectType("string"))
-                                        thenBlock += printlnCall
+                                        thenBlock.statements += printlnCall
                                     }
                                 ifElse.elseStatement =
                                     newBlock(enterScope = true) { elseBlock ->
                                         val recCall = newCall(newReference("a"))
                                         recCall.arguments += newLiteral(1, objectType("int"))
-                                        elseBlock += recCall
+                                        elseBlock.statements += recCall
                                     }
                             }
-                            block += ifElse
+                            block.statements += ifElse
 
-                            block += newReturn()
+                            block.statements += newReturn()
                         }
                 }
 
@@ -949,9 +949,9 @@ class FlowQueriesTest {
                         newBlock(enterScope = true) { block ->
                             val aCall = newCall(newReference("a"))
                             aCall.arguments += newReference("value", objectType("int"))
-                            block += aCall
+                            block.statements += aCall
 
-                            block += newReturn()
+                            block.statements += newReturn()
                         }
                 }
 
@@ -965,9 +965,9 @@ class FlowQueriesTest {
                         newBlock(enterScope = true) { block ->
                             val bCall = newCall(newReference("b"))
                             bCall.arguments += newReference("value", objectType("int"))
-                            block += bCall
+                            block.statements += bCall
 
-                            block += newReturn()
+                            block.statements += newReturn()
                         }
                 }
 
@@ -1000,22 +1000,22 @@ class FlowQueriesTest {
                                     temp.initializer = newLiteral("start")
                                     tempDecl.declarations += temp
                                     scopeManager.addDeclaration(temp)
-                                    loopBodyBlock += tempDecl
+                                    loopBodyBlock.statements += tempDecl
 
                                     val aCall = newCall(newReference("a"))
                                     aCall.arguments += newReference("i", objectType("int"))
-                                    loopBodyBlock += aCall
+                                    loopBodyBlock.statements += aCall
 
                                     val bCall = newCall(newReference("b"))
                                     bCall.arguments += newReference("i", objectType("int"))
-                                    loopBodyBlock += bCall
+                                    loopBodyBlock.statements += bCall
 
                                     val cCall = newCall(newReference("c"))
                                     cCall.arguments += newReference("i", objectType("int"))
-                                    loopBodyBlock += cCall
+                                    loopBodyBlock.statements += cCall
                                 }
                             }
-                            block += forEachNode
+                            block.statements += forEachNode
                         }
                 }
 

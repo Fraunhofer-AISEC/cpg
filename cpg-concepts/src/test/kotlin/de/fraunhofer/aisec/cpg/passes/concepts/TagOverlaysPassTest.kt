@@ -142,11 +142,11 @@ class TagOverlaysPassTest {
                                 variable.initializer = newLiteral("secret")
                                 declStmt.declarations += variable
                                 scopeManager.addDeclaration(variable)
-                                block += declStmt
+                                block.statements += declStmt
 
                                 val call = newCall(newReference("encrypt"))
                                 call.arguments += newReference("key")
-                                block += call
+                                block.statements += call
                             }
                     }
 

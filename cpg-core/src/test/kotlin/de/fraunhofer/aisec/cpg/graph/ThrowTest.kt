@@ -54,17 +54,17 @@ class ThrowTest {
 
                         func.body =
                             newBlock(enterScope = true) { block ->
-                                block += newThrow()
+                                block.statements += newThrow()
 
                                 val throwWithExc = newThrow()
                                 throwWithExc.exception = newCall(newReference("SomeError"))
-                                block += throwWithExc
+                                block.statements += throwWithExc
 
                                 val throwWithExcAndParent = newThrow()
                                 throwWithExcAndParent.exception = newCall(newReference("SomeError"))
                                 throwWithExcAndParent.parentException =
                                     newCall(newReference("SomeError2"))
-                                block += throwWithExcAndParent
+                                block.statements += throwWithExcAndParent
                             }
                     }
 

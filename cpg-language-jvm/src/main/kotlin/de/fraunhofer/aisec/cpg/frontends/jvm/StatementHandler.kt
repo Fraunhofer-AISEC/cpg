@@ -95,7 +95,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
             val stmt = newDeclarationStatement(rawNode = local)
             frontend.scopeManager.addDeclaration(decl)
             stmt.declarations += decl
-            outerBlock += stmt
+            outerBlock.statements += stmt
         }
 
         // Parse statements and segment them into (sub)-blocks.
@@ -115,13 +115,13 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
                 frontend.process(Any(), stmt)
 
                 // Always add it to the outer block
-                outerBlock += stmt
+                outerBlock.statements += stmt
             }
 
             // Parse the statement
             val stmt = handle(sootStmt)
             if (stmt != null) {
-                block += stmt
+                block.statements += stmt
             }
         }
 

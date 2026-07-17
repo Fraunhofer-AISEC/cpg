@@ -90,7 +90,7 @@ class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
                     tu.declarations += decl
                 } else {
                     val stmt = statementHandler.handle(innerNode)
-                    tu += stmt
+                    tu.statements += stmt
                 }
             }
         }

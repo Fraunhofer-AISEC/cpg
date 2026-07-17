@@ -64,10 +64,10 @@ class StatementBuilderTest {
                             var stmt = newDeclarationStatement()
                             stmt.declarations += localA
                             scopeManager.addDeclaration(localA)
-                            body += stmt
+                            body.statements += stmt
 
-                            body += newLookupScope(listOf("a"), scopeManager.globalScope)
-                            body += newReference("a")
+                            body.statements += newLookupScope(listOf("a"), scopeManager.globalScope)
+                            body.statements += newReference("a")
 
                             scopeManager.leaveScope(body)
                             func.body = body

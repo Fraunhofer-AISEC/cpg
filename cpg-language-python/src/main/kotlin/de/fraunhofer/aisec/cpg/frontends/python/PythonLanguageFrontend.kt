@@ -391,7 +391,13 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
                     }
                     // All other statements are added to the (static) statements block of the
                     // namespace.
-                    else -> it.statements += statementHandler.handle(stmt)
+                    else -> {
+                        val handled = statementHandler.handle(stmt)
+                        when (it) {
+                            is Namespace -> it.statements += handled
+                            is TranslationUnit -> it.statements += handled
+                        }
+                    }
                 }
             }
         }

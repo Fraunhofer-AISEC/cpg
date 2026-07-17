@@ -194,20 +194,20 @@ class ControlDependenceGraphPassTest {
                                 // [foo(), bar(), foo() && bar()], not just the operator.
                                 // Faithfully reproduced (confirmed via the original test).
                                 val fooCall = newCall(newReference("foo"))
-                                block += fooCall
+                                block.statements += fooCall
                                 val barCall = newCall(newReference("bar"))
-                                block += barCall
-                                block +=
+                                block.statements += barCall
+                                block.statements +=
                                     newBinaryOperator("&&").also {
                                         it.lhs = fooCall
                                         it.rhs = barCall
                                     }
 
                                 val bazCall = newCall(newReference("baz"))
-                                block += bazCall
+                                block.statements += bazCall
                                 val quuxCall = newCall(newReference("quux"))
-                                block += quuxCall
-                                block +=
+                                block.statements += quuxCall
+                                block.statements +=
                                     newBinaryOperator("||").also {
                                         it.lhs = bazCall
                                         it.rhs = quuxCall
@@ -215,7 +215,7 @@ class ControlDependenceGraphPassTest {
 
                                 val returnStmt = newReturn()
                                 returnStmt.returnValue = newLiteral(1, objectType("int"))
-                                block += returnStmt
+                                block.statements += returnStmt
                             }
                     }
 
@@ -249,7 +249,7 @@ class ControlDependenceGraphPassTest {
                             }
                         declStmt.declarations += i
                         scopeManager.addDeclaration(i)
-                        block += declStmt
+                        block.statements += declStmt
 
                         val if0 = newIfElse { ifElse ->
                             // "lt" has no ArgumentHolder context (see note in
@@ -258,7 +258,7 @@ class ControlDependenceGraphPassTest {
                             ifElse.condition = newLiteral(1, objectType("int"))
                             ifElse.thenStatement =
                                 newBlock(enterScope = true) { thenBlock ->
-                                    thenBlock +=
+                                    thenBlock.statements +=
                                         newAssign(
                                             operatorCode = "=",
                                             lhs = listOf(newReference("i")),
@@ -267,14 +267,14 @@ class ControlDependenceGraphPassTest {
 
                                     val printfCall0 = newCall(newReference("printf"))
                                     printfCall0.arguments += newLiteral("0\n", objectType("string"))
-                                    thenBlock += printfCall0
+                                    thenBlock.statements += printfCall0
                                 }
                         }
-                        block += if0
+                        block.statements += if0
 
                         val printfCall1 = newCall(newReference("printf"))
                         printfCall1.arguments += newLiteral("1\n", objectType("string"))
-                        block += printfCall1
+                        block.statements += printfCall1
 
                         val if1 = newIfElse { ifElse ->
                             // "gt" DOES have ArgumentHolder context, so its own self-attach
@@ -287,7 +287,7 @@ class ControlDependenceGraphPassTest {
                                 }
                             ifElse.thenStatement =
                                 newBlock(enterScope = true) { thenBlock ->
-                                    thenBlock +=
+                                    thenBlock.statements +=
                                         newAssign(
                                             operatorCode = "=",
                                             lhs = listOf(newReference("i")),
@@ -296,7 +296,7 @@ class ControlDependenceGraphPassTest {
                                 }
                             ifElse.elseStatement =
                                 newBlock(enterScope = true) { elseBlock ->
-                                    elseBlock +=
+                                    elseBlock.statements +=
                                         newAssign(
                                             operatorCode = "=",
                                             lhs = listOf(newReference("i")),
@@ -304,15 +304,15 @@ class ControlDependenceGraphPassTest {
                                         )
                                 }
                         }
-                        block += if1
+                        block.statements += if1
 
                         val printfCall2 = newCall(newReference("printf"))
                         printfCall2.arguments += newLiteral("2\n", objectType("string"))
-                        block += printfCall2
+                        block.statements += printfCall2
 
                         val returnStmt = newReturn()
                         returnStmt.returnValue = newReference("i")
-                        block += returnStmt
+                        block.statements += returnStmt
                     }
             }
 
@@ -344,7 +344,7 @@ class ControlDependenceGraphPassTest {
                                     }
                                 declStmt.declarations += i
                                 scopeManager.addDeclaration(i)
-                                block += declStmt
+                                block.statements += declStmt
 
                                 val forEach = newForEach()
                                 val loopVarDeclStmt = newDeclarationStatement()
@@ -366,17 +366,17 @@ class ControlDependenceGraphPassTest {
                                         printfCall.arguments +=
                                             newLiteral("loop: \${}\n", objectType("string"))
                                         printfCall.arguments += newReference("loopVar")
-                                        loopBody += printfCall
+                                        loopBody.statements += printfCall
                                     }
-                                block += forEach
+                                block.statements += forEach
 
                                 val printfCall1 = newCall(newReference("printf"))
                                 printfCall1.arguments += newLiteral("1\n", objectType("string"))
-                                block += printfCall1
+                                block.statements += printfCall1
 
                                 val returnStmt = newReturn()
                                 returnStmt.returnValue = newReference("i")
-                                block += returnStmt
+                                block.statements += returnStmt
                             }
                     }
 

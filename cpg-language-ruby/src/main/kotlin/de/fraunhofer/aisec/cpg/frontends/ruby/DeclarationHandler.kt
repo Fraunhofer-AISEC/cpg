@@ -77,7 +77,7 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
             if (lastStatement !is Return) {
                 val returnStatement = newReturn()
                 returnStatement.isImplicit = true
-                body += returnStatement
+                body.statements += returnStatement
 
                 // TODO: Ruby returns the last expression, if there is no explicit return
             }

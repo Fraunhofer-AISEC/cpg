@@ -108,7 +108,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             // Do not add case statements to the block because the already add themselves in
             // handleCaseClause. Otherwise, the order of case's would be wrong
             if (node !is Case) {
-                compound += node
+                compound.statements += node
             }
         }
 
@@ -149,7 +149,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         }
 
         // Add the case statement
-        currentBlock += case
+        currentBlock.statements += case
 
         // Wrap everything inside the case in a block statement, if this is a type-switch, so that
         // we can re-declare the variable locally in the block.
@@ -193,20 +193,20 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             stmt.declarations += decl
 
             if (block != null) {
-                block += stmt
+                block.statements += stmt
             }
         }
 
         for (s in caseClause.body) {
             if (block != null) {
-                block += handle(s)
+                block.statements += handle(s)
             } else {
-                currentBlock += handle(s)
+                currentBlock.statements += handle(s)
             }
         }
 
         if (block != null) {
-            currentBlock += block
+            currentBlock.statements += block
         }
 
         block?.let { frontend.scopeManager.leaveScope(it) }

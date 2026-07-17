@@ -87,7 +87,7 @@ class AssignTest {
                     val stmt = newAssign(lhs = listOf(refA, refErr), rhs = listOf(call))
 
                     main.body = newBlock()
-                    (main.body as Block) += stmt
+                    (main.body as Block).statements += stmt
                 }
 
                 translationResult { components.firstOrNull()?.translationUnits?.add(tu) }

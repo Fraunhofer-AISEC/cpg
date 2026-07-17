@@ -143,7 +143,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 if (last !is Return) {
                     val ret = newReturn()
                     ret.isImplicit = true
-                    body += ret
+                    body.statements += ret
                 }
             }
             func.body = body

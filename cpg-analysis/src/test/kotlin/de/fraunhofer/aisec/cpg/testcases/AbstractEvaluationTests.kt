@@ -129,28 +129,28 @@ abstract class AbstractEvaluationTests {
                                 val b = newVariable("b", objectType("Bar"))
                                 bDeclStmt.declarations += b
                                 scopeManager.addDeclaration(b)
-                                block += bDeclStmt
+                                block.statements += bDeclStmt
 
                                 val aDeclStmt = newDeclarationStatement()
                                 val a = newVariable("a", objectType("int"))
                                 a.initializer = newLiteral(5, objectType("int"))
                                 aDeclStmt.declarations += a
                                 scopeManager.addDeclaration(a)
-                                block += aDeclStmt
+                                block.statements += aDeclStmt
 
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "=",
                                         listOf(newReference("a")),
                                         listOf(newLiteral(0, objectType("int"))),
                                     )
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "-=",
                                         listOf(newReference("a")),
                                         listOf(newLiteral(2, objectType("int"))),
                                     )
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "+=",
                                         listOf(newReference("a")),
@@ -160,7 +160,7 @@ abstract class AbstractEvaluationTests {
                                 val fCall =
                                     newMemberCall(newMemberAccess("f", newReference("Bar")), false)
                                 fCall.arguments += newReference("a")
-                                block += fCall
+                                block.statements += fCall
                             }
                     }
                     newMethod("f2", holder = foo, enterScope = true) { method ->
@@ -173,27 +173,27 @@ abstract class AbstractEvaluationTests {
                                 val b = newVariable("b", objectType("Bar"))
                                 bDeclStmt.declarations += b
                                 scopeManager.addDeclaration(b)
-                                block += bDeclStmt
+                                block.statements += bDeclStmt
 
                                 val aDeclStmt = newDeclarationStatement()
                                 val a = newVariable("a", objectType("int"))
                                 a.initializer = newLiteral(5, objectType("int"))
                                 aDeclStmt.declarations += a
                                 scopeManager.addDeclaration(a)
-                                block += aDeclStmt
+                                block.statements += aDeclStmt
 
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "=",
                                         listOf(newReference("a")),
                                         listOf(newLiteral(3, objectType("int"))),
                                     )
 
-                                block +=
+                                block.statements +=
                                     newUnaryOperator("++", postfix = true, prefix = false).also {
                                         it.input = newReference("a")
                                     }
-                                block +=
+                                block.statements +=
                                     newUnaryOperator("++", postfix = false, prefix = true).also {
                                         it.input = newReference("a")
                                     }
@@ -201,43 +201,43 @@ abstract class AbstractEvaluationTests {
                                 val cCall =
                                     newMemberCall(newMemberAccess("c", newReference("Bar")), false)
                                 cCall.arguments += newReference("a")
-                                block += cCall
+                                block.statements += cCall
 
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "-=",
                                         listOf(newReference("a")),
                                         listOf(newLiteral(2, objectType("int"))),
                                     )
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "+=",
                                         listOf(newReference("a")),
                                         listOf(newLiteral(3, objectType("int"))),
                                     )
 
-                                block +=
+                                block.statements +=
                                     newUnaryOperator("--", postfix = true, prefix = false).also {
                                         it.input = newReference("a")
                                     }
-                                block +=
+                                block.statements +=
                                     newUnaryOperator("--", postfix = false, prefix = true).also {
                                         it.input = newReference("a")
                                     }
 
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "*=",
                                         listOf(newReference("a")),
                                         listOf(newLiteral(4, objectType("int"))),
                                     )
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "/=",
                                         listOf(newReference("a")),
                                         listOf(newLiteral(2, objectType("int"))),
                                     )
-                                block +=
+                                block.statements +=
                                     newAssign(
                                         "%=",
                                         listOf(newReference("a")),
@@ -247,7 +247,7 @@ abstract class AbstractEvaluationTests {
                                 val fCall =
                                     newMemberCall(newMemberAccess("f", newReference("Bar")), false)
                                 fCall.arguments += newReference("a")
-                                block += fCall
+                                block.statements += fCall
                             }
                     }
                     newMethod("f3", holder = foo, enterScope = true) { method ->
@@ -260,14 +260,14 @@ abstract class AbstractEvaluationTests {
                                 val b = newVariable("b", objectType("Bar"))
                                 bDeclStmt.declarations += b
                                 scopeManager.addDeclaration(b)
-                                block += bDeclStmt
+                                block.statements += bDeclStmt
 
                                 val aDeclStmt = newDeclarationStatement()
                                 val a = newVariable("a", objectType("int"))
                                 a.initializer = newLiteral(5, objectType("int"))
                                 aDeclStmt.declarations += a
                                 scopeManager.addDeclaration(a)
-                                block += aDeclStmt
+                                block.statements += aDeclStmt
 
                                 val ifElse = newIfElse { ifElse ->
                                     val nextBooleanCall =
@@ -279,7 +279,7 @@ abstract class AbstractEvaluationTests {
 
                                     ifElse.thenStatement =
                                         newBlock(enterScope = true) { thenBlock ->
-                                            thenBlock +=
+                                            thenBlock.statements +=
                                                 newAssign(
                                                     "-=",
                                                     listOf(newReference("a")),
@@ -287,12 +287,12 @@ abstract class AbstractEvaluationTests {
                                                 )
                                         }
                                 }
-                                block += ifElse
+                                block.statements += ifElse
 
                                 val fCall =
                                     newMemberCall(newMemberAccess("f", newReference("Bar")), false)
                                 fCall.arguments += newReference("a")
-                                block += fCall
+                                block.statements += fCall
                             }
                     }
                     newMethod("f4", holder = foo, enterScope = true) { method ->
@@ -305,14 +305,14 @@ abstract class AbstractEvaluationTests {
                                 val b = newVariable("b", objectType("Bar"))
                                 bDeclStmt.declarations += b
                                 scopeManager.addDeclaration(b)
-                                block += bDeclStmt
+                                block.statements += bDeclStmt
 
                                 val aDeclStmt = newDeclarationStatement()
                                 val a = newVariable("a", objectType("int"))
                                 a.initializer = newLiteral(5, objectType("int"))
                                 aDeclStmt.declarations += a
                                 scopeManager.addDeclaration(a)
-                                block += aDeclStmt
+                                block.statements += aDeclStmt
 
                                 val ifElse = newIfElse { ifElse ->
                                     val nextBooleanCall =
@@ -324,7 +324,7 @@ abstract class AbstractEvaluationTests {
 
                                     ifElse.thenStatement =
                                         newBlock(enterScope = true) { thenBlock ->
-                                            thenBlock +=
+                                            thenBlock.statements +=
                                                 newAssign(
                                                     "-=",
                                                     listOf(newReference("a")),
@@ -333,7 +333,7 @@ abstract class AbstractEvaluationTests {
                                         }
                                     ifElse.elseStatement =
                                         newBlock(enterScope = true) { elseBlock ->
-                                            elseBlock +=
+                                            elseBlock.statements +=
                                                 newAssign(
                                                     "=",
                                                     listOf(newReference("a")),
@@ -341,12 +341,12 @@ abstract class AbstractEvaluationTests {
                                                 )
                                         }
                                 }
-                                block += ifElse
+                                block.statements += ifElse
 
                                 val fCall =
                                     newMemberCall(newMemberAccess("f", newReference("Bar")), false)
                                 fCall.arguments += newReference("a")
-                                block += fCall
+                                block.statements += fCall
                             }
                     }
                     newMethod("f5", holder = foo, enterScope = true) { method ->
@@ -359,14 +359,14 @@ abstract class AbstractEvaluationTests {
                                 val b = newVariable("b", objectType("Bar"))
                                 bDeclStmt.declarations += b
                                 scopeManager.addDeclaration(b)
-                                block += bDeclStmt
+                                block.statements += bDeclStmt
 
                                 val aDeclStmt = newDeclarationStatement()
                                 val a = newVariable("a", objectType("int"))
                                 a.initializer = newLiteral(5, objectType("int"))
                                 aDeclStmt.declarations += a
                                 scopeManager.addDeclaration(a)
-                                block += aDeclStmt
+                                block.statements += aDeclStmt
 
                                 // Fluent's forStmt() never enters/leaves a scope for the `For`
                                 // node itself (unlike whileStmt/forEachStmt), so the loop
@@ -392,7 +392,7 @@ abstract class AbstractEvaluationTests {
                                             .also { it.input = newReference("i") }
 
                                     for_.statement = newBlock { loopBodyBlock ->
-                                        loopBodyBlock +=
+                                        loopBodyBlock.statements +=
                                             newAssign(
                                                 "+=",
                                                 listOf(newReference("a")),
@@ -401,15 +401,15 @@ abstract class AbstractEvaluationTests {
 
                                         val printlnCall = newCall(newReference("println"))
                                         printlnCall.arguments += newReference("i")
-                                        loopBodyBlock += printlnCall
+                                        loopBodyBlock.statements += printlnCall
                                     }
                                 }
-                                block += forNode
+                                block.statements += forNode
 
                                 val fCall =
                                     newMemberCall(newMemberAccess("f", newReference("Bar")), false)
                                 fCall.arguments += newReference("a")
-                                block += fCall
+                                block.statements += fCall
                             }
                     }
                     newMethod("f6", holder = foo, enterScope = true) { method ->
@@ -423,7 +423,7 @@ abstract class AbstractEvaluationTests {
                                 i.initializer = newLiteral(0, objectType("int"))
                                 iDeclStmt.declarations += i
                                 scopeManager.addDeclaration(i)
-                                block += iDeclStmt
+                                block.statements += iDeclStmt
 
                                 val forNode = newFor { for_ ->
                                     for_.initializerStatement =
@@ -456,28 +456,28 @@ abstract class AbstractEvaluationTests {
                                                     val call =
                                                         newCall(newReference("lessThanThree"))
                                                     call.arguments += newReference("i")
-                                                    tb += call
+                                                    tb.statements += call
                                                 }
                                             inner.elseStatement =
                                                 newBlock(enterScope = true) { eb ->
                                                     val call =
                                                         newCall(newReference("greaterEqualThree"))
                                                     call.arguments += newReference("i")
-                                                    eb += call
+                                                    eb.statements += call
                                                 }
                                         }
-                                        loopBodyBlock += innerIf
+                                        loopBodyBlock.statements += innerIf
 
                                         val printlnCall = newCall(newReference("println"))
                                         printlnCall.arguments += newReference("i")
-                                        loopBodyBlock += printlnCall
+                                        loopBodyBlock.statements += printlnCall
                                     }
                                 }
-                                block += forNode
+                                block.statements += forNode
 
                                 val afterLoopCall = newCall(newReference("afterLoop"))
                                 afterLoopCall.arguments += newReference("i")
-                                block += afterLoopCall
+                                block.statements += afterLoopCall
                             }
                     }
                 }

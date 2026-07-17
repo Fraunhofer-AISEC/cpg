@@ -62,7 +62,7 @@ class TypePropagationTest {
                             val intVar = newVariable("intVar", objectType("int"))
                             intVarDeclStmt.declarations += intVar
                             scopeManager.addDeclaration(intVar)
-                            block += intVarDeclStmt
+                            block.statements += intVarDeclStmt
 
                             val intVar2DeclStmt = newDeclarationStatement()
                             val intVar2 =
@@ -71,7 +71,7 @@ class TypePropagationTest {
                                 }
                             intVar2DeclStmt.declarations += intVar2
                             scopeManager.addDeclaration(intVar2)
-                            block += intVar2DeclStmt
+                            block.statements += intVar2DeclStmt
 
                             val addResultDeclStmt = newDeclarationStatement()
                             val addResult =
@@ -84,9 +84,9 @@ class TypePropagationTest {
                                 }
                             addResultDeclStmt.declarations += addResult
                             scopeManager.addDeclaration(addResult)
-                            block += addResultDeclStmt
+                            block.statements += addResultDeclStmt
 
-                            block += newReturn().also { it.returnValue = newLiteral(0) }
+                            block.statements += newReturn().also { it.returnValue = newLiteral(0) }
                         }
                 }
 
@@ -149,22 +149,23 @@ class TypePropagationTest {
                             val intVar = newVariable("intVar", objectType("int"))
                             intVarDeclStmt.declarations += intVar
                             scopeManager.addDeclaration(intVar)
-                            block += intVarDeclStmt
+                            block.statements += intVarDeclStmt
 
                             val shortVarDeclStmt = newDeclarationStatement()
                             val shortVar = newVariable("shortVar", objectType("short"))
                             shortVarDeclStmt.declarations += shortVar
                             scopeManager.addDeclaration(shortVar)
-                            block += shortVarDeclStmt
+                            block.statements += shortVarDeclStmt
 
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(newReference("shortVar")),
                                     listOf(newReference("intVar")),
                                 )
 
-                            block += newReturn().also { it.returnValue = newReference("shortVar") }
+                            block.statements +=
+                                newReturn().also { it.returnValue = newReference("shortVar") }
                         }
                 }
 
@@ -252,9 +253,9 @@ class TypePropagationTest {
                                 }
                             bDeclStmt.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDeclStmt
+                            block.statements += bDeclStmt
 
-                            block +=
+                            block.statements +=
                                 newMemberCall(
                                     newMemberAccess("doSomething", newReference("b")),
                                     false,
@@ -370,9 +371,9 @@ class TypePropagationTest {
                             val b = newVariable("b", objectType("BaseClass").pointer())
                             bDeclStmt.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDeclStmt
+                            block.statements += bDeclStmt
 
-                            block +=
+                            block.statements +=
                                 newAssign(
                                     "=",
                                     listOf(newReference("b")),
@@ -423,9 +424,9 @@ class TypePropagationTest {
                                 }
                             bbDeclStmt.declarations += bb
                             scopeManager.addDeclaration(bb)
-                            block += bbDeclStmt
+                            block.statements += bbDeclStmt
 
-                            block +=
+                            block.statements +=
                                 newReturn().also { ret ->
                                     ret.returnValue =
                                         newSubscription().also { sub ->
@@ -447,7 +448,7 @@ class TypePropagationTest {
                             val random = newVariable("random", objectType("boolean"))
                             randomDeclStmt.declarations += random
                             scopeManager.addDeclaration(random)
-                            block += randomDeclStmt
+                            block.statements += randomDeclStmt
 
                             val bDeclStmt = newDeclarationStatement()
                             val b =
@@ -459,9 +460,9 @@ class TypePropagationTest {
                                 }
                             bDeclStmt.declarations += b
                             scopeManager.addDeclaration(b)
-                            block += bDeclStmt
+                            block.statements += bDeclStmt
 
-                            block +=
+                            block.statements +=
                                 newMemberCall(
                                     newMemberAccess("doSomething", newReference("b")),
                                     false,
