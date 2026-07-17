@@ -56,15 +56,14 @@ class ThrowTest {
                             newBlock(enterScope = true) { block ->
                                 block.statements += newThrow()
 
-                                val throwWithExc = newThrow()
-                                throwWithExc.exception = newCall(newReference("SomeError"))
-                                block.statements += throwWithExc
+                                block.statements += newThrow {
+                                    it.exception = newCall(newReference("SomeError"))
+                                }
 
-                                val throwWithExcAndParent = newThrow()
-                                throwWithExcAndParent.exception = newCall(newReference("SomeError"))
-                                throwWithExcAndParent.parentException =
-                                    newCall(newReference("SomeError2"))
-                                block.statements += throwWithExcAndParent
+                                block.statements += newThrow {
+                                    it.exception = newCall(newReference("SomeError"))
+                                    it.parentException = newCall(newReference("SomeError2"))
+                                }
                             }
                     }
 

@@ -198,7 +198,7 @@ class ControlDependenceGraphPassTest {
                                 val barCall = newCall(newReference("bar"))
                                 block.statements += barCall
                                 block.statements +=
-                                    newBinaryOperator("&&").also {
+                                    newBinaryOperator("&&") {
                                         it.lhs = fooCall
                                         it.rhs = barCall
                                     }
@@ -208,7 +208,7 @@ class ControlDependenceGraphPassTest {
                                 val quuxCall = newCall(newReference("quux"))
                                 block.statements += quuxCall
                                 block.statements +=
-                                    newBinaryOperator("||").also {
+                                    newBinaryOperator("||") {
                                         it.lhs = bazCall
                                         it.rhs = quuxCall
                                     }
@@ -243,12 +243,9 @@ class ControlDependenceGraphPassTest {
                 func.body =
                     newBlock(enterScope = true) { block ->
                         val declStmt = newDeclarationStatement()
-                        val i =
-                            newVariable("i", objectType("int")).also {
-                                it.initializer = newLiteral(0, objectType("int"))
-                            }
-                        declStmt.declarations += i
-                        scopeManager.addDeclaration(i)
+                        newVariable("i", objectType("int"), holder = declStmt) {
+                            it.initializer = newLiteral(0, objectType("int"))
+                        }
                         block.statements += declStmt
 
                         val if0 = newIfElse { ifElse ->
@@ -281,7 +278,7 @@ class ControlDependenceGraphPassTest {
                             // (which happens after the operands' self-attach) correctly ends
                             // up overwriting to become the condition.
                             ifElse.condition =
-                                newBinaryOperator(">").also {
+                                newBinaryOperator(">") {
                                     it.lhs = newReference("i")
                                     it.rhs = newLiteral(0, objectType("int"))
                                 }
@@ -338,19 +335,18 @@ class ControlDependenceGraphPassTest {
                         func.body =
                             newBlock(enterScope = true) { block ->
                                 val declStmt = newDeclarationStatement()
-                                val i =
-                                    newVariable("i", objectType("int")).also {
-                                        it.initializer = newLiteral(0, objectType("int"))
-                                    }
-                                declStmt.declarations += i
-                                scopeManager.addDeclaration(i)
+                                newVariable("i", objectType("int"), holder = declStmt) {
+                                    it.initializer = newLiteral(0, objectType("int"))
+                                }
                                 block.statements += declStmt
 
                                 val forEach = newForEach()
                                 val loopVarDeclStmt = newDeclarationStatement()
-                                val loopVar = newVariable("loopVar", objectType("string"))
-                                loopVarDeclStmt.declarations += loopVar
-                                scopeManager.addDeclaration(loopVar)
+                                newVariable(
+                                    "loopVar",
+                                    objectType("string"),
+                                    holder = loopVarDeclStmt,
+                                )
                                 // Fluent's declare{}/call(...) self-attach to ForEach's generic
                                 // StatementHolder.statements *in addition to* the explicit
                                 // `variable =`/`iterable =` property assignment done in the

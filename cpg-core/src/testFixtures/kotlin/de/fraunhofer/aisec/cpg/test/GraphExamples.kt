@@ -34,15 +34,13 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
-import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
-import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -124,10 +122,10 @@ private fun Expression.line(tuName: String, i: Int): Expression {
  * `...WithElseAndBreak` test cases below.
  */
 private fun LanguageFrontend<*, *>.addIfTrueBreakAndPostIf(block: Block) {
-    val ifNode = newIfElse()
-    ifNode.condition = newLiteral(true, objectType("bool"))
-    ifNode.thenStatement = newBlock(enterScope = true) { it.statements += newBreak() }
-    block.statements += ifNode
+    block.statements += newIfElse {
+        it.condition = newLiteral(true, objectType("bool"))
+        it.thenStatement = newBlock(enterScope = true) { it.statements += newBreak() }
+    }
     block.statements += newCall(newReference("postIf"))
 }
 
@@ -135,33 +133,16 @@ private fun LanguageFrontend<*, *>.addIfTrueBreakAndPostIf(block: Block) {
 private fun LanguageFrontend<*, *>.elseCallBlock(): Block =
     newBlock(enterScope = true) { it.statements += newCall(newReference("elseCall")) }
 
-/** Mirrors the removed Fluent DSL's `field` helper. */
-private fun LanguageFrontend<*, *>.addField(
-    holder: DeclarationHolder,
-    name: CharSequence,
-    type: Type = unknownType(),
-    init: ((Field) -> Unit)? = null,
-): Field {
-    val node = newField(name, type)
-    init?.invoke(node)
-    scopeManager.addDeclaration(node)
-    holder.addDeclaration(node)
-    return node
-}
-
-/** Mirrors the removed Fluent DSL's `constructor` helper. */
-private fun LanguageFrontend<*, *>.addConstructor(
-    record: Record,
-    init: (Constructor) -> Unit,
-): Constructor {
-    val node = newConstructor(record.name, record)
-    scopeManager.enterScope(node)
-    init(node)
-    scopeManager.leaveScope(node)
-    scopeManager.addDeclaration(node)
-    record.constructors += node
-    return node
-}
+/** Mirrors the recurring `System.out.println(argument)` call idiom used below. */
+private fun LanguageFrontend<*, *>.printlnCall(argument: Expression): MemberCall =
+    newMemberCall(
+        newMemberAccess(
+            "println",
+            newMember("out", newReference("System").also { it.isStaticAccess = true }),
+        )
+    ) {
+        it.arguments += argument
+    }
 
 /** Mirrors the removed Fluent DSL's `receiver(name, type)` helper. */
 private fun LanguageFrontend<*, *>.addReceiver(method: Method, name: String, type: Type): Variable {
@@ -182,10 +163,7 @@ private fun LanguageFrontend<*, *>.declareVariable(
     init: ((Variable) -> Unit)? = null,
 ): Variable {
     val declStmt = newDeclarationStatement()
-    val v = newVariable(name, type)
-    init?.invoke(v)
-    declStmt.declarations += v
-    scopeManager.addDeclaration(v)
+    val v = newVariable(name, type, holder = declStmt, init = init)
     block.statements += declStmt
     return v
 }
@@ -208,10 +186,9 @@ class GraphExamples {
                     func.type = computeType(func)
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            block.statements +=
-                                newReturn().also {
-                                    it.returnValue = newLiteral(0, objectType("int"))
-                                }
+                            block.statements += newReturn {
+                                it.returnValue = newLiteral(0, objectType("int"))
+                            }
                         }
                 }
                 newFunction("main", holder = tu, enterScope = true) { func ->
@@ -224,8 +201,7 @@ class GraphExamples {
                                 initList.initializers = mutableListOf(dottedCall("foo"))
                                 v.initializer = initList
                             }
-                            block.statements +=
-                                newReturn().also { it.returnValue = newReference("i") }
+                            block.statements += newReturn { it.returnValue = newReference("i") }
                         }
                 }
 
@@ -249,23 +225,23 @@ class GraphExamples {
                         method.type = computeType(method)
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val w1 = newWhile()
-                                scopeManager.enterScope(w1)
-                                w1.condition = newLiteral(true, objectType("bool"))
-                                w1.statement = newBlock().also { addIfTrueBreakAndPostIf(it) }
-                                w1.elseStatement = elseCallBlock()
-                                scopeManager.leaveScope(w1)
-                                block.statements += w1
+                                block.statements +=
+                                    newWhile(enterScope = true) { w1 ->
+                                        w1.condition = newLiteral(true, objectType("bool"))
+                                        w1.statement =
+                                            newBlock().also { addIfTrueBreakAndPostIf(it) }
+                                        w1.elseStatement = elseCallBlock()
+                                    }
 
                                 block.statements += dottedCall("postWhile")
 
-                                val w2 = newWhile()
-                                scopeManager.enterScope(w2)
-                                w2.condition = newLiteral(true, objectType("bool"))
-                                w2.statement = newBlock().also { addIfTrueBreakAndPostIf(it) }
-                                w2.elseStatement = elseCallBlock()
-                                scopeManager.leaveScope(w2)
-                                block.statements += w2
+                                block.statements +=
+                                    newWhile(enterScope = true) { w2 ->
+                                        w2.condition = newLiteral(true, objectType("bool"))
+                                        w2.statement =
+                                            newBlock().also { addIfTrueBreakAndPostIf(it) }
+                                        w2.elseStatement = elseCallBlock()
+                                    }
                             }
                     }
                 }
@@ -290,23 +266,23 @@ class GraphExamples {
                         method.type = computeType(method)
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val d1 = newDoWhile()
-                                scopeManager.enterScope(d1)
-                                d1.condition = newLiteral(true, objectType("bool"))
-                                d1.statement = newBlock().also { addIfTrueBreakAndPostIf(it) }
-                                d1.elseStatement = elseCallBlock()
-                                scopeManager.leaveScope(d1)
-                                block.statements += d1
+                                block.statements +=
+                                    newDoWhile(enterScope = true) { d1 ->
+                                        d1.condition = newLiteral(true, objectType("bool"))
+                                        d1.statement =
+                                            newBlock().also { addIfTrueBreakAndPostIf(it) }
+                                        d1.elseStatement = elseCallBlock()
+                                    }
 
                                 block.statements += dottedCall("postDo")
 
-                                val d2 = newDoWhile()
-                                scopeManager.enterScope(d2)
-                                d2.condition = newLiteral(true, objectType("bool"))
-                                d2.statement = newBlock().also { addIfTrueBreakAndPostIf(it) }
-                                d2.elseStatement = elseCallBlock()
-                                scopeManager.leaveScope(d2)
-                                block.statements += d2
+                                block.statements +=
+                                    newDoWhile(enterScope = true) { d2 ->
+                                        d2.condition = newLiteral(true, objectType("bool"))
+                                        d2.statement =
+                                            newBlock().also { addIfTrueBreakAndPostIf(it) }
+                                        d2.elseStatement = elseCallBlock()
+                                    }
                             }
                     }
                 }
@@ -331,27 +307,22 @@ class GraphExamples {
                         method.type = computeType(method)
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                fun buildFor(): de.fraunhofer.aisec.cpg.graph.expressions.For {
-                                    val forNode = newFor()
-                                    forNode.statement =
-                                        newBlock().also { addIfTrueBreakAndPostIf(it) }
-                                    val initVar =
-                                        newVariable("a", objectType("int")).also {
+                                fun buildFor(): de.fraunhofer.aisec.cpg.graph.expressions.For =
+                                    newFor { forNode ->
+                                        forNode.statement =
+                                            newBlock().also { addIfTrueBreakAndPostIf(it) }
+                                        val declStmt = newDeclarationStatement()
+                                        newVariable("a", objectType("int"), holder = declStmt) {
                                             it.initializer = newLiteral(0, objectType("int"))
                                         }
-                                    forNode.initializerStatement =
-                                        newDeclarationStatement().also {
-                                            it.singleDeclaration = initVar
-                                        }
-                                    scopeManager.addDeclaration(initVar)
-                                    forNode.condition = newLiteral(true, objectType("bool"))
-                                    forNode.iterationStatement =
-                                        newUnaryOperator("++", true, false).also {
-                                            it.input = newReference("a")
-                                        }
-                                    forNode.elseStatement = elseCallBlock()
-                                    return forNode
-                                }
+                                        forNode.initializerStatement = declStmt
+                                        forNode.condition = newLiteral(true, objectType("bool"))
+                                        forNode.iterationStatement =
+                                            newUnaryOperator("++", true, false) {
+                                                it.input = newReference("a")
+                                            }
+                                        forNode.elseStatement = elseCallBlock()
+                                    }
 
                                 block.statements += buildFor()
                                 block.statements += dottedCall("postFor")
@@ -381,18 +352,16 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 fun buildForEach():
-                                    de.fraunhofer.aisec.cpg.graph.expressions.ForEach {
-                                    val forEach = newForEach()
-                                    forEach.iterable = dottedCall("listOf")
-                                    val aVar = newVariable("a", unknownType())
-                                    forEach.variable =
-                                        newDeclarationStatement().also { it.declarations += aVar }
-                                    scopeManager.addDeclaration(aVar)
-                                    forEach.statement =
-                                        newBlock().also { addIfTrueBreakAndPostIf(it) }
-                                    forEach.elseStatement = elseCallBlock()
-                                    return forEach
-                                }
+                                    de.fraunhofer.aisec.cpg.graph.expressions.ForEach =
+                                    newForEach { forEach ->
+                                        forEach.iterable = dottedCall("listOf")
+                                        val declStmt = newDeclarationStatement()
+                                        newVariable("a", unknownType(), holder = declStmt)
+                                        forEach.variable = declStmt
+                                        forEach.statement =
+                                            newBlock().also { addIfTrueBreakAndPostIf(it) }
+                                        forEach.elseStatement = elseCallBlock()
+                                    }
 
                                 block.statements += buildForEach()
                                 block.statements += dottedCall("postForEach")
@@ -422,168 +391,164 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 // forEachStmt { usedAsExpression = true; ... }
-                                val forEach1 = newForEach()
-                                forEach1.usedAsExpression = true
-                                forEach1.iterable = dottedCall("listOf")
-                                val aVarFE = newVariable("a", unknownType())
-                                forEach1.variable =
-                                    newDeclarationStatement().also { it.declarations += aVarFE }
-                                scopeManager.addDeclaration(aVarFE)
-                                forEach1.statement =
-                                    newBlock().also { it.statements += dottedCall("inBody") }
-                                forEach1.elseStatement =
-                                    newBlock(enterScope = true) {
-                                        it.statements += dottedCall("inElse")
-                                    }
-                                block.statements += forEach1
+                                block.statements += newForEach { forEach1 ->
+                                    forEach1.usedAsExpression = true
+                                    forEach1.iterable = dottedCall("listOf")
+                                    val declStmt = newDeclarationStatement()
+                                    newVariable("a", unknownType(), holder = declStmt)
+                                    forEach1.variable = declStmt
+                                    forEach1.statement =
+                                        newBlock().also { it.statements += dottedCall("inBody") }
+                                    forEach1.elseStatement =
+                                        newBlock(enterScope = true) {
+                                            it.statements += dottedCall("inElse")
+                                        }
+                                }
 
                                 // declare { variable("a") { literal(1) + forStmt {...} } }
-                                val forNode = newFor()
-                                forNode.usedAsExpression = true
-                                forNode.statement =
-                                    newBlock().also { it.statements += dottedCall("bodyCall") }
-                                val initVar =
-                                    newVariable("a", objectType("int")).also {
-                                        it.initializer = newLiteral(0, objectType("int"))
-                                    }
-                                forNode.initializerStatement =
-                                    newDeclarationStatement().also {
-                                        it.singleDeclaration = initVar
-                                    }
-                                scopeManager.addDeclaration(initVar)
-                                forNode.condition = newLiteral(true, objectType("bool"))
-                                forNode.iterationStatement =
-                                    newUnaryOperator("++", true, false).also {
-                                        it.input = newReference("a")
-                                    }
-                                forNode.elseStatement = elseCallBlock()
                                 // Fluent's forStmt{} self-attaches the For into the enclosing
                                 // *body* block (the nearest `StatementHolder`) regardless of it
                                 // also being used as an operand of `+` below -- both effects are
                                 // faithfully reproduced (the For node ends up both as a top-level
                                 // statement and nested inside the declaration's initializer).
+                                val forNode = newFor {
+                                    it.usedAsExpression = true
+                                    it.statement =
+                                        newBlock().also { blk ->
+                                            blk.statements += dottedCall("bodyCall")
+                                        }
+                                    val declStmt = newDeclarationStatement()
+                                    newVariable("a", objectType("int"), holder = declStmt) { v ->
+                                        v.initializer = newLiteral(0, objectType("int"))
+                                    }
+                                    it.initializerStatement = declStmt
+                                    it.condition = newLiteral(true, objectType("bool"))
+                                    it.iterationStatement =
+                                        newUnaryOperator("++", true, false) { u ->
+                                            u.input = newReference("a")
+                                        }
+                                    it.elseStatement = elseCallBlock()
+                                }
                                 block.statements += forNode
 
                                 declareVariable(block, "a", unknownType()) { v ->
                                     v.initializer =
-                                        newBinaryOperator("+").also {
+                                        newBinaryOperator("+") {
                                             it.lhs = newLiteral(1, objectType("int"))
                                             it.rhs = forNode
                                         }
                                 }
 
                                 // doStmt { usedAsExpression = true; ... }
-                                val doNode = newDoWhile()
-                                scopeManager.enterScope(doNode)
-                                doNode.usedAsExpression = true
-                                doNode.condition = newLiteral(true, objectType("bool"))
-                                doNode.statement =
-                                    newBlock().also { it.statements += dottedCall("bodyCall") }
-                                doNode.elseStatement = elseCallBlock()
-                                scopeManager.leaveScope(doNode)
-                                block.statements += doNode
+                                block.statements +=
+                                    newDoWhile(enterScope = true) { doNode ->
+                                        doNode.usedAsExpression = true
+                                        doNode.condition = newLiteral(true, objectType("bool"))
+                                        doNode.statement =
+                                            newBlock().also {
+                                                it.statements += dottedCall("bodyCall")
+                                            }
+                                        doNode.elseStatement = elseCallBlock()
+                                    }
 
                                 // label("lab") { usedAsExpression = true; whileStmt {...} }
                                 val labelNode = newLabel()
                                 labelNode.label = "lab"
                                 labelNode.usedAsExpression = true
-                                val whileNode = newWhile()
-                                scopeManager.enterScope(whileNode)
-                                whileNode.usedAsExpression = true
-                                whileNode.condition = newLiteral(true, objectType("bool"))
-                                whileNode.statement =
-                                    newBlock().also { it.statements += dottedCall("bodyCall") }
-                                whileNode.elseStatement = elseCallBlock()
-                                scopeManager.leaveScope(whileNode)
-                                labelNode.subStatement = whileNode
+                                labelNode.subStatement =
+                                    newWhile(enterScope = true) { whileNode ->
+                                        whileNode.usedAsExpression = true
+                                        whileNode.condition = newLiteral(true, objectType("bool"))
+                                        whileNode.statement =
+                                            newBlock().also {
+                                                it.statements += dottedCall("bodyCall")
+                                            }
+                                        whileNode.elseStatement = elseCallBlock()
+                                    }
                                 block.statements += labelNode
 
                                 // ifStmt { usedAsExpression = true; ... }
-                                val ifNode = newIfElse()
-                                ifNode.usedAsExpression = true
-                                ifNode.condition =
-                                    newBinaryOperator(">").also {
-                                        it.lhs = newReference("param")
-                                        it.rhs = newLiteral(7, objectType("int"))
-                                    }
-                                ifNode.thenStatement =
-                                    newBlock(enterScope = true) {
-                                        it.statements += dottedCall("thenCall")
-                                    }
-                                ifNode.elseStatement =
-                                    newBlock(enterScope = true) {
-                                        it.statements += dottedCall("elseCall")
-                                    }
-                                block.statements += ifNode
+                                block.statements += newIfElse { ifNode ->
+                                    ifNode.usedAsExpression = true
+                                    ifNode.condition =
+                                        newBinaryOperator(">") {
+                                            it.lhs = newReference("param")
+                                            it.rhs = newLiteral(7, objectType("int"))
+                                        }
+                                    ifNode.thenStatement =
+                                        newBlock(enterScope = true) {
+                                            it.statements += dottedCall("thenCall")
+                                        }
+                                    ifNode.elseStatement =
+                                        newBlock(enterScope = true) {
+                                            it.statements += dottedCall("elseCall")
+                                        }
+                                }
 
                                 // switchStmt(ref("someref")) { usedAsExpression = true; ... }
-                                val selector = newReference("someref")
-                                val switchNode = newSwitch()
-                                switchNode.selector = selector
-                                scopeManager.enterScope(switchNode)
-                                switchNode.usedAsExpression = true
-                                switchNode.statement =
-                                    newBlock().also { blk ->
-                                        blk.statements +=
-                                            newCase().also {
-                                                it.caseExpression = newReference("True")
-                                            }
-                                        blk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("a")),
-                                                listOf(
-                                                    newBinaryOperator("*").also {
-                                                        it.lhs = newReference("a")
-                                                        it.rhs = newLiteral(2, objectType("int"))
+                                block.statements +=
+                                    newSwitch(enterScope = true) { switchNode ->
+                                        switchNode.selector = newReference("someref")
+                                        switchNode.usedAsExpression = true
+                                        switchNode.statement =
+                                            newBlock().also { blk ->
+                                                blk.statements +=
+                                                    newCase().also {
+                                                        it.caseExpression = newReference("True")
                                                     }
-                                                ),
-                                            )
-                                        blk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("c")),
-                                                listOf(newLiteral(-2, objectType("int"))),
-                                            )
-                                        blk.statements += newBreak()
-                                        blk.statements +=
-                                            newCase().also {
-                                                it.caseExpression = newReference("False")
+                                                blk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("a")),
+                                                        listOf(
+                                                            newBinaryOperator("*") {
+                                                                it.lhs = newReference("a")
+                                                                it.rhs =
+                                                                    newLiteral(2, objectType("int"))
+                                                            }
+                                                        ),
+                                                    )
+                                                blk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("c")),
+                                                        listOf(newLiteral(-2, objectType("int"))),
+                                                    )
+                                                blk.statements += newBreak()
+                                                blk.statements +=
+                                                    newCase().also {
+                                                        it.caseExpression = newReference("False")
+                                                    }
+                                                blk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("a")),
+                                                        listOf(newLiteral(290, objectType("int"))),
+                                                    )
+                                                blk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("d")),
+                                                        listOf(newLiteral(-2, objectType("int"))),
+                                                    )
+                                                blk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("b")),
+                                                        listOf(newLiteral(-2, objectType("int"))),
+                                                    )
+                                                blk.statements += newBreak()
                                             }
-                                        blk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("a")),
-                                                listOf(newLiteral(290, objectType("int"))),
-                                            )
-                                        blk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("d")),
-                                                listOf(newLiteral(-2, objectType("int"))),
-                                            )
-                                        blk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("b")),
-                                                listOf(newLiteral(-2, objectType("int"))),
-                                            )
-                                        blk.statements += newBreak()
                                     }
-                                scopeManager.leaveScope(switchNode)
-                                block.statements += switchNode
 
                                 // declare { usedAsExpression = true; variable("a") { literal(42) }
                                 // }
-                                val declStmtFinal = newDeclarationStatement()
-                                declStmtFinal.usedAsExpression = true
-                                val varFinal =
-                                    newVariable("a", unknownType()).also {
+                                block.statements += newDeclarationStatement { ds ->
+                                    ds.usedAsExpression = true
+                                    newVariable("a", unknownType(), holder = ds) {
                                         it.initializer = newLiteral(42, objectType("int"))
                                     }
-                                declStmtFinal.declarations += varFinal
-                                scopeManager.addDeclaration(varFinal)
-                                block.statements += declStmtFinal
+                                }
                             }
                     }
                 }
@@ -612,21 +577,19 @@ class GraphExamples {
 
                                 val listComp = newCollectionComprehension()
                                 listComp.statement = newReference("i")
-                                val comp1 =
-                                    newComprehension().also {
-                                        it.variable = newReference("i")
-                                        it.iterable = newReference("someIterable")
-                                    }
-                                val comp2 =
-                                    newComprehension().also {
-                                        it.variable = newReference("j")
-                                        it.iterable = newReference("i")
-                                        it.predicate =
-                                            newBinaryOperator(">").also { gt ->
-                                                gt.lhs = newReference("j")
-                                                gt.rhs = newLiteral(5, objectType("int"))
-                                            }
-                                    }
+                                val comp1 = newComprehension {
+                                    it.variable = newReference("i")
+                                    it.iterable = newReference("someIterable")
+                                }
+                                val comp2 = newComprehension {
+                                    it.variable = newReference("j")
+                                    it.iterable = newReference("i")
+                                    it.predicate =
+                                        newBinaryOperator(">") { gt ->
+                                            gt.lhs = newReference("j")
+                                            gt.rhs = newLiteral(5, objectType("int"))
+                                        }
+                                }
                                 listComp.comprehensionExpressions = mutableListOf(comp1, comp2)
                                 block.statements += listComp
 
@@ -676,7 +639,7 @@ class GraphExamples {
                                 )
                             block.statements +=
                                 newMemberCall(newMemberAccess("dump", newReference("node")))
-                            block.statements += newReturn().also { it.isImplicit = true }
+                            block.statements += newReturn { it.isImplicit = true }
                         }
                 }
 
@@ -714,12 +677,12 @@ class GraphExamples {
                                     "=",
                                     listOf(newMember("next", newReference("node"))),
                                     listOf(
-                                        newUnaryOperator("&", false, false).also {
+                                        newUnaryOperator("&", false, false) {
                                             it.input = newReference("node")
                                         }
                                     ),
                                 )
-                            block.statements += newReturn().also { it.isImplicit = true }
+                            block.statements += newReturn { it.isImplicit = true }
                         }
                 }
 
@@ -755,7 +718,7 @@ class GraphExamples {
                                     "=",
                                     listOf(newReference("a")),
                                     listOf(
-                                        newBinaryOperator("+").also {
+                                        newBinaryOperator("+") {
                                             it.lhs = dottedCall("bar")
                                             it.rhs = newLiteral(2, objectType("int"))
                                         }
@@ -766,7 +729,7 @@ class GraphExamples {
                                     "=",
                                     listOf(newReference("b")),
                                     listOf(
-                                        newBinaryOperator("+").also {
+                                        newBinaryOperator("+") {
                                             it.lhs = newLiteral(2L, objectType("long"))
                                             it.rhs = dottedCall("baz")
                                         }
@@ -804,8 +767,7 @@ class GraphExamples {
                     func.type = computeType(func)
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            block.statements +=
-                                newReturn().also { it.returnValue = dottedCall("bar") }
+                            block.statements += newReturn { it.returnValue = dottedCall("bar") }
                         }
                 }
 
@@ -835,13 +797,12 @@ class GraphExamples {
                         method.type = computeType(method)
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block.statements +=
-                                    newReturn().also {
-                                        it.returnValue =
-                                            newUnaryOperator("-", false, false).also { u ->
-                                                u.input = dottedCall("bar")
-                                            }
-                                    }
+                                block.statements += newReturn {
+                                    it.returnValue =
+                                        newUnaryOperator("-", false, false) { u ->
+                                            u.input = dottedCall("bar")
+                                        }
+                                }
                             }
                     }
                 }
@@ -873,7 +834,7 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 declareVariable(block, "node", objectType("java.lang.String"))
-                                block.statements += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn { it.isImplicit = true }
                             }
                     }
                 }
@@ -893,7 +854,7 @@ class GraphExamples {
                 scopeManager.resetToGlobal(tu)
 
                 newRecord("Variables", "class", holder = tu, enterScope = true) { record ->
-                    addField(record, "field", objectType("int")) {
+                    newField("field", objectType("int"), holder = record) {
                         it.initializer = newLiteral(42, objectType("int"))
                         it.modifiers = setOf("private")
                     }
@@ -904,8 +865,9 @@ class GraphExamples {
                         method.receiver = newVariable("this", objectType("Variables"))
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block.statements +=
-                                    newReturn().also { it.returnValue = newMember("field") }
+                                block.statements += newReturn {
+                                    it.returnValue = newMember("field")
+                                }
                             }
                     }
 
@@ -918,8 +880,9 @@ class GraphExamples {
                                 declareVariable(block, "local", objectType("int")) {
                                     it.initializer = newLiteral(42, objectType("int"))
                                 }
-                                block.statements +=
-                                    newReturn().also { it.returnValue = newReference("local") }
+                                block.statements += newReturn {
+                                    it.returnValue = newReference("local")
+                                }
                             }
                     }
 
@@ -932,8 +895,9 @@ class GraphExamples {
                                 declareVariable(block, "field", objectType("int")) {
                                     it.initializer = newLiteral(43, objectType("int"))
                                 }
-                                block.statements +=
-                                    newReturn().also { it.returnValue = newReference("field") }
+                                block.statements += newReturn {
+                                    it.returnValue = newReference("field")
+                                }
                             }
                     }
 
@@ -946,10 +910,9 @@ class GraphExamples {
                                 declareVariable(block, "field", objectType("int")) {
                                     it.initializer = newLiteral(43, objectType("int"))
                                 }
-                                block.statements +=
-                                    newReturn().also {
-                                        it.returnValue = newMember("field", newReference("this"))
-                                    }
+                                block.statements += newReturn {
+                                    it.returnValue = newMember("field", newReference("this"))
+                                }
                             }
                     }
                 }
@@ -977,10 +940,8 @@ class GraphExamples {
                                 it.initializer = newLiteral(0, objectType("int"))
                             }
                             block.statements +=
-                                newUnaryOperator("++", true, false).also {
-                                    it.input = newReference("i")
-                                }
-                            block.statements += newReturn().also { it.isImplicit = true }
+                                newUnaryOperator("++", true, false) { it.input = newReference("i") }
+                            block.statements += newReturn { it.isImplicit = true }
                         }
                 }
 
@@ -1012,7 +973,7 @@ class GraphExamples {
                                     listOf(newReference("i")),
                                     listOf(newLiteral(0, objectType("int"))),
                                 )
-                            block.statements += newReturn().also { it.isImplicit = true }
+                            block.statements += newReturn { it.isImplicit = true }
                         }
                 }
 
@@ -1054,7 +1015,7 @@ class GraphExamples {
                                             PhysicalLocation(URI(tuName), Region(5, 7, 5, 8))
                                     }
                                     .let { lhs ->
-                                        newBinaryOperator("==").also {
+                                        newBinaryOperator("==") {
                                             it.lhs = lhs
                                             it.rhs =
                                                 newReference("b").also { rhs ->
@@ -1068,38 +1029,30 @@ class GraphExamples {
                                     }
                             val thenAssign =
                                 newAssign(
-                                        "=",
-                                        listOf(
-                                            newReference("b").also {
-                                                it.location =
-                                                    PhysicalLocation(
-                                                        URI(tuName),
-                                                        Region(5, 16, 5, 17),
-                                                    )
-                                            }
-                                        ),
-                                    )
-                                    .also {
-                                        it.rhs = mutableListOf(newLiteral(2, objectType("int")))
-                                        it.usedAsExpression = true
-                                    }
+                                    "=",
+                                    listOf(
+                                        newReference("b").also {
+                                            it.location =
+                                                PhysicalLocation(URI(tuName), Region(5, 16, 5, 17))
+                                        }
+                                    ),
+                                ) {
+                                    it.rhs = mutableListOf(newLiteral(2, objectType("int")))
+                                    it.usedAsExpression = true
+                                }
                             val elseAssign =
                                 newAssign(
-                                        "=",
-                                        listOf(
-                                            newReference("b").also {
-                                                it.location =
-                                                    PhysicalLocation(
-                                                        URI(tuName),
-                                                        Region(5, 23, 5, 24),
-                                                    )
-                                            }
-                                        ),
-                                    )
-                                    .also {
-                                        it.rhs = mutableListOf(newLiteral(3, objectType("int")))
-                                        it.usedAsExpression = true
-                                    }
+                                    "=",
+                                    listOf(
+                                        newReference("b").also {
+                                            it.location =
+                                                PhysicalLocation(URI(tuName), Region(5, 23, 5, 24))
+                                        }
+                                    ),
+                                ) {
+                                    it.rhs = mutableListOf(newLiteral(3, objectType("int")))
+                                    it.usedAsExpression = true
+                                }
                             block.statements +=
                                 newAssign(
                                     "=",
@@ -1117,7 +1070,7 @@ class GraphExamples {
                                 }
                             block.statements += newAssign("=", listOf(a2), listOf(b2))
 
-                            block.statements += newReturn().also { it.isImplicit = true }
+                            block.statements += newReturn { it.isImplicit = true }
                         }
                 }
 
@@ -1148,212 +1101,217 @@ class GraphExamples {
                                 }
 
                                 val declStmtBCD = newDeclarationStatement()
-                                val bVar =
-                                    newVariable("b", objectType("int")).also {
-                                        it.initializer = newLiteral(1, objectType("int"))
-                                    }
-                                val cVar =
-                                    newVariable("c", objectType("int")).also {
-                                        it.initializer = newLiteral(0, objectType("int"))
-                                    }
-                                val dVar =
-                                    newVariable("d", objectType("int")).also {
-                                        it.initializer = newLiteral(0, objectType("int"))
-                                    }
-                                declStmtBCD.declarations += bVar
-                                declStmtBCD.declarations += cVar
-                                declStmtBCD.declarations += dVar
-                                scopeManager.addDeclaration(bVar)
-                                scopeManager.addDeclaration(cVar)
-                                scopeManager.addDeclaration(dVar)
+                                newVariable("b", objectType("int"), holder = declStmtBCD) {
+                                    it.initializer = newLiteral(1, objectType("int"))
+                                }
+                                newVariable("c", objectType("int"), holder = declStmtBCD) {
+                                    it.initializer = newLiteral(0, objectType("int"))
+                                }
+                                newVariable("d", objectType("int"), holder = declStmtBCD) {
+                                    it.initializer = newLiteral(0, objectType("int"))
+                                }
                                 block.statements += declStmtBCD
 
                                 declareVariable(block, "sunShines", objectType("boolean")) {
                                     it.initializer = newLiteral(true, objectType("boolean"))
                                 }
 
-                                val outerIf = newIfElse()
-                                outerIf.condition =
-                                    newBinaryOperator(">").also {
-                                        it.lhs = newReference("a")
-                                        it.rhs = newLiteral(0, objectType("int"))
-                                    }
-                                outerIf.thenStatement =
-                                    newBlock(enterScope = true) { thenBlk ->
-                                        thenBlk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("d")),
-                                                listOf(newLiteral(5, objectType("int"))),
-                                            )
-                                        thenBlk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("c")),
-                                                listOf(newLiteral(2, objectType("int"))),
-                                            )
+                                block.statements += newIfElse { outerIf ->
+                                    outerIf.condition =
+                                        newBinaryOperator(">") {
+                                            it.lhs = newReference("a")
+                                            it.rhs = newLiteral(0, objectType("int"))
+                                        }
+                                    outerIf.thenStatement =
+                                        newBlock(enterScope = true) { thenBlk ->
+                                            thenBlk.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("d")),
+                                                    listOf(newLiteral(5, objectType("int"))),
+                                                )
+                                            thenBlk.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("c")),
+                                                    listOf(newLiteral(2, objectType("int"))),
+                                                )
 
-                                        val innerIf = newIfElse()
-                                        innerIf.condition =
-                                            newBinaryOperator(">").also {
-                                                it.lhs = newReference("b")
-                                                it.rhs = newLiteral(0, objectType("int"))
-                                            }
-                                        innerIf.thenStatement =
-                                            newBlock(enterScope = true) { innerThen ->
-                                                innerThen.statements +=
-                                                    newAssign(
-                                                        "=",
-                                                        listOf(newReference("d")),
-                                                        listOf(
-                                                            newBinaryOperator("*").also {
-                                                                it.lhs = newReference("a")
-                                                                it.rhs =
-                                                                    newLiteral(2, objectType("int"))
-                                                            }
-                                                        ),
-                                                    )
-                                                innerThen.statements +=
-                                                    newAssign(
-                                                        "=",
-                                                        listOf(newReference("a")),
-                                                        listOf(
-                                                            newBinaryOperator("+").also {
-                                                                it.lhs = newReference("a")
-                                                                it.rhs =
-                                                                    newBinaryOperator("*").also { m
-                                                                        ->
-                                                                        m.lhs = newReference("d")
-                                                                        m.rhs =
+                                            thenBlk.statements += newIfElse { innerIf ->
+                                                innerIf.condition =
+                                                    newBinaryOperator(">") {
+                                                        it.lhs = newReference("b")
+                                                        it.rhs = newLiteral(0, objectType("int"))
+                                                    }
+                                                innerIf.thenStatement =
+                                                    newBlock(enterScope = true) { innerThen ->
+                                                        innerThen.statements +=
+                                                            newAssign(
+                                                                "=",
+                                                                listOf(newReference("d")),
+                                                                listOf(
+                                                                    newBinaryOperator("*") {
+                                                                        it.lhs = newReference("a")
+                                                                        it.rhs =
                                                                             newLiteral(
                                                                                 2,
                                                                                 objectType("int"),
                                                                             )
                                                                     }
-                                                            }
-                                                        ),
-                                                    )
-                                            }
-                                        // Fluent's "elseIf" builds a nested IfElse whose *own*
-                                        // condition is built with "lt", which has no
-                                        // ArgumentHolder context at all. Since the ambient holder
-                                        // (the nested IfElse) is an overwrite-style ArgumentHolder,
-                                        // and "lt" never self-attaches, the final condition ends
-                                        // up being just the last-evaluated operand (the literal
-                                        // rhs), not the comparison. Faithfully reproduced.
-                                        innerIf.elseStatement =
-                                            newIfElse().also { elseIfNode ->
-                                                elseIfNode.condition =
-                                                    newLiteral(-2, objectType("int"))
-                                                elseIfNode.thenStatement =
-                                                    newBlock(enterScope = true) { elseIfThen ->
-                                                        elseIfThen.statements +=
+                                                                ),
+                                                            )
+                                                        innerThen.statements +=
                                                             newAssign(
                                                                 "=",
                                                                 listOf(newReference("a")),
                                                                 listOf(
-                                                                    newBinaryOperator("-").also {
+                                                                    newBinaryOperator("+") {
                                                                         it.lhs = newReference("a")
                                                                         it.rhs =
-                                                                            newLiteral(
-                                                                                10,
-                                                                                objectType("int"),
-                                                                            )
+                                                                            newBinaryOperator(
+                                                                                "*"
+                                                                            ) { m ->
+                                                                                m.lhs =
+                                                                                    newReference(
+                                                                                        "d"
+                                                                                    )
+                                                                                m.rhs =
+                                                                                    newLiteral(
+                                                                                        2,
+                                                                                        objectType(
+                                                                                            "int"
+                                                                                        ),
+                                                                                    )
+                                                                            }
                                                                     }
                                                                 ),
                                                             )
                                                     }
+                                                // Fluent's "elseIf" builds a nested IfElse
+                                                // whose *own* condition is built with
+                                                // "lt", which has no ArgumentHolder
+                                                // context at all. Since the ambient holder
+                                                // (the nested IfElse) is an
+                                                // overwrite-style ArgumentHolder, and "lt"
+                                                // never self-attaches, the final condition
+                                                // ends up being just the last-evaluated
+                                                // operand (the literal rhs), not the
+                                                // comparison. Faithfully reproduced.
+                                                innerIf.elseStatement = newIfElse { elseIfNode ->
+                                                    elseIfNode.condition =
+                                                        newLiteral(-2, objectType("int"))
+                                                    elseIfNode.thenStatement =
+                                                        newBlock(enterScope = true) { elseIfThen ->
+                                                            elseIfThen.statements +=
+                                                                newAssign(
+                                                                    "=",
+                                                                    listOf(newReference("a")),
+                                                                    listOf(
+                                                                        newBinaryOperator("-") {
+                                                                            it.lhs =
+                                                                                newReference("a")
+                                                                            it.rhs =
+                                                                                newLiteral(
+                                                                                    10,
+                                                                                    objectType(
+                                                                                        "int"
+                                                                                    ),
+                                                                                )
+                                                                        }
+                                                                    ),
+                                                                )
+                                                        }
+                                                }
                                             }
-                                        thenBlk.statements += innerIf
-                                    }
-                                outerIf.elseStatement =
-                                    newBlock(enterScope = true) { elseBlk ->
-                                        elseBlk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("b")),
-                                                listOf(newLiteral(-2, objectType("int"))),
-                                            )
-                                        elseBlk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("d")),
-                                                listOf(newLiteral(-2, objectType("int"))),
-                                            )
-                                        elseBlk.statements +=
-                                            newUnaryOperator("--", true, false).also {
-                                                it.input = newReference("a")
-                                            }
-                                    }
-                                block.statements += outerIf
+                                        }
+                                    outerIf.elseStatement =
+                                        newBlock(enterScope = true) { elseBlk ->
+                                            elseBlk.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("b")),
+                                                    listOf(newLiteral(-2, objectType("int"))),
+                                                )
+                                            elseBlk.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("d")),
+                                                    listOf(newLiteral(-2, objectType("int"))),
+                                                )
+                                            elseBlk.statements +=
+                                                newUnaryOperator("--", true, false) {
+                                                    it.input = newReference("a")
+                                                }
+                                        }
+                                }
 
                                 block.statements +=
                                     newAssign(
                                         "=",
                                         listOf(newReference("a")),
                                         listOf(
-                                            newBinaryOperator("+").also {
+                                            newBinaryOperator("+") {
                                                 it.lhs = newReference("a")
                                                 it.rhs = newReference("b")
                                             }
                                         ),
                                     )
 
-                                val switchNode = newSwitch()
-                                switchNode.selector = newReference("sunShines")
-                                scopeManager.enterScope(switchNode)
-                                switchNode.statement =
-                                    newBlock().also { blk ->
-                                        blk.statements +=
-                                            newCase().also {
-                                                it.caseExpression = newReference("True")
-                                            }
-                                        blk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("a")),
-                                                listOf(
-                                                    newBinaryOperator("*").also {
-                                                        it.lhs = newReference("a")
-                                                        it.rhs = newLiteral(2, objectType("int"))
+                                block.statements +=
+                                    newSwitch(enterScope = true) { switchNode ->
+                                        switchNode.selector = newReference("sunShines")
+                                        switchNode.statement =
+                                            newBlock().also { blk ->
+                                                blk.statements +=
+                                                    newCase().also {
+                                                        it.caseExpression = newReference("True")
                                                     }
-                                                ),
-                                            )
-                                        blk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("c")),
-                                                listOf(newLiteral(-2, objectType("int"))),
-                                            )
-                                        blk.statements += newBreak()
-                                        blk.statements +=
-                                            newCase().also {
-                                                it.caseExpression = newReference("False")
+                                                blk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("a")),
+                                                        listOf(
+                                                            newBinaryOperator("*") {
+                                                                it.lhs = newReference("a")
+                                                                it.rhs =
+                                                                    newLiteral(2, objectType("int"))
+                                                            }
+                                                        ),
+                                                    )
+                                                blk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("c")),
+                                                        listOf(newLiteral(-2, objectType("int"))),
+                                                    )
+                                                blk.statements += newBreak()
+                                                blk.statements +=
+                                                    newCase().also {
+                                                        it.caseExpression = newReference("False")
+                                                    }
+                                                blk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("a")),
+                                                        listOf(newLiteral(290, objectType("int"))),
+                                                    )
+                                                blk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("d")),
+                                                        listOf(newLiteral(-2, objectType("int"))),
+                                                    )
+                                                blk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("b")),
+                                                        listOf(newLiteral(-2, objectType("int"))),
+                                                    )
+                                                blk.statements += newBreak()
                                             }
-                                        blk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("a")),
-                                                listOf(newLiteral(290, objectType("int"))),
-                                            )
-                                        blk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("d")),
-                                                listOf(newLiteral(-2, objectType("int"))),
-                                            )
-                                        blk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("b")),
-                                                listOf(newLiteral(-2, objectType("int"))),
-                                            )
-                                        blk.statements += newBreak()
                                     }
-                                scopeManager.leaveScope(switchNode)
-                                block.statements += switchNode
 
-                                block.statements += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn { it.isImplicit = true }
                             }
                     }
                 }
@@ -1378,15 +1336,16 @@ class GraphExamples {
                     holder = tu,
                     enterScope = true,
                 ) { record ->
-                    addField(record, "bla", objectType("int"))
+                    newField("bla", objectType("int"), holder = record)
 
-                    addConstructor(record) { ctor ->
+                    newConstructor(record.name, record, holder = record, enterScope = true) { ctor
+                        ->
                         ctor.isImplicit = true
                         ctor.receiver =
                             newVariable("this", objectType("ControlFlowSensitiveDFGIfMerge"))
                         ctor.body =
                             newBlock(enterScope = true) { block ->
-                                block.statements += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn { it.isImplicit = true }
                             }
                     }
 
@@ -1402,44 +1361,31 @@ class GraphExamples {
                                     it.initializer = newLiteral(1, objectType("int"))
                                 }
 
-                                val ifNode = newIfElse()
-                                ifNode.condition =
-                                    newBinaryOperator(">").also {
-                                        it.lhs = newMember("length", newReference("args"))
-                                        it.rhs = newLiteral(3, objectType("int"))
-                                    }
-                                ifNode.thenStatement =
-                                    newBlock(enterScope = true) { thenBlk ->
-                                        thenBlk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("a")),
-                                                listOf(newLiteral(2, objectType("int"))),
-                                            )
-                                    }
-                                ifNode.elseStatement =
-                                    newBlock(enterScope = true) { elseBlk ->
-                                        val printlnCall =
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "println",
-                                                    newMember(
-                                                        "out",
-                                                        newReference("System").also {
-                                                            it.isStaticAccess = true
-                                                        },
-                                                    ),
+                                block.statements += newIfElse { ifNode ->
+                                    ifNode.condition =
+                                        newBinaryOperator(">") {
+                                            it.lhs = newMember("length", newReference("args"))
+                                            it.rhs = newLiteral(3, objectType("int"))
+                                        }
+                                    ifNode.thenStatement =
+                                        newBlock(enterScope = true) { thenBlk ->
+                                            thenBlk.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("a")),
+                                                    listOf(newLiteral(2, objectType("int"))),
                                                 )
-                                            )
-                                        printlnCall.arguments += newReference("a")
-                                        elseBlk.statements += printlnCall
-                                    }
-                                block.statements += ifNode
+                                        }
+                                    ifNode.elseStatement =
+                                        newBlock(enterScope = true) { elseBlk ->
+                                            elseBlk.statements += printlnCall(newReference("a"))
+                                        }
+                                }
 
                                 declareVariable(block, "b", objectType("int")) {
                                     it.initializer = newReference("a")
                                 }
-                                block.statements += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn { it.isImplicit = true }
                             }
                     }
 
@@ -1459,14 +1405,11 @@ class GraphExamples {
                                         newNew().also { n ->
                                             n.initializer =
                                                 newConstruction(
-                                                        parseName("ControlFlowSensitiveDFGIfMerge")
-                                                    )
-                                                    .also { c ->
-                                                        c.type =
-                                                            objectType(
-                                                                "ControlFlowSensitiveDFGIfMerge"
-                                                            )
-                                                    }
+                                                    parseName("ControlFlowSensitiveDFGIfMerge")
+                                                ) { c ->
+                                                    c.type =
+                                                        objectType("ControlFlowSensitiveDFGIfMerge")
+                                                }
                                         }
                                 }
                                 block.statements +=
@@ -1475,7 +1418,7 @@ class GraphExamples {
                                         listOf(newMember("bla", newReference("obj"))),
                                         listOf(newLiteral(3, objectType("int"))),
                                     )
-                                block.statements += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn { it.isImplicit = true }
                             }
                     }
                 }
@@ -1515,91 +1458,80 @@ class GraphExamples {
                                     it.initializer = newLiteral(0, objectType("int"))
                                 }
 
-                                val switchNode = newSwitch()
-                                switchNode.selector = newReference("switchVal")
-                                scopeManager.enterScope(switchNode)
-                                switchNode.statement =
-                                    newBlock().also { blk ->
-                                        blk.statements +=
-                                            newCase().also {
-                                                it.caseExpression = newLiteral(1, objectType("int"))
-                                            }
-                                        blk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(
-                                                    newReference("a").also {
-                                                        it.location =
-                                                            PhysicalLocation(
-                                                                URI(tuName),
-                                                                Region(8, 9, 8, 10),
-                                                            )
+                                block.statements +=
+                                    newSwitch(enterScope = true) { switchNode ->
+                                        switchNode.selector = newReference("switchVal")
+                                        switchNode.statement =
+                                            newBlock().also { blk ->
+                                                blk.statements +=
+                                                    newCase().also {
+                                                        it.caseExpression =
+                                                            newLiteral(1, objectType("int"))
                                                     }
-                                                ),
-                                                listOf(newLiteral(10, objectType("int"))),
-                                            )
-                                        blk.statements += newBreak()
-                                        blk.statements +=
-                                            newCase().also {
-                                                it.caseExpression = newLiteral(2, objectType("int"))
-                                            }
-                                        blk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(
-                                                    newReference("a").also {
-                                                        it.location =
-                                                            PhysicalLocation(
-                                                                URI(tuName),
-                                                                Region(11, 9, 11, 10),
-                                                            )
+                                                blk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(
+                                                            newReference("a").also {
+                                                                it.location =
+                                                                    PhysicalLocation(
+                                                                        URI(tuName),
+                                                                        Region(8, 9, 8, 10),
+                                                                    )
+                                                            }
+                                                        ),
+                                                        listOf(newLiteral(10, objectType("int"))),
+                                                    )
+                                                blk.statements += newBreak()
+                                                blk.statements +=
+                                                    newCase().also {
+                                                        it.caseExpression =
+                                                            newLiteral(2, objectType("int"))
                                                     }
-                                                ),
-                                                listOf(newLiteral(11, objectType("int"))),
-                                            )
-                                        blk.statements += newBreak()
-                                        blk.statements +=
-                                            newCase().also {
-                                                it.caseExpression = newLiteral(3, objectType("int"))
-                                            }
-                                        blk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(
-                                                    newReference("a").also {
-                                                        it.location =
-                                                            PhysicalLocation(
-                                                                URI(tuName),
-                                                                Region(14, 9, 14, 10),
-                                                            )
+                                                blk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(
+                                                            newReference("a").also {
+                                                                it.location =
+                                                                    PhysicalLocation(
+                                                                        URI(tuName),
+                                                                        Region(11, 9, 11, 10),
+                                                                    )
+                                                            }
+                                                        ),
+                                                        listOf(newLiteral(11, objectType("int"))),
+                                                    )
+                                                blk.statements += newBreak()
+                                                blk.statements +=
+                                                    newCase().also {
+                                                        it.caseExpression =
+                                                            newLiteral(3, objectType("int"))
                                                     }
-                                                ),
-                                                listOf(newLiteral(12, objectType("int"))),
-                                            )
-                                        blk.statements += newDefault()
-                                        val printlnCall =
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "println",
-                                                    newMember(
-                                                        "out",
-                                                        newReference("System").also {
-                                                            it.isStaticAccess = true
-                                                        },
-                                                    ),
-                                                )
-                                            )
-                                        printlnCall.arguments += newReference("a")
-                                        blk.statements += printlnCall
-                                        blk.statements += newBreak()
+                                                blk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(
+                                                            newReference("a").also {
+                                                                it.location =
+                                                                    PhysicalLocation(
+                                                                        URI(tuName),
+                                                                        Region(14, 9, 14, 10),
+                                                                    )
+                                                            }
+                                                        ),
+                                                        listOf(newLiteral(12, objectType("int"))),
+                                                    )
+                                                blk.statements += newDefault()
+                                                blk.statements += printlnCall(newReference("a"))
+                                                blk.statements += newBreak()
+                                            }
                                     }
-                                scopeManager.leaveScope(switchNode)
-                                block.statements += switchNode
 
                                 declareVariable(block, "b", objectType("int")) {
                                     it.initializer = newReference("a")
                                 }
-                                block.statements += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn { it.isImplicit = true }
                             }
                     }
                 }
@@ -1635,36 +1567,36 @@ class GraphExamples {
                                     it.initializer = newLiteral(1, objectType("int"))
                                 }
 
-                                val ifNode = newIfElse()
-                                ifNode.condition =
-                                    newBinaryOperator(">").also {
-                                        it.lhs = newMember("length", newReference("args"))
-                                        it.rhs = newLiteral(3, objectType("int"))
-                                    }
-                                ifNode.thenStatement =
-                                    newBlock(enterScope = true) { thenBlk ->
-                                        thenBlk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("a")),
-                                                listOf(newLiteral(2, objectType("int"))),
-                                            )
-                                    }
-                                ifNode.elseStatement =
-                                    newBlock(enterScope = true) { elseBlk ->
-                                        elseBlk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("a")),
-                                                listOf(newLiteral(4, objectType("int"))),
-                                            )
-                                        declareVariable(elseBlk, "b", objectType("int")) {
-                                            it.initializer = newReference("a")
+                                block.statements += newIfElse { ifNode ->
+                                    ifNode.condition =
+                                        newBinaryOperator(">") {
+                                            it.lhs = newMember("length", newReference("args"))
+                                            it.rhs = newLiteral(3, objectType("int"))
                                         }
-                                    }
-                                block.statements += ifNode
+                                    ifNode.thenStatement =
+                                        newBlock(enterScope = true) { thenBlk ->
+                                            thenBlk.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("a")),
+                                                    listOf(newLiteral(2, objectType("int"))),
+                                                )
+                                        }
+                                    ifNode.elseStatement =
+                                        newBlock(enterScope = true) { elseBlk ->
+                                            elseBlk.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("a")),
+                                                    listOf(newLiteral(4, objectType("int"))),
+                                                )
+                                            declareVariable(elseBlk, "b", objectType("int")) {
+                                                it.initializer = newReference("a")
+                                            }
+                                        }
+                                }
 
-                                block.statements += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn { it.isImplicit = true }
                             }
                     }
                 }
@@ -1698,124 +1630,139 @@ class GraphExamples {
 
                                 val labelNode = newLabel()
                                 labelNode.label = "lab1"
-
-                                val outerWhile = newWhile()
-                                scopeManager.enterScope(outerWhile)
-                                outerWhile.condition =
-                                    newBinaryOperator("<").also {
-                                        it.lhs = newReference("param")
-                                        it.rhs = newLiteral(5, objectType("int"))
-                                    }
-                                outerWhile.statement =
-                                    newBlock().also { outerBody ->
-                                        val innerWhile = newWhile()
-                                        scopeManager.enterScope(innerWhile)
-                                        innerWhile.condition =
-                                            newBinaryOperator(">").also {
+                                labelNode.subStatement =
+                                    newWhile(enterScope = true) { outerWhile ->
+                                        outerWhile.condition =
+                                            newBinaryOperator("<") {
                                                 it.lhs = newReference("param")
-                                                it.rhs = newLiteral(6, objectType("int"))
+                                                it.rhs = newLiteral(5, objectType("int"))
                                             }
-                                        innerWhile.statement =
-                                            newBlock().also { innerBody ->
-                                                val innerIf = newIfElse()
-                                                innerIf.condition =
-                                                    newBinaryOperator(">").also {
-                                                        it.lhs = newReference("param")
-                                                        it.rhs = newLiteral(7, objectType("int"))
+                                        outerWhile.statement =
+                                            newBlock().also { outerBody ->
+                                                outerBody.statements +=
+                                                    newWhile(enterScope = true) { innerWhile ->
+                                                        innerWhile.condition =
+                                                            newBinaryOperator(">") {
+                                                                it.lhs = newReference("param")
+                                                                it.rhs =
+                                                                    newLiteral(6, objectType("int"))
+                                                            }
+                                                        innerWhile.statement =
+                                                            newBlock().also { innerBody ->
+                                                                innerBody.statements +=
+                                                                    newIfElse { innerIf ->
+                                                                        innerIf.condition =
+                                                                            newBinaryOperator(">") {
+                                                                                it.lhs =
+                                                                                    newReference(
+                                                                                        "param"
+                                                                                    )
+                                                                                it.rhs =
+                                                                                    newLiteral(
+                                                                                        7,
+                                                                                        objectType(
+                                                                                            "int"
+                                                                                        ),
+                                                                                    )
+                                                                            }
+                                                                        innerIf.thenStatement =
+                                                                            newBlock(
+                                                                                enterScope = true
+                                                                            ) { thenBlk ->
+                                                                                thenBlk
+                                                                                    .statements +=
+                                                                                    newAssign(
+                                                                                        "=",
+                                                                                        listOf(
+                                                                                            newReference(
+                                                                                                "a"
+                                                                                            )
+                                                                                        ),
+                                                                                        listOf(
+                                                                                            newLiteral(
+                                                                                                1,
+                                                                                                objectType(
+                                                                                                    "int"
+                                                                                                ),
+                                                                                            )
+                                                                                        ),
+                                                                                    )
+                                                                                thenBlk
+                                                                                    .statements +=
+                                                                                    newContinue()
+                                                                                        .also {
+                                                                                            it
+                                                                                                .label =
+                                                                                                "lab1"
+                                                                                        }
+                                                                            }
+                                                                        innerIf.elseStatement =
+                                                                            newBlock(
+                                                                                enterScope = true
+                                                                            ) { elseBlk ->
+                                                                                elseBlk
+                                                                                    .statements +=
+                                                                                    printlnCall(
+                                                                                        newReference(
+                                                                                            "a"
+                                                                                        )
+                                                                                    )
+                                                                                elseBlk
+                                                                                    .statements +=
+                                                                                    newAssign(
+                                                                                        "=",
+                                                                                        listOf(
+                                                                                            newReference(
+                                                                                                "a"
+                                                                                            )
+                                                                                        ),
+                                                                                        listOf(
+                                                                                            newLiteral(
+                                                                                                2,
+                                                                                                objectType(
+                                                                                                    "int"
+                                                                                                ),
+                                                                                            )
+                                                                                        ),
+                                                                                    )
+                                                                                elseBlk
+                                                                                    .statements +=
+                                                                                    newBreak()
+                                                                                        .also {
+                                                                                            it
+                                                                                                .label =
+                                                                                                "lab1"
+                                                                                        }
+                                                                            }
+                                                                    }
+                                                                innerBody.statements +=
+                                                                    newAssign(
+                                                                        "=",
+                                                                        listOf(newReference("a")),
+                                                                        listOf(
+                                                                            newLiteral(
+                                                                                4,
+                                                                                objectType("int"),
+                                                                            )
+                                                                        ),
+                                                                    )
+                                                            }
                                                     }
-                                                innerIf.thenStatement =
-                                                    newBlock(enterScope = true) { thenBlk ->
-                                                        thenBlk.statements +=
-                                                            newAssign(
-                                                                "=",
-                                                                listOf(newReference("a")),
-                                                                listOf(
-                                                                    newLiteral(1, objectType("int"))
-                                                                ),
-                                                            )
-                                                        thenBlk.statements +=
-                                                            newContinue().also { it.label = "lab1" }
-                                                    }
-                                                innerIf.elseStatement =
-                                                    newBlock(enterScope = true) { elseBlk ->
-                                                        val printlnCall =
-                                                            newMemberCall(
-                                                                newMemberAccess(
-                                                                    "println",
-                                                                    newMember(
-                                                                        "out",
-                                                                        newReference("System")
-                                                                            .also {
-                                                                                it.isStaticAccess =
-                                                                                    true
-                                                                            },
-                                                                    ),
-                                                                )
-                                                            )
-                                                        printlnCall.arguments += newReference("a")
-                                                        elseBlk.statements += printlnCall
-                                                        elseBlk.statements +=
-                                                            newAssign(
-                                                                "=",
-                                                                listOf(newReference("a")),
-                                                                listOf(
-                                                                    newLiteral(2, objectType("int"))
-                                                                ),
-                                                            )
-                                                        elseBlk.statements +=
-                                                            newBreak().also { it.label = "lab1" }
-                                                    }
-                                                innerBody.statements += innerIf
-                                                innerBody.statements +=
+
+                                                outerBody.statements +=
+                                                    printlnCall(newReference("a"))
+                                                outerBody.statements +=
                                                     newAssign(
                                                         "=",
                                                         listOf(newReference("a")),
-                                                        listOf(newLiteral(4, objectType("int"))),
+                                                        listOf(newLiteral(3, objectType("int"))),
                                                     )
                                             }
-                                        scopeManager.leaveScope(innerWhile)
-                                        outerBody.statements += innerWhile
-
-                                        val printlnCall2 =
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "println",
-                                                    newMember(
-                                                        "out",
-                                                        newReference("System").also {
-                                                            it.isStaticAccess = true
-                                                        },
-                                                    ),
-                                                )
-                                            )
-                                        printlnCall2.arguments += newReference("a")
-                                        outerBody.statements += printlnCall2
-                                        outerBody.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("a")),
-                                                listOf(newLiteral(3, objectType("int"))),
-                                            )
                                     }
-                                scopeManager.leaveScope(outerWhile)
-                                labelNode.subStatement = outerWhile
                                 block.statements += labelNode
 
-                                val printlnCall3 =
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMember(
-                                                "out",
-                                                newReference("System").also {
-                                                    it.isStaticAccess = true
-                                                },
-                                            ),
-                                        )
-                                    )
-                                printlnCall3.arguments += newReference("a")
-                                block.statements += printlnCall3
-                                block.statements += newReturn().also { it.isImplicit = true }
+                                block.statements += printlnCall(newReference("a"))
+                                block.statements += newReturn { it.isImplicit = true }
                             }
                     }
                 }
@@ -1846,61 +1793,59 @@ class GraphExamples {
                                     it.initializer = newLiteral(0, objectType("int"))
                                 }
 
-                                val whileNode = newWhile()
-                                scopeManager.enterScope(whileNode)
-                                whileNode.condition =
-                                    newBinaryOperator("==").also {
-                                        it.lhs =
-                                            newBinaryOperator("%").also { m ->
-                                                m.lhs = newReference("param")
-                                                m.rhs = newLiteral(6, objectType("int"))
+                                block.statements +=
+                                    newWhile(enterScope = true) { whileNode ->
+                                        whileNode.condition =
+                                            newBinaryOperator("==") {
+                                                it.lhs =
+                                                    newBinaryOperator("%") { m ->
+                                                        m.lhs = newReference("param")
+                                                        m.rhs = newLiteral(6, objectType("int"))
+                                                    }
+                                                it.rhs = newLiteral(5, objectType("int"))
                                             }
-                                        it.rhs = newLiteral(5, objectType("int"))
+                                        whileNode.statement =
+                                            newBlock().also { body ->
+                                                body.statements += newIfElse { ifNode ->
+                                                    ifNode.condition =
+                                                        newBinaryOperator(">") {
+                                                            it.lhs = newReference("param")
+                                                            it.rhs =
+                                                                newLiteral(7, objectType("int"))
+                                                        }
+                                                    ifNode.thenStatement =
+                                                        newBlock(enterScope = true) { thenBlk ->
+                                                            thenBlk.statements +=
+                                                                newAssign(
+                                                                    "=",
+                                                                    listOf(newReference("a")),
+                                                                    listOf(
+                                                                        newLiteral(
+                                                                            1,
+                                                                            objectType("int"),
+                                                                        )
+                                                                    ),
+                                                                )
+                                                        }
+                                                    ifNode.elseStatement =
+                                                        newBlock(enterScope = true) { elseBlk ->
+                                                            elseBlk.statements +=
+                                                                printlnCall(newReference("a"))
+                                                            elseBlk.statements +=
+                                                                newAssign(
+                                                                    "=",
+                                                                    listOf(newReference("a")),
+                                                                    listOf(
+                                                                        newLiteral(
+                                                                            2,
+                                                                            objectType("int"),
+                                                                        )
+                                                                    ),
+                                                                )
+                                                        }
+                                                }
+                                            }
                                     }
-                                whileNode.statement =
-                                    newBlock().also { body ->
-                                        val ifNode = newIfElse()
-                                        ifNode.condition =
-                                            newBinaryOperator(">").also {
-                                                it.lhs = newReference("param")
-                                                it.rhs = newLiteral(7, objectType("int"))
-                                            }
-                                        ifNode.thenStatement =
-                                            newBlock(enterScope = true) { thenBlk ->
-                                                thenBlk.statements +=
-                                                    newAssign(
-                                                        "=",
-                                                        listOf(newReference("a")),
-                                                        listOf(newLiteral(1, objectType("int"))),
-                                                    )
-                                            }
-                                        ifNode.elseStatement =
-                                            newBlock(enterScope = true) { elseBlk ->
-                                                val printlnCall =
-                                                    newMemberCall(
-                                                        newMemberAccess(
-                                                            "println",
-                                                            newMember(
-                                                                "out",
-                                                                newReference("System").also {
-                                                                    it.isStaticAccess = true
-                                                                },
-                                                            ),
-                                                        )
-                                                    )
-                                                printlnCall.arguments += newReference("a")
-                                                elseBlk.statements += printlnCall
-                                                elseBlk.statements +=
-                                                    newAssign(
-                                                        "=",
-                                                        listOf(newReference("a")),
-                                                        listOf(newLiteral(2, objectType("int"))),
-                                                    )
-                                            }
-                                        body.statements += ifNode
-                                    }
-                                scopeManager.leaveScope(whileNode)
-                                block.statements += whileNode
 
                                 block.statements +=
                                     newAssign(
@@ -1908,7 +1853,7 @@ class GraphExamples {
                                         listOf(newReference("a")),
                                         listOf(newLiteral(3, objectType("int"))),
                                     )
-                                block.statements += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn { it.isImplicit = true }
                             }
                     }
                 }
@@ -1947,7 +1892,7 @@ class GraphExamples {
                                         "=",
                                         listOf(newReference("a")),
                                         listOf(
-                                            newBinaryOperator("+").also {
+                                            newBinaryOperator("+") {
                                                 it.lhs = newReference("a")
                                                 it.rhs = newReference("b")
                                             }
@@ -1983,16 +1928,15 @@ class GraphExamples {
                                     it.initializer = newLiteral(1, objectType("int"))
                                 }
 
-                                val ifNode = newIfElse()
-                                ifNode.condition =
-                                    newBinaryOperator("==").also {
-                                        it.lhs = newReference("a")
-                                        it.rhs = newLiteral(5, objectType("int"))
-                                    }
-                                ifNode.thenStatement =
-                                    newBlock(enterScope = true) { thenBlk ->
-                                        thenBlk.statements +=
-                                            newReturn().also {
+                                block.statements += newIfElse { ifNode ->
+                                    ifNode.condition =
+                                        newBinaryOperator("==") {
+                                            it.lhs = newReference("a")
+                                            it.rhs = newLiteral(5, objectType("int"))
+                                        }
+                                    ifNode.thenStatement =
+                                        newBlock(enterScope = true) { thenBlk ->
+                                            thenBlk.statements += newReturn {
                                                 it.returnValue = newLiteral(2, objectType("int"))
                                                 it.location =
                                                     PhysicalLocation(
@@ -2000,11 +1944,10 @@ class GraphExamples {
                                                         Region(5, 13, 5, 21),
                                                     )
                                             }
-                                    }
-                                ifNode.elseStatement =
-                                    newBlock(enterScope = true) { elseBlk ->
-                                        elseBlk.statements +=
-                                            newReturn().also {
+                                        }
+                                    ifNode.elseStatement =
+                                        newBlock(enterScope = true) { elseBlk ->
+                                            elseBlk.statements += newReturn {
                                                 it.returnValue = newReference("a")
                                                 it.location =
                                                     PhysicalLocation(
@@ -2012,10 +1955,10 @@ class GraphExamples {
                                                         Region(7, 13, 7, 21),
                                                     )
                                             }
-                                    }
-                                block.statements += ifNode
+                                        }
+                                }
 
-                                block.statements += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn { it.isImplicit = true }
                             }
                     }
                 }
@@ -2036,13 +1979,14 @@ class GraphExamples {
 
                 newNamespace("compiling", holder = tu, enterScope = true) { ns ->
                     newRecord("SimpleClass", "class", holder = ns, enterScope = true) { record ->
-                        addField(record, "field", objectType("int"))
+                        newField("field", objectType("int"), holder = record)
 
-                        addConstructor(record) { ctor ->
+                        newConstructor(record.name, record, holder = record, enterScope = true) {
+                            ctor ->
                             ctor.receiver = newVariable("this", objectType("SimpleClass"))
                             ctor.body =
                                 newBlock(enterScope = true) { block ->
-                                    block.statements += newReturn().also { it.isImplicit = true }
+                                    block.statements += newReturn { it.isImplicit = true }
                                 }
                         }
 
@@ -2052,72 +1996,62 @@ class GraphExamples {
                             method.receiver = newVariable("this", objectType("SimpleClass"))
                             method.body =
                                 newBlock(enterScope = true) { block ->
-                                    val printlnCall =
-                                        newMemberCall(
-                                            newMemberAccess(
-                                                "println",
-                                                newMember(
-                                                    "out",
-                                                    newReference("System").also {
-                                                        it.isStaticAccess = true
-                                                    },
-                                                ),
-                                            )
-                                        )
-                                    printlnCall.arguments +=
-                                        newLiteral("Hello world", unknownType())
-                                    block.statements += printlnCall
+                                    block.statements +=
+                                        printlnCall(newLiteral("Hello world", unknownType()))
 
                                     declareVariable(block, "x", objectType("int")) {
                                         it.initializer = newLiteral(0, unknownType())
                                     }
 
-                                    val ifNode = newIfElse()
-                                    ifNode.condition =
-                                        newBinaryOperator(">").also {
-                                            it.lhs =
-                                                newMemberCall(
-                                                    newMemberAccess(
-                                                        "currentTimeMillis",
-                                                        newReference("System").also {
-                                                            it.isStaticAccess = true
-                                                        },
+                                    block.statements += newIfElse { ifNode ->
+                                        ifNode.condition =
+                                            newBinaryOperator(">") {
+                                                it.lhs =
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "currentTimeMillis",
+                                                            newReference("System").also {
+                                                                it.isStaticAccess = true
+                                                            },
+                                                        )
                                                     )
-                                                )
-                                            it.rhs = newLiteral(0, unknownType())
-                                        }
-                                    ifNode.thenStatement =
-                                        newBlock(enterScope = true) { thenBlk ->
-                                            thenBlk.statements +=
-                                                newAssign(
-                                                    "=",
-                                                    listOf(newReference("x")),
-                                                    listOf(
-                                                        newBinaryOperator("+").also {
-                                                            it.lhs = newReference("x")
-                                                            it.rhs = newLiteral(1, unknownType())
-                                                        }
-                                                    ),
-                                                )
-                                        }
-                                    ifNode.elseStatement =
-                                        newBlock(enterScope = true) { elseBlk ->
-                                            elseBlk.statements +=
-                                                newAssign(
-                                                    "=",
-                                                    listOf(newReference("x")),
-                                                    listOf(
-                                                        newBinaryOperator("-").also {
-                                                            it.lhs = newReference("x")
-                                                            it.rhs = newLiteral(1, unknownType())
-                                                        }
-                                                    ),
-                                                )
-                                        }
-                                    block.statements += ifNode
+                                                it.rhs = newLiteral(0, unknownType())
+                                            }
+                                        ifNode.thenStatement =
+                                            newBlock(enterScope = true) { thenBlk ->
+                                                thenBlk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("x")),
+                                                        listOf(
+                                                            newBinaryOperator("+") {
+                                                                it.lhs = newReference("x")
+                                                                it.rhs =
+                                                                    newLiteral(1, unknownType())
+                                                            }
+                                                        ),
+                                                    )
+                                            }
+                                        ifNode.elseStatement =
+                                            newBlock(enterScope = true) { elseBlk ->
+                                                elseBlk.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("x")),
+                                                        listOf(
+                                                            newBinaryOperator("-") {
+                                                                it.lhs = newReference("x")
+                                                                it.rhs =
+                                                                    newLiteral(1, unknownType())
+                                                            }
+                                                        ),
+                                                    )
+                                            }
+                                    }
 
-                                    block.statements +=
-                                        newReturn().also { it.returnValue = newReference("x") }
+                                    block.statements += newReturn {
+                                        it.returnValue = newReference("x")
+                                    }
                                 }
                         }
                     }
@@ -2138,16 +2072,17 @@ class GraphExamples {
                 scopeManager.resetToGlobal(tu)
 
                 newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
-                    addField(record, "attr", objectType("String")) {
+                    newField("attr", objectType("String"), holder = record) {
                         it.initializer = newLiteral("", objectType("String"))
                     }
 
-                    addConstructor(record) { ctor ->
+                    newConstructor(record.name, record, holder = record, enterScope = true) { ctor
+                        ->
                         ctor.isImplicit = true
                         ctor.receiver = newVariable("this", objectType("Dataflow"))
                         ctor.body =
                             newBlock(enterScope = true) { block ->
-                                block.statements += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn { it.isImplicit = true }
                             }
                     }
 
@@ -2157,18 +2092,17 @@ class GraphExamples {
                         method.receiver = newVariable("this", objectType("Dataflow"))
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block.statements +=
-                                    newReturn().also {
-                                        it.returnValue =
-                                            newBinaryOperator("+").also { op ->
-                                                op.lhs =
-                                                    newLiteral(
-                                                        "ShortcutClass: attr=",
-                                                        objectType("String"),
-                                                    )
-                                                op.rhs = newMember("attr")
-                                            }
-                                    }
+                                block.statements += newReturn {
+                                    it.returnValue =
+                                        newBinaryOperator("+") { op ->
+                                            op.lhs =
+                                                newLiteral(
+                                                    "ShortcutClass: attr=",
+                                                    objectType("String"),
+                                                )
+                                            op.rhs = newMember("attr")
+                                        }
+                                }
                             }
                     }
 
@@ -2178,10 +2112,9 @@ class GraphExamples {
                         method.receiver = newVariable("this", objectType("Dataflow"))
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block.statements +=
-                                    newReturn().also {
-                                        it.returnValue = newLiteral("abcd", unknownType())
-                                    }
+                                block.statements += newReturn {
+                                    it.returnValue = newLiteral("abcd", unknownType())
+                                }
                             }
                     }
 
@@ -2192,21 +2125,8 @@ class GraphExamples {
                         newParameter("s", objectType("String"), holder = method)
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val printlnCall =
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMember(
-                                                "out",
-                                                newReference("System").also {
-                                                    it.isStaticAccess = true
-                                                },
-                                            ),
-                                        )
-                                    )
-                                printlnCall.arguments += newReference("s")
-                                block.statements += printlnCall
-                                block.statements += newReturn().also { it.isImplicit = true }
+                                block.statements += printlnCall(newReference("s"))
+                                block.statements += newReturn { it.isImplicit = true }
                             }
                     }
 
@@ -2221,7 +2141,7 @@ class GraphExamples {
                                     it.initializer =
                                         newNew().also { n ->
                                             n.initializer =
-                                                newConstruction(parseName("Dataflow")).also { c ->
+                                                newConstruction(parseName("Dataflow")) { c ->
                                                     c.type = objectType("Dataflow")
                                                 }
                                         }
@@ -2256,16 +2176,17 @@ class GraphExamples {
                 scopeManager.resetToGlobal(tu)
 
                 newRecord("ShortcutClass", "class", holder = tu, enterScope = true) { record ->
-                    addField(record, "attr", objectType("int")) {
+                    newField("attr", objectType("int"), holder = record) {
                         it.initializer = newLiteral(0, objectType("int"))
                     }
 
-                    addConstructor(record) { ctor ->
+                    newConstructor(record.name, record, holder = record, enterScope = true) { ctor
+                        ->
                         ctor.receiver = newVariable("this", objectType("ShortcutClass"))
                         ctor.isImplicit = true
                         ctor.body =
                             newBlock(enterScope = true) { block ->
-                                block.statements += newReturn().also { it.isImplicit = true }
+                                block.statements += newReturn { it.isImplicit = true }
                             }
                     }
 
@@ -2275,18 +2196,17 @@ class GraphExamples {
                         method.receiver = newVariable("this", objectType("ShortcutClass"))
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block.statements +=
-                                    newReturn().also {
-                                        it.returnValue =
-                                            newBinaryOperator("+").also { op ->
-                                                op.lhs =
-                                                    newLiteral(
-                                                        "ShortcutClass: attr=",
-                                                        objectType("String"),
-                                                    )
-                                                op.rhs = newMember("attr")
-                                            }
-                                    }
+                                block.statements += newReturn {
+                                    it.returnValue =
+                                        newBinaryOperator("+") { op ->
+                                            op.lhs =
+                                                newLiteral(
+                                                    "ShortcutClass: attr=",
+                                                    objectType("String"),
+                                                )
+                                            op.rhs = newMember("attr")
+                                        }
+                                }
                             }
                     }
 
@@ -2296,20 +2216,7 @@ class GraphExamples {
                         method.receiver = newVariable("this", objectType("ShortcutClass"))
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val printlnCall =
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMember(
-                                                "out",
-                                                newReference("System").also {
-                                                    it.isStaticAccess = true
-                                                },
-                                            ),
-                                        )
-                                    )
-                                printlnCall.arguments += dottedCall("this.toString")
-                                block.statements += printlnCall
+                                block.statements += printlnCall(dottedCall("this.toString"))
                             }
                     }
 
@@ -2320,50 +2227,54 @@ class GraphExamples {
                         newParameter("b", objectType("int"), holder = method)
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val outerIf = newIfElse()
-                                outerIf.condition =
-                                    newBinaryOperator("==").also {
-                                        it.lhs = newReference("b")
-                                        it.rhs = newLiteral(5, objectType("int"))
-                                    }
-                                outerIf.thenStatement =
-                                    newBlock(enterScope = true) { thenBlk ->
-                                        val innerIf = newIfElse()
-                                        innerIf.condition =
-                                            newBinaryOperator("==").also {
-                                                it.lhs = newMember("attr")
-                                                it.rhs = newLiteral(2, objectType("int"))
+                                block.statements += newIfElse { outerIf ->
+                                    outerIf.condition =
+                                        newBinaryOperator("==") {
+                                            it.lhs = newReference("b")
+                                            it.rhs = newLiteral(5, objectType("int"))
+                                        }
+                                    outerIf.thenStatement =
+                                        newBlock(enterScope = true) { thenBlk ->
+                                            thenBlk.statements += newIfElse { innerIf ->
+                                                innerIf.condition =
+                                                    newBinaryOperator("==") {
+                                                        it.lhs = newMember("attr")
+                                                        it.rhs = newLiteral(2, objectType("int"))
+                                                    }
+                                                innerIf.thenStatement =
+                                                    newBlock(enterScope = true) { innerThen ->
+                                                        innerThen.statements +=
+                                                            newAssign(
+                                                                "=",
+                                                                listOf(newMember("attr")),
+                                                                listOf(
+                                                                    newLiteral(3, objectType("int"))
+                                                                ),
+                                                            )
+                                                    }
+                                                innerIf.elseStatement =
+                                                    newBlock(enterScope = true) { innerElse ->
+                                                        innerElse.statements +=
+                                                            newAssign(
+                                                                "=",
+                                                                listOf(newMember("attr")),
+                                                                listOf(
+                                                                    newLiteral(2, objectType("int"))
+                                                                ),
+                                                            )
+                                                    }
                                             }
-                                        innerIf.thenStatement =
-                                            newBlock(enterScope = true) { innerThen ->
-                                                innerThen.statements +=
-                                                    newAssign(
-                                                        "=",
-                                                        listOf(newMember("attr")),
-                                                        listOf(newLiteral(3, objectType("int"))),
-                                                    )
-                                            }
-                                        innerIf.elseStatement =
-                                            newBlock(enterScope = true) { innerElse ->
-                                                innerElse.statements +=
-                                                    newAssign(
-                                                        "=",
-                                                        listOf(newMember("attr")),
-                                                        listOf(newLiteral(2, objectType("int"))),
-                                                    )
-                                            }
-                                        thenBlk.statements += innerIf
-                                    }
-                                outerIf.elseStatement =
-                                    newBlock(enterScope = true) { elseBlk ->
-                                        elseBlk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newMember("attr")),
-                                                listOf(newReference("b")),
-                                            )
-                                    }
-                                block.statements += outerIf
+                                        }
+                                    outerIf.elseStatement =
+                                        newBlock(enterScope = true) { elseBlk ->
+                                            elseBlk.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newMember("attr")),
+                                                    listOf(newReference("b")),
+                                                )
+                                        }
+                                }
                             }
                     }
 
@@ -2375,50 +2286,54 @@ class GraphExamples {
                             newBlock(enterScope = true) { block ->
                                 declareVariable(block, "a")
 
-                                val outerIf = newIfElse()
-                                outerIf.condition =
-                                    newBinaryOperator(">").also {
-                                        it.lhs = newReference("b")
-                                        it.rhs = newLiteral(5, objectType("int"))
-                                    }
-                                outerIf.thenStatement =
-                                    newBlock(enterScope = true) { thenBlk ->
-                                        val innerIf = newIfElse()
-                                        innerIf.condition =
-                                            newBinaryOperator("==").also {
-                                                it.lhs = newMember("attr")
-                                                it.rhs = newLiteral(2, objectType("int"))
+                                block.statements += newIfElse { outerIf ->
+                                    outerIf.condition =
+                                        newBinaryOperator(">") {
+                                            it.lhs = newReference("b")
+                                            it.rhs = newLiteral(5, objectType("int"))
+                                        }
+                                    outerIf.thenStatement =
+                                        newBlock(enterScope = true) { thenBlk ->
+                                            thenBlk.statements += newIfElse { innerIf ->
+                                                innerIf.condition =
+                                                    newBinaryOperator("==") {
+                                                        it.lhs = newMember("attr")
+                                                        it.rhs = newLiteral(2, objectType("int"))
+                                                    }
+                                                innerIf.thenStatement =
+                                                    newBlock(enterScope = true) { innerThen ->
+                                                        innerThen.statements +=
+                                                            newAssign(
+                                                                "=",
+                                                                listOf(newReference("a")),
+                                                                listOf(
+                                                                    newLiteral(3, objectType("int"))
+                                                                ),
+                                                            )
+                                                    }
+                                                innerIf.elseStatement =
+                                                    newBlock(enterScope = true) { innerElse ->
+                                                        innerElse.statements +=
+                                                            newAssign(
+                                                                "=",
+                                                                listOf(newReference("a")),
+                                                                listOf(
+                                                                    newLiteral(2, objectType("int"))
+                                                                ),
+                                                            )
+                                                    }
                                             }
-                                        innerIf.thenStatement =
-                                            newBlock(enterScope = true) { innerThen ->
-                                                innerThen.statements +=
-                                                    newAssign(
-                                                        "=",
-                                                        listOf(newReference("a")),
-                                                        listOf(newLiteral(3, objectType("int"))),
-                                                    )
-                                            }
-                                        innerIf.elseStatement =
-                                            newBlock(enterScope = true) { innerElse ->
-                                                innerElse.statements +=
-                                                    newAssign(
-                                                        "=",
-                                                        listOf(newReference("a")),
-                                                        listOf(newLiteral(2, objectType("int"))),
-                                                    )
-                                            }
-                                        thenBlk.statements += innerIf
-                                    }
-                                outerIf.elseStatement =
-                                    newBlock(enterScope = true) { elseBlk ->
-                                        elseBlk.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("a")),
-                                                listOf(newReference("b")),
-                                            )
-                                    }
-                                block.statements += outerIf
+                                        }
+                                    outerIf.elseStatement =
+                                        newBlock(enterScope = true) { elseBlk ->
+                                            elseBlk.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("a")),
+                                                    listOf(newReference("b")),
+                                                )
+                                        }
+                                }
                             }
                     }
 
@@ -2433,8 +2348,7 @@ class GraphExamples {
                                     it.initializer =
                                         newNew().also { n ->
                                             n.initializer =
-                                                newConstruction(parseName("ShortcutClass")).also { c
-                                                    ->
+                                                newConstruction(parseName("ShortcutClass")) { c ->
                                                     c.type = objectType("ShortcutClass")
                                                 }
                                         }
@@ -2487,7 +2401,8 @@ class GraphExamples {
                 scopeManager.resetToGlobal(tu)
 
                 newRecord("TestClass", "class", holder = tu, enterScope = true) { record ->
-                    addConstructor(record) { ctor ->
+                    newConstructor(record.name, record, holder = record, enterScope = true) { ctor
+                        ->
                         newParameter("i", objectType("int"), holder = ctor)
                     }
 
@@ -2499,14 +2414,13 @@ class GraphExamples {
                         method.type = computeType(method)
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                block.statements +=
-                                    newReturn().also {
-                                        it.returnValue =
-                                            newConstruction(parseName("TestClass")).also { c ->
-                                                c.type = objectType("TestClass")
-                                                c.arguments += newLiteral(4, objectType("int"))
-                                            }
-                                    }
+                                block.statements += newReturn {
+                                    it.returnValue =
+                                        newConstruction(parseName("TestClass")) { c ->
+                                            c.type = objectType("TestClass")
+                                            c.arguments += newLiteral(4, objectType("int"))
+                                        }
+                                }
                             }
                     }
 
@@ -2569,7 +2483,7 @@ class GraphExamples {
                 scopeManager.resetToGlobal(tu)
 
                 newRecord("myStruct", "class", holder = tu, enterScope = true) { record ->
-                    addField(record, "field1", objectType("int"))
+                    newField("field1", objectType("int"), holder = record)
                 }
                 newFunction("doSomething", holder = tu, enterScope = true) { func ->
                     func.returnTypes = listOf(unknownType())
@@ -2582,17 +2496,12 @@ class GraphExamples {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val declStmt = newDeclarationStatement()
-                            val s1Var = newVariable("s1", objectType("myStruct"))
-                            val s2Var = newVariable("s2", objectType("myStruct"))
-                            declStmt.declarations += s1Var
-                            declStmt.declarations += s2Var
-                            scopeManager.addDeclaration(s1Var)
-                            scopeManager.addDeclaration(s2Var)
+                            newVariable("s1", objectType("myStruct"), holder = declStmt)
+                            newVariable("s2", objectType("myStruct"), holder = declStmt)
                             block.statements += declStmt
 
                             block.statements +=
-                                newCall(newReference("doSomething"))
-                                    .also {
+                                newCall(newReference("doSomething")) {
                                         it.arguments +=
                                             newMember("field1", newReference("s1").line(tuName, 11))
                                                 .line(tuName, 11)
@@ -2619,16 +2528,14 @@ class GraphExamples {
                                 )
 
                             block.statements +=
-                                newCall(newReference("doSomething"))
-                                    .also {
+                                newCall(newReference("doSomething")) {
                                         it.arguments +=
                                             newMember("field1", newReference("s1").line(tuName, 15))
                                                 .line(tuName, 15)
                                     }
                                     .line(tuName, 15)
                             block.statements +=
-                                newCall(newReference("doSomething"))
-                                    .also {
+                                newCall(newReference("doSomething")) {
                                         it.arguments +=
                                             newMember("field1", newReference("s2").line(tuName, 16))
                                                 .line(tuName, 16)
@@ -2674,10 +2581,10 @@ class GraphExamples {
                 scopeManager.resetToGlobal(tu)
 
                 newRecord("inner", "class", holder = tu, enterScope = true) { record ->
-                    addField(record, "field", objectType("int"))
+                    newField("field", objectType("int"), holder = record)
                 }
                 newRecord("outer", "class", holder = tu, enterScope = true) { record ->
-                    addField(record, "in", objectType("inner"))
+                    newField("in", objectType("inner"), holder = record)
                 }
                 newFunction("doSomething", holder = tu, enterScope = true) { func ->
                     func.returnTypes = listOf(unknownType())
@@ -2706,8 +2613,7 @@ class GraphExamples {
                                 )
 
                             block.statements +=
-                                newCall(newReference("doSomething"))
-                                    .also {
+                                newCall(newReference("doSomething")) {
                                         it.arguments +=
                                             newMember(
                                                     "field",
@@ -2745,13 +2651,12 @@ class GraphExamples {
                             declareVariable(block, "a", objectType("short")) {
                                 it.initializer = newLiteral(42, unknownType())
                             }
-                            block.statements +=
-                                newThrow().also {
-                                    it.exception =
-                                        dottedCall("SomeError").also { c ->
-                                            c.arguments += newReference("a")
-                                        }
-                                }
+                            block.statements += newThrow {
+                                it.exception =
+                                    dottedCall("SomeError").also { c ->
+                                        c.arguments += newReference("a")
+                                    }
+                            }
                         }
                 }
 

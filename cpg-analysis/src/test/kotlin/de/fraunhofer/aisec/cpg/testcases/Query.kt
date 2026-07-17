@@ -57,7 +57,7 @@ class Query {
                             newBlock(enterScope = true) { block ->
                                 val ret = newReturn()
                                 ret.returnValue =
-                                    newBinaryOperator("+").also {
+                                    newBinaryOperator("+") {
                                         it.lhs = newLiteral("Dataflow: attr=", objectType("string"))
                                         it.rhs = newReference("attr")
                                     }
@@ -110,25 +110,21 @@ class Query {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val scDecl = newDeclarationStatement()
-                                val sc = newVariable("sc", objectType("Dataflow"))
+                                val sc = newVariable("sc", objectType("Dataflow"), holder = scDecl)
                                 val newExpr = newNew()
                                 val construction = newConstruction("Dataflow")
                                 construction.type = objectType("Dataflow")
                                 newExpr.initializer = construction
                                 sc.initializer = newExpr
-                                scDecl.declarations += sc
-                                scopeManager.addDeclaration(sc)
                                 block.statements += scDecl
 
                                 val sDecl = newDeclarationStatement()
-                                val s = newVariable("s", objectType("string"))
+                                val s = newVariable("s", objectType("string"), holder = sDecl)
                                 s.initializer =
                                     newMemberCall(
                                         newMemberAccess("toString", newReference("sc")),
                                         false,
                                     )
-                                sDecl.declarations += s
-                                scopeManager.addDeclaration(s)
                                 block.statements += sDecl
 
                                 val printCall =
@@ -173,7 +169,7 @@ class Query {
                 newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
                     // TODO: this field is static. How do we model this?
                     val logger =
-                        newField("logger", objectType("Logger"), holder = record).also { field ->
+                        newField("logger", objectType("Logger"), holder = record) { field ->
                             field.modifiers = setOf("static")
                             val getLoggerCall =
                                 newMemberCall(
@@ -222,14 +218,12 @@ class Query {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val scDecl = newDeclarationStatement()
-                                val sc = newVariable("sc", objectType("Dataflow"))
+                                val sc = newVariable("sc", objectType("Dataflow"), holder = scDecl)
                                 val newExpr = newNew()
                                 val construction = newConstruction("Dataflow")
                                 construction.type = objectType("Dataflow")
                                 newExpr.initializer = construction
                                 sc.initializer = newExpr
-                                scDecl.declarations += sc
-                                scopeManager.addDeclaration(sc)
                                 block.statements += scDecl
 
                                 block.statements +=
@@ -263,9 +257,9 @@ class Query {
                                     )
                                 logCall.arguments += newMemberAccess("INFO", newReference("Level"))
                                 logCall.arguments +=
-                                    newBinaryOperator("+").also { outer ->
+                                    newBinaryOperator("+") { outer ->
                                         outer.lhs =
-                                            newBinaryOperator("+").also { inner ->
+                                            newBinaryOperator("+") { inner ->
                                                 inner.lhs = newLiteral("put ", objectType("string"))
                                                 inner.rhs = newMemberAccess("a", newReference("sc"))
                                             }
@@ -302,7 +296,7 @@ class Query {
                 newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
                     // TODO: this field is static. How do we model this?
                     val logger =
-                        newField("logger", objectType("Logger"), holder = record).also { field ->
+                        newField("logger", objectType("Logger"), holder = record) { field ->
                             field.modifiers = setOf("static")
                             val getLoggerCall =
                                 newMemberCall(
@@ -351,14 +345,12 @@ class Query {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val scDecl = newDeclarationStatement()
-                                val sc = newVariable("sc", objectType("Dataflow"))
+                                val sc = newVariable("sc", objectType("Dataflow"), holder = scDecl)
                                 val newExpr = newNew()
                                 val construction = newConstruction("Dataflow")
                                 construction.type = objectType("Dataflow")
                                 newExpr.initializer = construction
                                 sc.initializer = newExpr
-                                scDecl.declarations += sc
-                                scopeManager.addDeclaration(sc)
                                 block.statements += scDecl
 
                                 block.statements +=
@@ -375,9 +367,9 @@ class Query {
                                     )
                                 logCall.arguments += newMemberAccess("INFO", newReference("Level"))
                                 logCall.arguments +=
-                                    newBinaryOperator("+").also { outer ->
+                                    newBinaryOperator("+") { outer ->
                                         outer.lhs =
-                                            newBinaryOperator("+").also { inner ->
+                                            newBinaryOperator("+") { inner ->
                                                 inner.lhs = newLiteral("put ", objectType("string"))
                                                 inner.rhs = newMemberAccess("a", newReference("sc"))
                                             }
@@ -428,7 +420,7 @@ class Query {
                 newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
                     // TODO: this field is static. How do we model this?
                     val logger =
-                        newField("logger", objectType("Logger"), holder = record).also { field ->
+                        newField("logger", objectType("Logger"), holder = record) { field ->
                             field.modifiers = setOf("static")
                             val getLoggerCall =
                                 newMemberCall(
@@ -477,14 +469,12 @@ class Query {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val scDecl = newDeclarationStatement()
-                                val sc = newVariable("sc", objectType("Dataflow"))
+                                val sc = newVariable("sc", objectType("Dataflow"), holder = scDecl)
                                 val newExpr = newNew()
                                 val construction = newConstruction("Dataflow")
                                 construction.type = objectType("Dataflow")
                                 newExpr.initializer = construction
                                 sc.initializer = newExpr
-                                scDecl.declarations += sc
-                                scopeManager.addDeclaration(sc)
                                 block.statements += scDecl
 
                                 block.statements +=
@@ -501,9 +491,9 @@ class Query {
                                     )
                                 logCall.arguments += newMemberAccess("INFO", newReference("Level"))
                                 logCall.arguments +=
-                                    newBinaryOperator("+").also { outer ->
+                                    newBinaryOperator("+") { outer ->
                                         outer.lhs =
-                                            newBinaryOperator("+").also { inner ->
+                                            newBinaryOperator("+") { inner ->
                                                 inner.lhs = newLiteral("put ", objectType("string"))
                                                 // Note: original uses ref("a") as base here (not
                                                 // "sc"), faithfully reproduced.
@@ -567,42 +557,33 @@ class Query {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val cDecl = newDeclarationStatement()
-                            val c = newVariable("c", objectType("char").pointer())
+                            val c = newVariable("c", objectType("char").pointer(), holder = cDecl)
                             val creationExpr = newArrayConstruction()
                             creationExpr.addDimension(newLiteral(4, objectType("int")))
                             creationExpr.type = objectType("char")
                             c.initializer = creationExpr
-                            cDecl.declarations += c
-                            scopeManager.addDeclaration(c)
                             block.statements += cDecl
 
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(4, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("int"))
+                            val b = newVariable("b", objectType("int"), holder = bDecl)
                             b.initializer =
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newReference("a")
                                     it.rhs = newLiteral(1, objectType("int"))
                                 }
-                            bDecl.declarations += b
-                            scopeManager.addDeclaration(b)
                             block.statements += bDecl
 
                             val dDecl = newDeclarationStatement()
-                            val d = newVariable("d", objectType("char"))
-                            d.initializer =
-                                newSubscription().also {
-                                    it.arrayExpression = newReference("c")
-                                    it.subscriptExpression = newReference("b")
-                                }
-                            dDecl.declarations += d
-                            scopeManager.addDeclaration(d)
+                            val d = newVariable("d", objectType("char"), holder = dDecl)
+                            d.initializer = newSubscription {
+                                it.arrayExpression = newReference("c")
+                                it.subscriptExpression = newReference("b")
+                            }
                             block.statements += dDecl
 
                             val ret = newReturn()
@@ -624,21 +605,18 @@ class Query {
                     func.type = computeType(func)
 
                     val cDecl = newDeclarationStatement()
-                    val c = newVariable("c", objectType("char").pointer())
+                    val c = newVariable("c", objectType("char").pointer(), holder = cDecl)
                     val creationExpr = newArrayConstruction()
                     creationExpr.addDimension(newLiteral(100, objectType("int")))
                     creationExpr.type = objectType("char")
                     c.initializer = creationExpr
-                    cDecl.declarations += c
-                    scopeManager.addDeclaration(c)
                     tu.statements += cDecl
 
                     val ret = newReturn()
-                    ret.returnValue =
-                        newSubscription().also {
-                            it.arrayExpression = newReference("c")
-                            it.subscriptExpression = newLiteral(0, objectType("int"))
-                        }
+                    ret.returnValue = newSubscription {
+                        it.arrayExpression = newReference("c")
+                        it.subscriptExpression = newLiteral(0, objectType("int"))
+                    }
                     tu.statements += ret
                 }
 
@@ -663,38 +641,32 @@ class Query {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val cDecl = newDeclarationStatement()
-                            val c = newVariable("c", objectType("char").pointer())
+                            val c = newVariable("c", objectType("char").pointer(), holder = cDecl)
                             val creationExpr = newArrayConstruction()
                             creationExpr.addDimension(newLiteral(4, objectType("int")))
                             creationExpr.type = objectType("char")
                             c.initializer = creationExpr
-                            cDecl.declarations += c
-                            scopeManager.addDeclaration(c)
                             block.statements += cDecl
 
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(0, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val forNode = newFor { for_ ->
                                 val iDecl = newDeclarationStatement()
-                                val i = newVariable("i", objectType("int"))
+                                val i = newVariable("i", objectType("int"), holder = iDecl)
                                 i.initializer = newLiteral(0, objectType("int"))
-                                iDecl.declarations += i
-                                scopeManager.addDeclaration(i)
                                 for_.initializerStatement = iDecl
 
                                 for_.condition =
-                                    newBinaryOperator("<").also {
+                                    newBinaryOperator("<") {
                                         it.lhs = newReference("i")
                                         it.rhs = newLiteral(5, objectType("int"))
                                     }
 
                                 for_.iterationStatement =
-                                    newUnaryOperator("++", postfix = true, prefix = false).also {
+                                    newUnaryOperator("++", postfix = true, prefix = false) {
                                         it.input = newReference("i")
                                     }
 
@@ -704,14 +676,12 @@ class Query {
                                             "=",
                                             listOf(newReference("a")),
                                             listOf(
-                                                newBinaryOperator("+").also {
+                                                newBinaryOperator("+") {
                                                     it.lhs = newReference("a")
-                                                    it.rhs =
-                                                        newSubscription().also { sub ->
-                                                            sub.arrayExpression = newReference("c")
-                                                            sub.subscriptExpression =
-                                                                newReference("i")
-                                                        }
+                                                    it.rhs = newSubscription { sub ->
+                                                        sub.arrayExpression = newReference("c")
+                                                        sub.subscriptExpression = newReference("i")
+                                                    }
                                                 }
                                             ),
                                         )
@@ -746,14 +716,12 @@ class Query {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val cDecl = newDeclarationStatement()
-                            val c = newVariable("c", objectType("char").pointer())
-                            cDecl.declarations += c
-                            scopeManager.addDeclaration(c)
+                            val c = newVariable("c", objectType("char").pointer(), holder = cDecl)
                             block.statements += cDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
-                                    newBinaryOperator(">").also {
+                                    newBinaryOperator(">") {
                                         it.lhs = newLiteral(5, objectType("int"))
                                         it.rhs = newLiteral(4, objectType("int"))
                                     }
@@ -785,28 +753,24 @@ class Query {
                             block.statements += ifElse
 
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(0, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val forNode = newFor { for_ ->
                                 val iDecl = newDeclarationStatement()
-                                val i = newVariable("i", objectType("int"))
+                                val i = newVariable("i", objectType("int"), holder = iDecl)
                                 i.initializer = newLiteral(0, objectType("int"))
-                                iDecl.declarations += i
-                                scopeManager.addDeclaration(i)
                                 for_.initializerStatement = iDecl
 
                                 for_.condition =
-                                    newBinaryOperator("<").also {
+                                    newBinaryOperator("<") {
                                         it.lhs = newReference("i")
                                         it.rhs = newLiteral(5, objectType("int"))
                                     }
 
                                 for_.iterationStatement =
-                                    newUnaryOperator("++", postfix = true, prefix = false).also {
+                                    newUnaryOperator("++", postfix = true, prefix = false) {
                                         it.input = newReference("i")
                                     }
 
@@ -816,14 +780,12 @@ class Query {
                                             "=",
                                             listOf(newReference("a")),
                                             listOf(
-                                                newBinaryOperator("+").also {
+                                                newBinaryOperator("+") {
                                                     it.lhs = newReference("a")
-                                                    it.rhs =
-                                                        newSubscription().also { sub ->
-                                                            sub.arrayExpression = newReference("c")
-                                                            sub.subscriptExpression =
-                                                                newReference("i")
-                                                        }
+                                                    it.rhs = newSubscription { sub ->
+                                                        sub.arrayExpression = newReference("c")
+                                                        sub.subscriptExpression = newReference("i")
+                                                    }
                                                 }
                                             ),
                                         )
@@ -858,38 +820,32 @@ class Query {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val cDecl = newDeclarationStatement()
-                            val c = newVariable("c", objectType("char").pointer())
+                            val c = newVariable("c", objectType("char").pointer(), holder = cDecl)
                             val creationExpr = newArrayConstruction()
                             creationExpr.addDimension(newLiteral(4, objectType("int")))
                             creationExpr.type = objectType("char")
                             c.initializer = creationExpr
-                            cDecl.declarations += c
-                            scopeManager.addDeclaration(c)
                             block.statements += cDecl
 
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(0, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val forNode = newFor { for_ ->
                                 val iDecl = newDeclarationStatement()
-                                val i = newVariable("i", objectType("int"))
+                                val i = newVariable("i", objectType("int"), holder = iDecl)
                                 i.initializer = newLiteral(0, objectType("int"))
-                                iDecl.declarations += i
-                                scopeManager.addDeclaration(i)
                                 for_.initializerStatement = iDecl
 
                                 for_.condition =
-                                    newBinaryOperator("<").also {
+                                    newBinaryOperator("<") {
                                         it.lhs = newReference("i")
                                         it.rhs = newLiteral(4, objectType("int"))
                                     }
 
                                 for_.iterationStatement =
-                                    newUnaryOperator("++", postfix = true, prefix = false).also {
+                                    newUnaryOperator("++", postfix = true, prefix = false) {
                                         it.input = newReference("i")
                                     }
 
@@ -899,14 +855,12 @@ class Query {
                                             "=",
                                             listOf(newReference("a")),
                                             listOf(
-                                                newBinaryOperator("+").also {
+                                                newBinaryOperator("+") {
                                                     it.lhs = newReference("a")
-                                                    it.rhs =
-                                                        newSubscription().also { sub ->
-                                                            sub.arrayExpression = newReference("c")
-                                                            sub.subscriptExpression =
-                                                                newReference("i")
-                                                        }
+                                                    it.rhs = newSubscription { sub ->
+                                                        sub.arrayExpression = newReference("c")
+                                                        sub.subscriptExpression = newReference("i")
+                                                    }
                                                 }
                                             ),
                                         )
@@ -941,10 +895,8 @@ class Query {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(4, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
                             // TODO: There was a commented-out line. No idea what to do with it:
                             // int a, b = 4; // this is broken, a is missing an initializer
@@ -983,22 +935,19 @@ class Query {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val arrayDecl = newDeclarationStatement()
-                            val array = newVariable("array", objectType("char").array())
+                            val array =
+                                newVariable("array", objectType("char").array(), holder = arrayDecl)
                             array.initializer = newLiteral("hello", objectType("char").array())
-                            arrayDecl.declarations += array
-                            scopeManager.addDeclaration(array)
                             block.statements += arrayDecl
 
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("short"))
+                            val a = newVariable("a", objectType("short"), holder = aDecl)
                             a.initializer = newLiteral(2, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
-                                    newBinaryOperator("==").also {
+                                    newBinaryOperator("==") {
                                         it.lhs = newReference("array")
                                         it.rhs = newLiteral("hello", objectType("string"))
                                     }
@@ -1015,14 +964,12 @@ class Query {
                             block.statements += ifElse
 
                             val xDecl = newDeclarationStatement()
-                            val x = newVariable("x", objectType("double"))
+                            val x = newVariable("x", objectType("double"), holder = xDecl)
                             x.initializer =
-                                newBinaryOperator("/").also {
+                                newBinaryOperator("/") {
                                     it.lhs = newLiteral(5, objectType("int"))
                                     it.rhs = newReference("a")
                                 }
-                            xDecl.declarations += x
-                            scopeManager.addDeclaration(x)
                             block.statements += xDecl
 
                             val ret = newReturn()
@@ -1052,10 +999,9 @@ class Query {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val arrayDecl = newDeclarationStatement()
-                            val array = newVariable("array", objectType("char").array())
+                            val array =
+                                newVariable("array", objectType("char").array(), holder = arrayDecl)
                             array.initializer = newLiteral("hello", objectType("char").array())
-                            arrayDecl.declarations += array
-                            scopeManager.addDeclaration(array)
                             block.statements += arrayDecl
 
                             val memcpyCall = newCall(newReference("memcpy"))
@@ -1078,15 +1024,13 @@ class Query {
                             block.statements += freeCall2
 
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("short"))
+                            val a = newVariable("a", objectType("short"), holder = aDecl)
                             a.initializer = newLiteral(2, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
-                                    newBinaryOperator("==").also {
+                                    newBinaryOperator("==") {
                                         it.lhs = newReference("array")
                                         it.rhs = newLiteral("hello", objectType("string"))
                                     }
@@ -1103,21 +1047,17 @@ class Query {
                             block.statements += ifElse
 
                             val xDecl = newDeclarationStatement()
-                            val x = newVariable("x", objectType("double"))
+                            val x = newVariable("x", objectType("double"), holder = xDecl)
                             x.initializer =
-                                newBinaryOperator("/").also {
+                                newBinaryOperator("/") {
                                     it.lhs = newLiteral(5, objectType("int"))
                                     it.rhs = newReference("a")
                                 }
-                            xDecl.declarations += x
-                            scopeManager.addDeclaration(x)
                             block.statements += xDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("int"))
+                            val b = newVariable("b", objectType("int"), holder = bDecl)
                             b.initializer = newLiteral(2147483648, objectType("int"))
-                            bDecl.declarations += b
-                            scopeManager.addDeclaration(b)
                             block.statements += bDecl
 
                             block.statements +=
@@ -1128,10 +1068,8 @@ class Query {
                                 )
 
                             val cDecl = newDeclarationStatement()
-                            val c = newVariable("c", objectType("long"))
+                            val c = newVariable("c", objectType("long"), holder = cDecl)
                             c.initializer = newLiteral(-10000, objectType("long"))
-                            cDecl.declarations += c
-                            scopeManager.addDeclaration(c)
                             block.statements += cDecl
 
                             val ret = newReturn()

@@ -126,16 +126,12 @@ abstract class AbstractEvaluationTests {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val bDeclStmt = newDeclarationStatement()
-                                val b = newVariable("b", objectType("Bar"))
-                                bDeclStmt.declarations += b
-                                scopeManager.addDeclaration(b)
+                                val b = newVariable("b", objectType("Bar"), holder = bDeclStmt)
                                 block.statements += bDeclStmt
 
                                 val aDeclStmt = newDeclarationStatement()
-                                val a = newVariable("a", objectType("int"))
+                                val a = newVariable("a", objectType("int"), holder = aDeclStmt)
                                 a.initializer = newLiteral(5, objectType("int"))
-                                aDeclStmt.declarations += a
-                                scopeManager.addDeclaration(a)
                                 block.statements += aDeclStmt
 
                                 block.statements +=
@@ -170,16 +166,12 @@ abstract class AbstractEvaluationTests {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val bDeclStmt = newDeclarationStatement()
-                                val b = newVariable("b", objectType("Bar"))
-                                bDeclStmt.declarations += b
-                                scopeManager.addDeclaration(b)
+                                val b = newVariable("b", objectType("Bar"), holder = bDeclStmt)
                                 block.statements += bDeclStmt
 
                                 val aDeclStmt = newDeclarationStatement()
-                                val a = newVariable("a", objectType("int"))
+                                val a = newVariable("a", objectType("int"), holder = aDeclStmt)
                                 a.initializer = newLiteral(5, objectType("int"))
-                                aDeclStmt.declarations += a
-                                scopeManager.addDeclaration(a)
                                 block.statements += aDeclStmt
 
                                 block.statements +=
@@ -190,11 +182,11 @@ abstract class AbstractEvaluationTests {
                                     )
 
                                 block.statements +=
-                                    newUnaryOperator("++", postfix = true, prefix = false).also {
+                                    newUnaryOperator("++", postfix = true, prefix = false) {
                                         it.input = newReference("a")
                                     }
                                 block.statements +=
-                                    newUnaryOperator("++", postfix = false, prefix = true).also {
+                                    newUnaryOperator("++", postfix = false, prefix = true) {
                                         it.input = newReference("a")
                                     }
 
@@ -217,11 +209,11 @@ abstract class AbstractEvaluationTests {
                                     )
 
                                 block.statements +=
-                                    newUnaryOperator("--", postfix = true, prefix = false).also {
+                                    newUnaryOperator("--", postfix = true, prefix = false) {
                                         it.input = newReference("a")
                                     }
                                 block.statements +=
-                                    newUnaryOperator("--", postfix = false, prefix = true).also {
+                                    newUnaryOperator("--", postfix = false, prefix = true) {
                                         it.input = newReference("a")
                                     }
 
@@ -257,16 +249,12 @@ abstract class AbstractEvaluationTests {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val bDeclStmt = newDeclarationStatement()
-                                val b = newVariable("b", objectType("Bar"))
-                                bDeclStmt.declarations += b
-                                scopeManager.addDeclaration(b)
+                                val b = newVariable("b", objectType("Bar"), holder = bDeclStmt)
                                 block.statements += bDeclStmt
 
                                 val aDeclStmt = newDeclarationStatement()
-                                val a = newVariable("a", objectType("int"))
+                                val a = newVariable("a", objectType("int"), holder = aDeclStmt)
                                 a.initializer = newLiteral(5, objectType("int"))
-                                aDeclStmt.declarations += a
-                                scopeManager.addDeclaration(a)
                                 block.statements += aDeclStmt
 
                                 val ifElse = newIfElse { ifElse ->
@@ -302,16 +290,12 @@ abstract class AbstractEvaluationTests {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val bDeclStmt = newDeclarationStatement()
-                                val b = newVariable("b", objectType("Bar"))
-                                bDeclStmt.declarations += b
-                                scopeManager.addDeclaration(b)
+                                val b = newVariable("b", objectType("Bar"), holder = bDeclStmt)
                                 block.statements += bDeclStmt
 
                                 val aDeclStmt = newDeclarationStatement()
-                                val a = newVariable("a", objectType("int"))
+                                val a = newVariable("a", objectType("int"), holder = aDeclStmt)
                                 a.initializer = newLiteral(5, objectType("int"))
-                                aDeclStmt.declarations += a
-                                scopeManager.addDeclaration(a)
                                 block.statements += aDeclStmt
 
                                 val ifElse = newIfElse { ifElse ->
@@ -356,16 +340,12 @@ abstract class AbstractEvaluationTests {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val bDeclStmt = newDeclarationStatement()
-                                val b = newVariable("b", objectType("Bar"))
-                                bDeclStmt.declarations += b
-                                scopeManager.addDeclaration(b)
+                                val b = newVariable("b", objectType("Bar"), holder = bDeclStmt)
                                 block.statements += bDeclStmt
 
                                 val aDeclStmt = newDeclarationStatement()
-                                val a = newVariable("a", objectType("int"))
+                                val a = newVariable("a", objectType("int"), holder = aDeclStmt)
                                 a.initializer = newLiteral(5, objectType("int"))
-                                aDeclStmt.declarations += a
-                                scopeManager.addDeclaration(a)
                                 block.statements += aDeclStmt
 
                                 // Fluent's forStmt() never enters/leaves a scope for the `For`
@@ -375,21 +355,20 @@ abstract class AbstractEvaluationTests {
                                 // here by not passing enterScope to newFor()/newBlock() below.
                                 val forNode = newFor { for_ ->
                                     val iDeclStmt = newDeclarationStatement()
-                                    val i = newVariable("i", objectType("int"))
+                                    val i = newVariable("i", objectType("int"), holder = iDeclStmt)
                                     i.initializer = newLiteral(0, objectType("int"))
-                                    iDeclStmt.declarations += i
-                                    scopeManager.addDeclaration(i)
                                     for_.initializerStatement = iDeclStmt
 
                                     for_.condition =
-                                        newBinaryOperator("<").also {
+                                        newBinaryOperator("<") {
                                             it.lhs = newReference("i")
                                             it.rhs = newLiteral(5, objectType("int"))
                                         }
 
                                     for_.iterationStatement =
-                                        newUnaryOperator("++", postfix = true, prefix = false)
-                                            .also { it.input = newReference("i") }
+                                        newUnaryOperator("++", postfix = true, prefix = false) {
+                                            it.input = newReference("i")
+                                        }
 
                                     for_.statement = newBlock { loopBodyBlock ->
                                         loopBodyBlock.statements +=
@@ -419,10 +398,8 @@ abstract class AbstractEvaluationTests {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val iDeclStmt = newDeclarationStatement()
-                                val i = newVariable("i", objectType("int"))
+                                val i = newVariable("i", objectType("int"), holder = iDeclStmt)
                                 i.initializer = newLiteral(0, objectType("int"))
-                                iDeclStmt.declarations += i
-                                scopeManager.addDeclaration(i)
                                 block.statements += iDeclStmt
 
                                 val forNode = newFor { for_ ->
@@ -434,19 +411,20 @@ abstract class AbstractEvaluationTests {
                                         )
 
                                     for_.condition =
-                                        newBinaryOperator("<").also {
+                                        newBinaryOperator("<") {
                                             it.lhs = newReference("i")
                                             it.rhs = newLiteral(5, objectType("int"))
                                         }
 
                                     for_.iterationStatement =
-                                        newUnaryOperator("++", postfix = true, prefix = false)
-                                            .also { it.input = newReference("i") }
+                                        newUnaryOperator("++", postfix = true, prefix = false) {
+                                            it.input = newReference("i")
+                                        }
 
                                     for_.statement = newBlock { loopBodyBlock ->
                                         val innerIf = newIfElse { inner ->
                                             inner.condition =
-                                                newBinaryOperator("<").also {
+                                                newBinaryOperator("<") {
                                                     it.lhs = newReference("i")
                                                     it.rhs = newLiteral(3, objectType("int"))
                                                 }

@@ -124,7 +124,7 @@ class DFGFunctionSummariesTest {
                                 // the member call's base. Faithfully reproduced below (and for all
                                 // other `memberCall("addAll", construct(...))` occurrences).
                                 val verySpecialListConstruction =
-                                    newConstruction("test.VerySpecialList").also {
+                                    newConstruction("test.VerySpecialList") {
                                         it.type = objectType("test.VerySpecialList")
                                     }
                                 block.statements += verySpecialListConstruction
@@ -134,13 +134,13 @@ class DFGFunctionSummariesTest {
                                     )
                                 addAll1.arguments += newLiteral(1, objectType("int"))
                                 addAll1.arguments +=
-                                    newConstruction("test.Object").also {
+                                    newConstruction("test.Object") {
                                         it.type = objectType("test.Object")
                                     }
                                 block.statements += addAll1
 
                                 val specialListConstruction1 =
-                                    newConstruction("test.SpecialList").also {
+                                    newConstruction("test.SpecialList") {
                                         it.type = objectType("test.SpecialList")
                                     }
                                 block.statements += specialListConstruction1
@@ -150,13 +150,13 @@ class DFGFunctionSummariesTest {
                                     )
                                 addAll2.arguments += newLiteral(1, objectType("int"))
                                 addAll2.arguments +=
-                                    newConstruction("test.List").also {
+                                    newConstruction("test.List") {
                                         it.type = objectType("test.List")
                                     }
                                 block.statements += addAll2
 
                                 val specialListConstruction2 =
-                                    newConstruction("test.SpecialList").also {
+                                    newConstruction("test.SpecialList") {
                                         it.type = objectType("test.SpecialList")
                                     }
                                 block.statements += specialListConstruction2
@@ -166,19 +166,18 @@ class DFGFunctionSummariesTest {
                                     )
                                 addAll3.arguments += newLiteral(1, objectType("int"))
                                 addAll3.arguments +=
-                                    newConstruction("test.Object").also {
+                                    newConstruction("test.Object") {
                                         it.type = objectType("test.Object")
                                     }
                                 block.statements += addAll3
 
                                 val declStmtA = newDeclarationStatement()
-                                val a = newVariable("a", objectType("test.List"))
-                                a.initializer =
-                                    newConstruction("test.List").also {
-                                        it.type = objectType("test.List")
-                                    }
-                                declStmtA.declarations += a
-                                scopeManager.addDeclaration(a)
+                                newVariable("a", objectType("test.List"), holder = declStmtA) {
+                                    it.initializer =
+                                        newConstruction("test.List") {
+                                            it.type = objectType("test.List")
+                                        }
+                                }
                                 block.statements += declStmtA
 
                                 // memberCall("addAll", ref("a", ...)) { ... } -- unlike
@@ -193,7 +192,7 @@ class DFGFunctionSummariesTest {
                                     )
                                 addAll4.arguments += newLiteral(1, objectType("int"))
                                 addAll4.arguments +=
-                                    newConstruction("test.Object").also {
+                                    newConstruction("test.Object") {
                                         it.type = objectType("test.Object")
                                     }
                                 block.statements += addAll4
@@ -203,7 +202,7 @@ class DFGFunctionSummariesTest {
                                 block.statements += printCall
 
                                 val randomTypeConstruction =
-                                    newConstruction("random.Type").also {
+                                    newConstruction("random.Type") {
                                         it.type = objectType("random.Type")
                                     }
                                 block.statements += randomTypeConstruction
@@ -211,15 +210,14 @@ class DFGFunctionSummariesTest {
                                     newMemberCall(newMemberAccess("addAll", randomTypeConstruction))
                                 addAll5.arguments += newLiteral(1, objectType("int"))
                                 addAll5.arguments +=
-                                    newConstruction("test.Object").also {
+                                    newConstruction("test.Object") {
                                         it.type = objectType("test.Object")
                                     }
                                 block.statements += addAll5
 
-                                block.statements +=
-                                    newReturn().also {
-                                        it.returnValue = newLiteral(0, objectType("int"))
-                                    }
+                                block.statements += newReturn {
+                                    it.returnValue = newLiteral(0, objectType("int"))
+                                }
                             }
                     }
 
@@ -423,17 +421,15 @@ class DFGFunctionSummariesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val declStmtA = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
-                            a.initializer = newLiteral(7, objectType("char"))
-                            declStmtA.declarations += a
-                            scopeManager.addDeclaration(a)
+                            newVariable("a", objectType("int"), holder = declStmtA) {
+                                it.initializer = newLiteral(7, objectType("char"))
+                            }
                             block.statements += declStmtA
 
                             val declStmtB = newDeclarationStatement()
-                            val b = newVariable("b", objectType("int"))
-                            b.initializer = newLiteral(5, objectType("char"))
-                            declStmtB.declarations += b
-                            scopeManager.addDeclaration(b)
+                            newVariable("b", objectType("int"), holder = declStmtB) {
+                                it.initializer = newLiteral(5, objectType("char"))
+                            }
                             block.statements += declStmtB
 
                             val memcpyCall = newCall(newReference("memcpy"))
@@ -444,8 +440,7 @@ class DFGFunctionSummariesTest {
                             memcpyCall.arguments += newLiteral(1, objectType("int"))
                             block.statements += memcpyCall
 
-                            block.statements +=
-                                newReturn().also { it.returnValue = newReference("a") }
+                            block.statements += newReturn { it.returnValue = newReference("a") }
                         }
                 }
 
@@ -569,17 +564,15 @@ class DFGFunctionSummariesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val declStmtA = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
-                            a.initializer = newLiteral(7, objectType("char"))
-                            declStmtA.declarations += a
-                            scopeManager.addDeclaration(a)
+                            newVariable("a", objectType("int"), holder = declStmtA) {
+                                it.initializer = newLiteral(7, objectType("char"))
+                            }
                             block.statements += declStmtA
 
                             val declStmtB = newDeclarationStatement()
-                            val b = newVariable("b", objectType("int"))
-                            b.initializer = newLiteral(5, objectType("char"))
-                            declStmtB.declarations += b
-                            scopeManager.addDeclaration(b)
+                            newVariable("b", objectType("int"), holder = declStmtB) {
+                                it.initializer = newLiteral(5, objectType("char"))
+                            }
                             block.statements += declStmtB
 
                             val memcpyCall = newCall(newReference("memcpy"))
@@ -590,8 +583,7 @@ class DFGFunctionSummariesTest {
                             memcpyCall.arguments += newLiteral(1, objectType("int"))
                             block.statements += memcpyCall
 
-                            block.statements +=
-                                newReturn().also { it.returnValue = newReference("a") }
+                            block.statements += newReturn { it.returnValue = newReference("a") }
                         }
                 }
 

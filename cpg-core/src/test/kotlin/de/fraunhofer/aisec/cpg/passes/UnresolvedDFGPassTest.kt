@@ -159,27 +159,21 @@ class UnresolvedDFGPassTest {
                 newRecord("DfgUnresolvedCalls", "class", holder = tu, enterScope = true) { record ->
                     newField("i", objectType("int"), modifiers = setOf("private"), holder = record)
 
-                    // Fluent's constructor() attaches via record.constructors +=, not the generic
-                    // DeclarationHolder mechanism, so it's wired manually rather than via the
-                    // `holder` builder parameter.
-                    val ctor =
-                        newConstructor(record.name, record, enterScope = true) { c ->
-                            c.receiver = newVariable("this", objectType("DfgUnresolvedCalls"))
-                            newParameter("i", objectType("int"), holder = c)
-                            c.body =
-                                newBlock(enterScope = true) { block ->
-                                    val memberAccess = newMemberAccess("i", newReference("this"))
-                                    block.statements +=
-                                        newAssign(
-                                            operatorCode = "=",
-                                            lhs = listOf(memberAccess),
-                                            rhs = listOf(newReference("i")),
-                                        )
-                                    block.statements += newReturn().also { it.isImplicit = true }
-                                }
-                        }
-                    scopeManager.addDeclaration(ctor)
-                    record.constructors += ctor
+                    newConstructor(record.name, record, holder = record, enterScope = true) { c ->
+                        c.receiver = newVariable("this", objectType("DfgUnresolvedCalls"))
+                        newParameter("i", objectType("int"), holder = c)
+                        c.body =
+                            newBlock(enterScope = true) { block ->
+                                val memberAccess = newMemberAccess("i", newReference("this"))
+                                block.statements +=
+                                    newAssign(
+                                        operatorCode = "=",
+                                        lhs = listOf(memberAccess),
+                                        rhs = listOf(newReference("i")),
+                                    )
+                                block.statements += newReturn { it.isImplicit = true }
+                            }
+                    }
 
                     newMethod(
                         "knownFunction",
@@ -195,7 +189,7 @@ class UnresolvedDFGPassTest {
                             newBlock(enterScope = true) { block ->
                                 val returnStmt = newReturn()
                                 returnStmt.returnValue =
-                                    newBinaryOperator("+").also {
+                                    newBinaryOperator("+") {
                                         it.lhs = newMemberAccess("i", newReference("this"))
                                         it.rhs = newReference("arg")
                                     }
@@ -216,92 +210,74 @@ class UnresolvedDFGPassTest {
                         m.body =
                             newBlock(enterScope = true) { block ->
                                 val osDeclStmt = newDeclarationStatement()
-                                val os =
-                                    newVariable(
-                                            "os",
-                                            objectType("Optional", listOf(objectType("String"))),
+                                newVariable(
+                                    "os",
+                                    objectType("Optional", listOf(objectType("String"))),
+                                    holder = osDeclStmt,
+                                ) {
+                                    it.initializer =
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "getOptionalString",
+                                                newReference("RandomClass"),
+                                            ),
+                                            true,
                                         )
-                                        .also {
-                                            it.initializer =
-                                                newMemberCall(
-                                                    newMemberAccess(
-                                                        "getOptionalString",
-                                                        newReference("RandomClass"),
-                                                    ),
-                                                    true,
-                                                )
-                                        }
-                                osDeclStmt.declarations += os
-                                scopeManager.addDeclaration(os)
+                                }
                                 block.statements += osDeclStmt
 
                                 val sDeclStmt = newDeclarationStatement()
-                                val s =
-                                    newVariable("s", objectType("String")).also {
-                                        it.initializer =
-                                            newMemberCall(
-                                                newMemberAccess("get", newReference("os")),
-                                                false,
-                                            )
-                                    }
-                                sDeclStmt.declarations += s
-                                scopeManager.addDeclaration(s)
+                                newVariable("s", objectType("String"), holder = sDeclStmt) {
+                                    it.initializer =
+                                        newMemberCall(
+                                            newMemberAccess("get", newReference("os")),
+                                            false,
+                                        )
+                                }
                                 block.statements += sDeclStmt
 
                                 val s2DeclStmt = newDeclarationStatement()
-                                val s2 =
-                                    newVariable("s2", objectType("String")).also {
-                                        it.initializer =
-                                            newMemberCall(
-                                                    newMemberAccess("get", newReference("os")),
-                                                    false,
-                                                )
-                                                .also { call ->
-                                                    call.arguments +=
-                                                        newLiteral(4, objectType("int"))
-                                                }
-                                    }
-                                s2DeclStmt.declarations += s2
-                                scopeManager.addDeclaration(s2)
+                                newVariable("s2", objectType("String"), holder = s2DeclStmt) {
+                                    it.initializer =
+                                        newMemberCall(
+                                            newMemberAccess("get", newReference("os")),
+                                            false,
+                                        ) { call ->
+                                            call.arguments += newLiteral(4, objectType("int"))
+                                        }
+                                }
                                 block.statements += s2DeclStmt
 
                                 val ducDeclStmt = newDeclarationStatement()
-                                val duc =
-                                    newVariable("duc", objectType("DfgUnresolvedCalls")).also {
-                                        it.initializer =
-                                            newNew().also { newExpr ->
-                                                newExpr.initializer =
-                                                    newConstruction("DfgUnresolvedCalls").also {
-                                                        construction ->
-                                                        construction.type =
-                                                            objectType("DfgUnresolvedCalls")
-                                                        construction.arguments +=
-                                                            newLiteral(3, objectType("int"))
-                                                    }
-                                            }
-                                    }
-                                ducDeclStmt.declarations += duc
-                                scopeManager.addDeclaration(duc)
+                                newVariable(
+                                    "duc",
+                                    objectType("DfgUnresolvedCalls"),
+                                    holder = ducDeclStmt,
+                                ) {
+                                    it.initializer =
+                                        newNew().also { newExpr ->
+                                            newExpr.initializer =
+                                                newConstruction("DfgUnresolvedCalls") { construction
+                                                    ->
+                                                    construction.type =
+                                                        objectType("DfgUnresolvedCalls")
+                                                    construction.arguments +=
+                                                        newLiteral(3, objectType("int"))
+                                                }
+                                        }
+                                }
                                 block.statements += ducDeclStmt
 
                                 val iDeclStmt = newDeclarationStatement()
-                                val i =
-                                    newVariable("i", objectType("int")).also {
-                                        it.initializer =
-                                            newMemberCall(
-                                                    newMemberAccess(
-                                                        "knownFunction",
-                                                        newReference("duc"),
-                                                    ),
-                                                    false,
-                                                )
-                                                .also { call ->
-                                                    call.arguments +=
-                                                        newLiteral(2, objectType("int"))
-                                                }
-                                    }
-                                iDeclStmt.declarations += i
-                                scopeManager.addDeclaration(i)
+                                newVariable("i", objectType("int"), holder = iDeclStmt) {
+                                    it.initializer =
+                                        newMemberCall(
+                                            newMemberAccess("knownFunction", newReference("duc")),
+                                            false,
+                                        ) { call ->
+                                            call.arguments += newLiteral(2, objectType("int"))
+                                        }
+                                }
                                 block.statements += iDeclStmt
                             }
                     }

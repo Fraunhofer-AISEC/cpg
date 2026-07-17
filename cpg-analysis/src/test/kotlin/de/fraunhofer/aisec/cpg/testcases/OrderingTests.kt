@@ -114,13 +114,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p4Decl = newDeclarationStatement()
-                                val p4 = newVariable("p4", objectType("Botan"))
+                                val p4 = newVariable("p4", objectType("Botan"), holder = p4Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p4.initializer = construction
-                                p4Decl.declarations += p4
-                                scopeManager.addDeclaration(p4)
                                 block.statements += p4Decl
 
                                 val startCall =
@@ -150,13 +148,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p4Decl = newDeclarationStatement()
-                                val p4 = newVariable("p4", objectType("Botan"))
+                                val p4 = newVariable("p4", objectType("Botan"), holder = p4Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p4.initializer = construction
-                                p4Decl.declarations += p4
-                                scopeManager.addDeclaration(p4)
                                 block.statements += p4Decl
 
                                 val startCall =
@@ -190,29 +186,25 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p4Decl = newDeclarationStatement()
-                                val p4 = newVariable("p4", objectType("Botan"))
+                                val p4 = newVariable("p4", objectType("Botan"), holder = p4Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p4.initializer = construction
-                                p4Decl.declarations += p4
-                                scopeManager.addDeclaration(p4)
                                 block.statements += p4Decl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"))
+                                val x = newVariable("x", objectType("int"), holder = xDecl)
                                 x.initializer =
                                     newMemberCall(
                                         newMemberAccess("nextUInt", newReference("URandomKt")),
                                         false,
                                     )
-                                xDecl.declarations += x
-                                scopeManager.addDeclaration(x)
                                 block.statements += xDecl
 
                                 val ifElse = newIfElse { ifElse ->
                                     ifElse.condition =
-                                        newBinaryOperator("<=").also {
+                                        newBinaryOperator("<=") {
                                             it.lhs = newReference("x")
                                             it.rhs = newLiteral(5, objectType("int"))
                                         }
@@ -262,13 +254,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p4Decl = newDeclarationStatement()
-                                val p4 = newVariable("p4", objectType("Botan"))
+                                val p4 = newVariable("p4", objectType("Botan"), holder = p4Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(1, objectType("int"))
                                 p4.initializer = construction
-                                p4Decl.declarations += p4
-                                scopeManager.addDeclaration(p4)
                                 block.statements += p4Decl
 
                                 // Not allowed as start
@@ -319,13 +309,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p4Decl = newDeclarationStatement()
-                                val p4 = newVariable("p4", objectType("Botan"))
+                                val p4 = newVariable("p4", objectType("Botan"), holder = p4Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p4.initializer = construction
-                                p4Decl.declarations += p4
-                                scopeManager.addDeclaration(p4)
                                 block.statements += p4Decl
 
                                 val startCall =
@@ -349,13 +337,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p4Decl = newDeclarationStatement()
-                                val p4 = newVariable("p4", objectType("Botan"))
+                                val p4 = newVariable("p4", objectType("Botan"), holder = p4Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p4.initializer = construction
-                                p4Decl.declarations += p4
-                                scopeManager.addDeclaration(p4)
                                 block.statements += p4Decl
 
                                 val ifElse = newIfElse { ifElse ->
@@ -365,7 +351,7 @@ class GraphExamples {
                                             false,
                                         )
                                     ifElse.condition =
-                                        newBinaryOperator("<=").also {
+                                        newBinaryOperator("<=") {
                                             it.lhs = nextUIntCall
                                             it.rhs = newLiteral(5, objectType("int"))
                                         }
@@ -402,13 +388,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p4Decl = newDeclarationStatement()
-                                val p4 = newVariable("p4", objectType("Botan"))
+                                val p4 = newVariable("p4", objectType("Botan"), holder = p4Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p4.initializer = construction
-                                p4Decl.declarations += p4
-                                scopeManager.addDeclaration(p4)
                                 block.statements += p4Decl
 
                                 val ifElse = newIfElse { ifElse ->
@@ -464,13 +448,12 @@ class GraphExamples {
                                 block.statements +=
                                     newBlock(enterScope = true) { nested1 ->
                                         val p4Decl = newDeclarationStatement()
-                                        val p4 = newVariable("p4", objectType("Botan"))
+                                        val p4 =
+                                            newVariable("p4", objectType("Botan"), holder = p4Decl)
                                         val construction = newConstruction("Botan")
                                         construction.type = objectType("Botan")
                                         construction.arguments += newLiteral(2, objectType("int"))
                                         p4.initializer = construction
-                                        p4Decl.declarations += p4
-                                        scopeManager.addDeclaration(p4)
                                         nested1.statements += p4Decl
 
                                         val startCall =
@@ -485,13 +468,12 @@ class GraphExamples {
                                 block.statements +=
                                     newBlock(enterScope = true) { nested2 ->
                                         val p5Decl = newDeclarationStatement()
-                                        val p5 = newVariable("p5", objectType("Botan"))
+                                        val p5 =
+                                            newVariable("p5", objectType("Botan"), holder = p5Decl)
                                         val construction = newConstruction("Botan")
                                         construction.type = objectType("Botan")
                                         construction.arguments += newLiteral(2, objectType("int"))
                                         p5.initializer = construction
-                                        p5Decl.declarations += p5
-                                        scopeManager.addDeclaration(p5)
                                         nested2.statements += p5Decl
 
                                         val finishCall =
@@ -575,13 +557,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p1Decl = newDeclarationStatement()
-                                val p1 = newVariable("p1", objectType("Botan"))
+                                val p1 = newVariable("p1", objectType("Botan"), holder = p1Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p1.initializer = construction
-                                p1Decl.declarations += p1
-                                scopeManager.addDeclaration(p1)
                                 block.statements += p1Decl
 
                                 block.statements +=
@@ -616,13 +596,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p1Decl = newDeclarationStatement()
-                                val p1 = newVariable("p1", objectType("Botan"))
+                                val p1 = newVariable("p1", objectType("Botan"), holder = p1Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p1.initializer = construction
-                                p1Decl.declarations += p1
-                                scopeManager.addDeclaration(p1)
                                 block.statements += p1Decl
 
                                 block.statements +=
@@ -662,13 +640,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p1Decl = newDeclarationStatement()
-                                val p1 = newVariable("p1", objectType("Botan"))
+                                val p1 = newVariable("p1", objectType("Botan"), holder = p1Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p1.initializer = construction
-                                p1Decl.declarations += p1
-                                scopeManager.addDeclaration(p1)
                                 block.statements += p1Decl
 
                                 block.statements +=
@@ -713,13 +689,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p2Decl = newDeclarationStatement()
-                                val p2 = newVariable("p2", objectType("Botan"))
+                                val p2 = newVariable("p2", objectType("Botan"), holder = p2Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p2.initializer = construction
-                                p2Decl.declarations += p2
-                                scopeManager.addDeclaration(p2)
                                 block.statements += p2Decl
 
                                 block.statements +=
@@ -774,13 +748,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p3Decl = newDeclarationStatement()
-                                val p3 = newVariable("p3", objectType("Botan"))
+                                val p3 = newVariable("p3", objectType("Botan"), holder = p3Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p3.initializer = construction
-                                p3Decl.declarations += p3
-                                scopeManager.addDeclaration(p3)
                                 block.statements += p3Decl
 
                                 block.statements +=
@@ -835,13 +807,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p3Decl = newDeclarationStatement()
-                                val p3 = newVariable("p3", objectType("Botan"))
+                                val p3 = newVariable("p3", objectType("Botan"), holder = p3Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p3.initializer = construction
-                                p3Decl.declarations += p3
-                                scopeManager.addDeclaration(p3)
                                 block.statements += p3Decl
 
                                 block.statements +=
@@ -901,13 +871,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p5Decl = newDeclarationStatement()
-                                val p5 = newVariable("p5", objectType("Botan"))
+                                val p5 = newVariable("p5", objectType("Botan"), holder = p5Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p5.initializer = construction
-                                p5Decl.declarations += p5
-                                scopeManager.addDeclaration(p5)
                                 block.statements += p5Decl
 
                                 block.statements +=
@@ -942,13 +910,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p6Decl = newDeclarationStatement()
-                                val p6 = newVariable("p6", objectType("Botan"))
+                                val p6 = newVariable("p6", objectType("Botan"), holder = p6Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p6.initializer = construction
-                                p6Decl.declarations += p6
-                                scopeManager.addDeclaration(p6)
                                 block.statements += p6Decl
 
                                 block.statements +=
@@ -1002,13 +968,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p6Decl = newDeclarationStatement()
-                                val p6 = newVariable("p6", objectType("Botan"))
+                                val p6 = newVariable("p6", objectType("Botan"), holder = p6Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p6.initializer = construction
-                                p6Decl.declarations += p6
-                                scopeManager.addDeclaration(p6)
                                 block.statements += p6Decl
 
                                 val whileNode =
@@ -1061,13 +1025,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p7Decl = newDeclarationStatement()
-                                val p7 = newVariable("p7", objectType("Botan"))
+                                val p7 = newVariable("p7", objectType("Botan"), holder = p7Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p7.initializer = construction
-                                p7Decl.declarations += p7
-                                scopeManager.addDeclaration(p7)
                                 block.statements += p7Decl
 
                                 block.statements +=
@@ -1092,7 +1054,7 @@ class GraphExamples {
                                                 true,
                                             )
                                         w.condition =
-                                            newBinaryOperator(">").also {
+                                            newBinaryOperator(">") {
                                                 it.lhs = nextUIntCall
                                                 it.rhs = newLiteral(5, objectType("int"))
                                             }
@@ -1133,13 +1095,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p8Decl = newDeclarationStatement()
-                                val p8 = newVariable("p8", objectType("Botan"))
+                                val p8 = newVariable("p8", objectType("Botan"), holder = p8Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p8.initializer = construction
-                                p8Decl.declarations += p8
-                                scopeManager.addDeclaration(p8)
                                 block.statements += p8Decl
 
                                 block.statements +=
@@ -1208,13 +1168,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p8Decl = newDeclarationStatement()
-                                val p8 = newVariable("p8", objectType("Botan"))
+                                val p8 = newVariable("p8", objectType("Botan"), holder = p8Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p8.initializer = construction
-                                p8Decl.declarations += p8
-                                scopeManager.addDeclaration(p8)
                                 block.statements += p8Decl
 
                                 block.statements +=
@@ -1268,13 +1226,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p6Decl = newDeclarationStatement()
-                                val p6 = newVariable("p6", objectType("Botan"))
+                                val p6 = newVariable("p6", objectType("Botan"), holder = p6Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p6.initializer = construction
-                                p6Decl.declarations += p6
-                                scopeManager.addDeclaration(p6)
                                 block.statements += p6Decl
 
                                 block.statements +=
@@ -1317,7 +1273,7 @@ class GraphExamples {
                                                 false,
                                             )
                                         d.condition =
-                                            newBinaryOperator(">").also {
+                                            newBinaryOperator(">") {
                                                 it.lhs = nextUIntCall
                                                 it.rhs = newLiteral(5, objectType("int"))
                                             }
@@ -1342,13 +1298,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p1Decl = newDeclarationStatement()
-                                val p1 = newVariable("p1", objectType("Botan"))
+                                val p1 = newVariable("p1", objectType("Botan"), holder = p1Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p1.initializer = construction
-                                p1Decl.declarations += p1
-                                scopeManager.addDeclaration(p1)
                                 block.statements += p1Decl
 
                                 block.statements +=
@@ -1388,13 +1342,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p1Decl = newDeclarationStatement()
-                                val p1 = newVariable("p1", objectType("Botan"))
+                                val p1 = newVariable("p1", objectType("Botan"), holder = p1Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(2, objectType("int"))
                                 p1.initializer = construction
-                                p1Decl.declarations += p1
-                                scopeManager.addDeclaration(p1)
                                 block.statements += p1Decl
 
                                 block.statements +=
@@ -1410,7 +1362,7 @@ class GraphExamples {
                                             false,
                                         )
                                     ifElse.condition =
-                                        newBinaryOperator(">").also {
+                                        newBinaryOperator(">") {
                                             it.lhs = nextUIntCall
                                             it.rhs = newLiteral(5, objectType("int"))
                                         }
@@ -1450,23 +1402,19 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p1Decl = newDeclarationStatement()
-                                val p1 = newVariable("p1", objectType("Botan"))
+                                val p1 = newVariable("p1", objectType("Botan"), holder = p1Decl)
                                 val construction1 = newConstruction("Botan")
                                 construction1.type = objectType("Botan")
                                 construction1.arguments += newLiteral(1, objectType("int"))
                                 p1.initializer = construction1
-                                p1Decl.declarations += p1
-                                scopeManager.addDeclaration(p1)
                                 block.statements += p1Decl
 
                                 val p2Decl = newDeclarationStatement()
-                                val p2 = newVariable("p2", objectType("Botan"))
+                                val p2 = newVariable("p2", objectType("Botan"), holder = p2Decl)
                                 val construction2 = newConstruction("Botan")
                                 construction2.type = objectType("Botan")
                                 construction2.arguments += newLiteral(2, objectType("int"))
                                 p2.initializer = construction2
-                                p2Decl.declarations += p2
-                                scopeManager.addDeclaration(p2)
                                 block.statements += p2Decl
 
                                 block.statements +=
@@ -1528,13 +1476,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p1Decl = newDeclarationStatement()
-                                val p1 = newVariable("p1", objectType("Botan"))
+                                val p1 = newVariable("p1", objectType("Botan"), holder = p1Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(1, objectType("int"))
                                 p1.initializer = construction
-                                p1Decl.declarations += p1
-                                scopeManager.addDeclaration(p1)
                                 block.statements += p1Decl
 
                                 block.statements +=
@@ -1601,13 +1547,11 @@ class GraphExamples {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val p1Decl = newDeclarationStatement()
-                                val p1 = newVariable("p1", objectType("Botan"))
+                                val p1 = newVariable("p1", objectType("Botan"), holder = p1Decl)
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
                                 construction.arguments += newLiteral(1, objectType("int"))
                                 p1.initializer = construction
-                                p1Decl.declarations += p1
-                                scopeManager.addDeclaration(p1)
                                 block.statements += p1Decl
 
                                 block.statements +=

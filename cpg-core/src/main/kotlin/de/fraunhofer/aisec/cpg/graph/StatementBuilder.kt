@@ -40,11 +40,14 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newReturn(rawNode: Any? = null): Return {
+fun MetadataProvider.newReturn(rawNode: Any? = null, init: ((Return) -> Unit)? = null): Return {
     val node = Return()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -182,11 +185,17 @@ fun MetadataProvider.newEmpty(rawNode: Any? = null): Empty {
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newDeclarationStatement(rawNode: Any? = null): DeclarationStatement {
+fun MetadataProvider.newDeclarationStatement(
+    rawNode: Any? = null,
+    init: ((DeclarationStatement) -> Unit)? = null,
+): DeclarationStatement {
     val node = DeclarationStatement()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 

@@ -82,29 +82,25 @@ class FlowQueriesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(5, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("string"))
+                            val b = newVariable("b", objectType("string"), holder = bDecl)
                             val fooCallA = newCall(newReference("foo"))
                             fooCallA.arguments += newReference("a")
                             val fooCallBar = newCall(newReference("foo"))
                             fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
-                                newBinaryOperator("+").also { outer ->
+                                newBinaryOperator("+") { outer ->
                                     outer.lhs =
-                                        newBinaryOperator("+").also { inner ->
+                                        newBinaryOperator("+") { inner ->
                                             inner.lhs = newLiteral("bla", objectType("string"))
                                             inner.rhs = fooCallA
                                         }
                                     outer.rhs = fooCallBar
                                 }
-                            bDecl.declarations += b
-                            scopeManager.addDeclaration(b)
                             block.statements += bDecl
 
                             val printA = newCall(newReference("print"))
@@ -124,7 +120,7 @@ class FlowQueriesTest {
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
-                                    newBinaryOperator("==").also {
+                                    newBinaryOperator("==") {
                                         it.lhs = newReference("b")
                                         it.rhs = newLiteral("test", objectType("string"))
                                     }
@@ -151,7 +147,7 @@ class FlowQueriesTest {
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
@@ -184,27 +180,23 @@ class FlowQueriesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(5, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("string"))
+                            val b = newVariable("b", objectType("string"), holder = bDecl)
                             val fooCallBar = newCall(newReference("foo"))
                             fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
-                                newBinaryOperator("+").also { outer ->
+                                newBinaryOperator("+") { outer ->
                                     outer.lhs =
-                                        newBinaryOperator("+").also { inner ->
+                                        newBinaryOperator("+") { inner ->
                                             inner.lhs = newLiteral("bla", objectType("string"))
                                             inner.rhs = newReference("a")
                                         }
                                     outer.rhs = fooCallBar
                                 }
-                            bDecl.declarations += b
-                            scopeManager.addDeclaration(b)
                             block.statements += bDecl
 
                             val printB = newCall(newReference("print"))
@@ -213,7 +205,7 @@ class FlowQueriesTest {
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
@@ -246,32 +238,28 @@ class FlowQueriesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(5, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("string"))
+                            val b = newVariable("b", objectType("string"), holder = bDecl)
                             val fooCallBar = newCall(newReference("foo"))
                             fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
-                                newBinaryOperator("+").also { outer ->
+                                newBinaryOperator("+") { outer ->
                                     outer.lhs =
-                                        newBinaryOperator("+").also { inner ->
+                                        newBinaryOperator("+") { inner ->
                                             inner.lhs = newLiteral("bla", objectType("string"))
                                             inner.rhs = newReference("a")
                                         }
                                     outer.rhs = fooCallBar
                                 }
-                            bDecl.declarations += b
-                            scopeManager.addDeclaration(b)
                             block.statements += bDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
-                                    newBinaryOperator("==").also {
+                                    newBinaryOperator("==") {
                                         it.lhs = newReference("b")
                                         it.rhs = newLiteral("test", objectType("string"))
                                     }
@@ -290,7 +278,7 @@ class FlowQueriesTest {
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
@@ -323,27 +311,23 @@ class FlowQueriesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(5, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("string"))
+                            val b = newVariable("b", objectType("string"), holder = bDecl)
                             val fooCallBar = newCall(newReference("foo"))
                             fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
-                                newBinaryOperator("+").also { outer ->
+                                newBinaryOperator("+") { outer ->
                                     outer.lhs =
-                                        newBinaryOperator("+").also { inner ->
+                                        newBinaryOperator("+") { inner ->
                                             inner.lhs = newLiteral("bla", objectType("string"))
                                             inner.rhs = newReference("a")
                                         }
                                     outer.rhs = fooCallBar
                                 }
-                            bDecl.declarations += b
-                            scopeManager.addDeclaration(b)
                             block.statements += bDecl
 
                             // Fluent's `IfElse.addArgument` unconditionally does
@@ -378,7 +362,7 @@ class FlowQueriesTest {
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
@@ -411,23 +395,19 @@ class FlowQueriesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(5, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("string"))
+                            val b = newVariable("b", objectType("string"), holder = bDecl)
                             val fooCallBar = newCall(newReference("foo"))
                             fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newLiteral("bla", objectType("string"))
                                     it.rhs = fooCallBar
                                 }
-                            bDecl.declarations += b
-                            scopeManager.addDeclaration(b)
                             block.statements += bDecl
 
                             val printA = newCall(newReference("print"))
@@ -436,7 +416,7 @@ class FlowQueriesTest {
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
@@ -469,28 +449,24 @@ class FlowQueriesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(5, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("string"))
+                            val b = newVariable("b", objectType("string"), holder = bDecl)
                             val fooCallBar = newCall(newReference("foo"))
                             fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newLiteral("bla", objectType("string"))
                                     it.rhs = fooCallBar
                                 }
-                            bDecl.declarations += b
-                            scopeManager.addDeclaration(b)
                             block.statements += bDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
-                                    newBinaryOperator("==").also {
+                                    newBinaryOperator("==") {
                                         it.lhs = newReference("b")
                                         it.rhs = newLiteral("test", objectType("string"))
                                     }
@@ -505,7 +481,7 @@ class FlowQueriesTest {
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
@@ -538,28 +514,24 @@ class FlowQueriesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(5, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("string"))
+                            val b = newVariable("b", objectType("string"), holder = bDecl)
                             val fooCallBar = newCall(newReference("foo"))
                             fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newLiteral("bla", objectType("string"))
                                     it.rhs = fooCallBar
                                 }
-                            bDecl.declarations += b
-                            scopeManager.addDeclaration(b)
                             block.statements += bDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
-                                    newBinaryOperator("==").also {
+                                    newBinaryOperator("==") {
                                         it.lhs = newReference("b")
                                         it.rhs = newLiteral("test", objectType("string"))
                                     }
@@ -580,7 +552,7 @@ class FlowQueriesTest {
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
@@ -613,28 +585,24 @@ class FlowQueriesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(5, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("string"))
+                            val b = newVariable("b", objectType("string"), holder = bDecl)
                             val fooCallBar = newCall(newReference("foo"))
                             fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newLiteral("bla", objectType("string"))
                                     it.rhs = fooCallBar
                                 }
-                            bDecl.declarations += b
-                            scopeManager.addDeclaration(b)
                             block.statements += bDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
-                                    newBinaryOperator("==").also {
+                                    newBinaryOperator("==") {
                                         it.lhs = newReference("b")
                                         it.rhs = newLiteral("test", objectType("string"))
                                     }
@@ -646,7 +614,7 @@ class FlowQueriesTest {
 
                                         val bazCall = newCall(newReference("baz"))
                                         bazCall.arguments +=
-                                            newBinaryOperator("+").also {
+                                            newBinaryOperator("+") {
                                                 it.lhs = newReference("a")
                                                 it.rhs = newReference("b")
                                             }
@@ -688,29 +656,25 @@ class FlowQueriesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(5, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("string"))
+                            val b = newVariable("b", objectType("string"), holder = bDecl)
                             val fooCallA = newCall(newReference("foo"))
                             fooCallA.arguments += newReference("a")
                             val fooCallBar = newCall(newReference("foo"))
                             fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
-                                newBinaryOperator("+").also { outer ->
+                                newBinaryOperator("+") { outer ->
                                     outer.lhs =
-                                        newBinaryOperator("+").also { inner ->
+                                        newBinaryOperator("+") { inner ->
                                             inner.lhs = newLiteral("bla", objectType("string"))
                                             inner.rhs = fooCallA
                                         }
                                     outer.rhs = fooCallBar
                                 }
-                            bDecl.declarations += b
-                            scopeManager.addDeclaration(b)
                             block.statements += bDecl
 
                             val printB = newCall(newReference("print"))
@@ -719,7 +683,7 @@ class FlowQueriesTest {
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
@@ -752,34 +716,30 @@ class FlowQueriesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(5, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("string"))
+                            val b = newVariable("b", objectType("string"), holder = bDecl)
                             val fooCallA = newCall(newReference("foo"))
                             fooCallA.arguments += newReference("a")
                             val fooCallBar = newCall(newReference("foo"))
                             fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
-                                newBinaryOperator("+").also { outer ->
+                                newBinaryOperator("+") { outer ->
                                     outer.lhs =
-                                        newBinaryOperator("+").also { inner ->
+                                        newBinaryOperator("+") { inner ->
                                             inner.lhs = newLiteral("bla", objectType("string"))
                                             inner.rhs = fooCallA
                                         }
                                     outer.rhs = fooCallBar
                                 }
-                            bDecl.declarations += b
-                            scopeManager.addDeclaration(b)
                             block.statements += bDecl
 
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
-                                    newBinaryOperator("==").also {
+                                    newBinaryOperator("==") {
                                         it.lhs = newReference("b")
                                         it.rhs = newLiteral("test", objectType("string"))
                                     }
@@ -798,7 +758,7 @@ class FlowQueriesTest {
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
@@ -831,29 +791,25 @@ class FlowQueriesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"))
+                            val a = newVariable("a", objectType("int"), holder = aDecl)
                             a.initializer = newLiteral(5, objectType("int"))
-                            aDecl.declarations += a
-                            scopeManager.addDeclaration(a)
                             block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("string"))
+                            val b = newVariable("b", objectType("string"), holder = bDecl)
                             val fooCallA = newCall(newReference("foo"))
                             fooCallA.arguments += newReference("a")
                             val fooCallBar = newCall(newReference("foo"))
                             fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
-                                newBinaryOperator("+").also { outer ->
+                                newBinaryOperator("+") { outer ->
                                     outer.lhs =
-                                        newBinaryOperator("+").also { inner ->
+                                        newBinaryOperator("+") { inner ->
                                             inner.lhs = newLiteral("bla", objectType("string"))
                                             inner.rhs = fooCallA
                                         }
                                     outer.rhs = fooCallBar
                                 }
-                            bDecl.declarations += b
-                            scopeManager.addDeclaration(b)
                             block.statements += bDecl
 
                             // Same `IfElse.addArgument` condition-overwrite quirk as in
@@ -883,7 +839,7 @@ class FlowQueriesTest {
 
                             val bazCall = newCall(newReference("baz"))
                             bazCall.arguments +=
-                                newBinaryOperator("+").also {
+                                newBinaryOperator("+") {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
@@ -915,7 +871,7 @@ class FlowQueriesTest {
                         newBlock(enterScope = true) { block ->
                             val ifElse = newIfElse { ifElse ->
                                 ifElse.condition =
-                                    newBinaryOperator("==").also {
+                                    newBinaryOperator("==") {
                                         it.lhs = newReference("i")
                                         it.rhs = newLiteral(1, objectType("int"))
                                     }
@@ -985,9 +941,7 @@ class FlowQueriesTest {
                         newBlock(enterScope = true) { block ->
                             val forEachNode = newForEach { forEach ->
                                 val iDeclStmt = newDeclarationStatement()
-                                val i = newVariable("i", objectType("int"))
-                                iDeclStmt.declarations += i
-                                scopeManager.addDeclaration(i)
+                                val i = newVariable("i", objectType("int"), holder = iDeclStmt)
                                 forEach.variable = iDeclStmt
 
                                 val rangeCall = newCall(newReference("range"))
@@ -996,10 +950,8 @@ class FlowQueriesTest {
 
                                 forEach.statement = newBlock { loopBodyBlock ->
                                     val tempDecl = newDeclarationStatement()
-                                    val temp = newVariable("temp")
+                                    val temp = newVariable("temp", holder = tempDecl)
                                     temp.initializer = newLiteral("start")
-                                    tempDecl.declarations += temp
-                                    scopeManager.addDeclaration(temp)
                                     loopBodyBlock.statements += tempDecl
 
                                     val aCall = newCall(newReference("a"))

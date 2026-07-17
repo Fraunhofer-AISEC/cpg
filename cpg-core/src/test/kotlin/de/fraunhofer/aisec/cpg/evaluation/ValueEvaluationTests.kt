@@ -60,44 +60,43 @@ class ValueEvaluationTests {
                         main.body =
                             newBlock(enterScope = true) { block ->
                                 val arrayDeclStmt = newDeclarationStatement()
-                                val arrayVar =
-                                    newVariable("array", objectType("int").array()).also {
-                                        it.initializer =
-                                            newArrayConstruction().also { ac ->
-                                                ac.addDimension(newLiteral(3, objectType("int")))
-                                            }
-                                    }
-                                arrayDeclStmt.declarations += arrayVar
-                                scopeManager.addDeclaration(arrayVar)
+                                newVariable(
+                                    "array",
+                                    objectType("int").array(),
+                                    holder = arrayDeclStmt,
+                                ) {
+                                    it.initializer =
+                                        newArrayConstruction().also { ac ->
+                                            ac.addDimension(newLiteral(3, objectType("int")))
+                                        }
+                                }
                                 block.statements += arrayDeclStmt
 
                                 val forNode = newFor { for_ ->
                                     val iDeclStmt = newDeclarationStatement()
-                                    val iVar =
-                                        newVariable("i", objectType("int")).also {
-                                            it.initializer = newLiteral(0, objectType("int"))
-                                        }
-                                    iDeclStmt.declarations += iVar
-                                    scopeManager.addDeclaration(iVar)
+                                    newVariable("i", objectType("int"), holder = iDeclStmt) {
+                                        it.initializer = newLiteral(0, objectType("int"))
+                                    }
                                     for_.initializerStatement = iDeclStmt
 
                                     for_.condition =
-                                        newBinaryOperator("<").also {
+                                        newBinaryOperator("<") {
                                             it.lhs = newReference("i")
                                             it.rhs =
                                                 newMemberAccess("length", newReference("array"))
                                         }
 
                                     for_.iterationStatement =
-                                        newUnaryOperator("++", postfix = true, prefix = false)
-                                            .also { it.input = newReference("i") }
+                                        newUnaryOperator("++", postfix = true, prefix = false) {
+                                            it.input = newReference("i")
+                                        }
 
                                     for_.statement = newBlock { loopBody ->
                                         loopBody.statements +=
                                             newAssign(
                                                 "=",
                                                 listOf(
-                                                    newSubscription().also {
+                                                    newSubscription {
                                                         it.arrayExpression = newReference("array")
                                                         it.subscriptExpression = newReference("i")
                                                     }
@@ -116,20 +115,16 @@ class ValueEvaluationTests {
                                         ),
                                         false,
                                     )
-                                printlnCall1.arguments +=
-                                    newSubscription().also {
-                                        it.arrayExpression = newReference("array")
-                                        it.subscriptExpression = newLiteral(1, objectType("int"))
-                                    }
+                                printlnCall1.arguments += newSubscription {
+                                    it.arrayExpression = newReference("array")
+                                    it.subscriptExpression = newLiteral(1, objectType("int"))
+                                }
                                 block.statements += printlnCall1
 
                                 val strDeclStmt = newDeclarationStatement()
-                                val strVar =
-                                    newVariable("str", objectType("String")).also {
-                                        it.initializer = newLiteral("abcde", objectType("String"))
-                                    }
-                                strDeclStmt.declarations += strVar
-                                scopeManager.addDeclaration(strVar)
+                                newVariable("str", objectType("String"), holder = strDeclStmt) {
+                                    it.initializer = newLiteral("abcde", objectType("String"))
+                                }
                                 block.statements += strDeclStmt
 
                                 val printlnCall2 =
@@ -177,18 +172,13 @@ class ValueEvaluationTests {
                         main.body =
                             newBlock(enterScope = true) { block ->
                                 val iDeclStmt = newDeclarationStatement()
-                                val iVar =
-                                    newVariable("i", objectType("int")).also {
-                                        it.initializer = newLiteral(3, objectType("int"))
-                                    }
-                                iDeclStmt.declarations += iVar
-                                scopeManager.addDeclaration(iVar)
+                                newVariable("i", objectType("int"), holder = iDeclStmt) {
+                                    it.initializer = newLiteral(3, objectType("int"))
+                                }
                                 block.statements += iDeclStmt
 
                                 val sDeclStmt = newDeclarationStatement()
-                                val sVar = newVariable("s", objectType("String"))
-                                sDeclStmt.declarations += sVar
-                                scopeManager.addDeclaration(sVar)
+                                newVariable("s", objectType("String"), holder = sDeclStmt)
                                 block.statements += sDeclStmt
 
                                 // Fluent's "lt" infix operator has no ArgumentHolder context, so
@@ -237,7 +227,7 @@ class ValueEvaluationTests {
                                         "=",
                                         listOf(newReference("s")),
                                         listOf(
-                                            newBinaryOperator("+").also {
+                                            newBinaryOperator("+") {
                                                 it.lhs = newReference("s")
                                                 it.rhs = newLiteral("?", objectType("string"))
                                             }
@@ -245,7 +235,7 @@ class ValueEvaluationTests {
                                     )
 
                                 block.statements +=
-                                    newUnaryOperator("++", postfix = true, prefix = false).also {
+                                    newUnaryOperator("++", postfix = true, prefix = false) {
                                         it.input = newReference("i")
                                     }
 
@@ -297,30 +287,24 @@ class ValueEvaluationTests {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val bDeclStmt = newDeclarationStatement()
-                            val bVar =
-                                newVariable("b", objectType("int")).also {
-                                    it.initializer =
-                                        newBinaryOperator("+").also { bo ->
-                                            bo.lhs = newLiteral(1, objectType("int"))
-                                            bo.rhs = newLiteral(1, objectType("int"))
-                                        }
-                                }
-                            bDeclStmt.declarations += bVar
-                            scopeManager.addDeclaration(bVar)
+                            newVariable("b", objectType("int"), holder = bDeclStmt) {
+                                it.initializer =
+                                    newBinaryOperator("+") { bo ->
+                                        bo.lhs = newLiteral(1, objectType("int"))
+                                        bo.rhs = newLiteral(1, objectType("int"))
+                                    }
+                            }
                             block.statements += bDeclStmt
 
                             block.statements +=
-                                newCall(newReference("println")).also {
+                                newCall(newReference("println")) {
                                     it.arguments += newReference("b")
                                 }
 
                             val aDeclStmt = newDeclarationStatement()
-                            val aVar =
-                                newVariable("a", objectType("int")).also {
-                                    it.initializer = newLiteral(1, objectType("int"))
-                                }
-                            aDeclStmt.declarations += aVar
-                            scopeManager.addDeclaration(aVar)
+                            newVariable("a", objectType("int"), holder = aDeclStmt) {
+                                it.initializer = newLiteral(1, objectType("int"))
+                            }
                             block.statements += aDeclStmt
 
                             block.statements +=
@@ -331,187 +315,150 @@ class ValueEvaluationTests {
                                 )
 
                             block.statements +=
-                                newCall(newReference("println")).also {
+                                newCall(newReference("println")) {
                                     it.arguments += newReference("a")
                                 }
 
                             val cDeclStmt = newDeclarationStatement()
-                            val cVar =
-                                newVariable("c", objectType("int")).also {
-                                    it.initializer =
-                                        newBinaryOperator("-").also { bo ->
-                                            bo.lhs = newLiteral(5, objectType("int"))
-                                            bo.rhs = newLiteral(2, objectType("int"))
-                                        }
-                                }
-                            cDeclStmt.declarations += cVar
-                            scopeManager.addDeclaration(cVar)
+                            newVariable("c", objectType("int"), holder = cDeclStmt) {
+                                it.initializer =
+                                    newBinaryOperator("-") { bo ->
+                                        bo.lhs = newLiteral(5, objectType("int"))
+                                        bo.rhs = newLiteral(2, objectType("int"))
+                                    }
+                            }
                             block.statements += cDeclStmt
 
                             val dDeclStmt = newDeclarationStatement()
-                            val dVar =
-                                newVariable("d", objectType("float")).also {
-                                    it.initializer =
-                                        newBinaryOperator("/").also { bo ->
-                                            bo.lhs = newLiteral(8, objectType("int"))
-                                            bo.rhs = newLiteral(3, objectType("int"))
-                                        }
-                                }
-                            dDeclStmt.declarations += dVar
-                            scopeManager.addDeclaration(dVar)
+                            newVariable("d", objectType("float"), holder = dDeclStmt) {
+                                it.initializer =
+                                    newBinaryOperator("/") { bo ->
+                                        bo.lhs = newLiteral(8, objectType("int"))
+                                        bo.rhs = newLiteral(3, objectType("int"))
+                                    }
+                            }
                             block.statements += dDeclStmt
 
                             val eDeclStmt = newDeclarationStatement()
-                            val eVar =
-                                newVariable("e", objectType("float")).also {
-                                    it.initializer =
-                                        newBinaryOperator("/").also { bo ->
-                                            bo.lhs = newLiteral(7.0, objectType("float"))
-                                            bo.rhs = newLiteral(2, objectType("int"))
-                                        }
-                                }
-                            eDeclStmt.declarations += eVar
-                            scopeManager.addDeclaration(eVar)
+                            newVariable("e", objectType("float"), holder = eDeclStmt) {
+                                it.initializer =
+                                    newBinaryOperator("/") { bo ->
+                                        bo.lhs = newLiteral(7.0, objectType("float"))
+                                        bo.rhs = newLiteral(2, objectType("int"))
+                                    }
+                            }
                             block.statements += eDeclStmt
 
                             val fDeclStmt = newDeclarationStatement()
-                            val fVar =
-                                newVariable("f", objectType("int")).also {
-                                    it.initializer =
-                                        newBinaryOperator("*").also { bo ->
-                                            bo.lhs = newLiteral(2, objectType("int"))
-                                            bo.rhs = newLiteral(5, objectType("int"))
-                                        }
-                                }
-                            fDeclStmt.declarations += fVar
-                            scopeManager.addDeclaration(fVar)
+                            newVariable("f", objectType("int"), holder = fDeclStmt) {
+                                it.initializer =
+                                    newBinaryOperator("*") { bo ->
+                                        bo.lhs = newLiteral(2, objectType("int"))
+                                        bo.rhs = newLiteral(5, objectType("int"))
+                                    }
+                            }
                             block.statements += fDeclStmt
 
                             val gDeclStmt = newDeclarationStatement()
-                            val gVar =
-                                newVariable("g", objectType("int")).also {
-                                    it.initializer =
-                                        newUnaryOperator("-", postfix = false, prefix = false)
-                                            .also { it.input = newReference("c") }
-                                }
-                            gDeclStmt.declarations += gVar
-                            scopeManager.addDeclaration(gVar)
+                            newVariable("g", objectType("int"), holder = gDeclStmt) {
+                                it.initializer =
+                                    newUnaryOperator("-", postfix = false, prefix = false) {
+                                        it.input = newReference("c")
+                                    }
+                            }
                             block.statements += gDeclStmt
 
                             block.statements +=
-                                newCall(newReference("println")).also {
+                                newCall(newReference("println")) {
                                     it.arguments +=
-                                        newBinaryOperator("+").also { bo ->
+                                        newBinaryOperator("+") { bo ->
                                             bo.lhs = newLiteral("Hello ", objectType("String"))
                                             bo.rhs = newLiteral("world", objectType("String"))
                                         }
                                 }
 
                             val hDeclStmt = newDeclarationStatement()
-                            val hVar =
-                                newVariable("h", objectType("bool")).also {
-                                    it.initializer =
-                                        newBinaryOperator("<=").also { bo ->
-                                            bo.lhs = newLiteral(5, objectType("int"))
-                                            bo.rhs = newLiteral(2, objectType("int"))
-                                        }
-                                }
-                            hDeclStmt.declarations += hVar
-                            scopeManager.addDeclaration(hVar)
+                            newVariable("h", objectType("bool"), holder = hDeclStmt) {
+                                it.initializer =
+                                    newBinaryOperator("<=") { bo ->
+                                        bo.lhs = newLiteral(5, objectType("int"))
+                                        bo.rhs = newLiteral(2, objectType("int"))
+                                    }
+                            }
                             block.statements += hDeclStmt
 
                             val iVarDeclStmt = newDeclarationStatement()
-                            val iVar2 =
-                                newVariable("i", objectType("bool")).also {
-                                    it.initializer =
-                                        newBinaryOperator(">").also { bo ->
-                                            bo.lhs = newLiteral(3, objectType("int"))
-                                            bo.rhs = newLiteral(3, objectType("int"))
-                                        }
-                                }
-                            iVarDeclStmt.declarations += iVar2
-                            scopeManager.addDeclaration(iVar2)
+                            newVariable("i", objectType("bool"), holder = iVarDeclStmt) {
+                                it.initializer =
+                                    newBinaryOperator(">") { bo ->
+                                        bo.lhs = newLiteral(3, objectType("int"))
+                                        bo.rhs = newLiteral(3, objectType("int"))
+                                    }
+                            }
                             block.statements += iVarDeclStmt
 
                             val jDeclStmt = newDeclarationStatement()
-                            val jVar =
-                                newVariable("j", objectType("bool")).also {
-                                    it.initializer =
-                                        newBinaryOperator(">=").also { bo ->
-                                            bo.lhs = newLiteral(3, objectType("int"))
-                                            bo.rhs = newLiteral(3.2, objectType("float"))
-                                        }
-                                }
-                            jDeclStmt.declarations += jVar
-                            scopeManager.addDeclaration(jVar)
+                            newVariable("j", objectType("bool"), holder = jDeclStmt) {
+                                it.initializer =
+                                    newBinaryOperator(">=") { bo ->
+                                        bo.lhs = newLiteral(3, objectType("int"))
+                                        bo.rhs = newLiteral(3.2, objectType("float"))
+                                    }
+                            }
                             block.statements += jDeclStmt
 
                             val kDeclStmt = newDeclarationStatement()
-                            val kVar =
-                                newVariable("k", objectType("bool")).also {
-                                    it.initializer =
-                                        newBinaryOperator("<=").also { bo ->
-                                            bo.lhs = newLiteral(3.1, objectType("float"))
-                                            bo.rhs = newLiteral(3, objectType("int"))
-                                        }
-                                }
-                            kDeclStmt.declarations += kVar
-                            scopeManager.addDeclaration(kVar)
+                            newVariable("k", objectType("bool"), holder = kDeclStmt) {
+                                it.initializer =
+                                    newBinaryOperator("<=") { bo ->
+                                        bo.lhs = newLiteral(3.1, objectType("float"))
+                                        bo.rhs = newLiteral(3, objectType("int"))
+                                    }
+                            }
                             block.statements += kDeclStmt
 
                             val lDeclStmt = newDeclarationStatement()
-                            val lVar =
-                                newVariable("l", objectType("bool")).also {
-                                    it.initializer =
-                                        newBinaryOperator(">=").also { bo ->
-                                            bo.lhs = newLiteral(3L, objectType("long"))
-                                            bo.rhs =
-                                                newCast().also { cast ->
-                                                    cast.castType = objectType("float")
-                                                    cast.expression =
-                                                        newLiteral(3.1, objectType("float"))
-                                                }
-                                        }
-                                }
-                            lDeclStmt.declarations += lVar
-                            scopeManager.addDeclaration(lVar)
+                            newVariable("l", objectType("bool"), holder = lDeclStmt) {
+                                it.initializer =
+                                    newBinaryOperator(">=") { bo ->
+                                        bo.lhs = newLiteral(3L, objectType("long"))
+                                        bo.rhs =
+                                            newCast().also { cast ->
+                                                cast.castType = objectType("float")
+                                                cast.expression =
+                                                    newLiteral(3.1, objectType("float"))
+                                            }
+                                    }
+                            }
                             block.statements += lDeclStmt
 
                             val mDeclStmt = newDeclarationStatement()
-                            val mVar =
-                                newVariable("m", objectType("bool")).also {
-                                    it.initializer =
-                                        newBinaryOperator(">=").also { bo ->
-                                            bo.lhs =
-                                                newCast().also { cast ->
-                                                    cast.castType = objectType("char")
-                                                    cast.expression =
-                                                        newLiteral(3, objectType("int"))
-                                                }
-                                            bo.rhs = newLiteral(3.1, objectType("float"))
-                                        }
-                                }
-                            mDeclStmt.declarations += mVar
-                            scopeManager.addDeclaration(mVar)
+                            newVariable("m", objectType("bool"), holder = mDeclStmt) {
+                                it.initializer =
+                                    newBinaryOperator(">=") { bo ->
+                                        bo.lhs =
+                                            newCast().also { cast ->
+                                                cast.castType = objectType("char")
+                                                cast.expression = newLiteral(3, objectType("int"))
+                                            }
+                                        bo.rhs = newLiteral(3.1, objectType("float"))
+                                    }
+                            }
                             block.statements += mDeclStmt
 
                             val nDeclStmt = newDeclarationStatement()
-                            val nVar =
-                                newVariable("n", objectType("bool")).also {
-                                    it.initializer =
-                                        newBinaryOperator("==").also { bo ->
-                                            bo.lhs = newLiteral(3, objectType("int"))
-                                            bo.rhs = newLiteral(3.1, objectType("float"))
-                                        }
-                                }
-                            nDeclStmt.declarations += nVar
-                            scopeManager.addDeclaration(nVar)
+                            newVariable("n", objectType("bool"), holder = nDeclStmt) {
+                                it.initializer =
+                                    newBinaryOperator("==") { bo ->
+                                        bo.lhs = newLiteral(3, objectType("int"))
+                                        bo.rhs = newLiteral(3.1, objectType("float"))
+                                    }
+                            }
                             block.statements += nDeclStmt
 
-                            block.statements +=
-                                newReturn().also {
-                                    it.returnValue = newLiteral(0, objectType("int"))
-                                }
+                            block.statements += newReturn {
+                                it.returnValue = newLiteral(0, objectType("int"))
+                            }
                         }
                 }
 
@@ -539,20 +486,17 @@ class ValueEvaluationTests {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             block.statements +=
-                                newCall(newReference("srand")).also {
+                                newCall(newReference("srand")) {
                                     it.arguments +=
-                                        newCall(newReference("time")).also { timeCall ->
+                                        newCall(newReference("time")) { timeCall ->
                                             timeCall.arguments += newReference("NULL")
                                         }
                                 }
 
                             val bDeclStmt = newDeclarationStatement()
-                            val bVar =
-                                newVariable("b", objectType("int")).also {
-                                    it.initializer = newLiteral(1, objectType("int"))
-                                }
-                            bDeclStmt.declarations += bVar
-                            scopeManager.addDeclaration(bVar)
+                            newVariable("b", objectType("int"), holder = bDeclStmt) {
+                                it.initializer = newLiteral(1, objectType("int"))
+                            }
                             block.statements += bDeclStmt
 
                             // Fluent's "lt" infix operator has no ArgumentHolder context, so it
@@ -571,7 +515,7 @@ class ValueEvaluationTests {
                                                 "=",
                                                 listOf(newReference("b")),
                                                 listOf(
-                                                    newBinaryOperator("+").also {
+                                                    newBinaryOperator("+") {
                                                         it.lhs = newReference("b")
                                                         it.rhs = newLiteral(1, objectType("int"))
                                                     }
@@ -582,7 +526,7 @@ class ValueEvaluationTests {
                             block.statements += ifElse1
 
                             block.statements +=
-                                newCall(newReference("println")).also {
+                                newCall(newReference("println")) {
                                     it.arguments += newReference("b")
                                 } // 1, 2
 
@@ -592,7 +536,7 @@ class ValueEvaluationTests {
                             // call/literal operands.
                             val ifElse2 = newIfElse { ifElse ->
                                 ifElse.condition =
-                                    newBinaryOperator(">").also {
+                                    newBinaryOperator(">") {
                                         it.lhs = newCall(newReference("rand"))
                                         it.rhs = newLiteral(5, objectType("int"))
                                     }
@@ -604,7 +548,7 @@ class ValueEvaluationTests {
                                                 "=",
                                                 listOf(newReference("b")),
                                                 listOf(
-                                                    newBinaryOperator("-").also {
+                                                    newBinaryOperator("-") {
                                                         it.lhs = newReference("b")
                                                         it.rhs = newLiteral(1, objectType("int"))
                                                     }
@@ -615,13 +559,13 @@ class ValueEvaluationTests {
                             block.statements += ifElse2
 
                             block.statements +=
-                                newCall(newReference("println")).also {
+                                newCall(newReference("println")) {
                                     it.arguments += newReference("b")
                                 } // 0, 1, 2
 
                             val ifElse3 = newIfElse { ifElse ->
                                 ifElse.condition =
-                                    newBinaryOperator(">").also {
+                                    newBinaryOperator(">") {
                                         it.lhs = newCall(newReference("rand"))
                                         it.rhs = newLiteral(3, objectType("int"))
                                     }
@@ -633,7 +577,7 @@ class ValueEvaluationTests {
                                                 "=",
                                                 listOf(newReference("b")),
                                                 listOf(
-                                                    newBinaryOperator("*").also {
+                                                    newBinaryOperator("*") {
                                                         it.lhs = newReference("b")
                                                         it.rhs = newLiteral(2, objectType("int"))
                                                     }
@@ -644,7 +588,7 @@ class ValueEvaluationTests {
                             block.statements += ifElse3
 
                             block.statements +=
-                                newCall(newReference("println")).also {
+                                newCall(newReference("println")) {
                                     it.arguments += newReference("b")
                                 } // 0, 1, 2, 4
 
@@ -660,7 +604,7 @@ class ValueEvaluationTests {
                             // with two AST parents. Faithfully reproduced here (confirmed via the
                             // original Fluent-based test).
                             val decB =
-                                newUnaryOperator("-", postfix = false, prefix = false).also {
+                                newUnaryOperator("-", postfix = false, prefix = false) {
                                     it.input = newReference("b")
                                 }
                             val ifElse4 = newIfElse { ifElse ->
@@ -675,39 +619,34 @@ class ValueEvaluationTests {
                             block.statements += ifElse4
 
                             block.statements +=
-                                newCall(newReference("println")).also {
+                                newCall(newReference("println")) {
                                     it.arguments += newReference("b")
                                 } // -4, -2, -1, 0, 1, 2, 4
 
                             val aDeclStmt = newDeclarationStatement()
-                            val aVar =
-                                newVariable("a", objectType("int")).also {
-                                    it.initializer =
-                                        newConditional(
-                                            newBinaryOperator("<").also {
-                                                it.lhs = newReference("b")
-                                                it.rhs = newLiteral(2, objectType("int"))
-                                            },
-                                            newLiteral(3, objectType("int")),
-                                            newUnaryOperator("++", postfix = true, prefix = false)
-                                                .also {
-                                                    it.input = newLiteral(5, objectType("int"))
-                                                },
-                                        )
-                                }
-                            aDeclStmt.declarations += aVar
-                            scopeManager.addDeclaration(aVar)
+                            newVariable("a", objectType("int"), holder = aDeclStmt) {
+                                it.initializer =
+                                    newConditional(
+                                        newBinaryOperator("<") {
+                                            it.lhs = newReference("b")
+                                            it.rhs = newLiteral(2, objectType("int"))
+                                        },
+                                        newLiteral(3, objectType("int")),
+                                        newUnaryOperator("++", postfix = true, prefix = false) {
+                                            it.input = newLiteral(5, objectType("int"))
+                                        },
+                                    )
+                            }
                             block.statements += aDeclStmt
 
                             block.statements +=
-                                newCall(newReference("println")).also {
+                                newCall(newReference("println")) {
                                     it.arguments += newReference("a")
                                 } // 3, 6
 
-                            block.statements +=
-                                newReturn().also {
-                                    it.returnValue = newLiteral(0, objectType("int"))
-                                }
+                            block.statements += newReturn {
+                                it.returnValue = newLiteral(0, objectType("int"))
+                            }
                         }
                 }
 
@@ -718,35 +657,33 @@ class ValueEvaluationTests {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val arrayDeclStmt = newDeclarationStatement()
-                            val arrayVar =
-                                newVariable("array", objectType("int").array()).also {
-                                    it.initializer =
-                                        newArrayConstruction().also { ac ->
-                                            ac.addDimension(newLiteral(6, objectType("int")))
-                                        }
-                                }
-                            arrayDeclStmt.declarations += arrayVar
-                            scopeManager.addDeclaration(arrayVar)
+                            newVariable(
+                                "array",
+                                objectType("int").array(),
+                                holder = arrayDeclStmt,
+                            ) {
+                                it.initializer =
+                                    newArrayConstruction().also { ac ->
+                                        ac.addDimension(newLiteral(6, objectType("int")))
+                                    }
+                            }
                             block.statements += arrayDeclStmt
 
                             val forNode = newFor { for_ ->
                                 val iDeclStmt = newDeclarationStatement()
-                                val iVar =
-                                    newVariable("i", objectType("int")).also {
-                                        it.initializer = newLiteral(0, objectType("int"))
-                                    }
-                                iDeclStmt.declarations += iVar
-                                scopeManager.addDeclaration(iVar)
+                                newVariable("i", objectType("int"), holder = iDeclStmt) {
+                                    it.initializer = newLiteral(0, objectType("int"))
+                                }
                                 for_.initializerStatement = iDeclStmt
 
                                 for_.condition =
-                                    newBinaryOperator("<").also {
+                                    newBinaryOperator("<") {
                                         it.lhs = newReference("i")
                                         it.rhs = newLiteral(6, objectType("int"))
                                     }
 
                                 for_.iterationStatement =
-                                    newUnaryOperator("++", postfix = true, prefix = false).also {
+                                    newUnaryOperator("++", postfix = true, prefix = false) {
                                         it.input = newReference("i")
                                     }
 
@@ -755,7 +692,7 @@ class ValueEvaluationTests {
                                         newAssign(
                                             "=",
                                             listOf(
-                                                newSubscription().also {
+                                                newSubscription {
                                                     it.arrayExpression = newReference("array")
                                                     it.subscriptExpression = newReference("i")
                                                 }
@@ -766,10 +703,9 @@ class ValueEvaluationTests {
                             }
                             block.statements += forNode
 
-                            block.statements +=
-                                newReturn().also {
-                                    it.returnValue = newLiteral(0, objectType("int"))
-                                }
+                            block.statements += newReturn {
+                                it.returnValue = newLiteral(0, objectType("int"))
+                            }
                         }
                 }
 

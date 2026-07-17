@@ -63,13 +63,11 @@ internal class ExtensionsTest : BaseTest() {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val declStmt = newDeclarationStatement()
-                            val problem =
-                                newProblemDeclaration(
-                                    problem = problemDeclText,
-                                    problemType = ProblemNode.ProblemType.TRANSLATION,
-                                )
-                            declStmt.declarations += problem
-                            scopeManager.addDeclaration(problem)
+                            newProblemDeclaration(
+                                problem = problemDeclText,
+                                problemType = ProblemNode.ProblemType.TRANSLATION,
+                                holder = declStmt,
+                            )
                             block.statements += declStmt
                         }
                 }

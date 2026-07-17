@@ -50,31 +50,20 @@ class StatementBuilderTest {
                             var tu = newTranslationUnit("main.file")
                             scopeManager.resetToGlobal(tu)
 
-                            var globalA = newVariable("a")
-                            scopeManager.addDeclaration(globalA)
-                            tu.declarations += globalA
+                            newVariable("a", holder = tu)
 
-                            var func = newFunction("main")
-                            scopeManager.enterScope(func)
+                            newFunction("main", holder = tu, enterScope = true) { func ->
+                                func.body =
+                                    newBlock(enterScope = true) { body ->
+                                        val stmt = newDeclarationStatement()
+                                        newVariable("a", holder = stmt)
+                                        body.statements += stmt
 
-                            var body = newBlock()
-                            scopeManager.enterScope(body)
-
-                            var localA = newVariable("a")
-                            var stmt = newDeclarationStatement()
-                            stmt.declarations += localA
-                            scopeManager.addDeclaration(localA)
-                            body.statements += stmt
-
-                            body.statements += newLookupScope(listOf("a"), scopeManager.globalScope)
-                            body.statements += newReference("a")
-
-                            scopeManager.leaveScope(body)
-                            func.body = body
-                            scopeManager.leaveScope(func)
-
-                            scopeManager.addDeclaration(func)
-                            tu.declarations += func
+                                        body.statements +=
+                                            newLookupScope(listOf("a"), scopeManager.globalScope)
+                                        body.statements += newReference("a")
+                                    }
+                            }
 
                             scopeManager.leaveScope(tu)
                             tu

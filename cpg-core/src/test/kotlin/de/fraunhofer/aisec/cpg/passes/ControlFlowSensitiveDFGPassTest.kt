@@ -342,12 +342,9 @@ class ControlFlowSensitiveDFGPassTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val declStmt = newDeclarationStatement()
-                            val i =
-                                newVariable("i", objectType("int")).also {
-                                    it.initializer = newLiteral(0, objectType("int"))
-                                }
-                            declStmt.declarations += i
-                            scopeManager.addDeclaration(i)
+                            newVariable("i", objectType("int"), holder = declStmt) {
+                                it.initializer = newLiteral(0, objectType("int"))
+                            }
                             block.statements += declStmt
 
                             // Note: Fluent's "forEachStmt" never enters a new scope for the
@@ -357,9 +354,7 @@ class ControlFlowSensitiveDFGPassTest {
                             // here. Faithfully reproduced.
                             val forEach = newForEach()
                             val loopVarDeclStmt = newDeclarationStatement()
-                            val loopVar = newVariable("loopVar", objectType("string"))
-                            loopVarDeclStmt.declarations += loopVar
-                            scopeManager.addDeclaration(loopVar)
+                            newVariable("loopVar", objectType("string"), holder = loopVarDeclStmt)
                             forEach.statements += loopVarDeclStmt
                             forEach.statements += newCall(newReference("magicFunction"))
                             forEach.statement =

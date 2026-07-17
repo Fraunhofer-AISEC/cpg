@@ -90,12 +90,10 @@ class FluentTest {
 
                             func.body =
                                 newBlock(enterScope = true) { block ->
-                                    val a =
-                                        newVariable("a", objectType("short")) {
-                                            it.initializer = newLiteral(1)
-                                        }
-                                    val declStmt = newDeclarationStatement { it.declarations += a }
-                                    scopeManager.addDeclaration(a)
+                                    val declStmt = newDeclarationStatement()
+                                    newVariable("a", objectType("short"), holder = declStmt) {
+                                        it.initializer = newLiteral(1)
+                                    }
                                     block.statements += declStmt
 
                                     val ifElse = newIfElse { ifElse ->
@@ -142,11 +140,12 @@ class FluentTest {
                                     }
                                     block.statements += ifElse
 
-                                    val some = newVariable("some", objectType("SomeClass"))
-                                    val someDeclStmt = newDeclarationStatement {
-                                        it.declarations += some
-                                    }
-                                    scopeManager.addDeclaration(some)
+                                    val someDeclStmt = newDeclarationStatement()
+                                    newVariable(
+                                        "some",
+                                        objectType("SomeClass"),
+                                        holder = someDeclStmt,
+                                    )
                                     block.statements += someDeclStmt
 
                                     val doCall = newCall(newReference("do"))
@@ -302,7 +301,6 @@ class FluentTest {
 
                             func.body =
                                 newBlock(enterScope = true) { block ->
-                                    val some = newVariable("some")
                                     val statementRef = newReference("i")
                                     val variableRef = newReference("i")
                                     val iterableRef = newReference("someIterable")
@@ -317,14 +315,13 @@ class FluentTest {
                                                 op.rhs = predRhs
                                             }
                                     }
-                                    some.initializer = newCollectionComprehension { cc ->
-                                        cc.statement = statementRef
-                                        cc.comprehensionExpressions += comprehension
+                                    val declStmt = newDeclarationStatement()
+                                    newVariable("some", holder = declStmt) {
+                                        it.initializer = newCollectionComprehension { cc ->
+                                            cc.statement = statementRef
+                                            cc.comprehensionExpressions += comprehension
+                                        }
                                     }
-                                    val declStmt = newDeclarationStatement {
-                                        it.declarations += some
-                                    }
-                                    scopeManager.addDeclaration(some)
                                     block.statements += declStmt
 
                                     val returnStmt = newReturn {
@@ -375,12 +372,10 @@ class FluentTest {
 
                             func.body =
                                 newBlock(enterScope = true) { block ->
-                                    val some = newVariable("some")
                                     val statementRef = newReference("i")
 
-                                    val i = newVariable("i")
-                                    val iDeclStmt = newDeclarationStatement { it.declarations += i }
-                                    scopeManager.addDeclaration(i)
+                                    val iDeclStmt = newDeclarationStatement()
+                                    newVariable("i", holder = iDeclStmt)
 
                                     val iterableRef = newReference("someIterable")
                                     val predLhs = newReference("i")
@@ -394,14 +389,13 @@ class FluentTest {
                                                 op.rhs = predRhs
                                             }
                                     }
-                                    some.initializer = newCollectionComprehension { cc ->
-                                        cc.statement = statementRef
-                                        cc.comprehensionExpressions += comprehension
+                                    val declStmt = newDeclarationStatement()
+                                    newVariable("some", holder = declStmt) {
+                                        it.initializer = newCollectionComprehension { cc ->
+                                            cc.statement = statementRef
+                                            cc.comprehensionExpressions += comprehension
+                                        }
                                     }
-                                    val declStmt = newDeclarationStatement {
-                                        it.declarations += some
-                                    }
-                                    scopeManager.addDeclaration(some)
                                     block.statements += declStmt
 
                                     val returnStmt = newReturn {
@@ -453,17 +447,11 @@ class FluentTest {
 
                             func.body =
                                 newBlock(enterScope = true) { block ->
-                                    val some = newVariable("some")
                                     val statementRef = newReference("i")
 
-                                    val i = newVariable("i")
-                                    val y = newVariable("y")
-                                    val iDeclStmt = newDeclarationStatement {
-                                        it.declarations += i
-                                        it.declarations += y
-                                    }
-                                    scopeManager.addDeclaration(i)
-                                    scopeManager.addDeclaration(y)
+                                    val iDeclStmt = newDeclarationStatement()
+                                    newVariable("i", holder = iDeclStmt)
+                                    newVariable("y", holder = iDeclStmt)
 
                                     val iterableRef = newReference("someIterable")
                                     val predLhs = newReference("i")
@@ -477,14 +465,13 @@ class FluentTest {
                                                 op.rhs = predRhs
                                             }
                                     }
-                                    some.initializer = newCollectionComprehension { cc ->
-                                        cc.statement = statementRef
-                                        cc.comprehensionExpressions += comprehension
+                                    val declStmt = newDeclarationStatement()
+                                    newVariable("some", holder = declStmt) {
+                                        it.initializer = newCollectionComprehension { cc ->
+                                            cc.statement = statementRef
+                                            cc.comprehensionExpressions += comprehension
+                                        }
                                     }
-                                    val declStmt = newDeclarationStatement {
-                                        it.declarations += some
-                                    }
-                                    scopeManager.addDeclaration(some)
                                     block.statements += declStmt
 
                                     val returnStmt = newReturn {

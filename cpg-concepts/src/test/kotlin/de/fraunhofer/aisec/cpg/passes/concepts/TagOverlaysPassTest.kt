@@ -138,10 +138,9 @@ class TagOverlaysPassTest {
                         main.body =
                             newBlock(enterScope = true) { block ->
                                 val declStmt = newDeclarationStatement()
-                                val variable = newVariable("key", objectType("string"))
-                                variable.initializer = newLiteral("secret")
-                                declStmt.declarations += variable
-                                scopeManager.addDeclaration(variable)
+                                newVariable("key", objectType("string"), holder = declStmt) {
+                                    it.initializer = newLiteral("secret")
+                                }
                                 block.statements += declStmt
 
                                 val call = newCall(newReference("encrypt"))

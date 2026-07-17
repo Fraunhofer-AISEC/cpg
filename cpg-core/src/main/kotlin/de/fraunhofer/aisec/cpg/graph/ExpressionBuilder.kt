@@ -65,7 +65,11 @@ fun <T, V> RawNodeTypeProvider<T>.newLiteral(
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newBinaryOperator(operatorCode: String, rawNode: Any? = null): BinaryOperator {
+fun MetadataProvider.newBinaryOperator(
+    operatorCode: String,
+    rawNode: Any? = null,
+    init: ((BinaryOperator) -> Unit)? = null,
+): BinaryOperator {
     val node =
         if (
             this is LanguageProvider &&
@@ -83,6 +87,8 @@ fun MetadataProvider.newBinaryOperator(operatorCode: String, rawNode: Any? = nul
 
     log(node)
 
+    init?.invoke(node)
+
     return node
 }
 
@@ -98,6 +104,7 @@ fun MetadataProvider.newUnaryOperator(
     postfix: Boolean,
     prefix: Boolean,
     rawNode: Any? = null,
+    init: ((UnaryOperator) -> Unit)? = null,
 ): UnaryOperator {
     val node = UnaryOperator()
     node.applyMetadata(this, operatorCode, rawNode, true)
@@ -107,6 +114,8 @@ fun MetadataProvider.newUnaryOperator(
     node.isPrefix = prefix
 
     log(node)
+
+    init?.invoke(node)
 
     return node
 }
@@ -122,6 +131,7 @@ fun MetadataProvider.newAssign(
     lhs: List<Expression> = listOf(),
     rhs: List<Expression> = listOf(),
     rawNode: Any? = null,
+    init: ((Assign) -> Unit)? = null,
 ): Assign {
     val node = Assign()
     node.applyMetadata(this, operatorCode, rawNode, true)
@@ -130,6 +140,8 @@ fun MetadataProvider.newAssign(
     node.rhs = rhs.toMutableList()
 
     log(node)
+
+    init?.invoke(node)
 
     return node
 }
@@ -161,11 +173,15 @@ fun MetadataProvider.newNew(type: Type = unknownType(), rawNode: Any? = null): N
 fun MetadataProvider.newConstruction(
     name: CharSequence? = EMPTY_NAME,
     rawNode: Any? = null,
+    init: ((Construction) -> Unit)? = null,
 ): Construction {
     val node = Construction()
     node.applyMetadata(this, name, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -182,6 +198,7 @@ fun MetadataProvider.newConditional(
     elseExpression: Expression? = null,
     type: Type = unknownType(),
     rawNode: Any? = null,
+    init: ((Conditional) -> Unit)? = null,
 ): Conditional {
     val node = Conditional()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -192,6 +209,9 @@ fun MetadataProvider.newConditional(
     node.elseExpression = elseExpression
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -206,6 +226,7 @@ fun MetadataProvider.newKeyValue(
     key: Expression,
     value: Expression,
     rawNode: Any? = null,
+    init: ((KeyValue) -> Unit)? = null,
 ): KeyValue {
     val node = KeyValue()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -214,6 +235,9 @@ fun MetadataProvider.newKeyValue(
     node.value = value
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -270,6 +294,7 @@ fun MetadataProvider.newCall(
     fqn: CharSequence? = null,
     template: Boolean = false,
     rawNode: Any? = null,
+    init: ((Call) -> Unit)? = null,
 ): Call {
     val node = Call()
     node.applyMetadata(this, fqn, rawNode, true)
@@ -285,6 +310,9 @@ fun MetadataProvider.newCall(
     node.template = template
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -323,6 +351,7 @@ fun MetadataProvider.newMemberCall(
     callee: Expression?,
     isStatic: Boolean = false,
     rawNode: Any? = null,
+    init: ((MemberCall) -> Unit)? = null,
 ): MemberCall {
     val node = MemberCall()
     node.applyMetadata(
@@ -342,6 +371,9 @@ fun MetadataProvider.newMemberCall(
     node.isStatic = isStatic
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -358,6 +390,7 @@ fun MetadataProvider.newMemberAccess(
     memberType: Type = unknownType(),
     operatorCode: String? = ".",
     rawNode: Any? = null,
+    init: ((MemberAccess) -> Unit)? = null,
 ): MemberAccess {
     val node = MemberAccess()
     node.applyMetadata(this, name, rawNode, true)
@@ -367,6 +400,9 @@ fun MetadataProvider.newMemberAccess(
     node.type = memberType
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -415,11 +451,17 @@ fun MetadataProvider.newTypeReference(
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newSubscription(rawNode: Any? = null): Subscription {
+fun MetadataProvider.newSubscription(
+    rawNode: Any? = null,
+    init: ((Subscription) -> Unit)? = null,
+): Subscription {
     val node = Subscription()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -572,11 +614,17 @@ fun MetadataProvider.newInitializerList(
 }
 
 @JvmOverloads
-fun MetadataProvider.newComprehension(rawNode: Any? = null): Comprehension {
+fun MetadataProvider.newComprehension(
+    rawNode: Any? = null,
+    init: ((Comprehension) -> Unit)? = null,
+): Comprehension {
     val node = Comprehension()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -632,11 +680,14 @@ fun MetadataProvider.newTypeExpression(
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newThrow(rawNode: Any? = null): Throw {
+fun MetadataProvider.newThrow(rawNode: Any? = null, init: ((Throw) -> Unit)? = null): Throw {
     val node = Throw()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 

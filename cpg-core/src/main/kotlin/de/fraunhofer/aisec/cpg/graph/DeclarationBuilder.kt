@@ -293,6 +293,7 @@ fun MetadataProvider.newVariable(
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null,
     holder: DeclarationHolder? = null,
+    init: ((Variable) -> Unit)? = null,
 ): Variable {
     val node = Variable()
     node.applyMetadata(this, name, rawNode, true)
@@ -301,6 +302,8 @@ fun MetadataProvider.newVariable(
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
 
     log(node)
+
+    init?.invoke(node)
 
     if (holder != null) {
         val scopeManager = provider.ctx.scopeManager
@@ -322,6 +325,7 @@ fun LanguageProvider.newTuple(
     elements: List<Variable>,
     initializer: Expression?,
     rawNode: Any? = null,
+    init: ((Tuple) -> Unit)? = null,
 ): Tuple {
     val node = Tuple()
     node.applyMetadata(this, null, rawNode, true)
@@ -336,6 +340,9 @@ fun LanguageProvider.newTuple(
     node.initializer = initializer
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -589,6 +596,7 @@ fun MetadataProvider.newField(
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null,
     holder: DeclarationHolder? = null,
+    init: ((Field) -> Unit)? = null,
 ): Field {
     val node = Field()
     node.applyMetadata(this, name, rawNode)
@@ -604,6 +612,8 @@ fun MetadataProvider.newField(
     }
 
     log(node)
+
+    init?.invoke(node)
 
     if (holder != null) {
         val scopeManager = provider.ctx.scopeManager

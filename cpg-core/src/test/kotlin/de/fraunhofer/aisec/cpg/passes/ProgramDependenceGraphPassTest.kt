@@ -123,13 +123,10 @@ class ProgramDependenceGraphPassTest {
                         func.body =
                             newBlock(enterScope = true) { block ->
                                 val declStmt = newDeclarationStatement()
-                                val i =
-                                    newVariable("i", objectType("int")).also {
-                                        it.comment = "remove next"
-                                        it.initializer = newCall(newReference("rand"))
-                                    }
-                                declStmt.declarations += i
-                                scopeManager.addDeclaration(i)
+                                newVariable("i", objectType("int"), holder = declStmt) {
+                                    it.comment = "remove next"
+                                    it.initializer = newCall(newReference("rand"))
+                                }
                                 block.statements += declStmt
 
                                 val ifElse = newIfElse { ifElse ->
@@ -150,7 +147,7 @@ class ProgramDependenceGraphPassTest {
                                                     lhs = listOf(newReference("i")),
                                                     rhs =
                                                         listOf(
-                                                            newBinaryOperator("*").also {
+                                                            newBinaryOperator("*") {
                                                                 it.lhs =
                                                                     newReference("i").also { ref ->
                                                                         ref.comment = "remove prev"
@@ -195,13 +192,10 @@ class ProgramDependenceGraphPassTest {
                         func.body =
                             newBlock(enterScope = true) { block ->
                                 val declStmt = newDeclarationStatement()
-                                val i =
-                                    newVariable("i", objectType("int")).also {
-                                        it.comment = "remove next"
-                                        it.initializer = newCall(newReference("rand"))
-                                    }
-                                declStmt.declarations += i
-                                scopeManager.addDeclaration(i)
+                                newVariable("i", objectType("int"), holder = declStmt) {
+                                    it.comment = "remove next"
+                                    it.initializer = newCall(newReference("rand"))
+                                }
                                 block.statements += declStmt
 
                                 val whileStmt =
@@ -211,7 +205,7 @@ class ProgramDependenceGraphPassTest {
                                         // own `holder += node` call happens after (and therefore
                                         // overwrites) the self-attaching ref/literal operands.
                                         w.condition =
-                                            newBinaryOperator(">").also {
+                                            newBinaryOperator(">") {
                                                 it.lhs = newReference("i")
                                                 it.rhs = newLiteral(0, objectType("int"))
                                             }
@@ -224,17 +218,16 @@ class ProgramDependenceGraphPassTest {
 
                                                 val decOp =
                                                     newUnaryOperator(
-                                                            "--",
-                                                            postfix = true,
-                                                            prefix = false,
-                                                        )
-                                                        .also {
-                                                            it.input =
-                                                                newReference("i").also { ref ->
-                                                                    ref.comment =
-                                                                        "remove prev, remove next"
-                                                                }
-                                                        }
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input =
+                                                            newReference("i").also { ref ->
+                                                                ref.comment =
+                                                                    "remove prev, remove next"
+                                                            }
+                                                    }
                                                 loopBody.statements += decOp
                                             }
                                     }

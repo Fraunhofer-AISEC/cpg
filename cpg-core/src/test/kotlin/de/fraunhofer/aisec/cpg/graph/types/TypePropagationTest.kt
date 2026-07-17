@@ -59,34 +59,30 @@ class TypePropagationTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val intVarDeclStmt = newDeclarationStatement()
-                            val intVar = newVariable("intVar", objectType("int"))
-                            intVarDeclStmt.declarations += intVar
-                            scopeManager.addDeclaration(intVar)
+                            newVariable("intVar", objectType("int"), holder = intVarDeclStmt)
                             block.statements += intVarDeclStmt
 
                             val intVar2DeclStmt = newDeclarationStatement()
-                            val intVar2 =
-                                newVariable("intVar2", objectType("int")) {
-                                    it.initializer = newLiteral(5)
-                                }
-                            intVar2DeclStmt.declarations += intVar2
-                            scopeManager.addDeclaration(intVar2)
+                            newVariable("intVar2", objectType("int"), holder = intVar2DeclStmt) {
+                                it.initializer = newLiteral(5)
+                            }
                             block.statements += intVar2DeclStmt
 
                             val addResultDeclStmt = newDeclarationStatement()
-                            val addResult =
-                                newVariable("addResult", objectType("int")).also {
-                                    it.initializer =
-                                        newBinaryOperator("+").also { bin ->
-                                            bin.lhs = newReference("intVar")
-                                            bin.rhs = newReference("intVar2")
-                                        }
-                                }
-                            addResultDeclStmt.declarations += addResult
-                            scopeManager.addDeclaration(addResult)
+                            newVariable(
+                                "addResult",
+                                objectType("int"),
+                                holder = addResultDeclStmt,
+                            ) {
+                                it.initializer =
+                                    newBinaryOperator("+") { bin ->
+                                        bin.lhs = newReference("intVar")
+                                        bin.rhs = newReference("intVar2")
+                                    }
+                            }
                             block.statements += addResultDeclStmt
 
-                            block.statements += newReturn().also { it.returnValue = newLiteral(0) }
+                            block.statements += newReturn { it.returnValue = newLiteral(0) }
                         }
                 }
 
@@ -146,15 +142,11 @@ class TypePropagationTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val intVarDeclStmt = newDeclarationStatement()
-                            val intVar = newVariable("intVar", objectType("int"))
-                            intVarDeclStmt.declarations += intVar
-                            scopeManager.addDeclaration(intVar)
+                            newVariable("intVar", objectType("int"), holder = intVarDeclStmt)
                             block.statements += intVarDeclStmt
 
                             val shortVarDeclStmt = newDeclarationStatement()
-                            val shortVar = newVariable("shortVar", objectType("short"))
-                            shortVarDeclStmt.declarations += shortVar
-                            scopeManager.addDeclaration(shortVar)
+                            newVariable("shortVar", objectType("short"), holder = shortVarDeclStmt)
                             block.statements += shortVarDeclStmt
 
                             block.statements +=
@@ -164,8 +156,9 @@ class TypePropagationTest {
                                     listOf(newReference("intVar")),
                                 )
 
-                            block.statements +=
-                                newReturn().also { it.returnValue = newReference("shortVar") }
+                            block.statements += newReturn {
+                                it.returnValue = newReference("shortVar")
+                            }
                         }
                 }
 
@@ -240,19 +233,20 @@ class TypePropagationTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val bDeclStmt = newDeclarationStatement()
-                            val b =
-                                newVariable("b", objectType("BaseClass").pointer()).also { v ->
-                                    v.initializer =
-                                        newNew().also { newExpr ->
-                                            newExpr.initializer =
-                                                newConstruction("DerivedClass").also {
-                                                    it.type = objectType("DerivedClass")
-                                                }
-                                            newExpr.type = objectType("DerivedClass").pointer()
-                                        }
-                                }
-                            bDeclStmt.declarations += b
-                            scopeManager.addDeclaration(b)
+                            newVariable(
+                                "b",
+                                objectType("BaseClass").pointer(),
+                                holder = bDeclStmt,
+                            ) { v ->
+                                v.initializer =
+                                    newNew().also { newExpr ->
+                                        newExpr.initializer =
+                                            newConstruction("DerivedClass") {
+                                                it.type = objectType("DerivedClass")
+                                            }
+                                        newExpr.type = objectType("DerivedClass").pointer()
+                                    }
+                            }
                             block.statements += bDeclStmt
 
                             block.statements +=
@@ -368,9 +362,7 @@ class TypePropagationTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val bDeclStmt = newDeclarationStatement()
-                            val b = newVariable("b", objectType("BaseClass").pointer())
-                            bDeclStmt.declarations += b
-                            scopeManager.addDeclaration(b)
+                            newVariable("b", objectType("BaseClass").pointer(), holder = bDeclStmt)
                             block.statements += bDeclStmt
 
                             block.statements +=
@@ -379,7 +371,7 @@ class TypePropagationTest {
                                     listOf(newReference("b")),
                                     listOf(
                                         newConditional(
-                                            newBinaryOperator("==").also {
+                                            newBinaryOperator("==") {
                                                 it.lhs = newReference("flip")
                                                 it.rhs = newLiteral(true)
                                             },
@@ -388,7 +380,7 @@ class TypePropagationTest {
                                                 cast.expression =
                                                     newNew().also { newExpr ->
                                                         newExpr.initializer =
-                                                            newConstruction("DerivedClassA").also {
+                                                            newConstruction("DerivedClassA") {
                                                                 it.type =
                                                                     objectType("DerivedClassA")
                                                             }
@@ -401,7 +393,7 @@ class TypePropagationTest {
                                                 cast.expression =
                                                     newNew().also { newExpr ->
                                                         newExpr.initializer =
-                                                            newConstruction("DerivedClassB").also {
+                                                            newConstruction("DerivedClassB") {
                                                                 it.type =
                                                                     objectType("DerivedClassB")
                                                             }
@@ -414,26 +406,19 @@ class TypePropagationTest {
                                 )
 
                             val bbDeclStmt = newDeclarationStatement()
-                            val bb =
-                                newVariable("bb", autoType()).also { v ->
-                                    v.initializer =
-                                        newInitializerList(
-                                                objectType("BaseClass").pointer().array()
-                                            )
-                                            .also { it.initializers += newReference("b") }
-                                }
-                            bbDeclStmt.declarations += bb
-                            scopeManager.addDeclaration(bb)
+                            newVariable("bb", autoType(), holder = bbDeclStmt) { v ->
+                                v.initializer =
+                                    newInitializerList(objectType("BaseClass").pointer().array())
+                                        .also { it.initializers += newReference("b") }
+                            }
                             block.statements += bbDeclStmt
 
-                            block.statements +=
-                                newReturn().also { ret ->
-                                    ret.returnValue =
-                                        newSubscription().also { sub ->
-                                            sub.arrayExpression = newReference("bb")
-                                            sub.subscriptExpression = newLiteral(1)
-                                        }
+                            block.statements += newReturn { ret ->
+                                ret.returnValue = newSubscription { sub ->
+                                    sub.arrayExpression = newReference("bb")
+                                    sub.subscriptExpression = newLiteral(1)
                                 }
+                            }
                         }
                 }
 
@@ -445,21 +430,20 @@ class TypePropagationTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val randomDeclStmt = newDeclarationStatement()
-                            val random = newVariable("random", objectType("boolean"))
-                            randomDeclStmt.declarations += random
-                            scopeManager.addDeclaration(random)
+                            newVariable("random", objectType("boolean"), holder = randomDeclStmt)
                             block.statements += randomDeclStmt
 
                             val bDeclStmt = newDeclarationStatement()
-                            val b =
-                                newVariable("b", objectType("BaseClass").pointer()).also { v ->
-                                    v.initializer =
-                                        newCall(newReference("create")).also { call ->
-                                            call.arguments += newReference("random")
-                                        }
-                                }
-                            bDeclStmt.declarations += b
-                            scopeManager.addDeclaration(b)
+                            newVariable(
+                                "b",
+                                objectType("BaseClass").pointer(),
+                                holder = bDeclStmt,
+                            ) { v ->
+                                v.initializer =
+                                    newCall(newReference("create")) { call ->
+                                        call.arguments += newReference("random")
+                                    }
+                            }
                             block.statements += bDeclStmt
 
                             block.statements +=

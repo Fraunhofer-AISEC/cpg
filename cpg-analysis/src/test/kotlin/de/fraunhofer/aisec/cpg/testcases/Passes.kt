@@ -57,26 +57,22 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"))
+                                val y = newVariable("y", objectType("int"), holder = yDecl)
                                 y.initializer = newLiteral(5, objectType("int"))
-                                yDecl.declarations += y
-                                scopeManager.addDeclaration(y)
                                 block.statements += yDecl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"))
+                                val x = newVariable("x", objectType("int"), holder = xDecl)
                                 x.initializer =
                                     newMemberCall(
                                         newMemberAccess("nextUInt", newReference("URandomKt")),
                                         false,
                                     )
-                                xDecl.declarations += x
-                                scopeManager.addDeclaration(x)
                                 block.statements += xDecl
 
                                 val ifElse = newIfElse { ifElse ->
                                     ifElse.condition =
-                                        newBinaryOperator("<=").also {
+                                        newBinaryOperator("<=") {
                                             it.lhs = newReference("x")
                                             it.rhs = newReference("y")
                                         }
@@ -84,21 +80,23 @@ class Passes {
                                         newBlock(enterScope = true) { thenBlock ->
                                             thenBlock.statements +=
                                                 newUnaryOperator(
-                                                        "++",
-                                                        postfix = true,
-                                                        prefix = false,
-                                                    )
-                                                    .also { it.input = newReference("y") }
+                                                    "++",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("y")
+                                                }
                                         }
                                     ifElse.elseStatement =
                                         newBlock(enterScope = true) { elseBlock ->
                                             elseBlock.statements +=
                                                 newUnaryOperator(
-                                                        "--",
-                                                        postfix = true,
-                                                        prefix = false,
-                                                    )
-                                                    .also { it.input = newReference("y") }
+                                                    "--",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("y")
+                                                }
                                         }
                                 }
                                 block.statements += ifElse
@@ -125,21 +123,17 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"))
+                                val y = newVariable("y", objectType("int"), holder = yDecl)
                                 y.initializer = newLiteral(6, objectType("int"))
-                                yDecl.declarations += y
-                                scopeManager.addDeclaration(y)
                                 block.statements += yDecl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"))
+                                val x = newVariable("x", objectType("int"), holder = xDecl)
                                 x.initializer =
                                     newMemberCall(
                                         newMemberAccess("nextUInt", newReference("URandomKt")),
                                         false,
                                     )
-                                xDecl.declarations += x
-                                scopeManager.addDeclaration(x)
                                 block.statements += xDecl
 
                                 val ifElse = newIfElse { ifElse ->
@@ -148,21 +142,23 @@ class Passes {
                                         newBlock(enterScope = true) { thenBlock ->
                                             thenBlock.statements +=
                                                 newUnaryOperator(
-                                                        "++",
-                                                        postfix = true,
-                                                        prefix = false,
-                                                    )
-                                                    .also { it.input = newReference("y") }
+                                                    "++",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("y")
+                                                }
                                         }
                                     ifElse.elseStatement =
                                         newBlock(enterScope = true) { elseBlock ->
                                             elseBlock.statements +=
                                                 newUnaryOperator(
-                                                        "--",
-                                                        postfix = true,
-                                                        prefix = false,
-                                                    )
-                                                    .also { it.input = newReference("y") }
+                                                    "--",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("y")
+                                                }
                                         }
                                 }
                                 block.statements += ifElse
@@ -189,21 +185,17 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"))
+                                val y = newVariable("y", objectType("int"), holder = yDecl)
                                 y.initializer = newLiteral(6, objectType("int"))
-                                yDecl.declarations += y
-                                scopeManager.addDeclaration(y)
                                 block.statements += yDecl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"))
+                                val x = newVariable("x", objectType("int"), holder = xDecl)
                                 x.initializer =
                                     newMemberCall(
                                         newMemberAccess("nextUInt", newReference("URandomKt")),
                                         false,
                                     )
-                                xDecl.declarations += x
-                                scopeManager.addDeclaration(x)
                                 block.statements += xDecl
 
                                 val ifElse = newIfElse { ifElse ->
@@ -212,21 +204,23 @@ class Passes {
                                         newBlock(enterScope = true) { thenBlock ->
                                             thenBlock.statements +=
                                                 newUnaryOperator(
-                                                        "++",
-                                                        postfix = true,
-                                                        prefix = false,
-                                                    )
-                                                    .also { it.input = newReference("y") }
+                                                    "++",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("y")
+                                                }
                                         }
                                     ifElse.elseStatement =
                                         newBlock(enterScope = true) { elseBlock ->
                                             elseBlock.statements +=
                                                 newUnaryOperator(
-                                                        "--",
-                                                        postfix = true,
-                                                        prefix = false,
-                                                    )
-                                                    .also { it.input = newReference("y") }
+                                                    "--",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("y")
+                                                }
                                         }
                                 }
                                 block.statements += ifElse
@@ -253,26 +247,22 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"))
+                                val y = newVariable("y", objectType("int"), holder = yDecl)
                                 y.initializer = newLiteral(6, objectType("int"))
-                                yDecl.declarations += y
-                                scopeManager.addDeclaration(y)
                                 block.statements += yDecl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"))
+                                val x = newVariable("x", objectType("int"), holder = xDecl)
                                 x.initializer =
                                     newMemberCall(
                                         newMemberAccess("nextUInt", newReference("URandomKt")),
                                         false,
                                     )
-                                xDecl.declarations += x
-                                scopeManager.addDeclaration(x)
                                 block.statements += xDecl
 
                                 val ifElse = newIfElse { ifElse ->
                                     ifElse.condition =
-                                        newBinaryOperator("<=").also {
+                                        newBinaryOperator("<=") {
                                             it.lhs = newReference("y")
                                             it.rhs = newLiteral(9, objectType("int"))
                                         }
@@ -280,21 +270,23 @@ class Passes {
                                         newBlock(enterScope = true) { thenBlock ->
                                             thenBlock.statements +=
                                                 newUnaryOperator(
-                                                        "++",
-                                                        postfix = true,
-                                                        prefix = false,
-                                                    )
-                                                    .also { it.input = newReference("y") }
+                                                    "++",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("y")
+                                                }
                                         }
                                     ifElse.elseStatement =
                                         newBlock(enterScope = true) { elseBlock ->
                                             elseBlock.statements +=
                                                 newUnaryOperator(
-                                                        "--",
-                                                        postfix = true,
-                                                        prefix = false,
-                                                    )
-                                                    .also { it.input = newReference("y") }
+                                                    "--",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("y")
+                                                }
                                         }
                                 }
                                 block.statements += ifElse
@@ -321,35 +313,29 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val zDecl = newDeclarationStatement()
-                                val z = newVariable("z", objectType("int"))
+                                val z = newVariable("z", objectType("int"), holder = zDecl)
                                 z.initializer = newLiteral(2, objectType("int"))
-                                zDecl.declarations += z
-                                scopeManager.addDeclaration(z)
                                 block.statements += zDecl
 
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"))
+                                val y = newVariable("y", objectType("int"), holder = yDecl)
                                 y.initializer = newReference("z")
-                                yDecl.declarations += y
-                                scopeManager.addDeclaration(y)
                                 block.statements += yDecl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"))
+                                val x = newVariable("x", objectType("int"), holder = xDecl)
                                 x.initializer =
                                     newMemberCall(
                                         newMemberAccess("nextUInt", newReference("URandomKt")),
                                         false,
                                     )
-                                xDecl.declarations += x
-                                scopeManager.addDeclaration(x)
                                 block.statements += xDecl
 
                                 val ifElse = newIfElse { ifElse ->
                                     ifElse.condition =
-                                        newBinaryOperator("<=").also {
+                                        newBinaryOperator("<=") {
                                             it.lhs =
-                                                newBinaryOperator("+").also { plus ->
+                                                newBinaryOperator("+") { plus ->
                                                     plus.lhs = newReference("y")
                                                     plus.rhs = newReference("z")
                                                 }
@@ -359,21 +345,23 @@ class Passes {
                                         newBlock(enterScope = true) { thenBlock ->
                                             thenBlock.statements +=
                                                 newUnaryOperator(
-                                                        "++",
-                                                        postfix = true,
-                                                        prefix = false,
-                                                    )
-                                                    .also { it.input = newReference("y") }
+                                                    "++",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("y")
+                                                }
                                         }
                                     ifElse.elseStatement =
                                         newBlock(enterScope = true) { elseBlock ->
                                             elseBlock.statements +=
                                                 newUnaryOperator(
-                                                        "--",
-                                                        postfix = true,
-                                                        prefix = false,
-                                                    )
-                                                    .also { it.input = newReference("y") }
+                                                    "--",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("y")
+                                                }
                                         }
                                 }
                                 block.statements += ifElse
@@ -407,35 +395,29 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val zDecl = newDeclarationStatement()
-                                val z = newVariable("z", objectType("int"))
+                                val z = newVariable("z", objectType("int"), holder = zDecl)
                                 z.initializer = newLiteral(5, objectType("int"))
-                                zDecl.declarations += z
-                                scopeManager.addDeclaration(z)
                                 block.statements += zDecl
 
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"))
+                                val y = newVariable("y", objectType("int"), holder = yDecl)
                                 y.initializer = newReference("z")
-                                yDecl.declarations += y
-                                scopeManager.addDeclaration(y)
                                 block.statements += yDecl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"))
+                                val x = newVariable("x", objectType("int"), holder = xDecl)
                                 x.initializer =
                                     newMemberCall(
                                         newMemberAccess("nextUInt", newReference("URandomKt")),
                                         false,
                                     )
-                                xDecl.declarations += x
-                                scopeManager.addDeclaration(x)
                                 block.statements += xDecl
 
                                 val ifElse = newIfElse { ifElse ->
                                     ifElse.condition =
-                                        newBinaryOperator("<=").also {
+                                        newBinaryOperator("<=") {
                                             it.lhs =
-                                                newBinaryOperator("+").also { plus ->
+                                                newBinaryOperator("+") { plus ->
                                                     plus.lhs = newReference("y")
                                                     plus.rhs = newReference("z")
                                                 }
@@ -445,21 +427,23 @@ class Passes {
                                         newBlock(enterScope = true) { thenBlock ->
                                             thenBlock.statements +=
                                                 newUnaryOperator(
-                                                        "++",
-                                                        postfix = true,
-                                                        prefix = false,
-                                                    )
-                                                    .also { it.input = newReference("y") }
+                                                    "++",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("y")
+                                                }
                                         }
                                     ifElse.elseStatement =
                                         newBlock(enterScope = true) { elseBlock ->
                                             elseBlock.statements +=
                                                 newUnaryOperator(
-                                                        "--",
-                                                        postfix = true,
-                                                        prefix = false,
-                                                    )
-                                                    .also { it.input = newReference("y") }
+                                                    "--",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("y")
+                                                }
                                         }
                                 }
                                 block.statements += ifElse
@@ -493,26 +477,22 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"))
+                                val y = newVariable("y", objectType("int"), holder = yDecl)
                                 y.initializer = newLiteral(6, objectType("int"))
-                                yDecl.declarations += y
-                                scopeManager.addDeclaration(y)
                                 block.statements += yDecl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"))
+                                val x = newVariable("x", objectType("int"), holder = xDecl)
                                 x.initializer =
                                     newMemberCall(
                                         newMemberAccess("nextUInt", newReference("URandomKt")),
                                         false,
                                     )
-                                xDecl.declarations += x
-                                scopeManager.addDeclaration(x)
                                 block.statements += xDecl
 
                                 val ifElse = newIfElse { ifElse ->
                                     ifElse.condition =
-                                        newBinaryOperator("<=").also {
+                                        newBinaryOperator("<=") {
                                             it.lhs = newReference("y")
                                             it.rhs = newLiteral(-1, objectType("int"))
                                         }
@@ -520,21 +500,23 @@ class Passes {
                                         newBlock(enterScope = true) { thenBlock ->
                                             thenBlock.statements +=
                                                 newUnaryOperator(
-                                                        "++",
-                                                        postfix = true,
-                                                        prefix = false,
-                                                    )
-                                                    .also { it.input = newReference("y") }
+                                                    "++",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("y")
+                                                }
                                         }
                                     ifElse.elseStatement =
                                         newBlock(enterScope = true) { elseBlock ->
                                             elseBlock.statements +=
                                                 newUnaryOperator(
-                                                        "--",
-                                                        postfix = true,
-                                                        prefix = false,
-                                                    )
-                                                    .also { it.input = newReference("y") }
+                                                    "--",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newReference("y")
+                                                }
                                         }
                                 }
                                 block.statements += ifElse
@@ -561,10 +543,8 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("boolean"))
+                                val x = newVariable("x", objectType("boolean"), holder = xDecl)
                                 x.initializer = newLiteral(true, objectType("boolean"))
-                                xDecl.declarations += x
-                                scopeManager.addDeclaration(x)
                                 block.statements += xDecl
 
                                 val whileNode =
@@ -612,10 +592,8 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("boolean"))
+                                val x = newVariable("x", objectType("boolean"), holder = xDecl)
                                 x.initializer = newLiteral(true, objectType("boolean"))
-                                xDecl.declarations += x
-                                scopeManager.addDeclaration(x)
                                 block.statements += xDecl
 
                                 val whileNode =
@@ -714,16 +692,14 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("boolean"))
+                                val x = newVariable("x", objectType("boolean"), holder = xDecl)
                                 x.initializer = newLiteral(1, objectType("int"))
-                                xDecl.declarations += x
-                                scopeManager.addDeclaration(x)
                                 block.statements += xDecl
 
                                 val whileNode =
                                     newWhile(enterScope = true) { w ->
                                         w.condition =
-                                            newBinaryOperator("<=").also {
+                                            newBinaryOperator("<=") {
                                                 it.lhs = newReference("x")
                                                 it.rhs = newLiteral(2, objectType("int"))
                                             }
@@ -769,16 +745,14 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("boolean"))
+                                val x = newVariable("x", objectType("boolean"), holder = xDecl)
                                 x.initializer = newLiteral(1, objectType("int"))
-                                xDecl.declarations += x
-                                scopeManager.addDeclaration(x)
                                 block.statements += xDecl
 
                                 val whileNode =
                                     newWhile(enterScope = true) { w ->
                                         w.condition =
-                                            newBinaryOperator(">").also {
+                                            newBinaryOperator(">") {
                                                 it.lhs = newReference("x")
                                                 it.rhs = newLiteral(3, objectType("int"))
                                             }
@@ -824,20 +798,18 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"))
+                                val y = newVariable("y", objectType("int"), holder = yDecl)
                                 y.initializer =
                                     newMemberCall(
                                         newMemberAccess("nextUInt", newReference("URandomKt")),
                                         false,
                                     )
-                                yDecl.declarations += y
-                                scopeManager.addDeclaration(y)
                                 block.statements += yDecl
 
                                 val whileNode =
                                     newWhile(enterScope = true) { w ->
                                         w.condition =
-                                            newBinaryOperator("<=").also {
+                                            newBinaryOperator("<=") {
                                                 it.lhs = newReference("y")
                                                 it.rhs = newLiteral(2, objectType("int"))
                                             }
