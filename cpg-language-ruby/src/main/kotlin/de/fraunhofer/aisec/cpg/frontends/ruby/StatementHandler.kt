@@ -49,19 +49,14 @@ class StatementHandler(lang: RubyLanguageFrontend) :
     }
 
     private fun handleBlockNode(blockNode: BlockNode): Block {
-        val compoundStatement = newBlock()
-
-        for (node in blockNode.filterNotNull()) {
-            compoundStatement.statements += handle(node)
+        return newBlock { compoundStatement ->
+            for (node in blockNode.filterNotNull()) {
+                compoundStatement.statements += handle(node)
+            }
         }
-
-        return compoundStatement
     }
 
     private fun handleReturnNode(node: ReturnNode): Return {
-        val stmt = newReturn()
-        stmt.returnValue = frontend.expressionHandler.handleNode(node.valueNode)
-
-        return stmt
+        return newReturn { it.returnValue = frontend.expressionHandler.handleNode(node.valueNode) }
     }
 }
