@@ -90,10 +90,11 @@ class FluentTest {
 
                             func.body =
                                 newBlock(enterScope = true) { block ->
-                                    val a = newVariable("a", objectType("short"))
-                                    a.initializer = newLiteral(1)
-                                    val declStmt = newDeclarationStatement()
-                                    declStmt.declarations += a
+                                    val a =
+                                        newVariable("a", objectType("short")) {
+                                            it.initializer = newLiteral(1)
+                                        }
+                                    val declStmt = newDeclarationStatement { it.declarations += a }
                                     scopeManager.addDeclaration(a)
                                     block.statements += declStmt
 
@@ -101,34 +102,40 @@ class FluentTest {
                                         val lhs = newReference("argc")
                                         val rhs = newLiteral(1)
                                         ifElse.condition =
-                                            newBinaryOperator("==").also {
+                                            newBinaryOperator("==") {
                                                 it.lhs = lhs
                                                 it.rhs = rhs
                                             }
                                         ifElse.thenStatement =
                                             newBlock(enterScope = true) { thenBlock ->
-                                                val printfCall = newCall(newReference("printf"))
-                                                printfCall.arguments += newLiteral("then")
+                                                val printfCall =
+                                                    newCall(newReference("printf")) {
+                                                        it.arguments += newLiteral("then")
+                                                    }
                                                 thenBlock.statements += printfCall
                                             }
                                         ifElse.elseStatement = newIfElse { elseIf ->
                                             val elseIfLhs = newReference("argc")
                                             val elseIfRhs = newLiteral(1)
                                             elseIf.condition =
-                                                newBinaryOperator("==").also {
+                                                newBinaryOperator("==") {
                                                     it.lhs = elseIfLhs
                                                     it.rhs = elseIfRhs
                                                 }
                                             elseIf.thenStatement =
                                                 newBlock(enterScope = true) { elseIfThenBlock ->
-                                                    val printfCall = newCall(newReference("printf"))
-                                                    printfCall.arguments += newLiteral("elseIf")
+                                                    val printfCall =
+                                                        newCall(newReference("printf")) {
+                                                            it.arguments += newLiteral("elseIf")
+                                                        }
                                                     elseIfThenBlock.statements += printfCall
                                                 }
                                             elseIf.elseStatement =
                                                 newBlock(enterScope = true) { elseIfElseBlock ->
-                                                    val printfCall = newCall(newReference("printf"))
-                                                    printfCall.arguments += newLiteral("else")
+                                                    val printfCall =
+                                                        newCall(newReference("printf")) {
+                                                            it.arguments += newLiteral("else")
+                                                        }
                                                     elseIfElseBlock.statements += printfCall
                                                 }
                                         }
@@ -136,8 +143,9 @@ class FluentTest {
                                     block.statements += ifElse
 
                                     val some = newVariable("some", objectType("SomeClass"))
-                                    val someDeclStmt = newDeclarationStatement()
-                                    someDeclStmt.declarations += some
+                                    val someDeclStmt = newDeclarationStatement {
+                                        it.declarations += some
+                                    }
                                     scopeManager.addDeclaration(some)
                                     block.statements += someDeclStmt
 
@@ -152,7 +160,7 @@ class FluentTest {
                                     val sumLhs = newReference("a")
                                     val sumRhs = newLiteral(2)
                                     returnStmt.returnValue =
-                                        newBinaryOperator("+").also {
+                                        newBinaryOperator("+") {
                                             it.lhs = sumLhs
                                             it.rhs = sumRhs
                                         }
@@ -300,27 +308,28 @@ class FluentTest {
                                     val iterableRef = newReference("someIterable")
                                     val predLhs = newReference("i")
                                     val predRhs = newLiteral(5, objectType("int"))
-                                    val comprehension =
-                                        newComprehension().also {
-                                            it.variable = variableRef
-                                            it.iterable = iterableRef
-                                            it.predicate =
-                                                newBinaryOperator(">").also { op ->
-                                                    op.lhs = predLhs
-                                                    op.rhs = predRhs
-                                                }
-                                        }
+                                    val comprehension = newComprehension {
+                                        it.variable = variableRef
+                                        it.iterable = iterableRef
+                                        it.predicate =
+                                            newBinaryOperator(">") { op ->
+                                                op.lhs = predLhs
+                                                op.rhs = predRhs
+                                            }
+                                    }
                                     some.initializer = newCollectionComprehension { cc ->
                                         cc.statement = statementRef
                                         cc.comprehensionExpressions += comprehension
                                     }
-                                    val declStmt = newDeclarationStatement()
-                                    declStmt.declarations += some
+                                    val declStmt = newDeclarationStatement {
+                                        it.declarations += some
+                                    }
                                     scopeManager.addDeclaration(some)
                                     block.statements += declStmt
 
-                                    val returnStmt = newReturn()
-                                    returnStmt.returnValue = newReference("some")
+                                    val returnStmt = newReturn {
+                                        it.returnValue = newReference("some")
+                                    }
                                     block.statements += returnStmt
                                 }
                         }
@@ -370,34 +379,34 @@ class FluentTest {
                                     val statementRef = newReference("i")
 
                                     val i = newVariable("i")
-                                    val iDeclStmt = newDeclarationStatement()
-                                    iDeclStmt.declarations += i
+                                    val iDeclStmt = newDeclarationStatement { it.declarations += i }
                                     scopeManager.addDeclaration(i)
 
                                     val iterableRef = newReference("someIterable")
                                     val predLhs = newReference("i")
                                     val predRhs = newLiteral(5, objectType("int"))
-                                    val comprehension =
-                                        newComprehension().also {
-                                            it.variable = iDeclStmt
-                                            it.iterable = iterableRef
-                                            it.predicate =
-                                                newBinaryOperator(">").also { op ->
-                                                    op.lhs = predLhs
-                                                    op.rhs = predRhs
-                                                }
-                                        }
+                                    val comprehension = newComprehension {
+                                        it.variable = iDeclStmt
+                                        it.iterable = iterableRef
+                                        it.predicate =
+                                            newBinaryOperator(">") { op ->
+                                                op.lhs = predLhs
+                                                op.rhs = predRhs
+                                            }
+                                    }
                                     some.initializer = newCollectionComprehension { cc ->
                                         cc.statement = statementRef
                                         cc.comprehensionExpressions += comprehension
                                     }
-                                    val declStmt = newDeclarationStatement()
-                                    declStmt.declarations += some
+                                    val declStmt = newDeclarationStatement {
+                                        it.declarations += some
+                                    }
                                     scopeManager.addDeclaration(some)
                                     block.statements += declStmt
 
-                                    val returnStmt = newReturn()
-                                    returnStmt.returnValue = newReference("some")
+                                    val returnStmt = newReturn {
+                                        it.returnValue = newReference("some")
+                                    }
                                     block.statements += returnStmt
                                 }
                         }
@@ -449,36 +458,38 @@ class FluentTest {
 
                                     val i = newVariable("i")
                                     val y = newVariable("y")
-                                    val iDeclStmt = newDeclarationStatement()
-                                    iDeclStmt.declarations += i
-                                    iDeclStmt.declarations += y
+                                    val iDeclStmt = newDeclarationStatement {
+                                        it.declarations += i
+                                        it.declarations += y
+                                    }
                                     scopeManager.addDeclaration(i)
                                     scopeManager.addDeclaration(y)
 
                                     val iterableRef = newReference("someIterable")
                                     val predLhs = newReference("i")
                                     val predRhs = newLiteral(5, objectType("int"))
-                                    val comprehension =
-                                        newComprehension().also {
-                                            it.variable = iDeclStmt
-                                            it.iterable = iterableRef
-                                            it.predicate =
-                                                newBinaryOperator(">").also { op ->
-                                                    op.lhs = predLhs
-                                                    op.rhs = predRhs
-                                                }
-                                        }
+                                    val comprehension = newComprehension {
+                                        it.variable = iDeclStmt
+                                        it.iterable = iterableRef
+                                        it.predicate =
+                                            newBinaryOperator(">") { op ->
+                                                op.lhs = predLhs
+                                                op.rhs = predRhs
+                                            }
+                                    }
                                     some.initializer = newCollectionComprehension { cc ->
                                         cc.statement = statementRef
                                         cc.comprehensionExpressions += comprehension
                                     }
-                                    val declStmt = newDeclarationStatement()
-                                    declStmt.declarations += some
+                                    val declStmt = newDeclarationStatement {
+                                        it.declarations += some
+                                    }
                                     scopeManager.addDeclaration(some)
                                     block.statements += declStmt
 
-                                    val returnStmt = newReturn()
-                                    returnStmt.returnValue = newReference("some")
+                                    val returnStmt = newReturn {
+                                        it.returnValue = newReference("some")
+                                    }
                                     block.statements += returnStmt
                                 }
                         }

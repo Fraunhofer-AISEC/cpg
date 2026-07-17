@@ -66,7 +66,7 @@ class TypePropagationTest {
 
                             val intVar2DeclStmt = newDeclarationStatement()
                             val intVar2 =
-                                newVariable("intVar2", objectType("int")).also {
+                                newVariable("intVar2", objectType("int")) {
                                     it.initializer = newLiteral(5)
                                 }
                             intVar2DeclStmt.declarations += intVar2
