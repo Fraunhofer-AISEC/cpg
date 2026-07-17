@@ -204,11 +204,18 @@ fun LanguageProvider.newName(
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newAnnotation(name: CharSequence?, rawNode: Any? = null): Annotation {
+fun MetadataProvider.newAnnotation(
+    name: CharSequence?,
+    rawNode: Any? = null,
+    init: ((Annotation) -> Unit)? = null,
+): Annotation {
     val node = Annotation()
     node.applyMetadata(this, name, rawNode, doNotPrependNamespace = true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
