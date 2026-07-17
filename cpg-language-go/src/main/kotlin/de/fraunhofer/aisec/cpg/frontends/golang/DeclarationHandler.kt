@@ -194,10 +194,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 // (and make it an array afterward)
                 val (type, variadic) = frontend.fieldTypeOf(param.type)
 
-                val p = newParameter(name, type, variadic, rawNode = param)
-
-                frontend.scopeManager.addDeclaration(p)
-                func.parameters += p
+                val p = newParameter(name, type, variadic, rawNode = param, holder = func)
 
                 frontend.setComment(p, param)
             }
