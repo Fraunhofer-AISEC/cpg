@@ -70,10 +70,9 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     }
 
     private fun handleThrow(throwStmt: JThrowStmt): Throw {
-        val expr = newThrow(rawNode = throwStmt)
-        expr.exception = frontend.expressionHandler.handle(throwStmt.op)
-
-        return expr
+        return newThrow(rawNode = throwStmt) { expr ->
+            expr.exception = frontend.expressionHandler.handle(throwStmt.op)
+        }
     }
 
     private fun handleBody(body: Body): Block {
@@ -105,10 +104,11 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
             if (label != null) {
                 // If we have a label, we need to create a new label statement, that starts a new
                 // block
-                val stmt = newLabel()
                 block = newBlock()
-                stmt.label = label
-                stmt.subStatement = block
+                val stmt = newLabel { stmt ->
+                    stmt.label = label
+                    stmt.subStatement = block
+                }
 
                 // We need to inform our processing system, since we do it outside of a handler, so
                 // the created goto statements will be informed about our new label
@@ -130,21 +130,19 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     }
 
     private fun handleAbstractDefinitionStmt(defStmt: AbstractDefinitionStmt): Assign {
-        val assign = newAssign("=", rawNode = defStmt)
-        assign.lhs =
-            listOfNotNull(frontend.expressionHandler.handle(defStmt.leftOp)).toMutableList()
-        assign.rhs =
-            listOfNotNull(frontend.expressionHandler.handle(defStmt.rightOp)).toMutableList()
-
-        return assign
+        return newAssign("=", rawNode = defStmt) { assign ->
+            assign.lhs =
+                listOfNotNull(frontend.expressionHandler.handle(defStmt.leftOp)).toMutableList()
+            assign.rhs =
+                listOfNotNull(frontend.expressionHandler.handle(defStmt.rightOp)).toMutableList()
+        }
     }
 
     private fun handleIfStmt(ifStmt: JIfStmt): IfElse {
-        val stmt = newIfElse(rawNode = ifStmt)
-        stmt.condition = frontend.expressionHandler.handle(ifStmt.condition)
-        stmt.thenStatement = handleBranchingStmt(ifStmt)
-
-        return stmt
+        return newIfElse(rawNode = ifStmt) { stmt ->
+            stmt.condition = frontend.expressionHandler.handle(ifStmt.condition)
+            stmt.thenStatement = handleBranchingStmt(ifStmt)
+        }
     }
 
     private fun handleGotoStmt(gotoStmt: JGotoStmt): Goto {
@@ -152,25 +150,23 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     }
 
     private fun handleBranchingStmt(branchingStmt: BranchingStmt): Goto {
-        val stmt = newGoto(rawNode = branchingStmt)
+        return newGoto(rawNode = branchingStmt) { stmt ->
+            frontend.body?.let {
+                val target = branchingStmt.getTargetStmts(it).firstOrNull()
+                val label = frontend.printer?.labels?.get(target)
+                if (label != null) {
+                    stmt.labelName = label
+                }
 
-        frontend.body?.let {
-            val target = branchingStmt.getTargetStmts(it).firstOrNull()
-            val label = frontend.printer?.labels?.get(target)
-            if (label != null) {
-                stmt.labelName = label
-            }
-
-            // Register a predicate listener that informs us as soon as new label statement that
-            // matches our label name is created.
-            frontend.registerPredicateListener({ _, to ->
-                (to is Label && to.label == stmt.labelName)
-            }) { _, to ->
-                stmt.targetLabel = to as Label
+                // Register a predicate listener that informs us as soon as new label statement
+                // that matches our label name is created.
+                frontend.registerPredicateListener({ _, to ->
+                    (to is Label && to.label == stmt.labelName)
+                }) { _, to ->
+                    stmt.targetLabel = to as Label
+                }
             }
         }
-
-        return stmt
     }
 
     private fun handleInvokeStmt(invokeStmt: JInvokeStmt) =
@@ -179,10 +175,9 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         }
 
     private fun handleReturnStmt(returnStmt: JReturnStmt): Return {
-        val stmt = newReturn(rawNode = returnStmt)
-        stmt.returnValue = frontend.expressionHandler.handle(returnStmt.op)
-
-        return stmt
+        return newReturn(rawNode = returnStmt) { stmt ->
+            stmt.returnValue = frontend.expressionHandler.handle(returnStmt.op)
+        }
     }
 
     private fun handleReturnVoidStmt(returnStmt: JReturnVoidStmt) = newReturn(rawNode = returnStmt)
