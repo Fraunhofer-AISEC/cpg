@@ -547,6 +547,7 @@ fun MetadataProvider.newReference(
     name: CharSequence?,
     type: Type = unknownType(),
     rawNode: Any? = null,
+    init: ((Reference) -> Unit)? = null,
 ): Reference {
     val node = Reference()
     node.applyMetadata(this, name, rawNode, true)
@@ -554,6 +555,9 @@ fun MetadataProvider.newReference(
     node.type = type
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
