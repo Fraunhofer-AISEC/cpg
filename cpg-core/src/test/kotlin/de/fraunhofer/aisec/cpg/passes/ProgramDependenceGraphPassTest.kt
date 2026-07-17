@@ -218,9 +218,8 @@ class ProgramDependenceGraphPassTest {
                                         w.statement =
                                             newBlock(enterScope = true) { loopBody ->
                                                 val printfCall = newCall(newReference("printf"))
-                                                printfCall.addArgument(
+                                                printfCall.arguments +=
                                                     newLiteral("#", objectType("string"))
-                                                )
                                                 loopBody += printfCall
 
                                                 val decOp =
@@ -242,7 +241,7 @@ class ProgramDependenceGraphPassTest {
                                 block += whileStmt
 
                                 val printfCall2 = newCall(newReference("printf"))
-                                printfCall2.addArgument(newLiteral("\n", objectType("string")))
+                                printfCall2.arguments += newLiteral("\n", objectType("string"))
                                 block += printfCall2
 
                                 val returnStmt = newReturn()

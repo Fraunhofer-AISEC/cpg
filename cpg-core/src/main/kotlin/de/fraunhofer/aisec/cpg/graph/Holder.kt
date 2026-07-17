@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 
 /**
- * This interface denotes that a [Node] "holds" a list of other nodes. See also [ArgumentHolder] and
- * [StatementHolder], in which [Holder] is used as a common interface.
+ * This interface denotes that a [Node] "holds" a list of other nodes. See also [StatementHolder],
+ * which uses [Holder] as a common interface.
  *
  * A primary use-case for the usage of this interface is the node builder functions (e.g. via their
  * `holder` parameter) in order to attach node objects which can either be used as a statement (e.g.

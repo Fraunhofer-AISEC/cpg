@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
@@ -38,7 +37,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Represents a conditional loop statement of the form: `do{...}while(...)`. Where the body, usually
  * a [Block], is executed and re-executed if the [condition] evaluates to true.
  */
-class DoWhile : Loop(), ArgumentHolder {
+class DoWhile : Loop() {
     @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /**
      * The loop condition that is evaluated after the loop statement and may trigger reevaluation.
@@ -50,22 +49,6 @@ class DoWhile : Loop(), ArgumentHolder {
             .appendSuper(super.toString())
             .append("condition", condition)
             .toString()
-
-    override fun addArgument(expression: Expression) {
-        this.condition = expression
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        if (condition == old) {
-            this.condition = new
-            return true
-        }
-        return false
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return condition == expression
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -28,15 +28,15 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import kotlin.test.Test
-import kotlin.test.assertTrue
+import kotlin.test.assertEquals
 
 class InterfacesTest {
 
     @Test
-    fun testRemoveArgument() {
+    fun testSetInitializer() {
         val v: HasInitializer = Variable()
         val lit = Literal<String>()
         v.initializer = lit
-        assertTrue(v.removeArgument(lit))
+        assertEquals(lit, v.initializer)
     }
 }

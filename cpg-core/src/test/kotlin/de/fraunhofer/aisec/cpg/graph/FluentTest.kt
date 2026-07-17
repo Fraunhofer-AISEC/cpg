@@ -108,7 +108,7 @@ class FluentTest {
                                         ifElse.thenStatement =
                                             newBlock(enterScope = true) { thenBlock ->
                                                 val printfCall = newCall(newReference("printf"))
-                                                printfCall.addArgument(newLiteral("then"))
+                                                printfCall.arguments += newLiteral("then")
                                                 thenBlock += printfCall
                                             }
                                         ifElse.elseStatement = newIfElse { elseIf ->
@@ -122,13 +122,13 @@ class FluentTest {
                                             elseIf.thenStatement =
                                                 newBlock(enterScope = true) { elseIfThenBlock ->
                                                     val printfCall = newCall(newReference("printf"))
-                                                    printfCall.addArgument(newLiteral("elseIf"))
+                                                    printfCall.arguments += newLiteral("elseIf")
                                                     elseIfThenBlock += printfCall
                                                 }
                                             elseIf.elseStatement =
                                                 newBlock(enterScope = true) { elseIfElseBlock ->
                                                     val printfCall = newCall(newReference("printf"))
-                                                    printfCall.addArgument(newLiteral("else"))
+                                                    printfCall.arguments += newLiteral("else")
                                                     elseIfElseBlock += printfCall
                                                 }
                                         }
@@ -145,7 +145,7 @@ class FluentTest {
                                     val memberBase = newReference("some")
                                     val memberCall =
                                         newMemberCall(newMemberAccess("func", memberBase), false)
-                                    doCall.addArgument(memberCall)
+                                    doCall.arguments += memberCall
                                     block += doCall
 
                                     val returnStmt = newReturn()

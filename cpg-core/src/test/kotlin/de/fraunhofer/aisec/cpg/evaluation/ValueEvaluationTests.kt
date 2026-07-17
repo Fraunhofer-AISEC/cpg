@@ -116,12 +116,11 @@ class ValueEvaluationTests {
                                         ),
                                         false,
                                     )
-                                printlnCall1.addArgument(
+                                printlnCall1.arguments +=
                                     newSubscription().also {
                                         it.arrayExpression = newReference("array")
                                         it.subscriptExpression = newLiteral(1, objectType("int"))
                                     }
-                                )
                                 block += printlnCall1
 
                                 val strDeclStmt = newDeclarationStatement()
@@ -141,7 +140,7 @@ class ValueEvaluationTests {
                                         ),
                                         false,
                                     )
-                                printlnCall2.addArgument(newReference("str"))
+                                printlnCall2.arguments += newReference("str")
                                 block += printlnCall2
 
                                 block += newReturn()
@@ -258,7 +257,7 @@ class ValueEvaluationTests {
                                         ),
                                         false,
                                     )
-                                printlnCall1.addArgument(newReference("s"))
+                                printlnCall1.arguments += newReference("s")
                                 block += printlnCall1
 
                                 val printlnCall2 =
@@ -269,7 +268,7 @@ class ValueEvaluationTests {
                                         ),
                                         false,
                                     )
-                                printlnCall2.addArgument(newReference("i"))
+                                printlnCall2.arguments += newReference("i")
                                 block += printlnCall2
 
                                 block += newReturn()
@@ -312,7 +311,7 @@ class ValueEvaluationTests {
 
                             block +=
                                 newCall(newReference("println")).also {
-                                    it.addArgument(newReference("b"))
+                                    it.arguments += newReference("b")
                                 }
 
                             val aDeclStmt = newDeclarationStatement()
@@ -333,7 +332,7 @@ class ValueEvaluationTests {
 
                             block +=
                                 newCall(newReference("println")).also {
-                                    it.addArgument(newReference("a"))
+                                    it.arguments += newReference("a")
                                 }
 
                             val cDeclStmt = newDeclarationStatement()
@@ -401,12 +400,11 @@ class ValueEvaluationTests {
 
                             block +=
                                 newCall(newReference("println")).also {
-                                    it.addArgument(
+                                    it.arguments +=
                                         newBinaryOperator("+").also { bo ->
                                             bo.lhs = newLiteral("Hello ", objectType("String"))
                                             bo.rhs = newLiteral("world", objectType("String"))
                                         }
-                                    )
                                 }
 
                             val hDeclStmt = newDeclarationStatement()
@@ -542,11 +540,10 @@ class ValueEvaluationTests {
                         newBlock(enterScope = true) { block ->
                             block +=
                                 newCall(newReference("srand")).also {
-                                    it.addArgument(
+                                    it.arguments +=
                                         newCall(newReference("time")).also { timeCall ->
-                                            timeCall.addArgument(newReference("NULL"))
+                                            timeCall.arguments += newReference("NULL")
                                         }
-                                    )
                                 }
 
                             val bDeclStmt = newDeclarationStatement()
@@ -586,7 +583,7 @@ class ValueEvaluationTests {
 
                             block +=
                                 newCall(newReference("println")).also {
-                                    it.addArgument(newReference("b"))
+                                    it.arguments += newReference("b")
                                 } // 1, 2
 
                             // Unlike "lt" above, "gt" (via its ArgumentHolder context) does end up
@@ -619,7 +616,7 @@ class ValueEvaluationTests {
 
                             block +=
                                 newCall(newReference("println")).also {
-                                    it.addArgument(newReference("b"))
+                                    it.arguments += newReference("b")
                                 } // 0, 1, 2
 
                             val ifElse3 = newIfElse { ifElse ->
@@ -648,7 +645,7 @@ class ValueEvaluationTests {
 
                             block +=
                                 newCall(newReference("println")).also {
-                                    it.addArgument(newReference("b"))
+                                    it.arguments += newReference("b")
                                 } // 0, 1, 2, 4
 
                             // Fluent's `ref("b") assign -ref("b")` (unlike the block-based
@@ -679,7 +676,7 @@ class ValueEvaluationTests {
 
                             block +=
                                 newCall(newReference("println")).also {
-                                    it.addArgument(newReference("b"))
+                                    it.arguments += newReference("b")
                                 } // -4, -2, -1, 0, 1, 2, 4
 
                             val aDeclStmt = newDeclarationStatement()
@@ -704,7 +701,7 @@ class ValueEvaluationTests {
 
                             block +=
                                 newCall(newReference("println")).also {
-                                    it.addArgument(newReference("a"))
+                                    it.arguments += newReference("a")
                                 } // 3, 6
 
                             block +=

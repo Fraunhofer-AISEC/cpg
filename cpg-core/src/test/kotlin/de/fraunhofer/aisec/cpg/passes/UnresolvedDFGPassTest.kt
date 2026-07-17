@@ -257,9 +257,8 @@ class UnresolvedDFGPassTest {
                                                     false,
                                                 )
                                                 .also { call ->
-                                                    call.addArgument(
+                                                    call.arguments +=
                                                         newLiteral(4, objectType("int"))
-                                                    )
                                                 }
                                     }
                                 s2DeclStmt.declarations += s2
@@ -276,9 +275,8 @@ class UnresolvedDFGPassTest {
                                                         construction ->
                                                         construction.type =
                                                             objectType("DfgUnresolvedCalls")
-                                                        construction.addArgument(
+                                                        construction.arguments +=
                                                             newLiteral(3, objectType("int"))
-                                                        )
                                                     }
                                             }
                                     }
@@ -298,9 +296,8 @@ class UnresolvedDFGPassTest {
                                                     false,
                                                 )
                                                 .also { call ->
-                                                    call.addArgument(
+                                                    call.arguments +=
                                                         newLiteral(2, objectType("int"))
-                                                    )
                                                 }
                                     }
                                 iDeclStmt.declarations += i

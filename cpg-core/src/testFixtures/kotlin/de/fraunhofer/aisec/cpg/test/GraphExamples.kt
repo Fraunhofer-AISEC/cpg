@@ -1416,7 +1416,7 @@ class GraphExamples {
                                                     ),
                                                 )
                                             )
-                                        printlnCall.addArgument(newReference("a"))
+                                        printlnCall.arguments += newReference("a")
                                         elseBlk += printlnCall
                                     }
                                 block += ifNode
@@ -1574,7 +1574,7 @@ class GraphExamples {
                                                     ),
                                                 )
                                             )
-                                        printlnCall.addArgument(newReference("a"))
+                                        printlnCall.arguments += newReference("a")
                                         blk += printlnCall
                                         blk += newBreak()
                                     }
@@ -1737,7 +1737,7 @@ class GraphExamples {
                                                                     ),
                                                                 )
                                                             )
-                                                        printlnCall.addArgument(newReference("a"))
+                                                        printlnCall.arguments += newReference("a")
                                                         elseBlk += printlnCall
                                                         elseBlk +=
                                                             newAssign(
@@ -1773,7 +1773,7 @@ class GraphExamples {
                                                     ),
                                                 )
                                             )
-                                        printlnCall2.addArgument(newReference("a"))
+                                        printlnCall2.arguments += newReference("a")
                                         outerBody += printlnCall2
                                         outerBody +=
                                             newAssign(
@@ -1798,7 +1798,7 @@ class GraphExamples {
                                             ),
                                         )
                                     )
-                                printlnCall3.addArgument(newReference("a"))
+                                printlnCall3.arguments += newReference("a")
                                 block += printlnCall3
                                 block += newReturn().also { it.isImplicit = true }
                             }
@@ -1873,7 +1873,7 @@ class GraphExamples {
                                                             ),
                                                         )
                                                     )
-                                                printlnCall.addArgument(newReference("a"))
+                                                printlnCall.arguments += newReference("a")
                                                 elseBlk += printlnCall
                                                 elseBlk +=
                                                     newAssign(
@@ -2049,9 +2049,8 @@ class GraphExamples {
                                                 ),
                                             )
                                         )
-                                    printlnCall.addArgument(
+                                    printlnCall.arguments +=
                                         newLiteral("Hello world", unknownType())
-                                    )
                                     block += printlnCall
 
                                     declareVariable(block, "x", objectType("int")) {
@@ -2189,7 +2188,7 @@ class GraphExamples {
                                             ),
                                         )
                                     )
-                                printlnCall.addArgument(newReference("s"))
+                                printlnCall.arguments += newReference("s")
                                 block += printlnCall
                                 block += newReturn().also { it.isImplicit = true }
                             }
@@ -2216,11 +2215,11 @@ class GraphExamples {
                                 }
                                 block +=
                                     dottedCall("sc.print").also {
-                                        it.addArgument(newReference("s"))
+                                        it.arguments += newReference("s")
                                     }
                                 block +=
                                     dottedCall("sc.print").also {
-                                        it.addArgument(dottedCall("sc.toString"))
+                                        it.arguments += dottedCall("sc.toString")
                                     }
                             }
                     }
@@ -2293,7 +2292,7 @@ class GraphExamples {
                                             ),
                                         )
                                     )
-                                printlnCall.addArgument(dottedCall("this.toString"))
+                                printlnCall.arguments += dottedCall("this.toString")
                                 block += printlnCall
                             }
                     }
@@ -2427,11 +2426,11 @@ class GraphExamples {
                                 block += dottedCall("sc.print")
                                 block +=
                                     dottedCall("sc.magic").also {
-                                        it.addArgument(newLiteral(3, objectType("int")))
+                                        it.arguments += newLiteral(3, objectType("int"))
                                     }
                                 block +=
                                     dottedCall("sc.magic2").also {
-                                        it.addArgument(newLiteral(5, objectType("int")))
+                                        it.arguments += newLiteral(5, objectType("int"))
                                     }
                             }
                     }
@@ -2489,7 +2488,7 @@ class GraphExamples {
                                         it.returnValue =
                                             newConstruction(parseName("TestClass")).also { c ->
                                                 c.type = objectType("TestClass")
-                                                c.addArgument(newLiteral(4, objectType("int")))
+                                                c.arguments += newLiteral(4, objectType("int"))
                                             }
                                     }
                             }
@@ -2578,10 +2577,9 @@ class GraphExamples {
                             block +=
                                 newCall(newReference("doSomething"))
                                     .also {
-                                        it.addArgument(
+                                        it.arguments +=
                                             newMember("field1", newReference("s1").line(tuName, 11))
                                                 .line(tuName, 11)
-                                        )
                                     }
                                     .line(tuName, 11)
 
@@ -2607,19 +2605,17 @@ class GraphExamples {
                             block +=
                                 newCall(newReference("doSomething"))
                                     .also {
-                                        it.addArgument(
+                                        it.arguments +=
                                             newMember("field1", newReference("s1").line(tuName, 15))
                                                 .line(tuName, 15)
-                                        )
                                     }
                                     .line(tuName, 15)
                             block +=
                                 newCall(newReference("doSomething"))
                                     .also {
-                                        it.addArgument(
+                                        it.arguments +=
                                             newMember("field1", newReference("s2").line(tuName, 16))
                                                 .line(tuName, 16)
-                                        )
                                     }
                                     .line(tuName, 16)
                         }
@@ -2696,7 +2692,7 @@ class GraphExamples {
                             block +=
                                 newCall(newReference("doSomething"))
                                     .also {
-                                        it.addArgument(
+                                        it.arguments +=
                                             newMember(
                                                     "field",
                                                     newMember(
@@ -2706,7 +2702,6 @@ class GraphExamples {
                                                         .line(tuName, 15),
                                                 )
                                                 .line(tuName, 15)
-                                        )
                                     }
                                     .line(tuName, 15)
                         }
@@ -2738,7 +2733,7 @@ class GraphExamples {
                                 newThrow().also {
                                     it.exception =
                                         dottedCall("SomeError").also { c ->
-                                            c.addArgument(newReference("a"))
+                                            c.arguments += newReference("a")
                                         }
                                 }
                         }

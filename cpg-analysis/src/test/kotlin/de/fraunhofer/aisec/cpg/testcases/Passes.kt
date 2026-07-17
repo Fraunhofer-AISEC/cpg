@@ -111,7 +111,7 @@ class Passes {
                                         ),
                                         false,
                                     )
-                                printlnCall.addArgument(newReference("y"))
+                                printlnCall.arguments += newReference("y")
                                 block += printlnCall
 
                                 block += newReturn()
@@ -175,7 +175,7 @@ class Passes {
                                         ),
                                         false,
                                     )
-                                printlnCall.addArgument(newReference("y"))
+                                printlnCall.arguments += newReference("y")
                                 block += printlnCall
 
                                 block += newReturn()
@@ -239,7 +239,7 @@ class Passes {
                                         ),
                                         false,
                                     )
-                                printlnCall.addArgument(newReference("y"))
+                                printlnCall.arguments += newReference("y")
                                 block += printlnCall
 
                                 block += newReturn()
@@ -307,7 +307,7 @@ class Passes {
                                         ),
                                         false,
                                     )
-                                printlnCall.addArgument(newReference("y"))
+                                printlnCall.arguments += newReference("y")
                                 block += printlnCall
 
                                 block += newReturn()
@@ -393,7 +393,7 @@ class Passes {
                                         ),
                                         false,
                                     )
-                                printlnCall.addArgument(newReference("y"))
+                                printlnCall.arguments += newReference("y")
                                 block += printlnCall
 
                                 block += newReturn()
@@ -479,7 +479,7 @@ class Passes {
                                         ),
                                         false,
                                     )
-                                printlnCall.addArgument(newReference("y"))
+                                printlnCall.arguments += newReference("y")
                                 block += printlnCall
 
                                 block += newReturn()
@@ -547,7 +547,7 @@ class Passes {
                                         ),
                                         false,
                                     )
-                                printlnCall.addArgument(newReference("y"))
+                                printlnCall.arguments += newReference("y")
                                 block += printlnCall
 
                                 block += newReturn()
@@ -582,9 +582,8 @@ class Passes {
                                                     ),
                                                     false,
                                                 )
-                                            printlnCall.addArgument(
+                                            printlnCall.arguments +=
                                                 newLiteral("Cool loop", objectType("string"))
-                                            )
                                             loopBodyBlock += printlnCall
                                         }
                                     }
@@ -598,9 +597,8 @@ class Passes {
                                         ),
                                         false,
                                     )
-                                printlnCall2.addArgument(
+                                printlnCall2.arguments +=
                                     newLiteral("After cool loop", objectType("string"))
-                                )
                                 block += printlnCall2
 
                                 block += newReturn()
@@ -635,9 +633,8 @@ class Passes {
                                                     ),
                                                     false,
                                                 )
-                                            printlnCall.addArgument(
+                                            printlnCall.arguments +=
                                                 newLiteral("Cool loop", objectType("string"))
-                                            )
                                             loopBodyBlock += printlnCall
 
                                             loopBodyBlock +=
@@ -658,9 +655,8 @@ class Passes {
                                         ),
                                         false,
                                     )
-                                printlnCall2.addArgument(
+                                printlnCall2.arguments +=
                                     newLiteral("After cool loop", objectType("string"))
-                                )
                                 block += printlnCall2
 
                                 block += newReturn()
@@ -688,9 +684,8 @@ class Passes {
                                                     ),
                                                     false,
                                                 )
-                                            printlnCall.addArgument(
+                                            printlnCall.arguments +=
                                                 newLiteral("Cool loop", objectType("string"))
-                                            )
                                             loopBodyBlock += printlnCall
                                         }
                                     }
@@ -704,9 +699,8 @@ class Passes {
                                         ),
                                         false,
                                     )
-                                printlnCall2.addArgument(
+                                printlnCall2.arguments +=
                                     newLiteral("After cool loop", objectType("string"))
-                                )
                                 block += printlnCall2
 
                                 block += newReturn()
@@ -745,9 +739,8 @@ class Passes {
                                                     ),
                                                     false,
                                                 )
-                                            printlnCall.addArgument(
+                                            printlnCall.arguments +=
                                                 newLiteral("Cool loop", objectType("string"))
-                                            )
                                             loopBodyBlock += printlnCall
                                         }
                                     }
@@ -761,9 +754,8 @@ class Passes {
                                         ),
                                         false,
                                     )
-                                printlnCall2.addArgument(
+                                printlnCall2.arguments +=
                                     newLiteral("After cool loop", objectType("string"))
-                                )
                                 block += printlnCall2
 
                                 block += newReturn()
@@ -802,9 +794,8 @@ class Passes {
                                                     ),
                                                     false,
                                                 )
-                                            printlnCall.addArgument(
+                                            printlnCall.arguments +=
                                                 newLiteral("Cool loop", objectType("string"))
-                                            )
                                             loopBodyBlock += printlnCall
                                         }
                                     }
@@ -818,9 +809,8 @@ class Passes {
                                         ),
                                         false,
                                     )
-                                printlnCall2.addArgument(
+                                printlnCall2.arguments +=
                                     newLiteral("After cool loop", objectType("string"))
-                                )
                                 block += printlnCall2
 
                                 block += newReturn()
@@ -863,9 +853,8 @@ class Passes {
                                                     ),
                                                     false,
                                                 )
-                                            printlnCall.addArgument(
+                                            printlnCall.arguments +=
                                                 newLiteral("Cool loop", objectType("string"))
-                                            )
                                             loopBodyBlock += printlnCall
 
                                             loopBodyBlock +=
@@ -894,9 +883,8 @@ class Passes {
                                         ),
                                         false,
                                     )
-                                printlnCall2.addArgument(
+                                printlnCall2.arguments +=
                                     newLiteral("After cool loop", objectType("string"))
-                                )
                                 block += printlnCall2
 
                                 block += newReturn()

@@ -55,8 +55,7 @@ import org.slf4j.LoggerFactory
  * [usedAsExpression]. When this property is set to true (it defaults to false), we model a dataflow
  * from the (first) rhs to the [Assign] itself.
  */
-class Assign :
-    Expression(false), AssignmentHolder, ArgumentHolder, HasType.TypeObserver, HasOperatorCode {
+class Assign : Expression(false), AssignmentHolder, HasType.TypeObserver, HasOperatorCode {
 
     override var operatorCode: String = "="
 
@@ -256,30 +255,6 @@ class Assign :
 
         // Propagate any assigned types from the source to the target
         findTargets(src).forEach { it.addAssignedTypes(assignedTypes) }
-    }
-
-    override fun addArgument(expression: Expression) {
-        if (lhs.isEmpty()) {
-            lhs = mutableListOf(expression)
-        } else {
-            rhs = mutableListOf(expression)
-        }
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        return if (lhs.singleOrNull() == old) {
-            lhs = mutableListOf(new)
-            true
-        } else if (rhs.singleOrNull() == old) {
-            rhs = mutableListOf(new)
-            true
-        } else {
-            false
-        }
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return expression in lhs || expression in rhs
     }
 
     override fun getStartingPrevEOG(): Collection<Node> {

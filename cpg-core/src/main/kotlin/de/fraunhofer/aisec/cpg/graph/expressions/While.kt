@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.expressions
 
-import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -41,7 +40,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Represents a conditional loop statement of the form: `while(...){...}`. The loop body is executed
  * until condition evaluates to false for the first time.
  */
-class While : Loop(), BranchingNode, ArgumentHolder {
+class While : Loop(), BranchingNode {
     @Relationship(value = "CONDITION_DECLARATION")
     var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
     /** C++ allows defining a declaration instead of a pure logical expression as condition */
@@ -60,19 +59,6 @@ class While : Loop(), BranchingNode, ArgumentHolder {
             .append("condition", condition)
             .append("conditionDeclaration", conditionDeclaration)
             .toString()
-    }
-
-    override fun addArgument(expression: Expression) {
-        this.condition = expression
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        this.condition = new
-        return true
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return this.condition == expression
     }
 
     override fun equals(other: Any?): Boolean {

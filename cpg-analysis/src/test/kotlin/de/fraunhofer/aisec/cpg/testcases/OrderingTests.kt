@@ -117,7 +117,7 @@ class GraphExamples {
                                 val p4 = newVariable("p4", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p4.initializer = construction
                                 p4Decl.declarations += p4
                                 scopeManager.addDeclaration(p4)
@@ -128,7 +128,7 @@ class GraphExamples {
                                         newMemberAccess("start", newReference("p4")),
                                         false,
                                     )
-                                startCall.addArgument(newReference("iv"))
+                                startCall.arguments += newReference("iv")
                                 block += startCall
 
                                 val finishCall =
@@ -136,7 +136,7 @@ class GraphExamples {
                                         newMemberAccess("finish", newReference("p4")),
                                         false,
                                     )
-                                finishCall.addArgument(newReference("buf"))
+                                finishCall.arguments += newReference("buf")
                                 block += finishCall
 
                                 block += newReturn()
@@ -153,7 +153,7 @@ class GraphExamples {
                                 val p4 = newVariable("p4", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p4.initializer = construction
                                 p4Decl.declarations += p4
                                 scopeManager.addDeclaration(p4)
@@ -164,7 +164,7 @@ class GraphExamples {
                                         newMemberAccess("start", newReference("p4")),
                                         false,
                                     )
-                                startCall.addArgument(newReference("iv"))
+                                startCall.arguments += newReference("iv")
                                 block += startCall
 
                                 // Not in the entity and therefore ignored
@@ -176,7 +176,7 @@ class GraphExamples {
                                         newMemberAccess("finish", newReference("p4")),
                                         false,
                                     )
-                                finishCall.addArgument(newReference("buf"))
+                                finishCall.arguments += newReference("buf")
                                 block += finishCall
 
                                 block += newReturn()
@@ -193,7 +193,7 @@ class GraphExamples {
                                 val p4 = newVariable("p4", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p4.initializer = construction
                                 p4Decl.declarations += p4
                                 scopeManager.addDeclaration(p4)
@@ -223,7 +223,7 @@ class GraphExamples {
                                                     newMemberAccess("start", newReference("p4")),
                                                     false,
                                                 )
-                                            startCall.addArgument(newReference("iv"))
+                                            startCall.arguments += newReference("iv")
                                             thenBlock += startCall
                                         }
                                     ifElse.elseStatement =
@@ -233,7 +233,7 @@ class GraphExamples {
                                                     newMemberAccess("start", newReference("p4")),
                                                     false,
                                                 )
-                                            startCall.addArgument(newReference("iv"))
+                                            startCall.arguments += newReference("iv")
                                             elseBlock += startCall
                                         }
                                 }
@@ -248,7 +248,7 @@ class GraphExamples {
                                         newMemberAccess("finish", newReference("p4")),
                                         false,
                                     )
-                                finishCall.addArgument(newReference("buf"))
+                                finishCall.arguments += newReference("buf")
                                 block += finishCall
 
                                 block += newReturn()
@@ -265,7 +265,7 @@ class GraphExamples {
                                 val p4 = newVariable("p4", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(1, objectType("int")))
+                                construction.arguments += newLiteral(1, objectType("int"))
                                 p4.initializer = construction
                                 p4Decl.declarations += p4
                                 scopeManager.addDeclaration(p4)
@@ -277,7 +277,7 @@ class GraphExamples {
                                         newMemberAccess("set_key", newReference("p4")),
                                         false,
                                     )
-                                setKeyCall1.addArgument(newReference("key"))
+                                setKeyCall1.arguments += newReference("key")
                                 block += setKeyCall1
 
                                 val startCall =
@@ -285,7 +285,7 @@ class GraphExamples {
                                         newMemberAccess("start", newReference("p4")),
                                         false,
                                     )
-                                startCall.addArgument(newReference("iv"))
+                                startCall.arguments += newReference("iv")
                                 block += startCall
 
                                 val finishCall =
@@ -293,7 +293,7 @@ class GraphExamples {
                                         newMemberAccess("finish", newReference("p4")),
                                         false,
                                     )
-                                finishCall.addArgument(newReference("buf"))
+                                finishCall.arguments += newReference("buf")
                                 block += finishCall
 
                                 // Not in the entity and therefore ignored
@@ -305,7 +305,7 @@ class GraphExamples {
                                         newMemberAccess("set_key", newReference("p4")),
                                         false,
                                     )
-                                setKeyCall2.addArgument(newReference("key"))
+                                setKeyCall2.arguments += newReference("key")
                                 block += setKeyCall2
 
                                 block += newReturn()
@@ -322,7 +322,7 @@ class GraphExamples {
                                 val p4 = newVariable("p4", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p4.initializer = construction
                                 p4Decl.declarations += p4
                                 scopeManager.addDeclaration(p4)
@@ -333,7 +333,7 @@ class GraphExamples {
                                         newMemberAccess("start", newReference("p4")),
                                         false,
                                     )
-                                startCall.addArgument(newReference("iv"))
+                                startCall.arguments += newReference("iv")
                                 block += startCall
 
                                 // Missing: memberCall("finish", ref("p4")) {ref("buf")}
@@ -352,7 +352,7 @@ class GraphExamples {
                                 val p4 = newVariable("p4", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p4.initializer = construction
                                 p4Decl.declarations += p4
                                 scopeManager.addDeclaration(p4)
@@ -376,7 +376,7 @@ class GraphExamples {
                                                     newMemberAccess("start", newReference("p4")),
                                                     false,
                                                 )
-                                            startCall.addArgument(newReference("iv"))
+                                            startCall.arguments += newReference("iv")
                                             thenBlock += startCall
                                         }
                                 }
@@ -388,7 +388,7 @@ class GraphExamples {
                                         newMemberAccess("finish", newReference("p4")),
                                         false,
                                     )
-                                finishCall.addArgument(newReference("buf"))
+                                finishCall.arguments += newReference("buf")
                                 block += finishCall
 
                                 block += newReturn()
@@ -405,7 +405,7 @@ class GraphExamples {
                                 val p4 = newVariable("p4", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p4.initializer = construction
                                 p4Decl.declarations += p4
                                 scopeManager.addDeclaration(p4)
@@ -420,7 +420,7 @@ class GraphExamples {
                                                     newMemberAccess("start", newReference("p4")),
                                                     false,
                                                 )
-                                            startCall.addArgument(newReference("iv"))
+                                            startCall.arguments += newReference("iv")
                                             thenBlock += startCall
 
                                             val finishCall =
@@ -428,7 +428,7 @@ class GraphExamples {
                                                     newMemberAccess("finish", newReference("p4")),
                                                     false,
                                                 )
-                                            finishCall.addArgument(newReference("buf"))
+                                            finishCall.arguments += newReference("buf")
                                             thenBlock += finishCall
                                         }
                                 }
@@ -440,7 +440,7 @@ class GraphExamples {
                                         newMemberAccess("start", newReference("p4")),
                                         false,
                                     )
-                                startCall2.addArgument(newReference("iv"))
+                                startCall2.arguments += newReference("iv")
                                 block += startCall2
 
                                 val finishCall2 =
@@ -448,7 +448,7 @@ class GraphExamples {
                                         newMemberAccess("finish", newReference("p4")),
                                         false,
                                     )
-                                finishCall2.addArgument(newReference("buf"))
+                                finishCall2.arguments += newReference("buf")
                                 block += finishCall2
 
                                 block += newReturn()
@@ -467,7 +467,7 @@ class GraphExamples {
                                         val p4 = newVariable("p4", objectType("Botan"))
                                         val construction = newConstruction("Botan")
                                         construction.type = objectType("Botan")
-                                        construction.addArgument(newLiteral(2, objectType("int")))
+                                        construction.arguments += newLiteral(2, objectType("int"))
                                         p4.initializer = construction
                                         p4Decl.declarations += p4
                                         scopeManager.addDeclaration(p4)
@@ -478,7 +478,7 @@ class GraphExamples {
                                                 newMemberAccess("start", newReference("p4")),
                                                 false,
                                             )
-                                        startCall.addArgument(newReference("iv"))
+                                        startCall.arguments += newReference("iv")
                                         nested1 += startCall
                                     }
 
@@ -488,7 +488,7 @@ class GraphExamples {
                                         val p5 = newVariable("p5", objectType("Botan"))
                                         val construction = newConstruction("Botan")
                                         construction.type = objectType("Botan")
-                                        construction.addArgument(newLiteral(2, objectType("int")))
+                                        construction.arguments += newLiteral(2, objectType("int"))
                                         p5.initializer = construction
                                         p5Decl.declarations += p5
                                         scopeManager.addDeclaration(p5)
@@ -499,7 +499,7 @@ class GraphExamples {
                                                 newMemberAccess("finish", newReference("p5")),
                                                 false,
                                             )
-                                        finishCall.addArgument(newReference("buf"))
+                                        finishCall.arguments += newReference("buf")
                                         nested2 += finishCall
 
                                         nested2 += newReturn()
@@ -578,7 +578,7 @@ class GraphExamples {
                                 val p1 = newVariable("p1", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p1.initializer = construction
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
@@ -619,7 +619,7 @@ class GraphExamples {
                                 val p1 = newVariable("p1", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p1.initializer = construction
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
@@ -665,7 +665,7 @@ class GraphExamples {
                                 val p1 = newVariable("p1", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p1.initializer = construction
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
@@ -716,7 +716,7 @@ class GraphExamples {
                                 val p2 = newVariable("p2", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p2.initializer = construction
                                 p2Decl.declarations += p2
                                 scopeManager.addDeclaration(p2)
@@ -777,7 +777,7 @@ class GraphExamples {
                                 val p3 = newVariable("p3", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p3.initializer = construction
                                 p3Decl.declarations += p3
                                 scopeManager.addDeclaration(p3)
@@ -838,7 +838,7 @@ class GraphExamples {
                                 val p3 = newVariable("p3", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p3.initializer = construction
                                 p3Decl.declarations += p3
                                 scopeManager.addDeclaration(p3)
@@ -904,7 +904,7 @@ class GraphExamples {
                                 val p5 = newVariable("p5", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p5.initializer = construction
                                 p5Decl.declarations += p5
                                 scopeManager.addDeclaration(p5)
@@ -945,7 +945,7 @@ class GraphExamples {
                                 val p6 = newVariable("p6", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p6.initializer = construction
                                 p6Decl.declarations += p6
                                 scopeManager.addDeclaration(p6)
@@ -1005,7 +1005,7 @@ class GraphExamples {
                                 val p6 = newVariable("p6", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p6.initializer = construction
                                 p6Decl.declarations += p6
                                 scopeManager.addDeclaration(p6)
@@ -1064,7 +1064,7 @@ class GraphExamples {
                                 val p7 = newVariable("p7", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p7.initializer = construction
                                 p7Decl.declarations += p7
                                 scopeManager.addDeclaration(p7)
@@ -1136,7 +1136,7 @@ class GraphExamples {
                                 val p8 = newVariable("p8", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p8.initializer = construction
                                 p8Decl.declarations += p8
                                 scopeManager.addDeclaration(p8)
@@ -1211,7 +1211,7 @@ class GraphExamples {
                                 val p8 = newVariable("p8", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p8.initializer = construction
                                 p8Decl.declarations += p8
                                 scopeManager.addDeclaration(p8)
@@ -1271,7 +1271,7 @@ class GraphExamples {
                                 val p6 = newVariable("p6", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p6.initializer = construction
                                 p6Decl.declarations += p6
                                 scopeManager.addDeclaration(p6)
@@ -1345,7 +1345,7 @@ class GraphExamples {
                                 val p1 = newVariable("p1", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p1.initializer = construction
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
@@ -1362,7 +1362,7 @@ class GraphExamples {
                                         newMemberAccess("foo", newReference("this")),
                                         false,
                                     )
-                                fooCall.addArgument(newReference("p1"))
+                                fooCall.arguments += newReference("p1")
                                 block += fooCall
 
                                 block +=
@@ -1391,7 +1391,7 @@ class GraphExamples {
                                 val p1 = newVariable("p1", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(2, objectType("int")))
+                                construction.arguments += newLiteral(2, objectType("int"))
                                 p1.initializer = construction
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
@@ -1421,7 +1421,7 @@ class GraphExamples {
                                                     newMemberAccess("foo", newReference("this")),
                                                     false,
                                                 )
-                                            fooCall.addArgument(newReference("p1"))
+                                            fooCall.arguments += newReference("p1")
                                             thenBlock += fooCall
                                         }
                                 }
@@ -1453,7 +1453,7 @@ class GraphExamples {
                                 val p1 = newVariable("p1", objectType("Botan"))
                                 val construction1 = newConstruction("Botan")
                                 construction1.type = objectType("Botan")
-                                construction1.addArgument(newLiteral(1, objectType("int")))
+                                construction1.arguments += newLiteral(1, objectType("int"))
                                 p1.initializer = construction1
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
@@ -1463,7 +1463,7 @@ class GraphExamples {
                                 val p2 = newVariable("p2", objectType("Botan"))
                                 val construction2 = newConstruction("Botan")
                                 construction2.type = objectType("Botan")
-                                construction2.addArgument(newLiteral(2, objectType("int")))
+                                construction2.arguments += newLiteral(2, objectType("int"))
                                 p2.initializer = construction2
                                 p2Decl.declarations += p2
                                 scopeManager.addDeclaration(p2)
@@ -1485,7 +1485,7 @@ class GraphExamples {
                                         newMemberAccess("foo", newReference("this")),
                                         false,
                                     )
-                                fooCall.addArgument(newReference("p2"))
+                                fooCall.arguments += newReference("p2")
                                 block += fooCall
 
                                 block +=
@@ -1531,7 +1531,7 @@ class GraphExamples {
                                 val p1 = newVariable("p1", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(1, objectType("int")))
+                                construction.arguments += newLiteral(1, objectType("int"))
                                 p1.initializer = construction
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)
@@ -1551,7 +1551,7 @@ class GraphExamples {
                                         ),
                                         false,
                                     )
-                                minimalInterprocUnclearArgumentCall.addArgument(newReference("p1"))
+                                minimalInterprocUnclearArgumentCall.arguments += newReference("p1")
                                 block += minimalInterprocUnclearArgumentCall
 
                                 block += newReturn()
@@ -1604,7 +1604,7 @@ class GraphExamples {
                                 val p1 = newVariable("p1", objectType("Botan"))
                                 val construction = newConstruction("Botan")
                                 construction.type = objectType("Botan")
-                                construction.addArgument(newLiteral(1, objectType("int")))
+                                construction.arguments += newLiteral(1, objectType("int"))
                                 p1.initializer = construction
                                 p1Decl.declarations += p1
                                 scopeManager.addDeclaration(p1)

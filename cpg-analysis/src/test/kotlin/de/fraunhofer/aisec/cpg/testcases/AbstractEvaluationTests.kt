@@ -159,7 +159,7 @@ abstract class AbstractEvaluationTests {
 
                                 val fCall =
                                     newMemberCall(newMemberAccess("f", newReference("Bar")), false)
-                                fCall.addArgument(newReference("a"))
+                                fCall.arguments += newReference("a")
                                 block += fCall
                             }
                     }
@@ -200,7 +200,7 @@ abstract class AbstractEvaluationTests {
 
                                 val cCall =
                                     newMemberCall(newMemberAccess("c", newReference("Bar")), false)
-                                cCall.addArgument(newReference("a"))
+                                cCall.arguments += newReference("a")
                                 block += cCall
 
                                 block +=
@@ -246,7 +246,7 @@ abstract class AbstractEvaluationTests {
 
                                 val fCall =
                                     newMemberCall(newMemberAccess("f", newReference("Bar")), false)
-                                fCall.addArgument(newReference("a"))
+                                fCall.arguments += newReference("a")
                                 block += fCall
                             }
                     }
@@ -291,7 +291,7 @@ abstract class AbstractEvaluationTests {
 
                                 val fCall =
                                     newMemberCall(newMemberAccess("f", newReference("Bar")), false)
-                                fCall.addArgument(newReference("a"))
+                                fCall.arguments += newReference("a")
                                 block += fCall
                             }
                     }
@@ -345,7 +345,7 @@ abstract class AbstractEvaluationTests {
 
                                 val fCall =
                                     newMemberCall(newMemberAccess("f", newReference("Bar")), false)
-                                fCall.addArgument(newReference("a"))
+                                fCall.arguments += newReference("a")
                                 block += fCall
                             }
                     }
@@ -400,7 +400,7 @@ abstract class AbstractEvaluationTests {
                                             )
 
                                         val printlnCall = newCall(newReference("println"))
-                                        printlnCall.addArgument(newReference("i"))
+                                        printlnCall.arguments += newReference("i")
                                         loopBodyBlock += printlnCall
                                     }
                                 }
@@ -408,7 +408,7 @@ abstract class AbstractEvaluationTests {
 
                                 val fCall =
                                     newMemberCall(newMemberAccess("f", newReference("Bar")), false)
-                                fCall.addArgument(newReference("a"))
+                                fCall.arguments += newReference("a")
                                 block += fCall
                             }
                     }
@@ -455,28 +455,28 @@ abstract class AbstractEvaluationTests {
                                                 newBlock(enterScope = true) { tb ->
                                                     val call =
                                                         newCall(newReference("lessThanThree"))
-                                                    call.addArgument(newReference("i"))
+                                                    call.arguments += newReference("i")
                                                     tb += call
                                                 }
                                             inner.elseStatement =
                                                 newBlock(enterScope = true) { eb ->
                                                     val call =
                                                         newCall(newReference("greaterEqualThree"))
-                                                    call.addArgument(newReference("i"))
+                                                    call.arguments += newReference("i")
                                                     eb += call
                                                 }
                                         }
                                         loopBodyBlock += innerIf
 
                                         val printlnCall = newCall(newReference("println"))
-                                        printlnCall.addArgument(newReference("i"))
+                                        printlnCall.arguments += newReference("i")
                                         loopBodyBlock += printlnCall
                                     }
                                 }
                                 block += forNode
 
                                 val afterLoopCall = newCall(newReference("afterLoop"))
-                                afterLoopCall.addArgument(newReference("i"))
+                                afterLoopCall.arguments += newReference("i")
                                 block += afterLoopCall
                             }
                     }

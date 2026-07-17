@@ -51,7 +51,7 @@ class FlowQueriesTest {
                     newBlock(enterScope = true) { block ->
                         val ret = newReturn()
                         val toStringCall = newCall(newReference("toString"))
-                        toStringCall.addArgument(newReference("arg"))
+                        toStringCall.arguments += newReference("arg")
                         ret.returnValue = toStringCall
                         block += ret
                     }
@@ -91,9 +91,9 @@ class FlowQueriesTest {
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
                             val fooCallA = newCall(newReference("foo"))
-                            fooCallA.addArgument(newReference("a"))
+                            fooCallA.arguments += newReference("a")
                             val fooCallBar = newCall(newReference("foo"))
-                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
                                 newBinaryOperator("+").also { outer ->
                                     outer.lhs =
@@ -108,11 +108,11 @@ class FlowQueriesTest {
                             block += bDecl
 
                             val printA = newCall(newReference("print"))
-                            printA.addArgument(newReference("a"))
+                            printA.arguments += newReference("a")
                             block += printA
 
                             val printB = newCall(newReference("print"))
-                            printB.addArgument(newReference("b"))
+                            printB.arguments += newReference("b")
                             block += printB
 
                             block +=
@@ -150,12 +150,11 @@ class FlowQueriesTest {
                             block += ifElse
 
                             val bazCall = newCall(newReference("baz"))
-                            bazCall.addArgument(
+                            bazCall.arguments +=
                                 newBinaryOperator("+").also {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            )
                             block += bazCall
                         }
                 }
@@ -194,7 +193,7 @@ class FlowQueriesTest {
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
                             val fooCallBar = newCall(newReference("foo"))
-                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
                                 newBinaryOperator("+").also { outer ->
                                     outer.lhs =
@@ -209,16 +208,15 @@ class FlowQueriesTest {
                             block += bDecl
 
                             val printB = newCall(newReference("print"))
-                            printB.addArgument(newReference("b"))
+                            printB.arguments += newReference("b")
                             block += printB
 
                             val bazCall = newCall(newReference("baz"))
-                            bazCall.addArgument(
+                            bazCall.arguments +=
                                 newBinaryOperator("+").also {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            )
                             block += bazCall
                         }
                 }
@@ -257,7 +255,7 @@ class FlowQueriesTest {
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
                             val fooCallBar = newCall(newReference("foo"))
-                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
                                 newBinaryOperator("+").also { outer ->
                                     outer.lhs =
@@ -280,23 +278,22 @@ class FlowQueriesTest {
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printA = newCall(newReference("print"))
-                                        printA.addArgument(newReference("a"))
+                                        printA.arguments += newReference("a")
                                         thenBlock += printA
                                     }
                             }
                             block += ifElse
 
                             val printB = newCall(newReference("print"))
-                            printB.addArgument(newReference("b"))
+                            printB.arguments += newReference("b")
                             block += printB
 
                             val bazCall = newCall(newReference("baz"))
-                            bazCall.addArgument(
+                            bazCall.arguments +=
                                 newBinaryOperator("+").also {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            )
                             block += bazCall
                         }
                 }
@@ -335,7 +332,7 @@ class FlowQueriesTest {
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
                             val fooCallBar = newCall(newReference("foo"))
-                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
                                 newBinaryOperator("+").also { outer ->
                                     outer.lhs =
@@ -364,28 +361,27 @@ class FlowQueriesTest {
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printA = newCall(newReference("print"))
-                                        printA.addArgument(newReference("a"))
+                                        printA.arguments += newReference("a")
                                         thenBlock += printA
                                     }
                                 ifElse.elseStatement =
                                     newBlock(enterScope = true) { elseBlock ->
                                         val printB = newCall(newReference("print"))
-                                        printB.addArgument(newReference("b"))
+                                        printB.arguments += newReference("b")
                                         elseBlock += printB
                                     }
                                 val printB2 = newCall(newReference("print"))
-                                printB2.addArgument(newReference("b"))
+                                printB2.arguments += newReference("b")
                                 ifElse.condition = printB2
                             }
                             block += ifElse
 
                             val bazCall = newCall(newReference("baz"))
-                            bazCall.addArgument(
+                            bazCall.arguments +=
                                 newBinaryOperator("+").also {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            )
                             block += bazCall
                         }
                 }
@@ -424,7 +420,7 @@ class FlowQueriesTest {
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
                             val fooCallBar = newCall(newReference("foo"))
-                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
                                 newBinaryOperator("+").also {
                                     it.lhs = newLiteral("bla", objectType("string"))
@@ -435,16 +431,15 @@ class FlowQueriesTest {
                             block += bDecl
 
                             val printA = newCall(newReference("print"))
-                            printA.addArgument(newReference("a"))
+                            printA.arguments += newReference("a")
                             block += printA
 
                             val bazCall = newCall(newReference("baz"))
-                            bazCall.addArgument(
+                            bazCall.arguments +=
                                 newBinaryOperator("+").also {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            )
                             block += bazCall
                         }
                 }
@@ -483,7 +478,7 @@ class FlowQueriesTest {
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
                             val fooCallBar = newCall(newReference("foo"))
-                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
                                 newBinaryOperator("+").also {
                                     it.lhs = newLiteral("bla", objectType("string"))
@@ -502,19 +497,18 @@ class FlowQueriesTest {
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printA = newCall(newReference("print"))
-                                        printA.addArgument(newReference("a"))
+                                        printA.arguments += newReference("a")
                                         thenBlock += printA
                                     }
                             }
                             block += ifElse
 
                             val bazCall = newCall(newReference("baz"))
-                            bazCall.addArgument(
+                            bazCall.arguments +=
                                 newBinaryOperator("+").also {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            )
                             block += bazCall
                         }
                 }
@@ -553,7 +547,7 @@ class FlowQueriesTest {
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
                             val fooCallBar = newCall(newReference("foo"))
-                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
                                 newBinaryOperator("+").also {
                                     it.lhs = newLiteral("bla", objectType("string"))
@@ -572,25 +566,24 @@ class FlowQueriesTest {
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printA = newCall(newReference("print"))
-                                        printA.addArgument(newReference("a"))
+                                        printA.arguments += newReference("a")
                                         thenBlock += printA
                                     }
                                 ifElse.elseStatement =
                                     newBlock(enterScope = true) { elseBlock ->
                                         val printA2 = newCall(newReference("print"))
-                                        printA2.addArgument(newReference("a"))
+                                        printA2.arguments += newReference("a")
                                         elseBlock += printA2
                                     }
                             }
                             block += ifElse
 
                             val bazCall = newCall(newReference("baz"))
-                            bazCall.addArgument(
+                            bazCall.arguments +=
                                 newBinaryOperator("+").also {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            )
                             block += bazCall
                         }
                 }
@@ -629,7 +622,7 @@ class FlowQueriesTest {
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
                             val fooCallBar = newCall(newReference("foo"))
-                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
                                 newBinaryOperator("+").also {
                                     it.lhs = newLiteral("bla", objectType("string"))
@@ -648,22 +641,21 @@ class FlowQueriesTest {
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printA = newCall(newReference("print"))
-                                        printA.addArgument(newReference("a"))
+                                        printA.arguments += newReference("a")
                                         thenBlock += printA
 
                                         val bazCall = newCall(newReference("baz"))
-                                        bazCall.addArgument(
+                                        bazCall.arguments +=
                                             newBinaryOperator("+").also {
                                                 it.lhs = newReference("a")
                                                 it.rhs = newReference("b")
                                             }
-                                        )
                                         thenBlock += bazCall
                                     }
                                 ifElse.elseStatement =
                                     newBlock(enterScope = true) { elseBlock ->
                                         val printC = newCall(newReference("print"))
-                                        printC.addArgument(newReference("c"))
+                                        printC.arguments += newReference("c")
                                         elseBlock += printC
                                     }
                             }
@@ -705,9 +697,9 @@ class FlowQueriesTest {
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
                             val fooCallA = newCall(newReference("foo"))
-                            fooCallA.addArgument(newReference("a"))
+                            fooCallA.arguments += newReference("a")
                             val fooCallBar = newCall(newReference("foo"))
-                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
                                 newBinaryOperator("+").also { outer ->
                                     outer.lhs =
@@ -722,16 +714,15 @@ class FlowQueriesTest {
                             block += bDecl
 
                             val printB = newCall(newReference("print"))
-                            printB.addArgument(newReference("b"))
+                            printB.arguments += newReference("b")
                             block += printB
 
                             val bazCall = newCall(newReference("baz"))
-                            bazCall.addArgument(
+                            bazCall.arguments +=
                                 newBinaryOperator("+").also {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            )
                             block += bazCall
                         }
                 }
@@ -770,9 +761,9 @@ class FlowQueriesTest {
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
                             val fooCallA = newCall(newReference("foo"))
-                            fooCallA.addArgument(newReference("a"))
+                            fooCallA.arguments += newReference("a")
                             val fooCallBar = newCall(newReference("foo"))
-                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
                                 newBinaryOperator("+").also { outer ->
                                     outer.lhs =
@@ -795,23 +786,22 @@ class FlowQueriesTest {
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printA = newCall(newReference("print"))
-                                        printA.addArgument(newReference("a"))
+                                        printA.arguments += newReference("a")
                                         thenBlock += printA
                                     }
                             }
                             block += ifElse
 
                             val printB = newCall(newReference("print"))
-                            printB.addArgument(newReference("b"))
+                            printB.arguments += newReference("b")
                             block += printB
 
                             val bazCall = newCall(newReference("baz"))
-                            bazCall.addArgument(
+                            bazCall.arguments +=
                                 newBinaryOperator("+").also {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            )
                             block += bazCall
                         }
                 }
@@ -850,9 +840,9 @@ class FlowQueriesTest {
                             val bDecl = newDeclarationStatement()
                             val b = newVariable("b", objectType("string"))
                             val fooCallA = newCall(newReference("foo"))
-                            fooCallA.addArgument(newReference("a"))
+                            fooCallA.arguments += newReference("a")
                             val fooCallBar = newCall(newReference("foo"))
-                            fooCallBar.addArgument(newCall(newReference("bar")))
+                            fooCallBar.arguments += newCall(newReference("bar"))
                             b.initializer =
                                 newBinaryOperator("+").also { outer ->
                                     outer.lhs =
@@ -876,28 +866,27 @@ class FlowQueriesTest {
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printA = newCall(newReference("print"))
-                                        printA.addArgument(newReference("a"))
+                                        printA.arguments += newReference("a")
                                         thenBlock += printA
                                     }
                                 ifElse.elseStatement =
                                     newBlock(enterScope = true) { elseBlock ->
                                         val printB = newCall(newReference("print"))
-                                        printB.addArgument(newReference("b"))
+                                        printB.arguments += newReference("b")
                                         elseBlock += printB
                                     }
                                 val printB2 = newCall(newReference("print"))
-                                printB2.addArgument(newReference("b"))
+                                printB2.arguments += newReference("b")
                                 ifElse.condition = printB2
                             }
                             block += ifElse
 
                             val bazCall = newCall(newReference("baz"))
-                            bazCall.addArgument(
+                            bazCall.arguments +=
                                 newBinaryOperator("+").also {
                                     it.lhs = newReference("a")
                                     it.rhs = newReference("b")
                                 }
-                            )
                             block += bazCall
                         }
                 }
@@ -933,15 +922,14 @@ class FlowQueriesTest {
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
                                         val printlnCall = newCall(newReference("println"))
-                                        printlnCall.addArgument(
+                                        printlnCall.arguments +=
                                             newLiteral("Then branch", objectType("string"))
-                                        )
                                         thenBlock += printlnCall
                                     }
                                 ifElse.elseStatement =
                                     newBlock(enterScope = true) { elseBlock ->
                                         val recCall = newCall(newReference("a"))
-                                        recCall.addArgument(newLiteral(1, objectType("int")))
+                                        recCall.arguments += newLiteral(1, objectType("int"))
                                         elseBlock += recCall
                                     }
                             }
@@ -960,7 +948,7 @@ class FlowQueriesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val aCall = newCall(newReference("a"))
-                            aCall.addArgument(newReference("value", objectType("int")))
+                            aCall.arguments += newReference("value", objectType("int"))
                             block += aCall
 
                             block += newReturn()
@@ -976,7 +964,7 @@ class FlowQueriesTest {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val bCall = newCall(newReference("b"))
-                            bCall.addArgument(newReference("value", objectType("int")))
+                            bCall.arguments += newReference("value", objectType("int"))
                             block += bCall
 
                             block += newReturn()
@@ -1003,7 +991,7 @@ class FlowQueriesTest {
                                 forEach.variable = iDeclStmt
 
                                 val rangeCall = newCall(newReference("range"))
-                                rangeCall.addArgument(newLiteral(1, objectType("int")))
+                                rangeCall.arguments += newLiteral(1, objectType("int"))
                                 forEach.iterable = rangeCall
 
                                 forEach.statement = newBlock { loopBodyBlock ->
@@ -1015,15 +1003,15 @@ class FlowQueriesTest {
                                     loopBodyBlock += tempDecl
 
                                     val aCall = newCall(newReference("a"))
-                                    aCall.addArgument(newReference("i", objectType("int")))
+                                    aCall.arguments += newReference("i", objectType("int"))
                                     loopBodyBlock += aCall
 
                                     val bCall = newCall(newReference("b"))
-                                    bCall.addArgument(newReference("i", objectType("int")))
+                                    bCall.arguments += newReference("i", objectType("int"))
                                     loopBodyBlock += bCall
 
                                     val cCall = newCall(newReference("c"))
-                                    cCall.addArgument(newReference("i", objectType("int")))
+                                    cCall.arguments += newReference("i", objectType("int"))
                                     loopBodyBlock += cCall
                                 }
                             }

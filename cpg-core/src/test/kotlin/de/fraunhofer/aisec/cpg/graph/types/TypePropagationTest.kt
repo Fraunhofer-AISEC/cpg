@@ -454,7 +454,7 @@ class TypePropagationTest {
                                 newVariable("b", objectType("BaseClass").pointer()).also { v ->
                                     v.initializer =
                                         newCall(newReference("create")).also { call ->
-                                            call.addArgument(newReference("random"))
+                                            call.arguments += newReference("random")
                                         }
                                 }
                             bDeclStmt.declarations += b

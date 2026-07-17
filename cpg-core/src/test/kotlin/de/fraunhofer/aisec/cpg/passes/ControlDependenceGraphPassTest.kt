@@ -266,14 +266,14 @@ class ControlDependenceGraphPassTest {
                                         )
 
                                     val printfCall0 = newCall(newReference("printf"))
-                                    printfCall0.addArgument(newLiteral("0\n", objectType("string")))
+                                    printfCall0.arguments += newLiteral("0\n", objectType("string"))
                                     thenBlock += printfCall0
                                 }
                         }
                         block += if0
 
                         val printfCall1 = newCall(newReference("printf"))
-                        printfCall1.addArgument(newLiteral("1\n", objectType("string")))
+                        printfCall1.arguments += newLiteral("1\n", objectType("string"))
                         block += printfCall1
 
                         val if1 = newIfElse { ifElse ->
@@ -307,7 +307,7 @@ class ControlDependenceGraphPassTest {
                         block += if1
 
                         val printfCall2 = newCall(newReference("printf"))
-                        printfCall2.addArgument(newLiteral("2\n", objectType("string")))
+                        printfCall2.arguments += newLiteral("2\n", objectType("string"))
                         block += printfCall2
 
                         val returnStmt = newReturn()
@@ -363,16 +363,15 @@ class ControlDependenceGraphPassTest {
                                 forEach.statement =
                                     newBlock(enterScope = true) { loopBody ->
                                         val printfCall = newCall(newReference("printf"))
-                                        printfCall.addArgument(
+                                        printfCall.arguments +=
                                             newLiteral("loop: \${}\n", objectType("string"))
-                                        )
-                                        printfCall.addArgument(newReference("loopVar"))
+                                        printfCall.arguments += newReference("loopVar")
                                         loopBody += printfCall
                                     }
                                 block += forEach
 
                                 val printfCall1 = newCall(newReference("printf"))
-                                printfCall1.addArgument(newLiteral("1\n", objectType("string")))
+                                printfCall1.arguments += newLiteral("1\n", objectType("string"))
                                 block += printfCall1
 
                                 val returnStmt = newReturn()

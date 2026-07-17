@@ -365,16 +365,15 @@ class ControlFlowSensitiveDFGPassTest {
                             forEach.statement =
                                 newBlock(enterScope = true) { loopBody ->
                                     val printfCall = newCall(newReference("printf"))
-                                    printfCall.addArgument(
+                                    printfCall.arguments +=
                                         newLiteral("loop: \${}\n", objectType("string"))
-                                    )
-                                    printfCall.addArgument(newReference("loopVar"))
+                                    printfCall.arguments += newReference("loopVar")
                                     loopBody += printfCall
                                 }
                             block += forEach
 
                             val printfCall2 = newCall(newReference("printf"))
-                            printfCall2.addArgument(newLiteral("1\n", objectType("string")))
+                            printfCall2.arguments += newLiteral("1\n", objectType("string"))
                             block += printfCall2
 
                             val returnStmt = newReturn()

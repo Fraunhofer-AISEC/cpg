@@ -132,12 +132,11 @@ class DFGFunctionSummariesTest {
                                     newMemberCall(
                                         newMemberAccess("addAll", verySpecialListConstruction)
                                     )
-                                addAll1.addArgument(newLiteral(1, objectType("int")))
-                                addAll1.addArgument(
+                                addAll1.arguments += newLiteral(1, objectType("int"))
+                                addAll1.arguments +=
                                     newConstruction("test.Object").also {
                                         it.type = objectType("test.Object")
                                     }
-                                )
                                 block += addAll1
 
                                 val specialListConstruction1 =
@@ -149,12 +148,11 @@ class DFGFunctionSummariesTest {
                                     newMemberCall(
                                         newMemberAccess("addAll", specialListConstruction1)
                                     )
-                                addAll2.addArgument(newLiteral(1, objectType("int")))
-                                addAll2.addArgument(
+                                addAll2.arguments += newLiteral(1, objectType("int"))
+                                addAll2.arguments +=
                                     newConstruction("test.List").also {
                                         it.type = objectType("test.List")
                                     }
-                                )
                                 block += addAll2
 
                                 val specialListConstruction2 =
@@ -166,12 +164,11 @@ class DFGFunctionSummariesTest {
                                     newMemberCall(
                                         newMemberAccess("addAll", specialListConstruction2)
                                     )
-                                addAll3.addArgument(newLiteral(1, objectType("int")))
-                                addAll3.addArgument(
+                                addAll3.arguments += newLiteral(1, objectType("int"))
+                                addAll3.arguments +=
                                     newConstruction("test.Object").also {
                                         it.type = objectType("test.Object")
                                     }
-                                )
                                 block += addAll3
 
                                 val declStmtA = newDeclarationStatement()
@@ -194,16 +191,15 @@ class DFGFunctionSummariesTest {
                                             newReference("a", objectType("test.List")),
                                         )
                                     )
-                                addAll4.addArgument(newLiteral(1, objectType("int")))
-                                addAll4.addArgument(
+                                addAll4.arguments += newLiteral(1, objectType("int"))
+                                addAll4.arguments +=
                                     newConstruction("test.Object").also {
                                         it.type = objectType("test.Object")
                                     }
-                                )
                                 block += addAll4
 
                                 val printCall = newCall(newReference("print"))
-                                printCall.addArgument(newReference("a", objectType("test.List")))
+                                printCall.arguments += newReference("a", objectType("test.List"))
                                 block += printCall
 
                                 val randomTypeConstruction =
@@ -213,12 +209,11 @@ class DFGFunctionSummariesTest {
                                 block += randomTypeConstruction
                                 val addAll5 =
                                     newMemberCall(newMemberAccess("addAll", randomTypeConstruction))
-                                addAll5.addArgument(newLiteral(1, objectType("int")))
-                                addAll5.addArgument(
+                                addAll5.arguments += newLiteral(1, objectType("int"))
+                                addAll5.arguments +=
                                     newConstruction("test.Object").also {
                                         it.type = objectType("test.Object")
                                     }
-                                )
                                 block += addAll5
 
                                 block +=
@@ -442,13 +437,11 @@ class DFGFunctionSummariesTest {
                             block += declStmtB
 
                             val memcpyCall = newCall(newReference("memcpy"))
-                            memcpyCall.addArgument(
+                            memcpyCall.arguments +=
                                 newPointerReference("a").also { it.input = newReference("a") }
-                            )
-                            memcpyCall.addArgument(
+                            memcpyCall.arguments +=
                                 newPointerReference("b").also { it.input = newReference("b") }
-                            )
-                            memcpyCall.addArgument(newLiteral(1, objectType("int")))
+                            memcpyCall.arguments += newLiteral(1, objectType("int"))
                             block += memcpyCall
 
                             block += newReturn().also { it.returnValue = newReference("a") }
@@ -589,13 +582,11 @@ class DFGFunctionSummariesTest {
                             block += declStmtB
 
                             val memcpyCall = newCall(newReference("memcpy"))
-                            memcpyCall.addArgument(
+                            memcpyCall.arguments +=
                                 newPointerReference("a").also { it.input = newReference("a") }
-                            )
-                            memcpyCall.addArgument(
+                            memcpyCall.arguments +=
                                 newPointerReference("b").also { it.input = newReference("b") }
-                            )
-                            memcpyCall.addArgument(newLiteral(1, objectType("int")))
+                            memcpyCall.arguments += newLiteral(1, objectType("int"))
                             block += memcpyCall
 
                             block += newReturn().also { it.returnValue = newReference("a") }

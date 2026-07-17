@@ -93,7 +93,7 @@ class Query {
                                         ),
                                         false,
                                     )
-                                printlnCall.addArgument(newReference("s"))
+                                printlnCall.arguments += newReference("s")
                                 block += printlnCall
 
                                 block += newReturn()
@@ -136,7 +136,7 @@ class Query {
                                         newMemberAccess("print", newReference("sc")),
                                         false,
                                     )
-                                printCall.addArgument(newReference("s"))
+                                printCall.arguments += newReference("s")
                                 block += printCall
 
                                 val printCall2 =
@@ -149,7 +149,7 @@ class Query {
                                         newMemberAccess("test", newReference("sc")),
                                         false,
                                     )
-                                printCall2.addArgument(testCall)
+                                printCall2.arguments += testCall
                                 block += printCall2
                             }
                     }
@@ -180,9 +180,8 @@ class Query {
                                     newMemberAccess("getLogger", newReference("Logger")),
                                     false,
                                 )
-                            getLoggerCall.addArgument(
+                            getLoggerCall.arguments +=
                                 newLiteral("DataflowLogger", objectType("string"))
-                            )
                             field.initializer = getLoggerCall
                         }
 
@@ -206,7 +205,7 @@ class Query {
                                         ),
                                         false,
                                     )
-                                printlnCall.addArgument(newReference("s"))
+                                printlnCall.arguments += newReference("s")
                                 block += printlnCall
 
                                 block += newReturn()
@@ -253,8 +252,8 @@ class Query {
                                     newMemberCall(newMemberAccess("toString", integerRef), false)
                                 innerCall.type = objectType("string")
                                 innerCall.isStatic = true
-                                innerCall.addArgument(newMemberAccess("a", newReference("sc")))
-                                outerCall.addArgument(innerCall)
+                                innerCall.arguments += newMemberAccess("a", newReference("sc"))
+                                outerCall.arguments += innerCall
                                 block += outerCall
 
                                 val logCall =
@@ -262,8 +261,8 @@ class Query {
                                         newMemberAccess("log", newReference("logger")),
                                         false,
                                     )
-                                logCall.addArgument(newMemberAccess("INFO", newReference("Level")))
-                                logCall.addArgument(
+                                logCall.arguments += newMemberAccess("INFO", newReference("Level"))
+                                logCall.arguments +=
                                     newBinaryOperator("+").also { outer ->
                                         outer.lhs =
                                             newBinaryOperator("+").also { inner ->
@@ -276,7 +275,6 @@ class Query {
                                                 objectType("string"),
                                             )
                                     }
-                                )
                                 block += logCall
 
                                 block += newReturn()
@@ -311,9 +309,8 @@ class Query {
                                     newMemberAccess("getLogger", newReference("Logger")),
                                     false,
                                 )
-                            getLoggerCall.addArgument(
+                            getLoggerCall.arguments +=
                                 newLiteral("DataflowLogger", objectType("string"))
-                            )
                             field.initializer = getLoggerCall
                         }
 
@@ -337,7 +334,7 @@ class Query {
                                         ),
                                         false,
                                     )
-                                printlnCall.addArgument(newReference("s"))
+                                printlnCall.arguments += newReference("s")
                                 block += printlnCall
 
                                 block += newReturn()
@@ -376,8 +373,8 @@ class Query {
                                         newMemberAccess("log", newReference("logger")),
                                         false,
                                     )
-                                logCall.addArgument(newMemberAccess("INFO", newReference("Level")))
-                                logCall.addArgument(
+                                logCall.arguments += newMemberAccess("INFO", newReference("Level"))
+                                logCall.arguments +=
                                     newBinaryOperator("+").also { outer ->
                                         outer.lhs =
                                             newBinaryOperator("+").also { inner ->
@@ -390,7 +387,6 @@ class Query {
                                                 objectType("string"),
                                             )
                                     }
-                                )
                                 block += logCall
 
                                 val dataflowRef = newReference("Dataflow", objectType("Dataflow"))
@@ -406,8 +402,8 @@ class Query {
                                     newMemberCall(newMemberAccess("toString", integerRef), false)
                                 innerCall.type = objectType("string")
                                 innerCall.isStatic = true
-                                innerCall.addArgument(newMemberAccess("a", newReference("sc")))
-                                outerCall.addArgument(innerCall)
+                                innerCall.arguments += newMemberAccess("a", newReference("sc"))
+                                outerCall.arguments += innerCall
                                 block += outerCall
 
                                 block += newReturn()
@@ -439,9 +435,8 @@ class Query {
                                     newMemberAccess("getLogger", newReference("Logger")),
                                     false,
                                 )
-                            getLoggerCall.addArgument(
+                            getLoggerCall.arguments +=
                                 newLiteral("DataflowLogger", objectType("string"))
-                            )
                             field.initializer = getLoggerCall
                         }
 
@@ -465,7 +460,7 @@ class Query {
                                         ),
                                         false,
                                     )
-                                printlnCall.addArgument(newReference("s"))
+                                printlnCall.arguments += newReference("s")
                                 block += printlnCall
 
                                 block += newReturn()
@@ -504,8 +499,8 @@ class Query {
                                         newMemberAccess("log", newReference("logger")),
                                         false,
                                     )
-                                logCall.addArgument(newMemberAccess("INFO", newReference("Level")))
-                                logCall.addArgument(
+                                logCall.arguments += newMemberAccess("INFO", newReference("Level"))
+                                logCall.arguments +=
                                     newBinaryOperator("+").also { outer ->
                                         outer.lhs =
                                             newBinaryOperator("+").also { inner ->
@@ -520,7 +515,6 @@ class Query {
                                                 objectType("string"),
                                             )
                                     }
-                                )
                                 block += logCall
 
                                 block +=
@@ -543,8 +537,8 @@ class Query {
                                     newMemberCall(newMemberAccess("toString", integerRef), false)
                                 innerCall.type = objectType("string")
                                 innerCall.isStatic = true
-                                innerCall.addArgument(newMemberAccess("a", newReference("sc")))
-                                outerCall.addArgument(innerCall)
+                                innerCall.arguments += newMemberAccess("a", newReference("sc"))
+                                outerCall.arguments += innerCall
                                 block += outerCall
 
                                 block += newReturn()
@@ -1065,23 +1059,22 @@ class Query {
                             block += arrayDecl
 
                             val memcpyCall = newCall(newReference("memcpy"))
-                            memcpyCall.addArgument(newReference("array"))
-                            memcpyCall.addArgument(
+                            memcpyCall.arguments += newReference("array")
+                            memcpyCall.arguments +=
                                 newLiteral("Hello world", objectType("char").array())
-                            )
-                            memcpyCall.addArgument(newLiteral(11, objectType("int")))
+                            memcpyCall.arguments += newLiteral(11, objectType("int"))
                             block += memcpyCall
 
                             val printfCall = newCall(newReference("printf"))
-                            printfCall.addArgument(newReference("array"))
+                            printfCall.arguments += newReference("array")
                             block += printfCall
 
                             val freeCall1 = newCall(newReference("free"))
-                            freeCall1.addArgument(newReference("array"))
+                            freeCall1.arguments += newReference("array")
                             block += freeCall1
 
                             val freeCall2 = newCall(newReference("free"))
-                            freeCall2.addArgument(newReference("array"))
+                            freeCall2.arguments += newReference("array")
                             block += freeCall2
 
                             val aDecl = newDeclarationStatement()
