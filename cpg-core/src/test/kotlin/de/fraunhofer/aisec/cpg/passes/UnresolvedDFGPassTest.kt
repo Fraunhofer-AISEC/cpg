@@ -164,11 +164,10 @@ class UnresolvedDFGPassTest {
                         newParameter("i", objectType("int"), holder = c)
                         c.body =
                             newBlock(enterScope = true) { block ->
-                                val memberAccess = newMemberAccess("i", newReference("this"))
                                 block.statements +=
                                     newAssign(
                                         operatorCode = "=",
-                                        lhs = listOf(memberAccess),
+                                        lhs = listOf(newMemberAccess("i", newReference("this"))),
                                         rhs = listOf(newReference("i")),
                                     )
                                 block.statements += newReturn { it.isImplicit = true }
@@ -187,13 +186,13 @@ class UnresolvedDFGPassTest {
                         newParameter("arg", objectType("int"), holder = m)
                         m.body =
                             newBlock(enterScope = true) { block ->
-                                val returnStmt = newReturn()
-                                returnStmt.returnValue =
-                                    newBinaryOperator("+") {
-                                        it.lhs = newMemberAccess("i", newReference("this"))
-                                        it.rhs = newReference("arg")
-                                    }
-                                block.statements += returnStmt
+                                block.statements += newReturn {
+                                    it.returnValue =
+                                        newBinaryOperator("+") {
+                                            it.lhs = newMemberAccess("i", newReference("this"))
+                                            it.rhs = newReference("arg")
+                                        }
+                                }
                             }
                     }
 

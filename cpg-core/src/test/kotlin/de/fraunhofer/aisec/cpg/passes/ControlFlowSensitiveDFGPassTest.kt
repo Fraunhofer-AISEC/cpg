@@ -352,28 +352,32 @@ class ControlFlowSensitiveDFGPassTest {
                             // ForEach's own (generic) StatementHolder.statements -- NOT its
                             // dedicated .variable/.iterable properties, since those aren't used
                             // here. Faithfully reproduced.
-                            val forEach = newForEach()
-                            val loopVarDeclStmt = newDeclarationStatement()
-                            newVariable("loopVar", objectType("string"), holder = loopVarDeclStmt)
-                            forEach.statements += loopVarDeclStmt
-                            forEach.statements += newCall(newReference("magicFunction"))
-                            forEach.statement =
-                                newBlock(enterScope = true) { loopBody ->
-                                    val printfCall = newCall(newReference("printf"))
-                                    printfCall.arguments +=
-                                        newLiteral("loop: \${}\n", objectType("string"))
-                                    printfCall.arguments += newReference("loopVar")
-                                    loopBody.statements += printfCall
+                            block.statements += newForEach { forEach ->
+                                val loopVarDeclStmt = newDeclarationStatement()
+                                newVariable(
+                                    "loopVar",
+                                    objectType("string"),
+                                    holder = loopVarDeclStmt,
+                                )
+                                forEach.statements += loopVarDeclStmt
+                                forEach.statements += newCall(newReference("magicFunction"))
+                                forEach.statement =
+                                    newBlock(enterScope = true) { loopBody ->
+                                        loopBody.statements +=
+                                            newCall(newReference("printf")) {
+                                                it.arguments +=
+                                                    newLiteral("loop: \${}\n", objectType("string"))
+                                                it.arguments += newReference("loopVar")
+                                            }
+                                    }
+                            }
+
+                            block.statements +=
+                                newCall(newReference("printf")) {
+                                    it.arguments += newLiteral("1\n", objectType("string"))
                                 }
-                            block.statements += forEach
 
-                            val printfCall2 = newCall(newReference("printf"))
-                            printfCall2.arguments += newLiteral("1\n", objectType("string"))
-                            block.statements += printfCall2
-
-                            val returnStmt = newReturn()
-                            returnStmt.returnValue = newReference("i")
-                            block.statements += returnStmt
+                            block.statements += newReturn { it.returnValue = newReference("i") }
                         }
                 }
 

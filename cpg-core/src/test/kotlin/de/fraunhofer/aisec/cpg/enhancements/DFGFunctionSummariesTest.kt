@@ -197,9 +197,10 @@ class DFGFunctionSummariesTest {
                                     }
                                 block.statements += addAll4
 
-                                val printCall = newCall(newReference("print"))
-                                printCall.arguments += newReference("a", objectType("test.List"))
-                                block.statements += printCall
+                                block.statements +=
+                                    newCall(newReference("print")) {
+                                        it.arguments += newReference("a", objectType("test.List"))
+                                    }
 
                                 val randomTypeConstruction =
                                     newConstruction("random.Type") {
@@ -432,13 +433,18 @@ class DFGFunctionSummariesTest {
                             }
                             block.statements += declStmtB
 
-                            val memcpyCall = newCall(newReference("memcpy"))
-                            memcpyCall.arguments +=
-                                newPointerReference("a").also { it.input = newReference("a") }
-                            memcpyCall.arguments +=
-                                newPointerReference("b").also { it.input = newReference("b") }
-                            memcpyCall.arguments += newLiteral(1, objectType("int"))
-                            block.statements += memcpyCall
+                            block.statements +=
+                                newCall(newReference("memcpy")) {
+                                    it.arguments +=
+                                        newPointerReference("a").also { ref ->
+                                            ref.input = newReference("a")
+                                        }
+                                    it.arguments +=
+                                        newPointerReference("b").also { ref ->
+                                            ref.input = newReference("b")
+                                        }
+                                    it.arguments += newLiteral(1, objectType("int"))
+                                }
 
                             block.statements += newReturn { it.returnValue = newReference("a") }
                         }
@@ -575,13 +581,18 @@ class DFGFunctionSummariesTest {
                             }
                             block.statements += declStmtB
 
-                            val memcpyCall = newCall(newReference("memcpy"))
-                            memcpyCall.arguments +=
-                                newPointerReference("a").also { it.input = newReference("a") }
-                            memcpyCall.arguments +=
-                                newPointerReference("b").also { it.input = newReference("b") }
-                            memcpyCall.arguments += newLiteral(1, objectType("int"))
-                            block.statements += memcpyCall
+                            block.statements +=
+                                newCall(newReference("memcpy")) {
+                                    it.arguments +=
+                                        newPointerReference("a").also { ref ->
+                                            ref.input = newReference("a")
+                                        }
+                                    it.arguments +=
+                                        newPointerReference("b").also { ref ->
+                                            ref.input = newReference("b")
+                                        }
+                                    it.arguments += newLiteral(1, objectType("int"))
+                                }
 
                             block.statements += newReturn { it.returnValue = newReference("a") }
                         }

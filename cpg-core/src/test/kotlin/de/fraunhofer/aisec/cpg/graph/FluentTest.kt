@@ -96,49 +96,41 @@ class FluentTest {
                                     }
                                     block.statements += declStmt
 
-                                    val ifElse = newIfElse { ifElse ->
-                                        val lhs = newReference("argc")
-                                        val rhs = newLiteral(1)
+                                    block.statements += newIfElse { ifElse ->
                                         ifElse.condition =
                                             newBinaryOperator("==") {
-                                                it.lhs = lhs
-                                                it.rhs = rhs
+                                                it.lhs = newReference("argc")
+                                                it.rhs = newLiteral(1)
                                             }
                                         ifElse.thenStatement =
                                             newBlock(enterScope = true) { thenBlock ->
-                                                val printfCall =
+                                                thenBlock.statements +=
                                                     newCall(newReference("printf")) {
                                                         it.arguments += newLiteral("then")
                                                     }
-                                                thenBlock.statements += printfCall
                                             }
                                         ifElse.elseStatement = newIfElse { elseIf ->
-                                            val elseIfLhs = newReference("argc")
-                                            val elseIfRhs = newLiteral(1)
                                             elseIf.condition =
                                                 newBinaryOperator("==") {
-                                                    it.lhs = elseIfLhs
-                                                    it.rhs = elseIfRhs
+                                                    it.lhs = newReference("argc")
+                                                    it.rhs = newLiteral(1)
                                                 }
                                             elseIf.thenStatement =
                                                 newBlock(enterScope = true) { elseIfThenBlock ->
-                                                    val printfCall =
+                                                    elseIfThenBlock.statements +=
                                                         newCall(newReference("printf")) {
                                                             it.arguments += newLiteral("elseIf")
                                                         }
-                                                    elseIfThenBlock.statements += printfCall
                                                 }
                                             elseIf.elseStatement =
                                                 newBlock(enterScope = true) { elseIfElseBlock ->
-                                                    val printfCall =
+                                                    elseIfElseBlock.statements +=
                                                         newCall(newReference("printf")) {
                                                             it.arguments += newLiteral("else")
                                                         }
-                                                    elseIfElseBlock.statements += printfCall
                                                 }
                                         }
                                     }
-                                    block.statements += ifElse
 
                                     val someDeclStmt = newDeclarationStatement()
                                     newVariable(
@@ -148,22 +140,22 @@ class FluentTest {
                                     )
                                     block.statements += someDeclStmt
 
-                                    val doCall = newCall(newReference("do"))
-                                    val memberBase = newReference("some")
-                                    val memberCall =
-                                        newMemberCall(newMemberAccess("func", memberBase), false)
-                                    doCall.arguments += memberCall
-                                    block.statements += doCall
-
-                                    val returnStmt = newReturn()
-                                    val sumLhs = newReference("a")
-                                    val sumRhs = newLiteral(2)
-                                    returnStmt.returnValue =
-                                        newBinaryOperator("+") {
-                                            it.lhs = sumLhs
-                                            it.rhs = sumRhs
+                                    block.statements +=
+                                        newCall(newReference("do")) {
+                                            it.arguments +=
+                                                newMemberCall(
+                                                    newMemberAccess("func", newReference("some")),
+                                                    false,
+                                                )
                                         }
-                                    block.statements += returnStmt
+
+                                    block.statements += newReturn {
+                                        it.returnValue =
+                                            newBinaryOperator("+") {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newLiteral(2)
+                                            }
+                                    }
                                 }
                         }
 
@@ -301,33 +293,26 @@ class FluentTest {
 
                             func.body =
                                 newBlock(enterScope = true) { block ->
-                                    val statementRef = newReference("i")
-                                    val variableRef = newReference("i")
-                                    val iterableRef = newReference("someIterable")
-                                    val predLhs = newReference("i")
-                                    val predRhs = newLiteral(5, objectType("int"))
-                                    val comprehension = newComprehension {
-                                        it.variable = variableRef
-                                        it.iterable = iterableRef
-                                        it.predicate =
-                                            newBinaryOperator(">") { op ->
-                                                op.lhs = predLhs
-                                                op.rhs = predRhs
-                                            }
-                                    }
                                     val declStmt = newDeclarationStatement()
                                     newVariable("some", holder = declStmt) {
                                         it.initializer = newCollectionComprehension { cc ->
-                                            cc.statement = statementRef
-                                            cc.comprehensionExpressions += comprehension
+                                            cc.statement = newReference("i")
+                                            cc.comprehensionExpressions += newComprehension {
+                                                it.variable = newReference("i")
+                                                it.iterable = newReference("someIterable")
+                                                it.predicate =
+                                                    newBinaryOperator(">") { op ->
+                                                        op.lhs = newReference("i")
+                                                        op.rhs = newLiteral(5, objectType("int"))
+                                                    }
+                                            }
                                         }
                                     }
                                     block.statements += declStmt
 
-                                    val returnStmt = newReturn {
+                                    block.statements += newReturn {
                                         it.returnValue = newReference("some")
                                     }
-                                    block.statements += returnStmt
                                 }
                         }
 
@@ -372,36 +357,29 @@ class FluentTest {
 
                             func.body =
                                 newBlock(enterScope = true) { block ->
-                                    val statementRef = newReference("i")
-
                                     val iDeclStmt = newDeclarationStatement()
                                     newVariable("i", holder = iDeclStmt)
 
-                                    val iterableRef = newReference("someIterable")
-                                    val predLhs = newReference("i")
-                                    val predRhs = newLiteral(5, objectType("int"))
-                                    val comprehension = newComprehension {
-                                        it.variable = iDeclStmt
-                                        it.iterable = iterableRef
-                                        it.predicate =
-                                            newBinaryOperator(">") { op ->
-                                                op.lhs = predLhs
-                                                op.rhs = predRhs
-                                            }
-                                    }
                                     val declStmt = newDeclarationStatement()
                                     newVariable("some", holder = declStmt) {
                                         it.initializer = newCollectionComprehension { cc ->
-                                            cc.statement = statementRef
-                                            cc.comprehensionExpressions += comprehension
+                                            cc.statement = newReference("i")
+                                            cc.comprehensionExpressions += newComprehension {
+                                                it.variable = iDeclStmt
+                                                it.iterable = newReference("someIterable")
+                                                it.predicate =
+                                                    newBinaryOperator(">") { op ->
+                                                        op.lhs = newReference("i")
+                                                        op.rhs = newLiteral(5, objectType("int"))
+                                                    }
+                                            }
                                         }
                                     }
                                     block.statements += declStmt
 
-                                    val returnStmt = newReturn {
+                                    block.statements += newReturn {
                                         it.returnValue = newReference("some")
                                     }
-                                    block.statements += returnStmt
                                 }
                         }
 
@@ -447,37 +425,30 @@ class FluentTest {
 
                             func.body =
                                 newBlock(enterScope = true) { block ->
-                                    val statementRef = newReference("i")
-
                                     val iDeclStmt = newDeclarationStatement()
                                     newVariable("i", holder = iDeclStmt)
                                     newVariable("y", holder = iDeclStmt)
 
-                                    val iterableRef = newReference("someIterable")
-                                    val predLhs = newReference("i")
-                                    val predRhs = newLiteral(5, objectType("int"))
-                                    val comprehension = newComprehension {
-                                        it.variable = iDeclStmt
-                                        it.iterable = iterableRef
-                                        it.predicate =
-                                            newBinaryOperator(">") { op ->
-                                                op.lhs = predLhs
-                                                op.rhs = predRhs
-                                            }
-                                    }
                                     val declStmt = newDeclarationStatement()
                                     newVariable("some", holder = declStmt) {
                                         it.initializer = newCollectionComprehension { cc ->
-                                            cc.statement = statementRef
-                                            cc.comprehensionExpressions += comprehension
+                                            cc.statement = newReference("i")
+                                            cc.comprehensionExpressions += newComprehension {
+                                                it.variable = iDeclStmt
+                                                it.iterable = newReference("someIterable")
+                                                it.predicate =
+                                                    newBinaryOperator(">") { op ->
+                                                        op.lhs = newReference("i")
+                                                        op.rhs = newLiteral(5, objectType("int"))
+                                                    }
+                                            }
                                         }
                                     }
                                     block.statements += declStmt
 
-                                    val returnStmt = newReturn {
+                                    block.statements += newReturn {
                                         it.returnValue = newReference("some")
                                     }
-                                    block.statements += returnStmt
                                 }
                         }
 

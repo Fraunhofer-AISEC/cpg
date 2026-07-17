@@ -55,13 +55,14 @@ class Query {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val ret = newReturn()
-                                ret.returnValue =
-                                    newBinaryOperator("+") {
-                                        it.lhs = newLiteral("Dataflow: attr=", objectType("string"))
-                                        it.rhs = newReference("attr")
-                                    }
-                                block.statements += ret
+                                block.statements += newReturn { ret ->
+                                    ret.returnValue =
+                                        newBinaryOperator("+") {
+                                            it.lhs =
+                                                newLiteral("Dataflow: attr=", objectType("string"))
+                                            it.rhs = newReference("attr")
+                                        }
+                                }
                             }
                     }
 
@@ -71,9 +72,9 @@ class Query {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val ret = newReturn()
-                                ret.returnValue = newLiteral("abcd", objectType("string"))
-                                block.statements += ret
+                                block.statements += newReturn {
+                                    it.returnValue = newLiteral("abcd", objectType("string"))
+                                }
                             }
                     }
 
@@ -85,16 +86,16 @@ class Query {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val printlnCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall.arguments += newReference("s")
-                                block.statements += printlnCall
+                                    ) {
+                                        it.arguments += newReference("s")
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -110,43 +111,43 @@ class Query {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val scDecl = newDeclarationStatement()
-                                val sc = newVariable("sc", objectType("Dataflow"), holder = scDecl)
                                 val newExpr = newNew()
-                                val construction = newConstruction("Dataflow")
-                                construction.type = objectType("Dataflow")
-                                newExpr.initializer = construction
-                                sc.initializer = newExpr
+                                newExpr.initializer =
+                                    newConstruction("Dataflow") { it.type = objectType("Dataflow") }
+                                newVariable("sc", objectType("Dataflow"), holder = scDecl) {
+                                    it.initializer = newExpr
+                                }
                                 block.statements += scDecl
 
                                 val sDecl = newDeclarationStatement()
-                                val s = newVariable("s", objectType("string"), holder = sDecl)
-                                s.initializer =
-                                    newMemberCall(
-                                        newMemberAccess("toString", newReference("sc")),
-                                        false,
-                                    )
+                                newVariable("s", objectType("string"), holder = sDecl) {
+                                    it.initializer =
+                                        newMemberCall(
+                                            newMemberAccess("toString", newReference("sc")),
+                                            false,
+                                        )
+                                }
                                 block.statements += sDecl
 
-                                val printCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("print", newReference("sc")),
                                         false,
-                                    )
-                                printCall.arguments += newReference("s")
-                                block.statements += printCall
+                                    ) {
+                                        it.arguments += newReference("s")
+                                    }
 
-                                val printCall2 =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("print", newReference("sc")),
                                         false,
-                                    )
-                                val testCall =
-                                    newMemberCall(
-                                        newMemberAccess("test", newReference("sc")),
-                                        false,
-                                    )
-                                printCall2.arguments += testCall
-                                block.statements += printCall2
+                                    ) {
+                                        it.arguments +=
+                                            newMemberCall(
+                                                newMemberAccess("test", newReference("sc")),
+                                                false,
+                                            )
+                                    }
                             }
                     }
                 }
@@ -168,18 +169,16 @@ class Query {
 
                 newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
                     // TODO: this field is static. How do we model this?
-                    val logger =
-                        newField("logger", objectType("Logger"), holder = record) { field ->
-                            field.modifiers = setOf("static")
-                            val getLoggerCall =
-                                newMemberCall(
-                                    newMemberAccess("getLogger", newReference("Logger")),
-                                    false,
-                                )
-                            getLoggerCall.arguments +=
-                                newLiteral("DataflowLogger", objectType("string"))
-                            field.initializer = getLoggerCall
-                        }
+                    newField("logger", objectType("Logger"), holder = record) { field ->
+                        field.modifiers = setOf("static")
+                        field.initializer =
+                            newMemberCall(
+                                newMemberAccess("getLogger", newReference("Logger")),
+                                false,
+                            ) {
+                                it.arguments += newLiteral("DataflowLogger", objectType("string"))
+                            }
+                    }
 
                     newField("a", objectType("int"), holder = record)
 
@@ -193,16 +192,16 @@ class Query {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val printlnCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall.arguments += newReference("s")
-                                block.statements += printlnCall
+                                    ) {
+                                        it.arguments += newReference("s")
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -218,12 +217,12 @@ class Query {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val scDecl = newDeclarationStatement()
-                                val sc = newVariable("sc", objectType("Dataflow"), holder = scDecl)
                                 val newExpr = newNew()
-                                val construction = newConstruction("Dataflow")
-                                construction.type = objectType("Dataflow")
-                                newExpr.initializer = construction
-                                sc.initializer = newExpr
+                                newExpr.initializer =
+                                    newConstruction("Dataflow") { it.type = objectType("Dataflow") }
+                                newVariable("sc", objectType("Dataflow"), holder = scDecl) {
+                                    it.initializer = newExpr
+                                }
                                 block.statements += scDecl
 
                                 block.statements +=
@@ -235,41 +234,50 @@ class Query {
 
                                 val dataflowRef = newReference("Dataflow", objectType("Dataflow"))
                                 dataflowRef.refersTo = record
-                                val outerCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("highlyCriticalOperation", dataflowRef),
                                         false,
-                                    )
-                                outerCall.isStatic = true
-                                val integerRef = newReference("Integer", objectType("Integer"))
-                                val innerCall =
-                                    newMemberCall(newMemberAccess("toString", integerRef), false)
-                                innerCall.type = objectType("string")
-                                innerCall.isStatic = true
-                                innerCall.arguments += newMemberAccess("a", newReference("sc"))
-                                outerCall.arguments += innerCall
-                                block.statements += outerCall
+                                    ) { outerCall ->
+                                        outerCall.isStatic = true
+                                        outerCall.arguments +=
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "toString",
+                                                    newReference("Integer", objectType("Integer")),
+                                                ),
+                                                false,
+                                            ) { innerCall ->
+                                                innerCall.type = objectType("string")
+                                                innerCall.isStatic = true
+                                                innerCall.arguments +=
+                                                    newMemberAccess("a", newReference("sc"))
+                                            }
+                                    }
 
-                                val logCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("log", newReference("logger")),
                                         false,
-                                    )
-                                logCall.arguments += newMemberAccess("INFO", newReference("Level"))
-                                logCall.arguments +=
-                                    newBinaryOperator("+") { outer ->
-                                        outer.lhs =
-                                            newBinaryOperator("+") { inner ->
-                                                inner.lhs = newLiteral("put ", objectType("string"))
-                                                inner.rhs = newMemberAccess("a", newReference("sc"))
+                                    ) { logCall ->
+                                        logCall.arguments +=
+                                            newMemberAccess("INFO", newReference("Level"))
+                                        logCall.arguments +=
+                                            newBinaryOperator("+") { outer ->
+                                                outer.lhs =
+                                                    newBinaryOperator("+") { inner ->
+                                                        inner.lhs =
+                                                            newLiteral("put ", objectType("string"))
+                                                        inner.rhs =
+                                                            newMemberAccess("a", newReference("sc"))
+                                                    }
+                                                outer.rhs =
+                                                    newLiteral(
+                                                        " into highlyCriticalOperation()",
+                                                        objectType("string"),
+                                                    )
                                             }
-                                        outer.rhs =
-                                            newLiteral(
-                                                " into highlyCriticalOperation()",
-                                                objectType("string"),
-                                            )
                                     }
-                                block.statements += logCall
 
                                 block.statements += newReturn()
                             }
@@ -295,18 +303,16 @@ class Query {
 
                 newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
                     // TODO: this field is static. How do we model this?
-                    val logger =
-                        newField("logger", objectType("Logger"), holder = record) { field ->
-                            field.modifiers = setOf("static")
-                            val getLoggerCall =
-                                newMemberCall(
-                                    newMemberAccess("getLogger", newReference("Logger")),
-                                    false,
-                                )
-                            getLoggerCall.arguments +=
-                                newLiteral("DataflowLogger", objectType("string"))
-                            field.initializer = getLoggerCall
-                        }
+                    newField("logger", objectType("Logger"), holder = record) { field ->
+                        field.modifiers = setOf("static")
+                        field.initializer =
+                            newMemberCall(
+                                newMemberAccess("getLogger", newReference("Logger")),
+                                false,
+                            ) {
+                                it.arguments += newLiteral("DataflowLogger", objectType("string"))
+                            }
+                    }
 
                     newField("a", objectType("int"), holder = record)
 
@@ -320,16 +326,16 @@ class Query {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val printlnCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall.arguments += newReference("s")
-                                block.statements += printlnCall
+                                    ) {
+                                        it.arguments += newReference("s")
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -345,12 +351,12 @@ class Query {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val scDecl = newDeclarationStatement()
-                                val sc = newVariable("sc", objectType("Dataflow"), holder = scDecl)
                                 val newExpr = newNew()
-                                val construction = newConstruction("Dataflow")
-                                construction.type = objectType("Dataflow")
-                                newExpr.initializer = construction
-                                sc.initializer = newExpr
+                                newExpr.initializer =
+                                    newConstruction("Dataflow") { it.type = objectType("Dataflow") }
+                                newVariable("sc", objectType("Dataflow"), holder = scDecl) {
+                                    it.initializer = newExpr
+                                }
                                 block.statements += scDecl
 
                                 block.statements +=
@@ -360,43 +366,52 @@ class Query {
                                         listOf(newLiteral(5, objectType("int"))),
                                     )
 
-                                val logCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("log", newReference("logger")),
                                         false,
-                                    )
-                                logCall.arguments += newMemberAccess("INFO", newReference("Level"))
-                                logCall.arguments +=
-                                    newBinaryOperator("+") { outer ->
-                                        outer.lhs =
-                                            newBinaryOperator("+") { inner ->
-                                                inner.lhs = newLiteral("put ", objectType("string"))
-                                                inner.rhs = newMemberAccess("a", newReference("sc"))
+                                    ) { logCall ->
+                                        logCall.arguments +=
+                                            newMemberAccess("INFO", newReference("Level"))
+                                        logCall.arguments +=
+                                            newBinaryOperator("+") { outer ->
+                                                outer.lhs =
+                                                    newBinaryOperator("+") { inner ->
+                                                        inner.lhs =
+                                                            newLiteral("put ", objectType("string"))
+                                                        inner.rhs =
+                                                            newMemberAccess("a", newReference("sc"))
+                                                    }
+                                                outer.rhs =
+                                                    newLiteral(
+                                                        " into highlyCriticalOperation()",
+                                                        objectType("string"),
+                                                    )
                                             }
-                                        outer.rhs =
-                                            newLiteral(
-                                                " into highlyCriticalOperation()",
-                                                objectType("string"),
-                                            )
                                     }
-                                block.statements += logCall
 
                                 val dataflowRef = newReference("Dataflow", objectType("Dataflow"))
                                 dataflowRef.refersTo = record
-                                val outerCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("highlyCriticalOperation", dataflowRef),
                                         false,
-                                    )
-                                outerCall.isStatic = true
-                                val integerRef = newReference("Integer", objectType("Integer"))
-                                val innerCall =
-                                    newMemberCall(newMemberAccess("toString", integerRef), false)
-                                innerCall.type = objectType("string")
-                                innerCall.isStatic = true
-                                innerCall.arguments += newMemberAccess("a", newReference("sc"))
-                                outerCall.arguments += innerCall
-                                block.statements += outerCall
+                                    ) { outerCall ->
+                                        outerCall.isStatic = true
+                                        outerCall.arguments +=
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "toString",
+                                                    newReference("Integer", objectType("Integer")),
+                                                ),
+                                                false,
+                                            ) { innerCall ->
+                                                innerCall.type = objectType("string")
+                                                innerCall.isStatic = true
+                                                innerCall.arguments +=
+                                                    newMemberAccess("a", newReference("sc"))
+                                            }
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -419,18 +434,16 @@ class Query {
 
                 newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
                     // TODO: this field is static. How do we model this?
-                    val logger =
-                        newField("logger", objectType("Logger"), holder = record) { field ->
-                            field.modifiers = setOf("static")
-                            val getLoggerCall =
-                                newMemberCall(
-                                    newMemberAccess("getLogger", newReference("Logger")),
-                                    false,
-                                )
-                            getLoggerCall.arguments +=
-                                newLiteral("DataflowLogger", objectType("string"))
-                            field.initializer = getLoggerCall
-                        }
+                    newField("logger", objectType("Logger"), holder = record) { field ->
+                        field.modifiers = setOf("static")
+                        field.initializer =
+                            newMemberCall(
+                                newMemberAccess("getLogger", newReference("Logger")),
+                                false,
+                            ) {
+                                it.arguments += newLiteral("DataflowLogger", objectType("string"))
+                            }
+                    }
 
                     newField("a", objectType("int"), holder = record)
 
@@ -444,16 +457,16 @@ class Query {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val printlnCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall.arguments += newReference("s")
-                                block.statements += printlnCall
+                                    ) {
+                                        it.arguments += newReference("s")
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -469,12 +482,12 @@ class Query {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val scDecl = newDeclarationStatement()
-                                val sc = newVariable("sc", objectType("Dataflow"), holder = scDecl)
                                 val newExpr = newNew()
-                                val construction = newConstruction("Dataflow")
-                                construction.type = objectType("Dataflow")
-                                newExpr.initializer = construction
-                                sc.initializer = newExpr
+                                newExpr.initializer =
+                                    newConstruction("Dataflow") { it.type = objectType("Dataflow") }
+                                newVariable("sc", objectType("Dataflow"), holder = scDecl) {
+                                    it.initializer = newExpr
+                                }
                                 block.statements += scDecl
 
                                 block.statements +=
@@ -484,28 +497,31 @@ class Query {
                                         listOf(newLiteral(5, objectType("int"))),
                                     )
 
-                                val logCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("log", newReference("logger")),
                                         false,
-                                    )
-                                logCall.arguments += newMemberAccess("INFO", newReference("Level"))
-                                logCall.arguments +=
-                                    newBinaryOperator("+") { outer ->
-                                        outer.lhs =
-                                            newBinaryOperator("+") { inner ->
-                                                inner.lhs = newLiteral("put ", objectType("string"))
-                                                // Note: original uses ref("a") as base here (not
-                                                // "sc"), faithfully reproduced.
-                                                inner.rhs = newMemberAccess("a", newReference("a"))
+                                    ) { logCall ->
+                                        logCall.arguments +=
+                                            newMemberAccess("INFO", newReference("Level"))
+                                        logCall.arguments +=
+                                            newBinaryOperator("+") { outer ->
+                                                outer.lhs =
+                                                    newBinaryOperator("+") { inner ->
+                                                        inner.lhs =
+                                                            newLiteral("put ", objectType("string"))
+                                                        // Note: original uses ref("a") as base here
+                                                        // (not "sc"), faithfully reproduced.
+                                                        inner.rhs =
+                                                            newMemberAccess("a", newReference("a"))
+                                                    }
+                                                outer.rhs =
+                                                    newLiteral(
+                                                        " into highlyCriticalOperation()",
+                                                        objectType("string"),
+                                                    )
                                             }
-                                        outer.rhs =
-                                            newLiteral(
-                                                " into highlyCriticalOperation()",
-                                                objectType("string"),
-                                            )
                                     }
-                                block.statements += logCall
 
                                 block.statements +=
                                     newAssign(
@@ -516,20 +532,26 @@ class Query {
 
                                 val dataflowRef = newReference("Dataflow", objectType("Dataflow"))
                                 dataflowRef.refersTo = record
-                                val outerCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess("highlyCriticalOperation", dataflowRef),
                                         false,
-                                    )
-                                outerCall.isStatic = true
-                                val integerRef = newReference("Integer", objectType("Integer"))
-                                val innerCall =
-                                    newMemberCall(newMemberAccess("toString", integerRef), false)
-                                innerCall.type = objectType("string")
-                                innerCall.isStatic = true
-                                innerCall.arguments += newMemberAccess("a", newReference("sc"))
-                                outerCall.arguments += innerCall
-                                block.statements += outerCall
+                                    ) { outerCall ->
+                                        outerCall.isStatic = true
+                                        outerCall.arguments +=
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "toString",
+                                                    newReference("Integer", objectType("Integer")),
+                                                ),
+                                                false,
+                                            ) { innerCall ->
+                                                innerCall.type = objectType("string")
+                                                innerCall.isStatic = true
+                                                innerCall.arguments +=
+                                                    newMemberAccess("a", newReference("sc"))
+                                            }
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -557,38 +579,42 @@ class Query {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val cDecl = newDeclarationStatement()
-                            val c = newVariable("c", objectType("char").pointer(), holder = cDecl)
                             val creationExpr = newArrayConstruction()
                             creationExpr.addDimension(newLiteral(4, objectType("int")))
                             creationExpr.type = objectType("char")
-                            c.initializer = creationExpr
+                            newVariable("c", objectType("char").pointer(), holder = cDecl) {
+                                it.initializer = creationExpr
+                            }
                             block.statements += cDecl
 
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"), holder = aDecl)
-                            a.initializer = newLiteral(4, objectType("int"))
+                            newVariable("a", objectType("int"), holder = aDecl) {
+                                it.initializer = newLiteral(4, objectType("int"))
+                            }
                             block.statements += aDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("int"), holder = bDecl)
-                            b.initializer =
-                                newBinaryOperator("+") {
-                                    it.lhs = newReference("a")
-                                    it.rhs = newLiteral(1, objectType("int"))
-                                }
+                            newVariable("b", objectType("int"), holder = bDecl) { b ->
+                                b.initializer =
+                                    newBinaryOperator("+") {
+                                        it.lhs = newReference("a")
+                                        it.rhs = newLiteral(1, objectType("int"))
+                                    }
+                            }
                             block.statements += bDecl
 
                             val dDecl = newDeclarationStatement()
-                            val d = newVariable("d", objectType("char"), holder = dDecl)
-                            d.initializer = newSubscription {
-                                it.arrayExpression = newReference("c")
-                                it.subscriptExpression = newReference("b")
+                            newVariable("d", objectType("char"), holder = dDecl) { d ->
+                                d.initializer = newSubscription {
+                                    it.arrayExpression = newReference("c")
+                                    it.subscriptExpression = newReference("b")
+                                }
                             }
                             block.statements += dDecl
 
-                            val ret = newReturn()
-                            ret.returnValue = newLiteral(0, objectType("int"))
-                            block.statements += ret
+                            block.statements += newReturn {
+                                it.returnValue = newLiteral(0, objectType("int"))
+                            }
                         }
                 }
 
@@ -605,19 +631,20 @@ class Query {
                     func.type = computeType(func)
 
                     val cDecl = newDeclarationStatement()
-                    val c = newVariable("c", objectType("char").pointer(), holder = cDecl)
                     val creationExpr = newArrayConstruction()
                     creationExpr.addDimension(newLiteral(100, objectType("int")))
                     creationExpr.type = objectType("char")
-                    c.initializer = creationExpr
+                    newVariable("c", objectType("char").pointer(), holder = cDecl) {
+                        it.initializer = creationExpr
+                    }
                     tu.statements += cDecl
 
-                    val ret = newReturn()
-                    ret.returnValue = newSubscription {
-                        it.arrayExpression = newReference("c")
-                        it.subscriptExpression = newLiteral(0, objectType("int"))
+                    tu.statements += newReturn { ret ->
+                        ret.returnValue = newSubscription {
+                            it.arrayExpression = newReference("c")
+                            it.subscriptExpression = newLiteral(0, objectType("int"))
+                        }
                     }
-                    tu.statements += ret
                 }
 
                 translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
@@ -641,22 +668,25 @@ class Query {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val cDecl = newDeclarationStatement()
-                            val c = newVariable("c", objectType("char").pointer(), holder = cDecl)
                             val creationExpr = newArrayConstruction()
                             creationExpr.addDimension(newLiteral(4, objectType("int")))
                             creationExpr.type = objectType("char")
-                            c.initializer = creationExpr
+                            newVariable("c", objectType("char").pointer(), holder = cDecl) {
+                                it.initializer = creationExpr
+                            }
                             block.statements += cDecl
 
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"), holder = aDecl)
-                            a.initializer = newLiteral(0, objectType("int"))
+                            newVariable("a", objectType("int"), holder = aDecl) {
+                                it.initializer = newLiteral(0, objectType("int"))
+                            }
                             block.statements += aDecl
 
-                            val forNode = newFor { for_ ->
+                            block.statements += newFor { for_ ->
                                 val iDecl = newDeclarationStatement()
-                                val i = newVariable("i", objectType("int"), holder = iDecl)
-                                i.initializer = newLiteral(0, objectType("int"))
+                                newVariable("i", objectType("int"), holder = iDecl) {
+                                    it.initializer = newLiteral(0, objectType("int"))
+                                }
                                 for_.initializerStatement = iDecl
 
                                 for_.condition =
@@ -687,11 +717,8 @@ class Query {
                                         )
                                 }
                             }
-                            block.statements += forNode
 
-                            val ret = newReturn()
-                            ret.returnValue = newReference("a")
-                            block.statements += ret
+                            block.statements += newReturn { it.returnValue = newReference("a") }
                         }
                 }
 
@@ -716,10 +743,10 @@ class Query {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val cDecl = newDeclarationStatement()
-                            val c = newVariable("c", objectType("char").pointer(), holder = cDecl)
+                            newVariable("c", objectType("char").pointer(), holder = cDecl)
                             block.statements += cDecl
 
-                            val ifElse = newIfElse { ifElse ->
+                            block.statements += newIfElse { ifElse ->
                                 ifElse.condition =
                                     newBinaryOperator(">") {
                                         it.lhs = newLiteral(5, objectType("int"))
@@ -750,17 +777,18 @@ class Query {
                                             )
                                     }
                             }
-                            block.statements += ifElse
 
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"), holder = aDecl)
-                            a.initializer = newLiteral(0, objectType("int"))
+                            newVariable("a", objectType("int"), holder = aDecl) {
+                                it.initializer = newLiteral(0, objectType("int"))
+                            }
                             block.statements += aDecl
 
-                            val forNode = newFor { for_ ->
+                            block.statements += newFor { for_ ->
                                 val iDecl = newDeclarationStatement()
-                                val i = newVariable("i", objectType("int"), holder = iDecl)
-                                i.initializer = newLiteral(0, objectType("int"))
+                                newVariable("i", objectType("int"), holder = iDecl) {
+                                    it.initializer = newLiteral(0, objectType("int"))
+                                }
                                 for_.initializerStatement = iDecl
 
                                 for_.condition =
@@ -791,11 +819,8 @@ class Query {
                                         )
                                 }
                             }
-                            block.statements += forNode
 
-                            val ret = newReturn()
-                            ret.returnValue = newReference("a")
-                            block.statements += ret
+                            block.statements += newReturn { it.returnValue = newReference("a") }
                         }
                 }
 
@@ -820,22 +845,25 @@ class Query {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val cDecl = newDeclarationStatement()
-                            val c = newVariable("c", objectType("char").pointer(), holder = cDecl)
                             val creationExpr = newArrayConstruction()
                             creationExpr.addDimension(newLiteral(4, objectType("int")))
                             creationExpr.type = objectType("char")
-                            c.initializer = creationExpr
+                            newVariable("c", objectType("char").pointer(), holder = cDecl) {
+                                it.initializer = creationExpr
+                            }
                             block.statements += cDecl
 
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"), holder = aDecl)
-                            a.initializer = newLiteral(0, objectType("int"))
+                            newVariable("a", objectType("int"), holder = aDecl) {
+                                it.initializer = newLiteral(0, objectType("int"))
+                            }
                             block.statements += aDecl
 
-                            val forNode = newFor { for_ ->
+                            block.statements += newFor { for_ ->
                                 val iDecl = newDeclarationStatement()
-                                val i = newVariable("i", objectType("int"), holder = iDecl)
-                                i.initializer = newLiteral(0, objectType("int"))
+                                newVariable("i", objectType("int"), holder = iDecl) {
+                                    it.initializer = newLiteral(0, objectType("int"))
+                                }
                                 for_.initializerStatement = iDecl
 
                                 for_.condition =
@@ -866,11 +894,8 @@ class Query {
                                         )
                                 }
                             }
-                            block.statements += forNode
 
-                            val ret = newReturn()
-                            ret.returnValue = newReference("a")
-                            block.statements += ret
+                            block.statements += newReturn { it.returnValue = newReference("a") }
                         }
                 }
 
@@ -895,8 +920,9 @@ class Query {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("int"), holder = aDecl)
-                            a.initializer = newLiteral(4, objectType("int"))
+                            newVariable("a", objectType("int"), holder = aDecl) {
+                                it.initializer = newLiteral(4, objectType("int"))
+                            }
                             block.statements += aDecl
                             // TODO: There was a commented-out line. No idea what to do with it:
                             // int a, b = 4; // this is broken, a is missing an initializer
@@ -908,9 +934,7 @@ class Query {
                                     listOf(newLiteral(3, objectType("int"))),
                                 )
 
-                            val ret = newReturn()
-                            ret.returnValue = newReference("a")
-                            block.statements += ret
+                            block.statements += newReturn { it.returnValue = newReference("a") }
                         }
                 }
 
@@ -935,17 +959,18 @@ class Query {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val arrayDecl = newDeclarationStatement()
-                            val array =
-                                newVariable("array", objectType("char").array(), holder = arrayDecl)
-                            array.initializer = newLiteral("hello", objectType("char").array())
+                            newVariable("array", objectType("char").array(), holder = arrayDecl) {
+                                it.initializer = newLiteral("hello", objectType("char").array())
+                            }
                             block.statements += arrayDecl
 
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("short"), holder = aDecl)
-                            a.initializer = newLiteral(2, objectType("int"))
+                            newVariable("a", objectType("short"), holder = aDecl) {
+                                it.initializer = newLiteral(2, objectType("int"))
+                            }
                             block.statements += aDecl
 
-                            val ifElse = newIfElse { ifElse ->
+                            block.statements += newIfElse { ifElse ->
                                 ifElse.condition =
                                     newBinaryOperator("==") {
                                         it.lhs = newReference("array")
@@ -961,20 +986,20 @@ class Query {
                                             )
                                     }
                             }
-                            block.statements += ifElse
 
                             val xDecl = newDeclarationStatement()
-                            val x = newVariable("x", objectType("double"), holder = xDecl)
-                            x.initializer =
-                                newBinaryOperator("/") {
-                                    it.lhs = newLiteral(5, objectType("int"))
-                                    it.rhs = newReference("a")
-                                }
+                            newVariable("x", objectType("double"), holder = xDecl) { x ->
+                                x.initializer =
+                                    newBinaryOperator("/") {
+                                        it.lhs = newLiteral(5, objectType("int"))
+                                        it.rhs = newReference("a")
+                                    }
+                            }
                             block.statements += xDecl
 
-                            val ret = newReturn()
-                            ret.returnValue = newLiteral(0, objectType("int"))
-                            block.statements += ret
+                            block.statements += newReturn {
+                                it.returnValue = newLiteral(0, objectType("int"))
+                            }
                         }
                 }
 
@@ -999,36 +1024,41 @@ class Query {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             val arrayDecl = newDeclarationStatement()
-                            val array =
-                                newVariable("array", objectType("char").array(), holder = arrayDecl)
-                            array.initializer = newLiteral("hello", objectType("char").array())
+                            newVariable("array", objectType("char").array(), holder = arrayDecl) {
+                                it.initializer = newLiteral("hello", objectType("char").array())
+                            }
                             block.statements += arrayDecl
 
-                            val memcpyCall = newCall(newReference("memcpy"))
-                            memcpyCall.arguments += newReference("array")
-                            memcpyCall.arguments +=
-                                newLiteral("Hello world", objectType("char").array())
-                            memcpyCall.arguments += newLiteral(11, objectType("int"))
-                            block.statements += memcpyCall
+                            block.statements +=
+                                newCall(newReference("memcpy")) {
+                                    it.arguments += newReference("array")
+                                    it.arguments +=
+                                        newLiteral("Hello world", objectType("char").array())
+                                    it.arguments += newLiteral(11, objectType("int"))
+                                }
 
-                            val printfCall = newCall(newReference("printf"))
-                            printfCall.arguments += newReference("array")
-                            block.statements += printfCall
+                            block.statements +=
+                                newCall(newReference("printf")) {
+                                    it.arguments += newReference("array")
+                                }
 
-                            val freeCall1 = newCall(newReference("free"))
-                            freeCall1.arguments += newReference("array")
-                            block.statements += freeCall1
+                            block.statements +=
+                                newCall(newReference("free")) {
+                                    it.arguments += newReference("array")
+                                }
 
-                            val freeCall2 = newCall(newReference("free"))
-                            freeCall2.arguments += newReference("array")
-                            block.statements += freeCall2
+                            block.statements +=
+                                newCall(newReference("free")) {
+                                    it.arguments += newReference("array")
+                                }
 
                             val aDecl = newDeclarationStatement()
-                            val a = newVariable("a", objectType("short"), holder = aDecl)
-                            a.initializer = newLiteral(2, objectType("int"))
+                            newVariable("a", objectType("short"), holder = aDecl) {
+                                it.initializer = newLiteral(2, objectType("int"))
+                            }
                             block.statements += aDecl
 
-                            val ifElse = newIfElse { ifElse ->
+                            block.statements += newIfElse { ifElse ->
                                 ifElse.condition =
                                     newBinaryOperator("==") {
                                         it.lhs = newReference("array")
@@ -1044,20 +1074,21 @@ class Query {
                                             )
                                     }
                             }
-                            block.statements += ifElse
 
                             val xDecl = newDeclarationStatement()
-                            val x = newVariable("x", objectType("double"), holder = xDecl)
-                            x.initializer =
-                                newBinaryOperator("/") {
-                                    it.lhs = newLiteral(5, objectType("int"))
-                                    it.rhs = newReference("a")
-                                }
+                            newVariable("x", objectType("double"), holder = xDecl) { x ->
+                                x.initializer =
+                                    newBinaryOperator("/") {
+                                        it.lhs = newLiteral(5, objectType("int"))
+                                        it.rhs = newReference("a")
+                                    }
+                            }
                             block.statements += xDecl
 
                             val bDecl = newDeclarationStatement()
-                            val b = newVariable("b", objectType("int"), holder = bDecl)
-                            b.initializer = newLiteral(2147483648, objectType("int"))
+                            newVariable("b", objectType("int"), holder = bDecl) {
+                                it.initializer = newLiteral(2147483648, objectType("int"))
+                            }
                             block.statements += bDecl
 
                             block.statements +=
@@ -1068,13 +1099,14 @@ class Query {
                                 )
 
                             val cDecl = newDeclarationStatement()
-                            val c = newVariable("c", objectType("long"), holder = cDecl)
-                            c.initializer = newLiteral(-10000, objectType("long"))
+                            newVariable("c", objectType("long"), holder = cDecl) {
+                                it.initializer = newLiteral(-10000, objectType("long"))
+                            }
                             block.statements += cDecl
 
-                            val ret = newReturn()
-                            ret.returnValue = newLiteral(0, objectType("int"))
-                            block.statements += ret
+                            block.statements += newReturn {
+                                it.returnValue = newLiteral(0, objectType("int"))
+                            }
                         }
                 }
 

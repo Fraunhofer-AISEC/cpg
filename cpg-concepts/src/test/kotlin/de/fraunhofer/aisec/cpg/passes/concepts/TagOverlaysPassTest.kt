@@ -143,9 +143,10 @@ class TagOverlaysPassTest {
                                 }
                                 block.statements += declStmt
 
-                                val call = newCall(newReference("encrypt"))
-                                call.arguments += newReference("key")
-                                block.statements += call
+                                block.statements +=
+                                    newCall(newReference("encrypt")) {
+                                        it.arguments += newReference("key")
+                                    }
                             }
                     }
 

@@ -197,9 +197,10 @@ class GraphExamples {
                     func.body =
                         newBlock(enterScope = true) { block ->
                             declareVariable(block, "i", objectType("int")) { v ->
-                                val initList = newInitializerList()
-                                initList.initializers = mutableListOf(dottedCall("foo"))
-                                v.initializer = initList
+                                v.initializer =
+                                    newInitializerList().also {
+                                        it.initializers = mutableListOf(dottedCall("foo"))
+                                    }
                             }
                             block.statements += newReturn { it.returnValue = newReference("i") }
                         }
@@ -452,20 +453,22 @@ class GraphExamples {
                                     }
 
                                 // label("lab") { usedAsExpression = true; whileStmt {...} }
-                                val labelNode = newLabel()
-                                labelNode.label = "lab"
-                                labelNode.usedAsExpression = true
-                                labelNode.subStatement =
-                                    newWhile(enterScope = true) { whileNode ->
-                                        whileNode.usedAsExpression = true
-                                        whileNode.condition = newLiteral(true, objectType("bool"))
-                                        whileNode.statement =
-                                            newBlock().also {
-                                                it.statements += dottedCall("bodyCall")
+                                block.statements +=
+                                    newLabel().also { labelNode ->
+                                        labelNode.label = "lab"
+                                        labelNode.usedAsExpression = true
+                                        labelNode.subStatement =
+                                            newWhile(enterScope = true) { whileNode ->
+                                                whileNode.usedAsExpression = true
+                                                whileNode.condition =
+                                                    newLiteral(true, objectType("bool"))
+                                                whileNode.statement =
+                                                    newBlock().also {
+                                                        it.statements += dottedCall("bodyCall")
+                                                    }
+                                                whileNode.elseStatement = elseCallBlock()
                                             }
-                                        whileNode.elseStatement = elseCallBlock()
                                     }
-                                block.statements += labelNode
 
                                 // ifStmt { usedAsExpression = true; ... }
                                 block.statements += newIfElse { ifNode ->
@@ -575,23 +578,25 @@ class GraphExamples {
                             newBlock(enterScope = true) { block ->
                                 block.statements += dottedCall("preComprehensions")
 
-                                val listComp = newCollectionComprehension()
-                                listComp.statement = newReference("i")
-                                val comp1 = newComprehension {
-                                    it.variable = newReference("i")
-                                    it.iterable = newReference("someIterable")
+                                block.statements += newCollectionComprehension { listComp ->
+                                    listComp.statement = newReference("i")
+                                    listComp.comprehensionExpressions =
+                                        mutableListOf(
+                                            newComprehension {
+                                                it.variable = newReference("i")
+                                                it.iterable = newReference("someIterable")
+                                            },
+                                            newComprehension {
+                                                it.variable = newReference("j")
+                                                it.iterable = newReference("i")
+                                                it.predicate =
+                                                    newBinaryOperator(">") { gt ->
+                                                        gt.lhs = newReference("j")
+                                                        gt.rhs = newLiteral(5, objectType("int"))
+                                                    }
+                                            },
+                                        )
                                 }
-                                val comp2 = newComprehension {
-                                    it.variable = newReference("j")
-                                    it.iterable = newReference("i")
-                                    it.predicate =
-                                        newBinaryOperator(">") { gt ->
-                                            gt.lhs = newReference("j")
-                                            gt.rhs = newLiteral(5, objectType("int"))
-                                        }
-                                }
-                                listComp.comprehensionExpressions = mutableListOf(comp1, comp2)
-                                block.statements += listComp
 
                                 block.statements += dottedCall("postComprehensions")
                             }
@@ -1628,138 +1633,158 @@ class GraphExamples {
                                     it.initializer = newLiteral(0, objectType("int"))
                                 }
 
-                                val labelNode = newLabel()
-                                labelNode.label = "lab1"
-                                labelNode.subStatement =
-                                    newWhile(enterScope = true) { outerWhile ->
-                                        outerWhile.condition =
-                                            newBinaryOperator("<") {
-                                                it.lhs = newReference("param")
-                                                it.rhs = newLiteral(5, objectType("int"))
-                                            }
-                                        outerWhile.statement =
-                                            newBlock().also { outerBody ->
-                                                outerBody.statements +=
-                                                    newWhile(enterScope = true) { innerWhile ->
-                                                        innerWhile.condition =
-                                                            newBinaryOperator(">") {
-                                                                it.lhs = newReference("param")
-                                                                it.rhs =
-                                                                    newLiteral(6, objectType("int"))
-                                                            }
-                                                        innerWhile.statement =
-                                                            newBlock().also { innerBody ->
-                                                                innerBody.statements +=
-                                                                    newIfElse { innerIf ->
-                                                                        innerIf.condition =
-                                                                            newBinaryOperator(">") {
-                                                                                it.lhs =
+                                block.statements +=
+                                    newLabel().also { labelNode ->
+                                        labelNode.label = "lab1"
+                                        labelNode.subStatement =
+                                            newWhile(enterScope = true) { outerWhile ->
+                                                outerWhile.condition =
+                                                    newBinaryOperator("<") {
+                                                        it.lhs = newReference("param")
+                                                        it.rhs = newLiteral(5, objectType("int"))
+                                                    }
+                                                outerWhile.statement =
+                                                    newBlock().also { outerBody ->
+                                                        outerBody.statements +=
+                                                            newWhile(enterScope = true) { innerWhile
+                                                                ->
+                                                                innerWhile.condition =
+                                                                    newBinaryOperator(">") {
+                                                                        it.lhs =
+                                                                            newReference("param")
+                                                                        it.rhs =
+                                                                            newLiteral(
+                                                                                6,
+                                                                                objectType("int"),
+                                                                            )
+                                                                    }
+                                                                innerWhile.statement =
+                                                                    newBlock().also { innerBody ->
+                                                                        innerBody.statements +=
+                                                                            newIfElse { innerIf ->
+                                                                                innerIf.condition =
+                                                                                    newBinaryOperator(
+                                                                                        ">"
+                                                                                    ) {
+                                                                                        it.lhs =
+                                                                                            newReference(
+                                                                                                "param"
+                                                                                            )
+                                                                                        it.rhs =
+                                                                                            newLiteral(
+                                                                                                7,
+                                                                                                objectType(
+                                                                                                    "int"
+                                                                                                ),
+                                                                                            )
+                                                                                    }
+                                                                                innerIf
+                                                                                    .thenStatement =
+                                                                                    newBlock(
+                                                                                        enterScope =
+                                                                                            true
+                                                                                    ) { thenBlk ->
+                                                                                        thenBlk
+                                                                                            .statements +=
+                                                                                            newAssign(
+                                                                                                "=",
+                                                                                                listOf(
+                                                                                                    newReference(
+                                                                                                        "a"
+                                                                                                    )
+                                                                                                ),
+                                                                                                listOf(
+                                                                                                    newLiteral(
+                                                                                                        1,
+                                                                                                        objectType(
+                                                                                                            "int"
+                                                                                                        ),
+                                                                                                    )
+                                                                                                ),
+                                                                                            )
+                                                                                        thenBlk
+                                                                                            .statements +=
+                                                                                            newContinue()
+                                                                                                .also {
+                                                                                                    it
+                                                                                                        .label =
+                                                                                                        "lab1"
+                                                                                                }
+                                                                                    }
+                                                                                innerIf
+                                                                                    .elseStatement =
+                                                                                    newBlock(
+                                                                                        enterScope =
+                                                                                            true
+                                                                                    ) { elseBlk ->
+                                                                                        elseBlk
+                                                                                            .statements +=
+                                                                                            printlnCall(
+                                                                                                newReference(
+                                                                                                    "a"
+                                                                                                )
+                                                                                            )
+                                                                                        elseBlk
+                                                                                            .statements +=
+                                                                                            newAssign(
+                                                                                                "=",
+                                                                                                listOf(
+                                                                                                    newReference(
+                                                                                                        "a"
+                                                                                                    )
+                                                                                                ),
+                                                                                                listOf(
+                                                                                                    newLiteral(
+                                                                                                        2,
+                                                                                                        objectType(
+                                                                                                            "int"
+                                                                                                        ),
+                                                                                                    )
+                                                                                                ),
+                                                                                            )
+                                                                                        elseBlk
+                                                                                            .statements +=
+                                                                                            newBreak()
+                                                                                                .also {
+                                                                                                    it
+                                                                                                        .label =
+                                                                                                        "lab1"
+                                                                                                }
+                                                                                    }
+                                                                            }
+                                                                        innerBody.statements +=
+                                                                            newAssign(
+                                                                                "=",
+                                                                                listOf(
                                                                                     newReference(
-                                                                                        "param"
+                                                                                        "a"
                                                                                     )
-                                                                                it.rhs =
+                                                                                ),
+                                                                                listOf(
                                                                                     newLiteral(
-                                                                                        7,
+                                                                                        4,
                                                                                         objectType(
                                                                                             "int"
                                                                                         ),
                                                                                     )
-                                                                            }
-                                                                        innerIf.thenStatement =
-                                                                            newBlock(
-                                                                                enterScope = true
-                                                                            ) { thenBlk ->
-                                                                                thenBlk
-                                                                                    .statements +=
-                                                                                    newAssign(
-                                                                                        "=",
-                                                                                        listOf(
-                                                                                            newReference(
-                                                                                                "a"
-                                                                                            )
-                                                                                        ),
-                                                                                        listOf(
-                                                                                            newLiteral(
-                                                                                                1,
-                                                                                                objectType(
-                                                                                                    "int"
-                                                                                                ),
-                                                                                            )
-                                                                                        ),
-                                                                                    )
-                                                                                thenBlk
-                                                                                    .statements +=
-                                                                                    newContinue()
-                                                                                        .also {
-                                                                                            it
-                                                                                                .label =
-                                                                                                "lab1"
-                                                                                        }
-                                                                            }
-                                                                        innerIf.elseStatement =
-                                                                            newBlock(
-                                                                                enterScope = true
-                                                                            ) { elseBlk ->
-                                                                                elseBlk
-                                                                                    .statements +=
-                                                                                    printlnCall(
-                                                                                        newReference(
-                                                                                            "a"
-                                                                                        )
-                                                                                    )
-                                                                                elseBlk
-                                                                                    .statements +=
-                                                                                    newAssign(
-                                                                                        "=",
-                                                                                        listOf(
-                                                                                            newReference(
-                                                                                                "a"
-                                                                                            )
-                                                                                        ),
-                                                                                        listOf(
-                                                                                            newLiteral(
-                                                                                                2,
-                                                                                                objectType(
-                                                                                                    "int"
-                                                                                                ),
-                                                                                            )
-                                                                                        ),
-                                                                                    )
-                                                                                elseBlk
-                                                                                    .statements +=
-                                                                                    newBreak()
-                                                                                        .also {
-                                                                                            it
-                                                                                                .label =
-                                                                                                "lab1"
-                                                                                        }
-                                                                            }
-                                                                    }
-                                                                innerBody.statements +=
-                                                                    newAssign(
-                                                                        "=",
-                                                                        listOf(newReference("a")),
-                                                                        listOf(
-                                                                            newLiteral(
-                                                                                4,
-                                                                                objectType("int"),
+                                                                                ),
                                                                             )
-                                                                        ),
-                                                                    )
+                                                                    }
                                                             }
-                                                    }
 
-                                                outerBody.statements +=
-                                                    printlnCall(newReference("a"))
-                                                outerBody.statements +=
-                                                    newAssign(
-                                                        "=",
-                                                        listOf(newReference("a")),
-                                                        listOf(newLiteral(3, objectType("int"))),
-                                                    )
+                                                        outerBody.statements +=
+                                                            printlnCall(newReference("a"))
+                                                        outerBody.statements +=
+                                                            newAssign(
+                                                                "=",
+                                                                listOf(newReference("a")),
+                                                                listOf(
+                                                                    newLiteral(3, objectType("int"))
+                                                                ),
+                                                            )
+                                                    }
                                             }
                                     }
-                                block.statements += labelNode
 
                                 block.statements += printlnCall(newReference("a"))
                                 block.statements += newReturn { it.isImplicit = true }

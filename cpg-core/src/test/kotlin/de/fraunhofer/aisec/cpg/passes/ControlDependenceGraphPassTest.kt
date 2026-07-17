@@ -213,9 +213,9 @@ class ControlDependenceGraphPassTest {
                                         it.rhs = quuxCall
                                     }
 
-                                val returnStmt = newReturn()
-                                returnStmt.returnValue = newLiteral(1, objectType("int"))
-                                block.statements += returnStmt
+                                block.statements += newReturn {
+                                    it.returnValue = newLiteral(1, objectType("int"))
+                                }
                             }
                     }
 
@@ -248,10 +248,10 @@ class ControlDependenceGraphPassTest {
                         }
                         block.statements += declStmt
 
-                        val if0 = newIfElse { ifElse ->
+                        block.statements += newIfElse { ifElse ->
                             // "lt" has no ArgumentHolder context (see note in
-                            // ProgramDependenceGraphPassTest) -- condition ends up being just
-                            // the literal, not the comparison. Faithfully reproduced.
+                            // ProgramDependenceGraphPassTest) -- condition ends up being
+                            // just the literal, not the comparison. Faithfully reproduced.
                             ifElse.condition = newLiteral(1, objectType("int"))
                             ifElse.thenStatement =
                                 newBlock(enterScope = true) { thenBlock ->
@@ -262,18 +262,19 @@ class ControlDependenceGraphPassTest {
                                             rhs = listOf(newLiteral(1, objectType("int"))),
                                         )
 
-                                    val printfCall0 = newCall(newReference("printf"))
-                                    printfCall0.arguments += newLiteral("0\n", objectType("string"))
-                                    thenBlock.statements += printfCall0
+                                    thenBlock.statements +=
+                                        newCall(newReference("printf")) {
+                                            it.arguments += newLiteral("0\n", objectType("string"))
+                                        }
                                 }
                         }
-                        block.statements += if0
 
-                        val printfCall1 = newCall(newReference("printf"))
-                        printfCall1.arguments += newLiteral("1\n", objectType("string"))
-                        block.statements += printfCall1
+                        block.statements +=
+                            newCall(newReference("printf")) {
+                                it.arguments += newLiteral("1\n", objectType("string"))
+                            }
 
-                        val if1 = newIfElse { ifElse ->
+                        block.statements += newIfElse { ifElse ->
                             // "gt" DOES have ArgumentHolder context, so its own self-attach
                             // (which happens after the operands' self-attach) correctly ends
                             // up overwriting to become the condition.
@@ -301,15 +302,13 @@ class ControlDependenceGraphPassTest {
                                         )
                                 }
                         }
-                        block.statements += if1
 
-                        val printfCall2 = newCall(newReference("printf"))
-                        printfCall2.arguments += newLiteral("2\n", objectType("string"))
-                        block.statements += printfCall2
+                        block.statements +=
+                            newCall(newReference("printf")) {
+                                it.arguments += newLiteral("2\n", objectType("string"))
+                            }
 
-                        val returnStmt = newReturn()
-                        returnStmt.returnValue = newReference("i")
-                        block.statements += returnStmt
+                        block.statements += newReturn { it.returnValue = newReference("i") }
                     }
             }
 
@@ -340,39 +339,43 @@ class ControlDependenceGraphPassTest {
                                 }
                                 block.statements += declStmt
 
-                                val forEach = newForEach()
-                                val loopVarDeclStmt = newDeclarationStatement()
-                                newVariable(
-                                    "loopVar",
-                                    objectType("string"),
-                                    holder = loopVarDeclStmt,
-                                )
-                                // Fluent's declare{}/call(...) self-attach to ForEach's generic
-                                // StatementHolder.statements *in addition to* the explicit
-                                // `variable =`/`iterable =` property assignment done in the
-                                // original test -- both effects are reproduced faithfully.
-                                forEach.statements += loopVarDeclStmt
-                                forEach.variable = loopVarDeclStmt
-                                val magicCall = newCall(newReference("magicFunction"))
-                                forEach.statements += magicCall
-                                forEach.iterable = magicCall
-                                forEach.statement =
-                                    newBlock(enterScope = true) { loopBody ->
-                                        val printfCall = newCall(newReference("printf"))
-                                        printfCall.arguments +=
-                                            newLiteral("loop: \${}\n", objectType("string"))
-                                        printfCall.arguments += newReference("loopVar")
-                                        loopBody.statements += printfCall
+                                block.statements += newForEach { forEach ->
+                                    val loopVarDeclStmt = newDeclarationStatement()
+                                    newVariable(
+                                        "loopVar",
+                                        objectType("string"),
+                                        holder = loopVarDeclStmt,
+                                    )
+                                    // Fluent's declare{}/call(...) self-attach to ForEach's
+                                    // generic StatementHolder.statements *in addition to* the
+                                    // explicit `variable =`/`iterable =` property assignment
+                                    // done in the original test -- both effects are
+                                    // reproduced faithfully.
+                                    forEach.statements += loopVarDeclStmt
+                                    forEach.variable = loopVarDeclStmt
+                                    val magicCall = newCall(newReference("magicFunction"))
+                                    forEach.statements += magicCall
+                                    forEach.iterable = magicCall
+                                    forEach.statement =
+                                        newBlock(enterScope = true) { loopBody ->
+                                            loopBody.statements +=
+                                                newCall(newReference("printf")) {
+                                                    it.arguments +=
+                                                        newLiteral(
+                                                            "loop: \${}\n",
+                                                            objectType("string"),
+                                                        )
+                                                    it.arguments += newReference("loopVar")
+                                                }
+                                        }
+                                }
+
+                                block.statements +=
+                                    newCall(newReference("printf")) {
+                                        it.arguments += newLiteral("1\n", objectType("string"))
                                     }
-                                block.statements += forEach
 
-                                val printfCall1 = newCall(newReference("printf"))
-                                printfCall1.arguments += newLiteral("1\n", objectType("string"))
-                                block.statements += printfCall1
-
-                                val returnStmt = newReturn()
-                                returnStmt.returnValue = newReference("i")
-                                block.statements += returnStmt
+                                block.statements += newReturn { it.returnValue = newReference("i") }
                             }
                     }
 

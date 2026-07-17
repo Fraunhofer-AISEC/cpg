@@ -79,9 +79,8 @@ class TupleTest {
                 newFunction("main", holder = tu, enterScope = true) { func ->
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val printCall = newCall(newReference("print"))
-                            printCall.arguments += newReference("a")
-                            block.statements += printCall
+                            block.statements +=
+                                newCall(newReference("print")) { it.arguments += newReference("a") }
                         }
                 }
 
@@ -171,9 +170,8 @@ class TupleTest {
 
                             tuple.elements.forEach { scopeManager.addDeclaration(it) }
 
-                            val printCall = newCall(newReference("print"))
-                            printCall.arguments += newReference("a")
-                            block.statements += printCall
+                            block.statements +=
+                                newCall(newReference("print")) { it.arguments += newReference("a") }
                         }
                 }
 

@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.expressions.expressions
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.passes.DFGPass
@@ -77,17 +76,19 @@ class AssignTest {
                 newFunction("main", holder = tu, enterScope = true) { main ->
                     main.type = computeType(main)
 
-                    val refA = newReference("a")
-                    val refErr = newReference("err")
-                    val refFunc = newReference("func")
-                    refFunc.refersTo = func
-                    val call = newCall(refFunc)
-
-                    // Assignment from "func()" to "a" and "err".
-                    val stmt = newAssign(lhs = listOf(refA, refErr), rhs = listOf(call))
-
-                    main.body = newBlock()
-                    (main.body as Block).statements += stmt
+                    main.body = newBlock {
+                        // Assignment from "func()" to "a" and "err".
+                        it.statements +=
+                            newAssign(
+                                lhs = listOf(newReference("a"), newReference("err")),
+                                rhs =
+                                    listOf(
+                                        newCall(
+                                            newReference("func").also { ref -> ref.refersTo = func }
+                                        )
+                                    ),
+                            )
+                    }
                 }
 
                 translationResult { components.firstOrNull()?.translationUnits?.add(tu) }

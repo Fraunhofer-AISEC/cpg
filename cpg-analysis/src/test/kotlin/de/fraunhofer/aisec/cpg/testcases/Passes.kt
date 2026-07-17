@@ -57,20 +57,22 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"), holder = yDecl)
-                                y.initializer = newLiteral(5, objectType("int"))
+                                newVariable("y", objectType("int"), holder = yDecl) {
+                                    it.initializer = newLiteral(5, objectType("int"))
+                                }
                                 block.statements += yDecl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"), holder = xDecl)
-                                x.initializer =
-                                    newMemberCall(
-                                        newMemberAccess("nextUInt", newReference("URandomKt")),
-                                        false,
-                                    )
+                                newVariable("x", objectType("int"), holder = xDecl) {
+                                    it.initializer =
+                                        newMemberCall(
+                                            newMemberAccess("nextUInt", newReference("URandomKt")),
+                                            false,
+                                        )
+                                }
                                 block.statements += xDecl
 
-                                val ifElse = newIfElse { ifElse ->
+                                block.statements += newIfElse { ifElse ->
                                     ifElse.condition =
                                         newBinaryOperator("<=") {
                                             it.lhs = newReference("x")
@@ -99,18 +101,17 @@ class Passes {
                                                 }
                                         }
                                 }
-                                block.statements += ifElse
 
-                                val printlnCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall.arguments += newReference("y")
-                                block.statements += printlnCall
+                                    ) {
+                                        it.arguments += newReference("y")
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -123,20 +124,22 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"), holder = yDecl)
-                                y.initializer = newLiteral(6, objectType("int"))
+                                newVariable("y", objectType("int"), holder = yDecl) {
+                                    it.initializer = newLiteral(6, objectType("int"))
+                                }
                                 block.statements += yDecl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"), holder = xDecl)
-                                x.initializer =
-                                    newMemberCall(
-                                        newMemberAccess("nextUInt", newReference("URandomKt")),
-                                        false,
-                                    )
+                                newVariable("x", objectType("int"), holder = xDecl) {
+                                    it.initializer =
+                                        newMemberCall(
+                                            newMemberAccess("nextUInt", newReference("URandomKt")),
+                                            false,
+                                        )
+                                }
                                 block.statements += xDecl
 
-                                val ifElse = newIfElse { ifElse ->
+                                block.statements += newIfElse { ifElse ->
                                     ifElse.condition = newLiteral(true, objectType("boolean"))
                                     ifElse.thenStatement =
                                         newBlock(enterScope = true) { thenBlock ->
@@ -161,18 +164,17 @@ class Passes {
                                                 }
                                         }
                                 }
-                                block.statements += ifElse
 
-                                val printlnCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall.arguments += newReference("y")
-                                block.statements += printlnCall
+                                    ) {
+                                        it.arguments += newReference("y")
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -185,20 +187,22 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"), holder = yDecl)
-                                y.initializer = newLiteral(6, objectType("int"))
+                                newVariable("y", objectType("int"), holder = yDecl) {
+                                    it.initializer = newLiteral(6, objectType("int"))
+                                }
                                 block.statements += yDecl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"), holder = xDecl)
-                                x.initializer =
-                                    newMemberCall(
-                                        newMemberAccess("nextUInt", newReference("URandomKt")),
-                                        false,
-                                    )
+                                newVariable("x", objectType("int"), holder = xDecl) {
+                                    it.initializer =
+                                        newMemberCall(
+                                            newMemberAccess("nextUInt", newReference("URandomKt")),
+                                            false,
+                                        )
+                                }
                                 block.statements += xDecl
 
-                                val ifElse = newIfElse { ifElse ->
+                                block.statements += newIfElse { ifElse ->
                                     ifElse.condition = newLiteral(false, objectType("boolean"))
                                     ifElse.thenStatement =
                                         newBlock(enterScope = true) { thenBlock ->
@@ -223,18 +227,17 @@ class Passes {
                                                 }
                                         }
                                 }
-                                block.statements += ifElse
 
-                                val printlnCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall.arguments += newReference("y")
-                                block.statements += printlnCall
+                                    ) {
+                                        it.arguments += newReference("y")
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -247,20 +250,22 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"), holder = yDecl)
-                                y.initializer = newLiteral(6, objectType("int"))
+                                newVariable("y", objectType("int"), holder = yDecl) {
+                                    it.initializer = newLiteral(6, objectType("int"))
+                                }
                                 block.statements += yDecl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"), holder = xDecl)
-                                x.initializer =
-                                    newMemberCall(
-                                        newMemberAccess("nextUInt", newReference("URandomKt")),
-                                        false,
-                                    )
+                                newVariable("x", objectType("int"), holder = xDecl) {
+                                    it.initializer =
+                                        newMemberCall(
+                                            newMemberAccess("nextUInt", newReference("URandomKt")),
+                                            false,
+                                        )
+                                }
                                 block.statements += xDecl
 
-                                val ifElse = newIfElse { ifElse ->
+                                block.statements += newIfElse { ifElse ->
                                     ifElse.condition =
                                         newBinaryOperator("<=") {
                                             it.lhs = newReference("y")
@@ -289,18 +294,17 @@ class Passes {
                                                 }
                                         }
                                 }
-                                block.statements += ifElse
 
-                                val printlnCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall.arguments += newReference("y")
-                                block.statements += printlnCall
+                                    ) {
+                                        it.arguments += newReference("y")
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -313,25 +317,28 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val zDecl = newDeclarationStatement()
-                                val z = newVariable("z", objectType("int"), holder = zDecl)
-                                z.initializer = newLiteral(2, objectType("int"))
+                                newVariable("z", objectType("int"), holder = zDecl) {
+                                    it.initializer = newLiteral(2, objectType("int"))
+                                }
                                 block.statements += zDecl
 
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"), holder = yDecl)
-                                y.initializer = newReference("z")
+                                newVariable("y", objectType("int"), holder = yDecl) {
+                                    it.initializer = newReference("z")
+                                }
                                 block.statements += yDecl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"), holder = xDecl)
-                                x.initializer =
-                                    newMemberCall(
-                                        newMemberAccess("nextUInt", newReference("URandomKt")),
-                                        false,
-                                    )
+                                newVariable("x", objectType("int"), holder = xDecl) {
+                                    it.initializer =
+                                        newMemberCall(
+                                            newMemberAccess("nextUInt", newReference("URandomKt")),
+                                            false,
+                                        )
+                                }
                                 block.statements += xDecl
 
-                                val ifElse = newIfElse { ifElse ->
+                                block.statements += newIfElse { ifElse ->
                                     ifElse.condition =
                                         newBinaryOperator("<=") {
                                             it.lhs =
@@ -364,7 +371,6 @@ class Passes {
                                                 }
                                         }
                                 }
-                                block.statements += ifElse
 
                                 block.statements +=
                                     newAssign(
@@ -373,16 +379,16 @@ class Passes {
                                         listOf(newLiteral(10, objectType("int"))),
                                     )
 
-                                val printlnCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall.arguments += newReference("y")
-                                block.statements += printlnCall
+                                    ) {
+                                        it.arguments += newReference("y")
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -395,25 +401,28 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val zDecl = newDeclarationStatement()
-                                val z = newVariable("z", objectType("int"), holder = zDecl)
-                                z.initializer = newLiteral(5, objectType("int"))
+                                newVariable("z", objectType("int"), holder = zDecl) {
+                                    it.initializer = newLiteral(5, objectType("int"))
+                                }
                                 block.statements += zDecl
 
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"), holder = yDecl)
-                                y.initializer = newReference("z")
+                                newVariable("y", objectType("int"), holder = yDecl) {
+                                    it.initializer = newReference("z")
+                                }
                                 block.statements += yDecl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"), holder = xDecl)
-                                x.initializer =
-                                    newMemberCall(
-                                        newMemberAccess("nextUInt", newReference("URandomKt")),
-                                        false,
-                                    )
+                                newVariable("x", objectType("int"), holder = xDecl) {
+                                    it.initializer =
+                                        newMemberCall(
+                                            newMemberAccess("nextUInt", newReference("URandomKt")),
+                                            false,
+                                        )
+                                }
                                 block.statements += xDecl
 
-                                val ifElse = newIfElse { ifElse ->
+                                block.statements += newIfElse { ifElse ->
                                     ifElse.condition =
                                         newBinaryOperator("<=") {
                                             it.lhs =
@@ -446,7 +455,6 @@ class Passes {
                                                 }
                                         }
                                 }
-                                block.statements += ifElse
 
                                 block.statements +=
                                     newAssign(
@@ -455,16 +463,16 @@ class Passes {
                                         listOf(newLiteral(3, objectType("int"))),
                                     )
 
-                                val printlnCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall.arguments += newReference("y")
-                                block.statements += printlnCall
+                                    ) {
+                                        it.arguments += newReference("y")
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -477,20 +485,22 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"), holder = yDecl)
-                                y.initializer = newLiteral(6, objectType("int"))
+                                newVariable("y", objectType("int"), holder = yDecl) {
+                                    it.initializer = newLiteral(6, objectType("int"))
+                                }
                                 block.statements += yDecl
 
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("int"), holder = xDecl)
-                                x.initializer =
-                                    newMemberCall(
-                                        newMemberAccess("nextUInt", newReference("URandomKt")),
-                                        false,
-                                    )
+                                newVariable("x", objectType("int"), holder = xDecl) {
+                                    it.initializer =
+                                        newMemberCall(
+                                            newMemberAccess("nextUInt", newReference("URandomKt")),
+                                            false,
+                                        )
+                                }
                                 block.statements += xDecl
 
-                                val ifElse = newIfElse { ifElse ->
+                                block.statements += newIfElse { ifElse ->
                                     ifElse.condition =
                                         newBinaryOperator("<=") {
                                             it.lhs = newReference("y")
@@ -519,18 +529,17 @@ class Passes {
                                                 }
                                         }
                                 }
-                                block.statements += ifElse
 
-                                val printlnCall =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall.arguments += newReference("y")
-                                block.statements += printlnCall
+                                    ) {
+                                        it.arguments += newReference("y")
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -543,15 +552,16 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("boolean"), holder = xDecl)
-                                x.initializer = newLiteral(true, objectType("boolean"))
+                                newVariable("x", objectType("boolean"), holder = xDecl) {
+                                    it.initializer = newLiteral(true, objectType("boolean"))
+                                }
                                 block.statements += xDecl
 
-                                val whileNode =
+                                block.statements +=
                                     newWhile(enterScope = true) { w ->
                                         w.condition = newReference("x")
                                         w.statement = newBlock { loopBodyBlock ->
-                                            val printlnCall =
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess(
                                                         "println",
@@ -561,25 +571,27 @@ class Passes {
                                                         ),
                                                     ),
                                                     false,
-                                                )
-                                            printlnCall.arguments +=
-                                                newLiteral("Cool loop", objectType("string"))
-                                            loopBodyBlock.statements += printlnCall
+                                                ) {
+                                                    it.arguments +=
+                                                        newLiteral(
+                                                            "Cool loop",
+                                                            objectType("string"),
+                                                        )
+                                                }
                                         }
                                     }
-                                block.statements += whileNode
 
-                                val printlnCall2 =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall2.arguments +=
-                                    newLiteral("After cool loop", objectType("string"))
-                                block.statements += printlnCall2
+                                    ) {
+                                        it.arguments +=
+                                            newLiteral("After cool loop", objectType("string"))
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -592,15 +604,16 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("boolean"), holder = xDecl)
-                                x.initializer = newLiteral(true, objectType("boolean"))
+                                newVariable("x", objectType("boolean"), holder = xDecl) {
+                                    it.initializer = newLiteral(true, objectType("boolean"))
+                                }
                                 block.statements += xDecl
 
-                                val whileNode =
+                                block.statements +=
                                     newWhile(enterScope = true) { w ->
                                         w.condition = newReference("x")
                                         w.statement = newBlock { loopBodyBlock ->
-                                            val printlnCall =
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess(
                                                         "println",
@@ -610,10 +623,13 @@ class Passes {
                                                         ),
                                                     ),
                                                     false,
-                                                )
-                                            printlnCall.arguments +=
-                                                newLiteral("Cool loop", objectType("string"))
-                                            loopBodyBlock.statements += printlnCall
+                                                ) {
+                                                    it.arguments +=
+                                                        newLiteral(
+                                                            "Cool loop",
+                                                            objectType("string"),
+                                                        )
+                                                }
 
                                             loopBodyBlock.statements +=
                                                 newAssign(
@@ -623,19 +639,18 @@ class Passes {
                                                 )
                                         }
                                     }
-                                block.statements += whileNode
 
-                                val printlnCall2 =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall2.arguments +=
-                                    newLiteral("After cool loop", objectType("string"))
-                                block.statements += printlnCall2
+                                    ) {
+                                        it.arguments +=
+                                            newLiteral("After cool loop", objectType("string"))
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -647,11 +662,11 @@ class Passes {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val whileNode =
+                                block.statements +=
                                     newWhile(enterScope = true) { w ->
                                         w.condition = newLiteral(false, objectType("boolean"))
                                         w.statement = newBlock { loopBodyBlock ->
-                                            val printlnCall =
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess(
                                                         "println",
@@ -661,25 +676,27 @@ class Passes {
                                                         ),
                                                     ),
                                                     false,
-                                                )
-                                            printlnCall.arguments +=
-                                                newLiteral("Cool loop", objectType("string"))
-                                            loopBodyBlock.statements += printlnCall
+                                                ) {
+                                                    it.arguments +=
+                                                        newLiteral(
+                                                            "Cool loop",
+                                                            objectType("string"),
+                                                        )
+                                                }
                                         }
                                     }
-                                block.statements += whileNode
 
-                                val printlnCall2 =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall2.arguments +=
-                                    newLiteral("After cool loop", objectType("string"))
-                                block.statements += printlnCall2
+                                    ) {
+                                        it.arguments +=
+                                            newLiteral("After cool loop", objectType("string"))
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -692,11 +709,12 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("boolean"), holder = xDecl)
-                                x.initializer = newLiteral(1, objectType("int"))
+                                newVariable("x", objectType("boolean"), holder = xDecl) {
+                                    it.initializer = newLiteral(1, objectType("int"))
+                                }
                                 block.statements += xDecl
 
-                                val whileNode =
+                                block.statements +=
                                     newWhile(enterScope = true) { w ->
                                         w.condition =
                                             newBinaryOperator("<=") {
@@ -704,7 +722,7 @@ class Passes {
                                                 it.rhs = newLiteral(2, objectType("int"))
                                             }
                                         w.statement = newBlock { loopBodyBlock ->
-                                            val printlnCall =
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess(
                                                         "println",
@@ -714,25 +732,27 @@ class Passes {
                                                         ),
                                                     ),
                                                     false,
-                                                )
-                                            printlnCall.arguments +=
-                                                newLiteral("Cool loop", objectType("string"))
-                                            loopBodyBlock.statements += printlnCall
+                                                ) {
+                                                    it.arguments +=
+                                                        newLiteral(
+                                                            "Cool loop",
+                                                            objectType("string"),
+                                                        )
+                                                }
                                         }
                                     }
-                                block.statements += whileNode
 
-                                val printlnCall2 =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall2.arguments +=
-                                    newLiteral("After cool loop", objectType("string"))
-                                block.statements += printlnCall2
+                                    ) {
+                                        it.arguments +=
+                                            newLiteral("After cool loop", objectType("string"))
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -745,11 +765,12 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val xDecl = newDeclarationStatement()
-                                val x = newVariable("x", objectType("boolean"), holder = xDecl)
-                                x.initializer = newLiteral(1, objectType("int"))
+                                newVariable("x", objectType("boolean"), holder = xDecl) {
+                                    it.initializer = newLiteral(1, objectType("int"))
+                                }
                                 block.statements += xDecl
 
-                                val whileNode =
+                                block.statements +=
                                     newWhile(enterScope = true) { w ->
                                         w.condition =
                                             newBinaryOperator(">") {
@@ -757,7 +778,7 @@ class Passes {
                                                 it.rhs = newLiteral(3, objectType("int"))
                                             }
                                         w.statement = newBlock { loopBodyBlock ->
-                                            val printlnCall =
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess(
                                                         "println",
@@ -767,25 +788,27 @@ class Passes {
                                                         ),
                                                     ),
                                                     false,
-                                                )
-                                            printlnCall.arguments +=
-                                                newLiteral("Cool loop", objectType("string"))
-                                            loopBodyBlock.statements += printlnCall
+                                                ) {
+                                                    it.arguments +=
+                                                        newLiteral(
+                                                            "Cool loop",
+                                                            objectType("string"),
+                                                        )
+                                                }
                                         }
                                     }
-                                block.statements += whileNode
 
-                                val printlnCall2 =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall2.arguments +=
-                                    newLiteral("After cool loop", objectType("string"))
-                                block.statements += printlnCall2
+                                    ) {
+                                        it.arguments +=
+                                            newLiteral("After cool loop", objectType("string"))
+                                    }
 
                                 block.statements += newReturn()
                             }
@@ -798,15 +821,16 @@ class Passes {
                         method.body =
                             newBlock(enterScope = true) { block ->
                                 val yDecl = newDeclarationStatement()
-                                val y = newVariable("y", objectType("int"), holder = yDecl)
-                                y.initializer =
-                                    newMemberCall(
-                                        newMemberAccess("nextUInt", newReference("URandomKt")),
-                                        false,
-                                    )
+                                newVariable("y", objectType("int"), holder = yDecl) {
+                                    it.initializer =
+                                        newMemberCall(
+                                            newMemberAccess("nextUInt", newReference("URandomKt")),
+                                            false,
+                                        )
+                                }
                                 block.statements += yDecl
 
-                                val whileNode =
+                                block.statements +=
                                     newWhile(enterScope = true) { w ->
                                         w.condition =
                                             newBinaryOperator("<=") {
@@ -814,7 +838,7 @@ class Passes {
                                                 it.rhs = newLiteral(2, objectType("int"))
                                             }
                                         w.statement = newBlock { loopBodyBlock ->
-                                            val printlnCall =
+                                            loopBodyBlock.statements +=
                                                 newMemberCall(
                                                     newMemberAccess(
                                                         "println",
@@ -824,10 +848,13 @@ class Passes {
                                                         ),
                                                     ),
                                                     false,
-                                                )
-                                            printlnCall.arguments +=
-                                                newLiteral("Cool loop", objectType("string"))
-                                            loopBodyBlock.statements += printlnCall
+                                                ) {
+                                                    it.arguments +=
+                                                        newLiteral(
+                                                            "Cool loop",
+                                                            objectType("string"),
+                                                        )
+                                                }
 
                                             loopBodyBlock.statements +=
                                                 newAssign(
@@ -845,19 +872,18 @@ class Passes {
                                                 )
                                         }
                                     }
-                                block.statements += whileNode
 
-                                val printlnCall2 =
+                                block.statements +=
                                     newMemberCall(
                                         newMemberAccess(
                                             "println",
                                             newMemberAccess("out", newReference("System")),
                                         ),
                                         false,
-                                    )
-                                printlnCall2.arguments +=
-                                    newLiteral("After cool loop", objectType("string"))
-                                block.statements += printlnCall2
+                                    ) {
+                                        it.arguments +=
+                                            newLiteral("After cool loop", objectType("string"))
+                                    }
 
                                 block.statements += newReturn()
                             }

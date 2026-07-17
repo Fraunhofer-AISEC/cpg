@@ -129,19 +129,20 @@ class ProgramDependenceGraphPassTest {
                                 }
                                 block.statements += declStmt
 
-                                val ifElse = newIfElse { ifElse ->
+                                block.statements += newIfElse { ifElse ->
                                     // Fluent's "lt" infix operator has no ArgumentHolder
-                                    // context, so it never actually attaches the comparison it
-                                    // builds -- the self-attaching ref("i")/literal(0) operands
-                                    // silently overwrite each other on the IfElse (an
-                                    // ArgumentHolder), leaving the *literal* as the "condition"
-                                    // instead of the intended comparison. Faithfully reproduced
-                                    // here (confirmed via the original Fluent-based test).
+                                    // context, so it never actually attaches the comparison
+                                    // it builds -- the self-attaching ref("i")/literal(0)
+                                    // operands silently overwrite each other on the IfElse
+                                    // (an ArgumentHolder), leaving the *literal* as the
+                                    // "condition" instead of the intended comparison.
+                                    // Faithfully reproduced here (confirmed via the original
+                                    // Fluent-based test).
                                     ifElse.condition = newLiteral(0, objectType("int"))
 
                                     ifElse.thenStatement =
                                         newBlock(enterScope = true) { thenBlock ->
-                                            val assign =
+                                            thenBlock.statements +=
                                                 newAssign(
                                                     operatorCode = "=",
                                                     lhs = listOf(newReference("i")),
@@ -160,14 +161,10 @@ class ProgramDependenceGraphPassTest {
                                                             }
                                                         ),
                                                 )
-                                            thenBlock.statements += assign
                                         }
                                 }
-                                block.statements += ifElse
 
-                                val returnStmt = newReturn()
-                                returnStmt.returnValue = newReference("i")
-                                block.statements += returnStmt
+                                block.statements += newReturn { it.returnValue = newReference("i") }
                             }
                     }
 
@@ -198,7 +195,7 @@ class ProgramDependenceGraphPassTest {
                                 }
                                 block.statements += declStmt
 
-                                val whileStmt =
+                                block.statements +=
                                     newWhile(enterScope = true) { w ->
                                         // Unlike "lt" above, "gt" (via its ArgumentHolder context)
                                         // does end up attaching the correct comparison here -- its
@@ -211,12 +208,13 @@ class ProgramDependenceGraphPassTest {
                                             }
                                         w.statement =
                                             newBlock(enterScope = true) { loopBody ->
-                                                val printfCall = newCall(newReference("printf"))
-                                                printfCall.arguments +=
-                                                    newLiteral("#", objectType("string"))
-                                                loopBody.statements += printfCall
+                                                loopBody.statements +=
+                                                    newCall(newReference("printf")) {
+                                                        it.arguments +=
+                                                            newLiteral("#", objectType("string"))
+                                                    }
 
-                                                val decOp =
+                                                loopBody.statements +=
                                                     newUnaryOperator(
                                                         "--",
                                                         postfix = true,
@@ -228,18 +226,17 @@ class ProgramDependenceGraphPassTest {
                                                                     "remove prev, remove next"
                                                             }
                                                     }
-                                                loopBody.statements += decOp
                                             }
                                     }
-                                block.statements += whileStmt
 
-                                val printfCall2 = newCall(newReference("printf"))
-                                printfCall2.arguments += newLiteral("\n", objectType("string"))
-                                block.statements += printfCall2
+                                block.statements +=
+                                    newCall(newReference("printf")) {
+                                        it.arguments += newLiteral("\n", objectType("string"))
+                                    }
 
-                                val returnStmt = newReturn()
-                                returnStmt.returnValue = newLiteral(0, objectType("int"))
-                                block.statements += returnStmt
+                                block.statements += newReturn {
+                                    it.returnValue = newLiteral(0, objectType("int"))
+                                }
                             }
                     }
 
