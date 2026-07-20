@@ -249,9 +249,8 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
     }
 
     /**
-     * TODO: Not completed yet Translates a
-     *   [PropertyDeclarationSyntax][Csharp.AST.PropertyDeclarationSyntax] into a [Field] and a
-     *   [Method] per accessor (`get`, `set`).
+     * Translates a [PropertyDeclarationSyntax][Csharp.AST.PropertyDeclarationSyntax] into a [Field]
+     * and a [Method] per accessor (`get`, `set`).
      *
      * C# spec:
      * [Properties](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#157-properties)

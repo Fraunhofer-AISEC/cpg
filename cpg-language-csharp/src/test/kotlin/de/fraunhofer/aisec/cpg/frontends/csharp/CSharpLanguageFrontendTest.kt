@@ -491,6 +491,97 @@ class CSharpLanguageFrontendTest : BaseTest() {
         val person = tu.records["Person"]
         assertNotNull(person)
 
-        TODO()
+        // public string Name { get; set; }
+        val nameField = person.fields["Name"]
+        assertNotNull(nameField)
+        assertEquals(true, nameField.isImplicit)
+        assertLocalName("string", nameField.type)
+
+        val getName = person.methods.singleOrNull { it.name.localName.startsWith("get_Name") }
+        assertNotNull(getName)
+        assertLocalName("string", getName.returnTypes.singleOrNull())
+        val getNameBody = getName.body
+        assertIs<Block>(getNameBody)
+        val getNameReturn = getNameBody.statements.singleOrNull()
+        assertIs<Return>(getNameReturn)
+        val getNameValue = getNameReturn.returnValue
+        assertIs<MemberAccess>(getNameValue)
+        assertLocalName("Name", getNameValue)
+
+        val setName = person.methods.singleOrNull { it.name.localName.startsWith("set_Name") }
+        assertNotNull(setName)
+        val valueParam = setName.parameters.singleOrNull()
+        assertNotNull(valueParam)
+        assertLocalName("value", valueParam)
+        assertLocalName("string", valueParam.type)
+        val setNameBody = setName.body
+        assertIs<Block>(setNameBody)
+        val setNameAssign = setNameBody.statements.singleOrNull()
+        assertIs<Assign>(setNameAssign)
+        val setNameLhs = setNameAssign.lhs.singleOrNull()
+        assertIs<MemberAccess>(setNameLhs)
+        assertLocalName("Name", setNameLhs)
+        val setNameRhs = setNameAssign.rhs.singleOrNull()
+        assertIs<Reference>(setNameRhs)
+        assertLocalName("value", setNameRhs)
+
+        // public int BirthYear { get; } = 1990;
+        val birthYearField = person.fields["BirthYear"]
+        assertNotNull(birthYearField)
+        val birthYearInitializer = birthYearField.initializer
+        assertIs<Literal<*>>(birthYearInitializer)
+        assertEquals(1990, birthYearInitializer.value)
+        assertNotNull(person.methods.singleOrNull { it.name.localName.startsWith("get_BirthYear") })
+        assertNull(person.methods.firstOrNull { it.name.localName.startsWith("set_BirthYear") })
+
+        // public int Age { get { return age; } }
+        val getAge = person.methods.singleOrNull { it.name.localName.startsWith("get_Age_") }
+        assertNotNull(getAge)
+        val getAgeBody = getAge.body
+        assertIs<Block>(getAgeBody)
+        val getAgeReturn = getAgeBody.statements.singleOrNull()
+        assertIs<Return>(getAgeReturn)
+        val getAgeValue = getAgeReturn.returnValue
+        assertIs<Reference>(getAgeValue)
+        assertLocalName("age", getAgeValue)
+
+        // public string FullName => Name;
+        val getFullName =
+            person.methods.singleOrNull { it.name.localName.startsWith("get_FullName") }
+        assertNotNull(getFullName)
+        assertLocalName("string", getFullName.returnTypes.singleOrNull())
+        val getFullNameBody = getFullName.body
+        assertIs<Block>(getFullNameBody)
+        val getFullNameReturn = getFullNameBody.statements.singleOrNull()
+        assertIs<Return>(getFullNameReturn)
+        val getFullNameValue = getFullNameReturn.returnValue
+        assertIs<Reference>(getFullNameValue)
+        assertLocalName("Name", getFullNameValue)
+
+        // public int AgeInMonths { get => age * 12; }
+        val getAgeInMonths =
+            person.methods.singleOrNull { it.name.localName.startsWith("get_AgeInMonths") }
+        assertNotNull(getAgeInMonths)
+        val getAgeInMonthsBody = getAgeInMonths.body
+        assertIs<Block>(getAgeInMonthsBody)
+        val getAgeInMonthsReturn = getAgeInMonthsBody.statements.singleOrNull()
+        assertIs<Return>(getAgeInMonthsReturn)
+        val multiplication = getAgeInMonthsReturn.returnValue
+        assertIs<BinaryOperator>(multiplication)
+        assertEquals("*", multiplication.operatorCode)
+        val multiplicationLhs = multiplication.lhs
+        assertIs<Reference>(multiplicationLhs)
+        assertLocalName("age", multiplicationLhs)
+        val multiplicationRhs = multiplication.rhs
+        assertIs<Literal<*>>(multiplicationRhs)
+        assertEquals(12, multiplicationRhs.value)
+
+        // public string Email { get; private set; }
+        val getEmail = person.methods.singleOrNull { it.name.localName.startsWith("get_Email") }
+        assertNotNull(getEmail)
+        assertContains(getEmail.modifiers, "public")
+        val setEmail = person.methods.singleOrNull { it.name.localName.startsWith("set_Email") }
+        assertNotNull(setEmail)
+        assertContains(setEmail.modifiers, "private")
     }
 }
