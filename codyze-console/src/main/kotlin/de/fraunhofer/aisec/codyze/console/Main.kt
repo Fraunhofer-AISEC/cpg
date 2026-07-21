@@ -75,7 +75,11 @@ private suspend fun ConsoleService.initChatService(): ChatService? {
         // refused, timeout) can fail for reasons outside our control. Since chatService is treated
         // as optional everywhere else in this file, a failure here should disable AI chat, not
         // crash the whole console.
-        log.error("Failed to start the MCP server or connect the chat client; AI chat will be disabled: {}", e.message, e)
+        log.error(
+            "Failed to start the MCP server or connect the chat client; AI chat will be disabled: {}",
+            e.message,
+            e,
+        )
         null
     }
 }
