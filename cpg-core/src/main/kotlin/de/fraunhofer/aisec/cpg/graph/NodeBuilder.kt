@@ -405,16 +405,18 @@ private fun <AstNode> Node.setCodeAndLocation(
 
 /**
  * This function tries to find the top-level file for a given [Path]. It first checks if the current
- * component has a top-level file, then checks if the path is part of any configured include paths,
- * and finally returns the parent directory of the path as a fallback.
+ * component has a top-level file that contains the path, then checks if the path is part of any
+ * configured include paths (e.g., for dependencies that live outside the component, such as a
+ * standard library), then falls back to the component top-level and finally to the parent directory
+ * of the path.
  */
 context(provider: ContextProvider)
 val Path.topLevel: File
     get() {
-        // First, try to see if the current component has a top-level
+        // First, try to see if the current component has a top-level that contains the path
         val topLevel = provider.ctx.currentComponent?.topLevel()
-        if (topLevel != null) {
-            return topLevel
+        if (topLevel != null && toAbsolutePath().startsWith(topLevel.absoluteFile.toPath())) {
+            return topLevel.absoluteFile
         }
 
         // Otherwise, we can try to see if the path is from a specified include
@@ -424,6 +426,11 @@ val Path.topLevel: File
                 // If the path starts with the include, we can return the include as top-level
                 return include.toFile()
             }
+        }
+
+        // Fall back to the component top-level, even though it does not contain the path
+        if (topLevel != null) {
+            return topLevel
         }
 
         // If no top-level was found, we return the path's parent as a file

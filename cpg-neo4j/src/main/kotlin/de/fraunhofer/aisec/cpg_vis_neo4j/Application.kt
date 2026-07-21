@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.persistence.Neo4jConnectionDefaults
 import de.fraunhofer.aisec.cpg.persistence.persistJson
 import de.fraunhofer.aisec.cpg.persistence.pushToNeo4j
+import de.fraunhofer.aisec.cpg.project.Project
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
@@ -301,16 +302,9 @@ class Application : Callable<Int> {
     fun setupTranslationConfiguration(): TranslationConfiguration {
         val translationConfiguration =
             TranslationConfiguration.builder()
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
+                .also { builder ->
+                    Project.defaultLanguages.forEach { builder.optionalLanguage(it) }
+                }
                 .loadIncludes(loadIncludes)
                 .exclusionPatterns(*exclusionPatterns.toTypedArray())
                 .addIncludesToGraph(loadIncludes)

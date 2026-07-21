@@ -37,12 +37,12 @@ import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.passes.concepts.TagOverlaysPass
 import de.fraunhofer.aisec.cpg.passes.concepts.TaggingContext
+import de.fraunhofer.aisec.cpg.project.Project
 import de.fraunhofer.aisec.cpg.query.NotYetEvaluated
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.toQueryTree
 import io.github.detekt.sarif4k.ReportingDescriptor
 import io.github.detekt.sarif4k.Result
-import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.uuid.Uuid
@@ -234,58 +234,44 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
     ): AnalysisProject {
         val name = name
 
-        val configBuilder =
-            TranslationConfiguration.builder()
-                .defaultPasses()
-                .registerPass<TagOverlaysPass>()
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
-                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
-
         if (name == null) {
             throw IllegalArgumentException("Project name must be set")
         }
 
-        val components = mutableMapOf<String, List<File>>()
-        val topLevels = mutableMapOf<String, File>()
+        val project =
+            Project.from(projectDir) {
+                // Build components from the specified architecture. If no modules are specified,
+                // the project structure is auto-detected, e.g., based on Go modules or a C/C++
+                // compilation database.
+                toeBuilder.architectureBuilder.modulesBuilder.modules.forEach { module ->
+                    // Exclude all files in the exclude list
+                    module.exclude.forEach { exclude(it) }
 
-        // Build software components and "top levels" from the specified architecture
-        toeBuilder.architectureBuilder.modulesBuilder.modules.forEach { it ->
-            // Exclude all files in the exclude list
-            it.exclude.forEach { exclude -> configBuilder.exclusionPatterns(exclude) }
+                    // Build the file list from the include list. If the include list is empty, we
+                    // include the directory itself
+                    val componentTopLevel = projectDir.resolve(module.directory)
+                    val files =
+                        module.include
+                            .map { componentTopLevel.resolve(it) }
+                            .ifEmpty { listOf(componentTopLevel) }
 
-            // Build the file list from the include list
-            val componentTopLevel = projectDir.resolve(it.directory).toFile()
-            var files = it.include.map { include -> componentTopLevel.resolve(include) }
+                    component(module.name, root = componentTopLevel, sources = files)
+                }
 
-            // If the include list is empty, we include the directory itself
-            if (files.isEmpty()) {
-                files = listOf(componentTopLevel)
+                translation {
+                    it.registerPass<TagOverlaysPass>()
+
+                    // Adjust config from the "external" config modifier as well as from any
+                    // configuration builder inside the script
+                    configModifier?.invoke(it)
+                    toolBuilder.translationConfigurationBuilder?.invoke(it)
+
+                    // Configure tagging from tagging builder
+                    it.configurePass<TagOverlaysPass>(
+                        TagOverlaysPass.Configuration(tag = taggingCtx)
+                    )
+                }
             }
-
-            components += it.name to files
-            topLevels += it.name to componentTopLevel
-        }
-
-        configBuilder.softwareComponents(components)
-        configBuilder.topLevels(topLevels)
-
-        // Adjust config from the "external" config modifier as well as from any configuration
-        // builder inside the script
-        configModifier?.invoke(configBuilder)
-        toolBuilder.translationConfigurationBuilder?.invoke(configBuilder)
-
-        // Configure tagging from tagging builder
-        configBuilder.configurePass<TagOverlaysPass>(
-            TagOverlaysPass.Configuration(tag = taggingCtx)
-        )
 
         // Collect all requirements functions from all categories
         val requirementFunctions =
@@ -303,7 +289,7 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
             assumptionStatusFunctions =
                 assumptionsBuilder.decisionBuilder.assumptionStatusFunctions,
             suppressedQueryTreeIDs = suppressionsBuilder.suppressions,
-            config = configBuilder.build(),
+            config = project.config,
             postProcess = postProcess,
         )
     }

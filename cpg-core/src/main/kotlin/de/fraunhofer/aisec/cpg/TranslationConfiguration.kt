@@ -44,6 +44,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.project.TargetEnvironment
 import java.io.File
 import java.nio.file.Path
 import kotlin.reflect.KClass
@@ -134,6 +135,13 @@ private constructor(
     val exclusionPatternsByRegex: List<Regex>,
     /** Whether the type propagation system using [TypeObserver] should be disabled. */
     val disableTypeObserver: Boolean,
+    /**
+     * The external environment (operating system, architecture, environment variables) the analyzed
+     * project is assumed to run on. Language frontends can use this to configure
+     * environment-specific behaviour, such as built-in preprocessor macros (C/C++) or build
+     * constraints (Go). Defaults to the environment of the current host.
+     */
+    val targetEnvironment: TargetEnvironment,
 ) {
     /** This list contains all languages which we want to translate. */
     @JsonIgnore val languages: Set<KClass<out Language<*>>>
@@ -283,6 +291,7 @@ private constructor(
         private val exclusionPatternsByRegex = mutableListOf<Regex>()
         private val exclusionPatternsByString = mutableListOf<String>()
         private var disableTypeObserver = false
+        private var targetEnvironment = TargetEnvironment.host()
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -739,6 +748,15 @@ private constructor(
             return this
         }
 
+        /**
+         * Sets the external environment (operating system, architecture, environment variables) the
+         * analyzed project is assumed to run on. Defaults to the environment of the current host.
+         */
+        fun targetEnvironment(environment: TargetEnvironment): Builder {
+            targetEnvironment = environment
+            return this
+        }
+
         @Throws(ConfigurationException::class)
         fun build(): TranslationConfiguration {
             registerExtraFrontendPasses()
@@ -772,6 +790,7 @@ private constructor(
                 exclusionPatternsByString,
                 exclusionPatternsByRegex,
                 disableTypeObserver,
+                targetEnvironment,
             )
         }
 

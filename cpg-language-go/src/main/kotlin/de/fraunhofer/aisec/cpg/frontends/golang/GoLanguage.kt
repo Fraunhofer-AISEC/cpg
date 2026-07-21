@@ -33,6 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.project.DetectionResult
+import de.fraunhofer.aisec.cpg.project.Detector
+import de.fraunhofer.aisec.cpg.project.TargetEnvironment
+import java.nio.file.Path
 import kotlin.math.max
 
 /** The Go language. */
@@ -43,7 +47,13 @@ open class GoLanguage :
     HasStructs,
     HasFirstClassFunctions,
     HasAnonymousIdentifier,
-    HasFunctionStyleCasts {
+    HasFunctionStyleCasts,
+    Detector {
+
+    override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
+        return detectGo(root, environment)
+    }
+
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
     @DoNotPersist override val frontend = GoLanguageFrontend::class

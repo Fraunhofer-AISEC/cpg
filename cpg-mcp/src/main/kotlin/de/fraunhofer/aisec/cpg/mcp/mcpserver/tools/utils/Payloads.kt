@@ -30,11 +30,18 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class CpgAnalyzePayload(
-    @Description("The contents of the file which should be analyzed.") val content: String? = null,
     @Description(
-        "The file extension. This is required to identify the programming language and should resemble the typical file ending (e.g. '.py' for python, '.c' for C code)."
+        "The contents of the file which should be analyzed. Alternatively, 'path' can be used to analyze files or whole projects on the local filesystem."
+    )
+    val content: String? = null,
+    @Description(
+        "The file extension. This is required to identify the programming language when providing 'content' and should resemble the typical file ending (e.g. '.py' for python, '.c' for C code)."
     )
     val extension: String? = null,
+    @Description(
+        "The path to a source file or a project directory (e.g., a repository checkout) on the local filesystem. For directories, the project structure is detected automatically, e.g., components based on Go modules or a C/C++ compilation database (compile_commands.json). Either 'path' or 'content' must be provided."
+    )
+    val path: String? = null,
 )
 
 @Serializable
