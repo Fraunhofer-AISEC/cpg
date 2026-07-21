@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Granularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Usage
 import de.fraunhofer.aisec.cpg.graph.expressions.*
@@ -408,6 +409,23 @@ fun Node.collectAllPrevDFGPaths(): List<NodePath> {
         .failed
         .map { it.second }
 }
+
+/**
+ * A single incoming data-flow edge to a node, i.e. one immediate `prevDFG` edge ("reaching
+ * write"). [source] is the node the value flows from, [granularity] is how much of it flows
+ * (full, partial, pointer), and [functionSummary] is true if the edge came from a function
+ * summary applied at a call site rather than a directly traced write. One hop only, does not
+ * follow [source] further back.
+ */
+data class ReachingWrite(
+    val source: Node,
+    val granularity: Granularity,
+    val functionSummary: Boolean,
+)
+
+/** Returns the set of nodes reaching [this] via one hop of incoming data flow. */
+fun Node.reachingWrites(): List<ReachingWrite> =
+    this.prevDFGEdges.map { ReachingWrite(it.start, it.granularity, it.functionSummary) }
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
