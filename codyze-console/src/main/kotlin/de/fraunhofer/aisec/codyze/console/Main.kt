@@ -59,16 +59,25 @@ fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
 private suspend fun ConsoleService.initChatService(): ChatService? {
     val chatService = ChatService.createIfConfigExist() ?: return null
 
-    log.info("Starting MCP server with streamable HTTP on port {}...", 8081)
-    runHttpMcpServerUsingKtorPlugin(port = 8081, server = configureDefaultServer())
+    return try {
+        log.info("Starting MCP server with streamable HTTP on port {}...", 8081)
+        runHttpMcpServerUsingKtorPlugin(port = 8081, server = configureDefaultServer())
 
-    val translationResult = getTranslationResult()?.analysisResult?.translationResult
-    if (translationResult != null) {
-        globalAnalysisResult = translationResult
+        val translationResult = getTranslationResult()?.analysisResult?.translationResult
+        if (translationResult != null) {
+            globalAnalysisResult = translationResult
+        }
+        chatService.connect()
+        log.info("MCP client connected")
+        chatService
+    } catch (e: Exception) {
+        // Starting the MCP server (e.g. port already in use) or connecting to it (e.g. connection
+        // refused, timeout) can fail for reasons outside our control. Since chatService is treated
+        // as optional everywhere else in this file, a failure here should disable AI chat, not
+        // crash the whole console.
+        log.error("Failed to start the MCP server or connect the chat client; AI chat will be disabled: {}", e.message, e)
+        null
     }
-    chatService.connect()
-    log.info("MCP client connected")
-    return chatService
 }
 
 /**
