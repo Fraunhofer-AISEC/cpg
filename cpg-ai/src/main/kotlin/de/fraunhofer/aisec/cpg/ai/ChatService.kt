@@ -83,6 +83,12 @@ class ChatService(
     /** Maximum number of tool call iterations before responding a text message. */
     private val maxToolIterations = 50
 
+    /**
+     * Maximum size, in characters, of a tool result that is kept in the LLM-facing conversation
+     * history (see [truncateForLlm]).
+     */
+    private val maxToolResultChars = 20000
+
     /** Return the discovered skills. */
     fun getSkills(): List<Skill> = skills
 
@@ -235,6 +241,23 @@ class ChatService(
         return if (parsedItems.size == 1) parsedItems[0] else JsonArray(parsedItems)
     }
 
+    /**
+     * Caps [text] so it is safe to store in the LLM-facing `toolCallHistory` built up in [chat].
+     * That history is resent to the LLM **in full, verbatim, on every subsequent iteration** of
+     * the tool-calling loop, so a single oversized tool result (or several moderate ones
+     * accumulating over iterations) could otherwise blow the LLM context window and cause a 400
+     * error from the provider. This only bounds what is sent back to the LLM: the full,
+     * untruncated content has already been emitted to the frontend separately (via `emit`) before
+     * this is applied, so the human-visible result is unaffected.
+     */
+    private fun truncateForLlm(text: String): String {
+        if (text.length <= maxToolResultChars) {
+            return text
+        }
+        return text.take(maxToolResultChars) +
+            "... [truncated: showing first $maxToolResultChars of ${text.length} characters]"
+    }
+
     /** Execute a tool call and emit result to frontend */
     private suspend fun executeToolCall(
         toolCall: ToolCall,
@@ -249,7 +272,7 @@ class ChatService(
                 val resultText =
                     skill?.let { wrapActivatedSkill(it) } ?: "Unknown skill: $skillName"
                 emit(Events.toolResult(toolCall.name, JsonPrimitive(resultText)))
-                return resultText
+                return truncateForLlm(resultText)
             }
 
             val result = mcp.callTool(name = toolCall.name, arguments = arguments)
@@ -261,11 +284,14 @@ class ChatService(
             log.debug("Emitting tool result event: {}", event)
             emit(event)
 
-            resultText
+            truncateForLlm(resultText)
         } catch (e: Exception) {
+            // e.message is normally a short human-readable message, but exceptions can in
+            // principle carry arbitrarily large messages (e.g. embedded response bodies or
+            // stack-trace-like details), so truncate here too for consistency and safety.
             val errorMsg = "Tool failed: ${e.message}"
             emit(Events.text(errorMsg))
-            errorMsg
+            truncateForLlm(errorMsg)
         }
     }
 
