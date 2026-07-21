@@ -43,6 +43,8 @@ programming language.
   * TypeScript
   * LLVM-IR
   * Ruby
+  * Rust
+  * C#
 
   Nothing suitable found? [Write your own language frontend](./CPG/impl/language.md)
   for the respective language.
