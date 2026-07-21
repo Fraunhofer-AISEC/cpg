@@ -125,6 +125,36 @@ collaborate and push the boundaries of static code analysis.
 
 ## Publications
 
+### 2026
+
+<div class="papers">
+
+<div class="admonition paper">
+  <p class="admonition-title">Efficient Software Security Evaluation: A Human-in-the-Loop Approach</p>
+  <div class="left">
+    <p class="authors">Christian Banse, Immanuel Kunz, Alexander Küchler, Leutrim Shala, Konrad Weiss, Maximilian Kaul</p>
+    <p class="conference">In: IEEE International Conference on Software Testing, Verification and Validation Workshops (ICSTW). Daejeon, Korea, Republic of.</p>
+    <details>
+      <summary>bibtex</summary>
+      <pre><code>@inproceedings{banse2026efficient,
+  author={Banse, Christian and Kunz, Immanuel and K\"uchler, Alexander and Shala, Leutrim and Weiss, Konrad and Kaul, Maximilian},
+  title={Efficient Software Security Evaluation: A Human-in-the-Loop Approach},
+  year={2026},
+  booktitle={2026 IEEE International Conference on Software Testing, Verification and Validation Workshops},
+  series={ICSTW '26},
+  doi = {10.1109/ICSTW72326.2026.00037},
+  location = {Daejeon, Korea, Republic of},
+  publisher={IEEE}
+}</code></pre>
+    </details>
+  </div>
+  <div class="right">
+    <a class="green-button" href="https://doi.org/10.1109/ICSTW72326.2026.00037">paper</a>
+  </div>
+</div>
+
+</div>
+
 ### 2024
 
 <div class="papers">
