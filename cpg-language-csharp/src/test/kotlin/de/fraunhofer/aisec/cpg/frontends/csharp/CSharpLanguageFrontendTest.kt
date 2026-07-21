@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
 import de.fraunhofer.aisec.cpg.graph.declarations.Enumeration
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.expressions.Assign
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
@@ -101,6 +102,44 @@ class CSharpLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun usingDirectivesTest() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("Usings.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        // `using System;`
+        val system = tu.imports["System"]
+        assertNotNull(system)
+        assertEquals(ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, system.style)
+
+        // `using static System.Math;`
+        val math = tu.imports["System.Math"]
+        assertNotNull(math)
+        assertEquals(ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, math.style)
+
+        // `global using System.Text;`
+        val text = tu.imports["System.Text"]
+        assertNotNull(text)
+        assertEquals(ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, text.style)
+
+        // `using Col = System.Collections.Generic;`
+        val alias = tu.imports.singleOrNull { it.alias?.localName == "Col" }
+        assertNotNull(alias)
+        assertEquals(ImportStyle.IMPORT_NAMESPACE, alias.style)
+        assertEquals("System.Collections.Generic", alias.import.toString())
+
+        // Namespace-level `using System.IO;`
+        val ns = tu.namespaces["HelloWorld"]
+        assertNotNull(ns)
+        val io = ns.imports["System.IO"]
+        assertNotNull(io)
+        assertEquals(ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, io.style)
+    }
+
+    @Test
     fun testFieldDeclarations() {
         val topLevel = Path.of("src", "test", "resources", "csharp")
         val tu =
@@ -131,6 +170,25 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertEquals(2, baz.parameters.size)
         assertEquals("a", baz.parameters[0].name.localName)
         assertEquals("b", baz.parameters[1].name.localName)
+    }
+
+    @Test
+    fun expressionBodiedMethodTest() {
+        val topLevel = Path.of("src", "test", "resources", "csharp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("Methods.cs").toFile()), topLevel, true) {
+                it.registerLanguage<CSharpLanguage>()
+            }
+        assertNotNull(tu)
+
+        val foo = tu.namespaces["HelloWorld"]?.records["Foo"]
+        assertNotNull(foo)
+
+        // An expression-bodied method (`int expressionBodied() => 1;`) has no block body, so
+        // Roslyn's Body is null. The frontend must not crash on such methods.
+        val expressionBodied = foo.methods["expressionBodied"]
+        assertNotNull(expressionBodied)
+        assertEquals(0, expressionBodied.parameters.size)
     }
 
     @Test

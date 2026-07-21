@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.csharp
 
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.New
@@ -38,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.newConstructor
 import de.fraunhofer.aisec.cpg.graph.newEnumConstant
 import de.fraunhofer.aisec.cpg.graph.newEnumeration
 import de.fraunhofer.aisec.cpg.graph.newField
+import de.fraunhofer.aisec.cpg.graph.newImport
 import de.fraunhofer.aisec.cpg.graph.newMemberAccess
 import de.fraunhofer.aisec.cpg.graph.newMethod
 import de.fraunhofer.aisec.cpg.graph.newNamespace
@@ -78,6 +80,12 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
         val namespace = newNamespace(node.name, rawNode = node)
         frontend.scopeManager.enterScope(namespace)
 
+        for (using in node.usings) {
+            val import = handleUsingDirective(using)
+            frontend.scopeManager.addDeclaration(import)
+            namespace.addDeclaration(import)
+        }
+
         for (member in node.members) {
             val decl = handle(member)
             frontend.scopeManager.addDeclaration(decl)
@@ -86,6 +94,35 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
 
         frontend.scopeManager.leaveScope(namespace)
         return namespace
+    }
+
+    /**
+     * Translates a [UsingDirectiveSyntax][Csharp.AST.UsingDirectiveSyntax] into an [Import].
+     *
+     * A plain `using System;` (and `using static System.Math;`) brings all members of the target
+     * into scope, so it maps to [ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE]. An alias directive
+     * `using Foo = System.Collections;` introduces `Foo` as an alias for the target, so it maps to
+     * [ImportStyle.IMPORT_NAMESPACE] with the alias.
+     *
+     * The `global` modifier widens the scope to the whole project rather than the file; this scope
+     * difference is not modeled, so global usings are treated like their non-global counterparts.
+     *
+     * C# spec:
+     * [Using directives](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/namespaces#145-using-directives)
+     */
+    fun handleUsingDirective(node: Csharp.AST.UsingDirectiveSyntax): Import {
+        val import = parseName(node.name)
+        val alias = node.alias
+        return if (alias != null) {
+            newImport(
+                import,
+                style = ImportStyle.IMPORT_NAMESPACE,
+                alias = parseName(alias.name),
+                rawNode = node,
+            )
+        } else {
+            newImport(import, style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, rawNode = node)
+        }
     }
 
     /**
@@ -243,7 +280,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
             method.parameters += param
         }
         method.returnTypes = listOf(frontend.typeOf(node.returnType))
-        method.body = frontend.statementHandler.handle(node.body)
+        node.body?.let { method.body = frontend.statementHandler.handle(it) }
         frontend.scopeManager.leaveScope(method)
         return method
     }
@@ -429,7 +466,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
             frontend.scopeManager.addDeclaration(param)
             constructor.parameters += param
         }
-        constructor.body = frontend.statementHandler.handle(node.body)
+        node.body?.let { constructor.body = frontend.statementHandler.handle(it) }
 
         frontend.scopeManager.leaveScope(constructor)
         return constructor

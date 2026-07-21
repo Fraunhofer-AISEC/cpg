@@ -15,4 +15,6 @@ class Foo
     {
         return;
     }
+
+    int expressionBodied() => 1;
 }

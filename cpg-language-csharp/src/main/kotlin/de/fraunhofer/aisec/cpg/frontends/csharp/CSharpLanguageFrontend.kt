@@ -58,6 +58,12 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
         currentTU = tu
         scopeManager.enterScope(tu)
 
+        for (using in root.usings) {
+            val import = declarationHandler.handleUsingDirective(using)
+            scopeManager.addDeclaration(import)
+            tu.addDeclaration(import)
+        }
+
         for (member in root.members) {
             val decl = declarationHandler.handle(member)
             scopeManager.addDeclaration(decl)

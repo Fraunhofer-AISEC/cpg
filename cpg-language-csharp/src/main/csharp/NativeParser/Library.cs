@@ -470,10 +470,13 @@ public static class Library
     }
 
     // We use `BaseMethodDeclarationSyntax` to get the body for Methods and Constructors.
+    // Body can be null for methods without a block body (e.g. abstract, interface or
+    // expression-bodied methods).
     [UnmanagedCallersOnly(EntryPoint = "GetBaseMethodDeclarationBody")]
     public static IntPtr GetBaseMethodDeclarationBody(IntPtr handlePtr)
     {
-        return Register(((BaseMethodDeclarationSyntax)Nodes[handlePtr]).Body);
+        var body = ((BaseMethodDeclarationSyntax)Nodes[handlePtr]).Body;
+        return body != null ? Register(body) : IntPtr.Zero;
     }
 
     [UnmanagedCallersOnly(EntryPoint = "GetBlockStatementCount")]

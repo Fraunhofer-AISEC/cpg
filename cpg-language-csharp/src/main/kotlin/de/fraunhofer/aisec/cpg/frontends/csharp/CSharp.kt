@@ -294,7 +294,7 @@ interface Csharp : Library {
             val parameterList: ParameterListSyntax by lazy {
                 INSTANCE.GetBaseMethodDeclarationParameterList(this)
             }
-            val body: BlockSyntax by lazy { INSTANCE.GetBaseMethodDeclarationBody(this) }
+            val body: BlockSyntax? by lazy { INSTANCE.GetBaseMethodDeclarationBody(this) }
 
             override fun fromNative(nativeValue: Any?, context: FromNativeContext?): Any {
                 if (nativeValue !is Pointer) {
@@ -1132,7 +1132,7 @@ interface Csharp : Library {
 
     fun GetConstructorDeclarationIdentifier(handle: AST.ConstructorDeclarationSyntax): String
 
-    fun GetBaseMethodDeclarationBody(handle: AST.BaseMethodDeclarationSyntax): AST.BlockSyntax
+    fun GetBaseMethodDeclarationBody(handle: AST.BaseMethodDeclarationSyntax): AST.BlockSyntax?
 
     fun GetBlockStatementCount(handle: AST.StatementSyntax): Int
 
