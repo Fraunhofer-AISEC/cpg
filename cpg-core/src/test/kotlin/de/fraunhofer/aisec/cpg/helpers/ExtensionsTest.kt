@@ -58,20 +58,19 @@ internal class ExtensionsTest : BaseTest() {
             val tu = newTranslationUnit("foo.bar")
             scopeManager.resetToGlobal(tu)
 
-            val foo =
-                newFunction("foo", holder = tu, enterScope = true) { func ->
-                    func.body =
-                        newBlock(enterScope = true) { block ->
-                            val declStmt = newDeclarationStatement()
+            newFunction("foo", holder = tu, enterScope = true) { func ->
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        block.statements += newDeclarationStatement { declStmt ->
                             newProblemDeclaration(
                                 problem = problemDeclText,
                                 problemType = ProblemNode.ProblemType.TRANSLATION,
                                 holder = declStmt,
                             )
-                            block.statements += declStmt
                         }
-                }
-            foo.additionalProblems += ProblemExpression(problemExprText)
+                    }
+                func.additionalProblems += ProblemExpression(problemExprText)
+            }
 
             translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
         }
@@ -96,10 +95,7 @@ internal class ExtensionsTest : BaseTest() {
         with(TestLanguageFrontend()) {
             val collectionComprehension =
                 newCollectionComprehension().applyWithScope {
-                    val varA = newVariable("a")
-                    val declarationStatement = newDeclarationStatement()
-                    declarationStatement.addDeclaration(varA)
-                    this.statement = declarationStatement
+                    this.statement = newDeclarationStatement { it.addDeclaration(newVariable("a")) }
                 }
             val varA = collectionComprehension.variables["a"]
             assertIs<Variable>(varA)

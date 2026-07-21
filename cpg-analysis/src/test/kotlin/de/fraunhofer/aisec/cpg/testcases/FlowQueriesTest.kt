@@ -82,31 +82,32 @@ class FlowQueriesTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(5, objectType("int"))
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
+                                    it.initializer = newLiteral(5, objectType("int"))
+                                }
                             }
-                            block.statements += aDecl
 
-                            val bDecl = newDeclarationStatement()
-                            newVariable("b", objectType("string"), holder = bDecl) { b ->
-                                b.initializer =
-                                    newBinaryOperator("+") { outer ->
-                                        outer.lhs =
-                                            newBinaryOperator("+") { inner ->
-                                                inner.lhs = newLiteral("bla", objectType("string"))
-                                                inner.rhs =
-                                                    newCall(newReference("foo")) {
-                                                        it.arguments += newReference("a")
-                                                    }
-                                            }
-                                        outer.rhs =
-                                            newCall(newReference("foo")) {
-                                                it.arguments += newCall(newReference("bar"))
-                                            }
-                                    }
+                            block.statements += newDeclarationStatement { bDecl ->
+                                newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                    b.initializer =
+                                        newBinaryOperator("+") { outer ->
+                                            outer.lhs =
+                                                newBinaryOperator("+") { inner ->
+                                                    inner.lhs =
+                                                        newLiteral("bla", objectType("string"))
+                                                    inner.rhs =
+                                                        newCall(newReference("foo")) {
+                                                            it.arguments += newReference("a")
+                                                        }
+                                                }
+                                            outer.rhs =
+                                                newCall(newReference("foo")) {
+                                                    it.arguments += newCall(newReference("bar"))
+                                                }
+                                        }
+                                }
                             }
-                            block.statements += bDecl
 
                             block.statements +=
                                 newCall(newReference("print")) { it.arguments += newReference("a") }
@@ -182,28 +183,29 @@ class FlowQueriesTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(5, objectType("int"))
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
+                                    it.initializer = newLiteral(5, objectType("int"))
+                                }
                             }
-                            block.statements += aDecl
 
-                            val bDecl = newDeclarationStatement()
-                            newVariable("b", objectType("string"), holder = bDecl) { b ->
-                                b.initializer =
-                                    newBinaryOperator("+") { outer ->
-                                        outer.lhs =
-                                            newBinaryOperator("+") { inner ->
-                                                inner.lhs = newLiteral("bla", objectType("string"))
-                                                inner.rhs = newReference("a")
-                                            }
-                                        outer.rhs =
-                                            newCall(newReference("foo")) {
-                                                it.arguments += newCall(newReference("bar"))
-                                            }
-                                    }
+                            block.statements += newDeclarationStatement { bDecl ->
+                                newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                    b.initializer =
+                                        newBinaryOperator("+") { outer ->
+                                            outer.lhs =
+                                                newBinaryOperator("+") { inner ->
+                                                    inner.lhs =
+                                                        newLiteral("bla", objectType("string"))
+                                                    inner.rhs = newReference("a")
+                                                }
+                                            outer.rhs =
+                                                newCall(newReference("foo")) {
+                                                    it.arguments += newCall(newReference("bar"))
+                                                }
+                                        }
+                                }
                             }
-                            block.statements += bDecl
 
                             block.statements +=
                                 newCall(newReference("print")) { it.arguments += newReference("b") }
@@ -243,28 +245,29 @@ class FlowQueriesTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(5, objectType("int"))
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
+                                    it.initializer = newLiteral(5, objectType("int"))
+                                }
                             }
-                            block.statements += aDecl
 
-                            val bDecl = newDeclarationStatement()
-                            newVariable("b", objectType("string"), holder = bDecl) { b ->
-                                b.initializer =
-                                    newBinaryOperator("+") { outer ->
-                                        outer.lhs =
-                                            newBinaryOperator("+") { inner ->
-                                                inner.lhs = newLiteral("bla", objectType("string"))
-                                                inner.rhs = newReference("a")
-                                            }
-                                        outer.rhs =
-                                            newCall(newReference("foo")) {
-                                                it.arguments += newCall(newReference("bar"))
-                                            }
-                                    }
+                            block.statements += newDeclarationStatement { bDecl ->
+                                newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                    b.initializer =
+                                        newBinaryOperator("+") { outer ->
+                                            outer.lhs =
+                                                newBinaryOperator("+") { inner ->
+                                                    inner.lhs =
+                                                        newLiteral("bla", objectType("string"))
+                                                    inner.rhs = newReference("a")
+                                                }
+                                            outer.rhs =
+                                                newCall(newReference("foo")) {
+                                                    it.arguments += newCall(newReference("bar"))
+                                                }
+                                        }
+                                }
                             }
-                            block.statements += bDecl
 
                             block.statements += newIfElse { ifElse ->
                                 ifElse.condition =
@@ -319,41 +322,36 @@ class FlowQueriesTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(5, objectType("int"))
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
+                                    it.initializer = newLiteral(5, objectType("int"))
+                                }
                             }
-                            block.statements += aDecl
 
-                            val bDecl = newDeclarationStatement()
-                            newVariable("b", objectType("string"), holder = bDecl) { b ->
-                                b.initializer =
-                                    newBinaryOperator("+") { outer ->
-                                        outer.lhs =
-                                            newBinaryOperator("+") { inner ->
-                                                inner.lhs = newLiteral("bla", objectType("string"))
-                                                inner.rhs = newReference("a")
-                                            }
-                                        outer.rhs =
-                                            newCall(newReference("foo")) {
-                                                it.arguments += newCall(newReference("bar"))
-                                            }
-                                    }
+                            block.statements += newDeclarationStatement { bDecl ->
+                                newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                    b.initializer =
+                                        newBinaryOperator("+") { outer ->
+                                            outer.lhs =
+                                                newBinaryOperator("+") { inner ->
+                                                    inner.lhs =
+                                                        newLiteral("bla", objectType("string"))
+                                                    inner.rhs = newReference("a")
+                                                }
+                                            outer.rhs =
+                                                newCall(newReference("foo")) {
+                                                    it.arguments += newCall(newReference("bar"))
+                                                }
+                                        }
+                                }
                             }
-                            block.statements += bDecl
 
-                            // Fluent's `IfElse.addArgument` unconditionally does
-                            // `condition = expression` (see `IfElse.addArgument`). The original
-                            // code has a bare `call("print") { ref("b") }` written directly
-                            // inside `ifStmt {}`'s own block (not inside `thenStmt`/`elseStmt`),
-                            // which self-attaches to the IfElse the same way `condition {}`'s
-                            // "b == 'test'" did -- silently overwriting the intended condition
-                            // with the print(b) call expression. The "b == 'test'" comparison is
-                            // therefore built and then immediately discarded, never part of the
-                            // final AST. Faithfully reproduced here: we skip building the
-                            // discarded comparison and go straight to the condition that
-                            // actually survives.
                             block.statements += newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator("==") {
+                                        it.lhs = newReference("b")
+                                        it.rhs = newLiteral("test", objectType("string"))
+                                    }
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
                                         thenBlock.statements +=
@@ -367,10 +365,6 @@ class FlowQueriesTest {
                                             newCall(newReference("print")) {
                                                 it.arguments += newReference("b")
                                             }
-                                    }
-                                ifElse.condition =
-                                    newCall(newReference("print")) {
-                                        it.arguments += newReference("b")
                                     }
                             }
 
@@ -409,24 +403,24 @@ class FlowQueriesTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(5, objectType("int"))
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
+                                    it.initializer = newLiteral(5, objectType("int"))
+                                }
                             }
-                            block.statements += aDecl
 
-                            val bDecl = newDeclarationStatement()
-                            newVariable("b", objectType("string"), holder = bDecl) { b ->
-                                b.initializer =
-                                    newBinaryOperator("+") {
-                                        it.lhs = newLiteral("bla", objectType("string"))
-                                        it.rhs =
-                                            newCall(newReference("foo")) {
-                                                it.arguments += newCall(newReference("bar"))
-                                            }
-                                    }
+                            block.statements += newDeclarationStatement { bDecl ->
+                                newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                    b.initializer =
+                                        newBinaryOperator("+") {
+                                            it.lhs = newLiteral("bla", objectType("string"))
+                                            it.rhs =
+                                                newCall(newReference("foo")) {
+                                                    it.arguments += newCall(newReference("bar"))
+                                                }
+                                        }
+                                }
                             }
-                            block.statements += bDecl
 
                             block.statements +=
                                 newCall(newReference("print")) { it.arguments += newReference("a") }
@@ -466,24 +460,24 @@ class FlowQueriesTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(5, objectType("int"))
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
+                                    it.initializer = newLiteral(5, objectType("int"))
+                                }
                             }
-                            block.statements += aDecl
 
-                            val bDecl = newDeclarationStatement()
-                            newVariable("b", objectType("string"), holder = bDecl) { b ->
-                                b.initializer =
-                                    newBinaryOperator("+") {
-                                        it.lhs = newLiteral("bla", objectType("string"))
-                                        it.rhs =
-                                            newCall(newReference("foo")) {
-                                                it.arguments += newCall(newReference("bar"))
-                                            }
-                                    }
+                            block.statements += newDeclarationStatement { bDecl ->
+                                newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                    b.initializer =
+                                        newBinaryOperator("+") {
+                                            it.lhs = newLiteral("bla", objectType("string"))
+                                            it.rhs =
+                                                newCall(newReference("foo")) {
+                                                    it.arguments += newCall(newReference("bar"))
+                                                }
+                                        }
+                                }
                             }
-                            block.statements += bDecl
 
                             block.statements += newIfElse { ifElse ->
                                 ifElse.condition =
@@ -535,24 +529,24 @@ class FlowQueriesTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(5, objectType("int"))
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
+                                    it.initializer = newLiteral(5, objectType("int"))
+                                }
                             }
-                            block.statements += aDecl
 
-                            val bDecl = newDeclarationStatement()
-                            newVariable("b", objectType("string"), holder = bDecl) { b ->
-                                b.initializer =
-                                    newBinaryOperator("+") {
-                                        it.lhs = newLiteral("bla", objectType("string"))
-                                        it.rhs =
-                                            newCall(newReference("foo")) {
-                                                it.arguments += newCall(newReference("bar"))
-                                            }
-                                    }
+                            block.statements += newDeclarationStatement { bDecl ->
+                                newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                    b.initializer =
+                                        newBinaryOperator("+") {
+                                            it.lhs = newLiteral("bla", objectType("string"))
+                                            it.rhs =
+                                                newCall(newReference("foo")) {
+                                                    it.arguments += newCall(newReference("bar"))
+                                                }
+                                        }
+                                }
                             }
-                            block.statements += bDecl
 
                             block.statements += newIfElse { ifElse ->
                                 ifElse.condition =
@@ -611,24 +605,24 @@ class FlowQueriesTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(5, objectType("int"))
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
+                                    it.initializer = newLiteral(5, objectType("int"))
+                                }
                             }
-                            block.statements += aDecl
 
-                            val bDecl = newDeclarationStatement()
-                            newVariable("b", objectType("string"), holder = bDecl) { b ->
-                                b.initializer =
-                                    newBinaryOperator("+") {
-                                        it.lhs = newLiteral("bla", objectType("string"))
-                                        it.rhs =
-                                            newCall(newReference("foo")) {
-                                                it.arguments += newCall(newReference("bar"))
-                                            }
-                                    }
+                            block.statements += newDeclarationStatement { bDecl ->
+                                newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                    b.initializer =
+                                        newBinaryOperator("+") {
+                                            it.lhs = newLiteral("bla", objectType("string"))
+                                            it.rhs =
+                                                newCall(newReference("foo")) {
+                                                    it.arguments += newCall(newReference("bar"))
+                                                }
+                                        }
+                                }
                             }
-                            block.statements += bDecl
 
                             block.statements += newIfElse { ifElse ->
                                 ifElse.condition =
@@ -687,31 +681,32 @@ class FlowQueriesTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(5, objectType("int"))
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
+                                    it.initializer = newLiteral(5, objectType("int"))
+                                }
                             }
-                            block.statements += aDecl
 
-                            val bDecl = newDeclarationStatement()
-                            newVariable("b", objectType("string"), holder = bDecl) { b ->
-                                b.initializer =
-                                    newBinaryOperator("+") { outer ->
-                                        outer.lhs =
-                                            newBinaryOperator("+") { inner ->
-                                                inner.lhs = newLiteral("bla", objectType("string"))
-                                                inner.rhs =
-                                                    newCall(newReference("foo")) {
-                                                        it.arguments += newReference("a")
-                                                    }
-                                            }
-                                        outer.rhs =
-                                            newCall(newReference("foo")) {
-                                                it.arguments += newCall(newReference("bar"))
-                                            }
-                                    }
+                            block.statements += newDeclarationStatement { bDecl ->
+                                newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                    b.initializer =
+                                        newBinaryOperator("+") { outer ->
+                                            outer.lhs =
+                                                newBinaryOperator("+") { inner ->
+                                                    inner.lhs =
+                                                        newLiteral("bla", objectType("string"))
+                                                    inner.rhs =
+                                                        newCall(newReference("foo")) {
+                                                            it.arguments += newReference("a")
+                                                        }
+                                                }
+                                            outer.rhs =
+                                                newCall(newReference("foo")) {
+                                                    it.arguments += newCall(newReference("bar"))
+                                                }
+                                        }
+                                }
                             }
-                            block.statements += bDecl
 
                             block.statements +=
                                 newCall(newReference("print")) { it.arguments += newReference("b") }
@@ -751,31 +746,32 @@ class FlowQueriesTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(5, objectType("int"))
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
+                                    it.initializer = newLiteral(5, objectType("int"))
+                                }
                             }
-                            block.statements += aDecl
 
-                            val bDecl = newDeclarationStatement()
-                            newVariable("b", objectType("string"), holder = bDecl) { b ->
-                                b.initializer =
-                                    newBinaryOperator("+") { outer ->
-                                        outer.lhs =
-                                            newBinaryOperator("+") { inner ->
-                                                inner.lhs = newLiteral("bla", objectType("string"))
-                                                inner.rhs =
-                                                    newCall(newReference("foo")) {
-                                                        it.arguments += newReference("a")
-                                                    }
-                                            }
-                                        outer.rhs =
-                                            newCall(newReference("foo")) {
-                                                it.arguments += newCall(newReference("bar"))
-                                            }
-                                    }
+                            block.statements += newDeclarationStatement { bDecl ->
+                                newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                    b.initializer =
+                                        newBinaryOperator("+") { outer ->
+                                            outer.lhs =
+                                                newBinaryOperator("+") { inner ->
+                                                    inner.lhs =
+                                                        newLiteral("bla", objectType("string"))
+                                                    inner.rhs =
+                                                        newCall(newReference("foo")) {
+                                                            it.arguments += newReference("a")
+                                                        }
+                                                }
+                                            outer.rhs =
+                                                newCall(newReference("foo")) {
+                                                    it.arguments += newCall(newReference("bar"))
+                                                }
+                                        }
+                                }
                             }
-                            block.statements += bDecl
 
                             block.statements += newIfElse { ifElse ->
                                 ifElse.condition =
@@ -830,39 +826,39 @@ class FlowQueriesTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(5, objectType("int"))
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
+                                    it.initializer = newLiteral(5, objectType("int"))
+                                }
                             }
-                            block.statements += aDecl
 
-                            val bDecl = newDeclarationStatement()
-                            newVariable("b", objectType("string"), holder = bDecl) { b ->
-                                b.initializer =
-                                    newBinaryOperator("+") { outer ->
-                                        outer.lhs =
-                                            newBinaryOperator("+") { inner ->
-                                                inner.lhs = newLiteral("bla", objectType("string"))
-                                                inner.rhs =
-                                                    newCall(newReference("foo")) {
-                                                        it.arguments += newReference("a")
-                                                    }
-                                            }
-                                        outer.rhs =
-                                            newCall(newReference("foo")) {
-                                                it.arguments += newCall(newReference("bar"))
-                                            }
-                                    }
+                            block.statements += newDeclarationStatement { bDecl ->
+                                newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                    b.initializer =
+                                        newBinaryOperator("+") { outer ->
+                                            outer.lhs =
+                                                newBinaryOperator("+") { inner ->
+                                                    inner.lhs =
+                                                        newLiteral("bla", objectType("string"))
+                                                    inner.rhs =
+                                                        newCall(newReference("foo")) {
+                                                            it.arguments += newReference("a")
+                                                        }
+                                                }
+                                            outer.rhs =
+                                                newCall(newReference("foo")) {
+                                                    it.arguments += newCall(newReference("bar"))
+                                                }
+                                        }
+                                }
                             }
-                            block.statements += bDecl
 
-                            // Same `IfElse.addArgument` condition-overwrite quirk as in
-                            // `validatorDataflowIfElse` -- see the comment there. The bare
-                            // `call("print") { ref("b") }` written directly inside `ifStmt {}`'s
-                            // block overwrites the "b == 'test'" condition, which is therefore
-                            // built and immediately discarded in the original. Faithfully
-                            // reproduced by skipping straight to the surviving condition.
                             block.statements += newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator("==") {
+                                        it.lhs = newReference("b")
+                                        it.rhs = newLiteral("test", objectType("string"))
+                                    }
                                 ifElse.thenStatement =
                                     newBlock(enterScope = true) { thenBlock ->
                                         thenBlock.statements +=
@@ -876,10 +872,6 @@ class FlowQueriesTest {
                                             newCall(newReference("print")) {
                                                 it.arguments += newReference("b")
                                             }
-                                    }
-                                ifElse.condition =
-                                    newCall(newReference("print")) {
-                                        it.arguments += newReference("b")
                                     }
                             }
 
@@ -977,10 +969,6 @@ class FlowQueriesTest {
                         }
                 }
 
-                // Fluent's `forEachStmt()` never enters/leaves a scope for the `ForEach` node
-                // itself (unlike `whileStmt`), so the loop variable "i" ends up declared
-                // directly in the enclosing method scope. Faithfully reproduced here by not
-                // passing `enterScope` to `newForEach()`/`newBlock()` below.
                 newFunction("main", holder = tu, enterScope = true) { func ->
                     func.returnTypes = listOf(incompleteType())
                     func.type = computeType(func)
@@ -989,39 +977,45 @@ class FlowQueriesTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            block.statements += newForEach { forEach ->
-                                val iDeclStmt = newDeclarationStatement()
-                                newVariable("i", objectType("int"), holder = iDeclStmt)
-                                forEach.variable = iDeclStmt
-
-                                forEach.iterable =
-                                    newCall(newReference("range")) {
-                                        it.arguments += newLiteral(1, objectType("int"))
+                            block.statements +=
+                                newForEach(enterScope = true) { forEach ->
+                                    forEach.variable = newDeclarationStatement { iDeclStmt ->
+                                        newVariable("i", objectType("int"), holder = iDeclStmt)
                                     }
 
-                                forEach.statement = newBlock { loopBodyBlock ->
-                                    val tempDecl = newDeclarationStatement()
-                                    newVariable("temp", holder = tempDecl) {
-                                        it.initializer = newLiteral("start")
-                                    }
-                                    loopBodyBlock.statements += tempDecl
-
-                                    loopBodyBlock.statements +=
-                                        newCall(newReference("a")) {
-                                            it.arguments += newReference("i", objectType("int"))
+                                    forEach.iterable =
+                                        newCall(newReference("range")) {
+                                            it.arguments += newLiteral(1, objectType("int"))
                                         }
 
-                                    loopBodyBlock.statements +=
-                                        newCall(newReference("b")) {
-                                            it.arguments += newReference("i", objectType("int"))
-                                        }
+                                    forEach.statement =
+                                        newBlock(enterScope = true) { loopBodyBlock ->
+                                            loopBodyBlock.statements +=
+                                                newDeclarationStatement { tempDecl ->
+                                                    newVariable("temp", holder = tempDecl) {
+                                                        it.initializer = newLiteral("start")
+                                                    }
+                                                }
 
-                                    loopBodyBlock.statements +=
-                                        newCall(newReference("c")) {
-                                            it.arguments += newReference("i", objectType("int"))
+                                            loopBodyBlock.statements +=
+                                                newCall(newReference("a")) {
+                                                    it.arguments +=
+                                                        newReference("i", objectType("int"))
+                                                }
+
+                                            loopBodyBlock.statements +=
+                                                newCall(newReference("b")) {
+                                                    it.arguments +=
+                                                        newReference("i", objectType("int"))
+                                                }
+
+                                            loopBodyBlock.statements +=
+                                                newCall(newReference("c")) {
+                                                    it.arguments +=
+                                                        newReference("i", objectType("int"))
+                                                }
                                         }
                                 }
-                            }
                         }
                 }
 

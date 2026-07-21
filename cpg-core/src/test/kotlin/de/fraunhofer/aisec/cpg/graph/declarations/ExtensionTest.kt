@@ -33,12 +33,12 @@ import de.fraunhofer.aisec.cpg.graph.*
 import kotlin.test.*
 
 /**
- * Mirrors Fluent's `extension(name, extendedDeclaration, init)`: it enters the scope of
- * [extendedDeclaration] if given (methods/fields added to an extension live in the *extended
- * record's* scope), or the extension's own scope otherwise -- `newExtension` has no `enterScope`
- * parameter of its own since [Extension] doesn't introduce a scope of its own via
- * [de.fraunhofer.aisec.cpg.ScopeManager], so this is wired manually rather than through the generic
- * `enterScope` builder parameter.
+ * Builds an [Extension] named [name] extending [extendedDeclaration]. While running [init] it
+ * enters the scope of [extendedDeclaration] (so methods/fields added to the extension live in the
+ * *extended record's* scope), or the extension's own scope when [extendedDeclaration] is `null`. It
+ * then registers the extension via the [de.fraunhofer.aisec.cpg.ScopeManager] and [holder]. The
+ * scope is entered/left manually here because [Extension] does not introduce a scope of its own and
+ * therefore cannot use the generic `enterScope` builder parameter.
  */
 context(provider: ContextProvider)
 private fun MetadataProvider.buildExtension(
@@ -73,8 +73,11 @@ class ExtensionTest {
                 val tu = newTranslationUnit(Node.EMPTY_NAME)
                 scopeManager.resetToGlobal(tu)
 
-                val rec = newRecord("Record", "class", holder = tu, enterScope = true)
-                buildExtension("Extension", rec, holder = tu) { ext ->
+                buildExtension(
+                    "Extension",
+                    newRecord("Record", "class", holder = tu, enterScope = true),
+                    holder = tu,
+                ) { ext ->
                     newMethod("extFunc", holder = ext, enterScope = true)
                     newField("extField", holder = ext)
                 }
@@ -137,8 +140,11 @@ class ExtensionTest {
                 val tu = newTranslationUnit(Node.EMPTY_NAME)
                 scopeManager.resetToGlobal(tu)
 
-                val record = newRecord("Record", "class", holder = tu, enterScope = true)
-                buildExtension(null, record, holder = tu) { ext ->
+                buildExtension(
+                    null,
+                    newRecord("Record", "class", holder = tu, enterScope = true),
+                    holder = tu,
+                ) { ext ->
                     newMethod("extFunc", holder = ext, enterScope = true)
                 }
 
@@ -268,10 +274,7 @@ class ExtensionTest {
                 assertEquals(2, ext.declarations.size)
 
                 // Add another method directly
-                // Fluent's method() would auto-attach this to the nearest DeclarationHolder in
-                // scope at this point, which is the translation unit (the extension() call has
-                // already returned) -- replicated explicitly here via holder = tu.
-                val method3 = newMethod("method3", holder = tu, enterScope = true)
+                val method3 = newMethod("method3", enterScope = true)
                 ext.addDeclaration(method3)
                 assertEquals(3, ext.declarations.size)
                 assertTrue(ext.declarations.contains(method3))

@@ -117,12 +117,10 @@ class DFGFunctionSummariesTest {
 
                         func.body =
                             newBlock(enterScope = true) { block ->
-                                // memberCall("addAll", construct("test.VerySpecialList")) { ... }
-                                // -- the base `construct(...)` is evaluated as a plain argument
-                                // while `block` is the ambient holder, so it self-attaches to the
-                                // block as an orphan statement IN ADDITION to being referenced as
-                                // the member call's base. Faithfully reproduced below (and for all
-                                // other `memberCall("addAll", construct(...))` occurrences).
+                                // The constructed base is also added as a standalone block
+                                // statement (in addition to being the member call's base) so it
+                                // appears in the block's EOG. The same applies to the other
+                                // `addAll` member calls whose base is a construction below.
                                 val verySpecialListConstruction =
                                     newConstruction("test.VerySpecialList") {
                                         it.type = objectType("test.VerySpecialList")
@@ -171,18 +169,18 @@ class DFGFunctionSummariesTest {
                                     }
                                 block.statements += addAll3
 
-                                val declStmtA = newDeclarationStatement()
-                                newVariable("a", objectType("test.List"), holder = declStmtA) {
-                                    it.initializer =
-                                        newConstruction("test.List") {
-                                            it.type = objectType("test.List")
-                                        }
+                                block.statements += newDeclarationStatement { declStmtA ->
+                                    newVariable("a", objectType("test.List"), holder = declStmtA) {
+                                        it.initializer =
+                                            newConstruction("test.List") {
+                                                it.type = objectType("test.List")
+                                            }
+                                    }
                                 }
-                                block.statements += declStmtA
 
-                                // memberCall("addAll", ref("a", ...)) { ... } -- unlike
-                                // `construct`, `ref` only self-attaches if the ambient holder is an
-                                // ArgumentHolder, so no orphan Reference is added here.
+                                // Here the member call's base is a reference to `a`, which is not
+                                // added as a standalone block statement, so no orphan reference
+                                // appears in the block.
                                 val addAll4 =
                                     newMemberCall(
                                         newMemberAccess(
@@ -421,17 +419,17 @@ class DFGFunctionSummariesTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val declStmtA = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = declStmtA) {
-                                it.initializer = newLiteral(7, objectType("char"))
+                            block.statements += newDeclarationStatement { declStmtA ->
+                                newVariable("a", objectType("int"), holder = declStmtA) {
+                                    it.initializer = newLiteral(7, objectType("char"))
+                                }
                             }
-                            block.statements += declStmtA
 
-                            val declStmtB = newDeclarationStatement()
-                            newVariable("b", objectType("int"), holder = declStmtB) {
-                                it.initializer = newLiteral(5, objectType("char"))
+                            block.statements += newDeclarationStatement { declStmtB ->
+                                newVariable("b", objectType("int"), holder = declStmtB) {
+                                    it.initializer = newLiteral(5, objectType("char"))
+                                }
                             }
-                            block.statements += declStmtB
 
                             block.statements +=
                                 newCall(newReference("memcpy")) {
@@ -569,17 +567,17 @@ class DFGFunctionSummariesTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val declStmtA = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = declStmtA) {
-                                it.initializer = newLiteral(7, objectType("char"))
+                            block.statements += newDeclarationStatement { declStmtA ->
+                                newVariable("a", objectType("int"), holder = declStmtA) {
+                                    it.initializer = newLiteral(7, objectType("char"))
+                                }
                             }
-                            block.statements += declStmtA
 
-                            val declStmtB = newDeclarationStatement()
-                            newVariable("b", objectType("int"), holder = declStmtB) {
-                                it.initializer = newLiteral(5, objectType("char"))
+                            block.statements += newDeclarationStatement { declStmtB ->
+                                newVariable("b", objectType("int"), holder = declStmtB) {
+                                    it.initializer = newLiteral(5, objectType("char"))
+                                }
                             }
-                            block.statements += declStmtB
 
                             block.statements +=
                                 newCall(newReference("memcpy")) {

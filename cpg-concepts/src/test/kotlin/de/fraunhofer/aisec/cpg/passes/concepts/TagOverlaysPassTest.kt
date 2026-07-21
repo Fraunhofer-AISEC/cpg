@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import java.util.Objects
 import kotlin.test.Test
@@ -130,18 +129,13 @@ class TagOverlaysPassTest {
                     newRecord("Encryption", "class", holder = tu, enterScope = true)
 
                     newFunction("main", holder = tu, enterScope = true) { main ->
-                        // Replicate Fluent's function()'s unconditional return-type/computeType
-                        // wiring, even though the return type here is just the default.
-                        main.returnTypes = listOf(unknownType())
-                        main.type = computeType(main)
-
                         main.body =
                             newBlock(enterScope = true) { block ->
-                                val declStmt = newDeclarationStatement()
-                                newVariable("key", objectType("string"), holder = declStmt) {
-                                    it.initializer = newLiteral("secret")
+                                block.statements += newDeclarationStatement { declStmt ->
+                                    newVariable("key", objectType("string"), holder = declStmt) {
+                                        it.initializer = newLiteral("secret")
+                                    }
                                 }
-                                block.statements += declStmt
 
                                 block.statements +=
                                     newCall(newReference("encrypt")) {

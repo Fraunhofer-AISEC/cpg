@@ -341,36 +341,34 @@ class ControlFlowSensitiveDFGPassTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val declStmt = newDeclarationStatement()
-                            newVariable("i", objectType("int"), holder = declStmt) {
-                                it.initializer = newLiteral(0, objectType("int"))
+                            block.statements += newDeclarationStatement { declStmt ->
+                                newVariable("i", objectType("int"), holder = declStmt) {
+                                    it.initializer = newLiteral(0, objectType("int"))
+                                }
                             }
-                            block.statements += declStmt
 
-                            // Note: Fluent's "forEachStmt" never enters a new scope for the
-                            // ForEach node itself, and "declare"/"call" inside its block attach to
-                            // ForEach's own (generic) StatementHolder.statements -- NOT its
-                            // dedicated .variable/.iterable properties, since those aren't used
-                            // here. Faithfully reproduced.
-                            block.statements += newForEach { forEach ->
-                                val loopVarDeclStmt = newDeclarationStatement()
-                                newVariable(
-                                    "loopVar",
-                                    objectType("string"),
-                                    holder = loopVarDeclStmt,
-                                )
-                                forEach.statements += loopVarDeclStmt
-                                forEach.statements += newCall(newReference("magicFunction"))
-                                forEach.statement =
-                                    newBlock(enterScope = true) { loopBody ->
-                                        loopBody.statements +=
-                                            newCall(newReference("printf")) {
-                                                it.arguments +=
-                                                    newLiteral("loop: \${}\n", objectType("string"))
-                                                it.arguments += newReference("loopVar")
-                                            }
+                            block.statements +=
+                                newForEach(enterScope = true) { forEach ->
+                                    forEach.variable = newDeclarationStatement { loopVarDeclStmt ->
+                                        newVariable(
+                                            "loopVar",
+                                            objectType("string"),
+                                            holder = loopVarDeclStmt,
+                                        )
                                     }
-                            }
+                                    forEach.statement =
+                                        newBlock(enterScope = true) { loopBody ->
+                                            loopBody.statements +=
+                                                newCall(newReference("printf")) {
+                                                    it.arguments +=
+                                                        newLiteral(
+                                                            "loop: \${}\n",
+                                                            objectType("string"),
+                                                        )
+                                                    it.arguments += newReference("loopVar")
+                                                }
+                                        }
+                                }
 
                             block.statements +=
                                 newCall(newReference("printf")) {

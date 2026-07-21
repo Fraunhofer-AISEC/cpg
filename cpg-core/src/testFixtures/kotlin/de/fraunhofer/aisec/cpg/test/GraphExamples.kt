@@ -50,9 +50,8 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
 
 /**
- * Mirrors the removed Fluent DSL's `memberOrRef` helper: builds a chain of [MemberAccess]/
- * [de.fraunhofer.aisec.cpg.graph.expressions.Reference] nodes for a (possibly qualified) [name],
- * optionally setting [type] on the innermost node.
+ * Builds a chain of [MemberAccess]/[de.fraunhofer.aisec.cpg.graph.expressions.Reference] nodes for
+ * a (possibly qualified) [name], optionally setting [type] on the innermost node.
  */
 private fun LanguageFrontend<*, *>.memberOrRef(name: Name, type: Type? = null): Expression {
     val node =
@@ -68,8 +67,8 @@ private fun LanguageFrontend<*, *>.memberOrRef(name: Name, type: Type? = null): 
 }
 
 /**
- * Mirrors the removed Fluent DSL's `call` helper: builds a [Call] (or a member call if [name] is a
- * dotted/qualified name) with the given [name] as callee.
+ * Builds a [Call] (or a member call if [name] is a dotted/qualified name) with the given [name] as
+ * callee.
  */
 private fun LanguageFrontend<*, *>.dottedCall(name: CharSequence, isStatic: Boolean = false): Call {
     val parsedName = parseName(name)
@@ -84,10 +83,9 @@ private fun LanguageFrontend<*, *>.dottedCall(name: CharSequence, isStatic: Bool
 }
 
 /**
- * Mirrors the removed Fluent DSL's `member` helper: builds a [MemberAccess] with the given [name].
- * If [base] is `null`, an implicit `this` reference is used, whose type is resolved to the nearest
- * enclosing record's type (mirroring Fluent's scope walk), or left as [unknownType] if none is
- * found.
+ * Builds a [MemberAccess] with the given [name]. If [base] is `null`, an implicit `this` reference
+ * is used, whose type is resolved to the nearest enclosing record's type, or left as [unknownType]
+ * if none is found.
  */
 private fun LanguageFrontend<*, *>.newMember(
     name: CharSequence,
@@ -109,7 +107,7 @@ private fun LanguageFrontend<*, *>.newMember(
     return newMemberAccess(name, memberBase, operatorCode = operatorCode)
 }
 
-/** Mirrors the removed Fluent DSL's `.line(i)` helper used to fake a [PhysicalLocation]. */
+/** Stamps a fake [PhysicalLocation] on the receiver for line [i], using its name as the code. */
 private fun Expression.line(tuName: String, i: Int): Expression {
     val code = this.name
     val region = Region(i, 0, i, code.length)
@@ -118,8 +116,8 @@ private fun Expression.line(tuName: String, i: Int): Expression {
 }
 
 /**
- * Mirrors the recurring "if (true) break; postIf()" loop body idiom used by several of the
- * `...WithElseAndBreak` test cases below.
+ * Appends the recurring "if (true) break;" statement followed by a `postIf()` call to [block], the
+ * shared loop body used by several of the `...WithElseAndBreak` test cases below.
  */
 private fun LanguageFrontend<*, *>.addIfTrueBreakAndPostIf(block: Block) {
     block.statements += newIfElse {
@@ -129,11 +127,11 @@ private fun LanguageFrontend<*, *>.addIfTrueBreakAndPostIf(block: Block) {
     block.statements += newCall(newReference("postIf"))
 }
 
-/** Mirrors the recurring `loopElseStmt { call("elseCall") }` idiom used below. */
+/** Builds the recurring loop `else` block containing a single `elseCall()` call. */
 private fun LanguageFrontend<*, *>.elseCallBlock(): Block =
     newBlock(enterScope = true) { it.statements += newCall(newReference("elseCall")) }
 
-/** Mirrors the recurring `System.out.println(argument)` call idiom used below. */
+/** Builds the recurring `System.out.println(argument)` member call used below. */
 private fun LanguageFrontend<*, *>.printlnCall(argument: Expression): MemberCall =
     newMemberCall(
         newMemberAccess(
@@ -144,7 +142,9 @@ private fun LanguageFrontend<*, *>.printlnCall(argument: Expression): MemberCall
         it.arguments += argument
     }
 
-/** Mirrors the removed Fluent DSL's `receiver(name, type)` helper. */
+/**
+ * Creates a [Variable] named [name] of [type], registers it, and sets it as [method]'s receiver.
+ */
 private fun LanguageFrontend<*, *>.addReceiver(method: Method, name: String, type: Type): Variable {
     val node = newVariable(name, type)
     method.receiver = node
@@ -153,8 +153,8 @@ private fun LanguageFrontend<*, *>.addReceiver(method: Method, name: String, typ
 }
 
 /**
- * Mirrors the removed Fluent DSL's `declare { variable(name, type) { ... } }` helper for a single
- * variable.
+ * Declares a single [Variable] named [name] of [type] (optionally initialized via [init]) inside a
+ * new declaration statement appended to [block].
  */
 private fun LanguageFrontend<*, *>.declareVariable(
     block: Block,
@@ -312,11 +312,17 @@ class GraphExamples {
                                     newFor { forNode ->
                                         forNode.statement =
                                             newBlock().also { addIfTrueBreakAndPostIf(it) }
-                                        val declStmt = newDeclarationStatement()
-                                        newVariable("a", objectType("int"), holder = declStmt) {
-                                            it.initializer = newLiteral(0, objectType("int"))
-                                        }
-                                        forNode.initializerStatement = declStmt
+                                        forNode.initializerStatement =
+                                            newDeclarationStatement { declStmt ->
+                                                newVariable(
+                                                    "a",
+                                                    objectType("int"),
+                                                    holder = declStmt,
+                                                ) {
+                                                    it.initializer =
+                                                        newLiteral(0, objectType("int"))
+                                                }
+                                            }
                                         forNode.condition = newLiteral(true, objectType("bool"))
                                         forNode.iterationStatement =
                                             newUnaryOperator("++", true, false) {
@@ -356,9 +362,9 @@ class GraphExamples {
                                     de.fraunhofer.aisec.cpg.graph.expressions.ForEach =
                                     newForEach { forEach ->
                                         forEach.iterable = dottedCall("listOf")
-                                        val declStmt = newDeclarationStatement()
-                                        newVariable("a", unknownType(), holder = declStmt)
-                                        forEach.variable = declStmt
+                                        forEach.variable = newDeclarationStatement { declStmt ->
+                                            newVariable("a", unknownType(), holder = declStmt)
+                                        }
                                         forEach.statement =
                                             newBlock().also { addIfTrueBreakAndPostIf(it) }
                                         forEach.elseStatement = elseCallBlock()
@@ -391,13 +397,12 @@ class GraphExamples {
                         method.type = computeType(method)
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                // forEachStmt { usedAsExpression = true; ... }
                                 block.statements += newForEach { forEach1 ->
                                     forEach1.usedAsExpression = true
                                     forEach1.iterable = dottedCall("listOf")
-                                    val declStmt = newDeclarationStatement()
-                                    newVariable("a", unknownType(), holder = declStmt)
-                                    forEach1.variable = declStmt
+                                    forEach1.variable = newDeclarationStatement { declStmt ->
+                                        newVariable("a", unknownType(), holder = declStmt)
+                                    }
                                     forEach1.statement =
                                         newBlock().also { it.statements += dottedCall("inBody") }
                                     forEach1.elseStatement =
@@ -406,23 +411,18 @@ class GraphExamples {
                                         }
                                 }
 
-                                // declare { variable("a") { literal(1) + forStmt {...} } }
-                                // Fluent's forStmt{} self-attaches the For into the enclosing
-                                // *body* block (the nearest `StatementHolder`) regardless of it
-                                // also being used as an operand of `+` below -- both effects are
-                                // faithfully reproduced (the For node ends up both as a top-level
-                                // statement and nested inside the declaration's initializer).
                                 val forNode = newFor {
                                     it.usedAsExpression = true
                                     it.statement =
                                         newBlock().also { blk ->
                                             blk.statements += dottedCall("bodyCall")
                                         }
-                                    val declStmt = newDeclarationStatement()
-                                    newVariable("a", objectType("int"), holder = declStmt) { v ->
-                                        v.initializer = newLiteral(0, objectType("int"))
+                                    it.initializerStatement = newDeclarationStatement { declStmt ->
+                                        newVariable("a", objectType("int"), holder = declStmt) { v
+                                            ->
+                                            v.initializer = newLiteral(0, objectType("int"))
+                                        }
                                     }
-                                    it.initializerStatement = declStmt
                                     it.condition = newLiteral(true, objectType("bool"))
                                     it.iterationStatement =
                                         newUnaryOperator("++", true, false) { u ->
@@ -430,7 +430,6 @@ class GraphExamples {
                                         }
                                     it.elseStatement = elseCallBlock()
                                 }
-                                block.statements += forNode
 
                                 declareVariable(block, "a", unknownType()) { v ->
                                     v.initializer =
@@ -440,7 +439,6 @@ class GraphExamples {
                                         }
                                 }
 
-                                // doStmt { usedAsExpression = true; ... }
                                 block.statements +=
                                     newDoWhile(enterScope = true) { doNode ->
                                         doNode.usedAsExpression = true
@@ -452,7 +450,6 @@ class GraphExamples {
                                         doNode.elseStatement = elseCallBlock()
                                     }
 
-                                // label("lab") { usedAsExpression = true; whileStmt {...} }
                                 block.statements +=
                                     newLabel().also { labelNode ->
                                         labelNode.label = "lab"
@@ -470,7 +467,6 @@ class GraphExamples {
                                             }
                                     }
 
-                                // ifStmt { usedAsExpression = true; ... }
                                 block.statements += newIfElse { ifNode ->
                                     ifNode.usedAsExpression = true
                                     ifNode.condition =
@@ -488,7 +484,6 @@ class GraphExamples {
                                         }
                                 }
 
-                                // switchStmt(ref("someref")) { usedAsExpression = true; ... }
                                 block.statements +=
                                     newSwitch(enterScope = true) { switchNode ->
                                         switchNode.selector = newReference("someref")
@@ -544,8 +539,6 @@ class GraphExamples {
                                             }
                                     }
 
-                                // declare { usedAsExpression = true; variable("a") { literal(42) }
-                                // }
                                 block.statements += newDeclarationStatement { ds ->
                                     ds.usedAsExpression = true
                                     newVariable("a", unknownType(), holder = ds) {
@@ -763,9 +756,8 @@ class GraphExamples {
                 val tu = newTranslationUnit("test.python")
                 scopeManager.resetToGlobal(tu)
 
-                // Computed before entering "foo"'s scope, mirroring Fluent's evaluation order of
-                // function arguments (see the `objectType`/scope-stamping caveat in the migration
-                // rules).
+                // The return types are resolved in the enclosing scope before entering "foo"'s
+                // scope.
                 val returnTypes = listOf(objectType("Foo"), objectType("Bar"))
                 newFunction("foo", holder = tu, enterScope = true) { func ->
                     func.returnTypes = returnTypes
@@ -1105,17 +1097,17 @@ class GraphExamples {
                                     it.initializer = newLiteral(0, objectType("int"))
                                 }
 
-                                val declStmtBCD = newDeclarationStatement()
-                                newVariable("b", objectType("int"), holder = declStmtBCD) {
-                                    it.initializer = newLiteral(1, objectType("int"))
+                                block.statements += newDeclarationStatement { declStmtBCD ->
+                                    newVariable("b", objectType("int"), holder = declStmtBCD) {
+                                        it.initializer = newLiteral(1, objectType("int"))
+                                    }
+                                    newVariable("c", objectType("int"), holder = declStmtBCD) {
+                                        it.initializer = newLiteral(0, objectType("int"))
+                                    }
+                                    newVariable("d", objectType("int"), holder = declStmtBCD) {
+                                        it.initializer = newLiteral(0, objectType("int"))
+                                    }
                                 }
-                                newVariable("c", objectType("int"), holder = declStmtBCD) {
-                                    it.initializer = newLiteral(0, objectType("int"))
-                                }
-                                newVariable("d", objectType("int"), holder = declStmtBCD) {
-                                    it.initializer = newLiteral(0, objectType("int"))
-                                }
-                                block.statements += declStmtBCD
 
                                 declareVariable(block, "sunShines", objectType("boolean")) {
                                     it.initializer = newLiteral(true, objectType("boolean"))
@@ -1192,16 +1184,10 @@ class GraphExamples {
                                                                 ),
                                                             )
                                                     }
-                                                // Fluent's "elseIf" builds a nested IfElse
-                                                // whose *own* condition is built with
-                                                // "lt", which has no ArgumentHolder
-                                                // context at all. Since the ambient holder
-                                                // (the nested IfElse) is an
-                                                // overwrite-style ArgumentHolder, and "lt"
-                                                // never self-attaches, the final condition
-                                                // ends up being just the last-evaluated
-                                                // operand (the literal rhs), not the
-                                                // comparison. Faithfully reproduced.
+                                                // The else-if condition is intentionally just this
+                                                // literal and does not reference a;
+                                                // DFGTest.testOutgoingDFGFromVariableDeclaration
+                                                // asserts exactly 6 out-edges for a.
                                                 innerIf.elseStatement = newIfElse { elseIfNode ->
                                                     elseIfNode.condition =
                                                         newLiteral(-2, objectType("int"))
@@ -2431,8 +2417,8 @@ class GraphExamples {
                         newParameter("i", objectType("int"), holder = ctor)
                     }
 
-                    // Computed before entering "method1"'s scope, mirroring Fluent's evaluation
-                    // order of function arguments.
+                    // The return type is resolved in the enclosing scope before entering
+                    // "method1"'s scope.
                     val method1ReturnType = objectType("TestClass")
                     newMethod("method1", holder = record, enterScope = true) { method ->
                         method.returnTypes = listOf(method1ReturnType)
@@ -2520,10 +2506,10 @@ class GraphExamples {
                     func.type = computeType(func)
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val declStmt = newDeclarationStatement()
-                            newVariable("s1", objectType("myStruct"), holder = declStmt)
-                            newVariable("s2", objectType("myStruct"), holder = declStmt)
-                            block.statements += declStmt
+                            block.statements += newDeclarationStatement { declStmt ->
+                                newVariable("s1", objectType("myStruct"), holder = declStmt)
+                                newVariable("s2", objectType("myStruct"), holder = declStmt)
+                            }
 
                             block.statements +=
                                 newCall(newReference("doSomething")) {

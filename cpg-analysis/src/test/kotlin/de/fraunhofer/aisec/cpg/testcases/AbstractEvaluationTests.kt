@@ -125,15 +125,15 @@ abstract class AbstractEvaluationTests {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val bDeclStmt = newDeclarationStatement()
-                                newVariable("b", objectType("Bar"), holder = bDeclStmt)
-                                block.statements += bDeclStmt
-
-                                val aDeclStmt = newDeclarationStatement()
-                                newVariable("a", objectType("int"), holder = aDeclStmt) {
-                                    it.initializer = newLiteral(5, objectType("int"))
+                                block.statements += newDeclarationStatement { bDeclStmt ->
+                                    newVariable("b", objectType("Bar"), holder = bDeclStmt)
                                 }
-                                block.statements += aDeclStmt
+
+                                block.statements += newDeclarationStatement { aDeclStmt ->
+                                    newVariable("a", objectType("int"), holder = aDeclStmt) {
+                                        it.initializer = newLiteral(5, objectType("int"))
+                                    }
+                                }
 
                                 block.statements +=
                                     newAssign(
@@ -169,15 +169,15 @@ abstract class AbstractEvaluationTests {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val bDeclStmt = newDeclarationStatement()
-                                newVariable("b", objectType("Bar"), holder = bDeclStmt)
-                                block.statements += bDeclStmt
-
-                                val aDeclStmt = newDeclarationStatement()
-                                newVariable("a", objectType("int"), holder = aDeclStmt) {
-                                    it.initializer = newLiteral(5, objectType("int"))
+                                block.statements += newDeclarationStatement { bDeclStmt ->
+                                    newVariable("b", objectType("Bar"), holder = bDeclStmt)
                                 }
-                                block.statements += aDeclStmt
+
+                                block.statements += newDeclarationStatement { aDeclStmt ->
+                                    newVariable("a", objectType("int"), holder = aDeclStmt) {
+                                        it.initializer = newLiteral(5, objectType("int"))
+                                    }
+                                }
 
                                 block.statements +=
                                     newAssign(
@@ -259,15 +259,15 @@ abstract class AbstractEvaluationTests {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val bDeclStmt = newDeclarationStatement()
-                                newVariable("b", objectType("Bar"), holder = bDeclStmt)
-                                block.statements += bDeclStmt
-
-                                val aDeclStmt = newDeclarationStatement()
-                                newVariable("a", objectType("int"), holder = aDeclStmt) {
-                                    it.initializer = newLiteral(5, objectType("int"))
+                                block.statements += newDeclarationStatement { bDeclStmt ->
+                                    newVariable("b", objectType("Bar"), holder = bDeclStmt)
                                 }
-                                block.statements += aDeclStmt
+
+                                block.statements += newDeclarationStatement { aDeclStmt ->
+                                    newVariable("a", objectType("int"), holder = aDeclStmt) {
+                                        it.initializer = newLiteral(5, objectType("int"))
+                                    }
+                                }
 
                                 block.statements += newIfElse { ifElse ->
                                     ifElse.condition =
@@ -302,15 +302,15 @@ abstract class AbstractEvaluationTests {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val bDeclStmt = newDeclarationStatement()
-                                newVariable("b", objectType("Bar"), holder = bDeclStmt)
-                                block.statements += bDeclStmt
-
-                                val aDeclStmt = newDeclarationStatement()
-                                newVariable("a", objectType("int"), holder = aDeclStmt) {
-                                    it.initializer = newLiteral(5, objectType("int"))
+                                block.statements += newDeclarationStatement { bDeclStmt ->
+                                    newVariable("b", objectType("Bar"), holder = bDeclStmt)
                                 }
-                                block.statements += aDeclStmt
+
+                                block.statements += newDeclarationStatement { aDeclStmt ->
+                                    newVariable("a", objectType("int"), holder = aDeclStmt) {
+                                        it.initializer = newLiteral(5, objectType("int"))
+                                    }
+                                }
 
                                 block.statements += newIfElse { ifElse ->
                                     ifElse.condition =
@@ -354,53 +354,56 @@ abstract class AbstractEvaluationTests {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val bDeclStmt = newDeclarationStatement()
-                                newVariable("b", objectType("Bar"), holder = bDeclStmt)
-                                block.statements += bDeclStmt
-
-                                val aDeclStmt = newDeclarationStatement()
-                                newVariable("a", objectType("int"), holder = aDeclStmt) {
-                                    it.initializer = newLiteral(5, objectType("int"))
+                                block.statements += newDeclarationStatement { bDeclStmt ->
+                                    newVariable("b", objectType("Bar"), holder = bDeclStmt)
                                 }
-                                block.statements += aDeclStmt
 
-                                // Fluent's forStmt() never enters/leaves a scope for the `For`
-                                // node itself (unlike whileStmt/forEachStmt), so the loop
-                                // variable "i" and the loop body end up declared/evaluated
-                                // directly in the enclosing method scope. Faithfully reproduced
-                                // here by not passing enterScope to newFor()/newBlock() below.
-                                block.statements += newFor { for_ ->
-                                    val iDeclStmt = newDeclarationStatement()
-                                    newVariable("i", objectType("int"), holder = iDeclStmt) {
-                                        it.initializer = newLiteral(0, objectType("int"))
+                                block.statements += newDeclarationStatement { aDeclStmt ->
+                                    newVariable("a", objectType("int"), holder = aDeclStmt) {
+                                        it.initializer = newLiteral(5, objectType("int"))
                                     }
-                                    for_.initializerStatement = iDeclStmt
+                                }
 
-                                    for_.condition =
-                                        newBinaryOperator("<") {
-                                            it.lhs = newReference("i")
-                                            it.rhs = newLiteral(5, objectType("int"))
-                                        }
+                                block.statements +=
+                                    newFor(enterScope = true) { for_ ->
+                                        for_.initializerStatement =
+                                            newDeclarationStatement { iDeclStmt ->
+                                                newVariable(
+                                                    "i",
+                                                    objectType("int"),
+                                                    holder = iDeclStmt,
+                                                ) {
+                                                    it.initializer =
+                                                        newLiteral(0, objectType("int"))
+                                                }
+                                            }
 
-                                    for_.iterationStatement =
-                                        newUnaryOperator("++", postfix = true, prefix = false) {
-                                            it.input = newReference("i")
-                                        }
+                                        for_.condition =
+                                            newBinaryOperator("<") {
+                                                it.lhs = newReference("i")
+                                                it.rhs = newLiteral(5, objectType("int"))
+                                            }
 
-                                    for_.statement = newBlock { loopBodyBlock ->
-                                        loopBodyBlock.statements +=
-                                            newAssign(
-                                                "+=",
-                                                listOf(newReference("a")),
-                                                listOf(newLiteral(1, objectType("int"))),
-                                            )
+                                        for_.iterationStatement =
+                                            newUnaryOperator("++", postfix = true, prefix = false) {
+                                                it.input = newReference("i")
+                                            }
 
-                                        loopBodyBlock.statements +=
-                                            newCall(newReference("println")) {
-                                                it.arguments += newReference("i")
+                                        for_.statement =
+                                            newBlock(enterScope = true) { loopBodyBlock ->
+                                                loopBodyBlock.statements +=
+                                                    newAssign(
+                                                        "+=",
+                                                        listOf(newReference("a")),
+                                                        listOf(newLiteral(1, objectType("int"))),
+                                                    )
+
+                                                loopBodyBlock.statements +=
+                                                    newCall(newReference("println")) {
+                                                        it.arguments += newReference("i")
+                                                    }
                                             }
                                     }
-                                }
 
                                 block.statements +=
                                     newMemberCall(
@@ -417,61 +420,72 @@ abstract class AbstractEvaluationTests {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val iDeclStmt = newDeclarationStatement()
-                                newVariable("i", objectType("int"), holder = iDeclStmt) {
-                                    it.initializer = newLiteral(0, objectType("int"))
-                                }
-                                block.statements += iDeclStmt
-
-                                block.statements += newFor { for_ ->
-                                    for_.initializerStatement =
-                                        newAssign(
-                                            "=",
-                                            listOf(newReference("i")),
-                                            listOf(newLiteral(0, objectType("int"))),
-                                        )
-
-                                    for_.condition =
-                                        newBinaryOperator("<") {
-                                            it.lhs = newReference("i")
-                                            it.rhs = newLiteral(5, objectType("int"))
-                                        }
-
-                                    for_.iterationStatement =
-                                        newUnaryOperator("++", postfix = true, prefix = false) {
-                                            it.input = newReference("i")
-                                        }
-
-                                    for_.statement = newBlock { loopBodyBlock ->
-                                        loopBodyBlock.statements += newIfElse { inner ->
-                                            inner.condition =
-                                                newBinaryOperator("<") {
-                                                    it.lhs = newReference("i")
-                                                    it.rhs = newLiteral(3, objectType("int"))
-                                                }
-
-                                            inner.thenStatement =
-                                                newBlock(enterScope = true) { tb ->
-                                                    tb.statements +=
-                                                        newCall(newReference("lessThanThree")) {
-                                                            it.arguments += newReference("i")
-                                                        }
-                                                }
-                                            inner.elseStatement =
-                                                newBlock(enterScope = true) { eb ->
-                                                    eb.statements +=
-                                                        newCall(newReference("greaterEqualThree")) {
-                                                            it.arguments += newReference("i")
-                                                        }
-                                                }
-                                        }
-
-                                        loopBodyBlock.statements +=
-                                            newCall(newReference("println")) {
-                                                it.arguments += newReference("i")
-                                            }
+                                block.statements += newDeclarationStatement { iDeclStmt ->
+                                    newVariable("i", objectType("int"), holder = iDeclStmt) {
+                                        it.initializer = newLiteral(0, objectType("int"))
                                     }
                                 }
+
+                                block.statements +=
+                                    newFor(enterScope = true) { for_ ->
+                                        for_.initializerStatement =
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("i")),
+                                                listOf(newLiteral(0, objectType("int"))),
+                                            )
+
+                                        for_.condition =
+                                            newBinaryOperator("<") {
+                                                it.lhs = newReference("i")
+                                                it.rhs = newLiteral(5, objectType("int"))
+                                            }
+
+                                        for_.iterationStatement =
+                                            newUnaryOperator("++", postfix = true, prefix = false) {
+                                                it.input = newReference("i")
+                                            }
+
+                                        for_.statement =
+                                            newBlock(enterScope = true) { loopBodyBlock ->
+                                                loopBodyBlock.statements += newIfElse { inner ->
+                                                    inner.condition =
+                                                        newBinaryOperator("<") {
+                                                            it.lhs = newReference("i")
+                                                            it.rhs =
+                                                                newLiteral(3, objectType("int"))
+                                                        }
+
+                                                    inner.thenStatement =
+                                                        newBlock(enterScope = true) { tb ->
+                                                            tb.statements +=
+                                                                newCall(
+                                                                    newReference("lessThanThree")
+                                                                ) {
+                                                                    it.arguments +=
+                                                                        newReference("i")
+                                                                }
+                                                        }
+                                                    inner.elseStatement =
+                                                        newBlock(enterScope = true) { eb ->
+                                                            eb.statements +=
+                                                                newCall(
+                                                                    newReference(
+                                                                        "greaterEqualThree"
+                                                                    )
+                                                                ) {
+                                                                    it.arguments +=
+                                                                        newReference("i")
+                                                                }
+                                                        }
+                                                }
+
+                                                loopBodyBlock.statements +=
+                                                    newCall(newReference("println")) {
+                                                        it.arguments += newReference("i")
+                                                    }
+                                            }
+                                    }
 
                                 block.statements +=
                                     newCall(newReference("afterLoop")) {

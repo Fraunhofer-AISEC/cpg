@@ -187,30 +187,16 @@ class ControlDependenceGraphPassTest {
 
                         func.body =
                             newBlock(enterScope = true) { block ->
-                                // Fluent's logicAnd/logicOr self-attach their operands (foo()/
-                                // bar()) to the block as separate statements *and* the resulting
-                                // operator itself -- there's no removal trick for these two
-                                // operators (unlike +, -, *, etc.), so the block ends up with
-                                // [foo(), bar(), foo() && bar()], not just the operator.
-                                // Faithfully reproduced (confirmed via the original test).
-                                val fooCall = newCall(newReference("foo"))
-                                block.statements += fooCall
-                                val barCall = newCall(newReference("bar"))
-                                block.statements += barCall
                                 block.statements +=
                                     newBinaryOperator("&&") {
-                                        it.lhs = fooCall
-                                        it.rhs = barCall
+                                        it.lhs = newCall(newReference("foo"))
+                                        it.rhs = newCall(newReference("bar"))
                                     }
 
-                                val bazCall = newCall(newReference("baz"))
-                                block.statements += bazCall
-                                val quuxCall = newCall(newReference("quux"))
-                                block.statements += quuxCall
                                 block.statements +=
                                     newBinaryOperator("||") {
-                                        it.lhs = bazCall
-                                        it.rhs = quuxCall
+                                        it.lhs = newCall(newReference("baz"))
+                                        it.rhs = newCall(newReference("quux"))
                                     }
 
                                 block.statements += newReturn {
@@ -242,17 +228,18 @@ class ControlDependenceGraphPassTest {
 
                 func.body =
                     newBlock(enterScope = true) { block ->
-                        val declStmt = newDeclarationStatement()
-                        newVariable("i", objectType("int"), holder = declStmt) {
-                            it.initializer = newLiteral(0, objectType("int"))
+                        block.statements += newDeclarationStatement { declStmt ->
+                            newVariable("i", objectType("int"), holder = declStmt) {
+                                it.initializer = newLiteral(0, objectType("int"))
+                            }
                         }
-                        block.statements += declStmt
 
                         block.statements += newIfElse { ifElse ->
-                            // "lt" has no ArgumentHolder context (see note in
-                            // ProgramDependenceGraphPassTest) -- condition ends up being
-                            // just the literal, not the comparison. Faithfully reproduced.
-                            ifElse.condition = newLiteral(1, objectType("int"))
+                            ifElse.condition =
+                                newBinaryOperator("<") {
+                                    it.lhs = newReference("i")
+                                    it.rhs = newLiteral(1, objectType("int"))
+                                }
                             ifElse.thenStatement =
                                 newBlock(enterScope = true) { thenBlock ->
                                     thenBlock.statements +=
@@ -275,9 +262,6 @@ class ControlDependenceGraphPassTest {
                             }
 
                         block.statements += newIfElse { ifElse ->
-                            // "gt" DOES have ArgumentHolder context, so its own self-attach
-                            // (which happens after the operands' self-attach) correctly ends
-                            // up overwriting to become the condition.
                             ifElse.condition =
                                 newBinaryOperator(">") {
                                     it.lhs = newReference("i")
@@ -333,28 +317,21 @@ class ControlDependenceGraphPassTest {
 
                         func.body =
                             newBlock(enterScope = true) { block ->
-                                val declStmt = newDeclarationStatement()
-                                newVariable("i", objectType("int"), holder = declStmt) {
-                                    it.initializer = newLiteral(0, objectType("int"))
+                                block.statements += newDeclarationStatement { declStmt ->
+                                    newVariable("i", objectType("int"), holder = declStmt) {
+                                        it.initializer = newLiteral(0, objectType("int"))
+                                    }
                                 }
-                                block.statements += declStmt
 
                                 block.statements += newForEach { forEach ->
-                                    val loopVarDeclStmt = newDeclarationStatement()
-                                    newVariable(
-                                        "loopVar",
-                                        objectType("string"),
-                                        holder = loopVarDeclStmt,
-                                    )
-                                    // Fluent's declare{}/call(...) self-attach to ForEach's
-                                    // generic StatementHolder.statements *in addition to* the
-                                    // explicit `variable =`/`iterable =` property assignment
-                                    // done in the original test -- both effects are
-                                    // reproduced faithfully.
-                                    forEach.statements += loopVarDeclStmt
-                                    forEach.variable = loopVarDeclStmt
+                                    forEach.variable = newDeclarationStatement { loopVarDeclStmt ->
+                                        newVariable(
+                                            "loopVar",
+                                            objectType("string"),
+                                            holder = loopVarDeclStmt,
+                                        )
+                                    }
                                     val magicCall = newCall(newReference("magicFunction"))
-                                    forEach.statements += magicCall
                                     forEach.iterable = magicCall
                                     forEach.statement =
                                         newBlock(enterScope = true) { loopBody ->

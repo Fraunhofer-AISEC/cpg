@@ -62,17 +62,13 @@ class TupleTest {
                     func.type = computeType(func)
                 }
 
-                // I fear this was too complex for the fluent DSL; so we just use the node
-                // builder here
                 val tuple =
                     newTuple(
                         listOf(newVariable("a"), newVariable("b")),
                         newCall(newReference("func")),
                     )
                 scopeManager.addDeclaration(tuple)
-                val declStmt = newDeclarationStatement()
-                declStmt.singleDeclaration = tuple
-                tu.statements += declStmt
+                tu.statements += newDeclarationStatement { it.singleDeclaration = tuple }
 
                 tuple.elements.forEach { scopeManager.addDeclaration(it) }
 
@@ -156,17 +152,13 @@ class TupleTest {
                 newFunction("main", holder = tu, enterScope = true) { func ->
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            // I fear this was too complex for the fluent DSL; so we just use
-                            // the node builder here
                             val tuple =
                                 newTuple(
                                     listOf(newVariable("a"), newVariable("b")),
                                     newCall(newReference("func")),
                                 )
                             scopeManager.addDeclaration(tuple)
-                            val declStmt = newDeclarationStatement()
-                            declStmt.declarations += tuple
-                            block.statements += declStmt
+                            block.statements += newDeclarationStatement { it.declarations += tuple }
 
                             tuple.elements.forEach { scopeManager.addDeclaration(it) }
 

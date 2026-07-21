@@ -110,24 +110,26 @@ class Query {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val scDecl = newDeclarationStatement()
-                                val newExpr = newNew()
-                                newExpr.initializer =
-                                    newConstruction("Dataflow") { it.type = objectType("Dataflow") }
-                                newVariable("sc", objectType("Dataflow"), holder = scDecl) {
-                                    it.initializer = newExpr
+                                block.statements += newDeclarationStatement { scDecl ->
+                                    val newExpr = newNew()
+                                    newExpr.initializer =
+                                        newConstruction("Dataflow") {
+                                            it.type = objectType("Dataflow")
+                                        }
+                                    newVariable("sc", objectType("Dataflow"), holder = scDecl) {
+                                        it.initializer = newExpr
+                                    }
                                 }
-                                block.statements += scDecl
 
-                                val sDecl = newDeclarationStatement()
-                                newVariable("s", objectType("string"), holder = sDecl) {
-                                    it.initializer =
-                                        newMemberCall(
-                                            newMemberAccess("toString", newReference("sc")),
-                                            false,
-                                        )
+                                block.statements += newDeclarationStatement { sDecl ->
+                                    newVariable("s", objectType("string"), holder = sDecl) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess("toString", newReference("sc")),
+                                                false,
+                                            )
+                                    }
                                 }
-                                block.statements += sDecl
 
                                 block.statements +=
                                     newMemberCall(
@@ -216,14 +218,16 @@ class Query {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val scDecl = newDeclarationStatement()
-                                val newExpr = newNew()
-                                newExpr.initializer =
-                                    newConstruction("Dataflow") { it.type = objectType("Dataflow") }
-                                newVariable("sc", objectType("Dataflow"), holder = scDecl) {
-                                    it.initializer = newExpr
+                                block.statements += newDeclarationStatement { scDecl ->
+                                    val newExpr = newNew()
+                                    newExpr.initializer =
+                                        newConstruction("Dataflow") {
+                                            it.type = objectType("Dataflow")
+                                        }
+                                    newVariable("sc", objectType("Dataflow"), holder = scDecl) {
+                                        it.initializer = newExpr
+                                    }
                                 }
-                                block.statements += scDecl
 
                                 block.statements +=
                                     newAssign(
@@ -350,14 +354,16 @@ class Query {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val scDecl = newDeclarationStatement()
-                                val newExpr = newNew()
-                                newExpr.initializer =
-                                    newConstruction("Dataflow") { it.type = objectType("Dataflow") }
-                                newVariable("sc", objectType("Dataflow"), holder = scDecl) {
-                                    it.initializer = newExpr
+                                block.statements += newDeclarationStatement { scDecl ->
+                                    val newExpr = newNew()
+                                    newExpr.initializer =
+                                        newConstruction("Dataflow") {
+                                            it.type = objectType("Dataflow")
+                                        }
+                                    newVariable("sc", objectType("Dataflow"), holder = scDecl) {
+                                        it.initializer = newExpr
+                                    }
                                 }
-                                block.statements += scDecl
 
                                 block.statements +=
                                     newAssign(
@@ -481,14 +487,16 @@ class Query {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val scDecl = newDeclarationStatement()
-                                val newExpr = newNew()
-                                newExpr.initializer =
-                                    newConstruction("Dataflow") { it.type = objectType("Dataflow") }
-                                newVariable("sc", objectType("Dataflow"), holder = scDecl) {
-                                    it.initializer = newExpr
+                                block.statements += newDeclarationStatement { scDecl ->
+                                    val newExpr = newNew()
+                                    newExpr.initializer =
+                                        newConstruction("Dataflow") {
+                                            it.type = objectType("Dataflow")
+                                        }
+                                    newVariable("sc", objectType("Dataflow"), holder = scDecl) {
+                                        it.initializer = newExpr
+                                    }
                                 }
-                                block.statements += scDecl
 
                                 block.statements +=
                                     newAssign(
@@ -510,8 +518,10 @@ class Query {
                                                     newBinaryOperator("+") { inner ->
                                                         inner.lhs =
                                                             newLiteral("put ", objectType("string"))
-                                                        // Note: original uses ref("a") as base here
-                                                        // (not "sc"), faithfully reproduced.
+                                                        // The base of this member access is
+                                                        // intentionally the "a" reference (not
+                                                        // "sc"), as checked by
+                                                        // testComplexDataflow3.
                                                         inner.rhs =
                                                             newMemberAccess("a", newReference("a"))
                                                     }
@@ -578,39 +588,39 @@ class Query {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val cDecl = newDeclarationStatement()
-                            val creationExpr = newArrayConstruction()
-                            creationExpr.addDimension(newLiteral(4, objectType("int")))
-                            creationExpr.type = objectType("char")
-                            newVariable("c", objectType("char").pointer(), holder = cDecl) {
-                                it.initializer = creationExpr
-                            }
-                            block.statements += cDecl
-
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(4, objectType("int"))
-                            }
-                            block.statements += aDecl
-
-                            val bDecl = newDeclarationStatement()
-                            newVariable("b", objectType("int"), holder = bDecl) { b ->
-                                b.initializer =
-                                    newBinaryOperator("+") {
-                                        it.lhs = newReference("a")
-                                        it.rhs = newLiteral(1, objectType("int"))
-                                    }
-                            }
-                            block.statements += bDecl
-
-                            val dDecl = newDeclarationStatement()
-                            newVariable("d", objectType("char"), holder = dDecl) { d ->
-                                d.initializer = newSubscription {
-                                    it.arrayExpression = newReference("c")
-                                    it.subscriptExpression = newReference("b")
+                            block.statements += newDeclarationStatement { cDecl ->
+                                val creationExpr = newArrayConstruction()
+                                creationExpr.addDimension(newLiteral(4, objectType("int")))
+                                creationExpr.type = objectType("char")
+                                newVariable("c", objectType("char").pointer(), holder = cDecl) {
+                                    it.initializer = creationExpr
                                 }
                             }
-                            block.statements += dDecl
+
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
+                                    it.initializer = newLiteral(4, objectType("int"))
+                                }
+                            }
+
+                            block.statements += newDeclarationStatement { bDecl ->
+                                newVariable("b", objectType("int"), holder = bDecl) { b ->
+                                    b.initializer =
+                                        newBinaryOperator("+") {
+                                            it.lhs = newReference("a")
+                                            it.rhs = newLiteral(1, objectType("int"))
+                                        }
+                                }
+                            }
+
+                            block.statements += newDeclarationStatement { dDecl ->
+                                newVariable("d", objectType("char"), holder = dDecl) { d ->
+                                    d.initializer = newSubscription {
+                                        it.arrayExpression = newReference("c")
+                                        it.subscriptExpression = newReference("b")
+                                    }
+                                }
+                            }
 
                             block.statements += newReturn {
                                 it.returnValue = newLiteral(0, objectType("int"))
@@ -618,33 +628,28 @@ class Query {
                         }
                 }
 
-                // Fluent's `function()` init lambda receiver is `Function`, which is not a
-                // `StatementHolder`; the `declare{}`/`returnStmt{}` calls below (which have no
-                // enclosing `body{}` in the original) therefore fell through to the nearest
-                // actual `StatementHolder` in the lexical chain -- the enclosing
-                // `TranslationUnit` -- so they ended up attached to `tu.statements` instead of
-                // `func.body` (which is never assigned). The declaration is still scoped to this
-                // function though, since `function()` already entered its scope. Faithfully
-                // reproduced here.
                 newFunction("some_other_function", holder = tu, enterScope = true) { func ->
                     func.returnTypes = listOf(objectType("char"))
                     func.type = computeType(func)
 
-                    val cDecl = newDeclarationStatement()
-                    val creationExpr = newArrayConstruction()
-                    creationExpr.addDimension(newLiteral(100, objectType("int")))
-                    creationExpr.type = objectType("char")
-                    newVariable("c", objectType("char").pointer(), holder = cDecl) {
-                        it.initializer = creationExpr
-                    }
-                    tu.statements += cDecl
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newDeclarationStatement { cDecl ->
+                                val creationExpr = newArrayConstruction()
+                                creationExpr.addDimension(newLiteral(100, objectType("int")))
+                                creationExpr.type = objectType("char")
+                                newVariable("c", objectType("char").pointer(), holder = cDecl) {
+                                    it.initializer = creationExpr
+                                }
+                            }
 
-                    tu.statements += newReturn { ret ->
-                        ret.returnValue = newSubscription {
-                            it.arrayExpression = newReference("c")
-                            it.subscriptExpression = newLiteral(0, objectType("int"))
+                            block.statements += newReturn { ret ->
+                                ret.returnValue = newSubscription {
+                                    it.arrayExpression = newReference("c")
+                                    it.subscriptExpression = newLiteral(0, objectType("int"))
+                                }
+                            }
                         }
-                    }
                 }
 
                 translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
@@ -667,27 +672,27 @@ class Query {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val cDecl = newDeclarationStatement()
-                            val creationExpr = newArrayConstruction()
-                            creationExpr.addDimension(newLiteral(4, objectType("int")))
-                            creationExpr.type = objectType("char")
-                            newVariable("c", objectType("char").pointer(), holder = cDecl) {
-                                it.initializer = creationExpr
+                            block.statements += newDeclarationStatement { cDecl ->
+                                val creationExpr = newArrayConstruction()
+                                creationExpr.addDimension(newLiteral(4, objectType("int")))
+                                creationExpr.type = objectType("char")
+                                newVariable("c", objectType("char").pointer(), holder = cDecl) {
+                                    it.initializer = creationExpr
+                                }
                             }
-                            block.statements += cDecl
 
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(0, objectType("int"))
-                            }
-                            block.statements += aDecl
-
-                            block.statements += newFor { for_ ->
-                                val iDecl = newDeclarationStatement()
-                                newVariable("i", objectType("int"), holder = iDecl) {
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
                                     it.initializer = newLiteral(0, objectType("int"))
                                 }
-                                for_.initializerStatement = iDecl
+                            }
+
+                            block.statements += newFor { for_ ->
+                                for_.initializerStatement = newDeclarationStatement { iDecl ->
+                                    newVariable("i", objectType("int"), holder = iDecl) {
+                                        it.initializer = newLiteral(0, objectType("int"))
+                                    }
+                                }
 
                                 for_.condition =
                                     newBinaryOperator("<") {
@@ -742,9 +747,9 @@ class Query {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val cDecl = newDeclarationStatement()
-                            newVariable("c", objectType("char").pointer(), holder = cDecl)
-                            block.statements += cDecl
+                            block.statements += newDeclarationStatement { cDecl ->
+                                newVariable("c", objectType("char").pointer(), holder = cDecl)
+                            }
 
                             block.statements += newIfElse { ifElse ->
                                 ifElse.condition =
@@ -778,18 +783,18 @@ class Query {
                                     }
                             }
 
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(0, objectType("int"))
-                            }
-                            block.statements += aDecl
-
-                            block.statements += newFor { for_ ->
-                                val iDecl = newDeclarationStatement()
-                                newVariable("i", objectType("int"), holder = iDecl) {
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
                                     it.initializer = newLiteral(0, objectType("int"))
                                 }
-                                for_.initializerStatement = iDecl
+                            }
+
+                            block.statements += newFor { for_ ->
+                                for_.initializerStatement = newDeclarationStatement { iDecl ->
+                                    newVariable("i", objectType("int"), holder = iDecl) {
+                                        it.initializer = newLiteral(0, objectType("int"))
+                                    }
+                                }
 
                                 for_.condition =
                                     newBinaryOperator("<") {
@@ -844,27 +849,27 @@ class Query {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val cDecl = newDeclarationStatement()
-                            val creationExpr = newArrayConstruction()
-                            creationExpr.addDimension(newLiteral(4, objectType("int")))
-                            creationExpr.type = objectType("char")
-                            newVariable("c", objectType("char").pointer(), holder = cDecl) {
-                                it.initializer = creationExpr
+                            block.statements += newDeclarationStatement { cDecl ->
+                                val creationExpr = newArrayConstruction()
+                                creationExpr.addDimension(newLiteral(4, objectType("int")))
+                                creationExpr.type = objectType("char")
+                                newVariable("c", objectType("char").pointer(), holder = cDecl) {
+                                    it.initializer = creationExpr
+                                }
                             }
-                            block.statements += cDecl
 
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(0, objectType("int"))
-                            }
-                            block.statements += aDecl
-
-                            block.statements += newFor { for_ ->
-                                val iDecl = newDeclarationStatement()
-                                newVariable("i", objectType("int"), holder = iDecl) {
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
                                     it.initializer = newLiteral(0, objectType("int"))
                                 }
-                                for_.initializerStatement = iDecl
+                            }
+
+                            block.statements += newFor { for_ ->
+                                for_.initializerStatement = newDeclarationStatement { iDecl ->
+                                    newVariable("i", objectType("int"), holder = iDecl) {
+                                        it.initializer = newLiteral(0, objectType("int"))
+                                    }
+                                }
 
                                 for_.condition =
                                     newBinaryOperator("<") {
@@ -919,11 +924,11 @@ class Query {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("int"), holder = aDecl) {
-                                it.initializer = newLiteral(4, objectType("int"))
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("int"), holder = aDecl) {
+                                    it.initializer = newLiteral(4, objectType("int"))
+                                }
                             }
-                            block.statements += aDecl
                             // TODO: There was a commented-out line. No idea what to do with it:
                             // int a, b = 4; // this is broken, a is missing an initializer
 
@@ -958,17 +963,21 @@ class Query {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val arrayDecl = newDeclarationStatement()
-                            newVariable("array", objectType("char").array(), holder = arrayDecl) {
-                                it.initializer = newLiteral("hello", objectType("char").array())
+                            block.statements += newDeclarationStatement { arrayDecl ->
+                                newVariable(
+                                    "array",
+                                    objectType("char").array(),
+                                    holder = arrayDecl,
+                                ) {
+                                    it.initializer = newLiteral("hello", objectType("char").array())
+                                }
                             }
-                            block.statements += arrayDecl
 
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("short"), holder = aDecl) {
-                                it.initializer = newLiteral(2, objectType("int"))
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("short"), holder = aDecl) {
+                                    it.initializer = newLiteral(2, objectType("int"))
+                                }
                             }
-                            block.statements += aDecl
 
                             block.statements += newIfElse { ifElse ->
                                 ifElse.condition =
@@ -987,15 +996,15 @@ class Query {
                                     }
                             }
 
-                            val xDecl = newDeclarationStatement()
-                            newVariable("x", objectType("double"), holder = xDecl) { x ->
-                                x.initializer =
-                                    newBinaryOperator("/") {
-                                        it.lhs = newLiteral(5, objectType("int"))
-                                        it.rhs = newReference("a")
-                                    }
+                            block.statements += newDeclarationStatement { xDecl ->
+                                newVariable("x", objectType("double"), holder = xDecl) { x ->
+                                    x.initializer =
+                                        newBinaryOperator("/") {
+                                            it.lhs = newLiteral(5, objectType("int"))
+                                            it.rhs = newReference("a")
+                                        }
+                                }
                             }
-                            block.statements += xDecl
 
                             block.statements += newReturn {
                                 it.returnValue = newLiteral(0, objectType("int"))
@@ -1023,11 +1032,15 @@ class Query {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val arrayDecl = newDeclarationStatement()
-                            newVariable("array", objectType("char").array(), holder = arrayDecl) {
-                                it.initializer = newLiteral("hello", objectType("char").array())
+                            block.statements += newDeclarationStatement { arrayDecl ->
+                                newVariable(
+                                    "array",
+                                    objectType("char").array(),
+                                    holder = arrayDecl,
+                                ) {
+                                    it.initializer = newLiteral("hello", objectType("char").array())
+                                }
                             }
-                            block.statements += arrayDecl
 
                             block.statements +=
                                 newCall(newReference("memcpy")) {
@@ -1052,11 +1065,11 @@ class Query {
                                     it.arguments += newReference("array")
                                 }
 
-                            val aDecl = newDeclarationStatement()
-                            newVariable("a", objectType("short"), holder = aDecl) {
-                                it.initializer = newLiteral(2, objectType("int"))
+                            block.statements += newDeclarationStatement { aDecl ->
+                                newVariable("a", objectType("short"), holder = aDecl) {
+                                    it.initializer = newLiteral(2, objectType("int"))
+                                }
                             }
-                            block.statements += aDecl
 
                             block.statements += newIfElse { ifElse ->
                                 ifElse.condition =
@@ -1075,21 +1088,21 @@ class Query {
                                     }
                             }
 
-                            val xDecl = newDeclarationStatement()
-                            newVariable("x", objectType("double"), holder = xDecl) { x ->
-                                x.initializer =
-                                    newBinaryOperator("/") {
-                                        it.lhs = newLiteral(5, objectType("int"))
-                                        it.rhs = newReference("a")
-                                    }
+                            block.statements += newDeclarationStatement { xDecl ->
+                                newVariable("x", objectType("double"), holder = xDecl) { x ->
+                                    x.initializer =
+                                        newBinaryOperator("/") {
+                                            it.lhs = newLiteral(5, objectType("int"))
+                                            it.rhs = newReference("a")
+                                        }
+                                }
                             }
-                            block.statements += xDecl
 
-                            val bDecl = newDeclarationStatement()
-                            newVariable("b", objectType("int"), holder = bDecl) {
-                                it.initializer = newLiteral(2147483648, objectType("int"))
+                            block.statements += newDeclarationStatement { bDecl ->
+                                newVariable("b", objectType("int"), holder = bDecl) {
+                                    it.initializer = newLiteral(2147483648, objectType("int"))
+                                }
                             }
-                            block.statements += bDecl
 
                             block.statements +=
                                 newAssign(
@@ -1098,11 +1111,11 @@ class Query {
                                     listOf(newLiteral(2147483648, objectType("int"))),
                                 )
 
-                            val cDecl = newDeclarationStatement()
-                            newVariable("c", objectType("long"), holder = cDecl) {
-                                it.initializer = newLiteral(-10000, objectType("long"))
+                            block.statements += newDeclarationStatement { cDecl ->
+                                newVariable("c", objectType("long"), holder = cDecl) {
+                                    it.initializer = newLiteral(-10000, objectType("long"))
+                                }
                             }
-                            block.statements += cDecl
 
                             block.statements += newReturn {
                                 it.returnValue = newLiteral(0, objectType("int"))

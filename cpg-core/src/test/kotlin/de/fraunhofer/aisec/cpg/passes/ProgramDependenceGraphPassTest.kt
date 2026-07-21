@@ -122,23 +122,19 @@ class ProgramDependenceGraphPassTest {
 
                         func.body =
                             newBlock(enterScope = true) { block ->
-                                val declStmt = newDeclarationStatement()
-                                newVariable("i", objectType("int"), holder = declStmt) {
-                                    it.comment = "remove next"
-                                    it.initializer = newCall(newReference("rand"))
+                                block.statements += newDeclarationStatement { declStmt ->
+                                    newVariable("i", objectType("int"), holder = declStmt) {
+                                        it.comment = "remove next"
+                                        it.initializer = newCall(newReference("rand"))
+                                    }
                                 }
-                                block.statements += declStmt
 
                                 block.statements += newIfElse { ifElse ->
-                                    // Fluent's "lt" infix operator has no ArgumentHolder
-                                    // context, so it never actually attaches the comparison
-                                    // it builds -- the self-attaching ref("i")/literal(0)
-                                    // operands silently overwrite each other on the IfElse
-                                    // (an ArgumentHolder), leaving the *literal* as the
-                                    // "condition" instead of the intended comparison.
-                                    // Faithfully reproduced here (confirmed via the original
-                                    // Fluent-based test).
-                                    ifElse.condition = newLiteral(0, objectType("int"))
+                                    ifElse.condition =
+                                        newBinaryOperator("<") {
+                                            it.lhs = newReference("i")
+                                            it.rhs = newLiteral(0, objectType("int"))
+                                        }
 
                                     ifElse.thenStatement =
                                         newBlock(enterScope = true) { thenBlock ->
@@ -188,19 +184,15 @@ class ProgramDependenceGraphPassTest {
 
                         func.body =
                             newBlock(enterScope = true) { block ->
-                                val declStmt = newDeclarationStatement()
-                                newVariable("i", objectType("int"), holder = declStmt) {
-                                    it.comment = "remove next"
-                                    it.initializer = newCall(newReference("rand"))
+                                block.statements += newDeclarationStatement { declStmt ->
+                                    newVariable("i", objectType("int"), holder = declStmt) {
+                                        it.comment = "remove next"
+                                        it.initializer = newCall(newReference("rand"))
+                                    }
                                 }
-                                block.statements += declStmt
 
                                 block.statements +=
                                     newWhile(enterScope = true) { w ->
-                                        // Unlike "lt" above, "gt" (via its ArgumentHolder context)
-                                        // does end up attaching the correct comparison here -- its
-                                        // own `holder += node` call happens after (and therefore
-                                        // overwrites) the self-attaching ref/literal operands.
                                         w.condition =
                                             newBinaryOperator(">") {
                                                 it.lhs = newReference("i")
