@@ -46,19 +46,19 @@ fun Server.listFunctions() {
     val toolDescription =
         """
         This tool lists all functions, more precisely function declarations, which are held in the graph.
-        
+        Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more.
+
         Example prompts:
         - "Show me all functions in the analyzed code"
         - "What functions are defined in this codebase?"
         """
             .trimIndent()
 
-    this.addTool(name = "cpg_list_functions", description = toolDescription) { request ->
-        request.runOnCpg { result: TranslationResult, _ ->
-            CallToolResult(
-                content = result.functions.map { TextContent(Json.encodeToString(it.toInfo())) }
-            )
-        }
+    this.addTool<CpgListPayload>(name = "cpg_list_functions", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgListPayload ->
+        val texts = result.functions.map { Json.encodeToString(it.toInfo()) }
+        CallToolResult(content = paginatedTextContent(texts, payload))
     }
 }
 
@@ -67,6 +67,7 @@ fun Server.listRecords() {
         """
         This tool lists all classes and structs, more precisely their declarations as compact summaries.
         Use cpg_get_node with a id to retrieve the full node details.
+        Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more.
 
         Example prompts:
         - "Show me all classes in the code"
@@ -74,28 +75,27 @@ fun Server.listRecords() {
         """
             .trimIndent()
 
-    this.addTool(name = "cpg_list_records", description = toolDescription) { request ->
-        request.runOnCpg { result: TranslationResult, _ ->
-            CallToolResult(
-                content = result.records.map { TextContent(Json.encodeToString(it.toInfo())) }
-            )
-        }
+    this.addTool<CpgListPayload>(name = "cpg_list_records", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgListPayload ->
+        val texts = result.records.map { Json.encodeToString(it.toInfo()) }
+        CallToolResult(content = paginatedTextContent(texts, payload))
     }
 }
 
 fun Server.listConceptsAndOperations() {
     val toolDescription =
-        "This tool lists all concepts (a special node marking 'what something IS') and operations (a special node marking 'what something DOES') which have been used as overlays to some nodes in the graph."
+        "This tool lists all concepts (a special node marking 'what something IS') and operations (a special node marking 'what something DOES') which have been used as overlays to some nodes in the graph. " +
+            "Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more."
 
-    this.addTool(name = "cpg_list_concepts_and_operations", description = toolDescription) { request
-        ->
-        request.runOnCpg { result: TranslationResult, _ ->
-            val concepts =
-                result.allChildrenWithOverlays<Concept>().map { TextContent(it.toJson()) }
-            val operations =
-                result.allChildrenWithOverlays<Operation>().map { TextContent(it.toJson()) }
-            CallToolResult(content = concepts + operations)
-        }
+    this.addTool<CpgListPayload>(
+        name = "cpg_list_concepts_and_operations",
+        description = toolDescription,
+    ) { result: TranslationResult, payload: CpgListPayload ->
+        val concepts = result.allChildrenWithOverlays<Concept>().map { it.toJson() }
+        val operations = result.allChildrenWithOverlays<Operation>().map { it.toJson() }
+        val texts = concepts + operations
+        CallToolResult(content = paginatedTextContent(texts, payload))
     }
 }
 
@@ -104,6 +104,7 @@ fun Server.listCalls() {
         """
         This tool lists all function and method calls as compact summaries.
         Use cpg_get_node with a id to retrieve the full node details.
+        Results are capped at $DEFAULT_LIST_LIMIT items by default; use the limit/offset parameters to paginate through more.
 
         Example prompts:
         - "Show me all function calls in the code"
@@ -111,12 +112,11 @@ fun Server.listCalls() {
         """
             .trimIndent()
 
-    this.addTool(name = "cpg_list_calls", description = toolDescription) { request ->
-        request.runOnCpg { result: TranslationResult, _ ->
-            CallToolResult(
-                content = result.calls.map { TextContent(Json.encodeToString(it.toInfo())) }
-            )
-        }
+    this.addTool<CpgListPayload>(name = "cpg_list_calls", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgListPayload ->
+        val texts = result.calls.map { Json.encodeToString(it.toInfo()) }
+        CallToolResult(content = paginatedTextContent(texts, payload))
     }
 }
 

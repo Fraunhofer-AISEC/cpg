@@ -217,6 +217,35 @@ fun Record.toInfo() = RecordInfo(this)
 
 fun Call.toInfo() = CallInfo(this)
 
+/** The default maximum number of items returned by paginated list tools. */
+const val DEFAULT_LIST_LIMIT = 200
+
+/**
+ * Paginates the given [texts] according to the [limit] and [offset] contained in [payload] and
+ * wraps each item of the resulting page in a [TextContent]. If the page does not reach the end of
+ * [texts], an additional summary [TextContent] is appended, informing the caller how many items
+ * were shown, which offset/limit were used, and which offset to use next to see more.
+ */
+fun paginatedTextContent(texts: List<String>, payload: CpgListPayload): List<TextContent> {
+    val offset = (payload.offset ?: 0).coerceAtLeast(0)
+    val limit = (payload.limit ?: DEFAULT_LIST_LIMIT).coerceAtLeast(1)
+
+    val page = texts.drop(offset).take(limit)
+    val content = page.map { TextContent(it) }.toMutableList()
+
+    val end = offset + page.size
+    if (end < texts.size) {
+        content.add(
+            TextContent(
+                "Showing ${page.size} of ${texts.size} items (offset=$offset, limit=$limit). " +
+                    "To see more, call this tool again with offset=$end."
+            )
+        )
+    }
+
+    return content
+}
+
 /** Returns all available concrete (non-abstract) concept classes. */
 fun getAvailableConcepts(): List<Class<out Concept>> {
     return listOverlayClasses<Concept>().filter {
