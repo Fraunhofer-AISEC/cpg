@@ -96,7 +96,7 @@
               class="flex cursor-not-allowed items-center rounded-md py-2 text-sm font-medium text-gray-400 {collapsed
                 ? 'justify-center px-1'
                 : 'px-3'}"
-              title={collapsed ? item.name : "The module 'cpg-mcp' is not enabled."}
+              title={collapsed ? item.name : "The module 'cpg-ai' is not enabled."}
             >
               {#if item.icon === 'robot'}
                 <svg class="{collapsed ? 'h-6 w-6' : 'mr-3 h-5 w-5'}" fill="currentColor" viewBox="0 -960 960 960">

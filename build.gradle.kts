@@ -129,8 +129,8 @@ val enableINIFrontend: Boolean by extra {
 }
 project.logger.lifecycle("INI frontend is ${if (enableINIFrontend) "enabled" else "disabled"}")
 
-val enableMCPModule: Boolean by extra {
-    val enableMCPModule: String? by project
-    enableMCPModule.toBoolean()
+val enableAIModule: Boolean by extra {
+    val enableAIModule: String? by project
+    enableAIModule.toBoolean()
 }
-project.logger.lifecycle("MCP module is ${if (enableMCPModule) "enabled" else "disabled"}")
+project.logger.lifecycle("AI module is ${if (enableAIModule) "enabled" else "disabled"}")

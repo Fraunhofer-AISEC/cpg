@@ -3,6 +3,9 @@
 A web application for Codyze with an optional AI chat, which is enhanced by an MCP client that acts as an agent.
 The agent uses the tools of the CPG MCP server to analyze code and answer questions.
 
+> [!IMPORTANT]
+> codyze-console has a hard build dependency on the `cpg-ai` module, so `enableAIModule=true` must be set in `gradle.properties` (see [AI Chat Features](#ai-chat-features) below) before building or running codyze-console at all - otherwise the build fails.
+
 ## Getting Started
 
 The easiest way to get started is by using the predefined IntelliJ run configurations in the `.run/` directory:
@@ -23,24 +26,24 @@ The web console is available at `http://localhost:8080`.
 
 ## AI Chat Features
 
-The AI chat requires the `cpg-mcp` module to be enabled and a configured LLM provider.
+codyze-console has a hard build dependency on the `cpg-ai` module (MCP server, `ChatService`, skills). The AI chat itself additionally requires a configured LLM provider to actually work at runtime.
 
-### 1. Enable the `cpg-mcp` module
+### 1. Enable the `cpg-ai` module
 
-Run the configuration script:
+`cpg-ai` is optional at the workspace level (like the language frontends), but codyze-console cannot be built without it. Run the configuration script:
 
 ```bash
 ./configure_frontends.sh
 ```
 
-Or enable it manually by setting `enableMCPModule=true` in `gradle.properties`.
+Or enable it manually by setting `enableAIModule=true` in `gradle.properties`. If you build codyze-console with `cpg-ai` disabled, the build fails with an explicit error telling you to enable it.
 
 ### 2. Configure your LLM provider
 
 Copy the example configuration:
 
 ```bash
-cp codyze-console/src/main/resources/application.conf.example codyze-console/src/main/resources/application.conf
+cp cpg-ai/src/main/resources/application.conf.example cpg-ai/src/main/resources/application.conf
 ```
 
 Then edit `application.conf` and configure the clients you want to use under `llm.clients`:
@@ -71,7 +74,7 @@ Currently, only Gemini and OpenAI-compatible endpoints are supported.
 
 ### 3. MCP Server
 
-When `cpg-mcp` is enabled, the MCP server is automatically started on port `8081`. The AI chat connects to it as an MCP client to access the CPG tools (e.g., listing functions, records, and calls).
+The MCP server is automatically started on port `8081` whenever codyze-console starts. The AI chat connects to it as an MCP client to access the CPG tools (e.g., listing functions, records, and calls).
 
 ## Architecture
 
@@ -79,7 +82,7 @@ The following diagram shows the interaction between the main components during a
 
 ```
 Frontend            Backend              LLM               MCP Server
-(Svelte)           (ChatService)      (Gemini/OpenAI)       (cpg-mcp)
+(Svelte)           (ChatService)      (Gemini/OpenAI)       (cpg-ai) 
    |                    |                    |                   |
    | POST /api/chat     |                    |                   |
    | {messages}         |                    |                   |
