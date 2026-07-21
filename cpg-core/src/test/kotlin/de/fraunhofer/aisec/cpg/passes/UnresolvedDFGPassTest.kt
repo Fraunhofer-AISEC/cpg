@@ -208,76 +208,79 @@ class UnresolvedDFGPassTest {
                         newParameter("args", objectType("String[]"), holder = m)
                         m.body =
                             newBlock(enterScope = true) { block ->
-                                val osDeclStmt = newDeclarationStatement()
-                                newVariable(
-                                    "os",
-                                    objectType("Optional", listOf(objectType("String"))),
-                                    holder = osDeclStmt,
-                                ) {
-                                    it.initializer =
-                                        newMemberCall(
-                                            newMemberAccess(
-                                                "getOptionalString",
-                                                newReference("RandomClass"),
-                                            ),
-                                            true,
-                                        )
+                                block.statements += newDeclarationStatement { osDeclStmt ->
+                                    newVariable(
+                                        "os",
+                                        objectType("Optional", listOf(objectType("String"))),
+                                        holder = osDeclStmt,
+                                    ) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "getOptionalString",
+                                                    newReference("RandomClass"),
+                                                ),
+                                                true,
+                                            )
+                                    }
                                 }
-                                block.statements += osDeclStmt
 
-                                val sDeclStmt = newDeclarationStatement()
-                                newVariable("s", objectType("String"), holder = sDeclStmt) {
-                                    it.initializer =
-                                        newMemberCall(
-                                            newMemberAccess("get", newReference("os")),
-                                            false,
-                                        )
+                                block.statements += newDeclarationStatement { sDeclStmt ->
+                                    newVariable("s", objectType("String"), holder = sDeclStmt) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess("get", newReference("os")),
+                                                false,
+                                            )
+                                    }
                                 }
-                                block.statements += sDeclStmt
 
-                                val s2DeclStmt = newDeclarationStatement()
-                                newVariable("s2", objectType("String"), holder = s2DeclStmt) {
-                                    it.initializer =
-                                        newMemberCall(
-                                            newMemberAccess("get", newReference("os")),
-                                            false,
-                                        ) { call ->
-                                            call.arguments += newLiteral(4, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { s2DeclStmt ->
+                                    newVariable("s2", objectType("String"), holder = s2DeclStmt) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess("get", newReference("os")),
+                                                false,
+                                            ) { call ->
+                                                call.arguments += newLiteral(4, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += s2DeclStmt
 
-                                val ducDeclStmt = newDeclarationStatement()
-                                newVariable(
-                                    "duc",
-                                    objectType("DfgUnresolvedCalls"),
-                                    holder = ducDeclStmt,
-                                ) {
-                                    it.initializer =
-                                        newNew().also { newExpr ->
-                                            newExpr.initializer =
-                                                newConstruction("DfgUnresolvedCalls") { construction
-                                                    ->
-                                                    construction.type =
-                                                        objectType("DfgUnresolvedCalls")
-                                                    construction.arguments +=
-                                                        newLiteral(3, objectType("int"))
-                                                }
-                                        }
+                                block.statements += newDeclarationStatement { ducDeclStmt ->
+                                    newVariable(
+                                        "duc",
+                                        objectType("DfgUnresolvedCalls"),
+                                        holder = ducDeclStmt,
+                                    ) {
+                                        it.initializer =
+                                            newNew().also { newExpr ->
+                                                newExpr.initializer =
+                                                    newConstruction("DfgUnresolvedCalls") {
+                                                        construction ->
+                                                        construction.type =
+                                                            objectType("DfgUnresolvedCalls")
+                                                        construction.arguments +=
+                                                            newLiteral(3, objectType("int"))
+                                                    }
+                                            }
+                                    }
                                 }
-                                block.statements += ducDeclStmt
 
-                                val iDeclStmt = newDeclarationStatement()
-                                newVariable("i", objectType("int"), holder = iDeclStmt) {
-                                    it.initializer =
-                                        newMemberCall(
-                                            newMemberAccess("knownFunction", newReference("duc")),
-                                            false,
-                                        ) { call ->
-                                            call.arguments += newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { iDeclStmt ->
+                                    newVariable("i", objectType("int"), holder = iDeclStmt) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "knownFunction",
+                                                    newReference("duc"),
+                                                ),
+                                                false,
+                                            ) { call ->
+                                                call.arguments += newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += iDeclStmt
                             }
                     }
                 }

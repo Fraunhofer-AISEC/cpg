@@ -113,16 +113,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p4Decl = newDeclarationStatement()
-                                newVariable("p4", objectType("Botan"), holder = p4Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p4Decl ->
+                                    newVariable("p4", objectType("Botan"), holder = p4Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p4Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -150,16 +150,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p4Decl = newDeclarationStatement()
-                                newVariable("p4", objectType("Botan"), holder = p4Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p4Decl ->
+                                    newVariable("p4", objectType("Botan"), holder = p4Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p4Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -191,26 +191,29 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p4Decl = newDeclarationStatement()
-                                newVariable("p4", objectType("Botan"), holder = p4Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p4Decl ->
+                                    newVariable("p4", objectType("Botan"), holder = p4Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p4Decl
 
-                                val xDecl = newDeclarationStatement()
-                                newVariable("x", objectType("int"), holder = xDecl) {
-                                    it.initializer =
-                                        newMemberCall(
-                                            newMemberAccess("nextUInt", newReference("URandomKt")),
-                                            false,
-                                        )
+                                block.statements += newDeclarationStatement { xDecl ->
+                                    newVariable("x", objectType("int"), holder = xDecl) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "nextUInt",
+                                                    newReference("URandomKt"),
+                                                ),
+                                                false,
+                                            )
+                                    }
                                 }
-                                block.statements += xDecl
 
                                 block.statements += newIfElse { ifElse ->
                                     ifElse.condition =
@@ -262,16 +265,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p4Decl = newDeclarationStatement()
-                                newVariable("p4", objectType("Botan"), holder = p4Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(1, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p4Decl ->
+                                    newVariable("p4", objectType("Botan"), holder = p4Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(1, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p4Decl
 
                                 // Not allowed as start
                                 block.statements +=
@@ -320,16 +323,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p4Decl = newDeclarationStatement()
-                                newVariable("p4", objectType("Botan"), holder = p4Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p4Decl ->
+                                    newVariable("p4", objectType("Botan"), holder = p4Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p4Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -351,16 +354,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p4Decl = newDeclarationStatement()
-                                newVariable("p4", objectType("Botan"), holder = p4Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p4Decl ->
+                                    newVariable("p4", objectType("Botan"), holder = p4Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p4Decl
 
                                 block.statements += newIfElse { ifElse ->
                                     ifElse.condition =
@@ -406,16 +409,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p4Decl = newDeclarationStatement()
-                                newVariable("p4", objectType("Botan"), holder = p4Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p4Decl ->
+                                    newVariable("p4", objectType("Botan"), holder = p4Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p4Decl
 
                                 block.statements += newIfElse { ifElse ->
                                     ifElse.condition = newLiteral(true, objectType("boolean"))
@@ -468,16 +471,20 @@ class GraphExamples {
                             newBlock(enterScope = true) { block ->
                                 block.statements +=
                                     newBlock(enterScope = true) { nested1 ->
-                                        val p4Decl = newDeclarationStatement()
-                                        newVariable("p4", objectType("Botan"), holder = p4Decl) {
-                                            it.initializer =
-                                                newConstruction("Botan") { construction ->
-                                                    construction.type = objectType("Botan")
-                                                    construction.arguments +=
-                                                        newLiteral(2, objectType("int"))
-                                                }
+                                        nested1.statements += newDeclarationStatement { p4Decl ->
+                                            newVariable(
+                                                "p4",
+                                                objectType("Botan"),
+                                                holder = p4Decl,
+                                            ) {
+                                                it.initializer =
+                                                    newConstruction("Botan") { construction ->
+                                                        construction.type = objectType("Botan")
+                                                        construction.arguments +=
+                                                            newLiteral(2, objectType("int"))
+                                                    }
+                                            }
                                         }
-                                        nested1.statements += p4Decl
 
                                         nested1.statements +=
                                             newMemberCall(
@@ -490,16 +497,20 @@ class GraphExamples {
 
                                 block.statements +=
                                     newBlock(enterScope = true) { nested2 ->
-                                        val p5Decl = newDeclarationStatement()
-                                        newVariable("p5", objectType("Botan"), holder = p5Decl) {
-                                            it.initializer =
-                                                newConstruction("Botan") { construction ->
-                                                    construction.type = objectType("Botan")
-                                                    construction.arguments +=
-                                                        newLiteral(2, objectType("int"))
-                                                }
+                                        nested2.statements += newDeclarationStatement { p5Decl ->
+                                            newVariable(
+                                                "p5",
+                                                objectType("Botan"),
+                                                holder = p5Decl,
+                                            ) {
+                                                it.initializer =
+                                                    newConstruction("Botan") { construction ->
+                                                        construction.type = objectType("Botan")
+                                                        construction.arguments +=
+                                                            newLiteral(2, objectType("int"))
+                                                    }
+                                            }
                                         }
-                                        nested2.statements += p5Decl
 
                                         nested2.statements +=
                                             newMemberCall(
@@ -581,16 +592,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p1Decl = newDeclarationStatement()
-                                newVariable("p1", objectType("Botan"), holder = p1Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p1Decl ->
+                                    newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p1Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -623,16 +634,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p1Decl = newDeclarationStatement()
-                                newVariable("p1", objectType("Botan"), holder = p1Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p1Decl ->
+                                    newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p1Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -670,16 +681,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p1Decl = newDeclarationStatement()
-                                newVariable("p1", objectType("Botan"), holder = p1Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p1Decl ->
+                                    newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p1Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -722,16 +733,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p2Decl = newDeclarationStatement()
-                                newVariable("p2", objectType("Botan"), holder = p2Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p2Decl ->
+                                    newVariable("p2", objectType("Botan"), holder = p2Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p2Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -784,16 +795,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p3Decl = newDeclarationStatement()
-                                newVariable("p3", objectType("Botan"), holder = p3Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p3Decl ->
+                                    newVariable("p3", objectType("Botan"), holder = p3Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p3Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -846,16 +857,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p3Decl = newDeclarationStatement()
-                                newVariable("p3", objectType("Botan"), holder = p3Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p3Decl ->
+                                    newVariable("p3", objectType("Botan"), holder = p3Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p3Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -913,16 +924,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p5Decl = newDeclarationStatement()
-                                newVariable("p5", objectType("Botan"), holder = p5Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p5Decl ->
+                                    newVariable("p5", objectType("Botan"), holder = p5Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p5Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -955,16 +966,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p6Decl = newDeclarationStatement()
-                                newVariable("p6", objectType("Botan"), holder = p6Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p6Decl ->
+                                    newVariable("p6", objectType("Botan"), holder = p6Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p6Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -1015,16 +1026,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p6Decl = newDeclarationStatement()
-                                newVariable("p6", objectType("Botan"), holder = p6Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p6Decl ->
+                                    newVariable("p6", objectType("Botan"), holder = p6Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p6Decl
 
                                 block.statements +=
                                     newWhile(enterScope = true) { w ->
@@ -1074,16 +1085,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p7Decl = newDeclarationStatement()
-                                newVariable("p7", objectType("Botan"), holder = p7Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p7Decl ->
+                                    newVariable("p7", objectType("Botan"), holder = p7Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p7Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -1145,16 +1156,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p8Decl = newDeclarationStatement()
-                                newVariable("p8", objectType("Botan"), holder = p8Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p8Decl ->
+                                    newVariable("p8", objectType("Botan"), holder = p8Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p8Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -1220,16 +1231,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p8Decl = newDeclarationStatement()
-                                newVariable("p8", objectType("Botan"), holder = p8Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p8Decl ->
+                                    newVariable("p8", objectType("Botan"), holder = p8Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p8Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -1280,16 +1291,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p6Decl = newDeclarationStatement()
-                                newVariable("p6", objectType("Botan"), holder = p6Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p6Decl ->
+                                    newVariable("p6", objectType("Botan"), holder = p6Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p6Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -1353,16 +1364,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p1Decl = newDeclarationStatement()
-                                newVariable("p1", objectType("Botan"), holder = p1Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p1Decl ->
+                                    newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p1Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -1400,16 +1411,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p1Decl = newDeclarationStatement()
-                                newVariable("p1", objectType("Botan"), holder = p1Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p1Decl ->
+                                    newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p1Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -1464,27 +1475,27 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p1Decl = newDeclarationStatement()
-                                newVariable("p1", objectType("Botan"), holder = p1Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(1, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p1Decl ->
+                                    newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(1, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p1Decl
 
-                                val p2Decl = newDeclarationStatement()
-                                newVariable("p2", objectType("Botan"), holder = p2Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(2, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p2Decl ->
+                                    newVariable("p2", objectType("Botan"), holder = p2Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(2, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p2Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -1544,16 +1555,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p1Decl = newDeclarationStatement()
-                                newVariable("p1", objectType("Botan"), holder = p1Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(1, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p1Decl ->
+                                    newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(1, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p1Decl
 
                                 block.statements +=
                                     newMemberCall(
@@ -1618,16 +1629,16 @@ class GraphExamples {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val p1Decl = newDeclarationStatement()
-                                newVariable("p1", objectType("Botan"), holder = p1Decl) {
-                                    it.initializer =
-                                        newConstruction("Botan") { construction ->
-                                            construction.type = objectType("Botan")
-                                            construction.arguments +=
-                                                newLiteral(1, objectType("int"))
-                                        }
+                                block.statements += newDeclarationStatement { p1Decl ->
+                                    newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                        it.initializer =
+                                            newConstruction("Botan") { construction ->
+                                                construction.type = objectType("Botan")
+                                                construction.arguments +=
+                                                    newLiteral(1, objectType("int"))
+                                            }
+                                    }
                                 }
-                                block.statements += p1Decl
 
                                 block.statements +=
                                     newMemberCall(

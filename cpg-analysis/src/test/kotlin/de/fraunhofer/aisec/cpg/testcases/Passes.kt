@@ -56,21 +56,24 @@ class Passes {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val yDecl = newDeclarationStatement()
-                                newVariable("y", objectType("int"), holder = yDecl) {
-                                    it.initializer = newLiteral(5, objectType("int"))
+                                block.statements += newDeclarationStatement { yDecl ->
+                                    newVariable("y", objectType("int"), holder = yDecl) {
+                                        it.initializer = newLiteral(5, objectType("int"))
+                                    }
                                 }
-                                block.statements += yDecl
 
-                                val xDecl = newDeclarationStatement()
-                                newVariable("x", objectType("int"), holder = xDecl) {
-                                    it.initializer =
-                                        newMemberCall(
-                                            newMemberAccess("nextUInt", newReference("URandomKt")),
-                                            false,
-                                        )
+                                block.statements += newDeclarationStatement { xDecl ->
+                                    newVariable("x", objectType("int"), holder = xDecl) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "nextUInt",
+                                                    newReference("URandomKt"),
+                                                ),
+                                                false,
+                                            )
+                                    }
                                 }
-                                block.statements += xDecl
 
                                 block.statements += newIfElse { ifElse ->
                                     ifElse.condition =
@@ -123,21 +126,24 @@ class Passes {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val yDecl = newDeclarationStatement()
-                                newVariable("y", objectType("int"), holder = yDecl) {
-                                    it.initializer = newLiteral(6, objectType("int"))
+                                block.statements += newDeclarationStatement { yDecl ->
+                                    newVariable("y", objectType("int"), holder = yDecl) {
+                                        it.initializer = newLiteral(6, objectType("int"))
+                                    }
                                 }
-                                block.statements += yDecl
 
-                                val xDecl = newDeclarationStatement()
-                                newVariable("x", objectType("int"), holder = xDecl) {
-                                    it.initializer =
-                                        newMemberCall(
-                                            newMemberAccess("nextUInt", newReference("URandomKt")),
-                                            false,
-                                        )
+                                block.statements += newDeclarationStatement { xDecl ->
+                                    newVariable("x", objectType("int"), holder = xDecl) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "nextUInt",
+                                                    newReference("URandomKt"),
+                                                ),
+                                                false,
+                                            )
+                                    }
                                 }
-                                block.statements += xDecl
 
                                 block.statements += newIfElse { ifElse ->
                                     ifElse.condition = newLiteral(true, objectType("boolean"))
@@ -186,21 +192,24 @@ class Passes {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val yDecl = newDeclarationStatement()
-                                newVariable("y", objectType("int"), holder = yDecl) {
-                                    it.initializer = newLiteral(6, objectType("int"))
+                                block.statements += newDeclarationStatement { yDecl ->
+                                    newVariable("y", objectType("int"), holder = yDecl) {
+                                        it.initializer = newLiteral(6, objectType("int"))
+                                    }
                                 }
-                                block.statements += yDecl
 
-                                val xDecl = newDeclarationStatement()
-                                newVariable("x", objectType("int"), holder = xDecl) {
-                                    it.initializer =
-                                        newMemberCall(
-                                            newMemberAccess("nextUInt", newReference("URandomKt")),
-                                            false,
-                                        )
+                                block.statements += newDeclarationStatement { xDecl ->
+                                    newVariable("x", objectType("int"), holder = xDecl) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "nextUInt",
+                                                    newReference("URandomKt"),
+                                                ),
+                                                false,
+                                            )
+                                    }
                                 }
-                                block.statements += xDecl
 
                                 block.statements += newIfElse { ifElse ->
                                     ifElse.condition = newLiteral(false, objectType("boolean"))
@@ -249,21 +258,24 @@ class Passes {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val yDecl = newDeclarationStatement()
-                                newVariable("y", objectType("int"), holder = yDecl) {
-                                    it.initializer = newLiteral(6, objectType("int"))
+                                block.statements += newDeclarationStatement { yDecl ->
+                                    newVariable("y", objectType("int"), holder = yDecl) {
+                                        it.initializer = newLiteral(6, objectType("int"))
+                                    }
                                 }
-                                block.statements += yDecl
 
-                                val xDecl = newDeclarationStatement()
-                                newVariable("x", objectType("int"), holder = xDecl) {
-                                    it.initializer =
-                                        newMemberCall(
-                                            newMemberAccess("nextUInt", newReference("URandomKt")),
-                                            false,
-                                        )
+                                block.statements += newDeclarationStatement { xDecl ->
+                                    newVariable("x", objectType("int"), holder = xDecl) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "nextUInt",
+                                                    newReference("URandomKt"),
+                                                ),
+                                                false,
+                                            )
+                                    }
                                 }
-                                block.statements += xDecl
 
                                 block.statements += newIfElse { ifElse ->
                                     ifElse.condition =
@@ -316,27 +328,30 @@ class Passes {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val zDecl = newDeclarationStatement()
-                                newVariable("z", objectType("int"), holder = zDecl) {
-                                    it.initializer = newLiteral(2, objectType("int"))
+                                block.statements += newDeclarationStatement { zDecl ->
+                                    newVariable("z", objectType("int"), holder = zDecl) {
+                                        it.initializer = newLiteral(2, objectType("int"))
+                                    }
                                 }
-                                block.statements += zDecl
 
-                                val yDecl = newDeclarationStatement()
-                                newVariable("y", objectType("int"), holder = yDecl) {
-                                    it.initializer = newReference("z")
+                                block.statements += newDeclarationStatement { yDecl ->
+                                    newVariable("y", objectType("int"), holder = yDecl) {
+                                        it.initializer = newReference("z")
+                                    }
                                 }
-                                block.statements += yDecl
 
-                                val xDecl = newDeclarationStatement()
-                                newVariable("x", objectType("int"), holder = xDecl) {
-                                    it.initializer =
-                                        newMemberCall(
-                                            newMemberAccess("nextUInt", newReference("URandomKt")),
-                                            false,
-                                        )
+                                block.statements += newDeclarationStatement { xDecl ->
+                                    newVariable("x", objectType("int"), holder = xDecl) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "nextUInt",
+                                                    newReference("URandomKt"),
+                                                ),
+                                                false,
+                                            )
+                                    }
                                 }
-                                block.statements += xDecl
 
                                 block.statements += newIfElse { ifElse ->
                                     ifElse.condition =
@@ -400,27 +415,30 @@ class Passes {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val zDecl = newDeclarationStatement()
-                                newVariable("z", objectType("int"), holder = zDecl) {
-                                    it.initializer = newLiteral(5, objectType("int"))
+                                block.statements += newDeclarationStatement { zDecl ->
+                                    newVariable("z", objectType("int"), holder = zDecl) {
+                                        it.initializer = newLiteral(5, objectType("int"))
+                                    }
                                 }
-                                block.statements += zDecl
 
-                                val yDecl = newDeclarationStatement()
-                                newVariable("y", objectType("int"), holder = yDecl) {
-                                    it.initializer = newReference("z")
+                                block.statements += newDeclarationStatement { yDecl ->
+                                    newVariable("y", objectType("int"), holder = yDecl) {
+                                        it.initializer = newReference("z")
+                                    }
                                 }
-                                block.statements += yDecl
 
-                                val xDecl = newDeclarationStatement()
-                                newVariable("x", objectType("int"), holder = xDecl) {
-                                    it.initializer =
-                                        newMemberCall(
-                                            newMemberAccess("nextUInt", newReference("URandomKt")),
-                                            false,
-                                        )
+                                block.statements += newDeclarationStatement { xDecl ->
+                                    newVariable("x", objectType("int"), holder = xDecl) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "nextUInt",
+                                                    newReference("URandomKt"),
+                                                ),
+                                                false,
+                                            )
+                                    }
                                 }
-                                block.statements += xDecl
 
                                 block.statements += newIfElse { ifElse ->
                                     ifElse.condition =
@@ -484,21 +502,24 @@ class Passes {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val yDecl = newDeclarationStatement()
-                                newVariable("y", objectType("int"), holder = yDecl) {
-                                    it.initializer = newLiteral(6, objectType("int"))
+                                block.statements += newDeclarationStatement { yDecl ->
+                                    newVariable("y", objectType("int"), holder = yDecl) {
+                                        it.initializer = newLiteral(6, objectType("int"))
+                                    }
                                 }
-                                block.statements += yDecl
 
-                                val xDecl = newDeclarationStatement()
-                                newVariable("x", objectType("int"), holder = xDecl) {
-                                    it.initializer =
-                                        newMemberCall(
-                                            newMemberAccess("nextUInt", newReference("URandomKt")),
-                                            false,
-                                        )
+                                block.statements += newDeclarationStatement { xDecl ->
+                                    newVariable("x", objectType("int"), holder = xDecl) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "nextUInt",
+                                                    newReference("URandomKt"),
+                                                ),
+                                                false,
+                                            )
+                                    }
                                 }
-                                block.statements += xDecl
 
                                 block.statements += newIfElse { ifElse ->
                                     ifElse.condition =
@@ -551,11 +572,11 @@ class Passes {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val xDecl = newDeclarationStatement()
-                                newVariable("x", objectType("boolean"), holder = xDecl) {
-                                    it.initializer = newLiteral(true, objectType("boolean"))
+                                block.statements += newDeclarationStatement { xDecl ->
+                                    newVariable("x", objectType("boolean"), holder = xDecl) {
+                                        it.initializer = newLiteral(true, objectType("boolean"))
+                                    }
                                 }
-                                block.statements += xDecl
 
                                 block.statements +=
                                     newWhile(enterScope = true) { w ->
@@ -603,11 +624,11 @@ class Passes {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val xDecl = newDeclarationStatement()
-                                newVariable("x", objectType("boolean"), holder = xDecl) {
-                                    it.initializer = newLiteral(true, objectType("boolean"))
+                                block.statements += newDeclarationStatement { xDecl ->
+                                    newVariable("x", objectType("boolean"), holder = xDecl) {
+                                        it.initializer = newLiteral(true, objectType("boolean"))
+                                    }
                                 }
-                                block.statements += xDecl
 
                                 block.statements +=
                                     newWhile(enterScope = true) { w ->
@@ -708,11 +729,11 @@ class Passes {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val xDecl = newDeclarationStatement()
-                                newVariable("x", objectType("boolean"), holder = xDecl) {
-                                    it.initializer = newLiteral(1, objectType("int"))
+                                block.statements += newDeclarationStatement { xDecl ->
+                                    newVariable("x", objectType("boolean"), holder = xDecl) {
+                                        it.initializer = newLiteral(1, objectType("int"))
+                                    }
                                 }
-                                block.statements += xDecl
 
                                 block.statements +=
                                     newWhile(enterScope = true) { w ->
@@ -764,11 +785,11 @@ class Passes {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val xDecl = newDeclarationStatement()
-                                newVariable("x", objectType("boolean"), holder = xDecl) {
-                                    it.initializer = newLiteral(1, objectType("int"))
+                                block.statements += newDeclarationStatement { xDecl ->
+                                    newVariable("x", objectType("boolean"), holder = xDecl) {
+                                        it.initializer = newLiteral(1, objectType("int"))
+                                    }
                                 }
-                                block.statements += xDecl
 
                                 block.statements +=
                                     newWhile(enterScope = true) { w ->
@@ -820,15 +841,18 @@ class Passes {
 
                         method.body =
                             newBlock(enterScope = true) { block ->
-                                val yDecl = newDeclarationStatement()
-                                newVariable("y", objectType("int"), holder = yDecl) {
-                                    it.initializer =
-                                        newMemberCall(
-                                            newMemberAccess("nextUInt", newReference("URandomKt")),
-                                            false,
-                                        )
+                                block.statements += newDeclarationStatement { yDecl ->
+                                    newVariable("y", objectType("int"), holder = yDecl) {
+                                        it.initializer =
+                                            newMemberCall(
+                                                newMemberAccess(
+                                                    "nextUInt",
+                                                    newReference("URandomKt"),
+                                                ),
+                                                false,
+                                            )
+                                    }
                                 }
-                                block.statements += yDecl
 
                                 block.statements +=
                                     newWhile(enterScope = true) { w ->

@@ -55,9 +55,9 @@ class StatementBuilderTest {
                             newFunction("main", holder = tu, enterScope = true) { func ->
                                 func.body =
                                     newBlock(enterScope = true) { body ->
-                                        val stmt = newDeclarationStatement()
-                                        newVariable("a", holder = stmt)
-                                        body.statements += stmt
+                                        body.statements += newDeclarationStatement { stmt ->
+                                            newVariable("a", holder = stmt)
+                                        }
 
                                         body.statements +=
                                             newLookupScope(listOf("a"), scopeManager.globalScope)

@@ -58,29 +58,33 @@ class TypePropagationTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val intVarDeclStmt = newDeclarationStatement()
-                            newVariable("intVar", objectType("int"), holder = intVarDeclStmt)
-                            block.statements += intVarDeclStmt
-
-                            val intVar2DeclStmt = newDeclarationStatement()
-                            newVariable("intVar2", objectType("int"), holder = intVar2DeclStmt) {
-                                it.initializer = newLiteral(5)
+                            block.statements += newDeclarationStatement { intVarDeclStmt ->
+                                newVariable("intVar", objectType("int"), holder = intVarDeclStmt)
                             }
-                            block.statements += intVar2DeclStmt
 
-                            val addResultDeclStmt = newDeclarationStatement()
-                            newVariable(
-                                "addResult",
-                                objectType("int"),
-                                holder = addResultDeclStmt,
-                            ) {
-                                it.initializer =
-                                    newBinaryOperator("+") { bin ->
-                                        bin.lhs = newReference("intVar")
-                                        bin.rhs = newReference("intVar2")
-                                    }
+                            block.statements += newDeclarationStatement { intVar2DeclStmt ->
+                                newVariable(
+                                    "intVar2",
+                                    objectType("int"),
+                                    holder = intVar2DeclStmt,
+                                ) {
+                                    it.initializer = newLiteral(5)
+                                }
                             }
-                            block.statements += addResultDeclStmt
+
+                            block.statements += newDeclarationStatement { addResultDeclStmt ->
+                                newVariable(
+                                    "addResult",
+                                    objectType("int"),
+                                    holder = addResultDeclStmt,
+                                ) {
+                                    it.initializer =
+                                        newBinaryOperator("+") { bin ->
+                                            bin.lhs = newReference("intVar")
+                                            bin.rhs = newReference("intVar2")
+                                        }
+                                }
+                            }
 
                             block.statements += newReturn { it.returnValue = newLiteral(0) }
                         }
@@ -141,13 +145,17 @@ class TypePropagationTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val intVarDeclStmt = newDeclarationStatement()
-                            newVariable("intVar", objectType("int"), holder = intVarDeclStmt)
-                            block.statements += intVarDeclStmt
+                            block.statements += newDeclarationStatement { intVarDeclStmt ->
+                                newVariable("intVar", objectType("int"), holder = intVarDeclStmt)
+                            }
 
-                            val shortVarDeclStmt = newDeclarationStatement()
-                            newVariable("shortVar", objectType("short"), holder = shortVarDeclStmt)
-                            block.statements += shortVarDeclStmt
+                            block.statements += newDeclarationStatement { shortVarDeclStmt ->
+                                newVariable(
+                                    "shortVar",
+                                    objectType("short"),
+                                    holder = shortVarDeclStmt,
+                                )
+                            }
 
                             block.statements +=
                                 newAssign(
@@ -232,22 +240,22 @@ class TypePropagationTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val bDeclStmt = newDeclarationStatement()
-                            newVariable(
-                                "b",
-                                objectType("BaseClass").pointer(),
-                                holder = bDeclStmt,
-                            ) { v ->
-                                v.initializer =
-                                    newNew().also { newExpr ->
-                                        newExpr.initializer =
-                                            newConstruction("DerivedClass") {
-                                                it.type = objectType("DerivedClass")
-                                            }
-                                        newExpr.type = objectType("DerivedClass").pointer()
-                                    }
+                            block.statements += newDeclarationStatement { bDeclStmt ->
+                                newVariable(
+                                    "b",
+                                    objectType("BaseClass").pointer(),
+                                    holder = bDeclStmt,
+                                ) { v ->
+                                    v.initializer =
+                                        newNew().also { newExpr ->
+                                            newExpr.initializer =
+                                                newConstruction("DerivedClass") {
+                                                    it.type = objectType("DerivedClass")
+                                                }
+                                            newExpr.type = objectType("DerivedClass").pointer()
+                                        }
+                                }
                             }
-                            block.statements += bDeclStmt
 
                             block.statements +=
                                 newMemberCall(
@@ -361,9 +369,13 @@ class TypePropagationTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val bDeclStmt = newDeclarationStatement()
-                            newVariable("b", objectType("BaseClass").pointer(), holder = bDeclStmt)
-                            block.statements += bDeclStmt
+                            block.statements += newDeclarationStatement { bDeclStmt ->
+                                newVariable(
+                                    "b",
+                                    objectType("BaseClass").pointer(),
+                                    holder = bDeclStmt,
+                                )
+                            }
 
                             block.statements +=
                                 newAssign(
@@ -405,13 +417,15 @@ class TypePropagationTest {
                                     ),
                                 )
 
-                            val bbDeclStmt = newDeclarationStatement()
-                            newVariable("bb", autoType(), holder = bbDeclStmt) { v ->
-                                v.initializer =
-                                    newInitializerList(objectType("BaseClass").pointer().array())
-                                        .also { it.initializers += newReference("b") }
+                            block.statements += newDeclarationStatement { bbDeclStmt ->
+                                newVariable("bb", autoType(), holder = bbDeclStmt) { v ->
+                                    v.initializer =
+                                        newInitializerList(
+                                                objectType("BaseClass").pointer().array()
+                                            )
+                                            .also { it.initializers += newReference("b") }
+                                }
                             }
-                            block.statements += bbDeclStmt
 
                             block.statements += newReturn { ret ->
                                 ret.returnValue = newSubscription { sub ->
@@ -429,22 +443,26 @@ class TypePropagationTest {
 
                     func.body =
                         newBlock(enterScope = true) { block ->
-                            val randomDeclStmt = newDeclarationStatement()
-                            newVariable("random", objectType("boolean"), holder = randomDeclStmt)
-                            block.statements += randomDeclStmt
-
-                            val bDeclStmt = newDeclarationStatement()
-                            newVariable(
-                                "b",
-                                objectType("BaseClass").pointer(),
-                                holder = bDeclStmt,
-                            ) { v ->
-                                v.initializer =
-                                    newCall(newReference("create")) { call ->
-                                        call.arguments += newReference("random")
-                                    }
+                            block.statements += newDeclarationStatement { randomDeclStmt ->
+                                newVariable(
+                                    "random",
+                                    objectType("boolean"),
+                                    holder = randomDeclStmt,
+                                )
                             }
-                            block.statements += bDeclStmt
+
+                            block.statements += newDeclarationStatement { bDeclStmt ->
+                                newVariable(
+                                    "b",
+                                    objectType("BaseClass").pointer(),
+                                    holder = bDeclStmt,
+                                ) { v ->
+                                    v.initializer =
+                                        newCall(newReference("create")) { call ->
+                                            call.arguments += newReference("random")
+                                        }
+                                }
+                            }
 
                             block.statements +=
                                 newMemberCall(
