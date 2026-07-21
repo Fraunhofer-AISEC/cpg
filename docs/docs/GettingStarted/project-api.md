@@ -44,7 +44,9 @@ same pattern:
 ## Languages
 
 ```kotlin
-// Auto-mode: every language frontend available on the classpath is used.
+// Auto-mode: the project directory is scanned for file extensions, and only default
+// languages with a matching extension (plus languages that don't declare extensions,
+// e.g. Go and C/C++) are registered.
 project(path) { }
 
 // Explicit: only Go is registered.

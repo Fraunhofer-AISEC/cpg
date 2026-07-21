@@ -438,7 +438,13 @@ class ProjectBuilder(
         builder.exclusionPatterns(*excludesByString.toTypedArray())
         builder.exclusionPatterns(*excludesByRegex.toTypedArray())
 
-        val symbols = detectionResults.flatMap { it.symbols.entries }.associate { it.toPair() }
+        // Merge symbols from all detectors. [detectionResults] lists standalone detectors before
+        // language-based ones (see above), so the first value seen for a key wins, giving
+        // standalone detectors precedence in case of conflicts.
+        val symbols = mutableMapOf<String, String>()
+        detectionResults.forEach { result ->
+            result.symbols.forEach { symbols.putIfAbsent(it.key, it.value) }
+        }
         if (symbols.isNotEmpty()) {
             builder.symbols(symbols)
         }

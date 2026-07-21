@@ -80,4 +80,75 @@ class GoProjectDetectionTest {
         assertTrue(project.detectionResults.isEmpty())
         assertEquals(listOf("application"), project.components.map { it.name })
     }
+
+    @Test
+    fun testGoWorkspaceWithoutModuleIsDetected(@TempDir tmp: Path) {
+        tmp.resolve("go.work").writeText("go 1.22\n")
+
+        val project = Project.from(tmp) { registerLanguage<GoLanguage>() }
+
+        val result = project.detectionResults.singleOrNull()
+        assertNotNull(result)
+        assertEquals("go", result.detector)
+        assertTrue(result.components.isEmpty())
+    }
+
+    @Test
+    fun testBareGoFilesWithoutModuleAreDetected(@TempDir tmp: Path) {
+        tmp.resolve("main.go").writeText("package main")
+
+        val project = Project.from(tmp) { registerLanguage<GoLanguage>() }
+
+        val result = project.detectionResults.singleOrNull()
+        assertNotNull(result)
+        assertTrue(result.components.isEmpty())
+    }
+
+    @Test
+    fun testUnparseableGoModFallsBackToDirectoryName(@TempDir tmp: Path) {
+        val module = tmp.resolve("services/worker")
+        module.createDirectories()
+        // No "module " directive, so parseGoMod() cannot determine a module path.
+        module.resolve("go.mod").writeText("go 1.22\n")
+
+        val project = Project.from(tmp) { registerLanguage<GoLanguage>() }
+
+        assertEquals(listOf("worker"), project.components.map { it.name })
+    }
+
+    @Test
+    fun testUnknownOsAndArchitectureYieldNoSymbols(@TempDir tmp: Path) {
+        tmp.resolve("go.mod").writeText("module example.com/app\n")
+
+        val project =
+            Project.from(tmp) {
+                registerLanguage<GoLanguage>()
+                environment {
+                    os = OperatingSystem.UNKNOWN
+                    architecture = Architecture.UNKNOWN
+                }
+            }
+
+        assertTrue("GOOS" !in project.config.symbols)
+        assertTrue("GOARCH" !in project.config.symbols)
+    }
+
+    @Test
+    fun testGoosMapping() {
+        assertEquals("linux", OperatingSystem.LINUX.goos)
+        assertEquals("darwin", OperatingSystem.MACOS.goos)
+        assertEquals("windows", OperatingSystem.WINDOWS.goos)
+        assertEquals("freebsd", OperatingSystem.FREEBSD.goos)
+        assertEquals(null, OperatingSystem.UNKNOWN.goos)
+    }
+
+    @Test
+    fun testGoarchMapping() {
+        assertEquals("amd64", Architecture.X86_64.goarch)
+        assertEquals("arm64", Architecture.ARM64.goarch)
+        assertEquals("386", Architecture.X86.goarch)
+        assertEquals("arm", Architecture.ARM.goarch)
+        assertEquals("riscv64", Architecture.RISCV64.goarch)
+        assertEquals(null, Architecture.UNKNOWN.goarch)
+    }
 }

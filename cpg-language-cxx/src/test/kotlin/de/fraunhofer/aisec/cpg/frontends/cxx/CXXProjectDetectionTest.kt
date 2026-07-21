@@ -32,6 +32,7 @@ import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.io.TempDir
 
 class CXXProjectDetectionTest {
@@ -117,5 +118,23 @@ class CXXProjectDetectionTest {
         assertNotNull(db)
         assertEquals(2, db.size)
         assertEquals(mapOf("FOO" to "1"), db.getAllSymbols("libfoo").filterKeys { it == "FOO" })
+    }
+
+    @Test
+    fun testNoCompilationDatabaseFound(@TempDir tmp: Path) {
+        tmp.resolve("main.c").writeText("int main() { return 0; }")
+
+        val project = Project.from(tmp) { registerLanguage<CLanguage>() }
+
+        assertTrue(project.detectionResults.isEmpty())
+    }
+
+    @Test
+    fun testMalformedCompilationDatabaseIsIgnored(@TempDir tmp: Path) {
+        tmp.resolve("compile_commands.json").writeText("this is not valid json")
+
+        val project = Project.from(tmp) { registerLanguage<CLanguage>() }
+
+        assertTrue(project.detectionResults.isEmpty())
     }
 }

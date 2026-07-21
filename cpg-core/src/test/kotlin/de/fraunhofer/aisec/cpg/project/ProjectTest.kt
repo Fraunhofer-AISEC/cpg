@@ -55,6 +55,13 @@ class DetectingTestLanguage : TestLanguage(), Detector {
     }
 }
 
+/** A standalone [Detector] that always contributes a conflicting `TEST_OS` symbol. */
+class ConflictingStandaloneDetector : Detector {
+    override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
+        return DetectionResult(detector = "conflicting", symbols = mapOf("TEST_OS" to "standalone"))
+    }
+}
+
 class ProjectTest {
     @Test
     fun testSingleFile(@TempDir tmp: Path) {
@@ -152,6 +159,22 @@ class ProjectTest {
     }
 
     @Test
+    fun testStandaloneDetectorSymbolsTakePrecedence(@TempDir tmp: Path) {
+        tmp.resolve("test.mod").writeText("module test")
+
+        val project =
+            Project.from(tmp) {
+                languages { use<DetectingTestLanguage>() }
+                environment { os = OperatingSystem.LINUX }
+                detector(ConflictingStandaloneDetector())
+            }
+
+        // Both the standalone detector and DetectingTestLanguage contribute a "TEST_OS" symbol;
+        // the standalone one must win.
+        assertEquals("standalone", project.config.symbols["TEST_OS"])
+    }
+
+    @Test
     fun testDirectoryComponentDetector(@TempDir tmp: Path) {
         tmp.resolve("components/backend").createDirectories()
         tmp.resolve("components/frontend").createDirectories()
@@ -168,6 +191,34 @@ class ProjectTest {
             tmp.resolve("components/backend").toFile(),
             project.config.topLevels["backend"],
         )
+    }
+
+    @Test
+    fun testDirectoryComponentDetectorNoFolder(@TempDir tmp: Path) {
+        val project =
+            Project.from(tmp) {
+                registerLanguage<TestLanguage>()
+                detector(DirectoryComponentDetector())
+            }
+
+        // No "components" folder exists, so the detector finds nothing and falls back to a
+        // single default component.
+        assertEquals(listOf(DEFAULT_APPLICATION_NAME), project.components.map { it.name })
+    }
+
+    @Test
+    fun testDirectoryComponentDetectorSkipsHiddenAndEmptyFolder(@TempDir tmp: Path) {
+        tmp.resolve("components/.hidden").createDirectories()
+
+        val project =
+            Project.from(tmp) {
+                registerLanguage<TestLanguage>()
+                detector(DirectoryComponentDetector())
+            }
+
+        // Only a hidden entry exists in "components", so the detector finds no components and
+        // falls back to a single default component.
+        assertEquals(listOf(DEFAULT_APPLICATION_NAME), project.components.map { it.name })
     }
 
     @Test
