@@ -27,9 +27,10 @@ package de.fraunhofer.aisec.cpg.testcases
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.array
-import de.fraunhofer.aisec.cpg.graph.builder.*
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 
 class GraphExamples {
@@ -44,190 +45,512 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("SimpleOrder.java") {
-                        import("kotlin.random.URandomKt")
-                        record("Botan") {
-                            constructor {
-                                param("i", t("int"))
-                                body {}
-                            }
-                            method("create", void()) { body {} }
-                            method("finish", void()) {
-                                param("b", t("char").array())
-                                body {}
-                            }
-                            method("init", void()) { body {} }
-                            method("process", void()) { body {} }
-                            method("reset", void()) { body {} }
-                            method("start", void()) {
-                                param("i", t("int"))
-                                body {}
-                            }
-                            method("set_key", void()) {
-                                param("i", t("int"))
-                                body {}
-                            }
+                singleTranslationUnit("SimpleOrder.java") { tu ->
+                    newInclude("kotlin.random.URandomKt", holder = tu)
+
+                    newRecord("Botan", "class", holder = tu, enterScope = true) { botan ->
+                        newConstructor(
+                            botan.name,
+                            recordDeclaration = botan,
+                            holder = botan,
+                            enterScope = true,
+                        ) { ctor ->
+                            newParameter("i", objectType("int"), holder = ctor)
+                            ctor.body = newBlock(enterScope = true)
                         }
-                        record("SimpleOrder") {
-                            field("cipher", t("char").array()) {}
-                            field("key", t("int")) {}
-                            field("iv", t("int")) {}
-                            field("direction", t("Cipher_Dir")) {}
-                            field("buf", t("char").array()) {}
+                        newMethod("create", holder = botan, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+                            method.body = newBlock(enterScope = true)
+                        }
+                        newMethod("finish", holder = botan, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+                            newParameter("b", objectType("char").array(), holder = method)
+                            method.body = newBlock(enterScope = true)
+                        }
+                        newMethod("init", holder = botan, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+                            method.body = newBlock(enterScope = true)
+                        }
+                        newMethod("process", holder = botan, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+                            method.body = newBlock(enterScope = true)
+                        }
+                        newMethod("reset", holder = botan, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+                            method.body = newBlock(enterScope = true)
+                        }
+                        newMethod("start", holder = botan, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+                            newParameter("i", objectType("int"), holder = method)
+                            method.body = newBlock(enterScope = true)
+                        }
+                        newMethod("set_key", holder = botan, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+                            newParameter("i", objectType("int"), holder = method)
+                            method.body = newBlock(enterScope = true)
+                        }
+                    }
 
-                            method("ok", void()) {
-                                body {
-                                    declare {
-                                        variable("p4", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                    newRecord("SimpleOrder", "class", holder = tu, enterScope = true) { record ->
+                        newField("cipher", objectType("char").array(), holder = record)
+                        newField("key", objectType("int"), holder = record)
+                        newField("iv", objectType("int"), holder = record)
+                        newField("direction", objectType("Cipher_Dir"), holder = record)
+                        newField("buf", objectType("char").array(), holder = record)
+
+                        newMethod("ok", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p4Decl ->
+                                        newVariable("p4", objectType("Botan"), holder = p4Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("start", ref("p4")) { ref("iv") }
-                                    memberCall("finish", ref("p4")) { ref("buf") }
-                                    returnStmt {}
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p4")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("iv")
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p4")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("buf")
+                                        }
+
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
 
-                            method("ok2", void()) {
-                                body {
-                                    declare {
-                                        variable("p4", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                        newMethod("ok2", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p4Decl ->
+                                        newVariable("p4", objectType("Botan"), holder = p4Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("start", ref("p4")) { ref("iv") }
-                                    memberCall(
-                                        "foo",
-                                        ref("p4"),
-                                    ) // Not in the entity and therefore ignored
-                                    memberCall("finish", ref("p4")) { ref("buf") }
-                                    returnStmt {}
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p4")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("iv")
+                                        }
+
+                                    // Not in the entity and therefore ignored
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("foo", newReference("p4")),
+                                            false,
+                                        )
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p4")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("buf")
+                                        }
+
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
 
-                            method("ok3", void()) {
-                                body {
-                                    declare {
-                                        variable("p4", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                        newMethod("ok3", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p4Decl ->
+                                        newVariable("p4", objectType("Botan"), holder = p4Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    declare {
-                                        variable("x", t("int")) {
-                                            memberCall("nextUInt", ref("URandomKt"))
+
+                                    block.statements += newDeclarationStatement { xDecl ->
+                                        newVariable("x", objectType("int"), holder = xDecl) {
+                                            it.initializer =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "nextUInt",
+                                                        newReference("URandomKt"),
+                                                    ),
+                                                    false,
+                                                )
                                         }
                                     }
-                                    ifStmt {
-                                        condition { ref("x") le literal(5, t("int")) }
-                                        thenStmt { memberCall("start", ref("p4")) { ref("iv") } }
-                                        elseStmt { memberCall("start", ref("p4")) { ref("iv") } }
+
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition =
+                                            newBinaryOperator("<=") {
+                                                it.lhs = newReference("x")
+                                                it.rhs = newLiteral(5, objectType("int"))
+                                            }
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "start",
+                                                            newReference("p4"),
+                                                        ),
+                                                        false,
+                                                    ) {
+                                                        it.arguments += newReference("iv")
+                                                    }
+                                            }
+                                        ifElse.elseStatement =
+                                            newBlock(enterScope = true) { elseBlock ->
+                                                elseBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "start",
+                                                            newReference("p4"),
+                                                        ),
+                                                        false,
+                                                    ) {
+                                                        it.arguments += newReference("iv")
+                                                    }
+                                            }
                                     }
-                                    memberCall(
-                                        "foo",
-                                        ref("p4"),
-                                    ) // Not in the entity and therefore ignored
-                                    memberCall("finish", ref("p4")) { ref("buf") }
-                                    returnStmt {}
+
+                                    // Not in the entity and therefore ignored
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("foo", newReference("p4")),
+                                            false,
+                                        )
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p4")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("buf")
+                                        }
+
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
 
-                            method("nok1", void()) {
-                                body {
-                                    declare {
-                                        variable("p4", t("Botan")) {
-                                            construct("Botan") { literal(1, t("int")) }
+                        newMethod("nok1", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p4Decl ->
+                                        newVariable("p4", objectType("Botan"), holder = p4Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(1, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("set_key", ref("p4")) {
-                                        ref("key")
-                                    } // Not allowed as start
-                                    memberCall("start", ref("p4")) { ref("iv") }
-                                    memberCall("finish", ref("p4")) { ref("buf") }
-                                    memberCall(
-                                        "foo",
-                                        ref("p4"),
-                                    ) // Not in the entity and therefore ignored
-                                    memberCall("set_key", ref("p4")) { ref("key") }
-                                    returnStmt {}
+
+                                    // Not allowed as start
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("set_key", newReference("p4")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("key")
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p4")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("iv")
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p4")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("buf")
+                                        }
+
+                                    // Not in the entity and therefore ignored
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("foo", newReference("p4")),
+                                            false,
+                                        )
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("set_key", newReference("p4")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("key")
+                                        }
+
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
 
-                            method("nok2", void()) {
-                                body {
-                                    declare {
-                                        variable("p4", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                        newMethod("nok2", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p4Decl ->
+                                        newVariable("p4", objectType("Botan"), holder = p4Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("start", ref("p4")) { ref("iv") }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p4")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("iv")
+                                        }
+
                                     // Missing: memberCall("finish", ref("p4")) {ref("buf")}
-                                    returnStmt {}
-                                }
-                            }
 
-                            method("nok3", void()) {
-                                body {
-                                    declare {
-                                        variable("p4", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("nok3", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p4Decl ->
+                                        newVariable("p4", objectType("Botan"), holder = p4Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    ifStmt {
-                                        condition {
-                                            memberCall("nextUInt", ref("URandomKt")) le
-                                                literal(5, t("int"))
-                                        }
-                                        thenStmt { memberCall("start", ref("p4")) { ref("iv") } }
+
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition =
+                                            newBinaryOperator("<=") {
+                                                it.lhs =
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "nextUInt",
+                                                            newReference("URandomKt"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                it.rhs = newLiteral(5, objectType("int"))
+                                            }
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "start",
+                                                            newReference("p4"),
+                                                        ),
+                                                        false,
+                                                    ) {
+                                                        it.arguments += newReference("iv")
+                                                    }
+                                            }
                                     }
+
                                     // start could be missing here
-                                    memberCall("finish", ref("p4")) { ref("buf") }
-                                    returnStmt {}
-                                }
-                            }
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p4")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("buf")
+                                        }
 
-                            method("nok4", void()) {
-                                body {
-                                    declare {
-                                        variable("p4", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("nok4", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p4Decl ->
+                                        newVariable("p4", objectType("Botan"), holder = p4Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    ifStmt {
-                                        condition { literal(true, t("boolean")) }
-                                        thenStmt {
-                                            memberCall("start", ref("p4")) { ref("iv") }
-                                            memberCall("finish", ref("p4")) { ref("buf") }
-                                        }
+
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition = newLiteral(true, objectType("boolean"))
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "start",
+                                                            newReference("p4"),
+                                                        ),
+                                                        false,
+                                                    ) {
+                                                        it.arguments += newReference("iv")
+                                                    }
+
+                                                thenBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "finish",
+                                                            newReference("p4"),
+                                                        ),
+                                                        false,
+                                                    ) {
+                                                        it.arguments += newReference("buf")
+                                                    }
+                                            }
                                     }
+
                                     // Not ok because p4 is already finished
-                                    memberCall("start", ref("p4")) { ref("iv") }
-                                    memberCall("finish", ref("p4")) { ref("buf") }
-                                    returnStmt {}
-                                }
-                            }
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p4")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("iv")
+                                        }
 
-                            method("nok5", void()) {
-                                body {
-                                    block {
-                                        declare {
-                                            variable("p4", t("Botan")) {
-                                                construct("Botan") { literal(2, t("int")) }
-                                            }
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p4")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("buf")
                                         }
-                                        memberCall("start", ref("p4")) { ref("iv") }
-                                    }
-                                    block {
-                                        declare {
-                                            variable("p5", t("Botan")) {
-                                                construct("Botan") { literal(2, t("int")) }
-                                            }
-                                        }
-                                        memberCall("finish", ref("p5")) { ref("buf") }
-                                        returnStmt {}
-                                    }
+
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
+
+                        newMethod("nok5", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements +=
+                                        newBlock(enterScope = true) { nested1 ->
+                                            nested1.statements +=
+                                                newDeclarationStatement { p4Decl ->
+                                                    newVariable(
+                                                        "p4",
+                                                        objectType("Botan"),
+                                                        holder = p4Decl,
+                                                    ) {
+                                                        it.initializer =
+                                                            newConstruction("Botan") { construction
+                                                                ->
+                                                                construction.type =
+                                                                    objectType("Botan")
+                                                                construction.arguments +=
+                                                                    newLiteral(2, objectType("int"))
+                                                            }
+                                                    }
+                                                }
+
+                                            nested1.statements +=
+                                                newMemberCall(
+                                                    newMemberAccess("start", newReference("p4")),
+                                                    false,
+                                                ) {
+                                                    it.arguments += newReference("iv")
+                                                }
+                                        }
+
+                                    block.statements +=
+                                        newBlock(enterScope = true) { nested2 ->
+                                            nested2.statements +=
+                                                newDeclarationStatement { p5Decl ->
+                                                    newVariable(
+                                                        "p5",
+                                                        objectType("Botan"),
+                                                        holder = p5Decl,
+                                                    ) {
+                                                        it.initializer =
+                                                            newConstruction("Botan") { construction
+                                                                ->
+                                                                construction.type =
+                                                                    objectType("Botan")
+                                                                construction.arguments +=
+                                                                    newLiteral(2, objectType("int"))
+                                                            }
+                                                    }
+                                                }
+
+                                            nested2.statements +=
+                                                newMemberCall(
+                                                    newMemberAccess("finish", newReference("p5")),
+                                                    false,
+                                                ) {
+                                                    it.arguments += newReference("buf")
+                                                }
+
+                                            nested2.statements += newReturn()
+                                        }
+                                }
                         }
                     }
                 }
@@ -242,388 +565,1186 @@ class GraphExamples {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("ComplexOrder.java") {
-                        import("kotlin.random.URandomKt")
-                        record("Botan") {
-                            constructor {
-                                param("i", t("int"))
-                                body {}
-                            }
-                            method("create", void()) { body {} }
-                            method("finish", void()) { body {} }
-                            method("init", void()) { body {} }
-                            method("process", void()) { body {} }
-                            method("reset", void()) { body {} }
-                            method("start", void()) { body {} }
+                singleTranslationUnit("ComplexOrder.java") { tu ->
+                    newInclude("kotlin.random.URandomKt", holder = tu)
+
+                    newRecord("Botan", "class", holder = tu, enterScope = true) { botan ->
+                        newConstructor(
+                            botan.name,
+                            recordDeclaration = botan,
+                            holder = botan,
+                            enterScope = true,
+                        ) { ctor ->
+                            newParameter("i", objectType("int"), holder = ctor)
+                            ctor.body = newBlock(enterScope = true)
                         }
-                        record("ComplexOrder") {
-                            method("ok_minimal1", void()) {
-                                body {
-                                    declare {
-                                        variable("p1", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
-                                        }
-                                    }
-                                    memberCall("create", ref("p1"))
-                                    memberCall("init", ref("p1"))
-                                    memberCall("start", ref("p1"))
-                                    memberCall("finish", ref("p1"))
-                                    returnStmt {}
-                                }
-                            }
+                        newMethod("create", holder = botan, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+                            method.body = newBlock(enterScope = true)
+                        }
+                        newMethod("finish", holder = botan, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+                            method.body = newBlock(enterScope = true)
+                        }
+                        newMethod("init", holder = botan, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+                            method.body = newBlock(enterScope = true)
+                        }
+                        newMethod("process", holder = botan, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+                            method.body = newBlock(enterScope = true)
+                        }
+                        newMethod("reset", holder = botan, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+                            method.body = newBlock(enterScope = true)
+                        }
+                        newMethod("start", holder = botan, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+                            method.body = newBlock(enterScope = true)
+                        }
+                    }
 
-                            method("ok_minimal2", void()) {
-                                body {
-                                    declare {
-                                        variable("p1", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
-                                        }
-                                    }
-                                    memberCall("create", ref("p1"))
-                                    memberCall("init", ref("p1"))
-                                    memberCall("start", ref("p1"))
-                                    memberCall("process", ref("p1"))
-                                    memberCall("finish", ref("p1"))
-                                    returnStmt {}
-                                }
-                            }
+                    newRecord("ComplexOrder", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("ok_minimal1", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
 
-                            method("ok_minimal3", void()) {
-                                body {
-                                    declare {
-                                        variable("p1", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p1Decl ->
+                                        newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("create", ref("p1"))
-                                    memberCall("init", ref("p1"))
-                                    memberCall("start", ref("p1"))
-                                    memberCall("process", ref("p1"))
-                                    memberCall("finish", ref("p1"))
-                                    memberCall("reset", ref("p1"))
-                                    returnStmt {}
-                                }
-                            }
 
-                            method("ok2", void()) {
-                                body {
-                                    declare {
-                                        variable("p2", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
-                                        }
-                                    }
-                                    memberCall("create", ref("p2"))
-                                    memberCall("init", ref("p2"))
-                                    memberCall("start", ref("p2"))
-                                    memberCall("process", ref("p2"))
-                                    memberCall("process", ref("p2"))
-                                    memberCall("process", ref("p2"))
-                                    memberCall("process", ref("p2"))
-                                    memberCall("finish", ref("p2"))
-                                    returnStmt {}
-                                }
-                            }
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p1")),
+                                            false,
+                                        )
 
-                            method("ok3", void()) {
-                                body {
-                                    declare {
-                                        variable("p3", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
-                                        }
-                                    }
-                                    memberCall("create", ref("p3"))
-                                    memberCall("init", ref("p3"))
-                                    memberCall("start", ref("p3"))
-                                    memberCall("process", ref("p3"))
-                                    memberCall("finish", ref("p3"))
-                                    memberCall("start", ref("p3"))
-                                    memberCall("process", ref("p3"))
-                                    memberCall("finish", ref("p3"))
-                                    returnStmt {}
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
 
-                            method("ok4", void()) {
-                                body {
-                                    declare {
-                                        variable("p3", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                        newMethod("ok_minimal2", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p1Decl ->
+                                        newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("create", ref("p3"))
-                                    memberCall("init", ref("p3"))
-                                    memberCall("start", ref("p3"))
-                                    memberCall("process", ref("p3"))
-                                    memberCall("finish", ref("p3"))
-                                    memberCall("start", ref("p3"))
-                                    memberCall("process", ref("p3"))
-                                    memberCall("finish", ref("p3"))
-                                    memberCall("reset", ref("p3"))
-                                    returnStmt {}
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("process", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p1")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
 
-                            method("nok1", void()) {
-                                body {
-                                    declare {
-                                        variable("p5", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                        newMethod("ok_minimal3", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p1Decl ->
+                                        newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("init", ref("p5"))
-                                    memberCall("start", ref("p5"))
-                                    memberCall("process", ref("p5"))
-                                    memberCall("finish", ref("p5"))
-                                    returnStmt {}
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("process", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("reset", newReference("p1")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
 
-                            method("nok2", void()) {
-                                body {
-                                    declare {
-                                        variable("p6", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                        newMethod("ok2", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p2Decl ->
+                                        newVariable("p2", objectType("Botan"), holder = p2Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("create", ref("p6"))
-                                    memberCall("init", ref("p6"))
-                                    ifStmt {
-                                        condition { literal(false, t("boolean")) }
-                                        thenStmt {
-                                            memberCall("start", ref("p6"))
-                                            memberCall("process", ref("p6"))
-                                            memberCall("finish", ref("p6"))
-                                        }
-                                    }
-                                    memberCall("reset", ref("p6"))
-                                    returnStmt {}
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p2")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p2")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p2")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("process", newReference("p2")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("process", newReference("p2")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("process", newReference("p2")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("process", newReference("p2")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p2")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
 
-                            method("nok3", void()) {
-                                body {
-                                    declare {
-                                        variable("p6", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                        newMethod("ok3", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p3Decl ->
+                                        newVariable("p3", objectType("Botan"), holder = p3Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    whileStmt {
-                                        whileCondition { literal(true, t("boolean")) }
-                                        loopBody {
-                                            memberCall("create", ref("p6"))
-                                            memberCall("init", ref("p6"))
-                                            memberCall("start", ref("p6"))
-                                            memberCall("process", ref("p6"))
-                                            memberCall("finish", ref("p6"))
-                                        }
-                                    }
-                                    memberCall("reset", ref("p6"))
-                                    returnStmt {}
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("process", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("process", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p3")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
 
-                            method("nokWhile", void()) {
-                                body {
-                                    declare {
-                                        variable("p7", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                        newMethod("ok4", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p3Decl ->
+                                        newVariable("p3", objectType("Botan"), holder = p3Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("create", ref("p7"))
-                                    memberCall("init", ref("p7"))
-                                    whileStmt {
-                                        whileCondition {
-                                            memberCall("nextUInt", ref("URandomKt"), true) gt
-                                                literal(5, t("int"))
-                                        }
-                                        loopBody {
-                                            memberCall("start", ref("p7"))
-                                            memberCall("process", ref("p7"))
-                                            memberCall("finish", ref("p7"))
-                                        }
-                                    }
-                                    memberCall("reset", ref("p7"))
-                                    returnStmt {}
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("process", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("process", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p3")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("reset", newReference("p3")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
 
-                            method("okWhile", void()) {
-                                body {
-                                    declare {
-                                        variable("p8", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                        newMethod("nok1", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p5Decl ->
+                                        newVariable("p5", objectType("Botan"), holder = p5Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("create", ref("p8"))
-                                    memberCall("init", ref("p8"))
-                                    memberCall("start", ref("p8"))
-                                    memberCall("process", ref("p8"))
-                                    memberCall("finish", ref("p8"))
-                                    whileStmt {
-                                        whileCondition { literal(true, t("boolean")) }
-                                        loopBody {
-                                            memberCall("start", ref("p8"))
-                                            memberCall("process", ref("p8"))
-                                            memberCall("finish", ref("p8"))
-                                        }
-                                    }
-                                    memberCall("reset", ref("p8"))
-                                    returnStmt {}
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p5")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p5")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("process", newReference("p5")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p5")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
 
-                            method("okWhile2", void()) {
-                                body {
-                                    declare {
-                                        variable("p8", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                        newMethod("nok2", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p6Decl ->
+                                        newVariable("p6", objectType("Botan"), holder = p6Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("create", ref("p8"))
-                                    memberCall("init", ref("p8"))
-                                    whileStmt {
-                                        whileCondition { literal(true, t("boolean")) }
-                                        loopBody {
-                                            memberCall("start", ref("p8"))
-                                            memberCall("process", ref("p8"))
-                                            memberCall("finish", ref("p8"))
-                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p6")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p6")),
+                                            false,
+                                        )
+
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition = newLiteral(false, objectType("boolean"))
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "start",
+                                                            newReference("p6"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                thenBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "process",
+                                                            newReference("p6"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                thenBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "finish",
+                                                            newReference("p6"),
+                                                        ),
+                                                        false,
+                                                    )
+                                            }
                                     }
-                                    memberCall("reset", ref("p8"))
-                                    returnStmt {}
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("reset", newReference("p6")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
 
-                            method("okDoWhile", void()) {
-                                body {
-                                    declare {
-                                        variable("p6", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                        newMethod("nok3", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p6Decl ->
+                                        newVariable("p6", objectType("Botan"), holder = p6Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("create", ref("p6"))
-                                    memberCall("init", ref("p6"))
-                                    doStmt {
-                                        loopBody {
-                                            memberCall("start", ref("p6"))
-                                            memberCall("process", ref("p6"))
-                                            memberCall("finish", ref("p6"))
+
+                                    block.statements +=
+                                        newWhile(enterScope = true) { w ->
+                                            w.condition = newLiteral(true, objectType("boolean"))
+                                            w.statement = newBlock { loopBodyBlock ->
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "create",
+                                                            newReference("p6"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess("init", newReference("p6")),
+                                                        false,
+                                                    )
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "start",
+                                                            newReference("p6"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "process",
+                                                            newReference("p6"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "finish",
+                                                            newReference("p6"),
+                                                        ),
+                                                        false,
+                                                    )
+                                            }
                                         }
 
-                                        doCondition {
-                                            memberCall("nextUInt", ref("URandomKt")) gt
-                                                literal(5, t("int"))
-                                        }
-                                    }
-                                    memberCall("reset", ref("p6"))
-                                    returnStmt {}
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("reset", newReference("p6")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
 
-                            method("minimalInterprocUnclear", void()) {
-                                body {
-                                    declare {
-                                        variable("p1", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                        newMethod("nokWhile", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p7Decl ->
+                                        newVariable("p7", objectType("Botan"), holder = p7Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("create", ref("p1"))
-                                    memberCall("foo", ref("this")) { ref("p1") }
-                                    memberCall("start", ref("p1"))
-                                    memberCall("finish", ref("p1"))
-                                    returnStmt {}
-                                }
-                            }
 
-                            method("minimalInterprocFail", void()) {
-                                body {
-                                    declare {
-                                        variable("p1", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p7")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p7")),
+                                            false,
+                                        )
+
+                                    block.statements +=
+                                        newWhile(enterScope = true) { w ->
+                                            w.condition =
+                                                newBinaryOperator(">") {
+                                                    it.lhs =
+                                                        newMemberCall(
+                                                            newMemberAccess(
+                                                                "nextUInt",
+                                                                newReference("URandomKt"),
+                                                            ),
+                                                            true,
+                                                        )
+                                                    it.rhs = newLiteral(5, objectType("int"))
+                                                }
+                                            w.statement = newBlock { loopBodyBlock ->
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "start",
+                                                            newReference("p7"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "process",
+                                                            newReference("p7"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "finish",
+                                                            newReference("p7"),
+                                                        ),
+                                                        false,
+                                                    )
+                                            }
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("reset", newReference("p7")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("okWhile", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p8Decl ->
+                                        newVariable("p8", objectType("Botan"), holder = p8Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("create", ref("p1"))
-                                    ifStmt {
-                                        condition {
-                                            memberCall("nextUInt", ref("URandomKt")) gt
-                                                literal(5, t("int"))
-                                        }
-                                        thenStmt { memberCall("foo", ref("this")) { ref("p1") } }
-                                    }
-                                    memberCall("start", ref("p1"))
-                                    memberCall("finish", ref("p1"))
-                                    returnStmt {}
-                                }
-                            }
 
-                            method("minimalInterprocFail2", void()) {
-                                body {
-                                    declare {
-                                        variable("p1", t("Botan")) {
-                                            construct("Botan") { literal(1, t("int")) }
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p8")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p8")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p8")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("process", newReference("p8")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p8")),
+                                            false,
+                                        )
+
+                                    block.statements +=
+                                        newWhile(enterScope = true) { w ->
+                                            w.condition = newLiteral(true, objectType("boolean"))
+                                            w.statement = newBlock { loopBodyBlock ->
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "start",
+                                                            newReference("p8"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "process",
+                                                            newReference("p8"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "finish",
+                                                            newReference("p8"),
+                                                        ),
+                                                        false,
+                                                    )
+                                            }
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("reset", newReference("p8")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("okWhile2", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p8Decl ->
+                                        newVariable("p8", objectType("Botan"), holder = p8Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    declare {
-                                        variable("p2", t("Botan")) {
-                                            construct("Botan") { literal(2, t("int")) }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p8")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p8")),
+                                            false,
+                                        )
+
+                                    block.statements +=
+                                        newWhile(enterScope = true) { w ->
+                                            w.condition = newLiteral(true, objectType("boolean"))
+                                            w.statement = newBlock { loopBodyBlock ->
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "start",
+                                                            newReference("p8"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "process",
+                                                            newReference("p8"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "finish",
+                                                            newReference("p8"),
+                                                        ),
+                                                        false,
+                                                    )
+                                            }
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("reset", newReference("p8")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("okDoWhile", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p6Decl ->
+                                        newVariable("p6", objectType("Botan"), holder = p6Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("create", ref("p1"))
-                                    memberCall("create", ref("p2"))
-                                    memberCall("foo", ref("this")) { ref("p2") }
-                                    memberCall("start", ref("p1"))
-                                    memberCall("finish", ref("p1"))
-                                    returnStmt {}
-                                }
-                            }
 
-                            method("foo", void()) {
-                                param("p1", t("Botan"))
-                                body {
-                                    memberCall("init", ref("p1"))
-                                    returnStmt {}
-                                }
-                            }
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p6")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p6")),
+                                            false,
+                                        )
 
-                            method("bar", void()) {
-                                body {
-                                    declare {
-                                        variable("p1", t("Botan")) {
-                                            construct("Botan") { literal(1, t("int")) }
+                                    block.statements +=
+                                        newDoWhile(enterScope = true) { d ->
+                                            d.statement = newBlock { loopBodyBlock ->
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "start",
+                                                            newReference("p6"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "process",
+                                                            newReference("p6"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "finish",
+                                                            newReference("p6"),
+                                                        ),
+                                                        false,
+                                                    )
+                                            }
+
+                                            d.condition =
+                                                newBinaryOperator(">") {
+                                                    it.lhs =
+                                                        newMemberCall(
+                                                            newMemberAccess(
+                                                                "nextUInt",
+                                                                newReference("URandomKt"),
+                                                            ),
+                                                            false,
+                                                        )
+                                                    it.rhs = newLiteral(5, objectType("int"))
+                                                }
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("reset", newReference("p6")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("minimalInterprocUnclear", holder = record, enterScope = true) {
+                            method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p1Decl ->
+                                        newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("create", ref("p1"))
-                                    memberCall("minimalInterprocUnclearArgument", ref("this")) {
-                                        ref("p1")
-                                    }
-                                    returnStmt {}
-                                }
-                            }
 
-                            method("minimalInterprocUnclearArgument", void()) {
-                                param("p1", t("Botan"))
-                                body {
-                                    memberCall("init", ref("p1"))
-                                    memberCall("start", ref("p1"))
-                                    memberCall("finish", ref("p1"))
-                                    returnStmt {}
-                                }
-                            }
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p1")),
+                                            false,
+                                        )
 
-                            method("minimalInterprocUnclearReturn", t("Botan")) {
-                                body {
-                                    declare {
-                                        variable("p1", t("Botan")) {
-                                            construct("Botan") { literal(1, t("int")) }
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("foo", newReference("this")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("p1")
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p1")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("minimalInterprocFail", holder = record, enterScope = true) {
+                            method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p1Decl ->
+                                        newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
                                         }
                                     }
-                                    memberCall("create", ref("p1"))
-                                    memberCall("init", ref("p1"))
-                                    memberCall("start", ref("p1"))
-                                    returnStmt { ref("p1") }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p1")),
+                                            false,
+                                        )
+
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition =
+                                            newBinaryOperator(">") {
+                                                it.lhs =
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "nextUInt",
+                                                            newReference("URandomKt"),
+                                                        ),
+                                                        false,
+                                                    )
+                                                it.rhs = newLiteral(5, objectType("int"))
+                                            }
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "foo",
+                                                            newReference("this"),
+                                                        ),
+                                                        false,
+                                                    ) {
+                                                        it.arguments += newReference("p1")
+                                                    }
+                                            }
+                                    }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p1")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
                                 }
-                            }
+                        }
+
+                        newMethod("minimalInterprocFail2", holder = record, enterScope = true) {
+                            method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p1Decl ->
+                                        newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(1, objectType("int"))
+                                                }
+                                        }
+                                    }
+
+                                    block.statements += newDeclarationStatement { p2Decl ->
+                                        newVariable("p2", objectType("Botan"), holder = p2Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p2")),
+                                            false,
+                                        )
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("foo", newReference("this")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("p2")
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p1")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("foo", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            newParameter("p1", objectType("Botan"), holder = method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p1")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("bar", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p1Decl ->
+                                        newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(1, objectType("int"))
+                                                }
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p1")),
+                                            false,
+                                        )
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "minimalInterprocUnclearArgument",
+                                                newReference("this"),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("p1")
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod(
+                            "minimalInterprocUnclearArgument",
+                            holder = record,
+                            enterScope = true,
+                        ) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            newParameter("p1", objectType("Botan"), holder = method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("finish", newReference("p1")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod(
+                            "minimalInterprocUnclearReturn",
+                            holder = record,
+                            enterScope = true,
+                        ) { method ->
+                            method.returnTypes = listOf(objectType("Botan"))
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { p1Decl ->
+                                        newVariable("p1", objectType("Botan"), holder = p1Decl) {
+                                            it.initializer =
+                                                newConstruction("Botan") { construction ->
+                                                    construction.type = objectType("Botan")
+                                                    construction.arguments +=
+                                                        newLiteral(1, objectType("int"))
+                                                }
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("create", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("init", newReference("p1")),
+                                            false,
+                                        )
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("start", newReference("p1")),
+                                            false,
+                                        )
+
+                                    block.statements += newReturn {
+                                        it.returnValue = newReference("p1")
+                                    }
+                                }
                         }
                     }
                 }

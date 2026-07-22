@@ -26,15 +26,18 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithShortCircuit
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
 import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -175,16 +178,29 @@ class ControlDependenceGraphPassTest {
                         .build()
                 )
                 .build {
-                    translationResult {
-                        translationUnit("if.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    call("foo") logicAnd call("bar")
-                                    call("baz") logicOr call("quux")
-                                    returnStmt { literal(1, t("int")) }
+                    singleTranslationUnit("if.cpp") { tu ->
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("int"))
+                            func.type = computeType(func)
+
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements +=
+                                        newBinaryOperator("&&") {
+                                            it.lhs = newCall(newReference("foo"))
+                                            it.rhs = newCall(newReference("bar"))
+                                        }
+
+                                    block.statements +=
+                                        newBinaryOperator("||") {
+                                            it.lhs = newCall(newReference("baz"))
+                                            it.rhs = newCall(newReference("quux"))
+                                        }
+
+                                    block.statements += newReturn {
+                                        it.returnValue = newLiteral(1, objectType("int"))
+                                    }
                                 }
-                            }
                         }
                     }
                 }
@@ -197,33 +213,86 @@ class ControlDependenceGraphPassTest {
                         .registerPass<ControlDependenceGraphPass>()
                         .build()
                 )
-                .build {
-                    translationResult {
-                        translationUnit("if.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                    ifStmt {
-                                        condition { ref("i") lt literal(1, t("int")) }
-                                        thenStmt {
-                                            ref("i") assign literal(1, t("int"))
-                                            call("printf") { literal("0\n", t("string")) }
-                                        }
-                                    }
-                                    call("printf") { literal("1\n", t("string")) }
-                                    ifStmt {
-                                        condition { ref("i") gt literal(0, t("int")) }
-                                        thenStmt { ref("i") assign literal(2, t("int")) }
-                                        elseStmt { ref("i") assign literal(3, t("int")) }
-                                    }
-                                    call("printf") { literal("2\n", t("string")) }
-                                    returnStmt { ref("i") }
+                .build { buildIfTestBody("if.cpp") }
+
+        private fun LanguageFrontend<*, *>.buildIfTestBody(tuName: String): TranslationResult {
+            return singleTranslationUnit(tuName) { tu ->
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("int"))
+                    func.type = computeType(func)
+
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newDeclarationStatement { declStmt ->
+                                newVariable("i", objectType("int"), holder = declStmt) {
+                                    it.initializer = newLiteral(0, objectType("int"))
                                 }
                             }
+
+                            block.statements += newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator("<") {
+                                        it.lhs = newReference("i")
+                                        it.rhs = newLiteral(1, objectType("int"))
+                                    }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        thenBlock.statements +=
+                                            newAssign(
+                                                operatorCode = "=",
+                                                lhs = listOf(newReference("i")),
+                                                rhs = listOf(newLiteral(1, objectType("int"))),
+                                            )
+
+                                        thenBlock.statements +=
+                                            newCall(newReference("printf")) {
+                                                it.arguments +=
+                                                    newLiteral("0\n", objectType("string"))
+                                            }
+                                    }
+                            }
+
+                            block.statements +=
+                                newCall(newReference("printf")) {
+                                    it.arguments += newLiteral("1\n", objectType("string"))
+                                }
+
+                            block.statements += newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator(">") {
+                                        it.lhs = newReference("i")
+                                        it.rhs = newLiteral(0, objectType("int"))
+                                    }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        thenBlock.statements +=
+                                            newAssign(
+                                                operatorCode = "=",
+                                                lhs = listOf(newReference("i")),
+                                                rhs = listOf(newLiteral(2, objectType("int"))),
+                                            )
+                                    }
+                                ifElse.elseStatement =
+                                    newBlock(enterScope = true) { elseBlock ->
+                                        elseBlock.statements +=
+                                            newAssign(
+                                                operatorCode = "=",
+                                                lhs = listOf(newReference("i")),
+                                                rhs = listOf(newLiteral(3, objectType("int"))),
+                                            )
+                                    }
+                            }
+
+                            block.statements +=
+                                newCall(newReference("printf")) {
+                                    it.arguments += newLiteral("2\n", objectType("string"))
+                                }
+
+                            block.statements += newReturn { it.returnValue = newReference("i") }
                         }
-                    }
                 }
+            }
+        }
 
         fun getForEachTest() =
             testFrontend(
@@ -234,27 +303,53 @@ class ControlDependenceGraphPassTest {
                         .build()
                 )
                 .build {
-                    translationResult {
-                        translationUnit("forEach.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                    forEachStmt {
-                                        variable = declare { variable("loopVar", t("string")) }
-                                        iterable = call("magicFunction")
-                                        loopBody {
-                                            call("printf") {
-                                                literal("loop: \${}\n", t("string"))
-                                                ref("loopVar")
-                                            }
+                    singleTranslationUnit("forEach.cpp") { tu ->
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("int"))
+                            func.type = computeType(func)
+
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { declStmt ->
+                                        newVariable("i", objectType("int"), holder = declStmt) {
+                                            it.initializer = newLiteral(0, objectType("int"))
                                         }
                                     }
-                                    call("printf") { literal("1\n", t("string")) }
 
-                                    returnStmt { ref("i") }
+                                    block.statements += newForEach { forEach ->
+                                        forEach.variable =
+                                            newDeclarationStatement { loopVarDeclStmt ->
+                                                newVariable(
+                                                    "loopVar",
+                                                    objectType("string"),
+                                                    holder = loopVarDeclStmt,
+                                                )
+                                            }
+                                        val magicCall = newCall(newReference("magicFunction"))
+                                        forEach.iterable = magicCall
+                                        forEach.statement =
+                                            newBlock(enterScope = true) { loopBody ->
+                                                loopBody.statements +=
+                                                    newCall(newReference("printf")) {
+                                                        it.arguments +=
+                                                            newLiteral(
+                                                                "loop: \${}\n",
+                                                                objectType("string"),
+                                                            )
+                                                        it.arguments += newReference("loopVar")
+                                                    }
+                                            }
+                                    }
+
+                                    block.statements +=
+                                        newCall(newReference("printf")) {
+                                            it.arguments += newLiteral("1\n", objectType("string"))
+                                        }
+
+                                    block.statements += newReturn {
+                                        it.returnValue = newReference("i")
+                                    }
                                 }
-                            }
                         }
                     }
                 }
@@ -270,32 +365,6 @@ class ControlDependenceGraphPassTest {
                         )
                         .build()
                 )
-                .build {
-                    translationResult {
-                        translationUnit("if.cpp") {
-                            // The main method
-                            function("main", t("int")) {
-                                body {
-                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                    ifStmt {
-                                        condition { ref("i") lt literal(1, t("int")) }
-                                        thenStmt {
-                                            ref("i") assign literal(1, t("int"))
-                                            call("printf") { literal("0\n", t("string")) }
-                                        }
-                                    }
-                                    call("printf") { literal("1\n", t("string")) }
-                                    ifStmt {
-                                        condition { ref("i") gt literal(0, t("int")) }
-                                        thenStmt { ref("i") assign literal(2, t("int")) }
-                                        elseStmt { ref("i") assign literal(3, t("int")) }
-                                    }
-                                    call("printf") { literal("2\n", t("string")) }
-                                    returnStmt { ref("i") }
-                                }
-                            }
-                        }
-                    }
-                }
+                .build { buildIfTestBody("if.cpp") }
     }
 }

@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.test.*
 import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.test.*
@@ -331,27 +332,50 @@ class ControlFlowSensitiveDFGPassTest {
                     .build()
             )
             .build {
-                translationResult {
-                    translationUnit("forEach.cpp") {
-                        // The main method
-                        function("main", t("int")) {
-                            body {
-                                declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                forEachStmt {
-                                    declare { variable("loopVar", t("string")) }
-                                    call("magicFunction")
-                                    loopBody {
-                                        call("printf") {
-                                            literal("loop: \${}\n", t("string"))
-                                            ref("loopVar")
-                                        }
+                singleTranslationUnit("forEach.cpp") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { declStmt ->
+                                    newVariable("i", objectType("int"), holder = declStmt) {
+                                        it.initializer = newLiteral(0, objectType("int"))
                                     }
                                 }
-                                call("printf") { literal("1\n", t("string")) }
 
-                                returnStmt { ref("i") }
+                                block.statements +=
+                                    newForEach(enterScope = true) { forEach ->
+                                        forEach.variable =
+                                            newDeclarationStatement { loopVarDeclStmt ->
+                                                newVariable(
+                                                    "loopVar",
+                                                    objectType("string"),
+                                                    holder = loopVarDeclStmt,
+                                                )
+                                            }
+                                        forEach.statement =
+                                            newBlock(enterScope = true) { loopBody ->
+                                                loopBody.statements +=
+                                                    newCall(newReference("printf")) {
+                                                        it.arguments +=
+                                                            newLiteral(
+                                                                "loop: \${}\n",
+                                                                objectType("string"),
+                                                            )
+                                                        it.arguments += newReference("loopVar")
+                                                    }
+                                            }
+                                    }
+
+                                block.statements +=
+                                    newCall(newReference("printf")) {
+                                        it.arguments += newLiteral("1\n", objectType("string"))
+                                    }
+
+                                block.statements += newReturn { it.returnValue = newReference("i") }
                             }
-                        }
                     }
                 }
             }

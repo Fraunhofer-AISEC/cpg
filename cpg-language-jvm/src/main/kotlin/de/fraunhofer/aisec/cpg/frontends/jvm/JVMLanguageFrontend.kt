@@ -156,11 +156,7 @@ class JVMLanguageFrontend(
                     val fqn = previous?.name.fqn(path)
                     val innerPkg =
                         packages.computeIfAbsent(fqn.toString()) {
-                            val pkg = newNamespace(it)
-                            scopeManager.addDeclaration(pkg)
-                            val holder = previous ?: tu
-                            holder.addDeclaration(pkg)
-                            pkg
+                            newNamespace(it, holder = previous ?: tu)
                         }
                     // Enter namespace scope
                     scopeManager.enterScope(innerPkg)

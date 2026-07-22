@@ -27,11 +27,19 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
+import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.inferPseudoLocations
+import de.fraunhofer.aisec.cpg.graph.newTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import kotlin.reflect.KClass
@@ -134,3 +142,45 @@ open class TestLanguageFrontend(
 
 class TestHandler(frontend: TestLanguageFrontend) :
     Handler<Node, Any, TestLanguageFrontend>(::ProblemDeclaration, frontend)
+
+/**
+ * Creates a new [TranslationResult] with a single default [Component], runs the configured passes
+ * on it, and infers pseudo-locations for any node that doesn't have a real one (e.g. nodes built
+ * directly via node builders in a test, without a real parser). This is the harness used to build
+ * ASTs directly for unit tests, without a real [LanguageFrontend.parse].
+ */
+fun LanguageFrontend<*, *>.translationResult(
+    init: TranslationResult.() -> Unit
+): TranslationResult {
+    val node = TranslationResult(TranslationManager.builder().config(ctx.config).build(), ctx)
+    val component = Component()
+    component.name = Name(DEFAULT_APPLICATION_NAME)
+    node.addComponent(component)
+    init(node)
+
+    executePassesSequentially(ctx, node, mutableSetOf())
+
+    // Start pseudo location inference for the root node of translation, propagating to its
+    // descendents.
+    node.inferPseudoLocations()
+
+    return node
+}
+
+/**
+ * Convenience wrapper around [translationResult] for the common case of a test that builds a single
+ * [TranslationUnit]. It creates the unit (named [name]), resets the
+ * [de.fraunhofer.aisec.cpg.ScopeManager] to its global scope, runs [init] to populate it (with the
+ * [LanguageFrontend] as receiver, so node builders bind their metadata correctly and `tu` is
+ * available for `holder =` etc.), and finally registers the unit in the result's default
+ * [Component].
+ */
+fun LanguageFrontend<*, *>.singleTranslationUnit(
+    name: CharSequence = Node.EMPTY_NAME,
+    init: LanguageFrontend<*, *>.(TranslationUnit) -> Unit,
+): TranslationResult {
+    val tu = newTranslationUnit(name)
+    scopeManager.resetToGlobal(tu)
+    init(tu)
+    return translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
+}

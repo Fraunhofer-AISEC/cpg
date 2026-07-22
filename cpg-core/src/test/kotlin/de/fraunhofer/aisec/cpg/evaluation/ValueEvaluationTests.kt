@@ -27,11 +27,10 @@ package de.fraunhofer.aisec.cpg.evaluation
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.array
-import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.newArrayConstruction
-import de.fraunhofer.aisec.cpg.graph.newConditional
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 
 class ValueEvaluationTests {
     companion object {
@@ -43,54 +42,116 @@ class ValueEvaluationTests {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("size.java") {
-                        record("MainClass") {
-                            method("main") {
-                                this.isStatic = true
-                                param("args", t("String").array())
-                                body {
-                                    declare {
-                                        variable("array", t("int").array()) {
-                                            val newExpr = newArrayConstruction()
-                                            newExpr.addDimension(literal(3, t("int")))
-                                            this.initializer = newExpr
+                singleTranslationUnit("size.java") { tu ->
+                    newRecord("MainClass", "class", holder = tu, enterScope = true) { record ->
+                        newMethod(
+                            "main",
+                            isStatic = true,
+                            recordDeclaration = record,
+                            holder = record,
+                            enterScope = true,
+                        ) { main ->
+                            main.returnTypes = listOf(unknownType())
+                            main.type = computeType(main)
+                            newParameter("args", objectType("String").array(), holder = main)
+
+                            main.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { arrayDeclStmt ->
+                                        newVariable(
+                                            "array",
+                                            objectType("int").array(),
+                                            holder = arrayDeclStmt,
+                                        ) {
+                                            it.initializer =
+                                                newArrayConstruction().also { ac ->
+                                                    ac.addDimension(
+                                                        newLiteral(3, objectType("int"))
+                                                    )
+                                                }
                                         }
                                     }
-                                    forStmt {
-                                        loopBody {
-                                            subscriptExpr {
-                                                ref("array")
-                                                ref("i")
-                                            } assign ref("i")
-                                        }
-                                        forInitializer {
-                                            declare {
-                                                variable("i", t("int")) { literal(0, t("int")) }
+
+                                    block.statements += newFor { for_ ->
+                                        for_.initializerStatement =
+                                            newDeclarationStatement { iDeclStmt ->
+                                                newVariable(
+                                                    "i",
+                                                    objectType("int"),
+                                                    holder = iDeclStmt,
+                                                ) {
+                                                    it.initializer =
+                                                        newLiteral(0, objectType("int"))
+                                                }
                                             }
-                                        }
-                                        forCondition { ref("i") lt member("length", ref("array")) }
-                                        forIteration { ref("i").inc() }
-                                    }
-                                    memberCall("println", member("out", ref("System"))) {
-                                        subscriptExpr {
-                                            ref("array")
-                                            literal(1, t("int"))
+
+                                        for_.condition =
+                                            newBinaryOperator("<") {
+                                                it.lhs = newReference("i")
+                                                it.rhs =
+                                                    newMemberAccess("length", newReference("array"))
+                                            }
+
+                                        for_.iterationStatement =
+                                            newUnaryOperator("++", postfix = true, prefix = false) {
+                                                it.input = newReference("i")
+                                            }
+
+                                        for_.statement = newBlock { loopBody ->
+                                            loopBody.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(
+                                                        newSubscription {
+                                                            it.arrayExpression =
+                                                                newReference("array")
+                                                            it.subscriptExpression =
+                                                                newReference("i")
+                                                        }
+                                                    ),
+                                                    listOf(newReference("i")),
+                                                )
                                         }
                                     }
 
-                                    declare {
-                                        variable("str", t("String")) {
-                                            literal("abcde", t("String"))
+                                    val printlnCall1 =
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        )
+                                    printlnCall1.arguments += newSubscription {
+                                        it.arrayExpression = newReference("array")
+                                        it.subscriptExpression = newLiteral(1, objectType("int"))
+                                    }
+                                    block.statements += printlnCall1
+
+                                    block.statements += newDeclarationStatement { strDeclStmt ->
+                                        newVariable(
+                                            "str",
+                                            objectType("String"),
+                                            holder = strDeclStmt,
+                                        ) {
+                                            it.initializer =
+                                                newLiteral("abcde", objectType("String"))
                                         }
                                     }
 
-                                    memberCall("println", member("out", ref("System"))) {
-                                        ref("str")
-                                    }
-                                    returnStmt {}
+                                    val printlnCall2 =
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        )
+                                    printlnCall2.arguments += newReference("str")
+                                    block.statements += printlnCall2
+
+                                    block.statements += newReturn()
                                 }
-                            }
                         }
                     }
                 }
@@ -104,34 +165,114 @@ class ValueEvaluationTests {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("complex.java") {
-                        record("MainClass") {
-                            method("main") {
-                                this.isStatic = true
-                                param("args", t("String").array())
-                                body {
-                                    declare { variable("i", t("int")) { literal(3, t("int")) } }
-                                    declare { variable("s", t("String")) }
+                singleTranslationUnit("complex.java") { tu ->
+                    newRecord("MainClass", "class", holder = tu, enterScope = true) { record ->
+                        newMethod(
+                            "main",
+                            isStatic = true,
+                            recordDeclaration = record,
+                            holder = record,
+                            enterScope = true,
+                        ) { main ->
+                            main.returnTypes = listOf(unknownType())
+                            main.type = computeType(main)
+                            newParameter("args", objectType("String").array(), holder = main)
 
-                                    ifStmt {
-                                        condition { ref("i") lt literal(2, t("int")) }
-                                        thenStmt { ref("s") assign literal("small", t("String")) }
-                                        elseStmt { ref("s") assign literal("big", t("String")) }
+                            main.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { iDeclStmt ->
+                                        newVariable("i", objectType("int"), holder = iDeclStmt) {
+                                            it.initializer = newLiteral(3, objectType("int"))
+                                        }
                                     }
 
-                                    ref("s") assignPlus literal("!", t("String"))
+                                    block.statements += newDeclarationStatement { sDeclStmt ->
+                                        newVariable("s", objectType("String"), holder = sDeclStmt)
+                                    }
 
-                                    ref("s") assign { ref("s") + literal("?", t("string")) }
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition =
+                                            newBinaryOperator("<") {
+                                                it.lhs = newReference("i")
+                                                it.rhs = newLiteral(2, objectType("int"))
+                                            }
 
-                                    ref("i").inc()
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("s")),
+                                                        listOf(
+                                                            newLiteral(
+                                                                "small",
+                                                                objectType("String"),
+                                                            )
+                                                        ),
+                                                    )
+                                            }
 
-                                    memberCall("println", member("out", ref("System"))) { ref("s") }
+                                        ifElse.elseStatement =
+                                            newBlock(enterScope = true) { elseBlock ->
+                                                elseBlock.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("s")),
+                                                        listOf(
+                                                            newLiteral("big", objectType("String"))
+                                                        ),
+                                                    )
+                                            }
+                                    }
 
-                                    memberCall("println", member("out", ref("System"))) { ref("i") }
-                                    returnStmt {}
+                                    block.statements +=
+                                        newAssign(
+                                            "+=",
+                                            listOf(newReference("s")),
+                                            listOf(newLiteral("!", objectType("String"))),
+                                        )
+
+                                    block.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("s")),
+                                            listOf(
+                                                newBinaryOperator("+") {
+                                                    it.lhs = newReference("s")
+                                                    it.rhs = newLiteral("?", objectType("string"))
+                                                }
+                                            ),
+                                        )
+
+                                    block.statements +=
+                                        newUnaryOperator("++", postfix = true, prefix = false) {
+                                            it.input = newReference("i")
+                                        }
+
+                                    val printlnCall1 =
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        )
+                                    printlnCall1.arguments += newReference("s")
+                                    block.statements += printlnCall1
+
+                                    val printlnCall2 =
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        )
+                                    printlnCall2.arguments += newReference("i")
+                                    block.statements += printlnCall2
+
+                                    block.statements += newReturn()
                                 }
-                            }
                         }
                     }
                 }
@@ -145,98 +286,188 @@ class ValueEvaluationTests {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("example.cpp") {
-                        function("main", t("int")) {
-                            body {
-                                declare {
-                                    variable("b", t("int")) {
-                                        literal(1, t("int")) + literal(1, t("int"))
-                                    }
-                                }
-                                call("println") { ref("b") }
+                singleTranslationUnit("example.cpp") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
 
-                                declare { variable("a", t("int")) { literal(1, t("int")) } }
-                                ref("a") assign literal(2, t("int"))
-                                call("println") { ref("a") }
-
-                                declare {
-                                    variable("c", t("int")) {
-                                        literal(5, t("int")) - literal(2, t("int"))
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { bDeclStmt ->
+                                    newVariable("b", objectType("int"), holder = bDeclStmt) {
+                                        it.initializer =
+                                            newBinaryOperator("+") { bo ->
+                                                bo.lhs = newLiteral(1, objectType("int"))
+                                                bo.rhs = newLiteral(1, objectType("int"))
+                                            }
                                     }
                                 }
 
-                                declare {
-                                    variable("d", t("float")) {
-                                        literal(8, t("int")) / literal(3, t("int"))
+                                block.statements +=
+                                    newCall(newReference("println")) {
+                                        it.arguments += newReference("b")
+                                    }
+
+                                block.statements += newDeclarationStatement { aDeclStmt ->
+                                    newVariable("a", objectType("int"), holder = aDeclStmt) {
+                                        it.initializer = newLiteral(1, objectType("int"))
                                     }
                                 }
 
-                                declare {
-                                    variable("e", t("float")) {
-                                        literal(7.0, t("float")) / literal(2, t("int"))
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newReference("a")),
+                                        listOf(newLiteral(2, objectType("int"))),
+                                    )
+
+                                block.statements +=
+                                    newCall(newReference("println")) {
+                                        it.arguments += newReference("a")
+                                    }
+
+                                block.statements += newDeclarationStatement { cDeclStmt ->
+                                    newVariable("c", objectType("int"), holder = cDeclStmt) {
+                                        it.initializer =
+                                            newBinaryOperator("-") { bo ->
+                                                bo.lhs = newLiteral(5, objectType("int"))
+                                                bo.rhs = newLiteral(2, objectType("int"))
+                                            }
                                     }
                                 }
 
-                                declare {
-                                    variable("f", t("int")) {
-                                        literal(2, t("int")) * literal(5, t("int"))
+                                block.statements += newDeclarationStatement { dDeclStmt ->
+                                    newVariable("d", objectType("float"), holder = dDeclStmt) {
+                                        it.initializer =
+                                            newBinaryOperator("/") { bo ->
+                                                bo.lhs = newLiteral(8, objectType("int"))
+                                                bo.rhs = newLiteral(3, objectType("int"))
+                                            }
                                     }
                                 }
 
-                                declare { variable("g", t("int")) { -ref("c") } }
-
-                                call("println") {
-                                    literal("Hello ", t("String")) + literal("world", t("String"))
-                                }
-
-                                declare {
-                                    variable("h", t("bool")) {
-                                        literal(5, t("int")) le literal(2, t("int"))
+                                block.statements += newDeclarationStatement { eDeclStmt ->
+                                    newVariable("e", objectType("float"), holder = eDeclStmt) {
+                                        it.initializer =
+                                            newBinaryOperator("/") { bo ->
+                                                bo.lhs = newLiteral(7.0, objectType("float"))
+                                                bo.rhs = newLiteral(2, objectType("int"))
+                                            }
                                     }
                                 }
 
-                                declare {
-                                    variable("i", t("bool")) {
-                                        literal(3, t("int")) gt literal(3, t("int"))
+                                block.statements += newDeclarationStatement { fDeclStmt ->
+                                    newVariable("f", objectType("int"), holder = fDeclStmt) {
+                                        it.initializer =
+                                            newBinaryOperator("*") { bo ->
+                                                bo.lhs = newLiteral(2, objectType("int"))
+                                                bo.rhs = newLiteral(5, objectType("int"))
+                                            }
                                     }
                                 }
 
-                                declare {
-                                    variable("j", t("bool")) {
-                                        literal(3, t("int")) ge literal(3.2, t("float"))
+                                block.statements += newDeclarationStatement { gDeclStmt ->
+                                    newVariable("g", objectType("int"), holder = gDeclStmt) {
+                                        it.initializer =
+                                            newUnaryOperator("-", postfix = false, prefix = false) {
+                                                it.input = newReference("c")
+                                            }
                                     }
                                 }
 
-                                declare {
-                                    variable("k", t("bool")) {
-                                        literal(3.1, t("float")) le literal(3, t("int"))
+                                block.statements +=
+                                    newCall(newReference("println")) {
+                                        it.arguments +=
+                                            newBinaryOperator("+") { bo ->
+                                                bo.lhs = newLiteral("Hello ", objectType("String"))
+                                                bo.rhs = newLiteral("world", objectType("String"))
+                                            }
+                                    }
+
+                                block.statements += newDeclarationStatement { hDeclStmt ->
+                                    newVariable("h", objectType("bool"), holder = hDeclStmt) {
+                                        it.initializer =
+                                            newBinaryOperator("<=") { bo ->
+                                                bo.lhs = newLiteral(5, objectType("int"))
+                                                bo.rhs = newLiteral(2, objectType("int"))
+                                            }
                                     }
                                 }
 
-                                declare {
-                                    variable("l", t("bool")) {
-                                        literal(3L, t("long")) ge
-                                            cast(t("float")) { literal(3.1, t("float")) }
+                                block.statements += newDeclarationStatement { iVarDeclStmt ->
+                                    newVariable("i", objectType("bool"), holder = iVarDeclStmt) {
+                                        it.initializer =
+                                            newBinaryOperator(">") { bo ->
+                                                bo.lhs = newLiteral(3, objectType("int"))
+                                                bo.rhs = newLiteral(3, objectType("int"))
+                                            }
                                     }
                                 }
 
-                                declare {
-                                    variable("m", t("bool")) {
-                                        cast(t("char")) { literal(3, t("int")) } ge
-                                            literal(3.1, t("float"))
+                                block.statements += newDeclarationStatement { jDeclStmt ->
+                                    newVariable("j", objectType("bool"), holder = jDeclStmt) {
+                                        it.initializer =
+                                            newBinaryOperator(">=") { bo ->
+                                                bo.lhs = newLiteral(3, objectType("int"))
+                                                bo.rhs = newLiteral(3.2, objectType("float"))
+                                            }
                                     }
                                 }
 
-                                declare {
-                                    variable("n", t("bool")) {
-                                        literal(3, t("int")) eq literal(3.1, t("float"))
+                                block.statements += newDeclarationStatement { kDeclStmt ->
+                                    newVariable("k", objectType("bool"), holder = kDeclStmt) {
+                                        it.initializer =
+                                            newBinaryOperator("<=") { bo ->
+                                                bo.lhs = newLiteral(3.1, objectType("float"))
+                                                bo.rhs = newLiteral(3, objectType("int"))
+                                            }
                                     }
                                 }
 
-                                returnStmt { literal(0, t("int")) }
+                                block.statements += newDeclarationStatement { lDeclStmt ->
+                                    newVariable("l", objectType("bool"), holder = lDeclStmt) {
+                                        it.initializer =
+                                            newBinaryOperator(">=") { bo ->
+                                                bo.lhs = newLiteral(3L, objectType("long"))
+                                                bo.rhs =
+                                                    newCast().also { cast ->
+                                                        cast.castType = objectType("float")
+                                                        cast.expression =
+                                                            newLiteral(3.1, objectType("float"))
+                                                    }
+                                            }
+                                    }
+                                }
+
+                                block.statements += newDeclarationStatement { mDeclStmt ->
+                                    newVariable("m", objectType("bool"), holder = mDeclStmt) {
+                                        it.initializer =
+                                            newBinaryOperator(">=") { bo ->
+                                                bo.lhs =
+                                                    newCast().also { cast ->
+                                                        cast.castType = objectType("char")
+                                                        cast.expression =
+                                                            newLiteral(3, objectType("int"))
+                                                    }
+                                                bo.rhs = newLiteral(3.1, objectType("float"))
+                                            }
+                                    }
+                                }
+
+                                block.statements += newDeclarationStatement { nDeclStmt ->
+                                    newVariable("n", objectType("bool"), holder = nDeclStmt) {
+                                        it.initializer =
+                                            newBinaryOperator("==") { bo ->
+                                                bo.lhs = newLiteral(3, objectType("int"))
+                                                bo.rhs = newLiteral(3.1, objectType("float"))
+                                            }
+                                    }
+                                }
+
+                                block.statements += newReturn {
+                                    it.returnValue = newLiteral(0, objectType("int"))
+                                }
                             }
-                        }
                     }
                 }
             }
@@ -249,87 +480,240 @@ class ValueEvaluationTests {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("cfexample.cpp") {
-                        import("time.h")
-                        import("stdlib.h")
-                        function("main", t("int")) {
-                            body {
-                                call("srand") { call("time") { ref("NULL") } }
+                singleTranslationUnit("cfexample.cpp") { tu ->
+                    tu.addDeclaration(newInclude("time.h"))
+                    tu.addDeclaration(newInclude("stdlib.h"))
 
-                                declare { variable("b", t("int")) { literal(1, t("int")) } }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
 
-                                ifStmt {
-                                    condition { call("rand") lt literal(10, t("int")) }
-                                    thenStmt { ref("b") assign { ref("b") + literal(1, t("int")) } }
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements +=
+                                    newCall(newReference("srand")) {
+                                        it.arguments +=
+                                            newCall(newReference("time")) { timeCall ->
+                                                timeCall.arguments += newReference("NULL")
+                                            }
+                                    }
+
+                                block.statements += newDeclarationStatement { bDeclStmt ->
+                                    newVariable("b", objectType("int"), holder = bDeclStmt) {
+                                        it.initializer = newLiteral(1, objectType("int"))
+                                    }
                                 }
 
-                                call("println") { ref("b") } // 1, 2
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("<") {
+                                            it.lhs = newCall(newReference("rand"))
+                                            it.rhs = newLiteral(10, objectType("int"))
+                                        }
 
-                                ifStmt {
-                                    condition { call("rand") gt literal(5, t("int")) }
-                                    thenStmt { ref("b") assign { ref("b") - literal(1, t("int")) } }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("b")),
+                                                    listOf(
+                                                        newBinaryOperator("+") {
+                                                            it.lhs = newReference("b")
+                                                            it.rhs =
+                                                                newLiteral(1, objectType("int"))
+                                                        }
+                                                    ),
+                                                )
+                                        }
                                 }
 
-                                call("println") { ref("b") } // 0, 1, 2
+                                block.statements +=
+                                    newCall(newReference("println")) {
+                                        it.arguments += newReference("b")
+                                    } // 1, 2
 
-                                ifStmt {
-                                    condition { call("rand") gt literal(3, t("int")) }
-                                    thenStmt { ref("b") assign { ref("b") * literal(2, t("int")) } }
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator(">") {
+                                            it.lhs = newCall(newReference("rand"))
+                                            it.rhs = newLiteral(5, objectType("int"))
+                                        }
+
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("b")),
+                                                    listOf(
+                                                        newBinaryOperator("-") {
+                                                            it.lhs = newReference("b")
+                                                            it.rhs =
+                                                                newLiteral(1, objectType("int"))
+                                                        }
+                                                    ),
+                                                )
+                                        }
                                 }
 
-                                call("println") { ref("b") } // 0, 1, 2, 4
+                                block.statements +=
+                                    newCall(newReference("println")) {
+                                        it.arguments += newReference("b")
+                                    } // 0, 1, 2
 
-                                ifStmt {
-                                    condition { call("rand") lt literal(4, t("int")) }
-                                    thenStmt { ref("b") assign -ref("b") }
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator(">") {
+                                            it.lhs = newCall(newReference("rand"))
+                                            it.rhs = newLiteral(3, objectType("int"))
+                                        }
+
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("b")),
+                                                    listOf(
+                                                        newBinaryOperator("*") {
+                                                            it.lhs = newReference("b")
+                                                            it.rhs =
+                                                                newLiteral(2, objectType("int"))
+                                                        }
+                                                    ),
+                                                )
+                                        }
                                 }
 
-                                call("println") { ref("b") } // -4, -2, -1, 0, 1, 2, 4
+                                block.statements +=
+                                    newCall(newReference("println")) {
+                                        it.arguments += newReference("b")
+                                    } // 0, 1, 2, 4
 
-                                declare {
-                                    variable("a", t("int")) {
-                                        this.initializer =
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator(">") {
+                                            it.lhs = newCall(newReference("rand"))
+                                            it.rhs = newLiteral(1, objectType("int"))
+                                        }
+
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("b")),
+                                                    listOf(
+                                                        newUnaryOperator(
+                                                            "-",
+                                                            prefix = true,
+                                                            postfix = false,
+                                                        ) {
+                                                            it.input = newReference("b")
+                                                        }
+                                                    ),
+                                                )
+                                        }
+                                }
+
+                                block.statements +=
+                                    newCall(newReference("println")) {
+                                        it.arguments += newReference("b")
+                                    } // -4, -2, -1, 0, 1, 2, 4
+
+                                block.statements += newDeclarationStatement { aDeclStmt ->
+                                    newVariable("a", objectType("int"), holder = aDeclStmt) {
+                                        it.initializer =
                                             newConditional(
-                                                ref("b") lt literal(2, t("int")),
-                                                literal(3, t("int")),
-                                                literal(5, t("int")).inc(),
+                                                newBinaryOperator("<") {
+                                                    it.lhs = newReference("b")
+                                                    it.rhs = newLiteral(2, objectType("int"))
+                                                },
+                                                newLiteral(3, objectType("int")),
+                                                newUnaryOperator(
+                                                    "++",
+                                                    postfix = true,
+                                                    prefix = false,
+                                                ) {
+                                                    it.input = newLiteral(5, objectType("int"))
+                                                },
                                             )
                                     }
                                 }
 
-                                call("println") { ref("a") } // 3, 6
+                                block.statements +=
+                                    newCall(newReference("println")) {
+                                        it.arguments += newReference("a")
+                                    } // 3, 6
 
-                                returnStmt { literal(0, t("int")) }
+                                block.statements += newReturn {
+                                    it.returnValue = newLiteral(0, objectType("int"))
+                                }
                             }
-                        }
+                    }
 
-                        function("loop", t("int")) {
-                            body {
-                                declare {
-                                    variable("array", t("int").array()) {
-                                        val creationExpr = newArrayConstruction()
-                                        creationExpr.addDimension(literal(6, t("int")))
-                                        this.initializer = creationExpr
+                    newFunction("loop", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { arrayDeclStmt ->
+                                    newVariable(
+                                        "array",
+                                        objectType("int").array(),
+                                        holder = arrayDeclStmt,
+                                    ) {
+                                        it.initializer =
+                                            newArrayConstruction().also { ac ->
+                                                ac.addDimension(newLiteral(6, objectType("int")))
+                                            }
                                     }
                                 }
 
-                                forStmt {
-                                    loopBody {
-                                        subscriptExpr {
-                                            ref("array")
-                                            ref("i")
-                                        } assign ref("i")
+                                block.statements += newFor { for_ ->
+                                    for_.initializerStatement =
+                                        newDeclarationStatement { iDeclStmt ->
+                                            newVariable(
+                                                "i",
+                                                objectType("int"),
+                                                holder = iDeclStmt,
+                                            ) {
+                                                it.initializer = newLiteral(0, objectType("int"))
+                                            }
+                                        }
+
+                                    for_.condition =
+                                        newBinaryOperator("<") {
+                                            it.lhs = newReference("i")
+                                            it.rhs = newLiteral(6, objectType("int"))
+                                        }
+
+                                    for_.iterationStatement =
+                                        newUnaryOperator("++", postfix = true, prefix = false) {
+                                            it.input = newReference("i")
+                                        }
+
+                                    for_.statement = newBlock { loopBody ->
+                                        loopBody.statements +=
+                                            newAssign(
+                                                "=",
+                                                listOf(
+                                                    newSubscription {
+                                                        it.arrayExpression = newReference("array")
+                                                        it.subscriptExpression = newReference("i")
+                                                    }
+                                                ),
+                                                listOf(newReference("i")),
+                                            )
                                     }
-                                    forInitializer {
-                                        declareVar("i", t("int")) { literal(0, t("int")) }
-                                    }
-                                    forCondition { ref("i") lt literal(6, t("int")) }
-                                    forIteration { ref("i").incNoContext() }
                                 }
-                                returnStmt { literal(0, t("int")) }
+
+                                block.statements += newReturn {
+                                    it.returnValue = newLiteral(0, objectType("int"))
+                                }
                             }
-                        }
                     }
                 }
             }

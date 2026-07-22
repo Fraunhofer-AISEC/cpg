@@ -26,39 +26,39 @@
 package de.fraunhofer.aisec.cpg.testcases
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.graph.array
-import de.fraunhofer.aisec.cpg.graph.builder.assign
-import de.fraunhofer.aisec.cpg.graph.builder.body
-import de.fraunhofer.aisec.cpg.graph.builder.call
-import de.fraunhofer.aisec.cpg.graph.builder.condition
-import de.fraunhofer.aisec.cpg.graph.builder.declare
-import de.fraunhofer.aisec.cpg.graph.builder.elseStmt
-import de.fraunhofer.aisec.cpg.graph.builder.eq
-import de.fraunhofer.aisec.cpg.graph.builder.forEachStmt
-import de.fraunhofer.aisec.cpg.graph.builder.function
-import de.fraunhofer.aisec.cpg.graph.builder.ifStmt
-import de.fraunhofer.aisec.cpg.graph.builder.iterable
-import de.fraunhofer.aisec.cpg.graph.builder.literal
-import de.fraunhofer.aisec.cpg.graph.builder.loopBody
-import de.fraunhofer.aisec.cpg.graph.builder.param
-import de.fraunhofer.aisec.cpg.graph.builder.plus
-import de.fraunhofer.aisec.cpg.graph.builder.plusAssign
-import de.fraunhofer.aisec.cpg.graph.builder.ref
-import de.fraunhofer.aisec.cpg.graph.builder.returnStmt
-import de.fraunhofer.aisec.cpg.graph.builder.t
-import de.fraunhofer.aisec.cpg.graph.builder.thenStmt
-import de.fraunhofer.aisec.cpg.graph.builder.translationResult
-import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
-import de.fraunhofer.aisec.cpg.graph.builder.variable
-import de.fraunhofer.aisec.cpg.graph.builder.void
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
 
 class FlowQueriesTest {
 
     companion object {
+        /** Builds the `foo(arg: int): string { return toString(arg) }` helper function. */
+        private fun LanguageFrontend<*, *>.buildFoo(tu: TranslationUnit) {
+            newFunction("foo", holder = tu, enterScope = true) { func ->
+                func.returnTypes = listOf(objectType("string"))
+                func.type = computeType(func)
+
+                newParameter("arg", objectType("int"), holder = func)
+
+                func.body =
+                    newBlock(enterScope = true) { block ->
+                        block.statements += newReturn { ret ->
+                            ret.returnValue =
+                                newCall(newReference("toString")) {
+                                    it.arguments += newReference("arg")
+                                }
+                        }
+                    }
+            }
+        }
+
         fun verySimpleDataflow(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
@@ -69,40 +69,98 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                singleTranslationUnit("Dataflow.java") { tu ->
+                    buildFoo(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(incompleteType())
+                        func.type = computeType(func)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) +
-                                            call("foo") { ref("a") } +
-                                            call("foo") { call("bar") }
+                        newParameter("args", objectType("string").array(), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
+                                        it.initializer = newLiteral(5, objectType("int"))
                                     }
                                 }
-                                call("print") { ref("a") }
 
-                                call("print") { ref("b") }
-
-                                ref("b") += literal("added", t("string"))
-
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt { ref("a") assign literal(10, t("int")) }
-                                    elseStmt { ref("b") assign literal("removed", t("string")) }
+                                block.statements += newDeclarationStatement { bDecl ->
+                                    newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                        b.initializer =
+                                            newBinaryOperator("+") { outer ->
+                                                outer.lhs =
+                                                    newBinaryOperator("+") { inner ->
+                                                        inner.lhs =
+                                                            newLiteral("bla", objectType("string"))
+                                                        inner.rhs =
+                                                            newCall(newReference("foo")) {
+                                                                it.arguments += newReference("a")
+                                                            }
+                                                    }
+                                                outer.rhs =
+                                                    newCall(newReference("foo")) {
+                                                        it.arguments += newCall(newReference("bar"))
+                                                    }
+                                            }
+                                    }
                                 }
 
-                                call("baz") { ref("a") + ref("b") }
+                                block.statements +=
+                                    newCall(newReference("print")) {
+                                        it.arguments += newReference("a")
+                                    }
+
+                                block.statements +=
+                                    newCall(newReference("print")) {
+                                        it.arguments += newReference("b")
+                                    }
+
+                                block.statements +=
+                                    newAssign(
+                                        "+=",
+                                        listOf(newReference("b")),
+                                        listOf(newLiteral("added", objectType("string"))),
+                                    )
+
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("==") {
+                                            it.lhs = newReference("b")
+                                            it.rhs = newLiteral("test", objectType("string"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("a")),
+                                                    listOf(newLiteral(10, objectType("int"))),
+                                                )
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("b")),
+                                                    listOf(
+                                                        newLiteral("removed", objectType("string"))
+                                                    ),
+                                                )
+                                        }
+                                }
+
+                                block.statements +=
+                                    newCall(newReference("baz")) { bazCall ->
+                                        bazCall.arguments +=
+                                            newBinaryOperator("+") {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newReference("b")
+                                            }
+                                    }
                             }
-                        }
                     }
                 }
             }
@@ -115,30 +173,55 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                singleTranslationUnit("Dataflow.java") { tu ->
+                    buildFoo(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(incompleteType())
+                        func.type = computeType(func)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) +
-                                            ref("a") +
-                                            call("foo") { call("bar") }
+                        newParameter("args", objectType("string").array(), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
+                                        it.initializer = newLiteral(5, objectType("int"))
                                     }
                                 }
-                                call("print") { ref("b") }
 
-                                call("baz") { ref("a") + ref("b") }
+                                block.statements += newDeclarationStatement { bDecl ->
+                                    newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                        b.initializer =
+                                            newBinaryOperator("+") { outer ->
+                                                outer.lhs =
+                                                    newBinaryOperator("+") { inner ->
+                                                        inner.lhs =
+                                                            newLiteral("bla", objectType("string"))
+                                                        inner.rhs = newReference("a")
+                                                    }
+                                                outer.rhs =
+                                                    newCall(newReference("foo")) {
+                                                        it.arguments += newCall(newReference("bar"))
+                                                    }
+                                            }
+                                    }
+                                }
+
+                                block.statements +=
+                                    newCall(newReference("print")) {
+                                        it.arguments += newReference("b")
+                                    }
+
+                                block.statements +=
+                                    newCall(newReference("baz")) { bazCall ->
+                                        bazCall.arguments +=
+                                            newBinaryOperator("+") {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newReference("b")
+                                            }
+                                    }
                             }
-                        }
                     }
                 }
             }
@@ -151,35 +234,70 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                singleTranslationUnit("Dataflow.java") { tu ->
+                    buildFoo(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(incompleteType())
+                        func.type = computeType(func)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) +
-                                            ref("a") +
-                                            call("foo") { call("bar") }
+                        newParameter("args", objectType("string").array(), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
+                                        it.initializer = newLiteral(5, objectType("int"))
                                     }
                                 }
 
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt { call("print") { ref("a") } }
+                                block.statements += newDeclarationStatement { bDecl ->
+                                    newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                        b.initializer =
+                                            newBinaryOperator("+") { outer ->
+                                                outer.lhs =
+                                                    newBinaryOperator("+") { inner ->
+                                                        inner.lhs =
+                                                            newLiteral("bla", objectType("string"))
+                                                        inner.rhs = newReference("a")
+                                                    }
+                                                outer.rhs =
+                                                    newCall(newReference("foo")) {
+                                                        it.arguments += newCall(newReference("bar"))
+                                                    }
+                                            }
+                                    }
                                 }
-                                call("print") { ref("b") }
 
-                                call("baz") { ref("a") + ref("b") }
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("==") {
+                                            it.lhs = newReference("b")
+                                            it.rhs = newLiteral("test", objectType("string"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newCall(newReference("print")) {
+                                                    it.arguments += newReference("a")
+                                                }
+                                        }
+                                }
+
+                                block.statements +=
+                                    newCall(newReference("print")) {
+                                        it.arguments += newReference("b")
+                                    }
+
+                                block.statements +=
+                                    newCall(newReference("baz")) { bazCall ->
+                                        bazCall.arguments +=
+                                            newBinaryOperator("+") {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newReference("b")
+                                            }
+                                    }
                             }
-                        }
                     }
                 }
             }
@@ -192,36 +310,72 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                singleTranslationUnit("Dataflow.java") { tu ->
+                    buildFoo(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(incompleteType())
+                        func.type = computeType(func)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) +
-                                            ref("a") +
-                                            call("foo") { call("bar") }
+                        newParameter("args", objectType("string").array(), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
+                                        it.initializer = newLiteral(5, objectType("int"))
                                     }
                                 }
 
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt { call("print") { ref("a") } }
-                                    elseStmt { call("print") { ref("b") } }
-                                    call("print") { ref("b") }
+                                block.statements += newDeclarationStatement { bDecl ->
+                                    newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                        b.initializer =
+                                            newBinaryOperator("+") { outer ->
+                                                outer.lhs =
+                                                    newBinaryOperator("+") { inner ->
+                                                        inner.lhs =
+                                                            newLiteral("bla", objectType("string"))
+                                                        inner.rhs = newReference("a")
+                                                    }
+                                                outer.rhs =
+                                                    newCall(newReference("foo")) {
+                                                        it.arguments += newCall(newReference("bar"))
+                                                    }
+                                            }
+                                    }
                                 }
 
-                                call("baz") { ref("a") + ref("b") }
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("==") {
+                                            it.lhs = newReference("b")
+                                            it.rhs = newLiteral("test", objectType("string"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newCall(newReference("print")) {
+                                                    it.arguments += newReference("a")
+                                                }
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock.statements +=
+                                                newCall(newReference("print")) {
+                                                    it.arguments += newReference("b")
+                                                }
+                                        }
+                                }
+
+                                block.statements +=
+                                    newCall(newReference("baz")) { bazCall ->
+                                        bazCall.arguments +=
+                                            newBinaryOperator("+") {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newReference("b")
+                                            }
+                                    }
                             }
-                        }
                     }
                 }
             }
@@ -234,28 +388,50 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                singleTranslationUnit("Dataflow.java") { tu ->
+                    buildFoo(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(incompleteType())
+                        func.type = computeType(func)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) + call("foo") { call("bar") }
+                        newParameter("args", objectType("string").array(), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
+                                        it.initializer = newLiteral(5, objectType("int"))
                                     }
                                 }
-                                call("print") { ref("a") }
 
-                                call("baz") { ref("a") + ref("b") }
+                                block.statements += newDeclarationStatement { bDecl ->
+                                    newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                        b.initializer =
+                                            newBinaryOperator("+") {
+                                                it.lhs = newLiteral("bla", objectType("string"))
+                                                it.rhs =
+                                                    newCall(newReference("foo")) {
+                                                        it.arguments += newCall(newReference("bar"))
+                                                    }
+                                            }
+                                    }
+                                }
+
+                                block.statements +=
+                                    newCall(newReference("print")) {
+                                        it.arguments += newReference("a")
+                                    }
+
+                                block.statements +=
+                                    newCall(newReference("baz")) { bazCall ->
+                                        bazCall.arguments +=
+                                            newBinaryOperator("+") {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newReference("b")
+                                            }
+                                    }
                             }
-                        }
                     }
                 }
             }
@@ -268,32 +444,60 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                singleTranslationUnit("Dataflow.java") { tu ->
+                    buildFoo(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(incompleteType())
+                        func.type = computeType(func)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) + call("foo") { call("bar") }
+                        newParameter("args", objectType("string").array(), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
+                                        it.initializer = newLiteral(5, objectType("int"))
                                     }
                                 }
 
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt { call("print") { ref("a") } }
+                                block.statements += newDeclarationStatement { bDecl ->
+                                    newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                        b.initializer =
+                                            newBinaryOperator("+") {
+                                                it.lhs = newLiteral("bla", objectType("string"))
+                                                it.rhs =
+                                                    newCall(newReference("foo")) {
+                                                        it.arguments += newCall(newReference("bar"))
+                                                    }
+                                            }
+                                    }
                                 }
 
-                                call("baz") { ref("a") + ref("b") }
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("==") {
+                                            it.lhs = newReference("b")
+                                            it.rhs = newLiteral("test", objectType("string"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newCall(newReference("print")) {
+                                                    it.arguments += newReference("a")
+                                                }
+                                        }
+                                }
+
+                                block.statements +=
+                                    newCall(newReference("baz")) { bazCall ->
+                                        bazCall.arguments +=
+                                            newBinaryOperator("+") {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newReference("b")
+                                            }
+                                    }
                             }
-                        }
                     }
                 }
             }
@@ -306,33 +510,67 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                singleTranslationUnit("Dataflow.java") { tu ->
+                    buildFoo(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(incompleteType())
+                        func.type = computeType(func)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) + call("foo") { call("bar") }
+                        newParameter("args", objectType("string").array(), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
+                                        it.initializer = newLiteral(5, objectType("int"))
                                     }
                                 }
 
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt { call("print") { ref("a") } }
-                                    elseStmt { call("print") { ref("a") } }
+                                block.statements += newDeclarationStatement { bDecl ->
+                                    newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                        b.initializer =
+                                            newBinaryOperator("+") {
+                                                it.lhs = newLiteral("bla", objectType("string"))
+                                                it.rhs =
+                                                    newCall(newReference("foo")) {
+                                                        it.arguments += newCall(newReference("bar"))
+                                                    }
+                                            }
+                                    }
                                 }
 
-                                call("baz") { ref("a") + ref("b") }
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("==") {
+                                            it.lhs = newReference("b")
+                                            it.rhs = newLiteral("test", objectType("string"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newCall(newReference("print")) {
+                                                    it.arguments += newReference("a")
+                                                }
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock.statements +=
+                                                newCall(newReference("print")) {
+                                                    it.arguments += newReference("a")
+                                                }
+                                        }
+                                }
+
+                                block.statements +=
+                                    newCall(newReference("baz")) { bazCall ->
+                                        bazCall.arguments +=
+                                            newBinaryOperator("+") {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newReference("b")
+                                            }
+                                    }
                             }
-                        }
                     }
                 }
             }
@@ -345,34 +583,67 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                singleTranslationUnit("Dataflow.java") { tu ->
+                    buildFoo(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(incompleteType())
+                        func.type = computeType(func)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) + call("foo") { call("bar") }
+                        newParameter("args", objectType("string").array(), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
+                                        it.initializer = newLiteral(5, objectType("int"))
                                     }
                                 }
 
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt {
-                                        call("print") { ref("a") }
-                                        call("baz") { ref("a") + ref("b") }
+                                block.statements += newDeclarationStatement { bDecl ->
+                                    newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                        b.initializer =
+                                            newBinaryOperator("+") {
+                                                it.lhs = newLiteral("bla", objectType("string"))
+                                                it.rhs =
+                                                    newCall(newReference("foo")) {
+                                                        it.arguments += newCall(newReference("bar"))
+                                                    }
+                                            }
                                     }
-                                    elseStmt { call("print") { ref("c") } }
+                                }
+
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("==") {
+                                            it.lhs = newReference("b")
+                                            it.rhs = newLiteral("test", objectType("string"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newCall(newReference("print")) {
+                                                    it.arguments += newReference("a")
+                                                }
+
+                                            thenBlock.statements +=
+                                                newCall(newReference("baz")) { bazCall ->
+                                                    bazCall.arguments +=
+                                                        newBinaryOperator("+") {
+                                                            it.lhs = newReference("a")
+                                                            it.rhs = newReference("b")
+                                                        }
+                                                }
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock.statements +=
+                                                newCall(newReference("print")) {
+                                                    it.arguments += newReference("c")
+                                                }
+                                        }
                                 }
                             }
-                        }
                     }
                 }
             }
@@ -385,30 +656,58 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                singleTranslationUnit("Dataflow.java") { tu ->
+                    buildFoo(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(incompleteType())
+                        func.type = computeType(func)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) +
-                                            call("foo") { ref("a") } +
-                                            call("foo") { call("bar") }
+                        newParameter("args", objectType("string").array(), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
+                                        it.initializer = newLiteral(5, objectType("int"))
                                     }
                                 }
-                                call("print") { ref("b") }
 
-                                call("baz") { ref("a") + ref("b") }
+                                block.statements += newDeclarationStatement { bDecl ->
+                                    newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                        b.initializer =
+                                            newBinaryOperator("+") { outer ->
+                                                outer.lhs =
+                                                    newBinaryOperator("+") { inner ->
+                                                        inner.lhs =
+                                                            newLiteral("bla", objectType("string"))
+                                                        inner.rhs =
+                                                            newCall(newReference("foo")) {
+                                                                it.arguments += newReference("a")
+                                                            }
+                                                    }
+                                                outer.rhs =
+                                                    newCall(newReference("foo")) {
+                                                        it.arguments += newCall(newReference("bar"))
+                                                    }
+                                            }
+                                    }
+                                }
+
+                                block.statements +=
+                                    newCall(newReference("print")) {
+                                        it.arguments += newReference("b")
+                                    }
+
+                                block.statements +=
+                                    newCall(newReference("baz")) { bazCall ->
+                                        bazCall.arguments +=
+                                            newBinaryOperator("+") {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newReference("b")
+                                            }
+                                    }
                             }
-                        }
                     }
                 }
             }
@@ -421,35 +720,73 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                singleTranslationUnit("Dataflow.java") { tu ->
+                    buildFoo(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(incompleteType())
+                        func.type = computeType(func)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) +
-                                            call("foo") { ref("a") } +
-                                            call("foo") { call("bar") }
+                        newParameter("args", objectType("string").array(), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
+                                        it.initializer = newLiteral(5, objectType("int"))
                                     }
                                 }
 
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt { call("print") { ref("a") } }
+                                block.statements += newDeclarationStatement { bDecl ->
+                                    newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                        b.initializer =
+                                            newBinaryOperator("+") { outer ->
+                                                outer.lhs =
+                                                    newBinaryOperator("+") { inner ->
+                                                        inner.lhs =
+                                                            newLiteral("bla", objectType("string"))
+                                                        inner.rhs =
+                                                            newCall(newReference("foo")) {
+                                                                it.arguments += newReference("a")
+                                                            }
+                                                    }
+                                                outer.rhs =
+                                                    newCall(newReference("foo")) {
+                                                        it.arguments += newCall(newReference("bar"))
+                                                    }
+                                            }
+                                    }
                                 }
-                                call("print") { ref("b") }
 
-                                call("baz") { ref("a") + ref("b") }
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("==") {
+                                            it.lhs = newReference("b")
+                                            it.rhs = newLiteral("test", objectType("string"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newCall(newReference("print")) {
+                                                    it.arguments += newReference("a")
+                                                }
+                                        }
+                                }
+
+                                block.statements +=
+                                    newCall(newReference("print")) {
+                                        it.arguments += newReference("b")
+                                    }
+
+                                block.statements +=
+                                    newCall(newReference("baz")) { bazCall ->
+                                        bazCall.arguments +=
+                                            newBinaryOperator("+") {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newReference("b")
+                                            }
+                                    }
                             }
-                        }
                     }
                 }
             }
@@ -462,36 +799,75 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("foo", t("string")) {
-                            param("arg", t("int"))
-                            body { returnStmt { call("toString") { ref("arg") } } }
-                        }
+                singleTranslationUnit("Dataflow.java") { tu ->
+                    buildFoo(tu)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(incompleteType())
+                        func.type = computeType(func)
 
-                                declare {
-                                    variable("b", t("string")) {
-                                        literal("bla", t("string")) +
-                                            call("foo") { ref("a") } +
-                                            call("foo") { call("bar") }
+                        newParameter("args", objectType("string").array(), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
+                                        it.initializer = newLiteral(5, objectType("int"))
                                     }
                                 }
 
-                                ifStmt {
-                                    condition { ref("b") eq literal("test", t("string")) }
-                                    thenStmt { call("print") { ref("a") } }
-                                    elseStmt { call("print") { ref("b") } }
-                                    call("print") { ref("b") }
+                                block.statements += newDeclarationStatement { bDecl ->
+                                    newVariable("b", objectType("string"), holder = bDecl) { b ->
+                                        b.initializer =
+                                            newBinaryOperator("+") { outer ->
+                                                outer.lhs =
+                                                    newBinaryOperator("+") { inner ->
+                                                        inner.lhs =
+                                                            newLiteral("bla", objectType("string"))
+                                                        inner.rhs =
+                                                            newCall(newReference("foo")) {
+                                                                it.arguments += newReference("a")
+                                                            }
+                                                    }
+                                                outer.rhs =
+                                                    newCall(newReference("foo")) {
+                                                        it.arguments += newCall(newReference("bar"))
+                                                    }
+                                            }
+                                    }
                                 }
 
-                                call("baz") { ref("a") + ref("b") }
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("==") {
+                                            it.lhs = newReference("b")
+                                            it.rhs = newLiteral("test", objectType("string"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newCall(newReference("print")) {
+                                                    it.arguments += newReference("a")
+                                                }
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock.statements +=
+                                                newCall(newReference("print")) {
+                                                    it.arguments += newReference("b")
+                                                }
+                                        }
+                                }
+
+                                block.statements +=
+                                    newCall(newReference("baz")) { bazCall ->
+                                        bazCall.arguments +=
+                                            newBinaryOperator("+") {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newReference("b")
+                                            }
+                                    }
                             }
-                        }
                     }
                 }
             }
@@ -504,53 +880,127 @@ class FlowQueriesTest {
                     .build()
         ) =
             testFrontend(config).build {
-                translationResult {
-                    translationUnit("Dataflow.java") {
-                        function("a", t("void")) {
-                            param("value", t("int"))
-                            body {
-                                ifStmt {
-                                    condition { ref("i") eq literal(1, t("int")) }
-                                    thenStmt {
-                                        call("println") { literal("Then branch", t("string")) }
-                                    }
-                                    elseStmt { call("a") { literal(1, t("int")) } }
+                singleTranslationUnit("Dataflow.java") { tu ->
+                    newFunction("a", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("void"))
+                        func.type = computeType(func)
+
+                        newParameter("value", objectType("int"), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("==") {
+                                            it.lhs = newReference("i")
+                                            it.rhs = newLiteral(1, objectType("int"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newCall(newReference("println")) {
+                                                    it.arguments +=
+                                                        newLiteral(
+                                                            "Then branch",
+                                                            objectType("string"),
+                                                        )
+                                                }
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            elseBlock.statements +=
+                                                newCall(newReference("a")) {
+                                                    it.arguments += newLiteral(1, objectType("int"))
+                                                }
+                                        }
                                 }
-                                returnStmt {}
-                            }
-                        }
 
-                        function("b", t("void")) {
-                            param("value", t("int"))
-                            body {
-                                call("a") { ref("value", t("int")) }
-                                returnStmt {}
+                                block.statements += newReturn()
                             }
-                        }
+                    }
 
-                        function("c", t("void")) {
-                            param("value", t("int"))
-                            body {
-                                call("b") { ref("value", t("int")) }
-                                returnStmt {}
-                            }
-                        }
+                    newFunction("b", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("void"))
+                        func.type = computeType(func)
 
-                        function("main", void()) {
-                            param("args", t("string").array())
-                            body {
-                                forEachStmt {
-                                    variable { declare { variable("i", t("int")) } }
-                                    iterable { call("range") { literal(1, t("int")) } }
-                                    loopBody {
-                                        declare { variable("temp") { literal("start") } }
-                                        call("a") { ref("i", t("int")) }
-                                        call("b") { ref("i", t("int")) }
-                                        call("c") { ref("i", t("int")) }
+                        newParameter("value", objectType("int"), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements +=
+                                    newCall(newReference("a")) {
+                                        it.arguments += newReference("value", objectType("int"))
                                     }
-                                }
+
+                                block.statements += newReturn()
                             }
-                        }
+                    }
+
+                    newFunction("c", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("void"))
+                        func.type = computeType(func)
+
+                        newParameter("value", objectType("int"), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements +=
+                                    newCall(newReference("b")) {
+                                        it.arguments += newReference("value", objectType("int"))
+                                    }
+
+                                block.statements += newReturn()
+                            }
+                    }
+
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(incompleteType())
+                        func.type = computeType(func)
+
+                        newParameter("args", objectType("string").array(), holder = func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements +=
+                                    newForEach(enterScope = true) { forEach ->
+                                        forEach.variable = newDeclarationStatement { iDeclStmt ->
+                                            newVariable("i", objectType("int"), holder = iDeclStmt)
+                                        }
+
+                                        forEach.iterable =
+                                            newCall(newReference("range")) {
+                                                it.arguments += newLiteral(1, objectType("int"))
+                                            }
+
+                                        forEach.statement =
+                                            newBlock(enterScope = true) { loopBodyBlock ->
+                                                loopBodyBlock.statements +=
+                                                    newDeclarationStatement { tempDecl ->
+                                                        newVariable("temp", holder = tempDecl) {
+                                                            it.initializer = newLiteral("start")
+                                                        }
+                                                    }
+
+                                                loopBodyBlock.statements +=
+                                                    newCall(newReference("a")) {
+                                                        it.arguments +=
+                                                            newReference("i", objectType("int"))
+                                                    }
+
+                                                loopBodyBlock.statements +=
+                                                    newCall(newReference("b")) {
+                                                        it.arguments +=
+                                                            newReference("i", objectType("int"))
+                                                    }
+
+                                                loopBodyBlock.statements +=
+                                                    newCall(newReference("c")) {
+                                                        it.arguments +=
+                                                            newReference("i", objectType("int"))
+                                                    }
+                                            }
+                                    }
+                            }
                     }
                 }
             }

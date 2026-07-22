@@ -54,38 +54,32 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
     }
 
     private fun handleDefnNode(node: DefnNode): Function {
-        val func = newFunction(node.name.idString())
+        return newFunction(node.name.idString(), enterScope = true) { func ->
+            for (arg in node.argsNode.args) {
+                val param = this.handle(arg) as? Parameter
+                if (param == null) {
+                    continue
+                }
 
-        frontend.scopeManager.enterScope(func)
-
-        for (arg in node.argsNode.args) {
-            val param = this.handle(arg) as? Parameter
-            if (param == null) {
-                continue
+                frontend.scopeManager.addDeclaration(param)
+                func.parameters += param
             }
 
-            frontend.scopeManager.addDeclaration(param)
-            func.parameters += param
-        }
+            val body = frontend.statementHandler.handle(node.bodyNode)
+            if (body is Block) {
+                // get the last statement
+                val lastStatement = body.statements.lastOrNull()
 
-        val body = frontend.statementHandler.handle(node.bodyNode)
-        if (body is Block) {
-            // get the last statement
-            val lastStatement = body.statements.lastOrNull()
+                // add an implicit return statement, if there is no return statement
+                if (lastStatement !is Return) {
+                    val returnStatement = newReturn()
+                    returnStatement.isImplicit = true
+                    body.statements += returnStatement
 
-            // add an implicit return statement, if there is no return statement
-            if (lastStatement !is Return) {
-                val returnStatement = newReturn()
-                returnStatement.isImplicit = true
-                body += returnStatement
-
-                // TODO: Ruby returns the last expression, if there is no explicit return
+                    // TODO: Ruby returns the last expression, if there is no explicit return
+                }
             }
+            func.body = body
         }
-        func.body = body
-
-        frontend.scopeManager.leaveScope(func)
-
-        return func
     }
 }

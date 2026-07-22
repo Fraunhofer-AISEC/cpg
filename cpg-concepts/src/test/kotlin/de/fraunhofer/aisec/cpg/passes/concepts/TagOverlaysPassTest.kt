@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
@@ -122,16 +122,28 @@ class TagOverlaysPassTest {
                         )
                 )
             ) {
-                translationResult {
-                    translationUnit {
-                        record("Encryption") {}
-                        function("main") {
-                            body {
-                                declare {
-                                    variable("key", t("string"), init = { literal("secret") })
+                build {
+                    singleTranslationUnit { tu ->
+                        newRecord("Encryption", "class", holder = tu, enterScope = true)
+
+                        newFunction("main", holder = tu, enterScope = true) { main ->
+                            main.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { declStmt ->
+                                        newVariable(
+                                            "key",
+                                            objectType("string"),
+                                            holder = declStmt,
+                                        ) {
+                                            it.initializer = newLiteral("secret")
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newCall(newReference("encrypt")) {
+                                            it.arguments += newReference("key")
+                                        }
                                 }
-                                call("encrypt") { ref("key") }
-                            }
                         }
                     }
                 }

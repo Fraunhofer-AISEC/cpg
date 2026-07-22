@@ -61,53 +61,45 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
     }
 
     private fun handleClass(sootClass: SootClass): Record {
-        val record =
-            newRecord(
-                sootClass.getName(),
-                if (sootClass.isInterface()) {
-                    "interface"
-                } else {
-                    "class"
-                },
-                rawNode = sootClass,
-            )
+        return newRecord(
+            sootClass.getName(),
+            if (sootClass.isInterface()) {
+                "interface"
+            } else {
+                "class"
+            },
+            rawNode = sootClass,
+            enterScope = true,
+        ) { record ->
+            // Collect super class
+            val o = sootClass.superclass
+            if (o.isPresent) {
+                record.addSuperClass(frontend.typeOf(o.get()))
+            }
 
-        // Collect super class
-        val o = sootClass.superclass
-        if (o.isPresent) {
-            record.addSuperClass(frontend.typeOf(o.get()))
-        }
+            // Collect implemented interfaces
+            for (i in sootClass.interfaces) {
+                record.implementedInterfaces += frontend.typeOf(i)
+            }
 
-        // Collect implemented interfaces
-        for (i in sootClass.interfaces) {
-            record.implementedInterfaces += frontend.typeOf(i)
-        }
+            // Loop through all fields
+            for (sootField in sootClass.fields) {
+                val field = handle(sootField) as? Field
+                if (field != null) {
+                    frontend.scopeManager.addDeclaration(field)
+                    record.addDeclaration(field)
+                }
+            }
 
-        // Enter the class scope
-        frontend.scopeManager.enterScope(record)
-
-        // Loop through all fields
-        for (sootField in sootClass.fields) {
-            val field = handle(sootField) as? Field
-            if (field != null) {
-                frontend.scopeManager.addDeclaration(field)
-                record.addDeclaration(field)
+            // Loop through all methods
+            for (sootMethod in sootClass.methods) {
+                val method = handle(sootMethod) as? Method
+                if (method != null) {
+                    frontend.scopeManager.addDeclaration(method)
+                    record.addDeclaration(method)
+                }
             }
         }
-
-        // Loop through all methods
-        for (sootMethod in sootClass.methods) {
-            val method = handle(sootMethod) as? Method
-            if (method != null) {
-                frontend.scopeManager.addDeclaration(method)
-                record.addDeclaration(method)
-            }
-        }
-
-        // Leave the class scope
-        frontend.scopeManager.leaveScope(record)
-
-        return record
     }
 
     private fun handleMethod(sootMethod: SootMethod): Method {
@@ -137,9 +129,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         // Add method parameters
         for ((index, type) in sootMethod.parameterTypes.withIndex()) {
-            val param = newParameter("@parameter${index}", frontend.typeOf(type))
-            frontend.scopeManager.addDeclaration(param)
-            method.parameters += param
+            newParameter("@parameter${index}", frontend.typeOf(type), holder = method)
         }
 
         // Parse body if doNotParseBody returns false

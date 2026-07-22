@@ -42,12 +42,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a C++ union/struct/class or Java class */
 open class Record :
-    Declaration(),
-    DeclarationHolder,
-    StatementHolder,
-    EOGStarterHolder,
-    DeclaresType,
-    HasSecondaryTypeEdge {
+    Declaration(), DeclarationHolder, EOGStarterHolder, DeclaresType, HasSecondaryTypeEdge {
     /** The kind, i.e. struct, class, union or enum. */
     var kind: String? = null
 
@@ -97,8 +92,8 @@ open class Record :
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    override var statementEdges = astEdgesOf<Expression>()
-    override var statements by unwrapping(Record::statementEdges)
+    var statementEdges = astEdgesOf<Expression>()
+    var statements by unwrapping(Record::statementEdges)
 
     @DoNotPersist var superClasses: MutableList<Type> = ArrayList()
 

@@ -134,34 +134,12 @@ interface HasDefault<T : Node?> : HasScope {
 }
 
 /**
- * Specifies that a certain node has an initializer. It is a special case of [ArgumentHolder], in
- * which the initializer is treated as the first (and only) argument.
+ * Specifies that a certain node has an initializer, which is treated as its first (and only)
+ * argument.
  */
-interface HasInitializer : HasScope, HasType, ArgumentHolder, AssignmentHolder {
+interface HasInitializer : HasScope, HasType, AssignmentHolder {
 
     var initializer: Expression?
-
-    override fun addArgument(expression: Expression) {
-        this.initializer = expression
-    }
-
-    override fun removeArgument(expression: Expression): Boolean {
-        return if (this.initializer == expression) {
-            this.initializer = null
-            true
-        } else {
-            false
-        }
-    }
-
-    override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        this.initializer = new
-        return true
-    }
-
-    override fun hasArgument(expression: Expression): Boolean {
-        return initializer == expression
-    }
 
     override val assignments: List<Assignment>
         get() {

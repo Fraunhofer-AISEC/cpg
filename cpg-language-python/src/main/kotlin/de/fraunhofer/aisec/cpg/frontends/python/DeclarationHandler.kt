@@ -166,7 +166,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
 
         if (func is Constructor) {
             (func.body as? Block)?.let { block ->
-                block +=
+                block.statements +=
                     newReturn().apply {
                         this.isImplicit = true
                         this.returnValue =
@@ -228,27 +228,23 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         isKwoOnly: Boolean = false,
         defaultValue: Expression? = null,
     ): Parameter {
-        val arg =
-            newParameter(
-                name = node.arg,
-                type = dynamicType(),
-                variadic = isVariadic,
-                rawNode = node,
-            )
-        arg.assignedTypes += frontend.typeOf(node.annotation)
-        defaultValue?.let { arg.default = it }
-        if (isPosOnly) {
-            arg.modifiers += MODIFIER_POSITIONAL_ONLY_ARGUMENT
+        return newParameter(
+            name = node.arg,
+            type = dynamicType(),
+            variadic = isVariadic,
+            rawNode = node,
+            holder = func,
+        ) { arg ->
+            arg.assignedTypes += frontend.typeOf(node.annotation)
+            defaultValue?.let { arg.default = it }
+            if (isPosOnly) {
+                arg.modifiers += MODIFIER_POSITIONAL_ONLY_ARGUMENT
+            }
+
+            if (isKwoOnly) {
+                arg.modifiers += MODIFIER_KEYWORD_ONLY_ARGUMENT
+            }
         }
-
-        if (isKwoOnly) {
-            arg.modifiers += MODIFIER_KEYWORD_ONLY_ARGUMENT
-        }
-
-        frontend.scopeManager.addDeclaration(arg)
-        func.parameters += arg
-
-        return arg
     }
 
     /**

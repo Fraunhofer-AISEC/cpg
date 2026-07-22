@@ -95,7 +95,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
      */
     override fun handleRecord(node: Record) {
         scopeManager.enterScope(node)
-        handleStatementHolder(node)
+        handleStatementHolder(node, node.statements)
         currentPredecessors.clear()
         scopeManager.leaveScope(node)
     }
