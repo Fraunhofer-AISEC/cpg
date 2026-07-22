@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.newBreak
 import de.fraunhofer.aisec.cpg.graph.newCase
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
+import java.math.BigInteger
 import uniffi.rustast.RsArrayExpr
 import uniffi.rustast.RsAst
 import uniffi.rustast.RsBinExpr
@@ -135,15 +136,20 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
         return when (literal.literalType) {
             RsLiteralType.CHAR_L ->
-                newLiteral(stringValue[0], language.builtInTypes["char"] ?: unknownType(), raw)
+                newLiteral(
+                    stringValue.removePrefix("'").removeSuffix("'")[0],
+                    language.builtInTypes["char"] ?: unknownType(),
+                    raw,
+                )
             RsLiteralType.STRING_L ->
-                newLiteral(stringValue, language.builtInTypes["str"] ?: unknownType(), raw)
+                newLiteral(
+                    stringValue.removePrefix("\"").removeSuffix("\""),
+                    language.builtInTypes["str"] ?: unknownType(),
+                    raw,
+                )
             RsLiteralType.BYTE_L ->
                 newLiteral(
-                    stringValue.removePrefix("b'").removeSuffix("'").let {
-                        if (it.startsWith("\\x")) it.removePrefix("\\x").toInt(16)
-                        else it.toInt(256)
-                    },
+                    parseRustByteLiteral(stringValue.removePrefix("b'").removeSuffix("'")),
                     language.builtInTypes["u8"] ?: unknownType(),
                     raw,
                 )
@@ -153,8 +159,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                     objectType("CString"),
                     raw,
                 )
-            RsLiteralType.INT_NUMBER_L ->
-                newLiteral(stringValue.toInt(), language.builtInTypes["str"] ?: unknownType(), raw)
+            RsLiteralType.INT_NUMBER_L -> buildIntType(stringValue, raw)
             RsLiteralType.BYTE_STRING_L ->
                 newLiteral(
                     stringValue.removePrefix("b").removeSuffix("'"),
@@ -169,7 +174,92 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                     raw,
                 )
             RsLiteralType.UNKNOWN_L ->
-                newLiteral(stringValue, language.builtInTypes["str"] ?: unknownType(), raw)
+                when (stringValue) {
+                    "true" -> newLiteral(true, language.builtInTypes["bool"] ?: unknownType(), raw)
+                    "false" ->
+                        newLiteral(false, language.builtInTypes["bool"] ?: unknownType(), raw)
+                    else ->
+                        newLiteral(stringValue, language.builtInTypes["str"] ?: unknownType(), raw)
+                }
+        }
+    }
+
+    private val escapes =
+        mapOf(
+            "\\n" to '\n',
+            "\\r" to '\r',
+            "\\t" to '\t',
+            "\\0" to '\u0000',
+            "\\'" to '\'',
+            "\\\"" to '"',
+            "\\\\" to '\\',
+        )
+
+    fun parseRustByteLiteral(content: String): Int =
+        when {
+            content.startsWith("\\x") -> content.substring(2).toInt(16)
+
+            content.startsWith("\\") ->
+                escapes[content]?.code ?: error("Unsupported escape: $content")
+
+            else -> content.single().code
+        }
+
+    fun buildIntType(literal: String, raw: Any): Literal<*> {
+        val suffixes =
+            listOf(
+                "isize",
+                "usize",
+                "i128",
+                "u128",
+                "i64",
+                "u64",
+                "i32",
+                "u32",
+                "i16",
+                "u16",
+                "i8",
+                "u8",
+            )
+
+        val suffixStart = literal.indexOfFirst { it == 'u' || it == 'i' }
+        val core = if (suffixStart == -1) literal else literal.substring(0, suffixStart)
+        // Strip separators
+        val clean = core.replace("_", "")
+
+        val (digits, radix) =
+            when {
+                clean.startsWith("0x") -> clean.substring(2) to 16
+                clean.startsWith("0o") -> clean.substring(2) to 8
+                clean.startsWith("0b") -> clean.substring(2) to 2
+                else -> clean to 10
+            }
+
+        val value = digits.toBigInteger(radix)
+
+        // Here we have an explicit suffix
+        for (suffix in suffixes) {
+            if (literal.endsWith(suffix)) {
+                return newLiteral(
+                    value.toInt(),
+                    language.builtInTypes[suffix] ?: unknownType(),
+                    raw,
+                )
+            }
+        }
+
+        return when {
+            value <= BigInteger.valueOf(Byte.MAX_VALUE.toLong()) ->
+                newLiteral(value.toInt(), language.builtInTypes["i8"] ?: unknownType(), raw)
+            value <= BigInteger.valueOf(Short.MAX_VALUE.toLong()) ->
+                newLiteral(value.toInt(), language.builtInTypes["i16"] ?: unknownType(), raw)
+            value <= BigInteger.valueOf(Int.MAX_VALUE.toLong()) ->
+                newLiteral(value.toInt(), language.builtInTypes["i32"] ?: unknownType(), raw)
+            value <= BigInteger.valueOf(Long.MAX_VALUE) ->
+                newLiteral(value.toInt(), language.builtInTypes["i64"] ?: unknownType(), raw)
+            value.bitLength() <= 127 ->
+                newLiteral(value.toInt(), language.builtInTypes["i128"] ?: unknownType(), raw)
+            else -> newLiteral(value, unknownType(), raw)
         }
     }
 

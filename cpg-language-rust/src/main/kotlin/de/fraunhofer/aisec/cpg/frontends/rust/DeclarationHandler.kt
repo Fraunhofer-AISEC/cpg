@@ -29,10 +29,13 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import uniffi.rustast.RsAssocItem
 import uniffi.rustast.RsAst
 import uniffi.rustast.RsConst
 import uniffi.rustast.RsEnum
+import uniffi.rustast.RsExpr
 import uniffi.rustast.RsFieldList
 import uniffi.rustast.RsFn
 import uniffi.rustast.RsImpl
@@ -90,8 +93,6 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         frontend.scopeManager.addDeclaration(function)
 
-        fn.retType?.let { function.type = frontend.typeOf(it) }
-
         frontend.scopeManager.enterScope(function)
 
         // Adding implicitly created parameters to the scope
@@ -101,9 +102,33 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             function.parameters += handleParameterDeclaration(param) as Parameter
         }
 
-        fn.body?.let { function.body = frontend.expressionHandler.handleBlockExpr(it) }
+        fn.retType?.let { function.returnTypes += frontend.typeOf(it) }
+        function.type = computeType(function)
+
+        fn.body?.let { blockExpr ->
+            function.body = frontend.expressionHandler.handleBlockExpr(blockExpr)
+
+            // If the function is supposed to return a value, but the last statement is not a return
+            // statement,
+            // we need to add an implicit return statement. This return statement is a wrapper
+            // around the original body
+            if (function.returnTypes.isNotEmpty()) {
+                function.body.statements.lastOrNull()?.let { lastStatement ->
+                    if (lastStatement !is Return) {
+                        function.body =
+                            newReturn(RsAst.RustExpr(RsExpr.BlockExpr(blockExpr))).also { returnExpr
+                                ->
+                                returnExpr.isImplicit = true
+                                returnExpr.returnValue = function.body
+                                returnExpr.returnValue?.usedAsExpression = true
+                            }
+                    }
+                }
+            }
+        }
 
         frontend.scopeManager.leaveScope(function)
+
         return function
     }
 
