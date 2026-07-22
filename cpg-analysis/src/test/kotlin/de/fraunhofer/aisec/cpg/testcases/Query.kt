@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.testcases
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 
@@ -43,118 +43,118 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                val tu = newTranslationUnit("Dataflow.java")
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit("Dataflow.java") { tu ->
+                    newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
+                        newField("attr", objectType("string"), holder = record)
 
-                newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
-                    newField("attr", objectType("string"), holder = record)
+                        newMethod("toString", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(objectType("string"))
+                            method.type = computeType(method)
 
-                    newMethod("toString", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(objectType("string"))
-                        method.type = computeType(method)
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newReturn { ret ->
+                                        ret.returnValue =
+                                            newBinaryOperator("+") {
+                                                it.lhs =
+                                                    newLiteral(
+                                                        "Dataflow: attr=",
+                                                        objectType("string"),
+                                                    )
+                                                it.rhs = newReference("attr")
+                                            }
+                                    }
+                                }
+                        }
 
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newReturn { ret ->
-                                    ret.returnValue =
-                                        newBinaryOperator("+") {
-                                            it.lhs =
-                                                newLiteral("Dataflow: attr=", objectType("string"))
-                                            it.rhs = newReference("attr")
+                        newMethod("test", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(objectType("string"))
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newReturn {
+                                        it.returnValue = newLiteral("abcd", objectType("string"))
+                                    }
+                                }
+                        }
+
+                        newMethod("print", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            newParameter("s", objectType("string"), holder = method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("s")
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("main", holder = record, enterScope = true) { method ->
+                            method.isStatic = true
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            newParameter("args", objectType("string").array(), holder = method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { scDecl ->
+                                        val newExpr = newNew()
+                                        newExpr.initializer =
+                                            newConstruction("Dataflow") {
+                                                it.type = objectType("Dataflow")
+                                            }
+                                        newVariable("sc", objectType("Dataflow"), holder = scDecl) {
+                                            it.initializer = newExpr
+                                        }
+                                    }
+
+                                    block.statements += newDeclarationStatement { sDecl ->
+                                        newVariable("s", objectType("string"), holder = sDecl) {
+                                            it.initializer =
+                                                newMemberCall(
+                                                    newMemberAccess("toString", newReference("sc")),
+                                                    false,
+                                                )
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("print", newReference("sc")),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("s")
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("print", newReference("sc")),
+                                            false,
+                                        ) {
+                                            it.arguments +=
+                                                newMemberCall(
+                                                    newMemberAccess("test", newReference("sc")),
+                                                    false,
+                                                )
                                         }
                                 }
-                            }
-                    }
-
-                    newMethod("test", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(objectType("string"))
-                        method.type = computeType(method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newReturn {
-                                    it.returnValue = newLiteral("abcd", objectType("string"))
-                                }
-                            }
-                    }
-
-                    newMethod("print", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        newParameter("s", objectType("string"), holder = method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments += newReference("s")
-                                    }
-
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("main", holder = record, enterScope = true) { method ->
-                        method.isStatic = true
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        newParameter("args", objectType("string").array(), holder = method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { scDecl ->
-                                    val newExpr = newNew()
-                                    newExpr.initializer =
-                                        newConstruction("Dataflow") {
-                                            it.type = objectType("Dataflow")
-                                        }
-                                    newVariable("sc", objectType("Dataflow"), holder = scDecl) {
-                                        it.initializer = newExpr
-                                    }
-                                }
-
-                                block.statements += newDeclarationStatement { sDecl ->
-                                    newVariable("s", objectType("string"), holder = sDecl) {
-                                        it.initializer =
-                                            newMemberCall(
-                                                newMemberAccess("toString", newReference("sc")),
-                                                false,
-                                            )
-                                    }
-                                }
-
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess("print", newReference("sc")),
-                                        false,
-                                    ) {
-                                        it.arguments += newReference("s")
-                                    }
-
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess("print", newReference("sc")),
-                                        false,
-                                    ) {
-                                        it.arguments +=
-                                            newMemberCall(
-                                                newMemberAccess("test", newReference("sc")),
-                                                false,
-                                            )
-                                    }
-                            }
+                        }
                     }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getComplexDataflow(
@@ -166,129 +166,137 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                val tu = newTranslationUnit("ComplexDataflow.java")
-                scopeManager.resetToGlobal(tu)
-
-                newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
-                    // TODO: this field is static. How do we model this?
-                    newField("logger", objectType("Logger"), holder = record) { field ->
-                        field.modifiers = setOf("static")
-                        field.initializer =
-                            newMemberCall(
-                                newMemberAccess("getLogger", newReference("Logger")),
-                                false,
-                            ) {
-                                it.arguments += newLiteral("DataflowLogger", objectType("string"))
-                            }
-                    }
-
-                    newField("a", objectType("int"), holder = record)
-
-                    newMethod("highlyCriticalOperation", holder = record, enterScope = true) {
-                        method ->
-                        method.isStatic = true
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        newParameter("s", objectType("string"), holder = method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments += newReference("s")
-                                    }
-
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("main", holder = record, enterScope = true) { method ->
-                        method.isStatic = true
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        newParameter("args", objectType("string").array(), holder = method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { scDecl ->
-                                    val newExpr = newNew()
-                                    newExpr.initializer =
-                                        newConstruction("Dataflow") {
-                                            it.type = objectType("Dataflow")
-                                        }
-                                    newVariable("sc", objectType("Dataflow"), holder = scDecl) {
-                                        it.initializer = newExpr
-                                    }
+                singleTranslationUnit("ComplexDataflow.java") { tu ->
+                    newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
+                        // TODO: this field is static. How do we model this?
+                        newField("logger", objectType("Logger"), holder = record) { field ->
+                            field.modifiers = setOf("static")
+                            field.initializer =
+                                newMemberCall(
+                                    newMemberAccess("getLogger", newReference("Logger")),
+                                    false,
+                                ) {
+                                    it.arguments +=
+                                        newLiteral("DataflowLogger", objectType("string"))
                                 }
+                        }
 
-                                block.statements +=
-                                    newAssign(
-                                        "=",
-                                        listOf(newMemberAccess("a", newReference("sc"))),
-                                        listOf(newLiteral(5, objectType("int"))),
-                                    )
+                        newField("a", objectType("int"), holder = record)
 
-                                val dataflowRef = newReference("Dataflow", objectType("Dataflow"))
-                                dataflowRef.refersTo = record
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess("highlyCriticalOperation", dataflowRef),
-                                        false,
-                                    ) { outerCall ->
-                                        outerCall.isStatic = true
-                                        outerCall.arguments +=
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "toString",
-                                                    newReference("Integer", objectType("Integer")),
-                                                ),
-                                                false,
-                                            ) { innerCall ->
-                                                innerCall.type = objectType("string")
-                                                innerCall.isStatic = true
-                                                innerCall.arguments +=
-                                                    newMemberAccess("a", newReference("sc"))
+                        newMethod("highlyCriticalOperation", holder = record, enterScope = true) {
+                            method ->
+                            method.isStatic = true
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            newParameter("s", objectType("string"), holder = method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("s")
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("main", holder = record, enterScope = true) { method ->
+                            method.isStatic = true
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            newParameter("args", objectType("string").array(), holder = method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { scDecl ->
+                                        val newExpr = newNew()
+                                        newExpr.initializer =
+                                            newConstruction("Dataflow") {
+                                                it.type = objectType("Dataflow")
                                             }
+                                        newVariable("sc", objectType("Dataflow"), holder = scDecl) {
+                                            it.initializer = newExpr
+                                        }
                                     }
 
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess("log", newReference("logger")),
-                                        false,
-                                    ) { logCall ->
-                                        logCall.arguments +=
-                                            newMemberAccess("INFO", newReference("Level"))
-                                        logCall.arguments +=
-                                            newBinaryOperator("+") { outer ->
-                                                outer.lhs =
-                                                    newBinaryOperator("+") { inner ->
-                                                        inner.lhs =
-                                                            newLiteral("put ", objectType("string"))
-                                                        inner.rhs =
-                                                            newMemberAccess("a", newReference("sc"))
-                                                    }
-                                                outer.rhs =
-                                                    newLiteral(
-                                                        " into highlyCriticalOperation()",
-                                                        objectType("string"),
-                                                    )
-                                            }
-                                    }
+                                    block.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newMemberAccess("a", newReference("sc"))),
+                                            listOf(newLiteral(5, objectType("int"))),
+                                        )
 
-                                block.statements += newReturn()
-                            }
+                                    val dataflowRef =
+                                        newReference("Dataflow", objectType("Dataflow"))
+                                    dataflowRef.refersTo = record
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("highlyCriticalOperation", dataflowRef),
+                                            false,
+                                        ) { outerCall ->
+                                            outerCall.isStatic = true
+                                            outerCall.arguments +=
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "toString",
+                                                        newReference(
+                                                            "Integer",
+                                                            objectType("Integer"),
+                                                        ),
+                                                    ),
+                                                    false,
+                                                ) { innerCall ->
+                                                    innerCall.type = objectType("string")
+                                                    innerCall.isStatic = true
+                                                    innerCall.arguments +=
+                                                        newMemberAccess("a", newReference("sc"))
+                                                }
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("log", newReference("logger")),
+                                            false,
+                                        ) { logCall ->
+                                            logCall.arguments +=
+                                                newMemberAccess("INFO", newReference("Level"))
+                                            logCall.arguments +=
+                                                newBinaryOperator("+") { outer ->
+                                                    outer.lhs =
+                                                        newBinaryOperator("+") { inner ->
+                                                            inner.lhs =
+                                                                newLiteral(
+                                                                    "put ",
+                                                                    objectType("string"),
+                                                                )
+                                                            inner.rhs =
+                                                                newMemberAccess(
+                                                                    "a",
+                                                                    newReference("sc"),
+                                                                )
+                                                        }
+                                                    outer.rhs =
+                                                        newLiteral(
+                                                            " into highlyCriticalOperation()",
+                                                            objectType("string"),
+                                                        )
+                                                }
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
                     }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getComplexDataflow2(
@@ -302,129 +310,137 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                val tu = newTranslationUnit("ComplexDataflow2.java")
-                scopeManager.resetToGlobal(tu)
-
-                newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
-                    // TODO: this field is static. How do we model this?
-                    newField("logger", objectType("Logger"), holder = record) { field ->
-                        field.modifiers = setOf("static")
-                        field.initializer =
-                            newMemberCall(
-                                newMemberAccess("getLogger", newReference("Logger")),
-                                false,
-                            ) {
-                                it.arguments += newLiteral("DataflowLogger", objectType("string"))
-                            }
-                    }
-
-                    newField("a", objectType("int"), holder = record)
-
-                    newMethod("highlyCriticalOperation", holder = record, enterScope = true) {
-                        method ->
-                        method.isStatic = true
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        newParameter("s", objectType("string"), holder = method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments += newReference("s")
-                                    }
-
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("main", holder = record, enterScope = true) { method ->
-                        method.isStatic = true
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        newParameter("args", objectType("string").array(), holder = method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { scDecl ->
-                                    val newExpr = newNew()
-                                    newExpr.initializer =
-                                        newConstruction("Dataflow") {
-                                            it.type = objectType("Dataflow")
-                                        }
-                                    newVariable("sc", objectType("Dataflow"), holder = scDecl) {
-                                        it.initializer = newExpr
-                                    }
+                singleTranslationUnit("ComplexDataflow2.java") { tu ->
+                    newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
+                        // TODO: this field is static. How do we model this?
+                        newField("logger", objectType("Logger"), holder = record) { field ->
+                            field.modifiers = setOf("static")
+                            field.initializer =
+                                newMemberCall(
+                                    newMemberAccess("getLogger", newReference("Logger")),
+                                    false,
+                                ) {
+                                    it.arguments +=
+                                        newLiteral("DataflowLogger", objectType("string"))
                                 }
+                        }
 
-                                block.statements +=
-                                    newAssign(
-                                        "=",
-                                        listOf(newMemberAccess("a", newReference("sc"))),
-                                        listOf(newLiteral(5, objectType("int"))),
-                                    )
+                        newField("a", objectType("int"), holder = record)
 
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess("log", newReference("logger")),
-                                        false,
-                                    ) { logCall ->
-                                        logCall.arguments +=
-                                            newMemberAccess("INFO", newReference("Level"))
-                                        logCall.arguments +=
-                                            newBinaryOperator("+") { outer ->
-                                                outer.lhs =
-                                                    newBinaryOperator("+") { inner ->
-                                                        inner.lhs =
-                                                            newLiteral("put ", objectType("string"))
-                                                        inner.rhs =
-                                                            newMemberAccess("a", newReference("sc"))
-                                                    }
-                                                outer.rhs =
-                                                    newLiteral(
-                                                        " into highlyCriticalOperation()",
-                                                        objectType("string"),
-                                                    )
+                        newMethod("highlyCriticalOperation", holder = record, enterScope = true) {
+                            method ->
+                            method.isStatic = true
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            newParameter("s", objectType("string"), holder = method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("s")
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("main", holder = record, enterScope = true) { method ->
+                            method.isStatic = true
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            newParameter("args", objectType("string").array(), holder = method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { scDecl ->
+                                        val newExpr = newNew()
+                                        newExpr.initializer =
+                                            newConstruction("Dataflow") {
+                                                it.type = objectType("Dataflow")
                                             }
+                                        newVariable("sc", objectType("Dataflow"), holder = scDecl) {
+                                            it.initializer = newExpr
+                                        }
                                     }
 
-                                val dataflowRef = newReference("Dataflow", objectType("Dataflow"))
-                                dataflowRef.refersTo = record
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess("highlyCriticalOperation", dataflowRef),
-                                        false,
-                                    ) { outerCall ->
-                                        outerCall.isStatic = true
-                                        outerCall.arguments +=
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "toString",
-                                                    newReference("Integer", objectType("Integer")),
-                                                ),
-                                                false,
-                                            ) { innerCall ->
-                                                innerCall.type = objectType("string")
-                                                innerCall.isStatic = true
-                                                innerCall.arguments +=
-                                                    newMemberAccess("a", newReference("sc"))
-                                            }
-                                    }
+                                    block.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newMemberAccess("a", newReference("sc"))),
+                                            listOf(newLiteral(5, objectType("int"))),
+                                        )
 
-                                block.statements += newReturn()
-                            }
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("log", newReference("logger")),
+                                            false,
+                                        ) { logCall ->
+                                            logCall.arguments +=
+                                                newMemberAccess("INFO", newReference("Level"))
+                                            logCall.arguments +=
+                                                newBinaryOperator("+") { outer ->
+                                                    outer.lhs =
+                                                        newBinaryOperator("+") { inner ->
+                                                            inner.lhs =
+                                                                newLiteral(
+                                                                    "put ",
+                                                                    objectType("string"),
+                                                                )
+                                                            inner.rhs =
+                                                                newMemberAccess(
+                                                                    "a",
+                                                                    newReference("sc"),
+                                                                )
+                                                        }
+                                                    outer.rhs =
+                                                        newLiteral(
+                                                            " into highlyCriticalOperation()",
+                                                            objectType("string"),
+                                                        )
+                                                }
+                                        }
+
+                                    val dataflowRef =
+                                        newReference("Dataflow", objectType("Dataflow"))
+                                    dataflowRef.refersTo = record
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("highlyCriticalOperation", dataflowRef),
+                                            false,
+                                        ) { outerCall ->
+                                            outerCall.isStatic = true
+                                            outerCall.arguments +=
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "toString",
+                                                        newReference(
+                                                            "Integer",
+                                                            objectType("Integer"),
+                                                        ),
+                                                    ),
+                                                    false,
+                                                ) { innerCall ->
+                                                    innerCall.type = objectType("string")
+                                                    innerCall.isStatic = true
+                                                    innerCall.arguments +=
+                                                        newMemberAccess("a", newReference("sc"))
+                                                }
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
                     }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getComplexDataflow3(
@@ -435,140 +451,148 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                val tu = newTranslationUnit("ComplexDataflow3.java")
-                scopeManager.resetToGlobal(tu)
-
-                newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
-                    // TODO: this field is static. How do we model this?
-                    newField("logger", objectType("Logger"), holder = record) { field ->
-                        field.modifiers = setOf("static")
-                        field.initializer =
-                            newMemberCall(
-                                newMemberAccess("getLogger", newReference("Logger")),
-                                false,
-                            ) {
-                                it.arguments += newLiteral("DataflowLogger", objectType("string"))
-                            }
-                    }
-
-                    newField("a", objectType("int"), holder = record)
-
-                    newMethod("highlyCriticalOperation", holder = record, enterScope = true) {
-                        method ->
-                        method.isStatic = true
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        newParameter("s", objectType("string"), holder = method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments += newReference("s")
-                                    }
-
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("main", holder = record, enterScope = true) { method ->
-                        method.isStatic = true
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        newParameter("args", objectType("string").array(), holder = method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { scDecl ->
-                                    val newExpr = newNew()
-                                    newExpr.initializer =
-                                        newConstruction("Dataflow") {
-                                            it.type = objectType("Dataflow")
-                                        }
-                                    newVariable("sc", objectType("Dataflow"), holder = scDecl) {
-                                        it.initializer = newExpr
-                                    }
+                singleTranslationUnit("ComplexDataflow3.java") { tu ->
+                    newRecord("Dataflow", "class", holder = tu, enterScope = true) { record ->
+                        // TODO: this field is static. How do we model this?
+                        newField("logger", objectType("Logger"), holder = record) { field ->
+                            field.modifiers = setOf("static")
+                            field.initializer =
+                                newMemberCall(
+                                    newMemberAccess("getLogger", newReference("Logger")),
+                                    false,
+                                ) {
+                                    it.arguments +=
+                                        newLiteral("DataflowLogger", objectType("string"))
                                 }
+                        }
 
-                                block.statements +=
-                                    newAssign(
-                                        "=",
-                                        listOf(newMemberAccess("a", newReference("sc"))),
-                                        listOf(newLiteral(5, objectType("int"))),
-                                    )
+                        newField("a", objectType("int"), holder = record)
 
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess("log", newReference("logger")),
-                                        false,
-                                    ) { logCall ->
-                                        logCall.arguments +=
-                                            newMemberAccess("INFO", newReference("Level"))
-                                        logCall.arguments +=
-                                            newBinaryOperator("+") { outer ->
-                                                outer.lhs =
-                                                    newBinaryOperator("+") { inner ->
-                                                        inner.lhs =
-                                                            newLiteral("put ", objectType("string"))
-                                                        // The base of this member access is
-                                                        // intentionally the "a" reference (not
-                                                        // "sc"), as checked by
-                                                        // testComplexDataflow3.
-                                                        inner.rhs =
-                                                            newMemberAccess("a", newReference("a"))
-                                                    }
-                                                outer.rhs =
-                                                    newLiteral(
-                                                        " into highlyCriticalOperation()",
-                                                        objectType("string"),
-                                                    )
+                        newMethod("highlyCriticalOperation", holder = record, enterScope = true) {
+                            method ->
+                            method.isStatic = true
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            newParameter("s", objectType("string"), holder = method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("s")
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("main", holder = record, enterScope = true) { method ->
+                            method.isStatic = true
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            newParameter("args", objectType("string").array(), holder = method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { scDecl ->
+                                        val newExpr = newNew()
+                                        newExpr.initializer =
+                                            newConstruction("Dataflow") {
+                                                it.type = objectType("Dataflow")
                                             }
+                                        newVariable("sc", objectType("Dataflow"), holder = scDecl) {
+                                            it.initializer = newExpr
+                                        }
                                     }
 
-                                block.statements +=
-                                    newAssign(
-                                        "=",
-                                        listOf(newMemberAccess("a", newReference("sc"))),
-                                        listOf(newLiteral(3, objectType("int"))),
-                                    )
+                                    block.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newMemberAccess("a", newReference("sc"))),
+                                            listOf(newLiteral(5, objectType("int"))),
+                                        )
 
-                                val dataflowRef = newReference("Dataflow", objectType("Dataflow"))
-                                dataflowRef.refersTo = record
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess("highlyCriticalOperation", dataflowRef),
-                                        false,
-                                    ) { outerCall ->
-                                        outerCall.isStatic = true
-                                        outerCall.arguments +=
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "toString",
-                                                    newReference("Integer", objectType("Integer")),
-                                                ),
-                                                false,
-                                            ) { innerCall ->
-                                                innerCall.type = objectType("string")
-                                                innerCall.isStatic = true
-                                                innerCall.arguments +=
-                                                    newMemberAccess("a", newReference("sc"))
-                                            }
-                                    }
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("log", newReference("logger")),
+                                            false,
+                                        ) { logCall ->
+                                            logCall.arguments +=
+                                                newMemberAccess("INFO", newReference("Level"))
+                                            logCall.arguments +=
+                                                newBinaryOperator("+") { outer ->
+                                                    outer.lhs =
+                                                        newBinaryOperator("+") { inner ->
+                                                            inner.lhs =
+                                                                newLiteral(
+                                                                    "put ",
+                                                                    objectType("string"),
+                                                                )
+                                                            // The base of this member access is
+                                                            // intentionally the "a" reference (not
+                                                            // "sc"), as checked by
+                                                            // testComplexDataflow3.
+                                                            inner.rhs =
+                                                                newMemberAccess(
+                                                                    "a",
+                                                                    newReference("a"),
+                                                                )
+                                                        }
+                                                    outer.rhs =
+                                                        newLiteral(
+                                                            " into highlyCriticalOperation()",
+                                                            objectType("string"),
+                                                        )
+                                                }
+                                        }
 
-                                block.statements += newReturn()
-                            }
+                                    block.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newMemberAccess("a", newReference("sc"))),
+                                            listOf(newLiteral(3, objectType("int"))),
+                                        )
+
+                                    val dataflowRef =
+                                        newReference("Dataflow", objectType("Dataflow"))
+                                    dataflowRef.refersTo = record
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess("highlyCriticalOperation", dataflowRef),
+                                            false,
+                                        ) { outerCall ->
+                                            outerCall.isStatic = true
+                                            outerCall.arguments +=
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "toString",
+                                                        newReference(
+                                                            "Integer",
+                                                            objectType("Integer"),
+                                                        ),
+                                                    ),
+                                                    false,
+                                                ) { innerCall ->
+                                                    innerCall.type = objectType("string")
+                                                    innerCall.isStatic = true
+                                                    innerCall.arguments +=
+                                                        newMemberAccess("a", newReference("sc"))
+                                                }
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
                     }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getArray(
@@ -579,80 +603,77 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                val tu = newTranslationUnit("array.cpp")
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit("array.cpp") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
 
-                newFunction("main", holder = tu, enterScope = true) { func ->
-                    func.returnTypes = listOf(objectType("int"))
-                    func.type = computeType(func)
-
-                    func.body =
-                        newBlock(enterScope = true) { block ->
-                            block.statements += newDeclarationStatement { cDecl ->
-                                val creationExpr = newArrayConstruction()
-                                creationExpr.addDimension(newLiteral(4, objectType("int")))
-                                creationExpr.type = objectType("char")
-                                newVariable("c", objectType("char").pointer(), holder = cDecl) {
-                                    it.initializer = creationExpr
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { cDecl ->
+                                    val creationExpr = newArrayConstruction()
+                                    creationExpr.addDimension(newLiteral(4, objectType("int")))
+                                    creationExpr.type = objectType("char")
+                                    newVariable("c", objectType("char").pointer(), holder = cDecl) {
+                                        it.initializer = creationExpr
+                                    }
                                 }
-                            }
 
-                            block.statements += newDeclarationStatement { aDecl ->
-                                newVariable("a", objectType("int"), holder = aDecl) {
-                                    it.initializer = newLiteral(4, objectType("int"))
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
+                                        it.initializer = newLiteral(4, objectType("int"))
+                                    }
                                 }
-                            }
 
-                            block.statements += newDeclarationStatement { bDecl ->
-                                newVariable("b", objectType("int"), holder = bDecl) { b ->
-                                    b.initializer =
-                                        newBinaryOperator("+") {
-                                            it.lhs = newReference("a")
-                                            it.rhs = newLiteral(1, objectType("int"))
+                                block.statements += newDeclarationStatement { bDecl ->
+                                    newVariable("b", objectType("int"), holder = bDecl) { b ->
+                                        b.initializer =
+                                            newBinaryOperator("+") {
+                                                it.lhs = newReference("a")
+                                                it.rhs = newLiteral(1, objectType("int"))
+                                            }
+                                    }
+                                }
+
+                                block.statements += newDeclarationStatement { dDecl ->
+                                    newVariable("d", objectType("char"), holder = dDecl) { d ->
+                                        d.initializer = newSubscription {
+                                            it.arrayExpression = newReference("c")
+                                            it.subscriptExpression = newReference("b")
                                         }
+                                    }
+                                }
+
+                                block.statements += newReturn {
+                                    it.returnValue = newLiteral(0, objectType("int"))
                                 }
                             }
+                    }
 
-                            block.statements += newDeclarationStatement { dDecl ->
-                                newVariable("d", objectType("char"), holder = dDecl) { d ->
-                                    d.initializer = newSubscription {
+                    newFunction("some_other_function", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("char"))
+                        func.type = computeType(func)
+
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { cDecl ->
+                                    val creationExpr = newArrayConstruction()
+                                    creationExpr.addDimension(newLiteral(100, objectType("int")))
+                                    creationExpr.type = objectType("char")
+                                    newVariable("c", objectType("char").pointer(), holder = cDecl) {
+                                        it.initializer = creationExpr
+                                    }
+                                }
+
+                                block.statements += newReturn { ret ->
+                                    ret.returnValue = newSubscription {
                                         it.arrayExpression = newReference("c")
-                                        it.subscriptExpression = newReference("b")
+                                        it.subscriptExpression = newLiteral(0, objectType("int"))
                                     }
                                 }
                             }
-
-                            block.statements += newReturn {
-                                it.returnValue = newLiteral(0, objectType("int"))
-                            }
-                        }
+                    }
                 }
-
-                newFunction("some_other_function", holder = tu, enterScope = true) { func ->
-                    func.returnTypes = listOf(objectType("char"))
-                    func.type = computeType(func)
-
-                    func.body =
-                        newBlock(enterScope = true) { block ->
-                            block.statements += newDeclarationStatement { cDecl ->
-                                val creationExpr = newArrayConstruction()
-                                creationExpr.addDimension(newLiteral(100, objectType("int")))
-                                creationExpr.type = objectType("char")
-                                newVariable("c", objectType("char").pointer(), holder = cDecl) {
-                                    it.initializer = creationExpr
-                                }
-                            }
-
-                            block.statements += newReturn { ret ->
-                                ret.returnValue = newSubscription {
-                                    it.arrayExpression = newReference("c")
-                                    it.subscriptExpression = newLiteral(0, objectType("int"))
-                                }
-                            }
-                        }
-                }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getArray2(
@@ -663,71 +684,69 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                val tu = newTranslationUnit("array2.cpp")
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit("array2.cpp") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
 
-                newFunction("main", holder = tu, enterScope = true) { func ->
-                    func.returnTypes = listOf(objectType("int"))
-                    func.type = computeType(func)
-
-                    func.body =
-                        newBlock(enterScope = true) { block ->
-                            block.statements += newDeclarationStatement { cDecl ->
-                                val creationExpr = newArrayConstruction()
-                                creationExpr.addDimension(newLiteral(4, objectType("int")))
-                                creationExpr.type = objectType("char")
-                                newVariable("c", objectType("char").pointer(), holder = cDecl) {
-                                    it.initializer = creationExpr
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { cDecl ->
+                                    val creationExpr = newArrayConstruction()
+                                    creationExpr.addDimension(newLiteral(4, objectType("int")))
+                                    creationExpr.type = objectType("char")
+                                    newVariable("c", objectType("char").pointer(), holder = cDecl) {
+                                        it.initializer = creationExpr
+                                    }
                                 }
-                            }
 
-                            block.statements += newDeclarationStatement { aDecl ->
-                                newVariable("a", objectType("int"), holder = aDecl) {
-                                    it.initializer = newLiteral(0, objectType("int"))
-                                }
-                            }
-
-                            block.statements += newFor { for_ ->
-                                for_.initializerStatement = newDeclarationStatement { iDecl ->
-                                    newVariable("i", objectType("int"), holder = iDecl) {
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
                                         it.initializer = newLiteral(0, objectType("int"))
                                     }
                                 }
 
-                                for_.condition =
-                                    newBinaryOperator("<") {
-                                        it.lhs = newReference("i")
-                                        it.rhs = newLiteral(5, objectType("int"))
+                                block.statements += newFor { for_ ->
+                                    for_.initializerStatement = newDeclarationStatement { iDecl ->
+                                        newVariable("i", objectType("int"), holder = iDecl) {
+                                            it.initializer = newLiteral(0, objectType("int"))
+                                        }
                                     }
 
-                                for_.iterationStatement =
-                                    newUnaryOperator("++", postfix = true, prefix = false) {
-                                        it.input = newReference("i")
-                                    }
+                                    for_.condition =
+                                        newBinaryOperator("<") {
+                                            it.lhs = newReference("i")
+                                            it.rhs = newLiteral(5, objectType("int"))
+                                        }
 
-                                for_.statement = newBlock { loopBodyBlock ->
-                                    loopBodyBlock.statements +=
-                                        newAssign(
-                                            "=",
-                                            listOf(newReference("a")),
-                                            listOf(
-                                                newBinaryOperator("+") {
-                                                    it.lhs = newReference("a")
-                                                    it.rhs = newSubscription { sub ->
-                                                        sub.arrayExpression = newReference("c")
-                                                        sub.subscriptExpression = newReference("i")
+                                    for_.iterationStatement =
+                                        newUnaryOperator("++", postfix = true, prefix = false) {
+                                            it.input = newReference("i")
+                                        }
+
+                                    for_.statement = newBlock { loopBodyBlock ->
+                                        loopBodyBlock.statements +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("a")),
+                                                listOf(
+                                                    newBinaryOperator("+") {
+                                                        it.lhs = newReference("a")
+                                                        it.rhs = newSubscription { sub ->
+                                                            sub.arrayExpression = newReference("c")
+                                                            sub.subscriptExpression =
+                                                                newReference("i")
+                                                        }
                                                     }
-                                                }
-                                            ),
-                                        )
+                                                ),
+                                            )
+                                    }
                                 }
+
+                                block.statements += newReturn { it.returnValue = newReference("a") }
                             }
-
-                            block.statements += newReturn { it.returnValue = newReference("a") }
-                        }
+                    }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getArray3(
@@ -738,98 +757,100 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                val tu = newTranslationUnit("array3.cpp")
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit("array3.cpp") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
 
-                newFunction("main", holder = tu, enterScope = true) { func ->
-                    func.returnTypes = listOf(objectType("int"))
-                    func.type = computeType(func)
-
-                    func.body =
-                        newBlock(enterScope = true) { block ->
-                            block.statements += newDeclarationStatement { cDecl ->
-                                newVariable("c", objectType("char").pointer(), holder = cDecl)
-                            }
-
-                            block.statements += newIfElse { ifElse ->
-                                ifElse.condition =
-                                    newBinaryOperator(">") {
-                                        it.lhs = newLiteral(5, objectType("int"))
-                                        it.rhs = newLiteral(4, objectType("int"))
-                                    }
-                                ifElse.thenStatement =
-                                    newBlock(enterScope = true) { thenBlock ->
-                                        val creationExpr = newArrayConstruction()
-                                        creationExpr.addDimension(newLiteral(4, objectType("int")))
-                                        creationExpr.type = objectType("char")
-                                        thenBlock.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("c")),
-                                                listOf(creationExpr),
-                                            )
-                                    }
-                                ifElse.elseStatement =
-                                    newBlock(enterScope = true) { elseBlock ->
-                                        val creationExpr = newArrayConstruction()
-                                        creationExpr.addDimension(newLiteral(5, objectType("int")))
-                                        creationExpr.type = objectType("char")
-                                        elseBlock.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("c")),
-                                                listOf(creationExpr),
-                                            )
-                                    }
-                            }
-
-                            block.statements += newDeclarationStatement { aDecl ->
-                                newVariable("a", objectType("int"), holder = aDecl) {
-                                    it.initializer = newLiteral(0, objectType("int"))
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { cDecl ->
+                                    newVariable("c", objectType("char").pointer(), holder = cDecl)
                                 }
-                            }
 
-                            block.statements += newFor { for_ ->
-                                for_.initializerStatement = newDeclarationStatement { iDecl ->
-                                    newVariable("i", objectType("int"), holder = iDecl) {
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator(">") {
+                                            it.lhs = newLiteral(5, objectType("int"))
+                                            it.rhs = newLiteral(4, objectType("int"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            val creationExpr = newArrayConstruction()
+                                            creationExpr.addDimension(
+                                                newLiteral(4, objectType("int"))
+                                            )
+                                            creationExpr.type = objectType("char")
+                                            thenBlock.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("c")),
+                                                    listOf(creationExpr),
+                                                )
+                                        }
+                                    ifElse.elseStatement =
+                                        newBlock(enterScope = true) { elseBlock ->
+                                            val creationExpr = newArrayConstruction()
+                                            creationExpr.addDimension(
+                                                newLiteral(5, objectType("int"))
+                                            )
+                                            creationExpr.type = objectType("char")
+                                            elseBlock.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("c")),
+                                                    listOf(creationExpr),
+                                                )
+                                        }
+                                }
+
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
                                         it.initializer = newLiteral(0, objectType("int"))
                                     }
                                 }
 
-                                for_.condition =
-                                    newBinaryOperator("<") {
-                                        it.lhs = newReference("i")
-                                        it.rhs = newLiteral(5, objectType("int"))
+                                block.statements += newFor { for_ ->
+                                    for_.initializerStatement = newDeclarationStatement { iDecl ->
+                                        newVariable("i", objectType("int"), holder = iDecl) {
+                                            it.initializer = newLiteral(0, objectType("int"))
+                                        }
                                     }
 
-                                for_.iterationStatement =
-                                    newUnaryOperator("++", postfix = true, prefix = false) {
-                                        it.input = newReference("i")
-                                    }
+                                    for_.condition =
+                                        newBinaryOperator("<") {
+                                            it.lhs = newReference("i")
+                                            it.rhs = newLiteral(5, objectType("int"))
+                                        }
 
-                                for_.statement = newBlock { loopBodyBlock ->
-                                    loopBodyBlock.statements +=
-                                        newAssign(
-                                            "=",
-                                            listOf(newReference("a")),
-                                            listOf(
-                                                newBinaryOperator("+") {
-                                                    it.lhs = newReference("a")
-                                                    it.rhs = newSubscription { sub ->
-                                                        sub.arrayExpression = newReference("c")
-                                                        sub.subscriptExpression = newReference("i")
+                                    for_.iterationStatement =
+                                        newUnaryOperator("++", postfix = true, prefix = false) {
+                                            it.input = newReference("i")
+                                        }
+
+                                    for_.statement = newBlock { loopBodyBlock ->
+                                        loopBodyBlock.statements +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("a")),
+                                                listOf(
+                                                    newBinaryOperator("+") {
+                                                        it.lhs = newReference("a")
+                                                        it.rhs = newSubscription { sub ->
+                                                            sub.arrayExpression = newReference("c")
+                                                            sub.subscriptExpression =
+                                                                newReference("i")
+                                                        }
                                                     }
-                                                }
-                                            ),
-                                        )
+                                                ),
+                                            )
+                                    }
                                 }
+
+                                block.statements += newReturn { it.returnValue = newReference("a") }
                             }
-
-                            block.statements += newReturn { it.returnValue = newReference("a") }
-                        }
+                    }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getArrayCorrect(
@@ -840,71 +861,69 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                val tu = newTranslationUnit("array_correct.cpp")
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit("array_correct.cpp") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
 
-                newFunction("main", holder = tu, enterScope = true) { func ->
-                    func.returnTypes = listOf(objectType("int"))
-                    func.type = computeType(func)
-
-                    func.body =
-                        newBlock(enterScope = true) { block ->
-                            block.statements += newDeclarationStatement { cDecl ->
-                                val creationExpr = newArrayConstruction()
-                                creationExpr.addDimension(newLiteral(4, objectType("int")))
-                                creationExpr.type = objectType("char")
-                                newVariable("c", objectType("char").pointer(), holder = cDecl) {
-                                    it.initializer = creationExpr
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { cDecl ->
+                                    val creationExpr = newArrayConstruction()
+                                    creationExpr.addDimension(newLiteral(4, objectType("int")))
+                                    creationExpr.type = objectType("char")
+                                    newVariable("c", objectType("char").pointer(), holder = cDecl) {
+                                        it.initializer = creationExpr
+                                    }
                                 }
-                            }
 
-                            block.statements += newDeclarationStatement { aDecl ->
-                                newVariable("a", objectType("int"), holder = aDecl) {
-                                    it.initializer = newLiteral(0, objectType("int"))
-                                }
-                            }
-
-                            block.statements += newFor { for_ ->
-                                for_.initializerStatement = newDeclarationStatement { iDecl ->
-                                    newVariable("i", objectType("int"), holder = iDecl) {
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
                                         it.initializer = newLiteral(0, objectType("int"))
                                     }
                                 }
 
-                                for_.condition =
-                                    newBinaryOperator("<") {
-                                        it.lhs = newReference("i")
-                                        it.rhs = newLiteral(4, objectType("int"))
+                                block.statements += newFor { for_ ->
+                                    for_.initializerStatement = newDeclarationStatement { iDecl ->
+                                        newVariable("i", objectType("int"), holder = iDecl) {
+                                            it.initializer = newLiteral(0, objectType("int"))
+                                        }
                                     }
 
-                                for_.iterationStatement =
-                                    newUnaryOperator("++", postfix = true, prefix = false) {
-                                        it.input = newReference("i")
-                                    }
+                                    for_.condition =
+                                        newBinaryOperator("<") {
+                                            it.lhs = newReference("i")
+                                            it.rhs = newLiteral(4, objectType("int"))
+                                        }
 
-                                for_.statement = newBlock { loopBodyBlock ->
-                                    loopBodyBlock.statements +=
-                                        newAssign(
-                                            "=",
-                                            listOf(newReference("a")),
-                                            listOf(
-                                                newBinaryOperator("+") {
-                                                    it.lhs = newReference("a")
-                                                    it.rhs = newSubscription { sub ->
-                                                        sub.arrayExpression = newReference("c")
-                                                        sub.subscriptExpression = newReference("i")
+                                    for_.iterationStatement =
+                                        newUnaryOperator("++", postfix = true, prefix = false) {
+                                            it.input = newReference("i")
+                                        }
+
+                                    for_.statement = newBlock { loopBodyBlock ->
+                                        loopBodyBlock.statements +=
+                                            newAssign(
+                                                "=",
+                                                listOf(newReference("a")),
+                                                listOf(
+                                                    newBinaryOperator("+") {
+                                                        it.lhs = newReference("a")
+                                                        it.rhs = newSubscription { sub ->
+                                                            sub.arrayExpression = newReference("c")
+                                                            sub.subscriptExpression =
+                                                                newReference("i")
+                                                        }
                                                     }
-                                                }
-                                            ),
-                                        )
+                                                ),
+                                            )
+                                    }
                                 }
+
+                                block.statements += newReturn { it.returnValue = newReference("a") }
                             }
-
-                            block.statements += newReturn { it.returnValue = newReference("a") }
-                        }
+                    }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getAssign(
@@ -915,35 +934,32 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                val tu = newTranslationUnit("assign.cpp")
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit("assign.cpp") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
 
-                newFunction("main", holder = tu, enterScope = true) { func ->
-                    func.returnTypes = listOf(objectType("int"))
-                    func.type = computeType(func)
-
-                    func.body =
-                        newBlock(enterScope = true) { block ->
-                            block.statements += newDeclarationStatement { aDecl ->
-                                newVariable("a", objectType("int"), holder = aDecl) {
-                                    it.initializer = newLiteral(4, objectType("int"))
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("int"), holder = aDecl) {
+                                        it.initializer = newLiteral(4, objectType("int"))
+                                    }
                                 }
+                                // TODO: There was a commented-out line. No idea what to do with it:
+                                // int a, b = 4; // this is broken, a is missing an initializer
+
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newReference("a")),
+                                        listOf(newLiteral(3, objectType("int"))),
+                                    )
+
+                                block.statements += newReturn { it.returnValue = newReference("a") }
                             }
-                            // TODO: There was a commented-out line. No idea what to do with it:
-                            // int a, b = 4; // this is broken, a is missing an initializer
-
-                            block.statements +=
-                                newAssign(
-                                    "=",
-                                    listOf(newReference("a")),
-                                    listOf(newLiteral(3, objectType("int"))),
-                                )
-
-                            block.statements += newReturn { it.returnValue = newReference("a") }
-                        }
+                    }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getDivBy0(
@@ -954,65 +970,63 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                val tu = newTranslationUnit("assign.cpp")
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit("assign.cpp") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
 
-                newFunction("main", holder = tu, enterScope = true) { func ->
-                    func.returnTypes = listOf(objectType("int"))
-                    func.type = computeType(func)
-
-                    func.body =
-                        newBlock(enterScope = true) { block ->
-                            block.statements += newDeclarationStatement { arrayDecl ->
-                                newVariable(
-                                    "array",
-                                    objectType("char").array(),
-                                    holder = arrayDecl,
-                                ) {
-                                    it.initializer = newLiteral("hello", objectType("char").array())
-                                }
-                            }
-
-                            block.statements += newDeclarationStatement { aDecl ->
-                                newVariable("a", objectType("short"), holder = aDecl) {
-                                    it.initializer = newLiteral(2, objectType("int"))
-                                }
-                            }
-
-                            block.statements += newIfElse { ifElse ->
-                                ifElse.condition =
-                                    newBinaryOperator("==") {
-                                        it.lhs = newReference("array")
-                                        it.rhs = newLiteral("hello", objectType("string"))
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { arrayDecl ->
+                                    newVariable(
+                                        "array",
+                                        objectType("char").array(),
+                                        holder = arrayDecl,
+                                    ) {
+                                        it.initializer =
+                                            newLiteral("hello", objectType("char").array())
                                     }
-                                ifElse.thenStatement =
-                                    newBlock(enterScope = true) { thenBlock ->
-                                        thenBlock.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("a")),
-                                                listOf(newLiteral(0, objectType("int"))),
-                                            )
-                                    }
-                            }
+                                }
 
-                            block.statements += newDeclarationStatement { xDecl ->
-                                newVariable("x", objectType("double"), holder = xDecl) { x ->
-                                    x.initializer =
-                                        newBinaryOperator("/") {
-                                            it.lhs = newLiteral(5, objectType("int"))
-                                            it.rhs = newReference("a")
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("short"), holder = aDecl) {
+                                        it.initializer = newLiteral(2, objectType("int"))
+                                    }
+                                }
+
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("==") {
+                                            it.lhs = newReference("array")
+                                            it.rhs = newLiteral("hello", objectType("string"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("a")),
+                                                    listOf(newLiteral(0, objectType("int"))),
+                                                )
                                         }
                                 }
-                            }
 
-                            block.statements += newReturn {
-                                it.returnValue = newLiteral(0, objectType("int"))
+                                block.statements += newDeclarationStatement { xDecl ->
+                                    newVariable("x", objectType("double"), holder = xDecl) { x ->
+                                        x.initializer =
+                                            newBinaryOperator("/") {
+                                                it.lhs = newLiteral(5, objectType("int"))
+                                                it.rhs = newReference("a")
+                                            }
+                                    }
+                                }
+
+                                block.statements += newReturn {
+                                    it.returnValue = newLiteral(0, objectType("int"))
+                                }
                             }
-                        }
+                    }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
         fun getVulnerable(
@@ -1023,107 +1037,105 @@ class Query {
                     .build()
         ) =
             testFrontend(config).build {
-                val tu = newTranslationUnit("assign.cpp")
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit("assign.cpp") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
 
-                newFunction("main", holder = tu, enterScope = true) { func ->
-                    func.returnTypes = listOf(objectType("int"))
-                    func.type = computeType(func)
-
-                    func.body =
-                        newBlock(enterScope = true) { block ->
-                            block.statements += newDeclarationStatement { arrayDecl ->
-                                newVariable(
-                                    "array",
-                                    objectType("char").array(),
-                                    holder = arrayDecl,
-                                ) {
-                                    it.initializer = newLiteral("hello", objectType("char").array())
-                                }
-                            }
-
-                            block.statements +=
-                                newCall(newReference("memcpy")) {
-                                    it.arguments += newReference("array")
-                                    it.arguments +=
-                                        newLiteral("Hello world", objectType("char").array())
-                                    it.arguments += newLiteral(11, objectType("int"))
-                                }
-
-                            block.statements +=
-                                newCall(newReference("printf")) {
-                                    it.arguments += newReference("array")
-                                }
-
-                            block.statements +=
-                                newCall(newReference("free")) {
-                                    it.arguments += newReference("array")
-                                }
-
-                            block.statements +=
-                                newCall(newReference("free")) {
-                                    it.arguments += newReference("array")
-                                }
-
-                            block.statements += newDeclarationStatement { aDecl ->
-                                newVariable("a", objectType("short"), holder = aDecl) {
-                                    it.initializer = newLiteral(2, objectType("int"))
-                                }
-                            }
-
-                            block.statements += newIfElse { ifElse ->
-                                ifElse.condition =
-                                    newBinaryOperator("==") {
-                                        it.lhs = newReference("array")
-                                        it.rhs = newLiteral("hello", objectType("string"))
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { arrayDecl ->
+                                    newVariable(
+                                        "array",
+                                        objectType("char").array(),
+                                        holder = arrayDecl,
+                                    ) {
+                                        it.initializer =
+                                            newLiteral("hello", objectType("char").array())
                                     }
-                                ifElse.thenStatement =
-                                    newBlock(enterScope = true) { thenBlock ->
-                                        thenBlock.statements +=
-                                            newAssign(
-                                                "=",
-                                                listOf(newReference("a")),
-                                                listOf(newLiteral(1, objectType("int"))),
-                                            )
-                                    }
-                            }
+                                }
 
-                            block.statements += newDeclarationStatement { xDecl ->
-                                newVariable("x", objectType("double"), holder = xDecl) { x ->
-                                    x.initializer =
-                                        newBinaryOperator("/") {
-                                            it.lhs = newLiteral(5, objectType("int"))
-                                            it.rhs = newReference("a")
+                                block.statements +=
+                                    newCall(newReference("memcpy")) {
+                                        it.arguments += newReference("array")
+                                        it.arguments +=
+                                            newLiteral("Hello world", objectType("char").array())
+                                        it.arguments += newLiteral(11, objectType("int"))
+                                    }
+
+                                block.statements +=
+                                    newCall(newReference("printf")) {
+                                        it.arguments += newReference("array")
+                                    }
+
+                                block.statements +=
+                                    newCall(newReference("free")) {
+                                        it.arguments += newReference("array")
+                                    }
+
+                                block.statements +=
+                                    newCall(newReference("free")) {
+                                        it.arguments += newReference("array")
+                                    }
+
+                                block.statements += newDeclarationStatement { aDecl ->
+                                    newVariable("a", objectType("short"), holder = aDecl) {
+                                        it.initializer = newLiteral(2, objectType("int"))
+                                    }
+                                }
+
+                                block.statements += newIfElse { ifElse ->
+                                    ifElse.condition =
+                                        newBinaryOperator("==") {
+                                            it.lhs = newReference("array")
+                                            it.rhs = newLiteral("hello", objectType("string"))
+                                        }
+                                    ifElse.thenStatement =
+                                        newBlock(enterScope = true) { thenBlock ->
+                                            thenBlock.statements +=
+                                                newAssign(
+                                                    "=",
+                                                    listOf(newReference("a")),
+                                                    listOf(newLiteral(1, objectType("int"))),
+                                                )
                                         }
                                 }
-                            }
 
-                            block.statements += newDeclarationStatement { bDecl ->
-                                newVariable("b", objectType("int"), holder = bDecl) {
-                                    it.initializer = newLiteral(2147483648, objectType("int"))
+                                block.statements += newDeclarationStatement { xDecl ->
+                                    newVariable("x", objectType("double"), holder = xDecl) { x ->
+                                        x.initializer =
+                                            newBinaryOperator("/") {
+                                                it.lhs = newLiteral(5, objectType("int"))
+                                                it.rhs = newReference("a")
+                                            }
+                                    }
+                                }
+
+                                block.statements += newDeclarationStatement { bDecl ->
+                                    newVariable("b", objectType("int"), holder = bDecl) {
+                                        it.initializer = newLiteral(2147483648, objectType("int"))
+                                    }
+                                }
+
+                                block.statements +=
+                                    newAssign(
+                                        "=",
+                                        listOf(newReference("b")),
+                                        listOf(newLiteral(2147483648, objectType("int"))),
+                                    )
+
+                                block.statements += newDeclarationStatement { cDecl ->
+                                    newVariable("c", objectType("long"), holder = cDecl) {
+                                        it.initializer = newLiteral(-10000, objectType("long"))
+                                    }
+                                }
+
+                                block.statements += newReturn {
+                                    it.returnValue = newLiteral(0, objectType("int"))
                                 }
                             }
-
-                            block.statements +=
-                                newAssign(
-                                    "=",
-                                    listOf(newReference("b")),
-                                    listOf(newLiteral(2147483648, objectType("int"))),
-                                )
-
-                            block.statements += newDeclarationStatement { cDecl ->
-                                newVariable("c", objectType("long"), holder = cDecl) {
-                                    it.initializer = newLiteral(-10000, objectType("long"))
-                                }
-                            }
-
-                            block.statements += newReturn {
-                                it.returnValue = newLiteral(0, objectType("int"))
-                            }
-                        }
+                    }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
     }
 }

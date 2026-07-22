@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.graph.expressions.Comprehension
 import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
@@ -54,39 +54,37 @@ class NodeBuilderTest {
                     it.registerPass<ProgramDependenceGraphPass>()
                 }
                 .build {
-                    val tu = newTranslationUnit("File")
-                    scopeManager.resetToGlobal(tu)
+                    singleTranslationUnit("File") { tu ->
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("list"))
+                            newParameter("argc", objectType("int"), holder = func)
 
-                    newFunction("main", holder = tu, enterScope = true) { func ->
-                        func.returnTypes = listOf(objectType("list"))
-                        newParameter("argc", objectType("int"), holder = func)
-
-                        func.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { declStmt ->
-                                    newVariable("some", holder = declStmt) {
-                                        it.initializer = newCollectionComprehension { cc ->
-                                            cc.statement = newReference("i")
-                                            cc.comprehensionExpressions += newComprehension {
-                                                it.variable = newReference("i")
-                                                it.iterable = newReference("someIterable")
-                                                it.predicate =
-                                                    newBinaryOperator(">") { op ->
-                                                        op.lhs = newReference("i")
-                                                        op.rhs = newLiteral(5, objectType("int"))
-                                                    }
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { declStmt ->
+                                        newVariable("some", holder = declStmt) {
+                                            it.initializer = newCollectionComprehension { cc ->
+                                                cc.statement = newReference("i")
+                                                cc.comprehensionExpressions += newComprehension {
+                                                    it.variable = newReference("i")
+                                                    it.iterable = newReference("someIterable")
+                                                    it.predicate =
+                                                        newBinaryOperator(">") { op ->
+                                                            op.lhs = newReference("i")
+                                                            op.rhs =
+                                                                newLiteral(5, objectType("int"))
+                                                        }
+                                                }
                                             }
                                         }
                                     }
-                                }
 
-                                block.statements += newReturn {
-                                    it.returnValue = newReference("some")
+                                    block.statements += newReturn {
+                                        it.returnValue = newReference("some")
+                                    }
                                 }
-                            }
+                        }
                     }
-
-                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
 
         val listComp = result.variables["some"]?.initializer
@@ -117,42 +115,40 @@ class NodeBuilderTest {
                     it.registerPass<ProgramDependenceGraphPass>()
                 }
                 .build {
-                    val tu = newTranslationUnit("File")
-                    scopeManager.resetToGlobal(tu)
+                    singleTranslationUnit("File") { tu ->
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("list"))
+                            newParameter("argc", objectType("int"), holder = func)
 
-                    newFunction("main", holder = tu, enterScope = true) { func ->
-                        func.returnTypes = listOf(objectType("list"))
-                        newParameter("argc", objectType("int"), holder = func)
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    val iDeclStmt = newDeclarationStatement()
+                                    newVariable("i", holder = iDeclStmt)
 
-                        func.body =
-                            newBlock(enterScope = true) { block ->
-                                val iDeclStmt = newDeclarationStatement()
-                                newVariable("i", holder = iDeclStmt)
-
-                                block.statements += newDeclarationStatement { declStmt ->
-                                    newVariable("some", holder = declStmt) {
-                                        it.initializer = newCollectionComprehension { cc ->
-                                            cc.statement = newReference("i")
-                                            cc.comprehensionExpressions += newComprehension {
-                                                it.variable = iDeclStmt
-                                                it.iterable = newReference("someIterable")
-                                                it.predicate =
-                                                    newBinaryOperator(">") { op ->
-                                                        op.lhs = newReference("i")
-                                                        op.rhs = newLiteral(5, objectType("int"))
-                                                    }
+                                    block.statements += newDeclarationStatement { declStmt ->
+                                        newVariable("some", holder = declStmt) {
+                                            it.initializer = newCollectionComprehension { cc ->
+                                                cc.statement = newReference("i")
+                                                cc.comprehensionExpressions += newComprehension {
+                                                    it.variable = iDeclStmt
+                                                    it.iterable = newReference("someIterable")
+                                                    it.predicate =
+                                                        newBinaryOperator(">") { op ->
+                                                            op.lhs = newReference("i")
+                                                            op.rhs =
+                                                                newLiteral(5, objectType("int"))
+                                                        }
+                                                }
                                             }
                                         }
                                     }
-                                }
 
-                                block.statements += newReturn {
-                                    it.returnValue = newReference("some")
+                                    block.statements += newReturn {
+                                        it.returnValue = newReference("some")
+                                    }
                                 }
-                            }
+                        }
                     }
-
-                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
 
         val listComp = result.variables["some"]?.initializer
@@ -184,43 +180,41 @@ class NodeBuilderTest {
                     it.registerPass<ProgramDependenceGraphPass>()
                 }
                 .build {
-                    val tu = newTranslationUnit("File")
-                    scopeManager.resetToGlobal(tu)
+                    singleTranslationUnit("File") { tu ->
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("list"))
+                            newParameter("argc", objectType("int"), holder = func)
 
-                    newFunction("main", holder = tu, enterScope = true) { func ->
-                        func.returnTypes = listOf(objectType("list"))
-                        newParameter("argc", objectType("int"), holder = func)
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    val iDeclStmt = newDeclarationStatement()
+                                    newVariable("i", holder = iDeclStmt)
+                                    newVariable("y", holder = iDeclStmt)
 
-                        func.body =
-                            newBlock(enterScope = true) { block ->
-                                val iDeclStmt = newDeclarationStatement()
-                                newVariable("i", holder = iDeclStmt)
-                                newVariable("y", holder = iDeclStmt)
-
-                                block.statements += newDeclarationStatement { declStmt ->
-                                    newVariable("some", holder = declStmt) {
-                                        it.initializer = newCollectionComprehension { cc ->
-                                            cc.statement = newReference("i")
-                                            cc.comprehensionExpressions += newComprehension {
-                                                it.variable = iDeclStmt
-                                                it.iterable = newReference("someIterable")
-                                                it.predicate =
-                                                    newBinaryOperator(">") { op ->
-                                                        op.lhs = newReference("i")
-                                                        op.rhs = newLiteral(5, objectType("int"))
-                                                    }
+                                    block.statements += newDeclarationStatement { declStmt ->
+                                        newVariable("some", holder = declStmt) {
+                                            it.initializer = newCollectionComprehension { cc ->
+                                                cc.statement = newReference("i")
+                                                cc.comprehensionExpressions += newComprehension {
+                                                    it.variable = iDeclStmt
+                                                    it.iterable = newReference("someIterable")
+                                                    it.predicate =
+                                                        newBinaryOperator(">") { op ->
+                                                            op.lhs = newReference("i")
+                                                            op.rhs =
+                                                                newLiteral(5, objectType("int"))
+                                                        }
+                                                }
                                             }
                                         }
                                     }
-                                }
 
-                                block.statements += newReturn {
-                                    it.returnValue = newReference("some")
+                                    block.statements += newReturn {
+                                        it.returnValue = newReference("some")
+                                    }
                                 }
-                            }
+                        }
                     }
-
-                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
 
         val listComp = result.variables["some"]?.initializer

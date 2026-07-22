@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.translationResult
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
@@ -123,28 +123,29 @@ class TagOverlaysPassTest {
                 )
             ) {
                 build {
-                    val tu = newTranslationUnit(Node.EMPTY_NAME)
-                    scopeManager.resetToGlobal(tu)
+                    singleTranslationUnit { tu ->
+                        newRecord("Encryption", "class", holder = tu, enterScope = true)
 
-                    newRecord("Encryption", "class", holder = tu, enterScope = true)
-
-                    newFunction("main", holder = tu, enterScope = true) { main ->
-                        main.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { declStmt ->
-                                    newVariable("key", objectType("string"), holder = declStmt) {
-                                        it.initializer = newLiteral("secret")
+                        newFunction("main", holder = tu, enterScope = true) { main ->
+                            main.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { declStmt ->
+                                        newVariable(
+                                            "key",
+                                            objectType("string"),
+                                            holder = declStmt,
+                                        ) {
+                                            it.initializer = newLiteral("secret")
+                                        }
                                     }
+
+                                    block.statements +=
+                                        newCall(newReference("encrypt")) {
+                                            it.arguments += newReference("key")
+                                        }
                                 }
-
-                                block.statements +=
-                                    newCall(newReference("encrypt")) {
-                                        it.arguments += newReference("key")
-                                    }
-                            }
+                        }
                     }
-
-                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
             }
 

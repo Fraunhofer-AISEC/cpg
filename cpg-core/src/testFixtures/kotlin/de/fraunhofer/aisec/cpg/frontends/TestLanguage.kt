@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.inferPseudoLocations
+import de.fraunhofer.aisec.cpg.graph.newTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
@@ -164,4 +165,22 @@ fun LanguageFrontend<*, *>.translationResult(
     node.inferPseudoLocations()
 
     return node
+}
+
+/**
+ * Convenience wrapper around [translationResult] for the common case of a test that builds a single
+ * [TranslationUnit]. It creates the unit (named [name]), resets the
+ * [de.fraunhofer.aisec.cpg.ScopeManager] to its global scope, runs [init] to populate it (with the
+ * [LanguageFrontend] as receiver, so node builders bind their metadata correctly and `tu` is
+ * available for `holder =` etc.), and finally registers the unit in the result's default
+ * [Component].
+ */
+fun LanguageFrontend<*, *>.singleTranslationUnit(
+    name: CharSequence = Node.EMPTY_NAME,
+    init: LanguageFrontend<*, *>.(TranslationUnit) -> Unit,
+): TranslationResult {
+    val tu = newTranslationUnit(name)
+    scopeManager.resetToGlobal(tu)
+    init(tu)
+    return translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
 }

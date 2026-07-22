@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
@@ -332,53 +332,51 @@ class ControlFlowSensitiveDFGPassTest {
                     .build()
             )
             .build {
-                val tu = newTranslationUnit("forEach.cpp")
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit("forEach.cpp") { tu ->
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("int"))
+                        func.type = computeType(func)
 
-                newFunction("main", holder = tu, enterScope = true) { func ->
-                    func.returnTypes = listOf(objectType("int"))
-                    func.type = computeType(func)
-
-                    func.body =
-                        newBlock(enterScope = true) { block ->
-                            block.statements += newDeclarationStatement { declStmt ->
-                                newVariable("i", objectType("int"), holder = declStmt) {
-                                    it.initializer = newLiteral(0, objectType("int"))
-                                }
-                            }
-
-                            block.statements +=
-                                newForEach(enterScope = true) { forEach ->
-                                    forEach.variable = newDeclarationStatement { loopVarDeclStmt ->
-                                        newVariable(
-                                            "loopVar",
-                                            objectType("string"),
-                                            holder = loopVarDeclStmt,
-                                        )
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements += newDeclarationStatement { declStmt ->
+                                    newVariable("i", objectType("int"), holder = declStmt) {
+                                        it.initializer = newLiteral(0, objectType("int"))
                                     }
-                                    forEach.statement =
-                                        newBlock(enterScope = true) { loopBody ->
-                                            loopBody.statements +=
-                                                newCall(newReference("printf")) {
-                                                    it.arguments +=
-                                                        newLiteral(
-                                                            "loop: \${}\n",
-                                                            objectType("string"),
-                                                        )
-                                                    it.arguments += newReference("loopVar")
-                                                }
-                                        }
                                 }
 
-                            block.statements +=
-                                newCall(newReference("printf")) {
-                                    it.arguments += newLiteral("1\n", objectType("string"))
-                                }
+                                block.statements +=
+                                    newForEach(enterScope = true) { forEach ->
+                                        forEach.variable =
+                                            newDeclarationStatement { loopVarDeclStmt ->
+                                                newVariable(
+                                                    "loopVar",
+                                                    objectType("string"),
+                                                    holder = loopVarDeclStmt,
+                                                )
+                                            }
+                                        forEach.statement =
+                                            newBlock(enterScope = true) { loopBody ->
+                                                loopBody.statements +=
+                                                    newCall(newReference("printf")) {
+                                                        it.arguments +=
+                                                            newLiteral(
+                                                                "loop: \${}\n",
+                                                                objectType("string"),
+                                                            )
+                                                        it.arguments += newReference("loopVar")
+                                                    }
+                                            }
+                                    }
 
-                            block.statements += newReturn { it.returnValue = newReference("i") }
-                        }
+                                block.statements +=
+                                    newCall(newReference("printf")) {
+                                        it.arguments += newLiteral("1\n", objectType("string"))
+                                    }
+
+                                block.statements += newReturn { it.returnValue = newReference("i") }
+                            }
+                    }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 }

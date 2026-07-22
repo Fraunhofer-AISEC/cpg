@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.translationResult
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.*
 import kotlin.test.*
 
@@ -70,19 +70,16 @@ class ExtensionTest {
             )
         ) {
             val tr = build {
-                val tu = newTranslationUnit(Node.EMPTY_NAME)
-                scopeManager.resetToGlobal(tu)
-
-                buildExtension(
-                    "Extension",
-                    newRecord("Record", "class", holder = tu, enterScope = true),
-                    holder = tu,
-                ) { ext ->
-                    newMethod("extFunc", holder = ext, enterScope = true)
-                    newField("extField", holder = ext)
+                singleTranslationUnit { tu ->
+                    buildExtension(
+                        "Extension",
+                        newRecord("Record", "class", holder = tu, enterScope = true),
+                        holder = tu,
+                    ) { ext ->
+                        newMethod("extFunc", holder = ext, enterScope = true)
+                        newField("extField", holder = ext)
+                    }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
             // find the TU and extension
@@ -112,14 +109,11 @@ class ExtensionTest {
             )
         ) {
             val tr = build {
-                val tu = newTranslationUnit(Node.EMPTY_NAME)
-                scopeManager.resetToGlobal(tu)
-
-                buildExtension("Extension", null, holder = tu) { ext ->
-                    newMethod("extFunc", holder = ext, enterScope = true)
+                singleTranslationUnit { tu ->
+                    buildExtension("Extension", null, holder = tu) { ext ->
+                        newMethod("extFunc", holder = ext, enterScope = true)
+                    }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
             val tu = tr.components.first().translationUnits.first()
@@ -137,18 +131,15 @@ class ExtensionTest {
             )
         ) {
             val tr = build {
-                val tu = newTranslationUnit(Node.EMPTY_NAME)
-                scopeManager.resetToGlobal(tu)
-
-                buildExtension(
-                    null,
-                    newRecord("Record", "class", holder = tu, enterScope = true),
-                    holder = tu,
-                ) { ext ->
-                    newMethod("extFunc", holder = ext, enterScope = true)
+                singleTranslationUnit { tu ->
+                    buildExtension(
+                        null,
+                        newRecord("Record", "class", holder = tu, enterScope = true),
+                        holder = tu,
+                    ) { ext ->
+                        newMethod("extFunc", holder = ext, enterScope = true)
+                    }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
             val tu = tr.components.first().translationUnits.first()
@@ -167,39 +158,36 @@ class ExtensionTest {
             )
         ) {
             build {
-                val tu = newTranslationUnit(Node.EMPTY_NAME)
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit { tu ->
+                    val record = newRecord("Record", "class", holder = tu, enterScope = true)
 
-                val record = newRecord("Record", "class", holder = tu, enterScope = true)
+                    val ext1 =
+                        buildExtension("Extension", record, holder = tu) { ext ->
+                            newMethod("method1", holder = ext, enterScope = true)
+                        }
 
-                val ext1 =
-                    buildExtension("Extension", record, holder = tu) { ext ->
-                        newMethod("method1", holder = ext, enterScope = true)
-                    }
+                    val ext2 =
+                        buildExtension("Extension", record, holder = tu) { ext ->
+                            newMethod("method2", holder = ext, enterScope = true)
+                        }
 
-                val ext2 =
-                    buildExtension("Extension", record, holder = tu) { ext ->
-                        newMethod("method2", holder = ext, enterScope = true)
-                    }
+                    val ext3 =
+                        buildExtension("Extension", null, holder = tu) { ext ->
+                            newMethod("method1", holder = ext, enterScope = true)
+                        }
 
-                val ext3 =
-                    buildExtension("Extension", null, holder = tu) { ext ->
-                        newMethod("method1", holder = ext, enterScope = true)
-                    }
+                    // Test same reference
+                    assertTrue(ext1.equals(ext1))
 
-                // Test same reference
-                assertTrue(ext1.equals(ext1))
+                    // Test different type
+                    assertFalse(ext1.equals("not an extension"))
 
-                // Test different type
-                assertFalse(ext1.equals("not an extension"))
+                    // Test different extendedDeclaration
+                    assertFalse(ext1.equals(ext3))
 
-                // Test different extendedDeclaration
-                assertFalse(ext1.equals(ext3))
-
-                // Test different declarations (method1 vs method2)
-                assertFalse(ext1.equals(ext2))
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
+                    // Test different declarations (method1 vs method2)
+                    assertFalse(ext1.equals(ext2))
+                }
             }
         }
     }
@@ -212,22 +200,19 @@ class ExtensionTest {
             )
         ) {
             build {
-                val tu = newTranslationUnit(Node.EMPTY_NAME)
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit { tu ->
+                    val record = newRecord("Record", "class", holder = tu, enterScope = true)
 
-                val record = newRecord("Record", "class", holder = tu, enterScope = true)
+                    val ext1 = buildExtension("Extension", record, holder = tu)
+                    val ext2 = buildExtension("Extension", record, holder = tu)
 
-                val ext1 = buildExtension("Extension", record, holder = tu)
-                val ext2 = buildExtension("Extension", record, holder = tu)
-
-                // Equal objects should have equal hash codes (they have same name and
-                // extended record)
-                // Note: hashCode comparison is meaningful here since they reference the
-                // same record
-                assertNotNull(ext1.hashCode())
-                assertNotNull(ext2.hashCode())
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
+                    // Equal objects should have equal hash codes (they have same name and
+                    // extended record)
+                    // Note: hashCode comparison is meaningful here since they reference the
+                    // same record
+                    assertNotNull(ext1.hashCode())
+                    assertNotNull(ext2.hashCode())
+                }
             }
         }
     }
@@ -240,16 +225,13 @@ class ExtensionTest {
             )
         ) {
             build {
-                val tu = newTranslationUnit(Node.EMPTY_NAME)
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit { tu ->
+                    val ext = buildExtension("Extension", null, holder = tu)
 
-                val ext = buildExtension("Extension", null, holder = tu)
-
-                // Test EOG methods return empty collections
-                assertTrue(ext.getStartingPrevEOG().isEmpty())
-                assertTrue(ext.getExitNextEOG().isEmpty())
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
+                    // Test EOG methods return empty collections
+                    assertTrue(ext.getStartingPrevEOG().isEmpty())
+                    assertTrue(ext.getExitNextEOG().isEmpty())
+                }
             }
         }
     }
@@ -262,24 +244,21 @@ class ExtensionTest {
             )
         ) {
             build {
-                val tu = newTranslationUnit(Node.EMPTY_NAME)
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit { tu ->
+                    val ext =
+                        buildExtension("Extension", null, holder = tu) { extNode ->
+                            newMethod("method1", holder = extNode, enterScope = true)
+                            newMethod("method2", holder = extNode, enterScope = true)
+                        }
 
-                val ext =
-                    buildExtension("Extension", null, holder = tu) { extNode ->
-                        newMethod("method1", holder = extNode, enterScope = true)
-                        newMethod("method2", holder = extNode, enterScope = true)
-                    }
+                    assertEquals(2, ext.declarations.size)
 
-                assertEquals(2, ext.declarations.size)
-
-                // Add another method directly
-                val method3 = newMethod("method3", enterScope = true)
-                ext.addDeclaration(method3)
-                assertEquals(3, ext.declarations.size)
-                assertTrue(ext.declarations.contains(method3))
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
+                    // Add another method directly
+                    val method3 = newMethod("method3", enterScope = true)
+                    ext.addDeclaration(method3)
+                    assertEquals(3, ext.declarations.size)
+                    assertTrue(ext.declarations.contains(method3))
+                }
             }
         }
     }

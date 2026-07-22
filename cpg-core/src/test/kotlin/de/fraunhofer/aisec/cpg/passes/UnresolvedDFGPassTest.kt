@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
@@ -153,139 +153,150 @@ class UnresolvedDFGPassTest {
                     )
                     .build()
             return testFrontend(config).build {
-                val tu = newTranslationUnit("DfgUnresolvedCalls.java")
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit("DfgUnresolvedCalls.java") { tu ->
+                    newRecord("DfgUnresolvedCalls", "class", holder = tu, enterScope = true) {
+                        record ->
+                        newField(
+                            "i",
+                            objectType("int"),
+                            modifiers = setOf("private"),
+                            holder = record,
+                        )
 
-                newRecord("DfgUnresolvedCalls", "class", holder = tu, enterScope = true) { record ->
-                    newField("i", objectType("int"), modifiers = setOf("private"), holder = record)
+                        newConstructor(record.name, record, holder = record, enterScope = true) { c
+                            ->
+                            c.receiver = newVariable("this", objectType("DfgUnresolvedCalls"))
+                            newParameter("i", objectType("int"), holder = c)
+                            c.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements +=
+                                        newAssign(
+                                            operatorCode = "=",
+                                            lhs =
+                                                listOf(newMemberAccess("i", newReference("this"))),
+                                            rhs = listOf(newReference("i")),
+                                        )
+                                    block.statements += newReturn { it.isImplicit = true }
+                                }
+                        }
 
-                    newConstructor(record.name, record, holder = record, enterScope = true) { c ->
-                        c.receiver = newVariable("this", objectType("DfgUnresolvedCalls"))
-                        newParameter("i", objectType("int"), holder = c)
-                        c.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements +=
-                                    newAssign(
-                                        operatorCode = "=",
-                                        lhs = listOf(newMemberAccess("i", newReference("this"))),
-                                        rhs = listOf(newReference("i")),
-                                    )
-                                block.statements += newReturn { it.isImplicit = true }
-                            }
-                    }
+                        newMethod(
+                            "knownFunction",
+                            recordDeclaration = record,
+                            holder = record,
+                            enterScope = true,
+                        ) { m ->
+                            m.returnTypes = listOf(objectType("int"))
+                            m.type = computeType(m)
+                            m.receiver = newVariable("this", objectType("DfgUnresolvedCalls"))
+                            newParameter("arg", objectType("int"), holder = m)
+                            m.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newReturn {
+                                        it.returnValue =
+                                            newBinaryOperator("+") {
+                                                it.lhs = newMemberAccess("i", newReference("this"))
+                                                it.rhs = newReference("arg")
+                                            }
+                                    }
+                                }
+                        }
 
-                    newMethod(
-                        "knownFunction",
-                        recordDeclaration = record,
-                        holder = record,
-                        enterScope = true,
-                    ) { m ->
-                        m.returnTypes = listOf(objectType("int"))
-                        m.type = computeType(m)
-                        m.receiver = newVariable("this", objectType("DfgUnresolvedCalls"))
-                        newParameter("arg", objectType("int"), holder = m)
-                        m.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newReturn {
-                                    it.returnValue =
-                                        newBinaryOperator("+") {
-                                            it.lhs = newMemberAccess("i", newReference("this"))
-                                            it.rhs = newReference("arg")
+                        // The main method
+                        newMethod(
+                            "main",
+                            recordDeclaration = record,
+                            holder = record,
+                            enterScope = true,
+                        ) { m ->
+                            m.type = computeType(m)
+                            m.isStatic = true
+                            newParameter("args", objectType("String[]"), holder = m)
+                            m.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { osDeclStmt ->
+                                        newVariable(
+                                            "os",
+                                            objectType("Optional", listOf(objectType("String"))),
+                                            holder = osDeclStmt,
+                                        ) {
+                                            it.initializer =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "getOptionalString",
+                                                        newReference("RandomClass"),
+                                                    ),
+                                                    true,
+                                                )
                                         }
-                                }
-                            }
-                    }
+                                    }
 
-                    // The main method
-                    newMethod(
-                        "main",
-                        recordDeclaration = record,
-                        holder = record,
-                        enterScope = true,
-                    ) { m ->
-                        m.type = computeType(m)
-                        m.isStatic = true
-                        newParameter("args", objectType("String[]"), holder = m)
-                        m.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { osDeclStmt ->
-                                    newVariable(
-                                        "os",
-                                        objectType("Optional", listOf(objectType("String"))),
-                                        holder = osDeclStmt,
-                                    ) {
-                                        it.initializer =
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "getOptionalString",
-                                                    newReference("RandomClass"),
-                                                ),
-                                                true,
-                                            )
+                                    block.statements += newDeclarationStatement { sDeclStmt ->
+                                        newVariable("s", objectType("String"), holder = sDeclStmt) {
+                                            it.initializer =
+                                                newMemberCall(
+                                                    newMemberAccess("get", newReference("os")),
+                                                    false,
+                                                )
+                                        }
+                                    }
+
+                                    block.statements += newDeclarationStatement { s2DeclStmt ->
+                                        newVariable(
+                                            "s2",
+                                            objectType("String"),
+                                            holder = s2DeclStmt,
+                                        ) {
+                                            it.initializer =
+                                                newMemberCall(
+                                                    newMemberAccess("get", newReference("os")),
+                                                    false,
+                                                ) { call ->
+                                                    call.arguments +=
+                                                        newLiteral(4, objectType("int"))
+                                                }
+                                        }
+                                    }
+
+                                    block.statements += newDeclarationStatement { ducDeclStmt ->
+                                        newVariable(
+                                            "duc",
+                                            objectType("DfgUnresolvedCalls"),
+                                            holder = ducDeclStmt,
+                                        ) {
+                                            it.initializer =
+                                                newNew().also { newExpr ->
+                                                    newExpr.initializer =
+                                                        newConstruction("DfgUnresolvedCalls") {
+                                                            construction ->
+                                                            construction.type =
+                                                                objectType("DfgUnresolvedCalls")
+                                                            construction.arguments +=
+                                                                newLiteral(3, objectType("int"))
+                                                        }
+                                                }
+                                        }
+                                    }
+
+                                    block.statements += newDeclarationStatement { iDeclStmt ->
+                                        newVariable("i", objectType("int"), holder = iDeclStmt) {
+                                            it.initializer =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "knownFunction",
+                                                        newReference("duc"),
+                                                    ),
+                                                    false,
+                                                ) { call ->
+                                                    call.arguments +=
+                                                        newLiteral(2, objectType("int"))
+                                                }
+                                        }
                                     }
                                 }
-
-                                block.statements += newDeclarationStatement { sDeclStmt ->
-                                    newVariable("s", objectType("String"), holder = sDeclStmt) {
-                                        it.initializer =
-                                            newMemberCall(
-                                                newMemberAccess("get", newReference("os")),
-                                                false,
-                                            )
-                                    }
-                                }
-
-                                block.statements += newDeclarationStatement { s2DeclStmt ->
-                                    newVariable("s2", objectType("String"), holder = s2DeclStmt) {
-                                        it.initializer =
-                                            newMemberCall(
-                                                newMemberAccess("get", newReference("os")),
-                                                false,
-                                            ) { call ->
-                                                call.arguments += newLiteral(4, objectType("int"))
-                                            }
-                                    }
-                                }
-
-                                block.statements += newDeclarationStatement { ducDeclStmt ->
-                                    newVariable(
-                                        "duc",
-                                        objectType("DfgUnresolvedCalls"),
-                                        holder = ducDeclStmt,
-                                    ) {
-                                        it.initializer =
-                                            newNew().also { newExpr ->
-                                                newExpr.initializer =
-                                                    newConstruction("DfgUnresolvedCalls") {
-                                                        construction ->
-                                                        construction.type =
-                                                            objectType("DfgUnresolvedCalls")
-                                                        construction.arguments +=
-                                                            newLiteral(3, objectType("int"))
-                                                    }
-                                            }
-                                    }
-                                }
-
-                                block.statements += newDeclarationStatement { iDeclStmt ->
-                                    newVariable("i", objectType("int"), holder = iDeclStmt) {
-                                        it.initializer =
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "knownFunction",
-                                                    newReference("duc"),
-                                                ),
-                                                false,
-                                            ) { call ->
-                                                call.arguments += newLiteral(2, objectType("int"))
-                                            }
-                                    }
-                                }
-                            }
+                        }
                     }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
         }
     }

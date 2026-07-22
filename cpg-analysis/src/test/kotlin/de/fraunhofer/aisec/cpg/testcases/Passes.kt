@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.testcases
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
@@ -44,877 +44,881 @@ class Passes {
                     .build()
         ) =
             testFrontend(config).build {
-                val tu = newTranslationUnit("Unreachability.java")
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit("Unreachability.java") { tu ->
+                    newInclude("kotlin.random.URandomKt", holder = tu)
 
-                newInclude("kotlin.random.URandomKt", holder = tu)
+                    newRecord("TestClass", "class", holder = tu, enterScope = true) { record ->
+                        newMethod("ifBothPossible", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
 
-                newRecord("TestClass", "class", holder = tu, enterScope = true) { record ->
-                    newMethod("ifBothPossible", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { yDecl ->
-                                    newVariable("y", objectType("int"), holder = yDecl) {
-                                        it.initializer = newLiteral(5, objectType("int"))
-                                    }
-                                }
-
-                                block.statements += newDeclarationStatement { xDecl ->
-                                    newVariable("x", objectType("int"), holder = xDecl) {
-                                        it.initializer =
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "nextUInt",
-                                                    newReference("URandomKt"),
-                                                ),
-                                                false,
-                                            )
-                                    }
-                                }
-
-                                block.statements += newIfElse { ifElse ->
-                                    ifElse.condition =
-                                        newBinaryOperator("<=") {
-                                            it.lhs = newReference("x")
-                                            it.rhs = newReference("y")
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { yDecl ->
+                                        newVariable("y", objectType("int"), holder = yDecl) {
+                                            it.initializer = newLiteral(5, objectType("int"))
                                         }
-                                    ifElse.thenStatement =
-                                        newBlock(enterScope = true) { thenBlock ->
-                                            thenBlock.statements +=
-                                                newUnaryOperator(
-                                                    "++",
-                                                    postfix = true,
-                                                    prefix = false,
-                                                ) {
-                                                    it.input = newReference("y")
-                                                }
-                                        }
-                                    ifElse.elseStatement =
-                                        newBlock(enterScope = true) { elseBlock ->
-                                            elseBlock.statements +=
-                                                newUnaryOperator(
-                                                    "--",
-                                                    postfix = true,
-                                                    prefix = false,
-                                                ) {
-                                                    it.input = newReference("y")
-                                                }
-                                        }
-                                }
-
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments += newReference("y")
                                     }
 
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("ifTrue", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { yDecl ->
-                                    newVariable("y", objectType("int"), holder = yDecl) {
-                                        it.initializer = newLiteral(6, objectType("int"))
-                                    }
-                                }
-
-                                block.statements += newDeclarationStatement { xDecl ->
-                                    newVariable("x", objectType("int"), holder = xDecl) {
-                                        it.initializer =
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "nextUInt",
-                                                    newReference("URandomKt"),
-                                                ),
-                                                false,
-                                            )
-                                    }
-                                }
-
-                                block.statements += newIfElse { ifElse ->
-                                    ifElse.condition = newLiteral(true, objectType("boolean"))
-                                    ifElse.thenStatement =
-                                        newBlock(enterScope = true) { thenBlock ->
-                                            thenBlock.statements +=
-                                                newUnaryOperator(
-                                                    "++",
-                                                    postfix = true,
-                                                    prefix = false,
-                                                ) {
-                                                    it.input = newReference("y")
-                                                }
-                                        }
-                                    ifElse.elseStatement =
-                                        newBlock(enterScope = true) { elseBlock ->
-                                            elseBlock.statements +=
-                                                newUnaryOperator(
-                                                    "--",
-                                                    postfix = true,
-                                                    prefix = false,
-                                                ) {
-                                                    it.input = newReference("y")
-                                                }
-                                        }
-                                }
-
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments += newReference("y")
-                                    }
-
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("ifFalse", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { yDecl ->
-                                    newVariable("y", objectType("int"), holder = yDecl) {
-                                        it.initializer = newLiteral(6, objectType("int"))
-                                    }
-                                }
-
-                                block.statements += newDeclarationStatement { xDecl ->
-                                    newVariable("x", objectType("int"), holder = xDecl) {
-                                        it.initializer =
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "nextUInt",
-                                                    newReference("URandomKt"),
-                                                ),
-                                                false,
-                                            )
-                                    }
-                                }
-
-                                block.statements += newIfElse { ifElse ->
-                                    ifElse.condition = newLiteral(false, objectType("boolean"))
-                                    ifElse.thenStatement =
-                                        newBlock(enterScope = true) { thenBlock ->
-                                            thenBlock.statements +=
-                                                newUnaryOperator(
-                                                    "++",
-                                                    postfix = true,
-                                                    prefix = false,
-                                                ) {
-                                                    it.input = newReference("y")
-                                                }
-                                        }
-                                    ifElse.elseStatement =
-                                        newBlock(enterScope = true) { elseBlock ->
-                                            elseBlock.statements +=
-                                                newUnaryOperator(
-                                                    "--",
-                                                    postfix = true,
-                                                    prefix = false,
-                                                ) {
-                                                    it.input = newReference("y")
-                                                }
-                                        }
-                                }
-
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments += newReference("y")
-                                    }
-
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("ifTrueComputed", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { yDecl ->
-                                    newVariable("y", objectType("int"), holder = yDecl) {
-                                        it.initializer = newLiteral(6, objectType("int"))
-                                    }
-                                }
-
-                                block.statements += newDeclarationStatement { xDecl ->
-                                    newVariable("x", objectType("int"), holder = xDecl) {
-                                        it.initializer =
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "nextUInt",
-                                                    newReference("URandomKt"),
-                                                ),
-                                                false,
-                                            )
-                                    }
-                                }
-
-                                block.statements += newIfElse { ifElse ->
-                                    ifElse.condition =
-                                        newBinaryOperator("<=") {
-                                            it.lhs = newReference("y")
-                                            it.rhs = newLiteral(9, objectType("int"))
-                                        }
-                                    ifElse.thenStatement =
-                                        newBlock(enterScope = true) { thenBlock ->
-                                            thenBlock.statements +=
-                                                newUnaryOperator(
-                                                    "++",
-                                                    postfix = true,
-                                                    prefix = false,
-                                                ) {
-                                                    it.input = newReference("y")
-                                                }
-                                        }
-                                    ifElse.elseStatement =
-                                        newBlock(enterScope = true) { elseBlock ->
-                                            elseBlock.statements +=
-                                                newUnaryOperator(
-                                                    "--",
-                                                    postfix = true,
-                                                    prefix = false,
-                                                ) {
-                                                    it.input = newReference("y")
-                                                }
-                                        }
-                                }
-
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments += newReference("y")
-                                    }
-
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("ifTrueComputedHard", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { zDecl ->
-                                    newVariable("z", objectType("int"), holder = zDecl) {
-                                        it.initializer = newLiteral(2, objectType("int"))
-                                    }
-                                }
-
-                                block.statements += newDeclarationStatement { yDecl ->
-                                    newVariable("y", objectType("int"), holder = yDecl) {
-                                        it.initializer = newReference("z")
-                                    }
-                                }
-
-                                block.statements += newDeclarationStatement { xDecl ->
-                                    newVariable("x", objectType("int"), holder = xDecl) {
-                                        it.initializer =
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "nextUInt",
-                                                    newReference("URandomKt"),
-                                                ),
-                                                false,
-                                            )
-                                    }
-                                }
-
-                                block.statements += newIfElse { ifElse ->
-                                    ifElse.condition =
-                                        newBinaryOperator("<=") {
-                                            it.lhs =
-                                                newBinaryOperator("+") { plus ->
-                                                    plus.lhs = newReference("y")
-                                                    plus.rhs = newReference("z")
-                                                }
-                                            it.rhs = newLiteral(9, objectType("int"))
-                                        }
-                                    ifElse.thenStatement =
-                                        newBlock(enterScope = true) { thenBlock ->
-                                            thenBlock.statements +=
-                                                newUnaryOperator(
-                                                    "++",
-                                                    postfix = true,
-                                                    prefix = false,
-                                                ) {
-                                                    it.input = newReference("y")
-                                                }
-                                        }
-                                    ifElse.elseStatement =
-                                        newBlock(enterScope = true) { elseBlock ->
-                                            elseBlock.statements +=
-                                                newUnaryOperator(
-                                                    "--",
-                                                    postfix = true,
-                                                    prefix = false,
-                                                ) {
-                                                    it.input = newReference("y")
-                                                }
-                                        }
-                                }
-
-                                block.statements +=
-                                    newAssign(
-                                        "=",
-                                        listOf(newReference("z")),
-                                        listOf(newLiteral(10, objectType("int"))),
-                                    )
-
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments += newReference("y")
-                                    }
-
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("ifFalseComputedHard", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { zDecl ->
-                                    newVariable("z", objectType("int"), holder = zDecl) {
-                                        it.initializer = newLiteral(5, objectType("int"))
-                                    }
-                                }
-
-                                block.statements += newDeclarationStatement { yDecl ->
-                                    newVariable("y", objectType("int"), holder = yDecl) {
-                                        it.initializer = newReference("z")
-                                    }
-                                }
-
-                                block.statements += newDeclarationStatement { xDecl ->
-                                    newVariable("x", objectType("int"), holder = xDecl) {
-                                        it.initializer =
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "nextUInt",
-                                                    newReference("URandomKt"),
-                                                ),
-                                                false,
-                                            )
-                                    }
-                                }
-
-                                block.statements += newIfElse { ifElse ->
-                                    ifElse.condition =
-                                        newBinaryOperator("<=") {
-                                            it.lhs =
-                                                newBinaryOperator("+") { plus ->
-                                                    plus.lhs = newReference("y")
-                                                    plus.rhs = newReference("z")
-                                                }
-                                            it.rhs = newLiteral(9, objectType("int"))
-                                        }
-                                    ifElse.thenStatement =
-                                        newBlock(enterScope = true) { thenBlock ->
-                                            thenBlock.statements +=
-                                                newUnaryOperator(
-                                                    "++",
-                                                    postfix = true,
-                                                    prefix = false,
-                                                ) {
-                                                    it.input = newReference("y")
-                                                }
-                                        }
-                                    ifElse.elseStatement =
-                                        newBlock(enterScope = true) { elseBlock ->
-                                            elseBlock.statements +=
-                                                newUnaryOperator(
-                                                    "--",
-                                                    postfix = true,
-                                                    prefix = false,
-                                                ) {
-                                                    it.input = newReference("y")
-                                                }
-                                        }
-                                }
-
-                                block.statements +=
-                                    newAssign(
-                                        "=",
-                                        listOf(newReference("z")),
-                                        listOf(newLiteral(3, objectType("int"))),
-                                    )
-
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments += newReference("y")
-                                    }
-
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("ifFalseComputed", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { yDecl ->
-                                    newVariable("y", objectType("int"), holder = yDecl) {
-                                        it.initializer = newLiteral(6, objectType("int"))
-                                    }
-                                }
-
-                                block.statements += newDeclarationStatement { xDecl ->
-                                    newVariable("x", objectType("int"), holder = xDecl) {
-                                        it.initializer =
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "nextUInt",
-                                                    newReference("URandomKt"),
-                                                ),
-                                                false,
-                                            )
-                                    }
-                                }
-
-                                block.statements += newIfElse { ifElse ->
-                                    ifElse.condition =
-                                        newBinaryOperator("<=") {
-                                            it.lhs = newReference("y")
-                                            it.rhs = newLiteral(-1, objectType("int"))
-                                        }
-                                    ifElse.thenStatement =
-                                        newBlock(enterScope = true) { thenBlock ->
-                                            thenBlock.statements +=
-                                                newUnaryOperator(
-                                                    "++",
-                                                    postfix = true,
-                                                    prefix = false,
-                                                ) {
-                                                    it.input = newReference("y")
-                                                }
-                                        }
-                                    ifElse.elseStatement =
-                                        newBlock(enterScope = true) { elseBlock ->
-                                            elseBlock.statements +=
-                                                newUnaryOperator(
-                                                    "--",
-                                                    postfix = true,
-                                                    prefix = false,
-                                                ) {
-                                                    it.input = newReference("y")
-                                                }
-                                        }
-                                }
-
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments += newReference("y")
-                                    }
-
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("whileTrueEndless", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { xDecl ->
-                                    newVariable("x", objectType("boolean"), holder = xDecl) {
-                                        it.initializer = newLiteral(true, objectType("boolean"))
-                                    }
-                                }
-
-                                block.statements +=
-                                    newWhile(enterScope = true) { w ->
-                                        w.condition = newReference("x")
-                                        w.statement = newBlock { loopBodyBlock ->
-                                            loopBodyBlock.statements +=
+                                    block.statements += newDeclarationStatement { xDecl ->
+                                        newVariable("x", objectType("int"), holder = xDecl) {
+                                            it.initializer =
                                                 newMemberCall(
                                                     newMemberAccess(
-                                                        "println",
-                                                        newMemberAccess(
-                                                            "out",
-                                                            newReference("System"),
-                                                        ),
+                                                        "nextUInt",
+                                                        newReference("URandomKt"),
                                                     ),
                                                     false,
-                                                ) {
-                                                    it.arguments +=
-                                                        newLiteral(
-                                                            "Cool loop",
-                                                            objectType("string"),
-                                                        )
-                                                }
-                                        }
-                                    }
-
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments +=
-                                            newLiteral("After cool loop", objectType("string"))
-                                    }
-
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("whileTrue", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { xDecl ->
-                                    newVariable("x", objectType("boolean"), holder = xDecl) {
-                                        it.initializer = newLiteral(true, objectType("boolean"))
-                                    }
-                                }
-
-                                block.statements +=
-                                    newWhile(enterScope = true) { w ->
-                                        w.condition = newReference("x")
-                                        w.statement = newBlock { loopBodyBlock ->
-                                            loopBodyBlock.statements +=
-                                                newMemberCall(
-                                                    newMemberAccess(
-                                                        "println",
-                                                        newMemberAccess(
-                                                            "out",
-                                                            newReference("System"),
-                                                        ),
-                                                    ),
-                                                    false,
-                                                ) {
-                                                    it.arguments +=
-                                                        newLiteral(
-                                                            "Cool loop",
-                                                            objectType("string"),
-                                                        )
-                                                }
-
-                                            loopBodyBlock.statements +=
-                                                newAssign(
-                                                    "=",
-                                                    listOf(newReference("x")),
-                                                    listOf(newLiteral(false, objectType("boolean"))),
                                                 )
                                         }
                                     }
 
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments +=
-                                            newLiteral("After cool loop", objectType("string"))
-                                    }
-
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("whileFalse", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements +=
-                                    newWhile(enterScope = true) { w ->
-                                        w.condition = newLiteral(false, objectType("boolean"))
-                                        w.statement = newBlock { loopBodyBlock ->
-                                            loopBodyBlock.statements +=
-                                                newMemberCall(
-                                                    newMemberAccess(
-                                                        "println",
-                                                        newMemberAccess(
-                                                            "out",
-                                                            newReference("System"),
-                                                        ),
-                                                    ),
-                                                    false,
-                                                ) {
-                                                    it.arguments +=
-                                                        newLiteral(
-                                                            "Cool loop",
-                                                            objectType("string"),
-                                                        )
-                                                }
-                                        }
-                                    }
-
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments +=
-                                            newLiteral("After cool loop", objectType("string"))
-                                    }
-
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("whileComputedTrue", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { xDecl ->
-                                    newVariable("x", objectType("boolean"), holder = xDecl) {
-                                        it.initializer = newLiteral(1, objectType("int"))
-                                    }
-                                }
-
-                                block.statements +=
-                                    newWhile(enterScope = true) { w ->
-                                        w.condition =
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition =
                                             newBinaryOperator("<=") {
                                                 it.lhs = newReference("x")
-                                                it.rhs = newLiteral(2, objectType("int"))
+                                                it.rhs = newReference("y")
                                             }
-                                        w.statement = newBlock { loopBodyBlock ->
-                                            loopBodyBlock.statements +=
-                                                newMemberCall(
-                                                    newMemberAccess(
-                                                        "println",
-                                                        newMemberAccess(
-                                                            "out",
-                                                            newReference("System"),
-                                                        ),
-                                                    ),
-                                                    false,
-                                                ) {
-                                                    it.arguments +=
-                                                        newLiteral(
-                                                            "Cool loop",
-                                                            objectType("string"),
-                                                        )
-                                                }
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newUnaryOperator(
+                                                        "++",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input = newReference("y")
+                                                    }
+                                            }
+                                        ifElse.elseStatement =
+                                            newBlock(enterScope = true) { elseBlock ->
+                                                elseBlock.statements +=
+                                                    newUnaryOperator(
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input = newReference("y")
+                                                    }
+                                            }
+                                    }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("y")
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("ifTrue", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { yDecl ->
+                                        newVariable("y", objectType("int"), holder = yDecl) {
+                                            it.initializer = newLiteral(6, objectType("int"))
                                         }
                                     }
 
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments +=
-                                            newLiteral("After cool loop", objectType("string"))
-                                    }
-
-                                block.statements += newReturn()
-                            }
-                    }
-
-                    newMethod("whileComputedFalse", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { xDecl ->
-                                    newVariable("x", objectType("boolean"), holder = xDecl) {
-                                        it.initializer = newLiteral(1, objectType("int"))
-                                    }
-                                }
-
-                                block.statements +=
-                                    newWhile(enterScope = true) { w ->
-                                        w.condition =
-                                            newBinaryOperator(">") {
-                                                it.lhs = newReference("x")
-                                                it.rhs = newLiteral(3, objectType("int"))
-                                            }
-                                        w.statement = newBlock { loopBodyBlock ->
-                                            loopBodyBlock.statements +=
+                                    block.statements += newDeclarationStatement { xDecl ->
+                                        newVariable("x", objectType("int"), holder = xDecl) {
+                                            it.initializer =
                                                 newMemberCall(
                                                     newMemberAccess(
-                                                        "println",
-                                                        newMemberAccess(
-                                                            "out",
-                                                            newReference("System"),
-                                                        ),
+                                                        "nextUInt",
+                                                        newReference("URandomKt"),
                                                     ),
                                                     false,
-                                                ) {
-                                                    it.arguments +=
-                                                        newLiteral(
-                                                            "Cool loop",
-                                                            objectType("string"),
-                                                        )
-                                                }
+                                                )
                                         }
                                     }
 
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments +=
-                                            newLiteral("After cool loop", objectType("string"))
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition = newLiteral(true, objectType("boolean"))
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newUnaryOperator(
+                                                        "++",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input = newReference("y")
+                                                    }
+                                            }
+                                        ifElse.elseStatement =
+                                            newBlock(enterScope = true) { elseBlock ->
+                                                elseBlock.statements +=
+                                                    newUnaryOperator(
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input = newReference("y")
+                                                    }
+                                            }
                                     }
 
-                                block.statements += newReturn()
-                            }
-                    }
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("y")
+                                        }
 
-                    newMethod("whileUnknown", holder = record, enterScope = true) { method ->
-                        method.returnTypes = listOf(incompleteType())
-                        method.type = computeType(method)
-
-                        method.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { yDecl ->
-                                    newVariable("y", objectType("int"), holder = yDecl) {
-                                        it.initializer =
-                                            newMemberCall(
-                                                newMemberAccess(
-                                                    "nextUInt",
-                                                    newReference("URandomKt"),
-                                                ),
-                                                false,
-                                            )
-                                    }
+                                    block.statements += newReturn()
                                 }
+                        }
 
-                                block.statements +=
-                                    newWhile(enterScope = true) { w ->
-                                        w.condition =
+                        newMethod("ifFalse", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { yDecl ->
+                                        newVariable("y", objectType("int"), holder = yDecl) {
+                                            it.initializer = newLiteral(6, objectType("int"))
+                                        }
+                                    }
+
+                                    block.statements += newDeclarationStatement { xDecl ->
+                                        newVariable("x", objectType("int"), holder = xDecl) {
+                                            it.initializer =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "nextUInt",
+                                                        newReference("URandomKt"),
+                                                    ),
+                                                    false,
+                                                )
+                                        }
+                                    }
+
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition = newLiteral(false, objectType("boolean"))
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newUnaryOperator(
+                                                        "++",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input = newReference("y")
+                                                    }
+                                            }
+                                        ifElse.elseStatement =
+                                            newBlock(enterScope = true) { elseBlock ->
+                                                elseBlock.statements +=
+                                                    newUnaryOperator(
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input = newReference("y")
+                                                    }
+                                            }
+                                    }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("y")
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("ifTrueComputed", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { yDecl ->
+                                        newVariable("y", objectType("int"), holder = yDecl) {
+                                            it.initializer = newLiteral(6, objectType("int"))
+                                        }
+                                    }
+
+                                    block.statements += newDeclarationStatement { xDecl ->
+                                        newVariable("x", objectType("int"), holder = xDecl) {
+                                            it.initializer =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "nextUInt",
+                                                        newReference("URandomKt"),
+                                                    ),
+                                                    false,
+                                                )
+                                        }
+                                    }
+
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition =
                                             newBinaryOperator("<=") {
                                                 it.lhs = newReference("y")
-                                                it.rhs = newLiteral(2, objectType("int"))
+                                                it.rhs = newLiteral(9, objectType("int"))
                                             }
-                                        w.statement = newBlock { loopBodyBlock ->
-                                            loopBodyBlock.statements +=
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newUnaryOperator(
+                                                        "++",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input = newReference("y")
+                                                    }
+                                            }
+                                        ifElse.elseStatement =
+                                            newBlock(enterScope = true) { elseBlock ->
+                                                elseBlock.statements +=
+                                                    newUnaryOperator(
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input = newReference("y")
+                                                    }
+                                            }
+                                    }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("y")
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("ifTrueComputedHard", holder = record, enterScope = true) { method
+                            ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { zDecl ->
+                                        newVariable("z", objectType("int"), holder = zDecl) {
+                                            it.initializer = newLiteral(2, objectType("int"))
+                                        }
+                                    }
+
+                                    block.statements += newDeclarationStatement { yDecl ->
+                                        newVariable("y", objectType("int"), holder = yDecl) {
+                                            it.initializer = newReference("z")
+                                        }
+                                    }
+
+                                    block.statements += newDeclarationStatement { xDecl ->
+                                        newVariable("x", objectType("int"), holder = xDecl) {
+                                            it.initializer =
                                                 newMemberCall(
                                                     newMemberAccess(
-                                                        "println",
-                                                        newMemberAccess(
-                                                            "out",
-                                                            newReference("System"),
-                                                        ),
+                                                        "nextUInt",
+                                                        newReference("URandomKt"),
                                                     ),
                                                     false,
-                                                ) {
-                                                    it.arguments +=
-                                                        newLiteral(
-                                                            "Cool loop",
-                                                            objectType("string"),
-                                                        )
-                                                }
-
-                                            loopBodyBlock.statements +=
-                                                newAssign(
-                                                    "=",
-                                                    listOf(newReference("y")),
-                                                    listOf(
-                                                        newMemberCall(
-                                                            newMemberAccess(
-                                                                "nextUInt",
-                                                                newReference("URandomKt"),
-                                                            ),
-                                                            false,
-                                                        )
-                                                    ),
                                                 )
                                         }
                                     }
 
-                                block.statements +=
-                                    newMemberCall(
-                                        newMemberAccess(
-                                            "println",
-                                            newMemberAccess("out", newReference("System")),
-                                        ),
-                                        false,
-                                    ) {
-                                        it.arguments +=
-                                            newLiteral("After cool loop", objectType("string"))
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition =
+                                            newBinaryOperator("<=") {
+                                                it.lhs =
+                                                    newBinaryOperator("+") { plus ->
+                                                        plus.lhs = newReference("y")
+                                                        plus.rhs = newReference("z")
+                                                    }
+                                                it.rhs = newLiteral(9, objectType("int"))
+                                            }
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newUnaryOperator(
+                                                        "++",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input = newReference("y")
+                                                    }
+                                            }
+                                        ifElse.elseStatement =
+                                            newBlock(enterScope = true) { elseBlock ->
+                                                elseBlock.statements +=
+                                                    newUnaryOperator(
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input = newReference("y")
+                                                    }
+                                            }
                                     }
 
-                                block.statements += newReturn()
-                            }
+                                    block.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("z")),
+                                            listOf(newLiteral(10, objectType("int"))),
+                                        )
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("y")
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("ifFalseComputedHard", holder = record, enterScope = true) {
+                            method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { zDecl ->
+                                        newVariable("z", objectType("int"), holder = zDecl) {
+                                            it.initializer = newLiteral(5, objectType("int"))
+                                        }
+                                    }
+
+                                    block.statements += newDeclarationStatement { yDecl ->
+                                        newVariable("y", objectType("int"), holder = yDecl) {
+                                            it.initializer = newReference("z")
+                                        }
+                                    }
+
+                                    block.statements += newDeclarationStatement { xDecl ->
+                                        newVariable("x", objectType("int"), holder = xDecl) {
+                                            it.initializer =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "nextUInt",
+                                                        newReference("URandomKt"),
+                                                    ),
+                                                    false,
+                                                )
+                                        }
+                                    }
+
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition =
+                                            newBinaryOperator("<=") {
+                                                it.lhs =
+                                                    newBinaryOperator("+") { plus ->
+                                                        plus.lhs = newReference("y")
+                                                        plus.rhs = newReference("z")
+                                                    }
+                                                it.rhs = newLiteral(9, objectType("int"))
+                                            }
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newUnaryOperator(
+                                                        "++",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input = newReference("y")
+                                                    }
+                                            }
+                                        ifElse.elseStatement =
+                                            newBlock(enterScope = true) { elseBlock ->
+                                                elseBlock.statements +=
+                                                    newUnaryOperator(
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input = newReference("y")
+                                                    }
+                                            }
+                                    }
+
+                                    block.statements +=
+                                        newAssign(
+                                            "=",
+                                            listOf(newReference("z")),
+                                            listOf(newLiteral(3, objectType("int"))),
+                                        )
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("y")
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("ifFalseComputed", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { yDecl ->
+                                        newVariable("y", objectType("int"), holder = yDecl) {
+                                            it.initializer = newLiteral(6, objectType("int"))
+                                        }
+                                    }
+
+                                    block.statements += newDeclarationStatement { xDecl ->
+                                        newVariable("x", objectType("int"), holder = xDecl) {
+                                            it.initializer =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "nextUInt",
+                                                        newReference("URandomKt"),
+                                                    ),
+                                                    false,
+                                                )
+                                        }
+                                    }
+
+                                    block.statements += newIfElse { ifElse ->
+                                        ifElse.condition =
+                                            newBinaryOperator("<=") {
+                                                it.lhs = newReference("y")
+                                                it.rhs = newLiteral(-1, objectType("int"))
+                                            }
+                                        ifElse.thenStatement =
+                                            newBlock(enterScope = true) { thenBlock ->
+                                                thenBlock.statements +=
+                                                    newUnaryOperator(
+                                                        "++",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input = newReference("y")
+                                                    }
+                                            }
+                                        ifElse.elseStatement =
+                                            newBlock(enterScope = true) { elseBlock ->
+                                                elseBlock.statements +=
+                                                    newUnaryOperator(
+                                                        "--",
+                                                        postfix = true,
+                                                        prefix = false,
+                                                    ) {
+                                                        it.input = newReference("y")
+                                                    }
+                                            }
+                                    }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments += newReference("y")
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("whileTrueEndless", holder = record, enterScope = true) { method
+                            ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { xDecl ->
+                                        newVariable("x", objectType("boolean"), holder = xDecl) {
+                                            it.initializer = newLiteral(true, objectType("boolean"))
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newWhile(enterScope = true) { w ->
+                                            w.condition = newReference("x")
+                                            w.statement = newBlock { loopBodyBlock ->
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "println",
+                                                            newMemberAccess(
+                                                                "out",
+                                                                newReference("System"),
+                                                            ),
+                                                        ),
+                                                        false,
+                                                    ) {
+                                                        it.arguments +=
+                                                            newLiteral(
+                                                                "Cool loop",
+                                                                objectType("string"),
+                                                            )
+                                                    }
+                                            }
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments +=
+                                                newLiteral("After cool loop", objectType("string"))
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("whileTrue", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { xDecl ->
+                                        newVariable("x", objectType("boolean"), holder = xDecl) {
+                                            it.initializer = newLiteral(true, objectType("boolean"))
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newWhile(enterScope = true) { w ->
+                                            w.condition = newReference("x")
+                                            w.statement = newBlock { loopBodyBlock ->
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "println",
+                                                            newMemberAccess(
+                                                                "out",
+                                                                newReference("System"),
+                                                            ),
+                                                        ),
+                                                        false,
+                                                    ) {
+                                                        it.arguments +=
+                                                            newLiteral(
+                                                                "Cool loop",
+                                                                objectType("string"),
+                                                            )
+                                                    }
+
+                                                loopBodyBlock.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("x")),
+                                                        listOf(
+                                                            newLiteral(false, objectType("boolean"))
+                                                        ),
+                                                    )
+                                            }
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments +=
+                                                newLiteral("After cool loop", objectType("string"))
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("whileFalse", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements +=
+                                        newWhile(enterScope = true) { w ->
+                                            w.condition = newLiteral(false, objectType("boolean"))
+                                            w.statement = newBlock { loopBodyBlock ->
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "println",
+                                                            newMemberAccess(
+                                                                "out",
+                                                                newReference("System"),
+                                                            ),
+                                                        ),
+                                                        false,
+                                                    ) {
+                                                        it.arguments +=
+                                                            newLiteral(
+                                                                "Cool loop",
+                                                                objectType("string"),
+                                                            )
+                                                    }
+                                            }
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments +=
+                                                newLiteral("After cool loop", objectType("string"))
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("whileComputedTrue", holder = record, enterScope = true) { method
+                            ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { xDecl ->
+                                        newVariable("x", objectType("boolean"), holder = xDecl) {
+                                            it.initializer = newLiteral(1, objectType("int"))
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newWhile(enterScope = true) { w ->
+                                            w.condition =
+                                                newBinaryOperator("<=") {
+                                                    it.lhs = newReference("x")
+                                                    it.rhs = newLiteral(2, objectType("int"))
+                                                }
+                                            w.statement = newBlock { loopBodyBlock ->
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "println",
+                                                            newMemberAccess(
+                                                                "out",
+                                                                newReference("System"),
+                                                            ),
+                                                        ),
+                                                        false,
+                                                    ) {
+                                                        it.arguments +=
+                                                            newLiteral(
+                                                                "Cool loop",
+                                                                objectType("string"),
+                                                            )
+                                                    }
+                                            }
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments +=
+                                                newLiteral("After cool loop", objectType("string"))
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("whileComputedFalse", holder = record, enterScope = true) { method
+                            ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { xDecl ->
+                                        newVariable("x", objectType("boolean"), holder = xDecl) {
+                                            it.initializer = newLiteral(1, objectType("int"))
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newWhile(enterScope = true) { w ->
+                                            w.condition =
+                                                newBinaryOperator(">") {
+                                                    it.lhs = newReference("x")
+                                                    it.rhs = newLiteral(3, objectType("int"))
+                                                }
+                                            w.statement = newBlock { loopBodyBlock ->
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "println",
+                                                            newMemberAccess(
+                                                                "out",
+                                                                newReference("System"),
+                                                            ),
+                                                        ),
+                                                        false,
+                                                    ) {
+                                                        it.arguments +=
+                                                            newLiteral(
+                                                                "Cool loop",
+                                                                objectType("string"),
+                                                            )
+                                                    }
+                                            }
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments +=
+                                                newLiteral("After cool loop", objectType("string"))
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
+
+                        newMethod("whileUnknown", holder = record, enterScope = true) { method ->
+                            method.returnTypes = listOf(incompleteType())
+                            method.type = computeType(method)
+
+                            method.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { yDecl ->
+                                        newVariable("y", objectType("int"), holder = yDecl) {
+                                            it.initializer =
+                                                newMemberCall(
+                                                    newMemberAccess(
+                                                        "nextUInt",
+                                                        newReference("URandomKt"),
+                                                    ),
+                                                    false,
+                                                )
+                                        }
+                                    }
+
+                                    block.statements +=
+                                        newWhile(enterScope = true) { w ->
+                                            w.condition =
+                                                newBinaryOperator("<=") {
+                                                    it.lhs = newReference("y")
+                                                    it.rhs = newLiteral(2, objectType("int"))
+                                                }
+                                            w.statement = newBlock { loopBodyBlock ->
+                                                loopBodyBlock.statements +=
+                                                    newMemberCall(
+                                                        newMemberAccess(
+                                                            "println",
+                                                            newMemberAccess(
+                                                                "out",
+                                                                newReference("System"),
+                                                            ),
+                                                        ),
+                                                        false,
+                                                    ) {
+                                                        it.arguments +=
+                                                            newLiteral(
+                                                                "Cool loop",
+                                                                objectType("string"),
+                                                            )
+                                                    }
+
+                                                loopBodyBlock.statements +=
+                                                    newAssign(
+                                                        "=",
+                                                        listOf(newReference("y")),
+                                                        listOf(
+                                                            newMemberCall(
+                                                                newMemberAccess(
+                                                                    "nextUInt",
+                                                                    newReference("URandomKt"),
+                                                                ),
+                                                                false,
+                                                            )
+                                                        ),
+                                                    )
+                                            }
+                                        }
+
+                                    block.statements +=
+                                        newMemberCall(
+                                            newMemberAccess(
+                                                "println",
+                                                newMemberAccess("out", newReference("System")),
+                                            ),
+                                            false,
+                                        ) {
+                                            it.arguments +=
+                                                newLiteral("After cool loop", objectType("string"))
+                                        }
+
+                                    block.statements += newReturn()
+                                }
+                        }
                     }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
     }
 }

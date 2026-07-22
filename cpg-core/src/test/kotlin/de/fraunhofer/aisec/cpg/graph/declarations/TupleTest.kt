@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.translationResult
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
@@ -54,33 +54,32 @@ class TupleTest {
             )
         ) {
             val result = build {
-                val tu = newTranslationUnit(Node.EMPTY_NAME)
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit { tu ->
+                    newFunction("func", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("MyClass"), objectType("error"))
+                        func.type = computeType(func)
+                    }
 
-                newFunction("func", holder = tu, enterScope = true) { func ->
-                    func.returnTypes = listOf(objectType("MyClass"), objectType("error"))
-                    func.type = computeType(func)
+                    val tuple =
+                        newTuple(
+                            listOf(newVariable("a"), newVariable("b")),
+                            newCall(newReference("func")),
+                        )
+                    scopeManager.addDeclaration(tuple)
+                    tu.statements += newDeclarationStatement { it.singleDeclaration = tuple }
+
+                    tuple.elements.forEach { scopeManager.addDeclaration(it) }
+
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                block.statements +=
+                                    newCall(newReference("print")) {
+                                        it.arguments += newReference("a")
+                                    }
+                            }
+                    }
                 }
-
-                val tuple =
-                    newTuple(
-                        listOf(newVariable("a"), newVariable("b")),
-                        newCall(newReference("func")),
-                    )
-                scopeManager.addDeclaration(tuple)
-                tu.statements += newDeclarationStatement { it.singleDeclaration = tuple }
-
-                tuple.elements.forEach { scopeManager.addDeclaration(it) }
-
-                newFunction("main", holder = tu, enterScope = true) { func ->
-                    func.body =
-                        newBlock(enterScope = true) { block ->
-                            block.statements +=
-                                newCall(newReference("print")) { it.arguments += newReference("a") }
-                        }
-                }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
             val main = result.functions["main"]
@@ -141,33 +140,34 @@ class TupleTest {
             )
         ) {
             val result = build {
-                val tu = newTranslationUnit(Node.EMPTY_NAME)
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit { tu ->
+                    newFunction("func", holder = tu, enterScope = true) { func ->
+                        func.returnTypes = listOf(objectType("MyClass"), objectType("error"))
+                        func.type = computeType(func)
+                    }
 
-                newFunction("func", holder = tu, enterScope = true) { func ->
-                    func.returnTypes = listOf(objectType("MyClass"), objectType("error"))
-                    func.type = computeType(func)
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.body =
+                            newBlock(enterScope = true) { block ->
+                                val tuple =
+                                    newTuple(
+                                        listOf(newVariable("a"), newVariable("b")),
+                                        newCall(newReference("func")),
+                                    )
+                                scopeManager.addDeclaration(tuple)
+                                block.statements += newDeclarationStatement {
+                                    it.declarations += tuple
+                                }
+
+                                tuple.elements.forEach { scopeManager.addDeclaration(it) }
+
+                                block.statements +=
+                                    newCall(newReference("print")) {
+                                        it.arguments += newReference("a")
+                                    }
+                            }
+                    }
                 }
-
-                newFunction("main", holder = tu, enterScope = true) { func ->
-                    func.body =
-                        newBlock(enterScope = true) { block ->
-                            val tuple =
-                                newTuple(
-                                    listOf(newVariable("a"), newVariable("b")),
-                                    newCall(newReference("func")),
-                                )
-                            scopeManager.addDeclaration(tuple)
-                            block.statements += newDeclarationStatement { it.declarations += tuple }
-
-                            tuple.elements.forEach { scopeManager.addDeclaration(it) }
-
-                            block.statements +=
-                                newCall(newReference("print")) { it.arguments += newReference("a") }
-                        }
-                }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
             val main = result.functions["main"]

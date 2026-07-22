@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.translationResult
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import kotlin.test.Test
@@ -44,32 +44,21 @@ class StatementBuilderTest {
             )
         val result =
             frontend.build {
-                translationResult {
-                    var tu =
-                        with(frontend) {
-                            var tu = newTranslationUnit("main.file")
-                            scopeManager.resetToGlobal(tu)
+                singleTranslationUnit("main.file") { tu ->
+                    newVariable("a", holder = tu)
 
-                            newVariable("a", holder = tu)
+                    newFunction("main", holder = tu, enterScope = true) { func ->
+                        func.body =
+                            newBlock(enterScope = true) { body ->
+                                body.statements += newDeclarationStatement { stmt ->
+                                    newVariable("a", holder = stmt)
+                                }
 
-                            newFunction("main", holder = tu, enterScope = true) { func ->
-                                func.body =
-                                    newBlock(enterScope = true) { body ->
-                                        body.statements += newDeclarationStatement { stmt ->
-                                            newVariable("a", holder = stmt)
-                                        }
-
-                                        body.statements +=
-                                            newLookupScope(listOf("a"), scopeManager.globalScope)
-                                        body.statements += newReference("a")
-                                    }
+                                body.statements +=
+                                    newLookupScope(listOf("a"), scopeManager.globalScope)
+                                body.statements += newReference("a")
                             }
-
-                            scopeManager.leaveScope(tu)
-                            tu
-                        }
-
-                    components.firstOrNull()?.translationUnits?.add(tu)
+                    }
                 }
             }
 

@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithShortCircuit
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
@@ -178,34 +178,31 @@ class ControlDependenceGraphPassTest {
                         .build()
                 )
                 .build {
-                    val tu = newTranslationUnit("if.cpp")
-                    scopeManager.resetToGlobal(tu)
+                    singleTranslationUnit("if.cpp") { tu ->
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("int"))
+                            func.type = computeType(func)
 
-                    newFunction("main", holder = tu, enterScope = true) { func ->
-                        func.returnTypes = listOf(objectType("int"))
-                        func.type = computeType(func)
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements +=
+                                        newBinaryOperator("&&") {
+                                            it.lhs = newCall(newReference("foo"))
+                                            it.rhs = newCall(newReference("bar"))
+                                        }
 
-                        func.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements +=
-                                    newBinaryOperator("&&") {
-                                        it.lhs = newCall(newReference("foo"))
-                                        it.rhs = newCall(newReference("bar"))
+                                    block.statements +=
+                                        newBinaryOperator("||") {
+                                            it.lhs = newCall(newReference("baz"))
+                                            it.rhs = newCall(newReference("quux"))
+                                        }
+
+                                    block.statements += newReturn {
+                                        it.returnValue = newLiteral(1, objectType("int"))
                                     }
-
-                                block.statements +=
-                                    newBinaryOperator("||") {
-                                        it.lhs = newCall(newReference("baz"))
-                                        it.rhs = newCall(newReference("quux"))
-                                    }
-
-                                block.statements += newReturn {
-                                    it.returnValue = newLiteral(1, objectType("int"))
                                 }
-                            }
+                        }
                     }
-
-                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
                 }
 
         fun getIfTest() =
@@ -219,84 +216,82 @@ class ControlDependenceGraphPassTest {
                 .build { buildIfTestBody("if.cpp") }
 
         private fun LanguageFrontend<*, *>.buildIfTestBody(tuName: String): TranslationResult {
-            val tu = newTranslationUnit(tuName)
-            scopeManager.resetToGlobal(tu)
+            return singleTranslationUnit(tuName) { tu ->
+                newFunction("main", holder = tu, enterScope = true) { func ->
+                    func.returnTypes = listOf(objectType("int"))
+                    func.type = computeType(func)
 
-            newFunction("main", holder = tu, enterScope = true) { func ->
-                func.returnTypes = listOf(objectType("int"))
-                func.type = computeType(func)
-
-                func.body =
-                    newBlock(enterScope = true) { block ->
-                        block.statements += newDeclarationStatement { declStmt ->
-                            newVariable("i", objectType("int"), holder = declStmt) {
-                                it.initializer = newLiteral(0, objectType("int"))
-                            }
-                        }
-
-                        block.statements += newIfElse { ifElse ->
-                            ifElse.condition =
-                                newBinaryOperator("<") {
-                                    it.lhs = newReference("i")
-                                    it.rhs = newLiteral(1, objectType("int"))
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newDeclarationStatement { declStmt ->
+                                newVariable("i", objectType("int"), holder = declStmt) {
+                                    it.initializer = newLiteral(0, objectType("int"))
                                 }
-                            ifElse.thenStatement =
-                                newBlock(enterScope = true) { thenBlock ->
-                                    thenBlock.statements +=
-                                        newAssign(
-                                            operatorCode = "=",
-                                            lhs = listOf(newReference("i")),
-                                            rhs = listOf(newLiteral(1, objectType("int"))),
-                                        )
-
-                                    thenBlock.statements +=
-                                        newCall(newReference("printf")) {
-                                            it.arguments += newLiteral("0\n", objectType("string"))
-                                        }
-                                }
-                        }
-
-                        block.statements +=
-                            newCall(newReference("printf")) {
-                                it.arguments += newLiteral("1\n", objectType("string"))
                             }
 
-                        block.statements += newIfElse { ifElse ->
-                            ifElse.condition =
-                                newBinaryOperator(">") {
-                                    it.lhs = newReference("i")
-                                    it.rhs = newLiteral(0, objectType("int"))
-                                }
-                            ifElse.thenStatement =
-                                newBlock(enterScope = true) { thenBlock ->
-                                    thenBlock.statements +=
-                                        newAssign(
-                                            operatorCode = "=",
-                                            lhs = listOf(newReference("i")),
-                                            rhs = listOf(newLiteral(2, objectType("int"))),
-                                        )
-                                }
-                            ifElse.elseStatement =
-                                newBlock(enterScope = true) { elseBlock ->
-                                    elseBlock.statements +=
-                                        newAssign(
-                                            operatorCode = "=",
-                                            lhs = listOf(newReference("i")),
-                                            rhs = listOf(newLiteral(3, objectType("int"))),
-                                        )
-                                }
-                        }
+                            block.statements += newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator("<") {
+                                        it.lhs = newReference("i")
+                                        it.rhs = newLiteral(1, objectType("int"))
+                                    }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        thenBlock.statements +=
+                                            newAssign(
+                                                operatorCode = "=",
+                                                lhs = listOf(newReference("i")),
+                                                rhs = listOf(newLiteral(1, objectType("int"))),
+                                            )
 
-                        block.statements +=
-                            newCall(newReference("printf")) {
-                                it.arguments += newLiteral("2\n", objectType("string"))
+                                        thenBlock.statements +=
+                                            newCall(newReference("printf")) {
+                                                it.arguments +=
+                                                    newLiteral("0\n", objectType("string"))
+                                            }
+                                    }
                             }
 
-                        block.statements += newReturn { it.returnValue = newReference("i") }
-                    }
+                            block.statements +=
+                                newCall(newReference("printf")) {
+                                    it.arguments += newLiteral("1\n", objectType("string"))
+                                }
+
+                            block.statements += newIfElse { ifElse ->
+                                ifElse.condition =
+                                    newBinaryOperator(">") {
+                                        it.lhs = newReference("i")
+                                        it.rhs = newLiteral(0, objectType("int"))
+                                    }
+                                ifElse.thenStatement =
+                                    newBlock(enterScope = true) { thenBlock ->
+                                        thenBlock.statements +=
+                                            newAssign(
+                                                operatorCode = "=",
+                                                lhs = listOf(newReference("i")),
+                                                rhs = listOf(newLiteral(2, objectType("int"))),
+                                            )
+                                    }
+                                ifElse.elseStatement =
+                                    newBlock(enterScope = true) { elseBlock ->
+                                        elseBlock.statements +=
+                                            newAssign(
+                                                operatorCode = "=",
+                                                lhs = listOf(newReference("i")),
+                                                rhs = listOf(newLiteral(3, objectType("int"))),
+                                            )
+                                    }
+                            }
+
+                            block.statements +=
+                                newCall(newReference("printf")) {
+                                    it.arguments += newLiteral("2\n", objectType("string"))
+                                }
+
+                            block.statements += newReturn { it.returnValue = newReference("i") }
+                        }
+                }
             }
-
-            return translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
         }
 
         fun getForEachTest() =
@@ -308,55 +303,55 @@ class ControlDependenceGraphPassTest {
                         .build()
                 )
                 .build {
-                    val tu = newTranslationUnit("forEach.cpp")
-                    scopeManager.resetToGlobal(tu)
+                    singleTranslationUnit("forEach.cpp") { tu ->
+                        newFunction("main", holder = tu, enterScope = true) { func ->
+                            func.returnTypes = listOf(objectType("int"))
+                            func.type = computeType(func)
 
-                    newFunction("main", holder = tu, enterScope = true) { func ->
-                        func.returnTypes = listOf(objectType("int"))
-                        func.type = computeType(func)
-
-                        func.body =
-                            newBlock(enterScope = true) { block ->
-                                block.statements += newDeclarationStatement { declStmt ->
-                                    newVariable("i", objectType("int"), holder = declStmt) {
-                                        it.initializer = newLiteral(0, objectType("int"))
-                                    }
-                                }
-
-                                block.statements += newForEach { forEach ->
-                                    forEach.variable = newDeclarationStatement { loopVarDeclStmt ->
-                                        newVariable(
-                                            "loopVar",
-                                            objectType("string"),
-                                            holder = loopVarDeclStmt,
-                                        )
-                                    }
-                                    val magicCall = newCall(newReference("magicFunction"))
-                                    forEach.iterable = magicCall
-                                    forEach.statement =
-                                        newBlock(enterScope = true) { loopBody ->
-                                            loopBody.statements +=
-                                                newCall(newReference("printf")) {
-                                                    it.arguments +=
-                                                        newLiteral(
-                                                            "loop: \${}\n",
-                                                            objectType("string"),
-                                                        )
-                                                    it.arguments += newReference("loopVar")
-                                                }
+                            func.body =
+                                newBlock(enterScope = true) { block ->
+                                    block.statements += newDeclarationStatement { declStmt ->
+                                        newVariable("i", objectType("int"), holder = declStmt) {
+                                            it.initializer = newLiteral(0, objectType("int"))
                                         }
-                                }
-
-                                block.statements +=
-                                    newCall(newReference("printf")) {
-                                        it.arguments += newLiteral("1\n", objectType("string"))
                                     }
 
-                                block.statements += newReturn { it.returnValue = newReference("i") }
-                            }
-                    }
+                                    block.statements += newForEach { forEach ->
+                                        forEach.variable =
+                                            newDeclarationStatement { loopVarDeclStmt ->
+                                                newVariable(
+                                                    "loopVar",
+                                                    objectType("string"),
+                                                    holder = loopVarDeclStmt,
+                                                )
+                                            }
+                                        val magicCall = newCall(newReference("magicFunction"))
+                                        forEach.iterable = magicCall
+                                        forEach.statement =
+                                            newBlock(enterScope = true) { loopBody ->
+                                                loopBody.statements +=
+                                                    newCall(newReference("printf")) {
+                                                        it.arguments +=
+                                                            newLiteral(
+                                                                "loop: \${}\n",
+                                                                objectType("string"),
+                                                            )
+                                                        it.arguments += newReference("loopVar")
+                                                    }
+                                            }
+                                    }
 
-                    translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
+                                    block.statements +=
+                                        newCall(newReference("printf")) {
+                                            it.arguments += newLiteral("1\n", objectType("string"))
+                                        }
+
+                                    block.statements += newReturn {
+                                        it.returnValue = newReference("i")
+                                    }
+                                }
+                        }
+                    }
                 }
 
         fun getTimeoutTest() =

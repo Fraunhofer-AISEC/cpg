@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
-import de.fraunhofer.aisec.cpg.frontends.translationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.applyWithScope
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
@@ -55,24 +55,21 @@ internal class ExtensionsTest : BaseTest() {
                 .build()
     ) =
         testFrontend(config).build {
-            val tu = newTranslationUnit("foo.bar")
-            scopeManager.resetToGlobal(tu)
-
-            newFunction("foo", holder = tu, enterScope = true) { func ->
-                func.body =
-                    newBlock(enterScope = true) { block ->
-                        block.statements += newDeclarationStatement { declStmt ->
-                            newProblemDeclaration(
-                                problem = problemDeclText,
-                                problemType = ProblemNode.ProblemType.TRANSLATION,
-                                holder = declStmt,
-                            )
+            singleTranslationUnit("foo.bar") { tu ->
+                newFunction("foo", holder = tu, enterScope = true) { func ->
+                    func.body =
+                        newBlock(enterScope = true) { block ->
+                            block.statements += newDeclarationStatement { declStmt ->
+                                newProblemDeclaration(
+                                    problem = problemDeclText,
+                                    problemType = ProblemNode.ProblemType.TRANSLATION,
+                                    holder = declStmt,
+                                )
+                            }
                         }
-                    }
-                func.additionalProblems += ProblemExpression(problemExprText)
+                    func.additionalProblems += ProblemExpression(problemExprText)
+                }
             }
-
-            translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
         }
 
     @Test

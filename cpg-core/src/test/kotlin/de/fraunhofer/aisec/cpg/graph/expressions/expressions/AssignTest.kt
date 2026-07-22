@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.expressions.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.translationResult
+import de.fraunhofer.aisec.cpg.frontends.singleTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
@@ -60,38 +60,39 @@ class AssignTest {
     fun propagateTuple() {
         with(TestLanguageFrontend()) {
             val result = build {
-                val tu = newTranslationUnit(Node.EMPTY_NAME)
-                scopeManager.resetToGlobal(tu)
+                singleTranslationUnit { tu ->
 
-                // Evaluated at the outer (translation-unit) scope, before "func"'s own scope is
-                // entered -- these types get compared later against freshly-created objectType(...)
-                // instances via assertContains, and Type.equals compares scope by reference.
-                val funcReturnTypes = listOf(objectType("MyClass"), objectType("error"))
-                val func =
-                    newFunction("func", holder = tu, enterScope = true) { f ->
-                        f.returnTypes = funcReturnTypes
-                        f.type = computeType(f)
-                    }
+                    // Evaluated at the outer (translation-unit) scope, before "func"'s own scope is
+                    // entered -- these types get compared later against freshly-created
+                    // objectType(...)
+                    // instances via assertContains, and Type.equals compares scope by reference.
+                    val funcReturnTypes = listOf(objectType("MyClass"), objectType("error"))
+                    val func =
+                        newFunction("func", holder = tu, enterScope = true) { f ->
+                            f.returnTypes = funcReturnTypes
+                            f.type = computeType(f)
+                        }
 
-                newFunction("main", holder = tu, enterScope = true) { main ->
-                    main.type = computeType(main)
+                    newFunction("main", holder = tu, enterScope = true) { main ->
+                        main.type = computeType(main)
 
-                    main.body = newBlock {
-                        // Assignment from "func()" to "a" and "err".
-                        it.statements +=
-                            newAssign(
-                                lhs = listOf(newReference("a"), newReference("err")),
-                                rhs =
-                                    listOf(
-                                        newCall(
-                                            newReference("func").also { ref -> ref.refersTo = func }
-                                        )
-                                    ),
-                            )
+                        main.body = newBlock {
+                            // Assignment from "func()" to "a" and "err".
+                            it.statements +=
+                                newAssign(
+                                    lhs = listOf(newReference("a"), newReference("err")),
+                                    rhs =
+                                        listOf(
+                                            newCall(
+                                                newReference("func").also { ref ->
+                                                    ref.refersTo = func
+                                                }
+                                            )
+                                        ),
+                                )
+                        }
                     }
                 }
-
-                translationResult { components.firstOrNull()?.translationUnits?.add(tu) }
             }
 
             val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
