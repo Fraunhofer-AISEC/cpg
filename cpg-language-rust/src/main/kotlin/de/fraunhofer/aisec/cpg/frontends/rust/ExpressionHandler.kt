@@ -1,0 +1,969 @@
+/*
+ * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.frontends.rust
+
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
+import de.fraunhofer.aisec.cpg.assumptions.assume
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.expressions.*
+import de.fraunhofer.aisec.cpg.graph.newBreak
+import de.fraunhofer.aisec.cpg.graph.newCase
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
+import java.math.BigInteger
+import uniffi.rustast.RsArrayExpr
+import uniffi.rustast.RsAst
+import uniffi.rustast.RsBinExpr
+import uniffi.rustast.RsBlockExpr
+import uniffi.rustast.RsBreakExpr
+import uniffi.rustast.RsCallExpr
+import uniffi.rustast.RsCastExpr
+import uniffi.rustast.RsClosureExpr
+import uniffi.rustast.RsContinueExpr
+import uniffi.rustast.RsExpr
+import uniffi.rustast.RsFieldExpr
+import uniffi.rustast.RsForExpr
+import uniffi.rustast.RsIfExpr
+import uniffi.rustast.RsIndexExpr
+import uniffi.rustast.RsItem
+import uniffi.rustast.RsLetExpr
+import uniffi.rustast.RsLiteral
+import uniffi.rustast.RsLiteralType
+import uniffi.rustast.RsLoopExpr
+import uniffi.rustast.RsMacroExpr
+import uniffi.rustast.RsMatchArm
+import uniffi.rustast.RsMatchExpr
+import uniffi.rustast.RsMethodCallExpr
+import uniffi.rustast.RsParenExpr
+import uniffi.rustast.RsPathExpr
+import uniffi.rustast.RsPrefixExpr
+import uniffi.rustast.RsRangeExpr
+import uniffi.rustast.RsRecordExpr
+import uniffi.rustast.RsRefExpr
+import uniffi.rustast.RsReturnExpr
+import uniffi.rustast.RsTryExpr
+import uniffi.rustast.RsTupleExpr
+import uniffi.rustast.RsUnderscoreExpr
+import uniffi.rustast.RsWhileExpr
+
+class ExpressionHandler(frontend: RustLanguageFrontend) :
+    RustHandler<Expression, RsAst.RustExpr>(::ProblemExpression, frontend) {
+
+    override fun handleNode(node: RsAst.RustExpr): Expression {
+        val unwrapped = node.v1
+        return handleNode(unwrapped)
+    }
+
+    fun handleNode(node: RsExpr): Expression {
+        return when (node) {
+            is RsExpr.BlockExpr -> handleBlockExpr(node.v1)
+            is RsExpr.Literal -> handleLiteral(node.v1)
+            is RsExpr.CallExpr -> handleCallExpr(node.v1)
+            is RsExpr.MethodCallExpr -> handleMethodCallExpr(node.v1)
+            is RsExpr.MacroExpr -> handleMacroExpr(node.v1)
+            is RsExpr.PathExpr -> handlePathExpr(node.v1)
+            is RsExpr.BinExpr -> handleBinExpr(node.v1)
+            is RsExpr.PrefixExpr -> handlePrefixExpr(node.v1)
+            is RsExpr.ParenExpr -> handleParenExpr(node.v1)
+            is RsExpr.RecordExpr -> handleRecordExpr(node.v1)
+            is RsExpr.IfExpr -> handleIfExpr(node.v1)
+            is RsExpr.LetExpr -> handleLetExpr(node.v1)
+            is RsExpr.WhileExpr -> handleWhileExpr(node.v1)
+            is RsExpr.ForExpr -> handleForExpr(node.v1)
+            is RsExpr.LoopExpr -> handleLoopExpr(node.v1)
+            is RsExpr.RangeExpr -> handleRangeExpr(node.v1)
+            is RsExpr.FieldExpr -> handleFieldExpr(node.v1)
+            is RsExpr.BreakExpr -> handleBreakExpr(node.v1)
+            is RsExpr.ContinueExpr -> handleContinueExpr(node.v1)
+            is RsExpr.CastExpr -> handleCastExpr(node.v1)
+            is RsExpr.IndexExpr -> handleIndexExpr(node.v1)
+            is RsExpr.RefExpr -> handleRefExpr(node.v1)
+            is RsExpr.ArrayExpr -> handleArrayExpr(node.v1)
+            is RsExpr.TupleExpr -> handleTupleExpr(node.v1)
+            is RsExpr.MatchExpr -> handleMatchExpr(node.v1)
+            is RsExpr.UnderscoreExpr -> handleUnderscoreExpr(node.v1)
+            is RsExpr.ReturnExpr -> handleReturnExpr(node.v1)
+            is RsExpr.TryExpr -> handleTryExpr(node.v1)
+            is RsExpr.ClosureExpr -> handleClosureExpr(node.v1)
+
+            else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
+        }
+    }
+
+    fun handleBlockExpr(blockExpr: RsBlockExpr): Expression {
+
+        val block = newBlock(RsAst.RustExpr(RsExpr.BlockExpr(blockExpr)))
+
+        frontend.scopeManager.enterScope(block)
+
+        for (stmt in blockExpr.stmts) {
+            block.statements += frontend.statementHandler.handle(RsAst.RustStmt(stmt))
+        }
+
+        blockExpr.tailExpr.getOrNull(0)?.let {
+            block.statements += frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        frontend.scopeManager.leaveScope(block)
+        return block.also { it.usedAsExpression = true }
+    }
+
+    fun handleLiteral(literal: RsLiteral): Expression {
+        val stringValue = literal.astNode.text
+        val raw = RsAst.RustExpr(RsExpr.Literal(literal))
+
+        return when (literal.literalType) {
+            RsLiteralType.CHAR_L ->
+                newLiteral(
+                    stringValue.removePrefix("'").removeSuffix("'")[0],
+                    language.builtInTypes["char"] ?: unknownType(),
+                    raw,
+                )
+            RsLiteralType.STRING_L ->
+                newLiteral(
+                    stringValue.removePrefix("\"").removeSuffix("\""),
+                    language.builtInTypes["str"] ?: unknownType(),
+                    raw,
+                )
+            RsLiteralType.BYTE_L ->
+                newLiteral(
+                    parseRustByteLiteral(stringValue.removePrefix("b'").removeSuffix("'")),
+                    language.builtInTypes["u8"] ?: unknownType(),
+                    raw,
+                )
+            RsLiteralType.C_STRING_L ->
+                newLiteral(
+                    stringValue.removePrefix("c").removeSuffix("'"),
+                    objectType("CString"),
+                    raw,
+                )
+            RsLiteralType.INT_NUMBER_L -> buildIntType(stringValue, raw)
+            RsLiteralType.BYTE_STRING_L ->
+                newLiteral(
+                    stringValue.removePrefix("b").removeSuffix("'"),
+                    language.builtInTypes["u8"] ?: unknownType().array(),
+                    raw,
+                )
+            RsLiteralType.FLOAT_NUMBER_L ->
+                newLiteral(
+                    stringValue.substringBefore("f").toFloat(),
+                    (if (stringValue.endsWith("f32")) language.builtInTypes["f32"]
+                    else language.builtInTypes["f32"]) ?: unknownType(),
+                    raw,
+                )
+            RsLiteralType.UNKNOWN_L ->
+                when (stringValue) {
+                    "true" -> newLiteral(true, language.builtInTypes["bool"] ?: unknownType(), raw)
+                    "false" ->
+                        newLiteral(false, language.builtInTypes["bool"] ?: unknownType(), raw)
+                    else ->
+                        newLiteral(stringValue, language.builtInTypes["str"] ?: unknownType(), raw)
+                }
+        }
+    }
+
+    private val escapes =
+        mapOf(
+            "\\n" to '\n',
+            "\\r" to '\r',
+            "\\t" to '\t',
+            "\\0" to '\u0000',
+            "\\'" to '\'',
+            "\\\"" to '"',
+            "\\\\" to '\\',
+        )
+
+    fun parseRustByteLiteral(content: String): Int =
+        when {
+            content.startsWith("\\x") -> content.substring(2).toInt(16)
+
+            content.startsWith("\\") ->
+                escapes[content]?.code ?: error("Unsupported escape: $content")
+
+            else -> content.single().code
+        }
+
+    fun buildIntType(literal: String, raw: Any): Literal<*> {
+        val suffixes =
+            listOf(
+                "isize",
+                "usize",
+                "i128",
+                "u128",
+                "i64",
+                "u64",
+                "i32",
+                "u32",
+                "i16",
+                "u16",
+                "i8",
+                "u8",
+            )
+
+        val suffixStart = literal.indexOfFirst { it == 'u' || it == 'i' }
+        val core = if (suffixStart == -1) literal else literal.substring(0, suffixStart)
+        // Strip separators
+        val clean = core.replace("_", "")
+
+        val (digits, radix) =
+            when {
+                clean.startsWith("0x") -> clean.substring(2) to 16
+                clean.startsWith("0o") -> clean.substring(2) to 8
+                clean.startsWith("0b") -> clean.substring(2) to 2
+                else -> clean to 10
+            }
+
+        val value = digits.toBigInteger(radix)
+
+        // Here we have an explicit suffix
+        for (suffix in suffixes) {
+            if (literal.endsWith(suffix)) {
+                return newLiteral(
+                    value.toInt(),
+                    language.builtInTypes[suffix] ?: unknownType(),
+                    raw,
+                )
+            }
+        }
+
+        return when {
+            value <= BigInteger.valueOf(Byte.MAX_VALUE.toLong()) ->
+                newLiteral(value.toInt(), language.builtInTypes["i8"] ?: unknownType(), raw)
+            value <= BigInteger.valueOf(Short.MAX_VALUE.toLong()) ->
+                newLiteral(value.toInt(), language.builtInTypes["i16"] ?: unknownType(), raw)
+            value <= BigInteger.valueOf(Int.MAX_VALUE.toLong()) ->
+                newLiteral(value.toInt(), language.builtInTypes["i32"] ?: unknownType(), raw)
+            value <= BigInteger.valueOf(Long.MAX_VALUE) ->
+                newLiteral(value.toInt(), language.builtInTypes["i64"] ?: unknownType(), raw)
+            value.bitLength() <= 127 ->
+                newLiteral(value.toInt(), language.builtInTypes["i128"] ?: unknownType(), raw)
+            else -> newLiteral(value, unknownType(), raw)
+        }
+    }
+
+    fun handleCallExpr(callExpr: RsCallExpr): Call {
+
+        val callee: Expression? = callExpr.expr.getOrNull(0)?.let { handleNode(it) }
+
+        val call = newCall(callee = callee, rawNode = RsAst.RustExpr(RsExpr.CallExpr(callExpr)))
+
+        for (arg in callExpr.arguments) {
+            call.arguments += handleNode(arg)
+        }
+
+        return call
+    }
+
+    fun handleMethodCallExpr(methodCallExpr: RsMethodCallExpr): MemberCall {
+
+        val callee: Expression? =
+            methodCallExpr.receiver.firstOrNull()?.let {
+                val base = handleNode(it)
+
+                methodCallExpr.nameRef?.let { call ->
+                    newMemberAccess(call.text, base, rawNode = RsAst.RustExpr(RsExpr.NameRef(call)))
+                }
+            }
+
+        val method =
+            newMemberCall(
+                callee = callee,
+                rawNode = RsAst.RustExpr(RsExpr.MethodCallExpr(methodCallExpr)),
+            )
+
+        for (arg in methodCallExpr.arguments) {
+            method.arguments += handleNode(arg)
+        }
+
+        return method
+    }
+
+    fun handleMacroExpr(macroExpr: RsMacroExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.MacroExpr(macroExpr))
+        macroExpr.macroCall?.let {
+            val base =
+                it.path?.segment?.nameRef?.let {
+                    newReference(it.text, rawNode = RsAst.RustExpr(RsExpr.NameRef(it)))
+                }
+            val call = newCall(callee = base, rawNode = raw)
+            call.arguments += newLiteral(it.macroString)
+            return call
+        }
+
+        return newProblemExpression(
+            problem = "MacroExpression does not contain Macro Call",
+            rawNode = raw,
+        )
+    }
+
+    fun handlePathExpr(pathExpr: RsPathExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.PathExpr(pathExpr))
+
+        pathExpr.path?.let { rsPath ->
+            return newReference(
+                frontend.handleKeywordsInNames(frontend.handlePathForRef(rsPath) ?: newName("")),
+                rawNode = raw,
+            )
+        }
+
+        return newProblemExpression(
+            problem = "PathExpression does not contain reference to a name",
+            rawNode = raw,
+        )
+    }
+
+    fun handleRefExpr(refExpr: RsRefExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.RefExpr(refExpr))
+
+        refExpr.expr.firstOrNull()?.let {
+            val subExpr = handleNode(it)
+
+            // We for now do not handle const and mut modifiers as they have no direct consequence
+            // in control or data flow.
+            // They are relevant to whether code is compilable, and therefore we may need to include
+            // it as the type.
+            return if (refExpr.isRef)
+                newUnaryOperator(operatorCode = "&", postfix = false, prefix = true, rawNode = raw)
+                    .also { unaryOp -> unaryOp.input = subExpr }
+            else subExpr
+        }
+
+        return newProblemExpression(
+            problem = "Reference expressions are not supported yet",
+            rawNode = raw,
+        )
+    }
+
+    fun handlePrefixExpr(prefixExpr: RsPrefixExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.PrefixExpr(prefixExpr))
+        return newUnaryOperator(prefixExpr.operator, postfix = false, prefix = true, rawNode = raw)
+            .also {
+                it.input =
+                    frontend.expressionHandler.handle(RsAst.RustExpr(prefixExpr.expr.first()))
+            }
+    }
+
+    fun handleBinExpr(binExpr: RsBinExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.BinExpr(binExpr))
+        if (binExpr.expressions.size == 2) {
+            val lhs = frontend.expressionHandler.handle(RsAst.RustExpr(binExpr.expressions.first()))
+            val rhs = frontend.expressionHandler.handle(RsAst.RustExpr(binExpr.expressions.last()))
+            if (
+                binExpr.operator in language.compoundAssignmentOperators ||
+                    binExpr.operator in language.simpleAssignmentOperators
+            ) {
+                return newAssign(binExpr.operator, listOf(lhs), listOf(rhs), raw)
+            }
+
+            return newBinaryOperator(binExpr.operator, raw).also {
+                it.lhs = lhs
+                it.rhs = rhs
+            }
+        } else if (binExpr.expressions.size == 1) {
+            return newUnaryOperator(
+                    binExpr.operator,
+                    postfix = false,
+                    prefix = false,
+                    rawNode = raw,
+                )
+                .also {
+                    it.input =
+                        frontend.expressionHandler.handle(
+                            RsAst.RustExpr(binExpr.expressions.first())
+                        )
+                }
+        }
+
+        return newProblemExpression(
+            problem =
+                "Operator based expression has an incorrect amount of ${binExpr.expressions} operators",
+            rawNode = raw,
+        )
+    }
+
+    fun handleIfExpr(ifExpr: RsIfExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.IfExpr(ifExpr))
+        val ifElse = newIfElse(raw)
+        frontend.scopeManager.enterScope(ifElse)
+
+        // Depending on whether the first expression is a let expression we want fo fill condition
+        // or condition declaration
+        ifExpr.expressions.first().let {
+            val condExpr = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            if (condExpr is DeclarationStatement) {
+                // There should only be one declaration inside a let of an if
+                ifElse.conditionDeclaration = condExpr.declarations.first()
+            } else {
+                ifElse.condition = condExpr
+            }
+        }
+
+        ifExpr.expressions.getOrNull(1)?.let {
+            ifElse.thenStatement = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        ifExpr.expressions.getOrNull(2)?.let {
+            ifElse.elseStatement = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        frontend.scopeManager.leaveScope(ifElse)
+        return ifElse.also { it.usedAsExpression = true }
+    }
+
+    fun handleLetExpr(letExpr: RsLetExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.LetExpr(letExpr))
+
+        // for us, a let expression is an assigment with a deconstruction
+
+        val assign: Assign =
+            newAssign(
+                operatorCode = "=",
+                lhs =
+                    letExpr.pat.firstOrNull()?.let {
+                        listOf(frontend.patternHandler.handle(RsAst.RustPat(it)))
+                    } ?: emptyList(),
+                rhs =
+                    letExpr.expr.firstOrNull()?.let {
+                        listOf(frontend.expressionHandler.handle(RsAst.RustExpr(it)))
+                    } ?: emptyList(),
+                rawNode = raw,
+            )
+
+        assign.usedAsExpression = true
+
+        return assign
+    }
+
+    fun handleWhileExpr(whileExpr: RsWhileExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.WhileExpr(whileExpr))
+
+        val whileExpression = newWhile(raw)
+
+        frontend.scopeManager.enterScope(whileExpression)
+
+        whileExpr.expressions.first().let {
+            val condExpr = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            if (condExpr is DeclarationStatement) {
+                // There should only be one declaration inside a let of an if
+                whileExpression.conditionDeclaration = condExpr.declarations.first()
+            } else {
+                whileExpression.condition = condExpr
+            }
+        }
+
+        whileExpr.expressions.getOrNull(1)?.let {
+            whileExpression.statement = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        frontend.scopeManager.leaveScope(whileExpression)
+
+        whileExpression.usedAsExpression = true
+
+        return whileExpression.also { it.usedAsExpression = true }
+    }
+
+    fun handleLoopExpr(loopExpr: RsLoopExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.LoopExpr(loopExpr))
+        val whileExpression = newWhile(raw)
+
+        frontend.scopeManager.enterScope(whileExpression)
+
+        whileExpression.condition =
+            newLiteral(true, language.builtInTypes["bool"] ?: unknownType(), raw).also {
+                it.isImplicit = true
+            }
+
+        loopExpr.body.firstOrNull()?.let {
+            whileExpression.statement = frontend.expressionHandler.handleBlockExpr(it)
+        }
+
+        frontend.scopeManager.leaveScope(whileExpression)
+
+        whileExpression.usedAsExpression = true
+
+        return whileExpression.also { it.usedAsExpression = true }
+    }
+
+    fun handleForExpr(forExpr: RsForExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ForExpr(forExpr))
+        val forEach = newForEach(rawNode = raw)
+        frontend.scopeManager.enterScope(forEach)
+
+        val variable =
+            forExpr.pat?.let { frontend.patternHandler.handle(RsAst.RustPat(it)) }
+                ?: newProblemExpression("Variable pattern is null")
+
+        forExpr.expressions.first().let {
+            val iterable = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            forEach.iterable = iterable
+        }
+
+        forExpr.expressions.getOrNull(1)?.let {
+            forEach.statement = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        forEach.variable = variable
+
+        frontend.scopeManager.leaveScope(forEach)
+
+        forEach.usedAsExpression = true
+
+        return forEach.also { it.usedAsExpression = true }
+    }
+
+    fun handleBreakExpr(breakExpr: RsBreakExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.BreakExpr(breakExpr))
+
+        val breakExpression = newBreak(raw)
+
+        breakExpr.lifetime?.let { breakExpression.label = it.name }
+
+        breakExpr.expr.firstOrNull()?.let {
+            breakExpression.expr = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            breakExpression.usedAsExpression = true
+        }
+
+        return breakExpression
+    }
+
+    fun handleContinueExpr(continueExpr: RsContinueExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ContinueExpr(continueExpr))
+
+        val continueExpression = newContinue(raw)
+
+        continueExpr.lifetime?.let { continueExpression.label = it.name }
+
+        return continueExpression
+    }
+
+    fun handleRangeExpr(rangeExpr: RsRangeExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.RangeExpr(rangeExpr))
+        val range = newRange(rawNode = raw)
+
+        rangeExpr.expressions.getOrNull(0)?.let {
+            range.floor = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        rangeExpr.expressions.getOrNull(1)?.let {
+            range.ceiling = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        range.operatorCode = rangeExpr.operator
+        return range
+    }
+
+    fun handleFieldExpr(fieldExpr: RsFieldExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.FieldExpr(fieldExpr))
+
+        fieldExpr.expr.first().let {
+            val base = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+            fieldExpr.nameRef?.let { nameRef ->
+                return newMemberAccess(name = nameRef.text, base = base, rawNode = raw)
+            }
+        }
+
+        return newProblemExpression(
+            problem = "FieldExpression does not contain a base expression or a name reference",
+            rawNode = raw,
+        )
+    }
+
+    fun handleCastExpr(castExpr: RsCastExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.CastExpr(castExpr))
+
+        val input = frontend.expressionHandler.handle(RsAst.RustExpr(castExpr.expr.first()))
+
+        val type = castExpr.ty.firstOrNull()?.let { frontend.typeOf(it) } ?: unknownType()
+
+        return newCast(raw).also {
+            it.expression = input
+            it.castType = type
+        }
+    }
+
+    fun handleIndexExpr(indexExpr: RsIndexExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.IndexExpr(indexExpr))
+
+        if (indexExpr.expressions.size >= 2) {
+            return newSubscription(rawNode = raw).also { subscription ->
+                indexExpr.expressions.getOrNull(0)?.let {
+                    subscription.arrayExpression =
+                        frontend.expressionHandler.handle(RsAst.RustExpr(it))
+                }
+
+                indexExpr.expressions.getOrNull(1)?.let {
+                    subscription.subscriptExpression =
+                        frontend.expressionHandler.handle(RsAst.RustExpr(it))
+                }
+            }
+        }
+
+        return newProblemExpression(
+            problem = "Index expressions was not parsed with two ore more expressions.",
+            rawNode = raw,
+        )
+    }
+
+    fun handleArrayExpr(arrayExpr: RsArrayExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ArrayExpr(arrayExpr))
+
+        val arrayConstruction =
+            newArrayConstruction(rawNode = raw).also { arrayConstruction ->
+                val initializer = newInitializerList(rawNode = raw)
+                for (expr in arrayExpr.expressions) {
+                    initializer.initializers +=
+                        frontend.expressionHandler.handle(RsAst.RustExpr(expr))
+                }
+                arrayConstruction.initializer = initializer
+            }
+
+        if (arrayExpr.repeating) {
+            arrayConstruction.assume(
+                assumptionType = AssumptionType.DataFlowAssumption,
+                "Using the repetition expression as value in the array model a direct DF although it is an indirect DF.",
+                arrayConstruction,
+            )
+        }
+
+        return arrayConstruction
+    }
+
+    fun handleRecordExpr(recordExpr: RsRecordExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.RecordExpr(recordExpr))
+
+        val t = recordExpr.path?.let { frontend.typeOf(it.astNode.text) } ?: unknownType()
+
+        // Todo Look if we can replace this with an initializer list as there is no effective
+        // constructor call
+        val construction = newConstruction(rawNode = raw)
+        construction.type = t
+
+        val refName = "null"
+
+        // We add this first, such that dfg handling then properly captures overwriting variables
+        recordExpr.spread.firstOrNull()?.let {
+            construction.addArgument(
+                newAssign(
+                    lhs = listOf(newReference(refName)),
+                    rhs = listOf(handle(RsAst.RustExpr(it))),
+                    rawNode = RsAst.RustExpr(it),
+                )
+            )
+        }
+
+        recordExpr.fields.forEach { field ->
+            val rawField = RsAst.RustExpr(RsExpr.RecordExprField(field))
+            field.expr.firstOrNull()?.let { expr ->
+                val value = handle(RsAst.RustExpr(expr))
+
+                val member =
+                    field.name?.let {
+                        newMemberAccess(it.text, newReference(refName), rawNode = rawField)
+                    }
+                        ?: newMemberAccess(
+                            value.toString(),
+                            newReference(refName),
+                            rawNode = rawField,
+                        )
+
+                construction.addArgument(
+                    newAssign(lhs = listOf(member), rhs = listOf(value), rawNode = rawField).also {
+                        it.usedAsExpression = true
+                    }
+                )
+            }
+        }
+
+        return construction
+    }
+
+    fun handleTupleExpr(tupleExpr: RsTupleExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.TupleExpr(tupleExpr))
+
+        val tupleConstruction = newInitializerList(rawNode = raw)
+
+        tupleExpr.exprs.forEach { expr ->
+            tupleConstruction.initializers += handle(RsAst.RustExpr(expr))
+        }
+
+        return tupleConstruction
+    }
+
+    fun handleReturnExpr(returnExpr: RsReturnExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ReturnExpr(returnExpr))
+        val ret = newReturn(raw)
+        returnExpr.expr.firstOrNull()?.let {
+            ret.returnValue = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+        return ret
+    }
+
+    fun handleMatchExpr(matchExpr: RsMatchExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.MatchExpr(matchExpr))
+
+        // Get the scrutinee (the value being matched)
+        val scrutinee =
+            matchExpr.expr.firstOrNull()?.let { handleNode(it) }
+                ?: return newProblemExpression(
+                    problem = "Match expression does not contain a scrutinee",
+                    rawNode = raw,
+                )
+
+        // Create the switch statement
+        val switchStatement =
+            newSwitch(rawNode = raw)
+                .assume(
+                    assumptionType = AssumptionType.ControlFlowAssumption,
+                    "Modeling match as a switch leads to an overapproximation of EOG paths as switch fallthrough can lead to guards being evaluated that would fail at the pattern matching, i.e. case expression.",
+                )
+        switchStatement.selector = scrutinee
+
+        frontend.scopeManager.enterScope(switchStatement)
+
+        // Create a block to hold all case statements
+        val caseBlock = newBlock(raw)
+        caseBlock.usedAsExpression = true
+
+        // Process each match arm
+        for (arm in matchExpr.arms) {
+            caseBlock.statements += handleMatchArm(arm)
+        }
+
+        switchStatement.statement = caseBlock
+
+        frontend.scopeManager.leaveScope(switchStatement)
+
+        switchStatement.usedAsExpression = true
+
+        return switchStatement
+    }
+
+    fun handleUnderscoreExpr(underscoreExpr: RsUnderscoreExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.UnderscoreExpr(underscoreExpr))
+        return newEmpty(raw).also { it.usedAsExpression = true }
+    }
+
+    fun handleParenExpr(parenExpr: RsParenExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ParenExpr(parenExpr))
+
+        parenExpr.expr.firstOrNull()?.let {
+            return handleNode(it)
+        }
+        return newEmpty(raw).also { it.usedAsExpression = true }
+    }
+
+    fun handleTryExpr(tryExpr: RsTryExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.TryExpr(tryExpr))
+        tryExpr.expr.firstOrNull()?.let {
+            // Here we translate a try expression to:
+            // match expr { Ok(val) => val, Err(err) => err }
+            // This does not fully depict the structure it is translated to as this depends on the
+            // implementation
+            // of the try trait, but is sufficient to modell the same EOG and DFG
+
+            // We model the try operator as a function call, as it is basically syntactic sugar for
+            // a match on the result
+            return newSwitch(rawNode = raw).also { switch ->
+                switch.selector = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+                frontend.scopeManager.enterScope(switch)
+
+                // Create a block to hold two case statements
+                val caseBlock = newBlock(raw)
+                caseBlock.usedAsExpression = true
+
+                caseBlock.statements +=
+                    newCase(raw).also { value ->
+                        value.caseExpression =
+                            newObjectDeconstruction(raw).also { obj ->
+                                obj.type = frontend.typeOf("Ok")
+                                obj.components +=
+                                    newDeclarationStatement(rawNode = raw).also { declaration ->
+                                        declaration.usedAsExpression = true
+                                        val variable = newVariable(rawNode = raw, name = "val")
+                                        declaration.declarations += variable
+
+                                        variable.initializer =
+                                            newEmpty(raw).also { it.usedAsExpression = true }
+                                        frontend.scopeManager.addDeclaration(variable)
+                                    }
+                            }
+                    }
+
+                val breakStatement = newBreak()
+                breakStatement.expr = newReference("val")
+                breakStatement.usedAsExpression = true
+                caseBlock.statements += breakStatement
+
+                caseBlock.statements +=
+                    newCase(raw).also { value ->
+                        value.caseExpression =
+                            newObjectDeconstruction(raw).also { obj ->
+                                obj.type = frontend.typeOf("Err")
+                                obj.components +=
+                                    newDeclarationStatement(rawNode = raw).also { declaration ->
+                                        declaration.usedAsExpression = true
+                                        val variable = newVariable(rawNode = raw, name = "err")
+                                        declaration.declarations += variable
+                                        variable.initializer =
+                                            newEmpty(raw).also { it.usedAsExpression = true }
+                                        frontend.scopeManager.addDeclaration(variable)
+                                    }
+                            }
+                    }
+                caseBlock.statements +=
+                    newReturn(raw).also { ret -> ret.returnValue = newReference("err") }
+
+                switch.statement = caseBlock
+
+                frontend.scopeManager.leaveScope(switch)
+
+                switch.usedAsExpression = true
+            }
+        }
+
+        return newProblemExpression(
+            problem = "Try expressions are not supported yet",
+            rawNode = raw,
+        )
+    }
+
+    private fun handleMatchArm(arm: RsMatchArm): List<Expression> {
+        val raw = RsAst.RustExpr(RsExpr.MatchArm(arm))
+        // Deconstruct the pattern and create a case statement
+        val pattern =
+            arm.pat.firstOrNull()?.let { frontend.patternHandler.handleNode(it) }
+                ?: return listOf(
+                    newProblemExpression(
+                        problem = "Match arm does not contain a pattern",
+                        rawNode = raw,
+                    )
+                )
+
+        val caseStatement =
+            newCase(rawNode = arm.pat.firstOrNull()?.let { RsAst.RustPat(it) } ?: raw)
+        caseStatement.caseExpression = pattern
+
+        var caseExpressions = mutableListOf<Expression>(caseStatement)
+
+        // Get the match arm expression
+        val armExpr =
+            arm.expr.firstOrNull()?.let { handleNode(it) }
+                ?: return listOf(
+                    newProblemExpression(
+                        problem = "Match arm does not contain an expression",
+                        rawNode = raw,
+                    )
+                )
+        val wrappedRawExpr = arm.expr.firstOrNull()?.let { RsAst.RustExpr(it) } ?: raw
+
+        // If there's a guard, wrap the break statement in an if
+        if (arm.guard.isNotEmpty()) {
+            val guard =
+                arm.guard.firstOrNull()?.let { handleNode(it) }
+                    ?: return listOf(
+                        newProblemExpression(
+                            problem = "Match arm guard could not be parsed",
+                            rawNode = raw,
+                        )
+                    )
+
+            val ifElse = newIfElse(raw)
+            ifElse.condition = guard
+
+            val breakStatement = newBreak(wrappedRawExpr)
+            breakStatement.expr = armExpr
+            breakStatement.usedAsExpression = true
+
+            val ifBlock = newBlock(raw)
+            ifBlock.statements += breakStatement
+            ifElse.thenStatement = ifBlock
+
+            caseExpressions += ifElse
+        } else {
+            // No guard, directly create break statement
+            val breakStatement = newBreak(wrappedRawExpr)
+            breakStatement.expr = armExpr
+            breakStatement.usedAsExpression = true
+
+            caseExpressions += breakStatement
+        }
+
+        return caseExpressions
+    }
+
+    fun handleClosureExpr(closureExpr: RsClosureExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.ClosureExpr(closureExpr))
+
+        val lambda = newLambda(rawNode = raw)
+
+        val paramsList = closureExpr.paramList.firstOrNull()
+        val enclosedFunction =
+            paramsList?.selfParam?.let {
+                newMethod(
+                    "",
+                    recordDeclaration = frontend.scopeManager.currentRecord,
+                    rawNode = raw,
+                )
+            } ?: newFunction("", rawNode = raw)
+        frontend.scopeManager.enterScope(enclosedFunction)
+
+        paramsList?.selfParam?.let {
+            val type = it.ty?.let { frontend.typeOf(it) }
+            enclosedFunction.parameters +=
+                newParameter(
+                        "self",
+                        type = type ?: unknownType(),
+                        rawNode = RsAst.RustItem(RsItem.SelfParam(it)),
+                    )
+                    .also { frontend.scopeManager.addDeclaration(it) }
+        }
+
+        paramsList?.let { params ->
+            for (parameter in params.params) {
+                val resolvedType = parameter.ty?.let { frontend.typeOf(it) } ?: unknownType()
+                // Todo We need to handle destructuring in a parameter properly
+                val code = parameter.astNode.text
+                val param =
+                    newParameter(
+                        if (code.contains(":")) code.substringBefore(":").trim() else code.trim(),
+                        resolvedType,
+                    )
+                frontend.scopeManager.addDeclaration(param)
+                enclosedFunction.parameters += param
+            }
+        }
+
+        val functionType = computeType(enclosedFunction)
+        enclosedFunction.type = functionType
+        closureExpr.expressions.firstOrNull()?.let {
+            enclosedFunction.body = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+        frontend.scopeManager.leaveScope(enclosedFunction)
+
+        lambda.function = enclosedFunction
+
+        return lambda
+    }
+}
