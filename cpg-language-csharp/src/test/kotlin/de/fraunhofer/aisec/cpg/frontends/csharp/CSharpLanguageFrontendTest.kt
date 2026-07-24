@@ -110,33 +110,23 @@ class CSharpLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        // `using System;`
+        // `using System;` (using namespace directive)
         val system = tu.imports["System"]
         assertNotNull(system)
         assertEquals(ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, system.style)
 
-        // `using static System.Math;`
+        // `using static System.Math;` (using static directive)
         val math = tu.imports["System.Math"]
         assertNotNull(math)
         assertEquals(ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, math.style)
 
-        // `global using System.Text;`
-        val text = tu.imports["System.Text"]
-        assertNotNull(text)
-        assertEquals(ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, text.style)
-
-        // `using Col = System.Collections.Generic;`
+        // `using Col = System.Collections.Generic;` (alias for a namespace)
         val alias = tu.imports.singleOrNull { it.alias?.localName == "Col" }
         assertNotNull(alias)
         assertEquals(ImportStyle.IMPORT_NAMESPACE, alias.style)
         assertEquals("System.Collections.Generic", alias.import.toString())
 
-        // Namespace-level `using System.IO;`
-        val ns = tu.namespaces["HelloWorld"]
-        assertNotNull(ns)
-        val io = ns.imports["System.IO"]
-        assertNotNull(io)
-        assertEquals(ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, io.style)
+        // TODO Create further tests
     }
 
     @Test

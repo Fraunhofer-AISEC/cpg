@@ -108,7 +108,7 @@ class DeclarationHandler(frontend: CSharpLanguageFrontend) :
      * difference is not modeled, so global usings are treated like their non-global counterparts.
      *
      * C# spec:
-     * [Using directives](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/namespaces#145-using-directives)
+     * [Using directives](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/namespaces#146-using-directives)
      */
     fun handleUsingDirective(node: Csharp.AST.UsingDirectiveSyntax): Import {
         val import = parseName(node.name)
