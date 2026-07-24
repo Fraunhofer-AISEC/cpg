@@ -917,34 +917,39 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val raw = RsAst.RustExpr(RsExpr.ClosureExpr(closureExpr))
 
         val lambda = newLambda(rawNode = raw)
-        val enclosedFunction = newFunction("", rawNode = raw)
-        frontend.scopeManager.enterScope(enclosedFunction)
 
         val paramsList = closureExpr.paramList.firstOrNull()
-
-        val function =
+        val enclosedFunction =
             paramsList?.selfParam?.let {
                 newMethod(
-                        "",
-                        recordDeclaration = frontend.scopeManager.currentRecord,
-                        rawNode = raw,
-                    )
-                    .apply {
-                        val type = it.ty?.let { frontend.typeOf(it) }
-                        this.parameters +=
-                            newParameter(
-                                it.astNode.text,
-                                type = type ?: unknownType(),
-                                rawNode = RsAst.RustItem(RsItem.SelfParam(it)),
-                            )
-                    }
+                    "",
+                    recordDeclaration = frontend.scopeManager.currentRecord,
+                    rawNode = raw,
+                )
             } ?: newFunction("", rawNode = raw)
+        frontend.scopeManager.enterScope(enclosedFunction)
+
+        paramsList?.selfParam?.let {
+            val type = it.ty?.let { frontend.typeOf(it) }
+            enclosedFunction.parameters +=
+                newParameter(
+                        "self",
+                        type = type ?: unknownType(),
+                        rawNode = RsAst.RustItem(RsItem.SelfParam(it)),
+                    )
+                    .also { frontend.scopeManager.addDeclaration(it) }
+        }
 
         paramsList?.let { params ->
             for (parameter in params.params) {
                 val resolvedType = parameter.ty?.let { frontend.typeOf(it) } ?: unknownType()
                 // Todo We need to handle destructuring in a parameter properly
-                val param = newParameter(parameter.astNode.text, resolvedType)
+                val code = parameter.astNode.text
+                val param =
+                    newParameter(
+                        if (code.contains(":")) code.substringBefore(":").trim() else code.trim(),
+                        resolvedType,
+                    )
                 frontend.scopeManager.addDeclaration(param)
                 enclosedFunction.parameters += param
             }
