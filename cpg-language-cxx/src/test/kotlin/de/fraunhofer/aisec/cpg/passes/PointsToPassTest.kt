@@ -36,7 +36,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
+import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.test.assertInvokes
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
 import kotlin.collections.singleOrNull
@@ -5004,5 +5006,128 @@ class PointsToPassTest {
                 base.prevFunctionSummaryDFG.toSet(),
             )
         }
+    }
+
+    @Test
+    fun testDerefPMVsOfRecursiveFunctions() {
+        val file = File("src/test/resources/complex_dfg.c")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(result)
+
+        // Functions
+        val func2 = result.functions("func2").single { it.body != null }
+        val func3 = result.functions("func3").single { it.body != null }
+
+        // Params and PMVs
+        val func2Param = func2.parameters.single()
+        val func2DerefPMV = func2Param.memoryValues.single { it.name.localName == "derefvalue" }
+
+        // actual tests
+        assertEquals(2, func2DerefPMV.prevDFG.size)
+        assertContains(func2DerefPMV.prevFullDFG, func3.allChildren<UnaryOperator>().single().input)
+    }
+
+    @Test
+    fun testGlobalStructToArg() {
+        val file = File("src/test/resources/pointsToPass/global_to_arg.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        // funcs
+        val testFunc = tu.functions("main").single()
+        val printFunc = tu.functions("printf").single()
+
+        // calls
+        val printfCall = testFunc.calls.single()
+
+        // args
+        val printfArg = printfCall.arguments[1]
+        assertNotNull(printfArg)
+
+        // variables
+        val variable = tu.variables("var").single()
+
+        // params and pmvs
+        val printfParam1 = printFunc.parameters[1]
+        assertNotNull(printfParam1)
+
+        val printfDerefPMV =
+            printfParam1.memoryValueEdges
+                .singleOrNull {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "derefvalue"
+                }
+                ?.start
+        assertNotNull(printfDerefPMV)
+
+        // We expect a DFG edge to have 2 nextFullDFGs: To the arg and to the derefPMVfrom the
+        // global var to the derefPMV
+        assertEquals(
+            setOf(printfDerefPMV, (printfArg as? PointerReference)?.input),
+            variable.nextFullDFG.toSet(),
+        )
+
+        // The DerefPMV of printf has one prevDFG to the global var, this one is ContextSensitive
+        assertEquals(1, printfDerefPMV.prevDFG.size)
+        assertEquals(
+            variable,
+            printfDerefPMV.prevDFGEdges
+                .singleOrNull {
+                    (it as? ContextSensitiveDataflow)?.callingContext?.calls?.singleOrNull() ==
+                        printfCall
+                }
+                ?.start,
+        )
+    }
+
+    @Test
+    fun testFunctionPointer() {
+        val file = File("src/test/resources/pointsToPass/function_pointer.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+                it.registerPass<PointsToPass>()
+            }
+        assertNotNull(tu)
+
+        // functions
+        val mainFunc = tu.functions("main").single()
+        val incpFunc = tu.functions("incp").single()
+        val execFuncPtrFunc = tu.functions("exec_func_ptr").single()
+
+        // calls
+        val funcPtrCall1 = mainFunc.calls.getOrNull(1)
+        assertNotNull(funcPtrCall1)
+        val funcPtrCall2 = execFuncPtrFunc.calls.single()
+
+        // params and pmvs
+        val incpParam = incpFunc.parameters.single()
+        val incpDerefPMV =
+            incpParam.memoryValues.single {
+                (it as? ParameterMemoryValue)?.name?.localName == "derefvalue"
+            }
+
+        // actual tests
+        // Check if we were able to correctly resolve the function pointer
+        assertInvokes(funcPtrCall1, incpFunc)
+        // Also check if we have the expected incoming DFG edges
+        // We expect an edge from the arg to the param
+        assertContains(incpParam.prevFullDFG, funcPtrCall1.arguments.single())
+        // And an edge from i to the deref PMV. Here we only have 1, b/c the PtP managed to
+        // only resolve the invokes edge for the call in Line 17, not in Line 8, so it only drew one
+        // prevDFG edge
+        assertEquals(tu.variables("i").single(), incpDerefPMV.prevFullDFG.single())
+
+        // The second one is trickier b/c the call in Line 8 does not have any usable memory values
+        // For this one, we rely on the DynamicInvokesResolver
+        assertInvokes(funcPtrCall2, incpFunc)
     }
 }
