@@ -50,7 +50,7 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleParameter(ctx: IASTParameterDeclaration): Parameter {
-        var name = ctx.declarator.name.toString()
+        var name = ctx.declarator.realName().first.name.toString()
         val specifier = ctx.declSpecifier
 
         // Parse the type. If we are running into the situation where the declSpecifier is
