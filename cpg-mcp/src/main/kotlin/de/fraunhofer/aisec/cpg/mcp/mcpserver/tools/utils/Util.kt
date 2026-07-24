@@ -213,6 +213,8 @@ fun OverlayNode.toJson() = Json.encodeToString(OverlayInfo(this))
 
 fun Function.toInfo() = FunctionInfo(this)
 
+fun Function.toUnmodeledInfo() = UnmodeledFunctionInfo(this)
+
 fun Record.toInfo() = RecordInfo(this)
 
 fun Call.toInfo() = CallInfo(this)

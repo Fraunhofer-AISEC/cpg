@@ -30,11 +30,26 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class CpgAnalyzePayload(
-    @Description("The contents of the file which should be analyzed.") val content: String? = null,
     @Description(
-        "The file extension. This is required to identify the programming language and should resemble the typical file ending (e.g. '.py' for python, '.c' for C code)."
+        "The contents of the file which should be analyzed. Use this for a single inline snippet. For multiple files (e.g. a test case plus its support headers/sources) use 'files' instead."
+    )
+    val content: String? = null,
+    @Description(
+        "The file extension. This is required to identify the programming language and should resemble the typical file ending (e.g. '.py' for python, '.c' for C code). Only used together with 'content'."
     )
     val extension: String? = null,
+    @Description(
+        "Absolute paths of source files already on disk to analyze together, e.g. a test case plus its support files. Use this instead of 'content'/'extension' whenever more than one file is involved."
+    )
+    val files: List<String>? = null,
+    @Description(
+        "Absolute paths of directories to search for #include headers, e.g. a support-files directory. Only used together with 'files'."
+    )
+    val includePaths: List<String>? = null,
+    @Description(
+        "Absolute path of the top-level directory of the analyzed project. Only used together with 'files'; defaults to the common parent directory of 'files' if omitted."
+    )
+    val topLevel: String? = null,
 )
 
 @Serializable

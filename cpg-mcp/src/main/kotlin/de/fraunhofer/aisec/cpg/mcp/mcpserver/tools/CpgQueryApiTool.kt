@@ -25,18 +25,98 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.mcp.FUNCTION_SUMMARIES_FILE
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgQueryScript
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toUnmodeledInfo
+import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.io.File
+import java.time.LocalDate
+import kotlin.script.experimental.api.ResultWithDiagnostics
+import kotlin.script.experimental.api.ScriptDiagnostic
+import kotlin.script.experimental.host.toScriptSource
+import kotlin.script.experimental.jvmhost.JvmScriptCompiler
+import kotlin.script.experimental.jvmhost.createJvmCompilationConfigurationFromTemplate
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 fun Server.addQueryTools() {
     this.addCpgQueryApiTool()
     this.addCpgNodeTypesTool()
     this.addCpgFunctionSummariesTool()
+    this.addCpgAddFunctionSummaryTool()
+    this.addCpgListUnmodeledFunctionsTool()
+    this.addCpgValidateQueryTool()
+}
+
+fun Server.addCpgValidateQueryTool() {
+    this.addTool(
+        name = "cpg_validate_query",
+        description =
+            """
+            Compiles a CPG query to check for errors without executing it. This includes syntax errors, unresolved
+            names, wrong function names/parameters, and type errors. Call this after writing a query to catch errors 
+            and to receive helpful tips. A successful compile does not mean the query is logically correct, only that it 
+            compiles without errors.
+            """
+                .trimIndent(),
+        inputSchema =
+            ToolSchema(
+                properties =
+                    buildJsonObject {
+                        putJsonObject("queryCode") {
+                            put("type", "string")
+                            put(
+                                "description",
+                                "The Kotlin CPG query script to compile. The analyzed source " +
+                                    "code is available as `result: TranslationResult`, as " +
+                                    "described by cpg_query_api.",
+                            )
+                        }
+                    },
+                required = listOf("queryCode"),
+            ),
+    ) { request ->
+        val queryCode = (request.arguments?.get("queryCode") as? JsonPrimitive)?.contentOrNull
+        if (queryCode.isNullOrBlank()) {
+            return@addTool CallToolResult(
+                content = listOf(TextContent("Missing parameter queryCode."))
+            )
+        }
+
+        val compilationConfiguration =
+            createJvmCompilationConfigurationFromTemplate<CpgQueryScript>()
+        val compileResult =
+            JvmScriptCompiler().invoke(queryCode.toScriptSource(), compilationConfiguration)
+
+        when (compileResult) {
+            is ResultWithDiagnostics.Success ->
+                CallToolResult(content = listOf(TextContent("Query compiles successfully.")))
+            is ResultWithDiagnostics.Failure -> {
+                val errors =
+                    compileResult.reports.filter { it.severity >= ScriptDiagnostic.Severity.ERROR }
+                CallToolResult(
+                    content =
+                        listOf(
+                            TextContent(
+                                "Compilation error: " + errors.joinToString("; ") { it.message }
+                            )
+                        )
+                )
+            }
+        }
+    }
 }
 
 fun Server.addCpgQueryApiTool() {
@@ -49,6 +129,8 @@ fun Server.addCpgQueryApiTool() {
             Call this before writing a query so you use the correct function names and parameters
             instead of guessing. Use cpg_node_types for the node types and members usable inside a
             predicate, and the source code browsing tools (cpg_list_*) to find the start nodes.
+            Once you've written a query, call cpg_validate_query to catch compile errors before
+            running it.
             """
                 .trimIndent(),
         inputSchema = ToolSchema(properties = buildJsonObject {}, required = listOf()),
@@ -59,9 +141,35 @@ fun Server.addCpgQueryApiTool() {
                     TextContent(
                         """
     # CPG Query DSL
-
-    The queries are written in Kotlin. The analyzed program is available as `result: TranslationResult`.
+    
+    The queries are written in Kotlin. The analyzed source code is available as `result: TranslationResult`.
     All query functions return a `QueryTree<Boolean>`.
+
+    A query is typically built in three steps:
+    1. Starting point: quantify over the nodes to check with `allExtended` / `existsExtended`,
+       or pick concrete start nodes from the shortcut collections (see cpg_node_types).
+    2. Inside `mustSatisfy`, state the property using the flow functions (`dataFlow`,
+       `executionPath`, `alwaysFlowsTo`) or the value functions (`min`, `max`, `size`).
+    3. Combine sub-results with `and` / `or` / `not(...)` into one `QueryTree<Boolean>`.
+
+    ## Starting point: allExtended / existsExtended — "does this hold for all / for at least one?"
+
+    ```kotlin
+    inline fun <reified T> Node.allExtended/existsExtended(
+        noinline sel: ((T) -> Boolean)? = null,
+        noinline mustSatisfy: (T) -> QueryTree<Boolean>,
+    ): QueryTree<Boolean>
+    ```
+
+    `allExtended`: `mustSatisfy` must hold for all nodes of type `T` below the receiver (use `sel`
+    to filter). `existsExtended`: it must hold for at least one.
+
+    Example: no value returned by a call to "sourceFunc" ever reaches a call to "sinkFunc":
+    ```kotlin
+    result.allExtended<Call>({ it.name.localName == "sourceFunc" }) { call ->
+        not(dataFlow(startNode = call) { it is Call && it.name.localName == "sinkFunc" })
+    }
+    ```
 
     ## dataFlow: "does this value ever reach X?"
 
@@ -78,7 +186,9 @@ fun Server.addCpgQueryApiTool() {
     ): QueryTree<Boolean>
     ```
 
-    Follows data-flow (DFG) edges from `startNode` until a node matches `predicate`.
+    Follows data-flow (DFG) edges from `startNode` until a node matches `predicate`. It only
+    reasons about existing DFG paths. For the guarantee that data always reaches something,
+    use alwaysFlowsTo. To check that a flow can never happen, wrap it in `not(...)`.
 
     Example: does the value of `call` ever reach a reference named "sink":
     ```kotlin
@@ -106,7 +216,7 @@ fun Server.addCpgQueryApiTool() {
     executionPath(startNode = call) { it is Call && it.name.localName == "someFunc" }
     ```
 
-    ## alwaysFlowsTo — "does this data reach X on ALL paths?"
+    ## alwaysFlowsTo: "does this data reach X on ALL paths?"
 
     ```kotlin
     fun Node.alwaysFlowsTo(
@@ -128,25 +238,6 @@ fun Server.addCpgQueryApiTool() {
     ```kotlin
     variable.alwaysFlowsTo(scope = Interprocedural()) { 
         it is Call && it.name.localName == "someFunction"
-    }
-    ```
-
-    ## allExtended / existsExtended: quantifiers over all nodes of a type
-
-    ```kotlin
-    inline fun <reified T> Node.allExtended/existsExtended(
-        noinline sel: ((T) -> Boolean)? = null,
-        noinline mustSatisfy: (T) -> QueryTree<Boolean>,
-    ): QueryTree<Boolean>
-    ```
-
-    `allExtended`: `mustSatisfy` must hold for all nodes of type `T` below the receiver (use `sel`
-    to filter which ones count). `existsExtended`: it must hold for at least one. 
-    
-    Example: for every call to "someFunction", its first argument flows to a literal:
-    ```kotlin
-    result.allExtended<Call>({ it.name.localName == "someFunction" }) { call ->
-        dataFlow(startNode = call.arguments[0]) { it is Literal<*> }
     }
     ```
 
@@ -233,7 +324,9 @@ fun Server.addCpgQueryApiTool() {
 
     `QueryTree<Boolean>` results combine with `not(q)`, `q1 and q2`, `q1 or q2`, `q1 xor q2`.
     A `List<QueryTree<Boolean>>` merges into one result with `.mergeWithAll()` (true if all
-    elements are true) or `.mergeWithAny()` (true if at least one is true).
+    elements are true) or `.mergeWithAny()` (true if at least one is true). If a step yields a
+    plain Boolean (e.g. after aggregating with Kotlin's `map`/`any`), wrap it with
+    `QueryTree(value)` to use it as a result.
 
     ## Parameter values
 
@@ -258,10 +351,31 @@ fun Server.addCpgQueryApiTool() {
 
     ## Function summaries (only for functions without body)
 
-    Only relevant for queries about memory or pointer state (points-to analysis) that must
-    track data flow through a function whose body is not part of the analyzed code (e.g. free
-    from the C standard library). In that case, call cpg_function_summaries to check whether
-    its effect is modeled. For all other queries this is not needed.
+    For a function whose body isn't part of the analyzed code (e.g. `free` from the C
+    standard library), the graph doesn't know what it actually does to its arguments, so a
+    `dataFlow`/`alwaysFlowsTo`/`executionPath` check just treats the call as if nothing
+    happened, even when the function invalidates a pointer or changes what it points to. A
+    query meant to catch a bug pattern in general, not just one example of it, needs these
+    effects registered, not only the functions the query happens to name.
+
+    Example: without a summary for `free`, a fresh allocation still looks reachable from an
+    earlier one that was already freed and replaced:
+    ```
+    p = malloc(10);   // firstMalloc
+    free(p);
+    p = malloc(10);   // a new, unrelated allocation
+    use(p);
+    ```
+    ```kotlin
+    dataFlow(startNode = firstMalloc) { it == useOfP }  // true, even though p was reassigned
+    ```
+    Registering free's summary (`from: freedMemory, to: param0.deref`, see
+    cpg_add_function_summary) tells the graph that free() changes what the pointer points
+    to, so this becomes `false`.
+
+    Call cpg_list_unmodeled_functions before writing such a query, and register a summary
+    with cpg_add_function_summary for every function whose real effect, allocating, freeing,
+    copying, or otherwise changing what a pointer points to, your check needs to reflect.
 
     A summary can introduce a synthetic value (an UnknownMemoryValue node, see cpg_node_types).
     To retrieve it as a start node for a dataFlow query:
@@ -323,9 +437,19 @@ fun Server.addCpgNodeTypesTool() {
     ## Expressions
 
     Every expression additionally has `type: Type` (compare via `type.name.localName`) and
-    `access: AccessValues` (READ, WRITE or READWRITE). Expressions that denote memory also have
-    `memoryAddresses: Set<MemoryAddress>` the memory cell the expression refers to. For example
-    expressions alias share a MemoryAddress: `a.memoryAddresses.any { it in b.memoryAddresses }`.
+    `access: AccessValues` (READ, WRITE or READWRITE). Expressions that mark memory also have
+    `memoryAddresses: Set<MemoryAddress>`.
+
+    For a `Reference` (and `PointerDereference`, which extends it), this is the address of the
+    *declaration's storage slot* it refers to (`refersTo.memoryAddresses`) -- not the value/pointee
+    currently stored there. It is fixed for the life of the declaration, so reassigning the variable
+    to a new allocation does not change it: `a.memoryAddresses.any { it in b.memoryAddresses }`
+    across two References to the same variable answers "same variable?", not "same allocation?" --
+    it stays true even across an intervening `free` and reassignment to a fresh allocation.
+
+    To check whether a pointer still holds a specific allocation (e.g. one freed earlier), follow
+    `dataFlow`/`prevFullDFG` from the allocation site instead of comparing `memoryAddresses` on
+    References.
 
     ### Call: a function call
 
@@ -464,14 +588,19 @@ fun Server.addCpgNodeTypesTool() {
     }
 }
 
+// TODO: add an example with memcopy
 fun Server.addCpgFunctionSummariesTool() {
     this.addTool(
         name = "cpg_function_summaries",
         description =
             """
-            Shows the data-flow summaries of functions without a body in the analyzed code
-            (e.g. `free`). Only call this for queries about memory or pointer state (points-to
-            analysis) that must track data flow through such a function.
+            Shows the registered data-flow summaries. A summary models what a function whose
+            body is not part of the analyzed code (e.g. `free` from the C standard library) influenced the data dereferenced 
+            by the arguments. 
+            Call this together with cpg_list_unmodeled_functions for any query
+            about memory, pointer, or tainted-data state, see cpg_query_api's "Function
+            summaries" section for why this matters even when the query never calls the
+            function out by name. Register missing summaries with 'cpg_add_function_summary'.
             """
                 .trimIndent(),
         inputSchema = ToolSchema(properties = buildJsonObject {}, required = listOf()),
@@ -482,14 +611,182 @@ fun Server.addCpgFunctionSummariesTool() {
                 content = listOf(TextContent("No function summaries file found."))
             )
         }
-        val text =
+        var text =
             """
-            Only needed for queries about memory or pointer state (points-to analysis) that track
-            data flow through a function whose body is not part of the analyzed code (e.g. `free`
-            from the C standard library). These summaries model their effect, e.g. "paramX.deref" is the memory the argument points to. A "from" value
-            that is no parameter (e.g. freedMemory) is a synthetic `UnknownMemoryValue` node and can be used as a start node.
+            Only needed for queries that track data flow through a function whose body is not
+            part of the analyzed code (e.g. `free` from the C standard library). Each entry
+            models the effect of one function on its arguments, e.g. "paramX.deref" is the
+            memory the argument points to. A "from" value that is not a parameter is a
+            synthetic `UnknownMemoryValue` node that marks data coming out of the function,
+            so that queries can use it as a start node.
             """
-                .trimIndent() + "\n\n" + summaries.readText()
+                .trimIndent()
+        val content = summaries.readText()
+        if (content.isBlank()) {
+            text += "\n\n(no summaries registered yet)"
+        } else {
+            text += "\n\n" + content
+        }
         CallToolResult(content = listOf(TextContent(text)))
+    }
+}
+
+fun Server.addCpgListUnmodeledFunctionsTool() {
+    this.addTool(
+        name = "cpg_list_unmodeled_functions",
+        description =
+            """
+            Lists functions for that the points-to analysis could not compute a real data-flow summary
+            (no function body available in the analyzed files), i.e.
+            data does not flow through calls to them unless you register a summary with
+            cpg_add_function_summary. Check this for any query about memory, pointer, or
+            tainted-data state, even if the query's predicate never names the function,
+            see cpg_query_api's "Function summaries" section for why an unmodeled call can
+            silently break such a query without ever appearing in it.
+
+            For each one this also reports where it was declared, if anywhere: a file path
+            outside the files you analyzed suggests an external library function; 
+            no path at all means the call could not be resolved to any declaration.
+            """
+                .trimIndent(),
+        inputSchema = ToolSchema(properties = buildJsonObject {}, required = listOf()),
+    ) { request ->
+        request.runOnCpg { result: TranslationResult, _ ->
+            val unmodeled =
+                result.functions.filter { func ->
+                    func.functionSummary.keys.any {
+                        (it as? Literal<*>)?.name?.localName == "dummy"
+                    } || func.functionSummary.values.flatten().any { it.isDummy }
+                }
+            if (unmodeled.isEmpty()) {
+                CallToolResult(content = listOf(TextContent("(no unmodeled functions found)")))
+            } else {
+                CallToolResult(
+                    content =
+                        unmodeled.map { TextContent(Json.encodeToString(it.toUnmodeledInfo())) }
+                )
+            }
+        }
+    }
+}
+
+fun Server.addCpgAddFunctionSummaryTool() {
+    this.addTool(
+        name = "cpg_add_function_summary",
+        description =
+            """
+            Registers a data-flow summary for a function whose body is not part of the analyzed
+            code (e.g. a C standard library function). Without a summary, queries cannot rely on
+            what the function actually does with its arguments, most importantly writes into the
+            memory an argument points to (points-to analysis), but also e.g. a flow from one
+            argument into another or into the base object.
+
+            Register one for any function that mutates, invalidates, or copies its arguments
+            and whose real behavior a memory-, pointer-, or taint-related query needs to
+            reflect, e.g. free invalidating the pointer it's given, strcpy copying one
+            argument's data into another, or malloc returning a fresh block of memory.
+            Without a summary, the graph has no model of what the function actually does, so
+            it cannot represent that a pointer became dangling or that memory changed, a
+            query then keeps treating the data as unchanged straight through the call, even
+            if the query's predicate never names that function (see cpg_query_api's
+            "Function summaries" section for a worked example).
+
+            Step by step:
+            1. Starting point: call cpg_list_unmodeled_functions to find functions with no
+               reliable data-flow summary that a query start node's value could reach.
+            2. Call cpg_function_summaries to see which of them are already registered.
+            3. Register the documented effect of each missing function with this tool, one
+               call per function, before relying on any dataFlow/executionPath/alwaysFlowsTo
+               result that involves memory, pointer, or tainted-data state.
+
+            The entry must be one YAML list item in exactly this format:
+
+            ```yaml
+            - functionDeclaration:
+                language: CLanguage        # language class name; CLanguage entries also match C++ code
+                methodName: someFunction   # fully qualified for methods, e.g. SomeClass::write
+                signature: [char*, int]    # optional, only to pick one overload (parameter type names)
+              dataFlows:                   # one item per flow the function causes
+                - from: param1
+                  to: param0.deref
+                  dfgType: full            # full: the value flows entirely; partial: only a part of the destination is written
+                - from: param0.deref
+                  to: return
+                  dfgType: full
+            ```
+
+            `from` is one of:
+            - `paramX`: the argument at index X
+            - `paramX.deref`: the memory the argument points to
+            - `base`: the object a method is called on
+            - `function`: the function itself
+            - `NewMemoryAddressX`: a newly allocated memory address, created fresh for every call
+              (for allocation functions; X is a number to tell several allocations apart)
+            - any other word: a synthetic marker value (`UnknownMemoryValue`) with that name,
+              e.g. to mark data the function writes as secret; queries can use it as a start node
+
+            `to` is one of: `paramX`, `paramX.deref`, `paramX.address` (the argument's address),
+            `base`, `return`.
+            """
+                .trimIndent(),
+        inputSchema =
+            ToolSchema(
+                properties =
+                    buildJsonObject {
+                        putJsonObject("yamlEntry") {
+                            put("type", "string")
+                            put(
+                                "description",
+                                "One YAML list item in the format described by the tool.",
+                            )
+                        }
+                    },
+                required = listOf("yamlEntry"),
+            ),
+    ) { request ->
+        val yamlEntry = (request.arguments?.get("yamlEntry") as? JsonPrimitive)?.contentOrNull
+        if (yamlEntry.isNullOrBlank()) {
+            return@addTool CallToolResult(
+                content = listOf(TextContent("Missing parameter yamlEntry."))
+            )
+        }
+        val summaries = File(FUNCTION_SUMMARIES_FILE)
+        if (!summaries.exists()) {
+            return@addTool CallToolResult(
+                content =
+                    listOf(
+                        TextContent(
+                            "Function summaries file not found at $FUNCTION_SUMMARIES_FILE. " +
+                                "The MCP server must be started from the repository root, " +
+                                "otherwise summaries cannot be registered."
+                        )
+                    )
+            )
+        }
+
+        val oldText = summaries.readText()
+        val entry = "# agent-added ${LocalDate.now()}\n" + yamlEntry.trimIndent().trim() + "\n"
+        val newText =
+            if (oldText.isBlank()) {
+                entry
+            } else {
+                oldText.trimEnd() + "\n\n" + entry
+            }
+        summaries.writeText(newText)
+        try {
+            DFGFunctionSummaries.fromFiles(listOf(summaries))
+        } catch (e: Exception) {
+            summaries.writeText(oldText)
+            return@addTool CallToolResult(
+                content =
+                    listOf(
+                        TextContent(
+                            "The entry does not parse and was rejected: ${e.message}. " +
+                                "Fix the entry and try again. The registered summaries are unchanged."
+                        )
+                    )
+            )
+        }
+        CallToolResult(content = listOf(TextContent("Summary registered")))
     }
 }

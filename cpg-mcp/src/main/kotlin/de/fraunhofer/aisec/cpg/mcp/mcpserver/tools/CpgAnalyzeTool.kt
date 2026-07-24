@@ -103,6 +103,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.io.File
+import java.nio.file.Paths
 import java.util.IdentityHashMap
 import kotlin.String
 import kotlin.reflect.KClass
@@ -122,12 +123,16 @@ val toolDescription =
         
         $cpgDescription
         
-        This tool parses source code and creates a comprehensive graph representation 
+        This tool parses source code and creates a comprehensive graph representation
         containing all nodes, functions, variables, and call expressions.
-        
+
         Example usage:
         - "Analyze this code: print('hello')"
         - "Analyze this uploaded file"
+
+        If the analysis spans more than one file (e.g. a test case and the support headers/sources
+        it includes), pass their absolute paths via 'files' instead of 'content'/'extension', and
+        the directories to search for #include headers via 'includePaths'.
     """
         .trimIndent()
 
@@ -162,35 +167,43 @@ fun runCpgAnalyze(
     runPasses: Boolean,
     cleanup: Boolean,
 ): CpgAnalysisResult {
-    val file =
-        when {
-            payload?.content != null -> {
-                val extension =
-                    if (payload.extension != null) {
-                        if (payload.extension.startsWith(".")) payload.extension
-                        else ".${payload.extension}"
-                    } else {
-                        throw IllegalArgumentException(
-                            "Extension is required when providing content"
-                        )
-                    }
-
-                val tempFile = File.createTempFile("cpg_analysis", extension)
-                tempFile.writeText(payload.content)
-                tempFile.deleteOnExit()
-                tempFile
-            }
-
-            else -> throw IllegalArgumentException("Must provide content")
-        }
-
     val config =
-        setupTranslationConfiguration(
-            topLevel = file,
-            files = listOf(file.absolutePath),
-            includePaths = emptyList(),
-            runPasses = runPasses,
-        )
+        if (payload?.files != null) {
+            val sourceFiles =
+                payload.files.map { path ->
+                    File(path).also { require(it.exists()) { "File does not exist: $path" } }
+                }
+            val topLevel =
+                payload.topLevel?.let { File(it) } ?: sourceFiles.first().absoluteFile.parentFile
+
+            setupTranslationConfiguration(
+                topLevel = topLevel,
+                files = sourceFiles.map { it.absolutePath },
+                includePaths = payload.includePaths?.map { Paths.get(it) } ?: emptyList(),
+                runPasses = runPasses,
+            )
+        } else if (payload?.content != null) {
+            val extension =
+                if (payload.extension != null) {
+                    if (payload.extension.startsWith(".")) payload.extension
+                    else ".${payload.extension}"
+                } else {
+                    throw IllegalArgumentException("Extension is required when providing content")
+                }
+
+            val tempFile = File.createTempFile("cpg_analysis", extension)
+            tempFile.writeText(payload.content)
+            tempFile.deleteOnExit()
+
+            setupTranslationConfiguration(
+                topLevel = tempFile,
+                files = listOf(tempFile.absolutePath),
+                includePaths = emptyList(),
+                runPasses = runPasses,
+            )
+        } else {
+            throw IllegalArgumentException("Must provide either 'content' or 'files'")
+        }
     config.disableCleanup = !cleanup
 
     if (ctx != null) {
@@ -241,12 +254,16 @@ fun Server.addCpgTranslate() {
         
         $cpgDescription
         
-        This tool parses source code and creates a comprehensive graph representation 
+        This tool parses source code and creates a comprehensive graph representation
         containing all nodes, functions, variables, and call expressions.
-        
+
         Example usage:
         - "Analyze this code: print('hello')"
         - "Analyze this uploaded file"
+
+        If the analysis spans more than one file (e.g. a test case and the support headers/sources
+        it includes), pass their absolute paths via 'files' instead of 'content'/'extension', and
+        the directories to search for #include headers via 'includePaths'.
     """
                 .trimIndent(),
         inputSchema = CpgAnalyzePayload::class.toSchema(),

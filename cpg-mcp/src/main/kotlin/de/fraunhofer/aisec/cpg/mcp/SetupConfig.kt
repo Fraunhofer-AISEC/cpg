@@ -97,7 +97,7 @@ fun setupTranslationConfiguration(
         translationConfiguration.registerPass<PythonFileConceptPass>()
 
         val functionSummaries = File(FUNCTION_SUMMARIES_FILE)
-        if (functionSummaries.exists()) {
+        if (functionSummaries.exists() && functionSummaries.readText().isNotBlank()) {
             translationConfiguration.registerFunctionSummaries(functionSummaries)
         }
     }

@@ -76,6 +76,11 @@ dependencies {
     // Command line interface support
     implementation(libs.clikt)
 
+    implementation(libs.kotlin.scripting.common)
+    implementation(libs.kotlin.scripting.dependencies)
+    implementation(libs.kotlin.scripting.jvm)
+    implementation(libs.kotlin.scripting.jvm.host)
+
     integrationTestImplementation(libs.ktor.server.cio)
     integrationTestImplementation(libs.ktor.server.test.host)
     integrationTestImplementation(libs.mcp.client)

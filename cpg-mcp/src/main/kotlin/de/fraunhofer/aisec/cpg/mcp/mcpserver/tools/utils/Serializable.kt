@@ -157,6 +157,25 @@ data class FunctionInfo(
 }
 
 @Serializable
+data class UnmodeledFunctionInfo(
+    val nodeId: String,
+    val name: String,
+    val signature: String,
+    val filePath: String?,
+    val isInferred: Boolean,
+) {
+    constructor(
+        functionDeclaration: Function
+    ) : this(
+        nodeId = functionDeclaration.id.toString(),
+        name = functionDeclaration.name.toString(),
+        signature = functionDeclaration.signature,
+        filePath = functionDeclaration.location?.artifactLocation?.uri?.path,
+        isInferred = functionDeclaration.isInferred,
+    )
+}
+
+@Serializable
 data class RecordInfo(
     val nodeId: String,
     val name: String,

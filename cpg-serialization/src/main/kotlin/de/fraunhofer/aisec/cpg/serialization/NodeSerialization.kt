@@ -73,6 +73,8 @@ data class NodeJSON(
     //        val astChildren: List<NodeJSON>,
     val prevDFG: List<EdgeJSON> = emptyList(),
     val nextDFG: List<EdgeJSON> = emptyList(),
+    val prevEOG: List<EdgeJSON> = emptyList(),
+    val nextEOG: List<EdgeJSON> = emptyList(),
     @Serializable(with = UuidSerializer::class) val translationUnitId: Uuid? = null,
     val componentName: String? = null,
     val fileName: String? = null,
@@ -101,6 +103,8 @@ fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
         // emptyList(),
         prevDFG = if (noEdges) emptyList() else this.prevDFGEdges.map { it.toJSON() },
         nextDFG = if (noEdges) emptyList() else this.nextDFGEdges.map { it.toJSON() },
+        prevEOG = if (noEdges) emptyList() else this.prevEOGEdges.map { it.toJSON() },
+        nextEOG = if (noEdges) emptyList() else this.nextEOGEdges.map { it.toJSON() },
         translationUnitId = this.translationUnit?.id,
         componentName = this.component?.name?.toString(),
     )
