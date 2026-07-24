@@ -198,7 +198,7 @@ fun Server.getNode() {
         payload: CpgIdPayload ->
         val node = result.nodes.find { it.id.toString() == payload.id }
         if (node != null) {
-            CallToolResult(content = listOf(TextContent(node.toJson())))
+            CallToolResult(content = listOf(TextContent(node.toJson(noEdges = false))))
         } else {
             CallToolResult(content = listOf(TextContent("No node found with ${payload.id}")))
         }

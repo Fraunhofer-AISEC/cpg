@@ -61,6 +61,21 @@ data class CpgNamePayload(@Description("The local name of the node to consider."
 data class CpgIdPayload(@Description("The id of the node to consider.") val id: String)
 
 @Serializable
+@Description(
+    "The payload to search for nodes by source-code substring and/or exact node type. At least one of codeContains/typeName must be set."
+)
+data class CpgSearchNodesPayload(
+    @Description(
+        "Case-insensitive substring to match against a node's source code, e.g. \"delete\" or \"free(\"."
+    )
+    val codeContains: String? = null,
+    @Description(
+        "Exact node type name to match, case-insensitive, e.g. \"Call\", \"Delete\" (see cpg_node_types)."
+    )
+    val typeName: String? = null,
+)
+
+@Serializable
 data class CpgCallArgumentByNameOrIndexPayload(
     @Description("ID of the method/function call whose arguments should be listed.")
     val nodeId: String,

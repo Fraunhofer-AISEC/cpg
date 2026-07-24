@@ -206,8 +206,13 @@ fun <T> QueryTree<T>.toQueryTreeNode(): QueryTreeNode {
     )
 }
 
-/** Converts any [Node] to a JSON string using the [NodeJSON] format. */
-fun Node.toJson() = Json.encodeToString(this.toJSON())
+/**
+ * Converts any [Node] to a JSON string using the [NodeJSON] format. Omits DFG/EOG edges by default,
+ * since most callers return a list of nodes and don't need each one's full edge set. Pass `noEdges
+ * = false` when showing the edges is the tool's actual purpose, e.g. cpg_get_node, which is meant
+ * to return everything known about one specific node, edges included.
+ */
+fun Node.toJson(noEdges: Boolean = true) = Json.encodeToString(this.toJSON(noEdges = noEdges))
 
 fun OverlayNode.toJson() = Json.encodeToString(OverlayInfo(this))
 

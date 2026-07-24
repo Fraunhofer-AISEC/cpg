@@ -28,9 +28,13 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.FUNCTION_SUMMARIES_FILE
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgQueryScript
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgSearchNodesPayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toUnmodeledInfo
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -58,6 +62,59 @@ fun Server.addQueryTools() {
     this.addCpgAddFunctionSummaryTool()
     this.addCpgListUnmodeledFunctionsTool()
     this.addCpgValidateQueryTool()
+    this.addCpgSearchNodesTool()
+}
+
+fun Server.addCpgSearchNodesTool() {
+    val toolDescription =
+        """
+        Finds graph nodes by source-code substring and/or exact node type, for constructs not
+        covered by cpg_node_types, e.g. a language keyword modeled as its own node type instead
+        of a Call (C++'s `delete`, `new`). Each result reports the node's real type (the same
+        name used throughout cpg_node_types), its code, and its location, so a selector guess
+        can be checked against the actual graph instead of assumed. Use cpg_get_node with the
+        returned id for full node details (edges included).
+
+        At least one of codeContains/typeName must be given. Once a codeContains search shows a
+        construct's real type, pass that as typeName to find every other node of that type.
+        """
+            .trimIndent()
+
+    this.addTool<CpgSearchNodesPayload>(name = "cpg_search_nodes", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgSearchNodesPayload ->
+        if (payload.codeContains.isNullOrBlank() && payload.typeName.isNullOrBlank()) {
+            return@addTool CallToolResult(
+                content =
+                    listOf(TextContent("At least one of codeContains/typeName must be given."))
+            )
+        }
+        val matches =
+            result.nodes.filter { node ->
+                (payload.codeContains == null ||
+                    node.code?.contains(payload.codeContains, ignoreCase = true) == true) &&
+                    (payload.typeName == null ||
+                        node.javaClass.simpleName.equals(payload.typeName, ignoreCase = true))
+            }
+        if (matches.isEmpty()) {
+            return@addTool CallToolResult(
+                content = listOf(TextContent("(no matching nodes found)"))
+            )
+        }
+        val limit = 50
+        val content = matches.take(limit).map { TextContent(it.toJson()) }
+        val truncationNote =
+            if (matches.size > limit) {
+                listOf(
+                    TextContent(
+                        "${matches.size - limit} more matches truncated; narrow codeContains/typeName to see them."
+                    )
+                )
+            } else {
+                emptyList()
+            }
+        CallToolResult(content = content + truncationNote)
+    }
 }
 
 fun Server.addCpgValidateQueryTool() {
@@ -451,6 +508,12 @@ fun Server.addCpgNodeTypesTool() {
     `dataFlow`/`prevFullDFG` from the allocation site instead of comparing `memoryAddresses` on
     References.
 
+    Not every operation is a `Call`: something the source language treats as an operator or
+    keyword (an assignment, a cast, array indexing, C++'s `delete`, ...) gets its own node type
+    below instead of showing up as a call named after it. If a selector like `it is Call &&
+    it.name.localName == "x"` matches nothing, check whether the operation already has a
+    dedicated type in this list -- or use cpg_search_nodes to find the real node and its type.
+
     ### Call: a function call
 
     ```kotlin
@@ -527,6 +590,12 @@ fun Server.addCpgNodeTypesTool() {
 
     ```kotlin
     operands: List<Expression>  // what is deleted
+    ```
+
+    ### New: a C++ `new` expression (not a Call)
+
+    ```kotlin
+    initializer: Expression?    // the constructor call, if any
     ```
 
     ## Synthetic memory nodes (created by the points-to analysis)
