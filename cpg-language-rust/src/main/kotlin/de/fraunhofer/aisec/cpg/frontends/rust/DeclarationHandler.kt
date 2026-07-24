@@ -75,25 +75,27 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val function =
             fn.paramList?.selfParam?.let {
                 newMethod(
-                        name,
-                        recordDeclaration = frontend.scopeManager.currentRecord,
-                        rawNode = raw,
-                    )
-                    .apply {
-                        val type = it.ty?.let { frontend.typeOf(it) }
-                        this.parameters +=
-                            newParameter(
-                                // Todo We need to handle destructuring in a parameter properly
-                                it.astNode.text,
-                                type = type ?: unknownType(),
-                                rawNode = RsAst.RustItem(RsItem.SelfParam(it)),
-                            )
-                    }
+                    name,
+                    recordDeclaration = frontend.scopeManager.currentRecord,
+                    rawNode = raw,
+                )
             } ?: newFunction(name, rawNode = raw)
 
         frontend.scopeManager.addDeclaration(function)
 
         frontend.scopeManager.enterScope(function)
+
+        fn.paramList?.selfParam?.let {
+            val type = it.ty?.let { frontend.typeOf(it) }
+            val code = it.astNode.text
+            function.parameters +=
+                newParameter(
+                    // Todo We need to handle destructuring in a parameter properly
+                    if (code.contains(":")) code.substringBefore(":").trim() else code.trim(),
+                    type = type ?: unknownType(),
+                    rawNode = RsAst.RustItem(RsItem.SelfParam(it)),
+                )
+        }
 
         // Adding implicitly created parameters to the scope
         function.parameters.forEach { frontend.scopeManager.addDeclaration(it) }
