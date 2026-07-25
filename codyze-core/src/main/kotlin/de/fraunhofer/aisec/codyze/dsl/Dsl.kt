@@ -248,6 +248,7 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.php.PHPLanguage")
 
         if (name == null) {
             throw IllegalArgumentException("Project name must be set")

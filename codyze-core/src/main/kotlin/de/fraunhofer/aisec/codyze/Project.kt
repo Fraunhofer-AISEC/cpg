@@ -271,6 +271,7 @@ class AnalysisProject(
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
                     .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
+                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.php.PHPLanguage")
 
             // We can either have a single source (using --sources) or multiple components (using
             // --components)
