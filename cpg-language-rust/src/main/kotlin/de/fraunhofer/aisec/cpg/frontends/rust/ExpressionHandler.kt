@@ -380,19 +380,6 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 it.lhs = lhs
                 it.rhs = rhs
             }
-        } else if (binExpr.expressions.size == 1) {
-            return newUnaryOperator(
-                    binExpr.operator,
-                    postfix = false,
-                    prefix = false,
-                    rawNode = raw,
-                )
-                .also {
-                    it.input =
-                        frontend.expressionHandler.handle(
-                            RsAst.RustExpr(binExpr.expressions.first())
-                        )
-                }
         }
 
         return newProblemExpression(
@@ -410,13 +397,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         // Depending on whether the first expression is a let expression we want fo fill condition
         // or condition declaration
         ifExpr.expressions.first().let {
-            val condExpr = frontend.expressionHandler.handle(RsAst.RustExpr(it))
-            if (condExpr is DeclarationStatement) {
-                // There should only be one declaration inside a let of an if
-                ifElse.conditionDeclaration = condExpr.declarations.first()
-            } else {
-                ifElse.condition = condExpr
-            }
+            ifElse.condition = frontend.expressionHandler.handle(RsAst.RustExpr(it))
         }
 
         ifExpr.expressions.getOrNull(1)?.let {

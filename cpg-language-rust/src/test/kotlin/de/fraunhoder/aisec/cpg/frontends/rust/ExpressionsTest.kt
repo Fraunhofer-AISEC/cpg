@@ -457,4 +457,25 @@ class ExpressionsTest {
         val empties = main.allChildren<Empty>()
         assertTrue(empties.isNotEmpty(), "Expected at least one Empty node")
     }
+
+    @Test
+    fun testLetChainExpression() {
+        val topLevel = Path.of("src", "test", "resources")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("let_chain.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+
+        val ifElse = main.allChildren<IfElse>().firstOrNull()
+        assertNotNull(ifElse, "Expected an IfElse statement in main function")
+        assertTrue(ifElse.condition.allChildren<DeclarationStatement>().size == 2)
+    }
 }
