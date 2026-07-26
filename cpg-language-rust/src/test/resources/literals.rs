@@ -34,6 +34,9 @@ fn main() {
     // Byte string literals
     let bytes = b"hello";
 
+    // CString literal
+    let cstring = c"hello";
+
     println!("{} {} {} {}", ch1, s1, i1, f1);
 }
 

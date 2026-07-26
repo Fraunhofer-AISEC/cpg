@@ -326,6 +326,13 @@ class ExpressionsTest {
         val trueLit = boolLiterals.firstOrNull { it.value == true }
         assertNotNull(trueLit)
 
+        val falseLit = boolLiterals.firstOrNull { it.value == false }
+        assertNotNull(falseLit)
+
+        val cstrings = stringLiterals.filter { (it.code ?: "").startsWith("c\"") }
+        assertTrue(cstrings.isNotEmpty(), "Should have string literals")
+        cstrings.forEach { it.value == (it.code ?: "").removePrefix("c\"").removeSuffix("\"") }
+
         // Test: Variables assigned with literals should have proper types
         val ch1 = main.variables["ch1"]
         assertNotNull(ch1)
@@ -429,5 +436,25 @@ class ExpressionsTest {
 
         val conditionCasts = conditionFunction.allChildren<Cast>()
         assertTrue(conditionCasts.isNotEmpty(), "Conditional should have cast expression")
+    }
+
+    @Test
+    fun testEmptyExpression() {
+        val topLevel = Path.of("src", "test", "resources")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("underscore.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+
+        val empties = main.allChildren<Empty>()
+        assertTrue(empties.isNotEmpty(), "Expected at least one Empty node")
     }
 }

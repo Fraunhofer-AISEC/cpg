@@ -107,7 +107,6 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.ReturnExpr -> handleReturnExpr(node.v1)
             is RsExpr.TryExpr -> handleTryExpr(node.v1)
             is RsExpr.ClosureExpr -> handleClosureExpr(node.v1)
-
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -155,15 +154,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 )
             RsLiteralType.C_STRING_L ->
                 newLiteral(
-                    stringValue.removePrefix("c").removeSuffix("'"),
+                    stringValue.removePrefix("c\"").removeSuffix("\""),
                     objectType("CString"),
                     raw,
                 )
             RsLiteralType.INT_NUMBER_L -> buildIntType(stringValue, raw)
             RsLiteralType.BYTE_STRING_L ->
                 newLiteral(
-                    stringValue.removePrefix("b").removeSuffix("'"),
-                    language.builtInTypes["u8"] ?: unknownType().array(),
+                    stringValue.removePrefix("b\"").removeSuffix("\""),
+                    (language.builtInTypes["u8"] ?: unknownType()).array(),
                     raw,
                 )
             RsLiteralType.FLOAT_NUMBER_L ->
