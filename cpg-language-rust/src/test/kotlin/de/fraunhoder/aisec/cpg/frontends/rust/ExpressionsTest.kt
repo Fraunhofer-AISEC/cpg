@@ -478,4 +478,9 @@ class ExpressionsTest {
         assertNotNull(ifElse, "Expected an IfElse statement in main function")
         assertTrue(ifElse.condition.allChildren<DeclarationStatement>().size == 2)
     }
+
+    @Test
+    fun testIndexExpression(){
+        
+    }
 }

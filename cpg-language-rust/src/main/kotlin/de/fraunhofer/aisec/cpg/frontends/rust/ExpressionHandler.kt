@@ -47,7 +47,6 @@ import uniffi.rustast.RsFieldExpr
 import uniffi.rustast.RsForExpr
 import uniffi.rustast.RsIfExpr
 import uniffi.rustast.RsIndexExpr
-import uniffi.rustast.RsItem
 import uniffi.rustast.RsLetExpr
 import uniffi.rustast.RsLiteral
 import uniffi.rustast.RsLiteralType
@@ -704,12 +703,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val raw = RsAst.RustExpr(RsExpr.MatchExpr(matchExpr))
 
         // Get the scrutinee (the value being matched)
-        val scrutinee =
-            matchExpr.expr.firstOrNull()?.let { handleNode(it) }
-                ?: return newProblemExpression(
-                    problem = "Match expression does not contain a scrutinee",
-                    rawNode = raw,
-                )
+        val scrutinee = matchExpr.expr.firstOrNull()?.let { handleNode(it) }
 
         // Create the switch statement
         val switchStatement =
@@ -824,7 +818,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
 
         return newProblemExpression(
-            problem = "Try expressions are not supported yet",
+            problem = "Try expression does not contain an expression",
             rawNode = raw,
         )
     }
@@ -832,14 +826,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     private fun handleMatchArm(arm: RsMatchArm): List<Expression> {
         val raw = RsAst.RustExpr(RsExpr.MatchArm(arm))
         // Deconstruct the pattern and create a case statement
-        val pattern =
-            arm.pat.firstOrNull()?.let { frontend.patternHandler.handleNode(it) }
-                ?: return listOf(
-                    newProblemExpression(
-                        problem = "Match arm does not contain a pattern",
-                        rawNode = raw,
-                    )
-                )
+        val pattern = arm.pat.firstOrNull()?.let { frontend.patternHandler.handleNode(it) }
 
         val caseStatement =
             newCase(rawNode = arm.pat.firstOrNull()?.let { RsAst.RustPat(it) } ?: raw)
@@ -848,26 +835,13 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         var caseExpressions = mutableListOf<Expression>(caseStatement)
 
         // Get the match arm expression
-        val armExpr =
-            arm.expr.firstOrNull()?.let { handleNode(it) }
-                ?: return listOf(
-                    newProblemExpression(
-                        problem = "Match arm does not contain an expression",
-                        rawNode = raw,
-                    )
-                )
+        val armExpr = arm.expr.firstOrNull()?.let { handleNode(it) }
+
         val wrappedRawExpr = arm.expr.firstOrNull()?.let { RsAst.RustExpr(it) } ?: raw
 
         // If there's a guard, wrap the break statement in an if
         if (arm.guard.isNotEmpty()) {
-            val guard =
-                arm.guard.firstOrNull()?.let { handleNode(it) }
-                    ?: return listOf(
-                        newProblemExpression(
-                            problem = "Match arm guard could not be parsed",
-                            rawNode = raw,
-                        )
-                    )
+            val guard = arm.guard.firstOrNull()?.let { handleNode(it) }
 
             val ifElse = newIfElse(raw)
             ifElse.condition = guard
@@ -899,26 +873,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val lambda = newLambda(rawNode = raw)
 
         val paramsList = closureExpr.paramList.firstOrNull()
-        val enclosedFunction =
-            paramsList?.selfParam?.let {
-                newMethod(
-                    "",
-                    recordDeclaration = frontend.scopeManager.currentRecord,
-                    rawNode = raw,
-                )
-            } ?: newFunction("", rawNode = raw)
+        val enclosedFunction = newFunction("", rawNode = raw)
         frontend.scopeManager.enterScope(enclosedFunction)
-
-        paramsList?.selfParam?.let {
-            val type = it.ty?.let { frontend.typeOf(it) }
-            enclosedFunction.parameters +=
-                newParameter(
-                        "self",
-                        type = type ?: unknownType(),
-                        rawNode = RsAst.RustItem(RsItem.SelfParam(it)),
-                    )
-                    .also { frontend.scopeManager.addDeclaration(it) }
-        }
 
         paramsList?.let { params ->
             for (parameter in params.params) {
