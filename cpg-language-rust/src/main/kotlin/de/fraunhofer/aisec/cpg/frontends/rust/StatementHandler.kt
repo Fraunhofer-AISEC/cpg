@@ -63,10 +63,6 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         val raw = RsAst.RustStmt(RsStmt.LetStmt(letStmt))
         // for us, a let expression is an assigment with a deconstruction
 
-        var initializer =
-            letStmt.initializer?.let { frontend.expressionHandler.handle(RsAst.RustExpr(it)) }
-                ?: newProblemExpression("Let statement does not have an initializer", rawNode = raw)
-
         letStmt.letElse?.let {
             return handleLetElse(letStmt, it, raw)
         }
@@ -83,7 +79,6 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                 )
 
             letStmt.initializer?.let {
-                // Todo If this is a tuple struct, rust analyzer will actually make a call out of it
                 variable.initializer = frontend.expressionHandler.handle(RsAst.RustExpr(it))
 
                 // Here, if we have the classical pattern for initializers we set the base of the

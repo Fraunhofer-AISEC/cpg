@@ -95,9 +95,19 @@ class PatternHandler(frontend: RustLanguageFrontend) :
         val raw = RsAst.RustPat(RsPat.IdentPat(identPat))
 
         val variable =
-            frontend.scopeManager.currentScope.symbols[identPat.name]
-                ?.filterIsInstance<Variable>()
-                ?.firstOrNull()
+            identPat.name?.let {
+                frontend.scopeManager
+                    .lookupSymbolByName(
+                        newName(
+                            it,
+                            doNotPrependNamespace = false,
+                            frontend.scopeManager.currentNamespace,
+                        ),
+                        language,
+                    )
+                    .filterIsInstance<Variable>()
+                    .firstOrNull()
+            }
 
         variable?.let {
             val lhsRef =
