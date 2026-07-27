@@ -69,7 +69,15 @@ dependencies {
     // api, not implementation: the Server type (from Application.kt/McpServer.kt) is part of this
     // module's public API surface, which codyze-console calls directly.
     api(libs.mcp)
+    // Koog's MCP integration (McpToolRegistryProvider) only models MCP *tools*, so ChatService
+    // still
+    // talks to the raw MCP client SDK directly for prompts/resources listing and one-off direct
+    // tool
+    // invocation (see ChatService.mcp). The tool-calling loop the LLM itself drives goes through
+    // Koog's ToolRegistry (McpToolRegistryProvider.fromClient), reusing that same connected client.
     implementation(libs.mcp.client)
+    implementation(libs.koog.agents)
+    implementation(libs.koog.agents.mcp)
     api(libs.ktor.server.cio)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.cors)

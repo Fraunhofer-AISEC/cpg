@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.ai.clients
 
 import de.fraunhofer.aisec.cpg.ai.ChatService
-import io.ktor.utils.io.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
@@ -43,29 +42,6 @@ const val SYSTEM_PROMPT =
         "If a previous tool result already answers the question, respond without calling tools again. " +
         "If a tool call fails, do not retry it, instead continue with the information you already have. " +
         "Explain your findings clearly."
-
-suspend fun readSseStream(channel: ByteReadChannel, processLine: suspend (String) -> Unit) {
-    while (!channel.isClosedForRead) {
-        val line =
-            try {
-                channel.readUTF8Line()
-            } catch (_: Exception) {
-                break
-            }
-
-        if (line.isNullOrBlank()) continue
-        if (!line.startsWith("data: ")) continue
-
-        val jsonStr = line.substringAfter("data: ").trim()
-        if (jsonStr == "[DONE]") break
-
-        try {
-            processLine(jsonStr)
-        } catch (_: Exception) {
-            // Continue on parsing errors
-        }
-    }
-}
 
 /** SSE event payloads streamed from [ChatService] to the frontend. */
 object Events {

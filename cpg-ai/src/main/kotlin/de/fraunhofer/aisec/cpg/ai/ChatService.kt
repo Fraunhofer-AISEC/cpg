@@ -25,15 +25,27 @@
  */
 package de.fraunhofer.aisec.cpg.ai
 
+import ai.koog.agents.core.agent.AIAgent
+import ai.koog.agents.core.agent.config.AIAgentConfig
+import ai.koog.agents.core.dsl.builder.node
+import ai.koog.agents.core.dsl.builder.strategy
+import ai.koog.agents.core.dsl.extension.*
+import ai.koog.agents.core.environment.ReceivedToolResult
+import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.agents.features.eventHandler.feature.handleEvents
+import ai.koog.agents.mcp.McpToolRegistryProvider
+import ai.koog.agents.mcp.metadata.McpServerInfo
+import ai.koog.prompt.dsl.prompt
+import ai.koog.prompt.message.MessagePart
+import ai.koog.prompt.streaming.StreamFrame
+import ai.koog.serialization.kotlinx.toKotlinxJsonElement
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import de.fraunhofer.aisec.cpg.ai.clients.*
-import de.fraunhofer.aisec.cpg.ai.skills.ACTIVATE_SKILL_TOOL_NAME
 import de.fraunhofer.aisec.cpg.ai.skills.SkillLoader
-import de.fraunhofer.aisec.cpg.ai.skills.buildActivateSkillTool
+import de.fraunhofer.aisec.cpg.ai.skills.buildActivateSkillToolRegistry
 import de.fraunhofer.aisec.cpg.ai.skills.buildSkillCatalog
 import de.fraunhofer.aisec.cpg.ai.skills.defaultSkillDirectories
-import de.fraunhofer.aisec.cpg.ai.skills.wrapActivatedSkill
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
@@ -58,6 +70,13 @@ class ChatService(
     suspend fun listAvailableProviders(): List<LlmProviderWithModels> =
         llmProviderConfig.listAvailableProviders()
 
+    /**
+     * Raw MCP client used for capability discovery (prompts/resources/tool schemas) and the direct,
+     * non-agentic [getPrompt]/[callTool] endpoints. Koog's MCP integration
+     * ([McpToolRegistryProvider]) only models MCP *tools*, so it can't replace this for
+     * prompts/resources listing. The LLM-driven tool-calling loop in [chat], however, goes through
+     * [mcpToolRegistry] below, which wraps this very same connected client.
+     */
     private val mcp: Client =
         Client(
             clientInfo = Implementation(name = "codyze-client", version = "1.0.0"),
@@ -68,6 +87,9 @@ class ChatService(
     private var prompts: List<Prompt> = emptyList()
     private var resources: List<Resource> = emptyList()
 
+    /** The MCP tools, wrapped as a Koog [ToolRegistry] for use by the agent in [chat]. */
+    private var mcpToolRegistry: ToolRegistry = ToolRegistry.EMPTY
+
     /** Connect to the MCP server via streamable HTTP. */
     suspend fun connect() {
         val transport = StreamableHttpClientTransport(url = mcpServerUrl, client = httpClient)
@@ -75,13 +97,121 @@ class ChatService(
         tools = mcp.listTools().tools
         prompts = mcp.listPrompts().prompts
         resources = mcp.listResources().resources
+        mcpToolRegistry =
+            McpToolRegistryProvider.fromClient(
+                mcpClient = mcp,
+                serverInfo = McpServerInfo(url = mcpServerUrl),
+            )
     }
 
     private val skillLoader = SkillLoader(defaultSkillDirectories)
     private var skills: List<Skill> = skillLoader.discoverSkills()
 
-    /** Maximum number of tool call iterations before responding a text message. */
+    /** Maximum number of tool-calling round trips the agent may take before it must respond. */
     private val maxToolIterations = 50
+
+    /**
+     * Once the running prompt grows beyond this many messages, [chatStrategy] compresses the
+     * history before continuing the tool-calling loop. With up to [maxToolIterations] round trips
+     * per [chat] call, a single oversized tool result (or many moderate ones accumulating over
+     * iterations) can otherwise grow the prompt past the LLM provider's context window and cause a
+     * 400 error.
+     */
+    private val historyCompressionThreshold = 60
+
+    /**
+     * Number of most recent messages kept when [chatStrategy] compresses the history: everything
+     * older is summarized away, per [HistoryCompressionStrategy.FromLastNMessages].
+     */
+    private val historyCompressionKeepLastN = 30
+
+    /**
+     * Maximum size, in characters, of a single tool result's text content admitted into the
+     * LLM-facing conversation (see the `truncateToolResults` node in [chatStrategy]). A single MCP
+     * tool call can return an unbounded amount of data (e.g. `cpg_list_functions` without narrow
+     * filters); left uncapped, one such result can alone exceed the LLM provider's context window
+     * and cause a hard 400 error - before [historyCompressionThreshold] ever triggers, since that
+     * gates on message *count*, not the size of an individual message. This cap only affects what
+     * the LLM sees: the frontend always receives the full, untruncated result via the `tool_result`
+     * SSE event, which is emitted from within tool execution itself - i.e. strictly before
+     * [chatStrategy]'s `truncateToolResults` node ever runs.
+     */
+    private val maxToolResultChars = 20_000
+
+    /**
+     * Caps a tool result's textual content to [maxToolResultChars], appending a truncation marker.
+     * Both [ReceivedToolResult.output] and any [MessagePart.Text] parts are capped: depending on
+     * the tool, either (or both) may be what actually reaches the LLM's prompt, since
+     * [ReceivedToolResult.toMessagePart] prefers `parts` and only falls back to wrapping [output]
+     * when `parts` is null.
+     */
+    private fun ReceivedToolResult.truncatedForLlm(): ReceivedToolResult {
+        fun truncate(text: String): String =
+            if (text.length <= maxToolResultChars) text
+            else "${text.take(maxToolResultChars)}...[truncated, ${text.length} chars total]"
+
+        return copy(
+            output = truncate(output),
+            parts =
+                parts?.map { part ->
+                    if (part is MessagePart.Text) part.copy(text = truncate(part.text)) else part
+                },
+        )
+    }
+
+    /**
+     * The agent's tool-calling loop: request the LLM, and if it calls tool(s), execute them and
+     * send the results back, repeating until the LLM responds with text. This mirrors Koog's
+     * built-in single-run strategy shape, extended with:
+     * - a `truncateToolResults` node that caps any oversized tool result (see [maxToolResultChars])
+     *   before it can reach the LLM-facing prompt, running right after tool execution (and thus
+     *   after the tool-call-completed event, which still carries the full, untruncated result to
+     *   the frontend) and before both downstream edges.
+     * - a history-compression node that fires once the prompt exceeds [historyCompressionThreshold]
+     *   messages (see class docs above), so long tool-calling loops don't blow the LLM's context
+     *   window either.
+     *
+     * Built once and reused across [chat] calls, since the graph itself carries no per-request
+     * state.
+     */
+    private val chatStrategy =
+        strategy<String, String>("chat-with-history-compression") {
+            val requestLlm by nodeLLMRequest()
+            val executeTool by nodeExecuteTools()
+            val truncateToolResults by
+                node<ReceivedToolResults, ReceivedToolResults>("truncateToolResults") { received ->
+                    ReceivedToolResults(received.toolResults.map { it.truncatedForLlm() })
+                }
+            val sendToolResult by nodeLLMSendToolResults()
+            val compressionStrategy =
+                HistoryCompressionStrategy.FromLastNMessages(historyCompressionKeepLastN)
+            val compressHistory by
+                nodeLLMCompressHistory<ReceivedToolResults>(strategy = compressionStrategy)
+
+            edge(nodeStart forwardTo requestLlm)
+            edge(requestLlm forwardTo nodeFinish onTextMessage { true })
+            edge(requestLlm forwardTo executeTool onToolCalls { true })
+            edge(executeTool forwardTo truncateToolResults)
+            // If the history has grown too large, compress it before sending the tool result.
+            edge(
+                truncateToolResults forwardTo
+                    compressHistory onCondition
+                    { _ ->
+                        llm.readSession { prompt.messages.size > historyCompressionThreshold }
+                    }
+            )
+            edge(compressHistory forwardTo sendToolResult)
+            // Otherwise, send the tool result directly.
+            edge(
+                truncateToolResults forwardTo
+                    sendToolResult onCondition
+                    { _ ->
+                        llm.readSession { prompt.messages.size <= historyCompressionThreshold }
+                    }
+            )
+            edge(sendToolResult forwardTo executeTool onToolCalls { true })
+            edge(sendToolResult forwardTo nodeFinish onTextMessage { true })
+        }
 
     /** Return the discovered skills. */
     fun getSkills(): List<Skill> = skills
@@ -92,9 +222,9 @@ class ChatService(
         send(Events.keepalive())
 
         val userMessage = request.messages.lastOrNull()?.content ?: ""
-        val conversationHistory = request.messages
+        val priorMessages = request.messages.dropLast(1)
 
-        val llm =
+        val chatLlm =
             llmProviderConfig.clientFor(request.client, request.model)
                 ?: run {
                     send(Events.text("Unknown or unavailable LLM client"))
@@ -102,42 +232,58 @@ class ChatService(
                 }
 
         try {
-            val toolCallHistory = mutableListOf<List<ToolCallWithResult>>()
-            var iteration = 0
-
-            val allTools = tools + listOfNotNull(buildActivateSkillTool(skills))
-            val systemPrompt = buildSystemPrompt(skills)
-
-            var toolCalls =
-                llm.sendPrompt(
-                    userMessage = userMessage,
-                    systemPrompt = systemPrompt,
-                    conversationHistory = conversationHistory,
-                    tools = allTools,
-                    onText = { text -> send(Events.text(text)) },
-                    onReasoning = { thought -> send(Events.reasoning(thought)) },
-                )
-
-            while (toolCalls.isNotEmpty() && iteration < maxToolIterations) {
-                iteration++
-                val roundtripResults =
-                    toolCalls.map { toolCall ->
-                        val result = executeToolCall(toolCall) { jsonEvent -> send(jsonEvent) }
-                        ToolCallWithResult(toolCall, result)
+            // Re-derive the full conversation as the agent's initial history: the frontend sends
+            // the
+            // complete message list on every request (ChatService itself is stateless across
+            // calls),
+            // so a fresh AIAgent/prompt is built per request, mirroring the old per-request
+            // LlmClient.
+            val history =
+                prompt(id = "chat-history") {
+                    system(buildSystemPrompt(skills))
+                    priorMessages.forEach { msg ->
+                        if (msg.content.isNotBlank()) {
+                            if (msg.role == "assistant") assistant(msg.content)
+                            else user(msg.content)
+                        }
                     }
-                toolCallHistory.add(roundtripResults)
+                }
 
-                toolCalls =
-                    llm.sendPrompt(
-                        userMessage = userMessage,
-                        systemPrompt = systemPrompt,
-                        conversationHistory = conversationHistory,
-                        toolCallHistory = toolCallHistory,
-                        tools = allTools,
-                        onText = { text -> send(Events.text(text)) },
-                        onReasoning = { thought -> send(Events.reasoning(thought)) },
-                    )
-            }
+            val toolRegistry = mcpToolRegistry + buildActivateSkillToolRegistry(skills)
+
+            val agent =
+                AIAgent(
+                    promptExecutor = chatLlm.executor,
+                    agentConfig =
+                        AIAgentConfig(
+                            prompt = history,
+                            model = chatLlm.model,
+                            maxAgentIterations = maxToolIterations,
+                        ),
+                    strategy = chatStrategy,
+                    toolRegistry = toolRegistry,
+                ) {
+                    handleEvents {
+                        onLLMStreamingFrameReceived { ctx ->
+                            when (val frame = ctx.streamFrame) {
+                                is StreamFrame.TextDelta -> send(Events.text(frame.text))
+                                is StreamFrame.ReasoningDelta ->
+                                    frame.text?.let { send(Events.reasoning(it)) }
+                                else -> {}
+                            }
+                        }
+                        onToolCallCompleted { ctx ->
+                            val content = ctx.toolResult?.toKotlinxJsonElement() ?: JsonNull
+                            send(Events.toolResult(ctx.toolName, content))
+                        }
+                        onToolCallFailed { ctx -> send(Events.text("Tool failed: ${ctx.message}")) }
+                    }
+                }
+
+            // The final text is already streamed out via onLLMStreamingFrameReceived above; the
+            // agent's return value only matters if the run finishes without ever streaming (e.g. an
+            // immediate tool-only response), so we don't need to re-emit it here.
+            agent.run(userMessage)
         } catch (e: Exception) {
             log.error("Chat error: {}", e.message, e)
             send(Events.text("Error: ${e.message}"))
@@ -233,40 +379,6 @@ class ChatService(
                 }
             }
         return if (parsedItems.size == 1) parsedItems[0] else JsonArray(parsedItems)
-    }
-
-    /** Execute a tool call and emit result to frontend */
-    private suspend fun executeToolCall(
-        toolCall: ToolCall,
-        emit: suspend (String) -> Unit,
-    ): String {
-        return try {
-            val arguments = Json.parseToJsonElement(toolCall.arguments).jsonObject
-
-            if (toolCall.name == ACTIVATE_SKILL_TOOL_NAME) {
-                val skillName = arguments["name"]?.jsonPrimitive?.contentOrNull
-                val skill = skills.find { it.name == skillName }
-                val resultText =
-                    skill?.let { wrapActivatedSkill(it) } ?: "Unknown skill: $skillName"
-                emit(Events.toolResult(toolCall.name, JsonPrimitive(resultText)))
-                return resultText
-            }
-
-            val result = mcp.callTool(name = toolCall.name, arguments = arguments)
-            val contentTexts = result.content.mapNotNull { (it as? TextContent)?.text }
-            val resultText = contentTexts.joinToString("\n")
-
-            val content = parseToolResultContent(contentTexts)
-            val event = Events.toolResult(toolCall.name, content)
-            log.debug("Emitting tool result event: {}", event)
-            emit(event)
-
-            resultText
-        } catch (e: Exception) {
-            val errorMsg = "Tool failed: ${e.message}"
-            emit(Events.text(errorMsg))
-            errorMsg
-        }
     }
 
     /** Call an MCP tool directly and return the result as a parsed JSON element. */
