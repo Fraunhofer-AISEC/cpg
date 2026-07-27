@@ -480,7 +480,186 @@ class ExpressionsTest {
     }
 
     @Test
-    fun testIndexExpression(){
-        
+    fun testIndexExpression() {
+        val topLevel = Path.of("src", "test", "resources")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("index_expression.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        // ------------------------------------------------------------------
+        // 1. array_index: show(numbers[2])
+        // ------------------------------------------------------------------
+        val arrayIndexFn = tu.functions["array_index"]
+        assertNotNull(arrayIndexFn)
+
+        val arraySubscriptions = arrayIndexFn.allChildren<Subscription>()
+        assertEquals(1, arraySubscriptions.size)
+
+        val arraySubscription = arraySubscriptions.first()
+        val arrayRef = assertIs<Reference>(arraySubscription.arrayExpression)
+        assertEquals("numbers", arrayRef.name.localName)
+
+        val arrayIndexLit = assertIs<Literal<*>>(arraySubscription.subscriptExpression)
+        assertEquals(2, arrayIndexLit.value)
+
+        // A plain read access should keep the default access value ...
+        assertEquals(AccessValues.READ, arraySubscription.access)
+        // ... and the whole array should flow into the subscription.
+        assertTrue(
+            arraySubscription.prevDFGEdges.any { it.start == arraySubscription.arrayExpression },
+            "Array expression should flow into the subscription for a read access",
+        )
+
+        // ------------------------------------------------------------------
+        // 2. vector_index: show(numbers[1]) where numbers is a vec! macro
+        // ------------------------------------------------------------------
+        val vectorIndexFn = tu.functions["vector_index"]
+        assertNotNull(vectorIndexFn)
+
+        val vectorSubscriptions = vectorIndexFn.allChildren<Subscription>()
+        assertEquals(1, vectorSubscriptions.size)
+
+        val vectorSubscription = vectorSubscriptions.first()
+        val vectorRef = assertIs<Reference>(vectorSubscription.arrayExpression)
+        assertEquals("numbers", vectorRef.name.localName)
+
+        val vectorIndexLit = assertIs<Literal<*>>(vectorSubscription.subscriptExpression)
+        assertEquals(1, vectorIndexLit.value)
+
+        // ------------------------------------------------------------------
+        // 3. mutable_index: numbers[1] = 42
+        // ------------------------------------------------------------------
+        val mutableIndexFn = tu.functions["mutable_index"]
+        assertNotNull(mutableIndexFn)
+
+        val mutableSubscriptions = mutableIndexFn.allChildren<Subscription>()
+        assertEquals(1, mutableSubscriptions.size)
+
+        val mutableSubscription = mutableSubscriptions.first()
+        assertIs<Reference>(mutableSubscription.arrayExpression)
+
+        val mutableIndexLit = assertIs<Literal<*>>(mutableSubscription.subscriptExpression)
+        assertEquals(1, mutableIndexLit.value)
+
+        // Being the target of an assignment, the subscription itself is written to ...
+        assertEquals(AccessValues.WRITE, mutableSubscription.access)
+        // ... the assigned value (42) flows into the subscription ...
+        assertTrue(
+            mutableSubscription.prevDFGEdges.any {
+                (it.start as? Literal<*>)?.value.toString() == "42"
+            },
+            "The assigned value should flow into the subscription",
+        )
+        // ... which in turn flows on into the array it indexes.
+        assertTrue(
+            mutableSubscription.nextDFGEdges.any { it.end == mutableSubscription.arrayExpression },
+            "A write access should flow from the subscription back into the array expression",
+        )
+
+        // ------------------------------------------------------------------
+        // 4. string_slice: let part = &s[1..4]
+        // ------------------------------------------------------------------
+        val stringSliceFn = tu.functions["string_slice"]
+        assertNotNull(stringSliceFn)
+
+        val part = stringSliceFn.variables["part"]
+        assertNotNull(part)
+
+        val partRefOp = assertIs<UnaryOperator>(part.assignments.first().value)
+        assertEquals("&", partRefOp.operatorCode)
+
+        val stringSliceSubscription = assertIs<Subscription>(partRefOp.input)
+        val stringSliceArray = assertIs<Reference>(stringSliceSubscription.arrayExpression)
+        assertEquals("s", stringSliceArray.name.localName)
+
+        val stringSliceRange = assertIs<Range>(stringSliceSubscription.subscriptExpression)
+        assertEquals("..", stringSliceRange.operatorCode)
+        assertEquals(1, (stringSliceRange.floor as? Literal<*>)?.value)
+        assertEquals(4, (stringSliceRange.ceiling as? Literal<*>)?.value)
+
+        // ------------------------------------------------------------------
+        // 5. slice_index: let middle = &data[1..4]
+        // ------------------------------------------------------------------
+        val sliceIndexFn = tu.functions["slice_index"]
+        assertNotNull(sliceIndexFn)
+
+        val middle = sliceIndexFn.variables["middle"]
+        assertNotNull(middle)
+
+        val middleRefOp = assertIs<UnaryOperator>(middle.assignments.first().value)
+        assertEquals("&", middleRefOp.operatorCode)
+
+        val sliceIndexSubscription = assertIs<Subscription>(middleRefOp.input)
+        assertIs<Reference>(sliceIndexSubscription.arrayExpression)
+
+        val sliceIndexRange = assertIs<Range>(sliceIndexSubscription.subscriptExpression)
+        assertEquals("..", sliceIndexRange.operatorCode)
+        assertEquals(1, (sliceIndexRange.floor as? Literal<*>)?.value)
+        assertEquals(4, (sliceIndexRange.ceiling as? Literal<*>)?.value)
+
+        // ------------------------------------------------------------------
+        // 6. ranges: six differently-shaped ranges used as subscripts
+        // ------------------------------------------------------------------
+        val rangesFn = tu.functions["ranges"]
+        assertNotNull(rangesFn)
+
+        val rangeCalls = rangesFn.calls.filter { it.name.localName == "show_dbg" }
+        assertEquals(6, rangeCalls.size)
+
+        fun subscriptOf(call: Call): Subscription {
+            val refOp = assertIs<UnaryOperator>(call.arguments.first())
+            assertEquals("&", refOp.operatorCode)
+            return assertIs<Subscription>(refOp.input)
+        }
+
+        // v[..] -> RangeFull: neither bound is set
+        val rangeFull = assertIs<Range>(subscriptOf(rangeCalls[0]).subscriptExpression)
+        assertEquals("..", rangeFull.operatorCode)
+        assertNull(rangeFull.floor)
+        assertNull(rangeFull.ceiling)
+
+        // v[..3] -> RangeTo: exactly one bound is set, holding the value 3
+        val rangeTo = assertIs<Range>(subscriptOf(rangeCalls[1]).subscriptExpression)
+        assertEquals("..", rangeTo.operatorCode)
+        val rangeToBound = rangeTo.floor ?: rangeTo.ceiling
+        assertNotNull(rangeToBound, "RangeTo should carry its single bound")
+        assertNull(if (rangeTo.floor != null) rangeTo.ceiling else rangeTo.floor)
+        assertEquals(3, (rangeToBound as? Literal<*>)?.value)
+
+        // v[2..] -> RangeFrom: exactly one bound is set, holding the value 2
+        val rangeFrom = assertIs<Range>(subscriptOf(rangeCalls[2]).subscriptExpression)
+        assertEquals("..", rangeFrom.operatorCode)
+        val rangeFromBound = rangeFrom.floor ?: rangeFrom.ceiling
+        assertNotNull(rangeFromBound, "RangeFrom should carry its single bound")
+        assertNull(if (rangeFrom.floor != null) rangeFrom.ceiling else rangeFrom.floor)
+        assertEquals(2, (rangeFromBound as? Literal<*>)?.value)
+
+        // v[1..4] -> Range: both bounds are set
+        val rangeBoth = assertIs<Range>(subscriptOf(rangeCalls[3]).subscriptExpression)
+        assertEquals("..", rangeBoth.operatorCode)
+        assertEquals(1, (rangeBoth.floor as? Literal<*>)?.value)
+        assertEquals(4, (rangeBoth.ceiling as? Literal<*>)?.value)
+
+        // v[..=2] -> RangeToInclusive: exactly one bound is set, holding the value 2
+        val rangeToInclusive = assertIs<Range>(subscriptOf(rangeCalls[4]).subscriptExpression)
+        assertEquals("..=", rangeToInclusive.operatorCode)
+        val rangeToInclusiveBound = rangeToInclusive.floor ?: rangeToInclusive.ceiling
+        assertNotNull(rangeToInclusiveBound, "RangeToInclusive should carry its single bound")
+        assertNull(
+            if (rangeToInclusive.floor != null) rangeToInclusive.ceiling else rangeToInclusive.floor
+        )
+        assertEquals(2, (rangeToInclusiveBound as? Literal<*>)?.value)
+
+        // v[1..=3] -> RangeInclusive: both bounds are set
+        val rangeInclusiveBoth = assertIs<Range>(subscriptOf(rangeCalls[5]).subscriptExpression)
+        assertEquals("..=", rangeInclusiveBoth.operatorCode)
+        assertEquals(1, (rangeInclusiveBoth.floor as? Literal<*>)?.value)
+        assertEquals(3, (rangeInclusiveBoth.ceiling as? Literal<*>)?.value)
     }
 }
