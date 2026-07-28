@@ -256,7 +256,11 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 else -> null
             }
 
-        return newLiteral(value, typ?.let { language.builtInTypes[it] } ?: unknownType(), raw)
+        return newLiteral(
+            value.toInt(),
+            typ?.let { language.builtInTypes[it] } ?: unknownType(),
+            raw,
+        )
     }
 
     fun handleCallExpr(callExpr: RsCallExpr): Call {
