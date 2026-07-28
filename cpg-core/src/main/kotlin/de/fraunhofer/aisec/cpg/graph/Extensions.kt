@@ -410,15 +410,6 @@ fun Node.collectAllPrevDFGPaths(): List<NodePath> {
         .map { it.second }
 }
 
-data class ReachingWrite(
-    val source: Node,
-    val granularity: Granularity,
-    val functionSummary: Boolean,
-)
-
-fun Node.reachingWrites(): List<ReachingWrite> =
-    this.prevDFGEdges.map { ReachingWrite(it.start, it.granularity, it.functionSummary) }
-
 /**
  * A single incoming data-flow edge to a node, i.e. one immediate `prevDFG` edge ("reaching write").
  * [source] is the node the value flows from, [granularity] is how much of it flows (full, partial,
