@@ -140,8 +140,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         for (child in ctx.declarations) {
             val decl = handle(child) ?: continue
 
-            frontend.scopeManager.addDeclaration(decl)
-            nsd.declarations += decl
+            val canonical = frontend.scopeManager.addDeclaration(decl)
+            nsd.addDeclaration(canonical)
         }
 
         frontend.scopeManager.leaveScope(nsd)
@@ -490,6 +490,16 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 //   initializer. This allows us to guess cast vs. call expression in the
                 //   initializer.
                 if (declaration is Variable) {
+                    // Remember whether this declarator carries the `extern` storage class (as
+                    // opposed to an `extern "C" { ... }` linkage specification, which is a
+                    // different CDT AST construct read from `IASTDeclSpecifier.storageClass`, not
+                    // touched here), so that redeclaration merging (see
+                    // [CLanguage.isRedeclaration]) can distinguish a mere declaration from a
+                    // definition.
+                    if (declSpecifier?.storageClass == IASTDeclSpecifier.sc_extern) {
+                        declaration.modifiers = declaration.modifiers + "extern"
+                    }
+
                     // Set template parameters of the variable (if any)
                     if (templateParams != null) {
                         declaration.templateParameters = templateParams
@@ -739,12 +749,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             val decl = handle(declaration) ?: continue
             if (decl is DeclarationSequence) {
                 decl.declarations.forEach {
-                    frontend.scopeManager.addDeclaration(it)
-                    node.addDeclaration(it)
+                    val canonical = frontend.scopeManager.addDeclaration(it)
+                    node.addDeclaration(canonical)
                 }
             } else {
-                frontend.scopeManager.addDeclaration(decl)
-                node.addDeclaration(decl)
+                val canonical = frontend.scopeManager.addDeclaration(decl)
+                node.addDeclaration(canonical)
             }
         }
 

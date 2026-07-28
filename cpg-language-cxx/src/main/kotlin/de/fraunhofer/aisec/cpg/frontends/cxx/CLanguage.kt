@@ -27,6 +27,10 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
@@ -51,6 +55,53 @@ open class CLanguage :
     override val elaboratedTypeSpecifier = listOf("struct", "union", "enum")
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
+
+    override val supportsDeclarationMerging = true
+
+    /**
+     * Whether a bare, non-`extern`, non-initialized redeclaration of a global [Variable] is a valid
+     * "tentative definition" ([ISO/IEC 9899:2011] §6.9.2) rather than an error. This holds for C,
+     * but is overridden to `false` for C++, where a non-class-type variable at namespace/global
+     * scope is already a full definition, even without an explicit initializer, so a second such
+     * declaration would be an ODR violation rather than a redeclaration of the same object.
+     */
+    open val supportsTentativeDefinitions: Boolean = true
+
+    override fun isRedeclaration(existing: Declaration, incoming: Declaration): Boolean {
+        if (existing::class != Variable::class || incoming::class != Variable::class) {
+            return false
+        }
+        if (existing.scope !is GlobalScope && existing.scope !is NamespaceScope) {
+            return false
+        }
+        existing as Variable
+        incoming as Variable
+        if (existing.initializer != null && incoming.initializer != null) {
+            // Two full definitions of the same global: an ODR violation. Leave both in place, so
+            // that resolution surfaces the ambiguity instead of silently picking a winner.
+            return false
+        }
+        if ("extern" in existing.modifiers || "extern" in incoming.modifiers) {
+            return true
+        }
+        // Neither side carries `extern`: this is only a valid tentative-definition redeclaration
+        // in C.
+        return supportsTentativeDefinitions
+    }
+
+    override fun mergeRedeclaration(existing: Declaration, incoming: Declaration) {
+        if (existing !is Variable || incoming !is Variable) {
+            return
+        }
+        if (existing.initializer == null && incoming.initializer != null) {
+            existing.initializer = incoming.initializer
+            incoming.initializer = null
+        }
+        existing.modifiers =
+            (existing.modifiers + incoming.modifiers).let {
+                if (existing.initializer != null) it - "extern" else it
+            }
+    }
 
     val unaryOperators = listOf("--", "++", "-", "+", "*", "&", "~")
 

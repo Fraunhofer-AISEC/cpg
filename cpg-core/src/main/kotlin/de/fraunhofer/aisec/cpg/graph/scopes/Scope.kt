@@ -132,9 +132,15 @@ sealed class Scope(
         typedefs[typedef.alias.name] = typedef
     }
 
-    /** Adds a [declaration] with the defined [symbol]. */
+    /**
+     * Adds a [declaration] with the defined [symbol]. Returns the canonical declaration for this
+     * symbol: either [declaration] itself, or a pre-existing declaration that [declaration] was
+     * merged into (see [Language.isRedeclaration]). Callers that wire [declaration] into an AST
+     * [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] afterwards MUST use the returned value
+     * instead of [declaration], to avoid re-introducing the duplicate the merge just collapsed.
+     */
     context(provider: ContextProvider)
-    open fun addSymbol(symbol: Symbol, declaration: Declaration) {
+    open fun addSymbol(symbol: Symbol, declaration: Declaration): Declaration {
         if (
             declaration is Import &&
                 declaration.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE
@@ -142,10 +148,10 @@ sealed class Scope(
             // Because a wildcard import does not really have a valid "symbol", we store it in a
             // separate list
             wildcardImports += declaration
-        } else {
-            val list = symbols.computeIfAbsent(symbol) { mutableListOf() }
-            list += declaration
+            return declaration
         }
+        val list = symbols.computeIfAbsent(symbol) { mutableListOf() }
+        return mergeOrAppend(list, declaration)
     }
 
     /**
@@ -335,5 +341,40 @@ fun SymbolMap.mergeFrom(symbolMap: SymbolMap) {
     for (entry in symbolMap) {
         val list = this.computeIfAbsent(entry.key) { mutableListOf() }
         list += entry.value
+    }
+}
+
+/**
+ * Attempts to fold [declaration] into an existing, compatible entry of [list], per [declaration]'s
+ * language-specific redeclaration policy (see [Language.isRedeclaration]). Returns the canonical
+ * declaration: an existing entry that [declaration] was merged into, or [declaration] itself if it
+ * was appended as a new entry.
+ */
+private fun mergeOrAppend(list: MutableList<Declaration>, declaration: Declaration): Declaration {
+    val language = declaration.language
+    if (language.supportsDeclarationMerging) {
+        val existing =
+            list.firstOrNull { it !== declaration && language.isRedeclaration(it, declaration) }
+        if (existing != null) {
+            language.mergeRedeclaration(existing, declaration)
+            return existing
+        }
+    }
+    list += declaration
+    return declaration
+}
+
+/**
+ * Re-applies each declaration's redeclaration-merge policy across this [SymbolMap], collapsing
+ * duplicates that were introduced by a blind [mergeFrom] (e.g., when combining scopes from multiple
+ * translation units parsed in parallel).
+ */
+fun SymbolMap.collapseRedeclarations() {
+    for (entry in this) {
+        val deduped = mutableListOf<Declaration>()
+        for (declaration in entry.value) {
+            mergeOrAppend(deduped, declaration)
+        }
+        entry.setValue(deduped)
     }
 }

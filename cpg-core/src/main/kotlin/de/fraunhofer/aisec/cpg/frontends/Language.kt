@@ -527,6 +527,27 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     }
 
     /**
+     * Whether [Scope.addSymbol] is allowed to merge an incoming declaration into an
+     * already-registered one of the same kind and symbol (see [isRedeclaration]), instead of
+     * appending a duplicate. Used to model languages where multiple textual declarations can refer
+     * to the same underlying object, e.g. C's `extern` declarations and tentative definitions.
+     */
+    open val supportsDeclarationMerging: Boolean = false
+
+    /**
+     * Determines whether [incoming] is a redeclaration of [existing] that should be merged rather
+     * than registered as a separate declaration. Only consulted when [supportsDeclarationMerging]
+     * is `true`.
+     */
+    open fun isRedeclaration(existing: Declaration, incoming: Declaration): Boolean = false
+
+    /**
+     * Merges state from [incoming] into [existing] when [isRedeclaration] returned `true`.
+     * [existing] remains the canonical node; [incoming] is discarded by the caller afterwards.
+     */
+    open fun mergeRedeclaration(existing: Declaration, incoming: Declaration) {}
+
+    /**
      * There are some cases where our [Inference] system needs to place declarations, e.g., a
      * [Namespace] in the [GlobalScope]. The issue with that is that the [Scope.astNode] of the
      * global scope is always the last parsed [TranslationUnit] and we might end up adding the
