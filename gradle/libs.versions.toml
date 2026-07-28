@@ -4,7 +4,7 @@ kotlinx-json = "1.10.0"
 neo4j5 = "5.28.10"
 log4j = "2.25.3"
 spotless = "8.1.0"
-publish = "0.36.0"
+publish = "0.37.0"
 sootup = "2.0.0"
 slf4j = "2.0.16"
 clikt = "5.1.0"
@@ -68,8 +68,8 @@ ktor-server-sse = { module = "io.ktor:ktor-server-sse", version.ref = "ktor" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 
-mcp = {module = "io.modelcontextprotocol:kotlin-sdk", version = "0.13.0"}
-mcp-client = {module = "io.modelcontextprotocol:kotlin-sdk-client", version = "0.13.0"}
+mcp = {module = "io.modelcontextprotocol:kotlin-sdk", version = "0.14.0"}
+mcp-client = {module = "io.modelcontextprotocol:kotlin-sdk-client", version = "0.14.0"}
 mcp-testing = {module = "io.modelcontextprotocol:kotlin-sdk-testing", version = "0.13.0"}
 
 # test
