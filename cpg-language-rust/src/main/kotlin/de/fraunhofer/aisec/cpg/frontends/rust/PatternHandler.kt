@@ -252,13 +252,12 @@ class PatternHandler(frontend: RustLanguageFrontend) :
 
         refPat.pat.firstOrNull()?.let {
             val contained = handleNode(it)
-            if (refPat.isRef) {
+            return if (refPat.isRef) {
                 val objectDeconstruction = newObjectDeconstruction(raw)
                 objectDeconstruction.components += contained
-                // Todo handle type as this behaves like a deref
-                return objectDeconstruction
+                objectDeconstruction
             } else {
-                return contained
+                contained
             }
         }
 

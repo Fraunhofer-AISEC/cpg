@@ -310,10 +310,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             return call
         }
 
-        return newProblemExpression(
-            problem = "MacroExpression does not contain Macro Call",
-            rawNode = raw,
-        )
+        return newProblemExpression("MacroExpression missing Macro Call", rawNode = raw)
     }
 
     fun handlePathExpr(pathExpr: RsPathExpr): Expression {
@@ -326,10 +323,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             )
         }
 
-        return newProblemExpression(
-            problem = "PathExpression does not contain reference to a name",
-            rawNode = raw,
-        )
+        return newProblemExpression("PathExpression missing path to name", rawNode = raw)
     }
 
     fun handleRefExpr(refExpr: RsRefExpr): Expression {
@@ -348,10 +342,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             else subExpr
         }
 
-        return newProblemExpression(
-            problem = "Reference expressions are not supported yet",
-            rawNode = raw,
-        )
+        return newProblemExpression("Reference expressions missing expr", rawNode = raw)
     }
 
     fun handlePrefixExpr(prefixExpr: RsPrefixExpr): Expression {
@@ -381,11 +372,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        return newProblemExpression(
-            problem =
-                "Operator based expression has an incorrect amount of ${binExpr.expressions} operators",
-            rawNode = raw,
-        )
+        return newProblemExpression("BinExpr has fewer than 2 operands", rawNode = raw)
     }
 
     fun handleIfExpr(ifExpr: RsIfExpr): Expression {
@@ -563,10 +550,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        return newProblemExpression(
-            problem = "FieldExpression does not contain a base expression or a name reference",
-            rawNode = raw,
-        )
+        return newProblemExpression("FieldExpression missing subexpr", rawNode = raw)
     }
 
     fun handleCastExpr(castExpr: RsCastExpr): Expression {
@@ -599,10 +583,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        return newProblemExpression(
-            problem = "Index expressions was not parsed with two ore more expressions.",
-            rawNode = raw,
-        )
+        return newProblemExpression("Index expressions missing 2 subexpr", rawNode = raw)
     }
 
     fun handleArrayExpr(arrayExpr: RsArrayExpr): Expression {
@@ -817,10 +798,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        return newProblemExpression(
-            problem = "Try expression does not contain an expression",
-            rawNode = raw,
-        )
+        return newProblemExpression("Try expression missing subexpr", rawNode = raw)
     }
 
     private fun handleMatchArm(arm: RsMatchArm): List<Expression> {
