@@ -34,11 +34,14 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
+import java.net.URI
 import sootup.apk.frontend.ApkAnalysisInputLocation
 import sootup.apk.frontend.DexBodyInterceptors
 import sootup.core.cache.provider.LRUCacheProvider
 import sootup.core.model.Body
+import sootup.core.model.HasPosition
 import sootup.core.model.SootMethod
 import sootup.core.model.SourceType
 import sootup.core.transform.BodyInterceptor
@@ -64,6 +67,8 @@ class JVMLanguageFrontend(
     val expressionHandler = ExpressionHandler(this)
 
     lateinit var view: JavaView
+
+    var classFileName: String? = null
 
     override val frontendConfiguration: JVMFrontendConfiguration by lazy {
         (this.ctx.config.frontendConfigurations[this::class] as? JVMFrontendConfiguration)
@@ -167,6 +172,8 @@ class JVMLanguageFrontend(
                     innerPkg
                 }
 
+            classFileName = sootClass.name.toString().replace(language.namespaceDelimiter, "/")
+
             val decl = declarationHandler.handle(sootClass)
             scopeManager.addDeclaration(decl)
             pkg?.addDeclaration(decl)
@@ -189,7 +196,18 @@ class JVMLanguageFrontend(
 
     override fun locationOf(astNode: Any): PhysicalLocation? {
         // We do not really have a location anyway. maybe in jimple?
-        return null
+        return (astNode as? HasPosition)?.position?.let { position ->
+            PhysicalLocation(
+                uri = URI(classFileName),
+                region =
+                    Region(
+                        startLine = position.firstLine,
+                        endLine = position.lastLine,
+                        startColumn = position.firstCol,
+                        endColumn = position.lastCol,
+                    ),
+            )
+        }
     }
 
     override fun codeOf(astNode: Any): String? {
