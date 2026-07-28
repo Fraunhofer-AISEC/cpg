@@ -36,8 +36,10 @@ import ai.koog.agents.features.eventHandler.feature.handleEvents
 import ai.koog.agents.mcp.McpToolRegistryProvider
 import ai.koog.agents.mcp.metadata.McpServerInfo
 import ai.koog.prompt.dsl.prompt
+import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.MessagePart
 import ai.koog.prompt.streaming.StreamFrame
+import ai.koog.prompt.streaming.toMessageResponse
 import ai.koog.serialization.kotlinx.toKotlinxJsonElement
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
@@ -58,6 +60,7 @@ import io.modelcontextprotocol.kotlin.sdk.client.StreamableHttpClientTransport
 import io.modelcontextprotocol.kotlin.sdk.types.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.toList
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 
@@ -163,6 +166,17 @@ class ChatService(
      * The agent's tool-calling loop: request the LLM, and if it calls tool(s), execute them and
      * send the results back, repeating until the LLM responds with text. This mirrors Koog's
      * built-in single-run strategy shape, extended with:
+     * - streaming LLM request/send-tool-result nodes ([nodeLLMRequestStreaming],
+     *   [nodeLLMSendToolResultsStreaming]) so [chat]'s `onLLMStreamingFrameReceived` handler
+     *   actually receives frames - the plain (non-streaming) node variants never call the streaming
+     *   client path at all, so that handler would otherwise never fire and no text would ever reach
+     *   the frontend. Each is paired with a small collector node
+     *   (`collectRequestLlmStream`/`collectSendToolResultStream`) that only *drains* the frame
+     *   [Flow] (`onLLMStreamingFrameReceived` fires as a side effect of collection, driven by
+     *   Koog's `ContextualPromptExecutor` - the collector must not re-emit frames itself, or every
+     *   token would reach the frontend twice) and reduces it back to a [Message.Assistant] via
+     *   [toMessageResponse], so every downstream edge below is unchanged from the non-streaming
+     *   version.
      * - a `truncateToolResults` node that caps any oversized tool result (see [maxToolResultChars])
      *   before it can reach the LLM-facing prompt, running right after tool execution (and thus
      *   after the tool-call-completed event, which still carries the full, untruncated result to
@@ -176,21 +190,38 @@ class ChatService(
      */
     private val chatStrategy =
         strategy<String, String>("chat-with-history-compression") {
-            val requestLlm by nodeLLMRequest()
+            val requestLlmStream by nodeLLMRequestStreaming()
+            val requestLlm by
+                node<Flow<StreamFrame>, Message.Assistant>("collectRequestLlmStream") { frames ->
+                    frames.toList().toMessageResponse()
+                }
             val executeTool by nodeExecuteTools()
             val truncateToolResults by
                 node<ReceivedToolResults, ReceivedToolResults>("truncateToolResults") { received ->
                     ReceivedToolResults(received.toolResults.map { it.truncatedForLlm() })
                 }
-            val sendToolResult by nodeLLMSendToolResults()
+            val sendToolResultStream by nodeLLMSendToolResultsStreaming()
+            val sendToolResult by
+                node<Flow<StreamFrame>, Message.Assistant>("collectSendToolResultStream") { frames
+                    ->
+                    frames.toList().toMessageResponse()
+                }
             val compressionStrategy =
                 HistoryCompressionStrategy.FromLastNMessages(historyCompressionKeepLastN)
             val compressHistory by
                 nodeLLMCompressHistory<ReceivedToolResults>(strategy = compressionStrategy)
 
-            edge(nodeStart forwardTo requestLlm)
-            edge(requestLlm forwardTo nodeFinish onTextMessage { true })
+            edge(nodeStart forwardTo requestLlmStream)
+            edge(requestLlmStream forwardTo requestLlm)
+            // onToolCalls is checked before onTextMessage (matching Koog's own singleRunStrategy
+            // convention): some providers' streaming responses include a harmless empty text part
+            // (e.g. vLLM sends an explicit `content: ""` on the role-establishing and
+            // finish-reason chunks) alongside a real tool call in the same reconstructed message.
+            // Since these edge predicates aren't mutually exclusive (onTextMessage just checks
+            // "any Text part present", regardless of tool calls), checking onTextMessage first
+            // would let that empty text part win the race and silently skip the tool call.
             edge(requestLlm forwardTo executeTool onToolCalls { true })
+            edge(requestLlm forwardTo nodeFinish onTextMessage { true })
             edge(executeTool forwardTo truncateToolResults)
             // If the history has grown too large, compress it before sending the tool result.
             edge(
@@ -200,15 +231,16 @@ class ChatService(
                         llm.readSession { prompt.messages.size > historyCompressionThreshold }
                     }
             )
-            edge(compressHistory forwardTo sendToolResult)
+            edge(compressHistory forwardTo sendToolResultStream)
             // Otherwise, send the tool result directly.
             edge(
                 truncateToolResults forwardTo
-                    sendToolResult onCondition
+                    sendToolResultStream onCondition
                     { _ ->
                         llm.readSession { prompt.messages.size <= historyCompressionThreshold }
                     }
             )
+            edge(sendToolResultStream forwardTo sendToolResult)
             edge(sendToolResult forwardTo executeTool onToolCalls { true })
             edge(sendToolResult forwardTo nodeFinish onTextMessage { true })
         }
