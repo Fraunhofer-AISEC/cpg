@@ -141,8 +141,6 @@ class PatternHandler(frontend: RustLanguageFrontend) :
 
         val box = newObjectDeconstruction(raw)
 
-        // Todo add type according to box pattern
-
         boxPat.pat.firstOrNull()?.let { box.components += handleNode(it) }
 
         return box
@@ -288,9 +286,20 @@ class PatternHandler(frontend: RustLanguageFrontend) :
     fun handleTupleStructPat(tupleStructPat: RsTupleStructPat): Expression {
         val raw = RsAst.RustPat(RsPat.TupleStructPat(tupleStructPat))
 
-        return newObjectDeconstruction(raw).also { oDec ->
-            tupleStructPat.fields.forEach { oDec.components += handleNode(it) }
+        val objectDeconstruction = newObjectDeconstruction(raw)
+
+        tupleStructPat.path?.let { rsPath ->
+            objectDeconstruction.type =
+                frontend.typeOf(
+                    frontend
+                        .handleKeywordsInNames(frontend.handlePathForRef(rsPath) ?: newName(""))
+                        .toString()
+                )
         }
+
+        tupleStructPat.fields.forEach { objectDeconstruction.components += handleNode(it) }
+
+        return objectDeconstruction
     }
 
     fun handleWildcardPat(wildcardPat: RsWildcardPat): Expression {
@@ -310,6 +319,6 @@ class PatternHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        return newProblemExpression("RecordPatField does not contain a valid pattern")
+        return newProblemExpression("RecordPatField missing valid pattern", rawNode = raw)
     }
 }
