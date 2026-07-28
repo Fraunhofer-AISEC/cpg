@@ -230,8 +230,8 @@ class RustLanguageFrontendTest {
         }
     }
 
-    @Ignore
     @Test
+    @Ignore
     fun testDFInLetStatements() {
         val topLevel = Path.of("src", "test", "resources")
         val tu =

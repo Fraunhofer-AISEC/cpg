@@ -44,7 +44,7 @@ dependencies { implementation(libs.jna) }
 tasks {
     val downloadLibRustAST by
         registering(Download::class) {
-            val version = "v0.0.9"
+            val version = "v0.0.10"
 
             src(
                 listOf(

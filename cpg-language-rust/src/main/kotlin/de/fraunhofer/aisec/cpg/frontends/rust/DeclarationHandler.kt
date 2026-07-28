@@ -29,10 +29,13 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
+import de.fraunhofer.aisec.cpg.graph.expressions.Return
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import uniffi.rustast.RsAssocItem
 import uniffi.rustast.RsAst
 import uniffi.rustast.RsConst
 import uniffi.rustast.RsEnum
+import uniffi.rustast.RsExpr
 import uniffi.rustast.RsFieldList
 import uniffi.rustast.RsFn
 import uniffi.rustast.RsImpl
@@ -72,27 +75,27 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val function =
             fn.paramList?.selfParam?.let {
                 newMethod(
-                        name,
-                        recordDeclaration = frontend.scopeManager.currentRecord,
-                        rawNode = raw,
-                    )
-                    .apply {
-                        val type = it.ty?.let { frontend.typeOf(it) }
-                        this.parameters +=
-                            newParameter(
-                                // Todo We need to handle destructuring in a parameter properly
-                                it.astNode.text,
-                                type = type ?: unknownType(),
-                                rawNode = RsAst.RustItem(RsItem.SelfParam(it)),
-                            )
-                    }
+                    name,
+                    recordDeclaration = frontend.scopeManager.currentRecord,
+                    rawNode = raw,
+                )
             } ?: newFunction(name, rawNode = raw)
 
         frontend.scopeManager.addDeclaration(function)
 
-        fn.retType?.let { function.type = frontend.typeOf(it) }
-
         frontend.scopeManager.enterScope(function)
+
+        fn.paramList?.selfParam?.let {
+            val type = it.ty?.let { frontend.typeOf(it) }
+            val code = it.astNode.text
+            function.parameters +=
+                newParameter(
+                    // Todo We need to handle destructuring in a parameter properly
+                    if (code.contains(":")) code.substringBefore(":").trim() else code.trim(),
+                    type = type ?: unknownType(),
+                    rawNode = RsAst.RustItem(RsItem.SelfParam(it)),
+                )
+        }
 
         // Adding implicitly created parameters to the scope
         function.parameters.forEach { frontend.scopeManager.addDeclaration(it) }
@@ -101,9 +104,33 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             function.parameters += handleParameterDeclaration(param) as Parameter
         }
 
-        fn.body?.let { function.body = frontend.expressionHandler.handleBlockExpr(it) }
+        fn.retType?.let { function.returnTypes += frontend.typeOf(it) }
+        function.type = computeType(function)
+
+        fn.body?.let { blockExpr ->
+            function.body = frontend.expressionHandler.handleBlockExpr(blockExpr)
+
+            // If the function is supposed to return a value, but the last statement is not a return
+            // statement,
+            // we need to add an implicit return statement. This return statement is a wrapper
+            // around the original body
+            if (function.returnTypes.isNotEmpty()) {
+                function.body.statements.lastOrNull()?.let { lastStatement ->
+                    if (lastStatement !is Return) {
+                        function.body =
+                            newReturn(RsAst.RustExpr(RsExpr.BlockExpr(blockExpr))).also { returnExpr
+                                ->
+                                returnExpr.isImplicit = true
+                                returnExpr.returnValue = function.body
+                                returnExpr.returnValue?.usedAsExpression = true
+                            }
+                    }
+                }
+            }
+        }
 
         frontend.scopeManager.leaveScope(function)
+
         return function
     }
 

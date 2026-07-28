@@ -193,7 +193,7 @@ fn let_else_example(opt: Option<&str>) {
         mark("let_else_none");
         return;
     };
-    value;
+    mark(value);
 
     mark("let_else_some");
 }

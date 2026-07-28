@@ -63,10 +63,6 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         val raw = RsAst.RustStmt(RsStmt.LetStmt(letStmt))
         // for us, a let expression is an assigment with a deconstruction
 
-        var initializer =
-            letStmt.initializer?.let { frontend.expressionHandler.handle(RsAst.RustExpr(it)) }
-                ?: newProblemExpression("Let statement does not have an initializer", rawNode = raw)
-
         letStmt.letElse?.let {
             return handleLetElse(letStmt, it, raw)
         }
@@ -83,7 +79,6 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                 )
 
             letStmt.initializer?.let {
-                // Todo If this is a tuple struct, rust analyzer will actually make a call out of it
                 variable.initializer = frontend.expressionHandler.handle(RsAst.RustExpr(it))
 
                 // Here, if we have the classical pattern for initializers we set the base of the
@@ -130,18 +125,13 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
     fun handleLetElse(letStmt: RsLetStmt, blockExpr: RsBlockExpr, raw: RsAst.RustStmt): Expression {
 
-        val patternResult =
+        val variableDeconstruction =
             letStmt.pat?.let { frontend.patternHandler.handle(RsAst.RustPat(it)) }
                 ?: newProblemExpression("Pattern cannot be parsed.", rawNode = raw)
 
-        val declarations = patternResult.nodes.filterIsInstance<DeclarationStatement>()
+        letStmt.ty?.let { variableDeconstruction.type = frontend.typeOf(it) }
 
-        val variableDeconstruction =
-            newObjectDeconstruction(raw).also { obj ->
-                letStmt.ty?.let { obj.type = frontend.typeOf(it) }
-                    ?: run { obj.type = unknownType() }
-                declarations.forEach { declStmt -> obj.components += declStmt }
-            }
+        val declarations = variableDeconstruction.nodes.filterIsInstance<DeclarationStatement>()
 
         // Handle the pattern, extract the variable declarations, put them into an object
         // deconstruction,

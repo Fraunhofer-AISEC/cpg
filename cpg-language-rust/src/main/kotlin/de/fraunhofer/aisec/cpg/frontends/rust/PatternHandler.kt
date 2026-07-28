@@ -95,9 +95,19 @@ class PatternHandler(frontend: RustLanguageFrontend) :
         val raw = RsAst.RustPat(RsPat.IdentPat(identPat))
 
         val variable =
-            frontend.scopeManager.currentScope.symbols[identPat.name]
-                ?.filterIsInstance<Variable>()
-                ?.firstOrNull()
+            identPat.name?.let {
+                frontend.scopeManager
+                    .lookupSymbolByName(
+                        newName(
+                            it,
+                            doNotPrependNamespace = false,
+                            frontend.scopeManager.currentNamespace,
+                        ),
+                        language,
+                    )
+                    .filterIsInstance<Variable>()
+                    .firstOrNull()
+            }
 
         variable?.let {
             val lhsRef =
@@ -120,7 +130,8 @@ class PatternHandler(frontend: RustLanguageFrontend) :
             // that are pointing to it
             // during deconstruction
             variable.initializer =
-                identPat.pat.firstOrNull()?.let { handleNode(it) } ?: newEmpty(raw)
+                identPat.pat.firstOrNull()?.let { handleNode(it) }
+                    ?: newEmpty(raw).also { it.usedAsExpression = true }
             frontend.scopeManager.addDeclaration(variable)
         }
     }
@@ -241,13 +252,12 @@ class PatternHandler(frontend: RustLanguageFrontend) :
 
         refPat.pat.firstOrNull()?.let {
             val contained = handleNode(it)
-            if (refPat.isRef) {
+            return if (refPat.isRef) {
                 val objectDeconstruction = newObjectDeconstruction(raw)
                 objectDeconstruction.components += contained
-                // Todo handle type as this behaves like a deref
-                return objectDeconstruction
+                objectDeconstruction
             } else {
-                return contained
+                contained
             }
         }
 
@@ -256,7 +266,7 @@ class PatternHandler(frontend: RustLanguageFrontend) :
 
     fun handleRestPat(restPat: RsRestPat): Expression {
         val raw = RsAst.RustPat(RsPat.RestPat(restPat))
-        return newEmpty(rawNode = raw)
+        return newEmpty(rawNode = raw).also { it.usedAsExpression = true }
     }
 
     fun handleSlicePat(slicePat: RsSlicePat): Expression {
@@ -285,7 +295,7 @@ class PatternHandler(frontend: RustLanguageFrontend) :
 
     fun handleWildcardPat(wildcardPat: RsWildcardPat): Expression {
         val raw = RsAst.RustPat(RsPat.WildcardPat(wildcardPat))
-        return newEmpty(rawNode = raw)
+        return newEmpty(rawNode = raw).also { it.usedAsExpression = true }
     }
 
     fun handleRecordPatField(recordPatField: RsRecordPatField): Expression {

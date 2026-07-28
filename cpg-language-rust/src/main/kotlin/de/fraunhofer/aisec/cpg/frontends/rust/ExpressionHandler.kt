@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.expressions.*
 import de.fraunhofer.aisec.cpg.graph.newBreak
 import de.fraunhofer.aisec.cpg.graph.newCase
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
+import java.math.BigInteger
 import uniffi.rustast.RsArrayExpr
 import uniffi.rustast.RsAst
 import uniffi.rustast.RsBinExpr
@@ -46,7 +47,6 @@ import uniffi.rustast.RsFieldExpr
 import uniffi.rustast.RsForExpr
 import uniffi.rustast.RsIfExpr
 import uniffi.rustast.RsIndexExpr
-import uniffi.rustast.RsItem
 import uniffi.rustast.RsLetExpr
 import uniffi.rustast.RsLiteral
 import uniffi.rustast.RsLiteralType
@@ -106,7 +106,6 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.ReturnExpr -> handleReturnExpr(node.v1)
             is RsExpr.TryExpr -> handleTryExpr(node.v1)
             is RsExpr.ClosureExpr -> handleClosureExpr(node.v1)
-
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -135,30 +134,34 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
         return when (literal.literalType) {
             RsLiteralType.CHAR_L ->
-                newLiteral(stringValue[0], language.builtInTypes["char"] ?: unknownType(), raw)
+                newLiteral(
+                    stringValue.removePrefix("'").removeSuffix("'")[0],
+                    language.builtInTypes["char"] ?: unknownType(),
+                    raw,
+                )
             RsLiteralType.STRING_L ->
-                newLiteral(stringValue, language.builtInTypes["str"] ?: unknownType(), raw)
+                newLiteral(
+                    stringValue.removePrefix("\"").removeSuffix("\""),
+                    language.builtInTypes["str"] ?: unknownType(),
+                    raw,
+                )
             RsLiteralType.BYTE_L ->
                 newLiteral(
-                    stringValue.removePrefix("b'").removeSuffix("'").let {
-                        if (it.startsWith("\\x")) it.removePrefix("\\x").toInt(16)
-                        else it.toInt(256)
-                    },
+                    parseRustByteLiteral(stringValue.removePrefix("b'").removeSuffix("'")),
                     language.builtInTypes["u8"] ?: unknownType(),
                     raw,
                 )
             RsLiteralType.C_STRING_L ->
                 newLiteral(
-                    stringValue.removePrefix("c").removeSuffix("'"),
+                    stringValue.removePrefix("c\"").removeSuffix("\""),
                     objectType("CString"),
                     raw,
                 )
-            RsLiteralType.INT_NUMBER_L ->
-                newLiteral(stringValue.toInt(), language.builtInTypes["str"] ?: unknownType(), raw)
+            RsLiteralType.INT_NUMBER_L -> buildIntType(stringValue, raw)
             RsLiteralType.BYTE_STRING_L ->
                 newLiteral(
-                    stringValue.removePrefix("b").removeSuffix("'"),
-                    language.builtInTypes["u8"] ?: unknownType().array(),
+                    stringValue.removePrefix("b\"").removeSuffix("\""),
+                    (language.builtInTypes["u8"] ?: unknownType()).array(),
                     raw,
                 )
             RsLiteralType.FLOAT_NUMBER_L ->
@@ -169,7 +172,92 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                     raw,
                 )
             RsLiteralType.UNKNOWN_L ->
-                newLiteral(stringValue, language.builtInTypes["str"] ?: unknownType(), raw)
+                when (stringValue) {
+                    "true" -> newLiteral(true, language.builtInTypes["bool"] ?: unknownType(), raw)
+                    "false" ->
+                        newLiteral(false, language.builtInTypes["bool"] ?: unknownType(), raw)
+                    else ->
+                        newLiteral(stringValue, language.builtInTypes["str"] ?: unknownType(), raw)
+                }
+        }
+    }
+
+    private val escapes =
+        mapOf(
+            "\\n" to '\n',
+            "\\r" to '\r',
+            "\\t" to '\t',
+            "\\0" to '\u0000',
+            "\\'" to '\'',
+            "\\\"" to '"',
+            "\\\\" to '\\',
+        )
+
+    fun parseRustByteLiteral(content: String): Int =
+        when {
+            content.startsWith("\\x") -> content.substring(2).toInt(16)
+
+            content.startsWith("\\") ->
+                escapes[content]?.code ?: error("Unsupported escape: $content")
+
+            else -> content.single().code
+        }
+
+    fun buildIntType(literal: String, raw: Any): Literal<*> {
+        val suffixes =
+            listOf(
+                "isize",
+                "usize",
+                "i128",
+                "u128",
+                "i64",
+                "u64",
+                "i32",
+                "u32",
+                "i16",
+                "u16",
+                "i8",
+                "u8",
+            )
+
+        val suffixStart = literal.indexOfFirst { it == 'u' || it == 'i' }
+        val core = if (suffixStart == -1) literal else literal.substring(0, suffixStart)
+        // Strip separators
+        val clean = core.replace("_", "")
+
+        val (digits, radix) =
+            when {
+                clean.startsWith("0x") -> clean.substring(2) to 16
+                clean.startsWith("0o") -> clean.substring(2) to 8
+                clean.startsWith("0b") -> clean.substring(2) to 2
+                else -> clean to 10
+            }
+
+        val value = digits.toBigInteger(radix)
+
+        // Here we have an explicit suffix
+        for (suffix in suffixes) {
+            if (literal.endsWith(suffix)) {
+                return newLiteral(
+                    value.toInt(),
+                    language.builtInTypes[suffix] ?: unknownType(),
+                    raw,
+                )
+            }
+        }
+
+        return when {
+            value <= BigInteger.valueOf(Byte.MAX_VALUE.toLong()) ->
+                newLiteral(value.toInt(), language.builtInTypes["i8"] ?: unknownType(), raw)
+            value <= BigInteger.valueOf(Short.MAX_VALUE.toLong()) ->
+                newLiteral(value.toInt(), language.builtInTypes["i16"] ?: unknownType(), raw)
+            value <= BigInteger.valueOf(Int.MAX_VALUE.toLong()) ->
+                newLiteral(value.toInt(), language.builtInTypes["i32"] ?: unknownType(), raw)
+            value <= BigInteger.valueOf(Long.MAX_VALUE) ->
+                newLiteral(value.toInt(), language.builtInTypes["i64"] ?: unknownType(), raw)
+            value.bitLength() <= 127 ->
+                newLiteral(value.toInt(), language.builtInTypes["i128"] ?: unknownType(), raw)
+            else -> newLiteral(value, unknownType(), raw)
         }
     }
 
@@ -222,10 +310,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             return call
         }
 
-        return newProblemExpression(
-            problem = "MacroExpression does not contain Macro Call",
-            rawNode = raw,
-        )
+        return newProblemExpression("MacroExpression missing Macro Call", rawNode = raw)
     }
 
     fun handlePathExpr(pathExpr: RsPathExpr): Expression {
@@ -238,10 +323,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             )
         }
 
-        return newProblemExpression(
-            problem = "PathExpression does not contain reference to a name",
-            rawNode = raw,
-        )
+        return newProblemExpression("PathExpression missing path to name", rawNode = raw)
     }
 
     fun handleRefExpr(refExpr: RsRefExpr): Expression {
@@ -260,10 +342,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             else subExpr
         }
 
-        return newProblemExpression(
-            problem = "Reference expressions are not supported yet",
-            rawNode = raw,
-        )
+        return newProblemExpression("Reference expressions missing expr", rawNode = raw)
     }
 
     fun handlePrefixExpr(prefixExpr: RsPrefixExpr): Expression {
@@ -291,26 +370,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 it.lhs = lhs
                 it.rhs = rhs
             }
-        } else if (binExpr.expressions.size == 1) {
-            return newUnaryOperator(
-                    binExpr.operator,
-                    postfix = false,
-                    prefix = false,
-                    rawNode = raw,
-                )
-                .also {
-                    it.input =
-                        frontend.expressionHandler.handle(
-                            RsAst.RustExpr(binExpr.expressions.first())
-                        )
-                }
         }
 
-        return newProblemExpression(
-            problem =
-                "Operator based expression has an incorrect amount of ${binExpr.expressions} operators",
-            rawNode = raw,
-        )
+        return newProblemExpression("BinExpr has fewer than 2 operands", rawNode = raw)
     }
 
     fun handleIfExpr(ifExpr: RsIfExpr): Expression {
@@ -321,13 +383,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         // Depending on whether the first expression is a let expression we want fo fill condition
         // or condition declaration
         ifExpr.expressions.first().let {
-            val condExpr = frontend.expressionHandler.handle(RsAst.RustExpr(it))
-            if (condExpr is DeclarationStatement) {
-                // There should only be one declaration inside a let of an if
-                ifElse.conditionDeclaration = condExpr.declarations.first()
-            } else {
-                ifElse.condition = condExpr
-            }
+            ifElse.condition = frontend.expressionHandler.handle(RsAst.RustExpr(it))
         }
 
         ifExpr.expressions.getOrNull(1)?.let {
@@ -494,10 +550,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        return newProblemExpression(
-            problem = "FieldExpression does not contain a base expression or a name reference",
-            rawNode = raw,
-        )
+        return newProblemExpression("FieldExpression missing subexpr", rawNode = raw)
     }
 
     fun handleCastExpr(castExpr: RsCastExpr): Expression {
@@ -530,10 +583,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        return newProblemExpression(
-            problem = "Index expressions was not parsed with two ore more expressions.",
-            rawNode = raw,
-        )
+        return newProblemExpression("Index expressions missing 2 subexpr", rawNode = raw)
     }
 
     fun handleArrayExpr(arrayExpr: RsArrayExpr): Expression {
@@ -634,12 +684,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val raw = RsAst.RustExpr(RsExpr.MatchExpr(matchExpr))
 
         // Get the scrutinee (the value being matched)
-        val scrutinee =
-            matchExpr.expr.firstOrNull()?.let { handleNode(it) }
-                ?: return newProblemExpression(
-                    problem = "Match expression does not contain a scrutinee",
-                    rawNode = raw,
-                )
+        val scrutinee = matchExpr.expr.firstOrNull()?.let { handleNode(it) }
 
         // Create the switch statement
         val switchStatement =
@@ -672,7 +717,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     fun handleUnderscoreExpr(underscoreExpr: RsUnderscoreExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.UnderscoreExpr(underscoreExpr))
-        return newEmpty(raw)
+        return newEmpty(raw).also { it.usedAsExpression = true }
     }
 
     fun handleParenExpr(parenExpr: RsParenExpr): Expression {
@@ -681,7 +726,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         parenExpr.expr.firstOrNull()?.let {
             return handleNode(it)
         }
-        return newEmpty(raw)
+        return newEmpty(raw).also { it.usedAsExpression = true }
     }
 
     fun handleTryExpr(tryExpr: RsTryExpr): Expression {
@@ -714,7 +759,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                                         val variable = newVariable(rawNode = raw, name = "val")
                                         declaration.declarations += variable
 
-                                        variable.initializer = newEmpty(raw)
+                                        variable.initializer =
+                                            newEmpty(raw).also { it.usedAsExpression = true }
                                         frontend.scopeManager.addDeclaration(variable)
                                     }
                             }
@@ -735,7 +781,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                                         declaration.usedAsExpression = true
                                         val variable = newVariable(rawNode = raw, name = "err")
                                         declaration.declarations += variable
-                                        variable.initializer = newEmpty(raw)
+                                        variable.initializer =
+                                            newEmpty(raw).also { it.usedAsExpression = true }
                                         frontend.scopeManager.addDeclaration(variable)
                                     }
                             }
@@ -751,23 +798,13 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        return newProblemExpression(
-            problem = "Try expressions are not supported yet",
-            rawNode = raw,
-        )
+        return newProblemExpression("Try expression missing subexpr", rawNode = raw)
     }
 
     private fun handleMatchArm(arm: RsMatchArm): List<Expression> {
         val raw = RsAst.RustExpr(RsExpr.MatchArm(arm))
         // Deconstruct the pattern and create a case statement
-        val pattern =
-            arm.pat.firstOrNull()?.let { frontend.patternHandler.handleNode(it) }
-                ?: return listOf(
-                    newProblemExpression(
-                        problem = "Match arm does not contain a pattern",
-                        rawNode = raw,
-                    )
-                )
+        val pattern = arm.pat.firstOrNull()?.let { frontend.patternHandler.handleNode(it) }
 
         val caseStatement =
             newCase(rawNode = arm.pat.firstOrNull()?.let { RsAst.RustPat(it) } ?: raw)
@@ -776,26 +813,13 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         var caseExpressions = mutableListOf<Expression>(caseStatement)
 
         // Get the match arm expression
-        val armExpr =
-            arm.expr.firstOrNull()?.let { handleNode(it) }
-                ?: return listOf(
-                    newProblemExpression(
-                        problem = "Match arm does not contain an expression",
-                        rawNode = raw,
-                    )
-                )
+        val armExpr = arm.expr.firstOrNull()?.let { handleNode(it) }
+
         val wrappedRawExpr = arm.expr.firstOrNull()?.let { RsAst.RustExpr(it) } ?: raw
 
         // If there's a guard, wrap the break statement in an if
         if (arm.guard.isNotEmpty()) {
-            val guard =
-                arm.guard.firstOrNull()?.let { handleNode(it) }
-                    ?: return listOf(
-                        newProblemExpression(
-                            problem = "Match arm guard could not be parsed",
-                            rawNode = raw,
-                        )
-                    )
+            val guard = arm.guard.firstOrNull()?.let { handleNode(it) }
 
             val ifElse = newIfElse(raw)
             ifElse.condition = guard
@@ -825,34 +849,21 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val raw = RsAst.RustExpr(RsExpr.ClosureExpr(closureExpr))
 
         val lambda = newLambda(rawNode = raw)
-        val enclosedFunction = newFunction("", rawNode = raw)
-        frontend.scopeManager.enterScope(enclosedFunction)
 
         val paramsList = closureExpr.paramList.firstOrNull()
-
-        val function =
-            paramsList?.selfParam?.let {
-                newMethod(
-                        "",
-                        recordDeclaration = frontend.scopeManager.currentRecord,
-                        rawNode = raw,
-                    )
-                    .apply {
-                        val type = it.ty?.let { frontend.typeOf(it) }
-                        this.parameters +=
-                            newParameter(
-                                it.astNode.text,
-                                type = type ?: unknownType(),
-                                rawNode = RsAst.RustItem(RsItem.SelfParam(it)),
-                            )
-                    }
-            } ?: newFunction("", rawNode = raw)
+        val enclosedFunction = newFunction("", rawNode = raw)
+        frontend.scopeManager.enterScope(enclosedFunction)
 
         paramsList?.let { params ->
             for (parameter in params.params) {
                 val resolvedType = parameter.ty?.let { frontend.typeOf(it) } ?: unknownType()
                 // Todo We need to handle destructuring in a parameter properly
-                val param = newParameter(parameter.astNode.text, resolvedType)
+                val code = parameter.astNode.text
+                val param =
+                    newParameter(
+                        if (code.contains(":")) code.substringBefore(":").trim() else code.trim(),
+                        resolvedType,
+                    )
                 frontend.scopeManager.addDeclaration(param)
                 enclosedFunction.parameters += param
             }
