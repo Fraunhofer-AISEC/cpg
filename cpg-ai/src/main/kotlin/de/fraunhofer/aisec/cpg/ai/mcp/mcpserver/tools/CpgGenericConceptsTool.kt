@@ -32,6 +32,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.*
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
@@ -43,6 +44,68 @@ import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import java.io.File
 import kotlinx.serialization.json.Json
+
+internal sealed class ResolveResult {
+    data class Success(val node: Node) : ResolveResult()
+
+    data class NotFound(val message: String) : ResolveResult()
+
+    data class Ambiguous(val candidates: List<Node>, val message: String) : ResolveResult()
+}
+
+internal fun resolveNode(
+    translationResult: TranslationResult,
+    nodeId: String? = null,
+    location: LLMLocation? = null,
+): ResolveResult {
+    if (nodeId == null && location == null) {
+        return ResolveResult.NotFound("Neither NodeId nor Location was provided")
+    }
+    if (nodeId != null) {
+        val node = translationResult.nodes.find { it.id.toString() == nodeId }
+        return if (node != null) {
+            ResolveResult.Success(node)
+        } else {
+            ResolveResult.NotFound("Node with ID $nodeId not found")
+        }
+    }
+    val loc = location!!
+    val llmGivenFile = loc.file.replace('\\', '/').trimStart('/')
+    val candidates =
+        translationResult.nodes.filter { node ->
+            val nodeLocation = node.location ?: return@filter false
+            val uri = nodeLocation.artifactLocation.uri ?: return@filter false
+            val path = uri.path ?: return@filter false
+            val nodePath = path.replace('\\', '/').trimStart('/')
+
+            val matchesFile =
+                nodePath.equals(llmGivenFile, ignoreCase = true) ||
+                    nodePath.endsWith("/$llmGivenFile", ignoreCase = true)
+
+            val matchesLine = loc.line == nodeLocation.region.startLine
+
+            val matchesColumn = loc.column == null || loc.column == nodeLocation.region.startColumn
+            matchesFile && matchesLine && matchesColumn
+        }
+
+    return when {
+        candidates.isEmpty() ->
+            ResolveResult.NotFound(
+                "Node not found at location ${loc.file}:${loc.line}${loc.column?.let { ":$it" } ?: ""}."
+            )
+        candidates.size == 1 -> ResolveResult.Success(candidates.single())
+        else -> {
+            val formatted =
+                candidates.joinToString {
+                    "${it::class.simpleName}(id=${it.id}, name=\"${it.name}\", code=\"${it.code?.trim()?.take(50)}\")"
+                }
+            ResolveResult.Ambiguous(
+                candidates,
+                "Multiple nodes found at location ${loc.file}:${loc.line}${loc.column?.let { ":$it" } ?: ""}: $formatted",
+            )
+        }
+    }
+}
 
 private const val fileName = "concepts.yaml"
 
@@ -108,8 +171,8 @@ fun Server.suggestLLMConceptsAndOperations() {
     val toolDescription =
         """
         Suggests concept and operations for a node in the CPG.
-        The `nodeId` on the concept refers to the node the concept describes. Each operation's `nodeId` refers to the node where the operation is realized.
-        All node IDs must come from prior tool results, so do not pass placeholder or invented IDs.
+        The `nodeId` or `location` on the concept refers to the node the concept describes. Each operation's `nodeId` or `location` refers to the node where the operation is realized.
+        Either `nodeId` or `location` must be provided. All node IDs/locations must come from prior tool results or valid source files, so do not pass placeholder or invented IDs.
         """
             .trimIndent()
 
@@ -117,31 +180,50 @@ fun Server.suggestLLMConceptsAndOperations() {
         name = "cpg_suggest_llm_concepts_and_operations",
         description = toolDescription,
     ) { result: TranslationResult, payload: LLMConcept ->
-        val conceptNode = result.nodes.find { it.id.toString() == payload.nodeId }
-        if (conceptNode == null) {
-            return@addTool CallToolResult(
-                content =
-                    listOf(
-                        TextContent("Node ${payload.nodeId} not found for concept ${payload.name}.")
+        val conceptNode =
+            when (val res = resolveNode(result, payload.nodeId, payload.location)) {
+                is ResolveResult.Success -> res.node
+                is ResolveResult.NotFound ->
+                    return@addTool CallToolResult(
+                        content = listOf(TextContent("Concept error: ${res.message}"))
                     )
-            )
-        }
-
-        payload.operations.forEach { operation ->
-            val opNode = result.nodes.find { it.id.toString() == operation.nodeId }
-            if (opNode == null) {
-                return@addTool CallToolResult(
-                    content =
-                        listOf(
-                            TextContent(
-                                "Node ${operation.nodeId} not found for operation ${operation.name}."
-                            )
-                        )
-                )
+                is ResolveResult.Ambiguous ->
+                    return@addTool CallToolResult(
+                        content = listOf(TextContent("Concept error: ${res.message}"))
+                    )
             }
+
+        val resolvedOperations = mutableListOf<LLMOperation>()
+        payload.operations.forEach { operation ->
+            val opNode =
+                when (val res = resolveNode(result, operation.nodeId, operation.location)) {
+                    is ResolveResult.Success -> res.node
+                    is ResolveResult.NotFound ->
+                        return@addTool CallToolResult(
+                            content =
+                                listOf(
+                                    TextContent(
+                                        "Operation error for '${operation.name}': ${res.message}"
+                                    )
+                                )
+                        )
+                    is ResolveResult.Ambiguous ->
+                        return@addTool CallToolResult(
+                            content =
+                                listOf(
+                                    TextContent(
+                                        "Operation error for '${operation.name}': ${res.message}"
+                                    )
+                                )
+                        )
+                }
+            resolvedOperations.add(operation.copy(nodeId = opNode.id.toString()))
         }
 
-        CallToolResult(content = listOf(TextContent(Json.encodeToString(payload))))
+        val resolvedPayload =
+            payload.copy(nodeId = conceptNode.id.toString(), operations = resolvedOperations)
+
+        CallToolResult(content = listOf(TextContent(Json.encodeToString(resolvedPayload))))
     }
 }
 
@@ -152,7 +234,7 @@ fun Server.addLLMConceptAndOperations() {
     val toolDescription =
         """
         This tool applies a concept and all its operations to the graph.
-        It creates and attaches a concept node and all operation nodes using their nodeId to specific nodes in the graph.
+        It creates and attaches a concept node and all operation nodes using their nodeId or location to specific nodes in the graph.
         """
             .trimIndent()
     this.addTool<LLMConceptList>(
@@ -164,17 +246,17 @@ fun Server.addLLMConceptAndOperations() {
         val schemasToPersist = mutableListOf<LLMConceptDescription>()
 
         payload.concepts.forEach { concept ->
-            val cpgConceptNode = result.nodes.find { it.id.toString() == concept.nodeId }
-            if (cpgConceptNode == null) {
-                failed.add(
-                    FailedConcept(
-                        concept = concept,
-                        reason =
-                            "Underlying CPG node ${concept.nodeId} not found for concept \"${concept.name}\".",
-                    )
-                )
+            val conceptNodeResult = resolveNode(result, concept.nodeId, concept.location)
+            if (conceptNodeResult !is ResolveResult.Success) {
+                val reason =
+                    when (conceptNodeResult) {
+                        is ResolveResult.NotFound -> conceptNodeResult.message
+                        is ResolveResult.Ambiguous -> conceptNodeResult.message
+                    }
+                failed.add(FailedConcept(concept = concept, reason = reason))
                 return@forEach
             }
+            val cpgConceptNode = conceptNodeResult.node
 
             val conceptNode =
                 GenericLLMConcept(
@@ -196,18 +278,20 @@ fun Server.addLLMConceptAndOperations() {
 
             val appliedOps = mutableListOf<AppliedOperation>()
             val failedOps = mutableListOf<FailedOperation>()
+            val resolvedOps = mutableListOf<LLMOperation>()
             concept.operations.forEach { operation ->
-                val cpgOperationNode = result.nodes.find { it.id.toString() == operation.nodeId }
-                if (cpgOperationNode == null) {
-                    failedOps.add(
-                        FailedOperation(
-                            operation = operation,
-                            reason =
-                                "Underlying CPG node ${operation.nodeId} not found for operation \"${operation.name}\".",
-                        )
-                    )
+                val opNodeResult = resolveNode(result, operation.nodeId, operation.location)
+                if (opNodeResult !is ResolveResult.Success) {
+                    val reason =
+                        when (opNodeResult) {
+                            is ResolveResult.NotFound -> opNodeResult.message
+                            is ResolveResult.Ambiguous -> opNodeResult.message
+                        }
+                    failedOps.add(FailedOperation(operation = operation, reason = reason))
+                    resolvedOps.add(operation)
                     return@forEach
                 }
+                val cpgOperationNode = opNodeResult.node
                 val opNode =
                     GenericLLMOperation(
                             underlyingNode = cpgOperationNode,
@@ -228,20 +312,28 @@ fun Server.addLLMConceptAndOperations() {
                                 )
                             NodeBuilder.log(this)
                         }
+                val resolvedOperation = operation.copy(nodeId = cpgOperationNode.id.toString())
                 appliedOps.add(
-                    AppliedOperation(operation = operation, overlayNodeId = opNode.id.toString())
+                    AppliedOperation(
+                        operation = resolvedOperation,
+                        overlayNodeId = opNode.id.toString(),
+                    )
                 )
+                resolvedOps.add(resolvedOperation)
             }
+
+            val resolvedConcept =
+                concept.copy(nodeId = cpgConceptNode.id.toString(), operations = resolvedOps)
 
             applied.add(
                 AppliedConcept(
-                    concept = concept,
+                    concept = resolvedConcept,
                     overlayNodeId = conceptNode.id.toString(),
                     appliedOperations = appliedOps,
                     failedOperations = failedOps,
                 )
             )
-            schemasToPersist.add(LLMConceptDescription(concept))
+            schemasToPersist.add(LLMConceptDescription(resolvedConcept))
         }
 
         if (schemasToPersist.isNotEmpty()) {
