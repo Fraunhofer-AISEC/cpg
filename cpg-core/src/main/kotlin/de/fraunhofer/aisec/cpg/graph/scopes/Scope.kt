@@ -44,9 +44,11 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Label
 import de.fraunhofer.aisec.cpg.graph.expressions.LookupScope
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.persistence.Relationship
+import java.util.concurrent.ConcurrentHashMap
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
@@ -123,6 +125,38 @@ sealed class Scope(
      * completely redesign the alias / typedef system.
      */
     @DoNotPersist val typedefs = mutableMapOf<Name, Typedef>()
+
+    /** Lazy backing field for [objectTypeCache]. */
+    @DoNotPersist
+    @Volatile
+    private var _objectTypeCache: ConcurrentHashMap<String, ObjectType>? = null
+
+    /**
+     * A per-scope cache of non-generic [ObjectType]s, keyed by their (local) name. It lets the
+     * frontend reuse a single [ObjectType] instance for repeated references to the same named type
+     * within this scope (see [de.fraunhofer.aisec.cpg.graph.objectType]), instead of allocating a
+     * fresh, redundant [ObjectType] for each use.
+     *
+     * Sharing is sound because a type's resolution (its [ObjectType.recordDeclaration], fully
+     * qualified name and supertypes) is fully determined by its name and scope; all references to
+     * the same name within this scope resolve identically.
+     *
+     * The cache is stored directly on the scope instead of in a map keyed by the scope on purpose:
+     * [Scope.equals]/[hashCode] are derived from mutable fields ([astNode], [name]), so using a
+     * [Scope] as a map key would strand entries (and silently stop interning) if those fields ever
+     * changed after insertion. Keying by the scope's own identity — i.e. hanging the cache off the
+     * instance — sidesteps that entirely, and, because each translation context has its own scopes,
+     * it preserves the previous per-context isolation. The container is allocated lazily on first
+     * use.
+     */
+    @DoNotPersist
+    val objectTypeCache: ConcurrentHashMap<String, ObjectType>
+        get() =
+            _objectTypeCache
+                ?: synchronized(this) {
+                    _objectTypeCache
+                        ?: ConcurrentHashMap<String, ObjectType>().also { _objectTypeCache = it }
+                }
 
     /**
      * Adds a [typedef] declaration to the scope. This is used to store typedefs in the scope, so

@@ -142,16 +142,18 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun removeAll(elements: Collection<EdgeType>): Boolean {
-        var ok = false
+        // Only notify for edges that were actually present and removed. Firing onRemove for
+        // elements that were not in this set (or for duplicates in the input) would corrupt
+        // mirror-property bookkeeping and other onRemove side effects. This mirrors the precise
+        // behavior of removeIf above.
+        val removed = ArrayList<EdgeType>()
         for (edge in elements.toSet()) {
             if (removeInternal(edge)) {
-                ok = true
+                removed.add(edge)
             }
         }
-        if (ok) {
-            elements.forEach { handleOnRemove(it) }
-        }
-        return ok
+        removed.forEach { handleOnRemove(it) }
+        return removed.isNotEmpty()
     }
 
     override fun clear() {

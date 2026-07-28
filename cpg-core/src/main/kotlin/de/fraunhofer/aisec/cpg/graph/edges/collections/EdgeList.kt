@@ -71,10 +71,13 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun removeAll(elements: Collection<EdgeType>): Boolean {
-        val ok = super.removeAll(elements.toSet())
-        if (ok) {
-            elements.forEach { handleOnRemove(it) }
-        }
+        // Only notify for edges that were actually present and removed. Firing onRemove for
+        // elements that were not in this list (or for duplicates in the input) would corrupt
+        // mirror-property bookkeeping and other onRemove side effects.
+        val toRemove = elements.toSet()
+        val removed = toRemove.filter { contains(it) }
+        val ok = super.removeAll(toRemove)
+        removed.forEach { handleOnRemove(it) }
         return ok
     }
 

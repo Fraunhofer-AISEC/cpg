@@ -59,14 +59,30 @@ class PhysicalLocation(uri: URI?, region: Region) {
             private val cache = ConcurrentHashMap<URI, ArtifactLocation>()
 
             /**
+             * Upper bound on the number of interned [ArtifactLocation]s. The interning only needs
+             * to help within the working set of files currently being analyzed; because an
+             * [ArtifactLocation] is value-equal and cheap to rebuild, dropping cached entries only
+             * forgoes sharing, never correctness. Bounding the cache prevents unbounded growth in
+             * long-lived processes (e.g. server mode) that analyze many distinct files over time.
+             */
+            private const val MAX_CACHE_SIZE = 50_000
+
+            /**
              * Returns a (shared) [ArtifactLocation] for [uri]. Since an [ArtifactLocation] is
              * immutable and value-equal by [uri], and every node in a file shares the same URI, we
              * intern one instance per URI instead of reconstructing a wrapper (and recomputing
-             * [fileName]) for every located node. The cache is bounded by the number of distinct
-             * files, not nodes.
+             * [fileName]) for every located node. The cache is bounded by [MAX_CACHE_SIZE] distinct
+             * URIs; once that limit is reached it is cleared and repopulated on demand.
              */
-            fun of(uri: URI?): ArtifactLocation =
-                if (uri == null) unknown else cache.computeIfAbsent(uri) { ArtifactLocation(it) }
+            fun of(uri: URI?): ArtifactLocation {
+                if (uri == null) return unknown
+                // Cheap, racy bound. Occasional over-shoot or double-clear across threads is
+                // harmless: entries are pure caches and any dropped instance is simply rebuilt.
+                if (cache.size >= MAX_CACHE_SIZE) {
+                    cache.clear()
+                }
+                return cache.computeIfAbsent(uri) { ArtifactLocation(it) }
+            }
         }
     }
 

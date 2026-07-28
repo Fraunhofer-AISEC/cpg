@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.types.*
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Creates a new [UnknownType] and sets the appropriate language, if this [MetadataProvider]
@@ -94,19 +93,16 @@ fun LanguageProvider.objectType(
     }
 
     // Conservative interning: for a non-generic named type we reuse a single ObjectType instance
-    // per
-    // (scope, name) within the current translation context (see
-    // TranslationContext.objectTypeCache).
-    // Every reference to the same named type in the same scope resolves identically, so sharing one
-    // instance avoids allocating a fresh, redundant ObjectType for each use. Types with generics,
-    // or
-    // created without a scope/context, keep their previous fresh-per-call behavior.
+    // per (scope, name), stored on the defining scope (see Scope.objectTypeCache). Every reference
+    // to the same named type in the same scope resolves identically, so sharing one instance avoids
+    // allocating a fresh, redundant ObjectType for each use. Types with generics, or created
+    // without a scope/context, keep their previous fresh-per-call behavior.
     val scope = (this as? ScopeProvider)?.scope
     val ctx = (this as? ContextProvider)?.ctx
     if (generics.isEmpty() && scope != null && ctx != null) {
-        return ctx.objectTypeCache
-            .computeIfAbsent(scope) { ConcurrentHashMap() }
-            .computeIfAbsent(name.toString()) { createObjectType(name, generics, rawNode) }
+        return scope.objectTypeCache.computeIfAbsent(name.toString()) {
+            createObjectType(name, generics, rawNode)
+        }
     }
 
     return createObjectType(name, generics, rawNode)

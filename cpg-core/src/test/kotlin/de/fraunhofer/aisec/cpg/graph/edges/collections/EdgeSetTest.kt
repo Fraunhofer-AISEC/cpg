@@ -121,4 +121,45 @@ class EdgeSetTest {
             assertTrue(n.nextDFGEdges.isEmpty())
         }
     }
+
+    /**
+     * [EdgeSet.removeAll] must only fire `onRemove` for edges it actually removed. Notifying an
+     * edge that is not a member (or a duplicate in the input) would run the mirror-property
+     * bookkeeping ([de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection]) for an
+     * edge that still legitimately lives elsewhere, evicting it from the mirror and corrupting the
+     * next/prev DFG invariant.
+     */
+    @Test
+    fun testRemoveAllOnlyNotifiesActuallyRemovedEdges() {
+        with(TestLanguageFrontend()) {
+            val n = newLiteral(0)
+            val m = newLiteral(10)
+            val t1 = newLiteral(1)
+            val t2 = newLiteral(2)
+
+            // n -> t1, n -> t2
+            n.nextDFG += t1
+            n.nextDFG += t2
+            // m -> t1 shares the target t1 but is NOT part of n's edge set. Its mirror lives in
+            // t1.prevDFGEdges.
+            m.nextDFG += t1
+
+            val foreignEdge = m.nextDFGEdges.single { it.end == t1 }
+            assertTrue(foreignEdge in t1.prevDFGEdges)
+
+            // Remove n -> t1 together with the foreign edge that is not a member of n.nextDFGEdges.
+            // Only n -> t1 must actually be removed and notified.
+            val ownEdge = n.nextDFGEdges.single { it.end == t1 }
+            assertTrue(n.nextDFGEdges.removeAll(listOf(ownEdge, foreignEdge)))
+
+            // n -> t1 is gone, n -> t2 remains.
+            assertEquals(setOf<Node>(t2), n.nextDFG)
+
+            // The foreign edge m -> t1 must be untouched on both sides of the mirror. With the
+            // previous (buggy) behavior, notifying foreignEdge here would have evicted it from
+            // t1.prevDFGEdges while leaving it in m.nextDFG.
+            assertTrue(t1 in m.nextDFG)
+            assertTrue(foreignEdge in t1.prevDFGEdges)
+        }
+    }
 }
