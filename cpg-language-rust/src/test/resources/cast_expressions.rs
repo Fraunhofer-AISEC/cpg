@@ -41,3 +41,7 @@ fn cast_in_condition(x: i64) {
     }
 }
 
+fn cast_in_return(value: i32) -> f64 {
+    return value as f64;
+}
+

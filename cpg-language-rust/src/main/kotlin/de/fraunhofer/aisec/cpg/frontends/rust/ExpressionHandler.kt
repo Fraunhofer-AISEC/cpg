@@ -246,19 +246,17 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        return when {
-            value <= BigInteger.valueOf(Byte.MAX_VALUE.toLong()) ->
-                newLiteral(value.toInt(), language.builtInTypes["i8"] ?: unknownType(), raw)
-            value <= BigInteger.valueOf(Short.MAX_VALUE.toLong()) ->
-                newLiteral(value.toInt(), language.builtInTypes["i16"] ?: unknownType(), raw)
-            value <= BigInteger.valueOf(Int.MAX_VALUE.toLong()) ->
-                newLiteral(value.toInt(), language.builtInTypes["i32"] ?: unknownType(), raw)
-            value <= BigInteger.valueOf(Long.MAX_VALUE) ->
-                newLiteral(value.toInt(), language.builtInTypes["i64"] ?: unknownType(), raw)
-            value.bitLength() <= 127 ->
-                newLiteral(value.toInt(), language.builtInTypes["i128"] ?: unknownType(), raw)
-            else -> newLiteral(value, unknownType(), raw)
-        }
+        val typ =
+            when {
+                value <= BigInteger.valueOf(Byte.MAX_VALUE.toLong()) -> "i8"
+                value <= BigInteger.valueOf(Short.MAX_VALUE.toLong()) -> "i16"
+                value <= BigInteger.valueOf(Int.MAX_VALUE.toLong()) -> "i32"
+                value <= BigInteger.valueOf(Long.MAX_VALUE) -> "i64"
+                value.bitLength() <= 127 -> "i128"
+                else -> null
+            }
+
+        return newLiteral(value, typ?.let { language.builtInTypes[it] } ?: unknownType(), raw)
     }
 
     fun handleCallExpr(callExpr: RsCallExpr): Call {
@@ -601,8 +599,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
         if (arrayExpr.repeating) {
             arrayConstruction.assume(
-                assumptionType = AssumptionType.DataFlowAssumption,
-                "Using the repetition expression as value in the array model a direct DF although it is an indirect DF.",
+                AssumptionType.DataFlowAssumption,
+                "Repetition expression as direct although it is an indirect DF.",
                 arrayConstruction,
             )
         }
@@ -638,15 +636,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             field.expr.firstOrNull()?.let { expr ->
                 val value = handle(RsAst.RustExpr(expr))
 
-                val member =
-                    field.name?.let {
-                        newMemberAccess(it.text, newReference(refName), rawNode = rawField)
-                    }
-                        ?: newMemberAccess(
-                            value.toString(),
-                            newReference(refName),
-                            rawNode = rawField,
-                        )
+                val name = field.name?.text ?: value.toString()
+
+                val member = newMemberAccess(name, newReference(refName), rawNode = rawField)
 
                 construction.addArgument(
                     newAssign(lhs = listOf(member), rhs = listOf(value), rawNode = rawField).also {
