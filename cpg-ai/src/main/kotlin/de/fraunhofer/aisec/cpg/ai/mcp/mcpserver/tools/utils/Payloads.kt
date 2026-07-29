@@ -46,6 +46,15 @@ data class CpgNamePayload(@Description("The local name of the node to consider."
 data class CpgIdPayload(@Description("The id of the node to consider.") val id: String)
 
 @Serializable
+@Description("The payload to identify a batch of functions by their names.")
+data class CpgNamesPayload(
+    @Description(
+        "The local names of the functions to look up. Keep this batch reasonably small (e.g. around 10 names) to avoid overly large responses."
+    )
+    val names: List<String>
+)
+
+@Serializable
 data class CpgCallArgumentByNameOrIndexPayload(
     @Description("ID of the method/function call whose arguments should be listed.")
     val nodeId: String,
