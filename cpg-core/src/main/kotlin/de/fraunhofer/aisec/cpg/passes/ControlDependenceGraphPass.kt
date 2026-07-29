@@ -169,6 +169,14 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         }
 
         log.trace("Done iterating EOG for {}. Generating the edges now.", startNode.name)
+        if (finalState.isEmpty()) {
+            // There's no useful EOG, which also means that firstBasicBlock is not visited. We have
+            // to draw the CDG edge from the startNode to the firstBasicBlock manually in this case.
+            firstBasicBlock.nodes.forEach { node ->
+                if (node != startNode) node.prevCDG += startNode
+            }
+            return
+        }
 
         // branchingNodeConditionals is a map organized as follows:
         //   BranchingNode -> Set of BasicBlocks where, if we visited all of these, the
