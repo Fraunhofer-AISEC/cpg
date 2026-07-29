@@ -30,17 +30,11 @@ import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.AstNode
-import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.Variable
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
+import de.fraunhofer.aisec.cpg.graph.edges.flows.dataflowsOf
 import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -50,7 +44,6 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.persistence.Relationship
-import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /**
@@ -62,7 +55,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * executable code.
  */
 abstract class Expression(usedAsExpression: Boolean = true) :
-    AstNode(), DeclarationHolder, HasType, HasMemoryAddress, HasMemoryValue {
+    AstNode(), HasType, HasMemoryAddress, HasMemoryValue {
 
     /**
      * This property specifies that this node is used as an expression. Depending on the language,
@@ -83,19 +76,6 @@ abstract class Expression(usedAsExpression: Boolean = true) :
      * modeling and determine the dataflow direction
      */
     open var access: AccessValues = AccessValues.READ
-
-    /**
-     * A list of local variables (or other values) associated to this statement, defined by their
-     * [ValueDeclaration] extracted from Block because `for`, `while`, `if`, and `switch` can
-     * declare locals in their condition or initializers.
-     *
-     * TODO: This is actually an AST node just for a subset of nodes, i.e. initializers in for-loops
-     */
-    @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
-    var localEdges = astEdgesOf<ValueDeclaration>()
-
-    /** Virtual property to access [localEdges] without property edges. */
-    var locals by unwrapping(Expression::localEdges)
 
     @DoNotPersist override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
@@ -136,27 +116,82 @@ abstract class Expression(usedAsExpression: Boolean = true) :
             informObservers(HasType.TypeObserver.ChangeType.ASSIGNED_TYPE)
         }
 
-    /** Each Expression also has a MemoryValue. */
-    @Relationship
-    override var memoryValueEdges =
-        Dataflows<Node>(
-            this,
-            mirrorProperty = HasMemoryValue::memoryValueUsageEdges,
-            outgoing = false,
-        )
-    override var memoryValues by unwrapping(Expression::memoryValueEdges)
+    /** Lazy backing field for [memoryValueEdges]. */
+    private var _memoryValueEdges: Dataflows<Node>? = null
 
-    /** Where the memory value of this Expression is used. */
+    /**
+     * Each Expression also has a MemoryValue.
+     *
+     * This and the other two memory-model containers ([memoryValueUsageEdges],
+     * [memoryAddressEdges]) are only populated by the DFG and points-to passes and stay empty on
+     * the majority of expressions. Their backing containers are therefore allocated lazily on first
+     * access. They are not part of [equals]/[hashCode], so lazy-on-access is safe.
+     */
     @Relationship
-    override var memoryValueUsageEdges =
-        Dataflows<Node>(this, mirrorProperty = HasMemoryValue::memoryValueEdges, outgoing = true)
-    override var memoryValueUsages by unwrapping(Expression::memoryValueUsageEdges)
+    override var memoryValueEdges: Dataflows<Node>
+        get() =
+            _memoryValueEdges
+                ?: dataflowsOf(HasMemoryValue::memoryValueUsageEdges, outgoing = false).also {
+                    _memoryValueEdges = it
+                }
+        set(value) {
+            _memoryValueEdges = value
+        }
 
-    /** Each Expression also has a MemoryAddress. */
+    /** Virtual property for accessing [memoryValueEdges] as plain nodes. */
+    @DoNotPersist
+    override var memoryValues: MutableSet<Node>
+        get() = memoryValueEdges.unwrap()
+        set(value) {
+            memoryValueEdges.resetTo(value)
+        }
+
+    /** Lazy backing field for [memoryValueUsageEdges]. */
+    private var _memoryValueUsageEdges: Dataflows<Node>? = null
+
+    /**
+     * Where the memory value of this Expression is used (allocated lazily, see [memoryValueEdges]).
+     */
     @Relationship
-    override var memoryAddressEdges =
-        memoryAddressEdgesOf(mirrorProperty = MemoryAddress::usageEdges, outgoing = true)
-    override var memoryAddresses by unwrapping(Expression::memoryAddressEdges)
+    override var memoryValueUsageEdges: Dataflows<Node>
+        get() =
+            _memoryValueUsageEdges
+                ?: dataflowsOf(HasMemoryValue::memoryValueEdges, outgoing = true).also {
+                    _memoryValueUsageEdges = it
+                }
+        set(value) {
+            _memoryValueUsageEdges = value
+        }
+
+    /** Virtual property for accessing [memoryValueUsageEdges] as plain nodes. */
+    @DoNotPersist
+    override var memoryValueUsages: MutableSet<Node>
+        get() = memoryValueUsageEdges.unwrap()
+        set(value) {
+            memoryValueUsageEdges.resetTo(value)
+        }
+
+    /** Lazy backing field for [memoryAddressEdges]. */
+    private var _memoryAddressEdges: MemoryAddressEdges? = null
+
+    /** Each Expression also has a MemoryAddress (allocated lazily, see [memoryValueEdges]). */
+    @Relationship
+    override var memoryAddressEdges: MemoryAddressEdges
+        get() =
+            _memoryAddressEdges
+                ?: memoryAddressEdgesOf(mirrorProperty = MemoryAddress::usageEdges, outgoing = true)
+                    .also { _memoryAddressEdges = it }
+        set(value) {
+            _memoryAddressEdges = value
+        }
+
+    /** Virtual property for accessing [memoryAddressEdges] as plain nodes. */
+    @DoNotPersist
+    override var memoryAddresses: MutableSet<MemoryAddress>
+        get() = memoryAddressEdges.unwrap()
+        set(value) {
+            memoryAddressEdges.resetTo(value)
+        }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -168,22 +203,16 @@ abstract class Expression(usedAsExpression: Boolean = true) :
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Expression) return false
-        return super.equals(other) &&
-            locals == other.locals &&
-            propertyEqualsList(localEdges, other.localEdges) &&
-            type == other.type
+        return super.equals(other) && type == other.type
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), locals)
-
-    override fun addDeclaration(declaration: Declaration) {
-        if (declaration is Variable) {
-            addIfNotContains(localEdges, declaration)
-        } else if (declaration is Function) {
-            addIfNotContains(localEdges, declaration)
-        }
+    override fun hashCode(): Int {
+        // `locals` moved to the few DeclarationHolder subclasses and is no longer part of the
+        // generic expression identity. This reproduces the historical value
+        // `Objects.hash(super.hashCode(), locals)` for the (now universal) empty-locals case, so
+        // expression node ids stay stable across this refactor. `type` is part of equals but
+        // deliberately excluded from the hash because it is mutated by the type passes, and a
+        // node's hash must stay stable while it is used as a map key.
+        return 31 * (31 + super.hashCode()) + 31
     }
-
-    override val declarations: List<Declaration>
-        get() = locals
 }
