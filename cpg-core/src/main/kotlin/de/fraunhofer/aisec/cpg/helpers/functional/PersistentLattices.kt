@@ -82,6 +82,9 @@ open class PersistentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
         val size: Int
             get() = map.size
 
+        /** Returns `true` if this [Element] contains no entries. */
+        fun isEmpty(): Boolean = map.isEmpty()
+
         val keys: Set<K>
             get() = map.keys.mapTo(LinkedHashSet()) { it.ref }
 
