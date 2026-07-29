@@ -67,15 +67,26 @@ open class CLanguage :
      */
     open val supportsTentativeDefinitions: Boolean = true
 
+    /**
+     * Determines whether [incoming] is a redeclaration of [existing] that should be merged into it,
+     * rather than registered as a separate declaration.
+     *
+     * This only ever applies to two [Variable]s of the exact same concrete kind (e.g. two plain
+     * global variables, or two `static` members of the same
+     * [de.fraunhofer.aisec.cpg.graph.declarations.Record]) at global or namespace scope, and only
+     * if at least one of them is "incomplete": either explicitly declared `extern`, or (in C only,
+     * see [supportsTentativeDefinitions]) simply lacking an initializer, per C11's "tentative
+     * definition" rules (§6.9.2). Two full definitions of the same symbol are deliberately left
+     * unmerged, since that is an ODR violation rather than a legitimate redeclaration, and should
+     * surface as an ambiguity during symbol resolution instead of being silently resolved.
+     */
     override fun isRedeclaration(existing: Declaration, incoming: Declaration): Boolean {
-        if (existing::class != Variable::class || incoming::class != Variable::class) {
+        if (existing !is Variable || incoming !is Variable || existing::class != incoming::class) {
             return false
         }
         if (existing.scope !is GlobalScope && existing.scope !is NamespaceScope) {
             return false
         }
-        existing as Variable
-        incoming as Variable
         if (existing.initializer != null && incoming.initializer != null) {
             // Two full definitions of the same global: an ODR violation. Leave both in place, so
             // that resolution surfaces the ambiguity instead of silently picking a winner.
@@ -89,6 +100,15 @@ open class CLanguage :
         return supportsTentativeDefinitions
     }
 
+    /**
+     * Merges [incoming] into [existing] after [isRedeclaration] determined that they refer to the
+     * same object. [existing] is kept as the canonical declaration: it inherits [incoming]'s
+     * initializer if it did not already have one of its own (i.e., if [incoming] turned out to be
+     * the actual definition), and the union of both declarations' [Declaration.modifiers], with a
+     * now-stale `extern` modifier removed once the declaration has become a definition. [incoming]
+     * is discarded by the caller afterwards; its initializer is cleared here so it does not keep a
+     * dangling reference to state that is now owned by [existing].
+     */
     override fun mergeRedeclaration(existing: Declaration, incoming: Declaration) {
         if (existing !is Variable || incoming !is Variable) {
             return
