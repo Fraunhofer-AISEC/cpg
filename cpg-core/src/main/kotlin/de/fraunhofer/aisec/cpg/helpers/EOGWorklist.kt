@@ -166,8 +166,14 @@ class Worklist<K : Any, N : Any, V>() {
     /**
      * The actual worklist, i.e., elements which still have to be analyzed and the state which
      * should be considered there.
+     *
+     * A [LinkedHashMap] preserves insertion order (like the list-based implementation this
+     * replaces) while making the by-node lookup in [push] O(1) on average instead of the O(n)
+     * linear scan a list would require. Removing and re-inserting a key moves it to the end of the
+     * iteration order, which is exactly the "move updated entries to the back of the queue"
+     * behavior the previous implementation had.
      */
-    private val nodeOrder: MutableList<Pair<K, State<N, V>>> = mutableListOf()
+    private val nodeOrder: LinkedHashMap<K, State<N, V>> = LinkedHashMap()
 
     /**
      * Adds [newNode] and the [state] to the [globalState] (i.e., computes the [State.lub] of the
@@ -187,21 +193,21 @@ class Worklist<K : Any, N : Any, V>() {
      * If it returns `false`, the [newNode] wasn't added to the worklist as the state didn't change.
      */
     fun push(newNode: K, state: State<N, V>): Boolean {
-        val currentEntry = nodeOrder.find { it.first == newNode }
+        val currentState = nodeOrder[newNode]
         val update: Boolean
-        val newEntry =
-            if (currentEntry != null) {
-                val (newState, update2) = currentEntry.second.lub(state)
-                update = update2
-                if (update) {
-                    nodeOrder.remove(currentEntry)
-                }
-                Pair(currentEntry.first, newState)
-            } else {
-                update = true
-                Pair(newNode, state)
+        val newState: State<N, V>
+        if (currentState != null) {
+            val (lubState, changed) = currentState.lub(state)
+            update = changed
+            newState = lubState
+            if (update) {
+                nodeOrder.remove(newNode)
             }
-        if (update) nodeOrder.add(newEntry)
+        } else {
+            update = true
+            newState = state
+        }
+        if (update) nodeOrder[newNode] = newState
         return update
     }
 
@@ -213,9 +219,11 @@ class Worklist<K : Any, N : Any, V>() {
 
     /** Removes a [Node] from the worklist and returns the [Node] together with its [State] */
     fun pop(): Pair<K, State<N, V>> {
-        val node = nodeOrder.removeFirst()
-        alreadySeen.add(node.first)
-        return node
+        val iterator = nodeOrder.entries.iterator()
+        val entry = iterator.next()
+        iterator.remove()
+        alreadySeen.add(entry.key)
+        return Pair(entry.key, entry.value)
     }
 
     /** Computes the meet over paths for all the states in [globalState]. */
