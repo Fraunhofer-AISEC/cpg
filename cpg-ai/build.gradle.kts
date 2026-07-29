@@ -33,6 +33,10 @@ plugins {
 }
 
 application {
+    // The Gradle module is called cpg-ai (it covers more than just the MCP server, e.g. skills and
+    // chat integration), but the binary it produces only starts the MCP server, so it keeps the
+    // narrower, established cpg-mcp name.
+    applicationName = "cpg-mcp"
     mainClass.set("de.fraunhofer.aisec.cpg.ai.mcp.ApplicationKt")
     // Since we are potentially persisting deeply nested graphs, we need to increase the stack and
     // heap size.
