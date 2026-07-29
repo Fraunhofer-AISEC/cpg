@@ -69,6 +69,8 @@ class ChatService(
     private val httpClient: HttpClient,
     private val llmProviderConfig: LlmProviderConfig,
     private val mcpServerUrl: String,
+    /** Maximum number of tool-calling round trips the agent may take before it must respond. */
+    private val maxAgentIterations: Int = 100,
 ) {
     suspend fun listAvailableProviders(): List<LlmProviderWithModels> =
         llmProviderConfig.listAvailableProviders()
@@ -110,12 +112,9 @@ class ChatService(
     private val skillLoader = SkillLoader(defaultSkillDirectories)
     private var skills: List<Skill> = skillLoader.discoverSkills()
 
-    /** Maximum number of tool-calling round trips the agent may take before it must respond. */
-    private val maxToolIterations = 50
-
     /**
      * Once the running prompt grows beyond this many messages, [chatStrategy] compresses the
-     * history before continuing the tool-calling loop. With up to [maxToolIterations] round trips
+     * history before continuing the tool-calling loop. With up to [maxAgentIterations] round trips
      * per [chat] call, a single oversized tool result (or many moderate ones accumulating over
      * iterations) can otherwise grow the prompt past the LLM provider's context window and cause a
      * 400 error.
@@ -290,7 +289,7 @@ class ChatService(
                         AIAgentConfig(
                             prompt = history,
                             model = chatLlm.model,
-                            maxAgentIterations = maxToolIterations,
+                            maxAgentIterations = maxAgentIterations,
                         ),
                     strategy = chatStrategy,
                     toolRegistry = toolRegistry,
