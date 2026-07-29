@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.HasBuiltins
+import de.fraunhofer.aisec.cpg.frontends.HasDeclarationMerging
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.AstNode
@@ -135,9 +136,10 @@ sealed class Scope(
     /**
      * Adds a [declaration] with the defined [symbol]. Returns the canonical declaration for this
      * symbol: either [declaration] itself, or a pre-existing declaration that [declaration] was
-     * merged into (see [Language.isRedeclaration]). Callers that wire [declaration] into an AST
-     * [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] afterwards MUST use the returned value
-     * instead of [declaration], to avoid re-introducing the duplicate the merge just collapsed.
+     * merged into (see [HasDeclarationMerging.isRedeclaration]). Callers that wire [declaration]
+     * into an AST [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] afterwards MUST use the
+     * returned value instead of [declaration], to avoid re-introducing the duplicate the merge just
+     * collapsed.
      */
     context(provider: ContextProvider)
     open fun addSymbol(symbol: Symbol, declaration: Declaration): Declaration {
@@ -346,13 +348,13 @@ fun SymbolMap.mergeFrom(symbolMap: SymbolMap) {
 
 /**
  * Attempts to fold [declaration] into an existing, compatible entry of [list], per [declaration]'s
- * language-specific redeclaration policy (see [Language.isRedeclaration]). Returns the canonical
- * declaration: an existing entry that [declaration] was merged into, or [declaration] itself if it
- * was appended as a new entry.
+ * language-specific redeclaration policy (see [HasDeclarationMerging.isRedeclaration]). Returns the
+ * canonical declaration: an existing entry that [declaration] was merged into, or [declaration]
+ * itself if it was appended as a new entry.
  */
 private fun mergeOrAppend(list: MutableList<Declaration>, declaration: Declaration): Declaration {
     val language = declaration.language
-    if (language.supportsDeclarationMerging) {
+    if (language is HasDeclarationMerging) {
         val existing =
             list.firstOrNull { it !== declaration && language.isRedeclaration(it, declaration) }
         if (existing != null) {

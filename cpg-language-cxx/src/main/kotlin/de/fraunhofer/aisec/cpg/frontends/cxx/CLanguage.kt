@@ -46,7 +46,8 @@ open class CLanguage :
     HasElaboratedTypeSpecifier,
     HasShortCircuitOperators,
     HasGlobalVariables,
-    HasGlobalFunctions {
+    HasGlobalFunctions,
+    HasDeclarationMerging {
     override val fileExtensions = listOf("c", "h")
     override val namespaceDelimiter = "::"
     @DoNotPersist
@@ -55,8 +56,6 @@ open class CLanguage :
     override val elaboratedTypeSpecifier = listOf("struct", "union", "enum")
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
-
-    override val supportsDeclarationMerging = true
 
     /**
      * Whether a bare, non-`extern`, non-initialized redeclaration of a global [Variable] is a valid
