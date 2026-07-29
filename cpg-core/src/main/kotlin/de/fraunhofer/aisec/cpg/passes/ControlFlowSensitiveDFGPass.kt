@@ -489,11 +489,14 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             if (writtenTo is Reference) {
                 // This is a special case: We add the nextEOGEdge which goes out of the loop but
                 // with the old previousWrites map.
+                // Hoisted out of the filter: allChildren() flattens the whole statement subtree, so
+                // recomputing it for every nextEOGEdge was O(edges x subtree).
+                val statementChildren = currentNode.statement.allChildren<Node>()
                 val nodesOutsideTheLoop =
                     currentNode.nextEOGEdges.filter {
                         it.unreachable != true &&
                             it.end != currentNode.statement &&
-                            it.end !in currentNode.statement.allChildren<Node>()
+                            it.end !in statementChildren
                     }
                 nodesOutsideTheLoop.forEach { worklist.push(it, state.duplicate()) }
             }

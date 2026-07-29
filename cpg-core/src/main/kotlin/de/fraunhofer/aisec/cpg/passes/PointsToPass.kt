@@ -3799,8 +3799,9 @@ fun PointsToState.Element.getValues(
             }
             retVal
         }
-        is Declaration -> {
-            /* For Declarations, we have to look up the last value written to it.
+        is ValueDeclaration -> {
+            /* For value declarations, we have to look up the last value written to it. Only
+             * value declarations carry a memory address (see HasMemoryAddress on ValueDeclaration).
              */
             if (node.memoryAddresses.isEmpty()) {
                 node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
@@ -3907,9 +3908,10 @@ fun PointsToState.Element.getValues(
 
 fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet<Node> {
     return when (node) {
-        is Declaration -> {
+        is ValueDeclaration -> {
             /*
-             * For declarations, we created a new MemoryAddress node, so that's the one we use here
+             * For value declarations, we created a new MemoryAddress node, so that's the one we use
+             * here. Only value declarations carry a memory address.
              */
             if (node.memoryAddresses.isEmpty()) {
                 node.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
@@ -3982,7 +3984,7 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet
                 if (refersTo is Function) {
                     globalDerefs.put(refersTo, PowersetLattice.Element(Pair(refersTo, false)))
                     identitySetOf(refersTo)
-                } else {
+                } else if (refersTo is ValueDeclaration) {
                     /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a Function. So let's do this here */
                     if (refersTo.memoryAddresses.isEmpty()) {
                         val newAddress = MemoryAddress(node.name, isGlobal(node))
@@ -3990,6 +3992,9 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet
                     }
 
                     refersTo.memoryAddresses.toIdentitySet()
+                } else {
+                    /* Only value declarations carry a memory address. */
+                    identitySetOf()
                 }
             } ?: identitySetOf()
         }
