@@ -139,9 +139,6 @@ project.logger.lifecycle(
 
 val enableMCPModule: Boolean by extra {
     val enableMCPModule: String? by project
-    // codyze-console cannot build without this module, so default to whatever codyze-console
-    // resolved to instead of requiring both to be enabled separately; an explicit setting here
-    // always takes precedence over that default.
-    enableMCPModule?.toBoolean() ?: enableCodyzeConsole
+    enableMCPModule.toBoolean()
 }
 project.logger.lifecycle("MCP module is ${if (enableMCPModule) "enabled" else "disabled"}")

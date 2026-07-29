@@ -59,10 +59,7 @@ val enableCodyzeConsole: Boolean by extra {
 }
 val enableMCPModule: Boolean by extra {
     val enableMCPModule: String? by settings
-    // codyze-console cannot build without this module, so default to whatever codyze-console
-    // resolved to instead of requiring both to be enabled separately; an explicit setting here
-    // always takes precedence over that default.
-    enableMCPModule?.toBoolean() ?: enableCodyzeConsole
+    enableMCPModule.toBoolean()
 }
 
 if (enableJavaFrontend) include(":cpg-language-java")
