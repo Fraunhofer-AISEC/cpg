@@ -129,8 +129,19 @@ val enableINIFrontend: Boolean by extra {
 }
 project.logger.lifecycle("INI frontend is ${if (enableINIFrontend) "enabled" else "disabled"}")
 
+val enableCodyzeConsole: Boolean by extra {
+    val enableCodyzeConsole: String? by project
+    enableCodyzeConsole.toBoolean()
+}
+project.logger.lifecycle(
+    "codyze-console is ${if (enableCodyzeConsole) "enabled" else "disabled"}"
+)
+
 val enableMCPModule: Boolean by extra {
     val enableMCPModule: String? by project
-    enableMCPModule.toBoolean()
+    // codyze-console cannot build without this module, so default to whatever codyze-console
+    // resolved to instead of requiring both to be enabled separately; an explicit setting here
+    // always takes precedence over that default.
+    enableMCPModule?.toBoolean() ?: enableCodyzeConsole
 }
 project.logger.lifecycle("MCP module is ${if (enableMCPModule) "enabled" else "disabled"}")
