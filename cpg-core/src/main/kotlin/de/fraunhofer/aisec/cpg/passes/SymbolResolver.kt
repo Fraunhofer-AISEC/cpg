@@ -276,6 +276,11 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
             candidates = resolveMemberByName(ref.name.localName, setOf(record.toType()))
         }
 
+        // Drop candidates that are invisible to this reference because of internal linkage: a
+        // declaration with [Visibility.INTERNAL] (e.g. a file-scope `static` in C/C++) is confined
+        // to its own translation unit and must not be resolved from another one.
+        candidates = candidates.withoutForeignInternalLinkage(ref)
+
         // Store the candidates in the reference
         ref.candidates = candidates
 
@@ -325,6 +330,28 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         ref.markClean()
+    }
+
+    /**
+     * Removes candidates that are invisible to [ref] because of internal linkage. A declaration
+     * with [Visibility.INTERNAL] (in C/C++ a file-scope `static`, see the frontend's
+     * `HasKeywordSemantics` mapping) is confined to its own translation unit, so it must not be
+     * resolved from a reference in a different one. This is what makes cross-translation-unit
+     * lookups of `static` globals and functions fail, as the language semantics require.
+     *
+     * Candidates without internal linkage are always kept, so languages that never assign
+     * [Visibility.INTERNAL] are completely unaffected. As internal linkage is comparatively rare,
+     * we avoid resolving [ref]'s translation unit unless at least one candidate actually has it.
+     */
+    private fun Set<Declaration>.withoutForeignInternalLinkage(ref: Reference): Set<Declaration> {
+        if (none { it.hasInternalLinkage }) {
+            return this
+        }
+
+        val referencingUnit = ref.translationUnit
+        return filterTo(mutableSetOf()) { candidate ->
+            !candidate.hasInternalLinkage || candidate.translationUnit == referencingUnit
+        }
     }
 
     /**
