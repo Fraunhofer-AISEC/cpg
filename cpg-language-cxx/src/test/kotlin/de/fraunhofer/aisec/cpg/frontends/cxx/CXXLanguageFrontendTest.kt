@@ -397,7 +397,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertTrue(initializer is Literal<*>)
             assertEquals(1, initializer.value)
 
-            val twoDeclarations = statements[2].declarations
+            val twoDeclarations = (statements[2] as DeclarationStatement).declarations
             assertEquals(2, twoDeclarations.size)
 
             val b = twoDeclarations[0] as Variable
@@ -430,7 +430,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertLocalName("ptr2", pointerWithAssign)
             assertLiteralValue(null, pointerWithAssign.initializer)
 
-            val classWithVariable = statements[6].declarations
+            val classWithVariable = (statements[6] as DeclarationStatement).declarations
             assertEquals(2, classWithVariable.size)
 
             val classA = classWithVariable[0] as Record

@@ -178,6 +178,10 @@ For parsing TypeScript, the necessary TypeScript-based code can be found in the 
 
 [Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro) functionality is provided via the optional `cpg-mcp` module. It can be enabled/disabled via the `gradle.properties` setting `enableMCPModule`.
 
+#### Codyze Console
+
+The [Codyze Console](codyze-console/README.md) web application is an optional module, enabled/disabled via the `gradle.properties` setting `enableCodyzeConsole`. Its AI chat feature additionally requires the `cpg-mcp` module (see above) to be enabled separately.
+
 ### Code Style
 
 We use [Google Java Style](https://github.com/google/google-java-format) as a formatting. Please install the appropriate plugin for your IDE, such as the [google-java-format IntelliJ plugin](https://plugins.jetbrains.com/plugin/8527-google-java-format) or [google-java-format Eclipse plugin](https://github.com/google/google-java-format/releases/download/google-java-format-1.6/google-java-format-eclipse-plugin_1.6.0.jar).
