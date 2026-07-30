@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -55,7 +56,11 @@ import org.slf4j.LoggerFactory
  * [usedAsExpression]. When this property is set to true (it defaults to false), we model a dataflow
  * from the (first) rhs to the [Assign] itself.
  */
-class Assign : Expression(false), AssignmentHolder, HasType.TypeObserver, HasOperatorCode {
+class Assign :
+    Expression(false),
+    AssignmentHolder,
+    HasType.TypeObserver,
+    HasOperatorCode {
 
     override var operatorCode: String = "="
 
@@ -162,6 +167,12 @@ class Assign : Expression(false), AssignmentHolder, HasType.TypeObserver, HasOpe
      * [declarations].
      */
     override var declarations by unwrapping(Assign::declarationEdges)
+
+    override fun addDeclaration(declaration: Declaration) {
+        if (declaration is Variable) {
+            addIfNotContains(declarationEdges, declaration)
+        }
+    }
 
     /** Finds the value (of [rhs]) that is assigned to the particular [lhs] expression. */
     fun findValue(lhsExpression: HasType): Expression? {

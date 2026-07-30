@@ -5,6 +5,8 @@ The agent uses the tools of the CPG MCP server to analyze code and answer questi
 
 ## Getting Started
 
+Codyze Console is an optional module. Enable it by setting `enableCodyzeConsole=true` in `gradle.properties` (or via `./configure_frontends.sh`), then rerun/resync Gradle.
+
 The easiest way to get started is by using the predefined IntelliJ run configurations in the `.run/` directory:
 - *Codyze Console* (standalone)
 - *Codyze Compliance Scan (with Console and Example)* (with an example project).

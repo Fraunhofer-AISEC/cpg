@@ -129,6 +129,14 @@ val enableINIFrontend: Boolean by extra {
 }
 project.logger.lifecycle("INI frontend is ${if (enableINIFrontend) "enabled" else "disabled"}")
 
+val enableCodyzeConsole: Boolean by extra {
+    val enableCodyzeConsole: String? by project
+    enableCodyzeConsole.toBoolean()
+}
+project.logger.lifecycle(
+    "codyze-console is ${if (enableCodyzeConsole) "enabled" else "disabled"}"
+)
+
 val enableMCPModule: Boolean by extra {
     val enableMCPModule: String? by project
     enableMCPModule.toBoolean()

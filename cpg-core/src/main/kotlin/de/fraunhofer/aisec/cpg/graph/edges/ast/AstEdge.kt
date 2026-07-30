@@ -37,7 +37,12 @@ open class AstEdge<T : AstNode>(start: AstNode, end: T) : Edge<T>(start, end) {
         end.astParent = start
     }
 
-    override var labels: Set<String> = setOf("AST")
+    override var labels: Set<String> = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [AstEdge]s (see [Edge.labels]). */
+        val LABELS = setOf("AST")
+    }
 }
 
 /** Creates an [AstEdges] container starting from this node. */

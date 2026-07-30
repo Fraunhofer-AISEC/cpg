@@ -46,6 +46,23 @@ import kotlin.test.assertTrue
 import org.junit.jupiter.api.assertInstanceOf
 
 class ControlDependenceGraphPassTest {
+
+    @Test
+    fun testFlatFunction() {
+        val result = getFlatTest()
+        assertNotNull(result)
+        val main = result.functions["main"]
+        assertNotNull(main)
+        val allNodes = main.body.allChildren<AstNode>().filter { it != main.body }
+        allNodes.forEach { node ->
+            assertEquals(
+                main,
+                node.prevCDG.singleOrNull(),
+                "Expected node ${node} to have a CDG edge to main, but found ${node.prevCDG}",
+            )
+        }
+    }
+
     @Test
     fun testIfStatements() {
         val result = getIfTest()
@@ -201,6 +218,30 @@ class ControlDependenceGraphPassTest {
                                         it.returnValue = newLiteral(1, objectType("int"))
                                     }
                                 }
+                        }
+                    }
+                }
+
+        fun getFlatTest() =
+            testFrontend(
+                    TranslationConfiguration.builder()
+                        .registerLanguage<TestLanguageWithColon>()
+                        .defaultPasses()
+                        .registerPass<ControlDependenceGraphPass>()
+                        .build()
+                )
+                .build {
+                    translationResult {
+                        translationUnit("if.cpp") {
+                            // The main method
+                            function("main", t("int")) {
+                                body {
+                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
+                                    call("printf") { literal("1\n", t("string")) }
+                                    call("printf") { literal("2\n", t("string")) }
+                                    returnStmt { ref("i") }
+                                }
+                            }
                         }
                     }
                 }

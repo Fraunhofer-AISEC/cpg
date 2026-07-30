@@ -55,8 +55,12 @@ mavenPublishing {
     }
 }
 
+val codyzeConsoleEnabled = findProject(":codyze-console") != null
+
 dependencies {
     implementation(projects.codyzeCompliance)
-    implementation(projects.codyzeConsole)
+    if (codyzeConsoleEnabled) {
+        implementation(project(":codyze-console"))
+    }
     implementation(libs.clikt)
 }

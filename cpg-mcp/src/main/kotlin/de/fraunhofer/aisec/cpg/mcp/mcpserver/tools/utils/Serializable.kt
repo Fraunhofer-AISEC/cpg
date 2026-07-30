@@ -216,6 +216,10 @@ data class CpgAnalysisResult(
     val functions: Int,
     val variables: Int,
     val callExpressions: Int,
+    /** The names of the components of the analyzed project. */
+    val components: List<String> = listOf(),
+    /** Notes about what the project auto-detection recognized, e.g., a compilation database. */
+    val detectionNotes: List<String> = listOf(),
 )
 
 @Serializable
