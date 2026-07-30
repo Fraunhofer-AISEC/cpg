@@ -71,14 +71,6 @@ import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.variables
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgRunPassPayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.PassInfo
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.addTool
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toSchema
 import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
