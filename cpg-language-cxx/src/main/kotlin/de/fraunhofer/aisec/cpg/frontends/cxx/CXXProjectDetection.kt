@@ -53,7 +53,7 @@ private fun findCompilationDatabase(directory: Path): Path? {
  * preprocessor defines, and its targets are translated into [ComponentDefinition]s rooted in
  * [root]. Returns `null` if no compilation database is found.
  */
-internal fun detectCxx(root: Path): DetectionResult? {
+internal fun detectCxxProject(root: Path): DetectionResult? {
     val file = findCompilationDatabase(root) ?: return null
     val db = tryLoadCompilationDatabase(file) ?: return null
     val components =

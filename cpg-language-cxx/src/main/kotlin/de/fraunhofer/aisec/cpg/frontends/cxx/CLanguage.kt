@@ -50,7 +50,7 @@ open class CLanguage :
     Detector {
 
     override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
-        return detectCxx(root)
+        return detectCxxProject(root)
     }
 
     override val fileExtensions = listOf("c", "h")
