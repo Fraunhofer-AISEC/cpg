@@ -160,6 +160,7 @@ nav:
       - "Using Codyze": GettingStarted/codyze.md
       - "Usage as library":
           - "Adding the Dependency": GettingStarted/library.md
+          - "Project API": GettingStarted/project-api.md
           - "Using the Query API": GettingStarted/query.md
           - "Shortcuts to Explore the Graph": GettingStarted/shortcuts.md
           - "Graph Traversal (followXXX)":

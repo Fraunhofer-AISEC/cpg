@@ -65,6 +65,11 @@ open class CPPLanguage :
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
 
+    // C++ has no notion of a "tentative definition": a non-class-type variable at
+    // namespace/global scope without an initializer is already a full definition, so a second
+    // such declaration is an ODR violation, not a redeclaration of the same object.
+    override val supportsTentativeDefinitions = false
+
     @DoNotPersist
     override val overloadedOperatorNames:
         Map<Pair<KClass<out HasOverloadedOperation>, String>, Symbol> =
