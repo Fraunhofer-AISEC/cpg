@@ -27,7 +27,9 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.HasModifiers
+import de.fraunhofer.aisec.cpg.graph.HasVisibility
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
@@ -42,7 +44,7 @@ import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
  * currently have two [Function] nodes. This is very similar to the behaviour of clang, however
  * clang does establish a connection between those nodes, we currently do not.
  */
-abstract class Declaration : AstNode(), HasModifiers {
+abstract class Declaration : AstNode(), HasModifiers, HasVisibility {
     @DoNotPersist
     val symbol: Symbol
         get() {
@@ -56,6 +58,8 @@ abstract class Declaration : AstNode(), HasModifiers {
     var declaringScope: Scope? = null
 
     override var modifiers: Set<String> = setOf()
+
+    override var visibility: Visibility = Visibility.UNKNOWN
 
     override fun getExitNextEOG(): Collection<Node> {
         return setOf()
