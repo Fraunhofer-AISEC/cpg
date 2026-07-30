@@ -61,7 +61,6 @@ import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.PassInfo
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.toSchema
-import de.fraunhofer.aisec.cpg.ai.mcp.setupTranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -72,6 +71,14 @@ import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.variables
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgRunPassPayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.PassInfo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.addTool
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toSchema
 import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
@@ -93,18 +100,22 @@ import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.passes.briefDescription
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.passes.configuration.PassOrderingHelper
 import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import de.fraunhofer.aisec.cpg.passes.consumeTargets
 import de.fraunhofer.aisec.cpg.passes.hardDependencies
 import de.fraunhofer.aisec.cpg.passes.softDependencies
+import de.fraunhofer.aisec.cpg.project.Project
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.io.File
+import java.nio.file.Paths
 import java.util.IdentityHashMap
 import kotlin.String
+import kotlin.io.path.exists
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.primaryConstructor
@@ -119,15 +130,21 @@ var ctx: TranslationContext? = null
 val toolDescription =
     """
         Analyze source code using CPG (Code Property Graph).
-        
+
         $cpgDescription
-        
-        This tool parses source code and creates a comprehensive graph representation 
+
+        This tool parses source code and creates a comprehensive graph representation
         containing all nodes, functions, variables, and call expressions.
-        
+
+        It can either analyze a small code snippet (using 'content') or a file or whole
+        project directory on the local filesystem (using 'path'). For project directories,
+        the project structure is detected automatically, e.g., components based on Go
+        modules or a C/C++ compilation database (compile_commands.json).
+
         Example usage:
         - "Analyze this code: print('hello')"
         - "Analyze this uploaded file"
+        - "Analyze the project in /path/to/repo"
     """
         .trimIndent()
 
@@ -162,8 +179,14 @@ fun runCpgAnalyze(
     runPasses: Boolean,
     cleanup: Boolean,
 ): CpgAnalysisResult {
-    val file =
+    val path =
         when {
+            payload?.path != null -> {
+                val path = Paths.get(payload.path).toAbsolutePath().normalize()
+                require(path.exists()) { "Please use a correct path. It was: $path" }
+                path
+            }
+
             payload?.content != null -> {
                 val extension =
                     if (payload.extension != null) {
@@ -178,20 +201,32 @@ fun runCpgAnalyze(
                 val tempFile = File.createTempFile("cpg_analysis", extension)
                 tempFile.writeText(payload.content)
                 tempFile.deleteOnExit()
-                tempFile
+                tempFile.toPath()
             }
 
-            else -> throw IllegalArgumentException("Must provide content")
+            else -> throw IllegalArgumentException("Must provide either a path or content")
         }
 
-    val config =
-        setupTranslationConfiguration(
-            topLevel = file,
-            files = listOf(file.absolutePath),
-            includePaths = emptyList(),
-            runPasses = runPasses,
-        )
-    config.disableCleanup = !cleanup
+    val project =
+        Project.from(path) {
+            if (!runPasses) passes {}
+            translation {
+                it.debugParser(true)
+                it.loadIncludes(true)
+                it.addIncludesToGraph(true)
+                it.inferenceConfiguration(
+                    InferenceConfiguration.builder().inferRecords(true).build()
+                )
+
+                if (runPasses) {
+                    it.registerPass<ControlDependenceGraphPass>()
+                    it.registerPass<ProgramDependenceGraphPass>()
+                    it.registerPass<PythonFileConceptPass>()
+                }
+                it.registerPass<PrepareSerialization>()
+            }
+        }
+    project.config.disableCleanup = !cleanup
 
     if (ctx != null) {
         ctx?.executedFrontends?.forEach { frontend ->
@@ -203,11 +238,8 @@ fun runCpgAnalyze(
         ctx = null
     }
 
-    val analyzer = TranslationManager.builder().config(config).build()
-    ctx = TranslationContext(config)
-    val result =
-        ctx?.let { ctx -> analyzer.analyze(ctx).get() }
-            ?: throw IllegalStateException("Translation context is not initialized")
+    val result = project.analyze()
+    ctx = result.ctx
 
     // Store the result globally
     globalAnalysisResult = result
@@ -222,6 +254,11 @@ fun runCpgAnalyze(
         functions = functions.size,
         variables = variables.size,
         callExpressions = callExpressions.size,
+        components = project.components.map { it.name },
+        detectionNotes =
+            project.detectionResults.flatMap { result ->
+                result.notes.map { "${result.detector}: $it" }
+            },
     )
 }
 
@@ -238,15 +275,21 @@ fun Server.addCpgTranslate() {
         description =
             """
         Translates the source code into the AST of the CPG (Code Property Graph). This serves as a basis for subsequent passes and analyses.
-        
+
         $cpgDescription
-        
-        This tool parses source code and creates a comprehensive graph representation 
+
+        This tool parses source code and creates a comprehensive graph representation
         containing all nodes, functions, variables, and call expressions.
-        
+
+        It can either translate a small code snippet (using 'content') or a file or whole
+        project directory on the local filesystem (using 'path'). For project directories,
+        the project structure is detected automatically, e.g., components based on Go
+        modules or a C/C++ compilation database (compile_commands.json).
+
         Example usage:
         - "Analyze this code: print('hello')"
         - "Analyze this uploaded file"
+        - "Analyze the project in /path/to/repo"
     """
                 .trimIndent(),
         inputSchema = CpgAnalyzePayload::class.toSchema(),
