@@ -178,6 +178,10 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             LOGGER.error("Scope for null node is not a GlobalScope or is null")
         } else {
             currGlobalScope.mergeFrom(globalScopes)
+            // The merge above blindly concatenates symbol lists from every translation unit's
+            // global scope. Re-collapse them now, so that e.g. an `extern` declaration in one TU
+            // and its definition in another TU still resolve as a single declaration.
+            currGlobalScope.symbols.collapseRedeclarations()
             scopeMap[null] = currGlobalScope
         }
         for (manager in toMerge) {
@@ -188,6 +192,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                 if (existing != null) {
                     // merge symbols
                     existing.symbols.mergeFrom(entry.value.symbols)
+                    existing.symbols.collapseRedeclarations()
 
                     // copy over the typedefs as well just to be sure
                     existing.typedefs.putAll(entry.value.typedefs)
@@ -398,11 +403,18 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * This function MUST be called when a language frontend first handles a [Declaration]. It adds
      * a declaration to the scope manager, taking into account the currently active scope.
      *
+     * Returns the canonical declaration for [declaration]'s symbol: usually [declaration] itself,
+     * but if the current scope's language merged it into an already-registered declaration of the
+     * same symbol (see [HasRedeclarations.isRedeclaration]), the pre-existing declaration it was
+     * merged into. Callers that subsequently wire the declaration into an AST
+     * [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] MUST use the returned value, not
+     * [declaration], to avoid re-introducing the duplicate the merge just collapsed.
+     *
      * @param declaration the declaration to add
      */
     fun <T : Declaration> addDeclaration(declaration: T): T {
-        currentScope.addSymbol(declaration.symbol, declaration)
-        return declaration
+        @Suppress("UNCHECKED_CAST")
+        return currentScope.addSymbol(declaration.symbol, declaration) as T
     }
 
     /**

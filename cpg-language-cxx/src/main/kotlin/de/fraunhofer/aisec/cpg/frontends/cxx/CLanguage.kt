@@ -27,6 +27,10 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.project.DetectionResult
@@ -47,6 +51,7 @@ open class CLanguage :
     HasShortCircuitOperators,
     HasGlobalVariables,
     HasGlobalFunctions,
+    HasRedeclarations,
     Detector {
 
     override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
@@ -61,6 +66,71 @@ open class CLanguage :
     override val elaboratedTypeSpecifier = listOf("struct", "union", "enum")
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
+
+    /**
+     * Whether a bare, non-`extern`, non-initialized redeclaration of a global [Variable] is a valid
+     * "tentative definition" ([ISO/IEC 9899:2011] §6.9.2) rather than an error. This holds for C,
+     * but is overridden to `false` for C++, where a non-class-type variable at namespace/global
+     * scope is already a full definition, even without an explicit initializer, so a second such
+     * declaration would be an ODR violation rather than a redeclaration of the same object.
+     */
+    open val supportsTentativeDefinitions: Boolean = true
+
+    /**
+     * Determines whether [incoming] is a redeclaration of [existing] that should be merged into it,
+     * rather than registered as a separate declaration.
+     *
+     * This only ever applies to two [Variable]s of the exact same concrete kind (e.g. two plain
+     * global variables, or two `static` members of the same
+     * [de.fraunhofer.aisec.cpg.graph.declarations.Record]) at global or namespace scope, and only
+     * if at least one of them is "incomplete": either explicitly declared `extern`, or (in C only,
+     * see [supportsTentativeDefinitions]) simply lacking an initializer, per C11's "tentative
+     * definition" rules (§6.9.2). Two full definitions of the same symbol are deliberately left
+     * unmerged, since that is an ODR violation rather than a legitimate redeclaration, and should
+     * surface as an ambiguity during symbol resolution instead of being silently resolved.
+     */
+    override fun isRedeclaration(existing: Declaration, incoming: Declaration): Boolean {
+        if (existing !is Variable || incoming !is Variable || existing::class != incoming::class) {
+            return false
+        }
+        if (existing.scope !is GlobalScope && existing.scope !is NamespaceScope) {
+            return false
+        }
+        if (existing.initializer != null && incoming.initializer != null) {
+            // Two full definitions of the same global: an ODR violation. Leave both in place, so
+            // that resolution surfaces the ambiguity instead of silently picking a winner.
+            return false
+        }
+        if ("extern" in existing.modifiers || "extern" in incoming.modifiers) {
+            return true
+        }
+        // Neither side carries `extern`: this is only a valid tentative-definition redeclaration
+        // in C.
+        return supportsTentativeDefinitions
+    }
+
+    /**
+     * Merges [incoming] into [existing] after [isRedeclaration] determined that they refer to the
+     * same object. [existing] is kept as the canonical declaration: it inherits [incoming]'s
+     * initializer if it did not already have one of its own (i.e., if [incoming] turned out to be
+     * the actual definition), and the union of both declarations' [Declaration.modifiers], with a
+     * now-stale `extern` modifier removed once the declaration has become a definition. [incoming]
+     * is discarded by the caller afterwards; its initializer is cleared here so it does not keep a
+     * dangling reference to state that is now owned by [existing].
+     */
+    override fun mergeRedeclaration(existing: Declaration, incoming: Declaration) {
+        if (existing !is Variable || incoming !is Variable) {
+            return
+        }
+        if (existing.initializer == null && incoming.initializer != null) {
+            existing.initializer = incoming.initializer
+            incoming.initializer = null
+        }
+        existing.modifiers =
+            (existing.modifiers + incoming.modifiers).let {
+                if (existing.initializer != null) it - "extern" else it
+            }
+    }
 
     val unaryOperators = listOf("--", "++", "-", "+", "*", "&", "~")
 

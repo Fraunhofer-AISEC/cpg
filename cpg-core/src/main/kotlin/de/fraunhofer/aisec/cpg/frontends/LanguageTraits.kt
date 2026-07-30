@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
@@ -303,6 +304,27 @@ interface HasBuiltins : LanguageTrait {
 
     /** Name of files that may contain the builtin functions of a language */
     val builtinsFileCandidates: Set<File>
+}
+
+/**
+ * A language trait that specifies that this language allows multiple textual declarations to refer
+ * to the same underlying object, and that [Scope.addSymbol] may therefore merge an incoming
+ * declaration into an already-registered one of the same kind and symbol (see [isRedeclaration]),
+ * instead of appending a duplicate. A common example is C's `extern` declarations and tentative
+ * definitions.
+ */
+interface HasRedeclarations : LanguageTrait {
+    /**
+     * Determines whether [incoming] is a redeclaration of [existing] that should be merged rather
+     * than registered as a separate declaration.
+     */
+    fun isRedeclaration(existing: Declaration, incoming: Declaration): Boolean
+
+    /**
+     * Merges state from [incoming] into [existing] when [isRedeclaration] returned `true`.
+     * [existing] remains the canonical node; [incoming] is discarded by the caller afterwards.
+     */
+    fun mergeRedeclaration(existing: Declaration, incoming: Declaration)
 }
 
 /**
