@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -41,6 +42,14 @@ import kotlin.reflect.KClass
 
 const val CONST = "const"
 
+/** The C/C++ storage-class specifier that marks internal linkage or a static member. */
+const val STATIC = "static"
+
+/** The C/C++ access specifier keywords, used inside records to control member visibility. */
+const val PUBLIC = "public"
+const val PROTECTED = "protected"
+const val PRIVATE = "private"
+
 /** The C language. */
 open class CLanguage :
     Language<CXXLanguageFrontend>(),
@@ -52,6 +61,7 @@ open class CLanguage :
     HasGlobalVariables,
     HasGlobalFunctions,
     HasRedeclarations,
+    HasKeywordSemantics,
     Detector {
 
     override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
@@ -130,6 +140,35 @@ open class CLanguage :
             (existing.modifiers + incoming.modifiers).let {
                 if (existing.initializer != null) it - "extern" else it
             }
+    }
+
+    /**
+     * Interprets a C/C++ declaration keyword into its canonical [KeywordSemantics], resolving the
+     * notorious context-dependence of `static`:
+     * - at file/namespace scope ([DeclarationContext.GLOBAL]) it grants *internal linkage*, i.e.
+     *   the declaration is confined to its own translation unit ([Visibility.INTERNAL]);
+     * - on a record member ([DeclarationContext.RECORD]) it makes the member *static*, i.e. bound
+     *   to the record itself rather than to an instance;
+     * - inside a function body ([DeclarationContext.LOCAL]) it only affects storage duration, which
+     *   is irrelevant to symbol resolution, so it carries no canonical semantics.
+     *
+     * The access specifiers `public`/`protected`/`private` map onto the corresponding [Visibility]
+     * regardless of context (they only ever occur on record members). Any other keyword yields
+     * empty [KeywordSemantics].
+     */
+    override fun interpretKeyword(keyword: String, context: DeclarationContext): KeywordSemantics {
+        return when (keyword) {
+            STATIC ->
+                when (context) {
+                    DeclarationContext.GLOBAL -> KeywordSemantics(visibility = Visibility.INTERNAL)
+                    DeclarationContext.RECORD -> KeywordSemantics(isStatic = true)
+                    DeclarationContext.LOCAL -> KeywordSemantics()
+                }
+            PUBLIC -> KeywordSemantics(visibility = Visibility.PUBLIC)
+            PROTECTED -> KeywordSemantics(visibility = Visibility.PROTECTED)
+            PRIVATE -> KeywordSemantics(visibility = Visibility.PRIVATE)
+            else -> KeywordSemantics()
+        }
     }
 
     val unaryOperators = listOf("--", "++", "-", "+", "*", "&", "~")

@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
@@ -325,6 +326,69 @@ interface HasRedeclarations : LanguageTrait {
      * [existing] remains the canonical node; [incoming] is discarded by the caller afterwards.
      */
     fun mergeRedeclaration(existing: Declaration, incoming: Declaration)
+}
+
+/**
+ * The syntactic position in which a declaration appears. The *meaning* of a storage-class or
+ * visibility keyword such as C/C++'s `static` depends entirely on this context, so a frontend must
+ * classify a declaration before asking a [HasKeywordSemantics] language to interpret its keywords.
+ */
+enum class DeclarationContext {
+    /** File or namespace scope, i.e. a non-member, top-level declaration. */
+    GLOBAL,
+
+    /** The body of a function or a nested block, i.e. a local declaration. */
+    LOCAL,
+
+    /** A member of a record (class, struct, union, ...). */
+    RECORD,
+}
+
+/**
+ * The canonical semantics that a single declaration keyword implies, as returned by
+ * [HasKeywordSemantics.interpretKeyword].
+ *
+ * Every property is nullable and defaults to `null`, meaning "this keyword says nothing about this
+ * axis". This lets a frontend fold the results of several keywords together (e.g. with [merge])
+ * without one keyword's silence overwriting another keyword's opinion.
+ */
+data class KeywordSemantics(
+    /** The [Visibility] the keyword implies, or `null` if it does not affect visibility. */
+    val visibility: Visibility? = null,
+
+    /**
+     * Whether the keyword marks the declaration as a static (class-level rather than per-instance)
+     * member, or `null` if it says nothing about member binding.
+     */
+    val isStatic: Boolean? = null,
+) {
+    /**
+     * Combines this with [other], where any axis [other] has an opinion on (a non-`null` value)
+     * takes precedence. Used to accumulate the semantics of all keywords on a declaration.
+     */
+    fun merge(other: KeywordSemantics): KeywordSemantics {
+        return KeywordSemantics(
+            visibility = other.visibility ?: this.visibility,
+            isStatic = other.isStatic ?: this.isStatic,
+        )
+    }
+}
+
+/**
+ * A language trait for languages in which a declaration keyword's meaning depends on *where* it
+ * appears — most notably C/C++'s `static`, which denotes internal linkage at file scope, mere
+ * static storage duration inside a function, and a class-level member inside a record.
+ *
+ * Frontends keep the raw keyword in [HasModifiers.modifiers] and additionally call
+ * [interpretKeyword] to obtain the canonical [KeywordSemantics], which they then project onto
+ * [HasVisibility.visibility] and
+ * [de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration.isStatic]. Centralizing the mapping
+ * behind this trait keeps the per-language knowledge of "what does this keyword mean in this
+ * position" in a single place, instead of scattering it across the frontend's handlers.
+ */
+interface HasKeywordSemantics : LanguageTrait {
+    /** Interprets [keyword] appearing in the given [context] into canonical [KeywordSemantics]. */
+    fun interpretKeyword(keyword: String, context: DeclarationContext): KeywordSemantics
 }
 
 /**
