@@ -405,8 +405,8 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      *
      * Returns the canonical declaration for [declaration]'s symbol: usually [declaration] itself,
      * but if the current scope's language merged it into an already-registered declaration of the
-     * same symbol (see [HasDeclarationMerging.isRedeclaration]), the pre-existing declaration it
-     * was merged into. Callers that subsequently wire the declaration into an AST
+     * same symbol (see [HasRedeclarations.isRedeclaration]), the pre-existing declaration it was
+     * merged into. Callers that subsequently wire the declaration into an AST
      * [de.fraunhofer.aisec.cpg.graph.DeclarationHolder] MUST use the returned value, not
      * [declaration], to avoid re-introducing the duplicate the merge just collapsed.
      *

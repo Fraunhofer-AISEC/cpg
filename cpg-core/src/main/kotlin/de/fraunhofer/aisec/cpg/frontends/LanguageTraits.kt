@@ -313,7 +313,7 @@ interface HasBuiltins : LanguageTrait {
  * instead of appending a duplicate. A common example is C's `extern` declarations and tentative
  * definitions.
  */
-interface HasDeclarationMerging : LanguageTrait {
+interface HasRedeclarations : LanguageTrait {
     /**
      * Determines whether [incoming] is a redeclaration of [existing] that should be merged rather
      * than registered as a separate declaration.

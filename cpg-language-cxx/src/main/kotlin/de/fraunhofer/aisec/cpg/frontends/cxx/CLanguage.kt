@@ -47,7 +47,7 @@ open class CLanguage :
     HasShortCircuitOperators,
     HasGlobalVariables,
     HasGlobalFunctions,
-    HasDeclarationMerging {
+    HasRedeclarations {
     override val fileExtensions = listOf("c", "h")
     override val namespaceDelimiter = "::"
     @DoNotPersist
