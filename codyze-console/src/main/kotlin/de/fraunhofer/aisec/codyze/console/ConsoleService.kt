@@ -31,7 +31,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
+import de.fraunhofer.aisec.cpg.project.Project
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import de.fraunhofer.aisec.cpg.serialization.toJSON
@@ -85,49 +86,42 @@ class ConsoleService {
     suspend fun analyze(request: AnalyzeRequestJSON): AnalysisResultJSON =
         withContext(Dispatchers.IO) {
             val path = Path.of(request.sourceDir)
-            val builder =
-                TranslationConfiguration.builder()
-                    .sourceLocations(path.toFile())
-                    .defaultPasses()
-                    .loadIncludes(true)
-                    .registerPass<PythonStdLibConfigurationPass>()
-                    .registerPass<LoadPersistedConcepts>()
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
-                    .optionalLanguage(
-                        "de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage"
-                    )
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
-                    .codeInNodes(true)
+            val project =
+                Project.from(path) {
+                    // If an explicit top-level is requested, we place the sources in a single
+                    // component rooted there instead of relying on auto-detection
+                    request.topLevel?.let {
+                        component(
+                            DEFAULT_APPLICATION_NAME,
+                            root = Path.of(it),
+                            sources = listOf(path),
+                        )
+                    }
 
-            if (request.includeDir != null) {
-                builder.includePath(request.includeDir)
-            }
+                    translation {
+                        it.loadIncludes(true)
+                        it.registerPass<PythonStdLibConfigurationPass>()
+                        it.registerPass<LoadPersistedConcepts>()
 
-            if (request.topLevel != null) {
-                builder.topLevel(File(request.topLevel))
-            }
-
-            if (request.conceptsFile != null) {
-                builder.configurePass<LoadPersistedConcepts>(
-                    LoadPersistedConcepts.Configuration(
-                        conceptFiles = listOf(File(request.conceptsFile))
-                    )
-                )
-            }
-
-            val config = builder.build()
+                        request.includeDir?.let { dir -> it.includePath(dir) }
+                        request.conceptsFile?.let { file ->
+                            it.configurePass<LoadPersistedConcepts>(
+                                LoadPersistedConcepts.Configuration(
+                                    conceptFiles = listOf(File(file))
+                                )
+                            )
+                        }
+                    }
+                }
 
             // Build an ad-hoc project
-            val project =
-                AnalysisProject(name = AD_HOC_PROJECT_NAME, projectDir = null, config = config)
-            analyzeProject(project)
+            val analysisProject =
+                AnalysisProject(
+                    name = AD_HOC_PROJECT_NAME,
+                    projectDir = null,
+                    config = project.config,
+                )
+            analyzeProject(analysisProject)
         }
 
     /** Analyzes the given project and returns the analysis result as [AnalysisResultJSON]. */

@@ -33,6 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.project.DetectionResult
+import de.fraunhofer.aisec.cpg.project.Detector
+import de.fraunhofer.aisec.cpg.project.TargetEnvironment
+import java.nio.file.Path
 import kotlin.reflect.KClass
 
 const val CONST = "const"
@@ -47,7 +51,13 @@ open class CLanguage :
     HasShortCircuitOperators,
     HasGlobalVariables,
     HasGlobalFunctions,
-    HasRedeclarations {
+    HasRedeclarations,
+    Detector {
+
+    override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
+        return detectCxxProject(root)
+    }
+
     override val fileExtensions = listOf("c", "h")
     override val namespaceDelimiter = "::"
     @DoNotPersist

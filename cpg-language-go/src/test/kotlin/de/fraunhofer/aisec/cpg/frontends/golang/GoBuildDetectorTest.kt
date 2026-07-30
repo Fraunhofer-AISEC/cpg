@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,23 +23,22 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.codyze
+package de.fraunhofer.aisec.cpg.frontends.golang
 
-import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.main
-import com.github.ajalt.clikt.core.subcommands
+import de.fraunhofer.aisec.cpg.project.TargetEnvironment
+import java.nio.file.Path
+import kotlin.io.path.writeText
+import kotlin.test.Test
+import kotlin.test.assertNull
+import org.junit.jupiter.api.io.TempDir
 
-class Codyze : CliktCommand() {
-    override fun run() {}
-}
+class GoBuildDetectorTest {
+    @Test
+    fun testNoGoModReturnsNull(@TempDir tmp: Path) {
+        tmp.resolve("main.go").writeText("package main")
 
-fun main(args: Array<String>) {
-    Codyze()
-        .subcommands(
-            listOfNotNull(
-                ConsoleCommandHelper.consoleCommand(),
-                de.fraunhofer.aisec.codyze.compliance.Command,
-            )
-        )
-        .main(args)
+        val result = GoBuildDetector().detect(tmp, TargetEnvironment.host())
+
+        assertNull(result)
+    }
 }
