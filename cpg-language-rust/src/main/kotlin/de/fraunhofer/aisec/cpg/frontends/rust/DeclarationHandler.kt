@@ -334,7 +334,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         scope?.astNode?.let {
             frontend.scopeManager.leaveScope(it)
-            currentScope.astNode?.let { frontend.scopeManager.leaveScope(it) }
+            currentScope.astNode?.let { frontend.scopeManager.enterScope(it) }
         }
 
         return extensionDeclaration

@@ -125,6 +125,9 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
     fun handleLetElse(letStmt: RsLetStmt, blockExpr: RsBlockExpr, raw: RsAst.RustStmt): Expression {
 
+        // Using this handling of the pattern just to extract the necessary declarations and are
+        // then discarded. The
+        // pattern is handled once again when the necessary scope and context are correct.
         val variableDeconstruction =
             letStmt.pat?.let { frontend.patternHandler.handle(RsAst.RustPat(it)) }
                 ?: newProblemExpression("Pattern cannot be parsed.", rawNode = raw)

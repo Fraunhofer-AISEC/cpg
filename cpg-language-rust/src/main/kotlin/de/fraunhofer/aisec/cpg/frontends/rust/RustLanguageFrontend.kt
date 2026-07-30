@@ -33,6 +33,8 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.types.AutoType
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -115,13 +117,33 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
             is RsType.PtrType -> typeOf(type.v1.ty.first()).pointer()
             is RsType.RefType -> typeOf(type.v1.ty.first()).ref()
             is RsType.SliceType -> typeOf(type.v1.ty.first()).array()
-            is RsType.FnPtrType -> unknownType()
-            is RsType.InferType -> unknownType() // Todo Auto type?
-            is RsType.MacroType -> unknownType()
-            is RsType.DynTraitType -> unknownType()
-            is RsType.ForType -> unknownType()
-            is RsType.ImplTraitType -> unknownType()
-            is RsType.NeverType -> unknownType()
+            is RsType.FnPtrType -> {
+                val params =
+                    type.v1.paramList.firstOrNull()?.params?.map {
+                        it.ty?.let { t -> typeOf(t) } ?: unknownType()
+                    } ?: listOf()
+                val ret = type.v1.retType.firstOrNull()?.let { typeOf(it) } ?: unknownType()
+                FunctionType(
+                    parameters = params,
+                    returnTypes = listOf(ret),
+                    language = this.language,
+                )
+            }
+
+            is RsType.InferType -> AutoType(language)
+            // Cannot handle the type of a macro before expansion
+            is RsType.MacroType -> newProblemType(RsAst.RustType(type))
+            // Currently we only handle one of the contained types, in the future we need to solve
+            // this by introducing
+            // Type lists or type bounds
+            is RsType.DynTraitType ->
+                type.v1.typeBoundList.firstOrNull()?.ty?.let { typeOf(it) } ?: unknownType()
+            is RsType.ImplTraitType ->
+                type.v1.typeBoundList.firstOrNull()?.ty?.let { typeOf(it) } ?: unknownType()
+            // Just unwrapping the type here, if we need to handle lifetime bounds in the type we
+            // have to change this in the future
+            is RsType.ForType -> type.v1.ty.firstOrNull()?.let { typeOf(it) } ?: unknownType()
+            is RsType.NeverType -> language.builtInTypes["!"] ?: unknownType()
         }
     }
 
