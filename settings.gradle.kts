@@ -63,10 +63,14 @@ val enableCodyzeConsole: Boolean by extra {
 }
 val enableAIModule: Boolean by extra {
     val enableAIModule: String? by settings
-    // codyze-console cannot build without this module, so default to whatever codyze-console
-    // resolved to instead of requiring both to be enabled separately; an explicit setting here
-    // always takes precedence over that default.
-    enableAIModule?.toBoolean() ?: enableCodyzeConsole
+    // codyze-console has a hard, unconditional build dependency on cpg-ai, so codyze-console
+    // being enabled always forces cpg-ai on too, even if enableAIModule=false is set explicitly -
+    // an explicit false would otherwise just break the codyze-console build.
+    val explicitlyEnabled = enableAIModule.toBoolean()
+    if (!explicitlyEnabled && enableCodyzeConsole) {
+        println("cpg-ai module auto-enabled because codyze-console is enabled")
+    }
+    explicitlyEnabled || enableCodyzeConsole
 }
 
 if (enableJavaFrontend) include(":cpg-language-java")

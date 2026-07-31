@@ -4,7 +4,7 @@ A web application for Codyze with an optional AI chat, which is enhanced by an M
 The agent uses the tools of the CPG MCP server to analyze code and answer questions.
 
 > [!IMPORTANT]
-> codyze-console has a hard build dependency on the `cpg-ai` module, so `enableAIModule=true` must be set in `gradle.properties` (see [AI Chat Features](#ai-chat-features) below) before building or running codyze-console at all - otherwise the build fails.
+> codyze-console has a hard, unconditional build dependency on the `cpg-ai` module (see [AI Chat Features](#ai-chat-features) below). Enabling `enableCodyzeConsole=true` in `gradle.properties` always enables `cpg-ai` too - no separate step needed, and even an explicit `enableAIModule=false` is overridden while `enableCodyzeConsole=true`.
 
 ## Getting Started
 
@@ -28,17 +28,17 @@ The web console is available at `http://localhost:8080`.
 
 ## AI Chat Features
 
-codyze-console has a hard build dependency on the `cpg-ai` module (MCP server, `ChatService`, skills). The AI chat itself additionally requires a configured LLM provider to actually work at runtime.
+codyze-console has a hard, unconditional build dependency on the `cpg-ai` module (MCP server, `ChatService`, skills), which is always enabled together with `enableCodyzeConsole=true` as described above - no separate step needed. The AI chat itself additionally requires a configured LLM provider to actually work at runtime.
 
-### 1. Enable the `cpg-ai` module
+### 1. Enable the `cpg-ai` module independently (optional)
 
-`cpg-ai` is optional at the workspace level (like the language frontends), but codyze-console cannot be built without it. Run the configuration script:
+`cpg-ai` is optional at the workspace level (like the language frontends), but codyze-console cannot be built without it, so it's always enabled alongside `enableCodyzeConsole=true`. If you want `cpg-ai` enabled without `codyze-console` (e.g. just the MCP server), use the configuration script:
 
 ```bash
 ./configure_frontends.sh
 ```
 
-Or enable it manually by setting `enableAIModule=true` in `gradle.properties`. If you build codyze-console with `cpg-ai` disabled, the build fails with an explicit error telling you to enable it.
+Or set `enableAIModule=true` manually in `gradle.properties`. Note this only matters independently of `codyze-console`: an explicit `enableAIModule=false` has no effect while `enableCodyzeConsole=true`, since that dependency is unconditional.
 
 ### 2. Configure your LLM provider
 

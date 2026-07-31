@@ -14,7 +14,7 @@ pip install mcpo
 
 3. Start the proxy server:
 ```bash
-uvx mcpo --port 8000 -- /path/to/cpg-ai/build/install/cpg-ai/bin/cpg-ai
+uvx mcpo --port 8000 -- /path/to/cpg-ai/build/install/cpg-mcp/bin/cpg-mcp
 ```
 
 5. Add to OpenWebUI:
