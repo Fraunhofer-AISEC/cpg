@@ -38,6 +38,7 @@ import ai.koog.agents.mcp.metadata.McpServerInfo
 import ai.koog.prompt.dsl.prompt
 import ai.koog.prompt.message.Message
 import ai.koog.prompt.message.MessagePart
+import ai.koog.prompt.params.LLMParams
 import ai.koog.prompt.streaming.StreamFrame
 import ai.koog.prompt.streaming.toMessageResponse
 import ai.koog.serialization.kotlinx.toKotlinxJsonElement
@@ -141,6 +142,16 @@ class ChatService(
     private val maxToolResultChars = 20_000
 
     /**
+     * Nudge sent to the model when it replies with plain text instead of calling a tool, to
+     * distinguish "narrating the next step" from a genuine final answer (see the `buildNudge` node
+     * in [chatStrategy]).
+     */
+    private val continueNudgeMessage =
+        "If your task is not yet complete, call the appropriate tool now instead of describing " +
+            "what you would do. If you are done, just confirm that no further tool calls are " +
+            "needed."
+
+    /**
      * Caps a tool result's textual content to [maxToolResultChars], appending a truncation marker.
      * Both [ReceivedToolResult.output] and any [MessagePart.Text] parts are capped: depending on
      * the tool, either (or both) may be what actually reaches the LLM's prompt, since
@@ -158,6 +169,18 @@ class ChatService(
                 parts?.map { part ->
                     if (part is MessagePart.Text) part.copy(text = truncate(part.text)) else part
                 },
+        )
+    }
+
+    /** Logs token usage reported by the LLM provider for one response, if any was reported. */
+    private fun logTokenUsage(message: Message.Assistant) {
+        val usage = message.metaInfo
+        log.info(
+            "LLM usage: model={} input={} output={} total={}",
+            usage.modelId,
+            usage.inputTokensCount,
+            usage.outputTokensCount,
+            usage.totalTokensCount,
         )
     }
 
@@ -192,7 +215,7 @@ class ChatService(
             val requestLlmStream by nodeLLMRequestStreaming()
             val requestLlm by
                 node<Flow<StreamFrame>, Message.Assistant>("collectRequestLlmStream") { frames ->
-                    frames.toList().toMessageResponse()
+                    frames.toList().toMessageResponse().also { logTokenUsage(it) }
                 }
             val executeTool by nodeExecuteTools()
             val truncateToolResults by
@@ -203,12 +226,24 @@ class ChatService(
             val sendToolResult by
                 node<Flow<StreamFrame>, Message.Assistant>("collectSendToolResultStream") { frames
                     ->
-                    frames.toList().toMessageResponse()
+                    frames.toList().toMessageResponse().also { logTokenUsage(it) }
                 }
             val compressionStrategy =
                 HistoryCompressionStrategy.FromLastNMessages(historyCompressionKeepLastN)
             val compressHistory by
                 nodeLLMCompressHistory<ReceivedToolResults>(strategy = compressionStrategy)
+            // Some models (esp. smaller/local ones) narrate their next step in plain text instead
+            // of calling a tool in the same turn (e.g. "Let me check what functions are
+            // available:" with no accompanying tool call). Rather than accepting that prose as the
+            // final answer, give the model one nudge to actually continue; only if it replies with
+            // text *again* do we treat it as truly final. This costs one extra round trip on every
+            // genuinely-final answer too, but avoids silently truncating still-in-progress work.
+            val buildNudge by node<String, String>("buildNudge") { _ -> continueNudgeMessage }
+            val nudgeRequestStream by nodeLLMRequestStreaming("nudgeRequestStream")
+            val nudgeRequest by
+                node<Flow<StreamFrame>, Message.Assistant>("collectNudgeRequestStream") { frames ->
+                    frames.toList().toMessageResponse().also { logTokenUsage(it) }
+                }
 
             edge(nodeStart forwardTo requestLlmStream)
             edge(requestLlmStream forwardTo requestLlm)
@@ -220,7 +255,7 @@ class ChatService(
             // "any Text part present", regardless of tool calls), checking onTextMessage first
             // would let that empty text part win the race and silently skip the tool call.
             edge(requestLlm forwardTo executeTool onToolCalls { true })
-            edge(requestLlm forwardTo nodeFinish onTextMessage { true })
+            edge(requestLlm forwardTo buildNudge onTextMessage { true })
             edge(executeTool forwardTo truncateToolResults)
             // If the history has grown too large, compress it before sending the tool result.
             edge(
@@ -241,7 +276,12 @@ class ChatService(
             )
             edge(sendToolResultStream forwardTo sendToolResult)
             edge(sendToolResult forwardTo executeTool onToolCalls { true })
-            edge(sendToolResult forwardTo nodeFinish onTextMessage { true })
+            edge(sendToolResult forwardTo buildNudge onTextMessage { true })
+
+            edge(buildNudge forwardTo nudgeRequestStream)
+            edge(nudgeRequestStream forwardTo nudgeRequest)
+            edge(nudgeRequest forwardTo executeTool onToolCalls { true })
+            edge(nudgeRequest forwardTo nodeFinish onTextMessage { true })
         }
 
     /** Return the discovered skills. */
@@ -270,7 +310,10 @@ class ChatService(
             // so a fresh AIAgent/prompt is built per request, mirroring the old per-request
             // LlmClient.
             val history =
-                prompt(id = "chat-history") {
+                prompt(
+                    id = "chat-history",
+                    params = LLMParams(toolChoice = LLMParams.ToolChoice.Auto),
+                ) {
                     system(buildSystemPrompt(skills))
                     priorMessages.forEach { msg ->
                         if (msg.content.isNotBlank()) {

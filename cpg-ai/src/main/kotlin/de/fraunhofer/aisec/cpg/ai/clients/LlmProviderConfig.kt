@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.ai.clients
 
+import ai.koog.http.client.ktor.KtorKoogHttpClient
 import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
 import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
 import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
@@ -35,7 +36,11 @@ import ai.koog.prompt.llm.LLModel
 import com.typesafe.config.Config
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.*
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger as KtorLogger
+import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -89,10 +94,33 @@ class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<Cl
             }
 
             ClientProvider.OPENAI_COMPATIBLE -> {
+                // Logs the full request/response bodies exchanged with the OpenAI-compatible
+                // endpoint (tool schema, tool_choice, and the raw completion) - invaluable for
+                // debugging tool-calling issues against custom/local servers (vLLM, ollama, ...),
+                // whose behavior can diverge from the official OpenAI API in ways that are
+                // otherwise invisible from inside Koog's client.
+                val loggingKtorClient =
+                    HttpClient(CIO) {
+                        install(Logging) {
+                            logger =
+                                object : KtorLogger {
+                                    override fun log(message: String) {
+                                        println(message)
+                                    }
+                                }
+                            level = LogLevel.ALL
+                        }
+                    }
+                // Reuses Koog's own KtorKoogHttpClient.Factory (rather than hand-rolling the
+                // KoogHttpClient setup) so we get its baseUrl/contentType/ContentNegotiation/SSE
+                // wiring exactly as the default apiKey-based OpenAILLMClient constructor would -
+                // only swapping in our logging-enabled Ktor client underneath.
                 val client =
                     OpenAILLMClient(
                         apiKey = config.apiKey ?: "not-needed",
                         settings = OpenAIClientSettings(baseUrl = config.baseUrl),
+                        httpClientFactory =
+                            KtorKoogHttpClient.Factory(baseClient = loggingKtorClient),
                     )
                 ChatLlm(
                     executor = MultiLLMPromptExecutor(LLMProvider.OpenAI to client),
