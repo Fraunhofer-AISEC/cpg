@@ -83,6 +83,7 @@ dependencies {
     implementation(libs.ktor.server.cors)
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.bundles.ktor.client)
+    implementation(libs.ktor.client.logging)
     implementation(libs.kotlinx.serialization.json)
 
     // Test dependencies
