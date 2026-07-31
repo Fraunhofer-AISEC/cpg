@@ -72,6 +72,10 @@ dependencies {
 
     // Test dependencies
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    // We depend on the C/C++ frontend for testing project analysis with a compilation database,
+    // but the frontend is only available if enabled. The corresponding tests are skipped if it is
+    // not available.
+    findProject(":cpg-language-cxx")?.also { testImplementation(it) }
 
     // Command line interface support
     implementation(libs.clikt)

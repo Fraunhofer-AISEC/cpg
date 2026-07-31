@@ -15,7 +15,6 @@ include(":cpg-serialization")
 include(":codyze")
 include(":codyze-core")
 include(":codyze-compliance")
-include(":codyze-console")
 
 // this code block also exists in the root build.gradle.kts
 val enableJavaFrontend: Boolean by extra {
@@ -58,6 +57,10 @@ val enableINIFrontend: Boolean by extra {
     val enableINIFrontend: String? by settings
     enableINIFrontend.toBoolean()
 }
+val enableCodyzeConsole: Boolean by extra {
+    val enableCodyzeConsole: String? by settings
+    enableCodyzeConsole.toBoolean()
+}
 val enableMCPModule: Boolean by extra {
     val enableMCPModule: String? by settings
     enableMCPModule.toBoolean()
@@ -74,6 +77,7 @@ if (enableRubyFrontend) include(":cpg-language-ruby")
 if (enableJVMFrontend) include(":cpg-language-jvm")
 if (enableINIFrontend) include(":cpg-language-ini")
 if (enableMCPModule) include(":cpg-mcp")
+if (enableCodyzeConsole) include(":codyze-console")
 
 
 kover {

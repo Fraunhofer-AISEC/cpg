@@ -12,6 +12,7 @@ enableJVMFrontend=true
 enableINIFrontend=true
 enableRustFrontend=true
 enableMCPModule=true
+enableCodyzeConsole=true
 
 org.jetbrains.dokka.experimental.gradle.pluginMode=V2Enabled
 ## Suppress warnings about using the experimental Dokka plugin

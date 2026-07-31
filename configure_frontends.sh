@@ -64,5 +64,7 @@ answerJVM=$(ask "Do you want to enable the JVM frontend? (currently $(getPropert
 setProperty "enableJVMFrontend" $answerJVM
 answerINI=$(ask "Do you want to enable the INI frontend? (currently $(getProperty "enableINIFrontend"))")
 setProperty "enableINIFrontend" $answerINI
+answerCodyzeConsole=$(ask "Do you want to enable codyze-console? (currently $(getProperty "enableCodyzeConsole"))")
+setProperty "enableCodyzeConsole" $answerCodyzeConsole
 answerMCP=$(ask "Do you want to enable the MCP module? (currently $(getProperty "enableMCPModule"))")
 setProperty "enableMCPModule" $answerMCP
