@@ -139,9 +139,13 @@ project.logger.lifecycle(
 
 val enableAIModule: Boolean by extra {
     val enableAIModule: String? by project
-    // codyze-console cannot build without this module, so default to whatever codyze-console
-    // resolved to instead of requiring both to be enabled separately; an explicit setting here
-    // always takes precedence over that default.
-    enableAIModule?.toBoolean() ?: enableCodyzeConsole
+    // codyze-console has a hard, unconditional build dependency on cpg-ai, so codyze-console
+    // being enabled always forces cpg-ai on too, even if enableAIModule=false is set explicitly -
+    // an explicit false would otherwise just break the codyze-console build.
+    val explicitlyEnabled = enableAIModule.toBoolean()
+    if (!explicitlyEnabled && enableCodyzeConsole) {
+        project.logger.lifecycle("cpg-ai module auto-enabled because codyze-console is enabled")
+    }
+    explicitlyEnabled || enableCodyzeConsole
 }
 project.logger.lifecycle("AI module is ${if (enableAIModule) "enabled" else "disabled"}")
