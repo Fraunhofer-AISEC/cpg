@@ -554,8 +554,86 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
             }
         )
 
-        return candidates
+        // Drop members that are inaccessible from where the access happens (e.g. a `private` member
+        // reached from outside its record), for languages that model access control.
+        return candidates.onlyAccessibleFrom(scopeManager.currentRecord)
     }
+
+    /**
+     * Narrows this set of member-resolution candidates to those that are accessible from the record
+     * [from] in which the access syntactically occurs, honoring member access control (e.g. C/C++
+     * `private` / `protected`) for languages that declare it via [HasAccessControl]. Candidates in
+     * languages without that trait, and members whose visibility is [Visibility.UNKNOWN] or
+     * [Visibility.PUBLIC], are always accessible, so unrelated languages remain unaffected.
+     *
+     * The filter is intentionally conservative and only ever *narrows* an ambiguous candidate set:
+     * if it would remove every candidate — for instance because the code genuinely performs an
+     * access the source language forbids — the original set is returned unchanged. We would rather
+     * resolve a technically-illegal access than silently drop the only edge and leave the reference
+     * unresolvable. As access control only restricts [Visibility.PRIVATE] and
+     * [Visibility.PROTECTED] members, we skip the work entirely unless at least one candidate
+     * carries such a visibility.
+     */
+    private fun Set<Declaration>.onlyAccessibleFrom(from: Record?): Set<Declaration> {
+        if (none { it.hasRestrictedVisibility }) {
+            return this
+        }
+
+        val accessible = filterTo(mutableSetOf()) { it.isAccessibleFrom(from) }
+        return accessible.ifEmpty { this }
+    }
+
+    /**
+     * Whether this member declaration is accessible from the record [from] in which the access
+     * occurs. A [Visibility.PRIVATE] member is only accessible from within its own declaring
+     * record, a [Visibility.PROTECTED] member additionally from records that (transitively) inherit
+     * from the declaring one. Any other visibility (including [Visibility.UNKNOWN]), and any
+     * language without the [HasAccessControl] trait, imposes no restriction.
+     *
+     * This deliberately models only the two most common access relationships. Access that is
+     * granted through other means — a `friend` declaration or a nested class reaching into its
+     * enclosing one — is *not* recognized and is reported as inaccessible here. Because
+     * [onlyAccessibleFrom] never removes the last candidate, such an access still resolves as long
+     * as it is unambiguous; only genuinely ambiguous candidate sets could be narrowed incorrectly.
+     */
+    private fun Declaration.isAccessibleFrom(from: Record?): Boolean {
+        if (language !is HasAccessControl) {
+            return true
+        }
+
+        return when (visibility) {
+            Visibility.PRIVATE -> from != null && declaringRecord == from
+            Visibility.PROTECTED ->
+                from != null && (declaringRecord == from || declaringRecord in from.allSuperclasses)
+            else -> true
+        }
+    }
+
+    /**
+     * The [Record] that declares this member. For a [Method] this is its [Method.recordDeclaration]
+     * (which is also set for out-of-line definitions), for any other member it is the closest
+     * enclosing [Record] in the AST. Returns `null` for non-members.
+     */
+    private val Declaration.declaringRecord: Record?
+        get() = (this as? Method)?.recordDeclaration ?: firstParentOrNull<Record>()
+
+    /**
+     * All (transitively) inherited super-records of this [Record] — the transitive closure of
+     * [Record.superTypeDeclarations] (which only holds the *direct* super-records), excluding the
+     * record itself.
+     */
+    private val Record.allSuperclasses: Set<Record>
+        get() {
+            val result = mutableSetOf<Record>()
+            val worklist = ArrayDeque(superTypeDeclarations)
+            while (worklist.isNotEmpty()) {
+                val next = worklist.removeFirst()
+                if (result.add(next)) {
+                    worklist.addAll(next.superTypeDeclarations)
+                }
+            }
+            return result
+        }
 
     protected open fun handleConstruction(constructExpression: Construction) {
         if (constructExpression.instantiates != null && constructExpression.constructor != null)

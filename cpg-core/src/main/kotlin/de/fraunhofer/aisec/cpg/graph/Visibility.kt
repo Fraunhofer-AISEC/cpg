@@ -77,8 +77,18 @@ enum class Visibility {
 
 /**
  * Whether this declaration has [Visibility.INTERNAL] linkage, i.e. it is confined to its own
- * translation unit. Such declarations are placed into a per-file scope rather than the shared
- * [GlobalScope] so that they cannot be resolved from other translation units.
+ * translation unit. Such declarations still live in the shared [GlobalScope], but the
+ * [SymbolResolver] drops them as resolution candidates for references originating in a different
+ * translation unit, so that they cannot be resolved from another one.
  */
 val Declaration.hasInternalLinkage: Boolean
     get() = visibility == Visibility.INTERNAL
+
+/**
+ * Whether access to this declaration is restricted by access control, i.e. it is
+ * [Visibility.PRIVATE] or [Visibility.PROTECTED] and therefore not reachable from everywhere its
+ * declaring [Record] is. Used by the [SymbolResolver] to decide whether a member is a viable
+ * resolution candidate for a given access.
+ */
+val Declaration.hasRestrictedVisibility: Boolean
+    get() = visibility == Visibility.PRIVATE || visibility == Visibility.PROTECTED

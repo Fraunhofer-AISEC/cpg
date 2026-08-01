@@ -392,6 +392,19 @@ interface HasKeywordSemantics : LanguageTrait {
 }
 
 /**
+ * A language trait for languages that enforce *access control* on record members, i.e. that
+ * restrict from where a member may be accessed based on an access specifier such as C++'s `public`
+ * / `protected` / `private`.
+ *
+ * When a language declares this trait, the [SymbolResolver] takes the canonical
+ * [de.fraunhofer.aisec.cpg.graph.HasVisibility.visibility] of a member into account while resolving
+ * a member by name, preferring members that are actually accessible from the point of access over
+ * inaccessible ones (see [SymbolResolver.resolveMemberByName]). Languages without this trait are
+ * left completely unaffected and keep resolving members regardless of visibility.
+ */
+interface HasAccessControl : LanguageTrait
+
+/**
  * Creates a [Pair] of class and operator code used in
  * [HasOperatorOverloading.overloadedOperatorNames].
  */

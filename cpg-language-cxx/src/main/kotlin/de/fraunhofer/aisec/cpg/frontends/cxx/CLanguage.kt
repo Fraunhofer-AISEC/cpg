@@ -62,6 +62,7 @@ open class CLanguage :
     HasGlobalFunctions,
     HasRedeclarations,
     HasKeywordSemantics,
+    HasAccessControl,
     Detector {
 
     override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
