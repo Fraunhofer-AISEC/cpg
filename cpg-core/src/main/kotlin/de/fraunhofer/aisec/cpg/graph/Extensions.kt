@@ -645,6 +645,12 @@ class SimpleStack<T> {
         return SimpleStack<T>().apply { deque.addAll(this@SimpleStack.deque) }
     }
 
+    /**
+     * Returns a snapshot of the stack as a list, ordered top-first (i.e. the most recently [push]ed
+     * element is at index 0). Used to build immutable state keys for loop detection.
+     */
+    fun toList(): List<T> = deque.toList()
+
     override fun equals(other: Any?): Boolean {
         return other is SimpleStack<T> && this.depth == other.depth && this.deque == other.deque
     }
@@ -664,30 +670,6 @@ class SimpleStack<T> {
 
     operator fun contains(elem: T): Boolean {
         return deque.contains(elem)
-    }
-
-    /** Hack: Check if the items in the deque repeat themselves */
-    fun isLoop(): Boolean {
-        if (this.deque.isEmpty()) return false
-        val first = this.deque.removeFirst()
-        var current: T? = null
-        val pattern = mutableListOf(first)
-        var containsLoop = true
-
-        // Pop elements until we determine the pattern
-        while (current != first) {
-            if (this.deque.isEmpty()) return false
-            if (this.deque.first() == first) break
-            // We have a small loop over a single element
-            if (current != first) current = this.deque.removeFirst()
-            pattern.add(current)
-        }
-        // Now let's check if the pattern happens again
-        pattern.forEach {
-            if (this.deque.isEmpty()) return false
-            if (it != this.deque.removeFirst()) containsLoop = false
-        }
-        return containsLoop
     }
 }
 
@@ -888,7 +870,8 @@ fun Node.followNextPDGUntilHit(
                     (it as? Edge<Node>)?.let { element -> nextEdges.add(element) }
                 }
             }
-            nextEdges.map { Triple(it.end, it, ctx) }
+            // Clone the context per edge so sibling branches do not alias the same [Context].
+            nextEdges.map { Triple(it.end, it, ctx.clone()) }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -939,7 +922,8 @@ fun Node.followNextCDGUntilHit(
                     (it as? Edge<Node>)?.let { element -> nextEdges.add(element) }
                 }
             }
-            nextEdges.map { Triple(it.end, it, ctx) }
+            // Clone the context per edge so sibling branches do not alias the same [Context].
+            nextEdges.map { Triple(it.end, it, ctx.clone()) }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -987,23 +971,29 @@ fun Node.followPrevPDGUntilHit(
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode, ctx, _, _ ->
-            val nextEdges = currentNode.prevPDGEdges.toMutableList()
+            // Pair each edge with its OWN cloned context, so sibling branches never share (and then
+            // mutate, via a call-stack push or the step counter) the same [Context].
+            val nextEdges =
+                currentNode.prevPDGEdges.mapTo(mutableListOf<Pair<Edge<Node>, Context>>()) { edge ->
+                    Pair(edge, ctx.clone())
+                }
             if (interproceduralAnalysis) {
-                nextEdges.addAll(
-                    (currentNode as? Function)?.usageEdges?.mapNotNull { edge ->
-                        val node = edge.end
-                        if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true) {
-                            val call = node.astParent as? Call
-                            call?.let {
-                                ctx.callStack.push(it)
-                                @Suppress("UNCHECKED_CAST")
-                                edge as? Edge<Node>
+                (currentNode as? Function)?.usageEdges?.forEach { edge ->
+                    val node = edge.end
+                    if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true) {
+                        val call = node.astParent as? Call
+                        if (call != null) {
+                            @Suppress("UNCHECKED_CAST")
+                            (edge as? Edge<Node>)?.let { e ->
+                                val newCtx = ctx.clone()
+                                newCtx.callStack.push(call)
+                                nextEdges.add(Pair(e, newCtx))
                             }
-                        } else null
-                    } ?: listOf()
-                )
+                        }
+                    }
+                }
             }
-            nextEdges.map { Triple(it.end, it, ctx) }
+            nextEdges.map { (edge, c) -> Triple(edge.end, edge, c) }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -1051,25 +1041,33 @@ fun Node.followPrevCDGUntilHit(
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode, ctx, _, _ ->
-            val nextEdges: MutableList<Edge<Node>> = currentNode.prevCDGEdges.toMutableList()
+            // Pair each edge with its OWN cloned context, so sibling branches never share (and then
+            // mutate, via a call-stack push or the step counter) the same [Context].
+            val nextEdges =
+                currentNode.prevCDGEdges.mapTo(mutableListOf<Pair<Edge<Node>, Context>>()) { edge ->
+                    Pair(edge, ctx.clone())
+                }
             if (interproceduralAnalysis) {
-                nextEdges.addAll(
-                    (currentNode as? Function)?.usageEdges?.mapNotNull { edge ->
-                        val node = edge.end
-                        if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true) {
-                            val call = node.astParent as? Call
-                            call?.let {
-                                ctx.callStack.push(it)
-                                @Suppress("UNCHECKED_CAST")
-                                edge as? Edge<Node>
+                (currentNode as? Function)?.usageEdges?.forEach { edge ->
+                    val node = edge.end
+                    if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true) {
+                        val call = node.astParent as? Call
+                        if (call != null) {
+                            @Suppress("UNCHECKED_CAST")
+                            (edge as? Edge<Node>)?.let { e ->
+                                val newCtx = ctx.clone()
+                                newCtx.callStack.push(call)
+                                nextEdges.add(Pair(e, newCtx))
                             }
-                        } else null
-                    } ?: listOf()
-                )
+                        }
+                    }
+                }
             }
             // For some reason, the Usage edge needs the opposite direction to the CDG edge. It does
             // make sense, but it's not intuitive and never will be.
-            nextEdges.map { edge -> Triple(if (edge is Usage) edge.end else edge.start, edge, ctx) }
+            nextEdges.map { (edge, c) ->
+                Triple(if (edge is Usage) edge.end else edge.start, edge, c)
+            }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -1119,95 +1117,195 @@ fun Node.followXUntilHit(
         ) -> Collection<Triple<Node, Edge<Node>, Context>>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    continueAfterHit: Boolean = false,
     ctx: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
-    // Looks complicated but at least it's not recursive...
-    // result: List of paths (between from and to)
+    // This traversal runs one of two regimes depending on [findAllPossiblePaths]. Both regimes use
+    // the same decision for when a successor state must NOT be expanded ([contextExplosion] and,
+    // for
+    // MUST, [isNodeWithCallStackInPath]); they differ only in scheduling and bookkeeping:
+    //
+    //  * MAY  (findAllPossiblePaths == false): a visit-once breadth-first search over the precise
+    //    (node, callStack, indexStack) state. BFS visits each reachable state at most once and
+    //    reaches it via its shortest path first, so the shortest witness is found without ever
+    //    diving into (possibly unbounded) recursion before shallower paths are exhausted. This is
+    //    exactly what the MAY consumers need (`fulfilled.any` / `fulfilled.minByOrNull { size }`),
+    //    and it is linear in the reachable state space and in memory: only parent pointers are
+    //    kept, and full paths are rebuilt lazily just for the (few) recorded results.
+    //
+    //  * MUST (findAllPossiblePaths == true): a depth-first faithful enumeration of every maximal
+    //    path, so that `failed` contains exactly the maximal paths that do not hit `predicate`
+    //    (MUST/inevitability holds iff `failed` is empty). On an acyclic graph this enumerates
+    //    every distinct path (preserving the exact fulfilled/failed counts the tests pin down);
+    //    loops and interprocedural recursion are cut by the shared decision above.
     val fulfilledPaths = mutableListOf<NodePath>()
     // failedPaths: All the paths which do not satisfy "predicate"
     val failedPaths = mutableListOf<Pair<FailureReason, NodePath>>()
     val loopingPaths: MutableSet<NodePath> = ConcurrentHashMap.newKeySet()
-    // The list of paths where we're not done yet.
-    val worklist = identitySetOf<List<Triple<Node, Edge<Node>?, Context>>>()
-    worklist.add(listOf(Triple(this, null, ctx))) // We start only with the "from" node (=this)
 
-    val alreadySeenNodes = mutableSetOf<Triple<Node, Edge<Node>?, Context>>()
     // First check if the current node satisfies the predicate.
     // If it does, we consider this path fulfilled and skip further traversal.
     if (predicate(this)) {
         fulfilledPaths.add(NodePath(mutableListOf(this), emptyList()).addAssumptionDependence(this))
         return FulfilledAndFailedPaths(fulfilledPaths, failedPaths)
     }
-    while (worklist.isNotEmpty()) {
-        val currentPath = worklist.maxBy { it.size }
-        worklist.remove(currentPath)
-        val currentNode = currentPath.last().first
-        val currentEdge = currentPath.last().second
-        val currentContext = currentPath.last().third
-        alreadySeenNodes.add(Triple(currentNode, currentEdge, currentContext))
-        val currentPathNodes = currentPath.map { it.first }
-        val currentPathEdges = currentPath.mapNotNull { it.second }
-        // The last node of the path is where we continue. We get all of its outgoing CDG edges and
-        // follow them
-        val nextNodes = x(currentNode, currentContext, currentPath, loopingPaths)
 
-        // No further nodes in the path and the path criteria are not satisfied.
-        if (nextNodes.isEmpty() && collectFailedPaths) {
-            // TODO: How to determine if this path is really at the end or if it exceeded the number
-            // of steps?
-            failedPaths.add(
-                FailureReason.PATH_ENDED to
-                    NodePath(currentPathNodes, currentPathEdges)
-                        .addAssumptionDependence(currentPath.map { it.third })
-            )
+    if (!findAllPossiblePaths) {
+        // ===== MAY regime: visit-once breadth-first search with parent pointers =====
+        // For every discovered state we remember how we reached it (previous state + edge) and the
+        // context/node we had there, so a witness can be rebuilt lazily. BFS (FIFO) guarantees the
+        // first time we reach a state is via a shortest path.
+        val parentOf = HashMap<TraversalStateKey, Pair<TraversalStateKey, Edge<Node>?>?>()
+        val ctxOf = HashMap<TraversalStateKey, Context>()
+        val nodeOf = HashMap<TraversalStateKey, Node>()
+        val queue = ArrayDeque<TraversalStateKey>()
+        // We only need one (shortest) witness per target node. Dedup by object identity so two
+        // *distinct* target nodes that happen to be structurally equal (same name/location/class)
+        // are both reported.
+        val recordedHits = identitySetOf<Node>()
+        val startKey = ctx.stateKey(this)
+        parentOf[startKey] = null
+        ctxOf[startKey] = ctx
+        nodeOf[startKey] = this
+        queue.addLast(startKey)
+
+        // Rebuilds the path from the start back to [key] (inclusive) in forward order, optionally
+        // extended by one final (node, edge, context) hop.
+        fun witness(
+            key: TraversalStateKey,
+            extraNode: Node? = null,
+            extraEdge: Edge<Node>? = null,
+            extraCtx: Context? = null,
+        ): NodePath {
+            val nodes = ArrayDeque<Node>()
+            val edges = ArrayDeque<Edge<Node>>()
+            val contexts = ArrayDeque<Context>()
+            var k: TraversalStateKey? = key
+            while (k != null) {
+                nodes.addFirst(nodeOf.getValue(k))
+                contexts.addFirst(ctxOf.getValue(k))
+                val parent = parentOf[k]
+                parent?.second?.let { edges.addFirst(it) }
+                k = parent?.first
+            }
+            extraNode?.let { nodes.addLast(it) }
+            extraEdge?.let { edges.addLast(it) }
+            extraCtx?.let { contexts.addLast(it) }
+            return NodePath(nodes.toList(), edges.toList())
+                .addAssumptionDependence(contexts.toList())
         }
 
-        for ((nextNode, edge, newContext) in nextNodes) {
-            // Copy the path for each outgoing edge and add the next node
-            if (predicate(nextNode)) {
-                // We ended up in the node fulfilling "predicate", so we're done for this path. Add
-                // the path to the results.
-                val nodePath =
-                    NodePath(currentPathNodes + nextNode, currentPathEdges + edge)
-                        .addAssumptionDependence(currentPath.map { it.third } + newContext)
-                fulfilledPaths.add(nodePath)
-                continue // Don't add this path anymore. The requirement is satisfied.
+        while (queue.isNotEmpty()) {
+            val currentKey = queue.removeFirst()
+            val currentNode = nodeOf.getValue(currentKey)
+            val currentContext = ctxOf.getValue(currentKey)
+            // `x`/`followEdge` only reads the path to build looping-path records, which the MAY
+            // regime does not consume, so a light single-element path suffices and keeps this O(1).
+            val lightPath =
+                listOf(Triple<Node, Edge<Node>?, Context>(currentNode, null, currentContext))
+            val nextNodes = x(currentNode, currentContext, lightPath, loopingPaths)
+
+            if (nextNodes.isEmpty() && collectFailedPaths) {
+                failedPaths.add(FailureReason.PATH_ENDED to witness(currentKey))
+                continue
             }
-            if (earlyTermination(nextNode, currentContext)) {
+
+            for ((nextNode, edge, newContext) in nextNodes) {
+                if (predicate(nextNode)) {
+                    // Only keep the first (shortest, thanks to BFS) witness per target node.
+                    if (recordedHits.add(nextNode)) {
+                        fulfilledPaths.add(witness(currentKey, nextNode, edge, newContext))
+                    }
+                    continue
+                }
+                if (earlyTermination(nextNode, currentContext)) {
+                    if (collectFailedPaths) {
+                        failedPaths.add(
+                            FailureReason.HIT_EARLY_TERMINATION to
+                                witness(currentKey, nextNode, edge, newContext)
+                        )
+                    }
+                    continue
+                }
+                if (contextExplosion(newContext)) {
+                    // Recursion / stack explosion: cut this branch.
+                    loopingPaths.add(witness(currentKey, nextNode, edge, newContext))
+                    continue
+                }
+                // `stateKey` ignores `steps`, so we can compute it before incrementing and only
+                // advance the step counter for a genuinely new state we are about to enqueue.
+                val nextKey = newContext.stateKey(nextNode)
+                if (nextKey !in parentOf) {
+                    newContext.inc()
+                    parentOf[nextKey] = currentKey to edge
+                    ctxOf[nextKey] = newContext
+                    nodeOf[nextKey] = nextNode
+                    queue.addLast(nextKey)
+                }
+            }
+        }
+    } else {
+        // ===== MUST regime: depth-first faithful path enumeration =====
+        // A LIFO worklist (stack) gives depth-first order with O(1) push/pop; the enumeration is
+        // exhaustive, so the order does not affect the result, only memory (frontier-sized).
+        val worklist = ArrayDeque<List<Triple<Node, Edge<Node>?, Context>>>()
+        worklist.addLast(listOf(Triple(this, null, ctx))) // We start only with the "from" node.
+
+        while (worklist.isNotEmpty()) {
+            val currentPath = worklist.removeLast()
+            val currentNode = currentPath.last().first
+            val currentContext = currentPath.last().third
+            val currentPathNodes = currentPath.map { it.first }
+            val currentPathEdges = currentPath.mapNotNull { it.second }
+            val nextNodes = x(currentNode, currentContext, currentPath, loopingPaths)
+
+            // No further nodes in the path and the path criteria are not satisfied.
+            if (nextNodes.isEmpty() && collectFailedPaths) {
+                // TODO: How to determine if this path is really at the end or if it exceeded the
+                // number of steps?
                 failedPaths.add(
-                    FailureReason.HIT_EARLY_TERMINATION to
+                    FailureReason.PATH_ENDED to
+                        NodePath(currentPathNodes, currentPathEdges)
+                            .addAssumptionDependence(currentPath.map { it.third })
+                )
+            }
+
+            for ((nextNode, edge, newContext) in nextNodes) {
+                if (predicate(nextNode)) {
+                    // We ended up in the node fulfilling "predicate", so we're done for this path.
+                    fulfilledPaths.add(
                         NodePath(currentPathNodes + nextNode, currentPathEdges + edge)
                             .addAssumptionDependence(currentPath.map { it.third } + newContext)
-                )
-                continue // Don't add this path anymore. We already failed.
-            }
-            // The next node is new in the current path (i.e., there's no loop), so we add the path
-            // with the next step to the worklist.
-            if (
-                !isNodeWithCallStackInPath(nextNode, newContext, currentPath) &&
-                    // A hack that tries to ensure that we are not running in circles: Watch out if
-                    // the top of the newContext and the currentPath callStack are the same and not
-                    // null, this could indicate a loop
-                    // However, if the newContext and the currentPath last's callStack are the same,
-                    // it should be fine I guess
-                    !newContext.callStack.clone().isLoop() &&
-                    (newContext.callStack.top != currentPath.last().third.callStack.top ||
-                        newContext.callStack.top == null ||
-                        newContext.callStack == currentPath.last().third.callStack) &&
-                    (findAllPossiblePaths ||
-                        (!isNodeWithCallStackInPath(nextNode, newContext, alreadySeenNodes) &&
-                            worklist.none { isNodeWithCallStackInPath(nextNode, newContext, it) }))
-            ) {
-                worklist.add(currentPath.toMutableList() + Triple(nextNode, edge, newContext.inc()))
-            } else {
-                // There's a loop.
-                loopingPaths.add(
-                    NodePath(currentPathNodes + nextNode, currentPathEdges + edge)
-                        .addAssumptionDependence(currentPath.map { it.third } + newContext)
-                )
+                    )
+                    continue // Don't add this path anymore. The requirement is satisfied.
+                }
+                if (earlyTermination(nextNode, currentContext)) {
+                    failedPaths.add(
+                        FailureReason.HIT_EARLY_TERMINATION to
+                            NodePath(currentPathNodes + nextNode, currentPathEdges + edge)
+                                .addAssumptionDependence(currentPath.map { it.third } + newContext)
+                    )
+                    continue // Don't add this path anymore. We already failed.
+                }
+                // Extend the path unless continuing would loop or blow up the stacks.
+                // `isNodeWithCallStackInPath` catches loops where the (node, callStack) state
+                // repeats on the current path (intraprocedural loops and recursion via the same
+                // call site). `contextExplosion` additionally catches interprocedural recursion
+                // whose call stack keeps growing so that no (node, callStack) state ever repeats,
+                // and unbounded index/call-stack growth in general.
+                if (
+                    !isNodeWithCallStackInPath(nextNode, newContext, currentPath) &&
+                        !contextExplosion(newContext)
+                ) {
+                    worklist.addLast(currentPath + Triple(nextNode, edge, newContext.inc()))
+                } else {
+                    // There's a loop.
+                    loopingPaths.add(
+                        NodePath(currentPathNodes + nextNode, currentPathEdges + edge)
+                            .addAssumptionDependence(currentPath.map { it.third } + newContext)
+                    )
+                }
             }
         }
     }
@@ -1247,6 +1345,58 @@ fun isNodeWithCallStackInPath(
     path: Collection<Triple<Node, Edge<Node>?, Context>>,
 ): Boolean {
     return path.any { it.first == node && context.callStack == it.third.callStack }
+}
+
+/**
+ * Hard backstops that bound the traversal state space even when the graph contains recursion whose
+ * call stack never repeats a state (e.g. every recursion level goes through a *fresh* call site) or
+ * an unbounded chain of indexed data flows. Real programs stay far below these; they exist only to
+ * guarantee termination in pathological cases. The primary, precise recursion cut is the
+ * same-call-site detection in [contextExplosion] and the on-path (node, callStack) repeat detection
+ * in [isNodeWithCallStackInPath].
+ */
+private const val MAX_CALL_STACK_BACKSTOP = 1000
+
+private const val MAX_INDEX_STACK_BACKSTOP = 1000
+
+/**
+ * An immutable, flow-, context- and field-sensitive traversal state. Two states with the same
+ * [node], call stack and index stack are indistinguishable for the remainder of the traversal, so
+ * the MAY search may visit each such state at most once.
+ */
+private data class TraversalStateKey(
+    val node: Node,
+    val callStack: List<Call>,
+    val indexStack: List<IndexedDataflowGranularity>,
+)
+
+/** Builds the [TraversalStateKey] for reaching [node] under this [Context]. */
+private fun Context.stateKey(node: Node): TraversalStateKey =
+    TraversalStateKey(node, callStack.toList(), indexStack.toList())
+
+/**
+ * Decides whether the state described by [ctx] must not be expanded any further because continuing
+ * would (or is very likely to) diverge. This is the crucial guard for interprocedural recursion,
+ * which the legacy `(node, callStack)`-repeat check cannot catch on its own: recursion through a
+ * fresh call site grows the call stack forever without any state ever repeating.
+ *
+ * We cut a branch if either stack has grown past its hard backstop, or if the *same call site*
+ * appears more than once on the call stack. The latter is compared by reference identity so that
+ * two syntactically identical but distinct call sites are never mistaken for a recursion cycle.
+ */
+private fun contextExplosion(ctx: Context): Boolean {
+    if (ctx.indexStack.depth > MAX_INDEX_STACK_BACKSTOP) return true
+    val callDepth = ctx.callStack.depth
+    if (callDepth > MAX_CALL_STACK_BACKSTOP) return true
+    // Only a call stack of depth >= 2 can contain a repeated call site (a recursion cycle); avoid
+    // the snapshot + map allocation in the common shallow/intraprocedural case.
+    if (callDepth >= 2) {
+        val seen = java.util.IdentityHashMap<Call, Boolean>()
+        for (call in ctx.callStack.toList()) {
+            if (seen.put(call, true) != null) return true
+        }
+    }
+    return false
 }
 
 /**
