@@ -2,7 +2,8 @@
   "extends": [
     "config:recommended",
     "schedule:weekly",
-    ":enableVulnerabilityAlerts"
+    ":enableVulnerabilityAlerts",
+    "security:minimumReleaseAgeNpm"
   ],
   "patch": {
     "enabled": false
@@ -26,6 +27,10 @@
       "addLabels": [
         "npm"
       ]
+    },
+    {
+      "matchFileNames": ["codyze-console/**/webapp/**"],
+      "groupName": "Codyze Console WebApp dependencies"
     }
   ]
 }

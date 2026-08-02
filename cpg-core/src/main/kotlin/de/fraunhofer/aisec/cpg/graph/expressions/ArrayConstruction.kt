@@ -62,7 +62,9 @@ class ArrayConstruction : Expression(), HasInitializer {
 
     /** Adds an [Expression] to the existing [dimensions]. */
     fun addDimension(expression: Expression) {
-        addIfNotContains(dimensionEdges, expression)
+        if (dimensionEdges.none { it.end == expression }) {
+            dimensionEdges += expression
+        }
     }
 
     override fun equals(other: Any?): Boolean {
