@@ -81,7 +81,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         val outerBlock = newBlock(rawNode = body)
 
         val printer = NormalStmtPrinter()
-        printer.initializeSootMethod(body.stmtGraph)
+        printer.initializeSootMethod(body.controlFlowGraph)
 
         frontend.printer = printer
         frontend.body = body

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.jvm
 
+// import sootup.java.frontend.inputlocation.JavaSourcePathAnalysisInputLocation
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -39,21 +40,20 @@ import java.io.File
 import java.net.URI
 import sootup.apk.frontend.ApkAnalysisInputLocation
 import sootup.apk.frontend.DexBodyInterceptors
+import sootup.apk.frontend.main.AndroidVersionInfo
 import sootup.core.cache.provider.LRUCacheProvider
+import sootup.core.interceptor.BodyInterceptor
 import sootup.core.model.Body
 import sootup.core.model.HasPosition
 import sootup.core.model.SootMethod
 import sootup.core.model.SourceType
-import sootup.core.transform.BodyInterceptor
 import sootup.core.types.ArrayType
 import sootup.core.types.UnknownType
 import sootup.core.util.printer.NormalStmtPrinter
 import sootup.interceptors.*
 import sootup.java.bytecode.frontend.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.core.views.JavaView
-import sootup.java.frontend.inputlocation.JavaSourcePathAnalysisInputLocation
 import sootup.jimple.frontend.JimpleAnalysisInputLocation
-import sootup.jimple.frontend.JimpleView
 
 typealias SootType = sootup.core.types.Type
 
@@ -115,7 +115,10 @@ class JVMLanguageFrontend(
                     val apkAnalysis =
                         ApkAnalysisInputLocation(
                             file.toPath(),
-                            "",
+                            AndroidVersionInfo(
+                                file.toPath(),
+                                "",
+                            ), // TODO: Add the android.jar path and files
                             DexBodyInterceptors.Default.bodyInterceptors(),
                         )
 
@@ -130,15 +133,15 @@ class JVMLanguageFrontend(
                         )
                     )
                 }
-                file.extension == "java" -> {
+                /*file.extension == "java" -> {
                     JavaView(
                         JavaSourcePathAnalysisInputLocation(
                             ctx.currentComponent?.topLevel()?.path!!
                         )
                     )
-                }
+                }*/
                 file.extension == "jimple" -> {
-                    JimpleView(
+                    JavaView(
                         JimpleAnalysisInputLocation(ctx.currentComponent?.topLevel()?.toPath()!!)
                     )
                 }
