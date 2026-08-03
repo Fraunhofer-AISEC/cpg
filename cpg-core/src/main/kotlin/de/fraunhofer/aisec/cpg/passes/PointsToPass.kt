@@ -952,6 +952,83 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     private suspend fun storeFunctionSummary(node: Function, doubleState: PointsToState.Element) {
         clearFSDummies(node.functionSummary)
+
+        for (param in node.parameters) {
+            val indexes: MutableSet<IndexKey> = linkedSetOf()
+            val values = doubleState.getValues(param, param).mapTo(IdentitySet()) { it.first }
+
+            for (value in values) {
+                if (doubleState.hasDeclarationStateValueEntry(value)) {
+                    indexes.add(IndexKey(value, 2))
+
+                    val derefValues =
+                        doubleState.getValues(value, value).mapTo(PowersetLattice.Element()) {
+                            it.first
+                        }
+
+                    for (derefValue in derefValues) {
+                        if (doubleState.hasDeclarationStateValueEntry(derefValue)) {
+                            indexes.add(IndexKey(derefValue, 3))
+                        }
+                    }
+                }
+            }
+
+            for ((idx, dstValueDepth) in indexes) {
+                val stateEntries =
+                    doubleState
+                        .fetchValueFromDeclarationState(
+                            idx,
+                            fetchFields = true,
+                            excludeShortFSValues = true,
+                        )
+                        .filterTo(PowersetLattice.Element()) { it.value.name != param.name }
+
+                data class KeyWithSubAccessEntry(val value: Any, val shortFS: Any)
+
+                val keysWithSubAccess =
+                    stateEntries
+                        .filter { it.subAccessName.isNotEmpty() }
+                        .mapTo(mutableSetOf()) { KeyWithSubAccessEntry(it.value, it.shortFS) }
+
+                val filteredStateEntries =
+                    stateEntries.filterNot { entry ->
+                        entry.subAccessName.isEmpty() &&
+                            KeyWithSubAccessEntry(entry.value, entry.shortFS) in keysWithSubAccess
+                    }
+
+                for ((value, shortFS, subAccessName, lastWrites) in filteredStateEntries) {
+                    if (
+                        value.name != param.name &&
+                            !(value is ParameterMemoryValue &&
+                                value.name.localName.contains("derefvalue") &&
+                                value.name.parent?.localName == param.name.localName) &&
+                            !(value is UnknownMemoryValue && lastWrites.isEmpty())
+                    ) {
+                        addParameterInfoToFS(
+                            node,
+                            param,
+                            dstValueDepth,
+                            value,
+                            shortFS,
+                            subAccessName,
+                            lastWrites,
+                        )
+                    }
+                }
+            }
+        }
+
+        if (node.functionSummary.isEmpty()) {
+            node.functionSummary.put(newLiteral("dummy"), ConcurrentHashMap.newKeySet<FSEntry>())
+        }
+    }
+
+    private suspend fun storeFunctionSummaryConcurrent(
+        node: Function,
+        doubleState: PointsToState.Element,
+    ) {
+        clearFSDummies(node.functionSummary)
         // We try to run this in outer coroutines for each param and inner coroutines per
         // param.
         // In order not to launch an immense amount of coroutines, we calculate their number before
@@ -1467,7 +1544,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 "derefderefvalue"
                         }
                         .map { it.start }
-                argVals.forEachMaybeParallel(minChunkSize = MIN_CHUNK_SIZE / 10) { (argVal, _) ->
+                for ((argVal, _) in argVals) {
+                    //                argVals.forEachMaybeParallel(minChunkSize = MIN_CHUNK_SIZE /
+                    // 10) { (argVal, _) ->
                     doubleState =
                         innerCalculateIncomingCallingContexts(
                             arg,
@@ -1618,23 +1697,23 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val param: Node?, // From which parameter entry in the functionSummary did we gather the
         // information
         val srcNode: Node?,
-        val lastWrites: MutableSet<NodeWithPropertiesKey>,
+        val lastWrites: ConcurrentIdentitySet<NodeWithPropertiesKey>,
         val propertySet: EqualLinkedHashSet<Any>,
         val dst: IdentitySet<Node> = identitySetOf(),
     ) {
         override fun equals(other: Any?): Boolean {
             return other is MapDstToSrcEntry &&
+                param == other.param &&
                 srcNode === other.srcNode &&
-                lastWrites.size == other.lastWrites.size &&
-                lastWrites.all { lw -> other.lastWrites.any { it === lw } } &&
-                propertySet.size == other.propertySet.size &&
-                propertySet.all { p -> other.propertySet.any { it == p } } &&
+                // Skip checking for lastWrites b/c we change that
+                propertySet == other.propertySet &&
                 dst == other.dst
         }
 
         override fun hashCode(): Int {
-            var result = srcNode?.hashCode() ?: 0
-            result = 31 * result + lastWrites.hashCode()
+            var result = System.identityHashCode(param)
+            result = 31 * result + System.identityHashCode(srcNode)
+            // Skip including lastWrites b/c we change that
             result = 31 * result + propertySet.hashCode()
             result = 31 * result + dst.hashCode()
             return result
@@ -1694,6 +1773,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val prev: MutableSet<NodeWithPropertiesKey>,
     )
 
+    /* Needed for deduplication */
+    private data class PreprocessedFSEntryDedupKey(
+        val dstValueDepth: Int,
+        val subAccessName: String,
+        val srcNode: IdKey<Node>?,
+        val srcValueDepth: Int,
+        val shortFS: Boolean,
+        val propertySet: EqualLinkedHashSet<Any>,
+    )
+
     private data class AddEntryDestinationDedupCache(
         val buckets: ConcurrentHashMap<AddEntryDedupKey, AddEntryDedupBucket> = ConcurrentHashMap()
     )
@@ -1707,6 +1796,157 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val genericSourcesCache = ConcurrentHashMap<AddEntryGenericSourcesKey, IdentitySet<Node?>>()
     }
 
+    private fun concurrentCopyOfLastWrites(
+        lastWrites: Collection<NodeWithPropertiesKey>
+    ): ConcurrentIdentitySet<NodeWithPropertiesKey> {
+        return concurrentIdentitySetOf<NodeWithPropertiesKey>().apply { addAll(lastWrites) }
+    }
+
+    private fun deduplicatePreprocessedFSEntries(
+        entries: List<PreprocessedFSEntry>
+    ): List<PreprocessedFSEntry> {
+        val deduplicated = LinkedHashMap<PreprocessedFSEntryDedupKey, PreprocessedFSEntry>()
+
+        for (entry in entries) {
+            val key =
+                PreprocessedFSEntryDedupKey(
+                    dstValueDepth = entry.dstValueDepth,
+                    subAccessName = entry.subAccessName,
+                    srcNode = entry.srcNode?.let { IdKey(it) },
+                    srcValueDepth = entry.srcValueDepth,
+                    shortFS = entry.shortFS,
+                    propertySet = equalLinkedHashSetOf<Any>().apply { addAll(entry.propertySet) },
+                )
+
+            val existing = deduplicated[key]
+            if (existing == null) {
+                deduplicated[key] = entry
+            } else {
+                existing.prev.addAll(entry.prev)
+            }
+        }
+
+        return deduplicated.values.toList()
+    }
+
+    private fun Node.stableKey(): String {
+        val location =
+            (this as? AstNode)?.location?.let {
+                "${it.region.startLine}:${it.region.startColumn}:${it.region.endLine}:${it.region.endColumn}"
+            } ?: "no-location"
+
+        val parentName = (this.astParent as? Node)?.name?.toString() ?: "no-parent"
+
+        return listOf(
+                this::class.qualifiedName ?: this::class.simpleName ?: "UnknownClass",
+                name.toString(),
+                parentName,
+                location,
+            )
+            .joinToString("|")
+    }
+
+    private val nodeComparator: Comparator<Node> =
+        compareBy<Node> { it.stableKey() }
+            .thenBy { it::class.qualifiedName ?: "" }
+            .thenBy { it.name.toString() }
+
+    private val functionComparator: Comparator<Function> =
+        compareBy<Function> { it.name.toString() }
+            .thenBy { it.signature.toString() }
+            .thenBy { it.location?.toString() ?: "" }
+            .thenBy { it.stableKey() }
+
+    private val fsEntryComparator: Comparator<FSEntry> =
+        compareBy<FSEntry> { it.destValueDepth }
+            .thenBy { it.subAccessName }
+            .thenBy { it.srcValueDepth }
+            .thenBy { entry ->
+                when (val src = entry.srcNode) {
+                    is Node -> src.stableKey()
+                    is Name -> src.toString()
+                    null -> ""
+                    else -> src.toString()
+                }
+            }
+            .thenBy { entry ->
+                entry.properties.map { it.stablePropertyKey() }.sorted().joinToString(";")
+            }
+            .thenBy { entry -> entry.lastWrites.map { it.stableKey() }.sorted().joinToString(";") }
+
+    private fun NodeWithPropertiesKey.stableKey(): String =
+        "${node.stableKey()}|${properties.map { it.stablePropertyKey() }.sorted().joinToString(";")}"
+
+    private fun Any?.stablePropertyKey(): String =
+        when (this) {
+            null -> "null"
+            is Boolean -> "Boolean:$this"
+            is Int -> "Int:$this"
+            is String -> "String:$this"
+            is Name -> "Name:$this"
+            is Node -> "Node:${this.stableKey()}"
+            is Field -> "Field:${this.name}"
+            is Granularity -> "Granularity:${this::class.qualifiedName}:$this"
+            is CallingContextIn ->
+                "CallingContextIn:${this.calls.map { it.stableKey() }.joinToString(">")}"
+            is CallingContextOut ->
+                "CallingContextOut:${this.calls.map { it.stableKey() }.joinToString(">")}"
+            else -> "${this::class.qualifiedName}:$this"
+        }
+
+    private fun paramKindOrder(param: Node): Int =
+        when (param) {
+            is Record -> 0
+            is Parameter -> 1
+            is Return -> 2
+            is Function -> 3
+            else -> 4
+        }
+
+    private val preprocessedFsEntryComparator: Comparator<PreprocessedFSEntry> =
+        compareBy<PreprocessedFSEntry> { it.dstValueDepth }
+            .thenBy { it.subAccessName }
+            .thenBy { it.srcValueDepth }
+            .thenBy { it.srcNode?.stableKey() ?: "" }
+            .thenBy { it.shortFS }
+            .thenBy {
+                it.propertySet
+                    .map { property -> property.stablePropertyKey() }
+                    .sorted()
+                    .joinToString(";")
+            }
+            .thenBy { it.prev.map { prev -> prev.stableKey() }.sorted().joinToString(";") }
+
+    private fun copyMapDstToSrc(
+        original: ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>
+    ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
+        val copy = ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>()
+
+        for ((dstAddr, entries) in original) {
+            val copiedEntries = concurrentIdentitySetOf<MapDstToSrcEntry>()
+
+            for (entry in entries) {
+                copiedEntries.add(
+                    MapDstToSrcEntry(
+                        param = entry.param,
+                        srcNode = entry.srcNode,
+                        lastWrites = concurrentCopyOfLastWrites(entry.lastWrites),
+                        propertySet = copyPropertySet(entry.propertySet),
+                        dst = identitySetOf<Node>().apply { addAll(entry.dst) },
+                    )
+                )
+            }
+
+            copy.put(dstAddr, copiedEntries)
+        }
+
+        return copy
+    }
+
+    private fun copyPropertySet(propertySet: EqualLinkedHashSet<Any>): EqualLinkedHashSet<Any> {
+        return equalLinkedHashSetOf<Any>().apply { addAll(propertySet) }
+    }
+
     private suspend fun handleCall(
         lattice: PointsToState,
         currentNode: Call,
@@ -1715,27 +1955,30 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var doubleState = doubleState
         val mapDstToSrc = ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>()
         val addEntryToMapCache = AddEntryToMapCache()
+        val shortFsPrevEdges = linkedSetOf<NodeWithPropertiesKey>()
 
         // If the call is a function pointer, and we don't yet have invokes edges we try to fetch
         // them now
         addDynamicInvokesEdges(currentNode, doubleState)
 
         // The toIdentitySet avoids having the same elements multiple times
-        var invokes = currentNode.invokes.toIdentitySet()
+        var invokes = currentNode.invokes.toIdentitySet().sortedWith(functionComparator)
         // If we have multiple functions with the same name and the same signature and one has an
         // empty body, we assume that this is from the header so we ignore it
         invokes =
-            invokes.mapFilteredTo(
-                identitySetOf(),
-                { inv ->
-                    !(inv.body == null &&
-                        // If the body is empty, check if we have the "real" Function
-                        // somewhere in our list
-                        invokes.any { it != inv && it.name == inv.name && it.type == inv.type })
-                },
-            ) { inv ->
-                inv
-            }
+            invokes
+                .mapFilteredTo(
+                    identitySetOf(),
+                    { inv ->
+                        !(inv.body == null &&
+                            // If the body is empty, check if we have the "real" Function
+                            // somewhere in our list
+                            invokes.any { it != inv && it.name == inv.name && it.type == inv.type })
+                    },
+                ) { inv ->
+                    inv
+                }
+                .sortedWith(functionComparator)
         invokes.forEach { invoke ->
             val inv = calculateFunctionSummaries(invoke)
             if (inv != null) {
@@ -1749,84 +1992,103 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 )
 
                 val parameterWork =
-                    inv.functionSummary.mapNotNull { (param, fsEntries) ->
-                        val dst =
-                            when (param) {
-                                // If we have a record, we use the base as argument
-                                is Record -> {
-                                    (currentNode as? MemberCall)?.base
+                    inv.functionSummary.entries
+                        .sortedWith(
+                            compareBy<Map.Entry<Node, MutableSet<FSEntry>>> { (param, _) ->
+                                    paramKindOrder(param)
                                 }
-                                is Parameter ->
-                                    if (param.argumentIndex < currentNode.arguments.size)
-                                        currentNode.arguments[param.argumentIndex]
-                                    else null
-                                is Return,
-                                is Function -> currentNode
-                                else -> null
-                            }
+                                .thenBy { (param, _) -> param.stableKey() }
+                        )
+                        .mapNotNull { (param, fsEntries) ->
+                            val dst =
+                                when (param) {
+                                    // If we have a record, we use the base as argument
+                                    is Record -> {
+                                        (currentNode as? MemberCall)?.base
+                                    }
+                                    is Parameter ->
+                                        if (param.argumentIndex < currentNode.arguments.size)
+                                            currentNode.arguments[param.argumentIndex]
+                                        else null
+                                    is Return,
+                                    is Function -> currentNode
+                                    else -> null
+                                }
 
-                        if (dst == null) {
-                            null
-                        } else {
-                            val depthBuckets = Array(4) { mutableListOf<PreprocessedFSEntry>() }
-                            for ((
-                                dstValueDepth,
-                                srcNode,
-                                srcValueDepth,
-                                subAccessName,
-                                lastWrites,
-                                properties,
-                            ) in fsEntries) {
-                                if (dstValueDepth in 0..3) {
-                                    val shortFS = properties.any { it == true }
-                                    val propertySet = properties
-                                    val normalizedSrcNode =
-                                        when (srcNode) {
-                                            is Function -> currentNode
-                                            is Name -> {
-                                                val memoryAddress =
-                                                    CallToMemAddrMap.computeIfAbsent(currentNode) {
-                                                            ConcurrentIdentityHashMap()
-                                                        }
-                                                        .computeIfAbsent(srcNode) {
-                                                            MemoryAddress(srcNode)
-                                                        }
-                                                memoryAddress.nextDFGEdges +=
-                                                    Dataflow(memoryAddress, inv)
-                                                memoryAddress
+                            if (dst == null) {
+                                null
+                            } else {
+                                val depthBuckets = Array(4) { mutableListOf<PreprocessedFSEntry>() }
+                                /*                            for ((
+                                    dstValueDepth,
+                                    srcNode,
+                                    srcValueDepth,
+                                    subAccessName,
+                                    lastWrites,
+                                    properties,
+                                ) in fsEntries) {*/
+                                for (fsEntry in fsEntries.sortedWith(fsEntryComparator)) {
+                                    val dstValueDepth = fsEntry.destValueDepth
+                                    val srcNode = fsEntry.srcNode
+                                    val srcValueDepth = fsEntry.srcValueDepth
+                                    val subAccessName = fsEntry.subAccessName
+                                    val lastWrites = fsEntry.lastWrites
+                                    val properties = fsEntry.properties
+                                    if (dstValueDepth in 0..3) {
+                                        val shortFS = properties.any { it == true }
+                                        val propertySet =
+                                            equalLinkedHashSetOf<Any>().apply { addAll(properties) }
+                                        val normalizedSrcNode =
+                                            when (srcNode) {
+                                                is Function -> currentNode
+                                                is Name -> {
+                                                    val memoryAddress =
+                                                        CallToMemAddrMap.computeIfAbsent(
+                                                                currentNode
+                                                            ) {
+                                                                ConcurrentIdentityHashMap()
+                                                            }
+                                                            .computeIfAbsent(srcNode) {
+                                                                MemoryAddress(srcNode)
+                                                            }
+                                                    memoryAddress.nextDFGEdges +=
+                                                        Dataflow(memoryAddress, inv)
+                                                    memoryAddress
+                                                }
+
+                                                else -> srcNode as? Node
                                             }
-
-                                            else -> srcNode as? Node
-                                        }
-                                    val prev =
-                                        calculatePrevDFGs(
-                                            lastWrites,
-                                            shortFS,
-                                            currentNode,
-                                            inv,
-                                            srcNode,
+                                        val prev =
+                                            calculatePrevDFGs(
+                                                lastWrites,
+                                                shortFS,
+                                                currentNode,
+                                                inv,
+                                                srcNode,
+                                            )
+                                        depthBuckets[dstValueDepth].add(
+                                            PreprocessedFSEntry(
+                                                dstValueDepth,
+                                                subAccessName,
+                                                normalizedSrcNode,
+                                                srcValueDepth,
+                                                shortFS,
+                                                propertySet,
+                                                prev,
+                                            )
                                         )
-                                    depthBuckets[dstValueDepth].add(
-                                        PreprocessedFSEntry(
-                                            dstValueDepth,
-                                            subAccessName,
-                                            normalizedSrcNode,
-                                            srcValueDepth,
-                                            shortFS,
-                                            propertySet,
-                                            prev,
-                                        )
-                                    )
+                                    }
                                 }
-                            }
 
-                            ParamFsWork(
-                                param,
-                                dst,
-                                Array(4) { depth -> depthBuckets[depth].toList() },
-                            )
+                                ParamFsWork(
+                                    param,
+                                    dst,
+                                    Array(4) { depth ->
+                                        deduplicatePreprocessedFSEntries(depthBuckets[depth])
+                                    },
+                                )
+                            }
                         }
-                    }
 
                 if (parameterWork.isEmpty()) {
                     return@forEach
@@ -1837,6 +2099,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // We can't go through all levels at once as a change at a lower level may
                 // affect a higher level. So let's do this step by step
                 for (depth in 0..3) {
+                    // Create a snapshot of mapDstToSrc. calculateCallDestinations reads from this,
+                    // it should contain all the required information (the info from the previous
+                    // depths). This allows us to use threads in which addEntryToMap at the same
+                    // time manipulates the actual mapDstToSrc
+                    val mapDstToSrcSnapshot = copyMapDstToSrc(mapDstToSrc)
                     coroutineScope {
                         for (work in parameterWork) {
                             if (work.entriesByDepth[depth].isEmpty()) {
@@ -1848,7 +2115,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     val (destinationAddresses, destinations) =
                                         calculateCallDestinations(
                                             doubleState,
-                                            mapDstToSrc,
+                                            mapDstToSrcSnapshot,
                                             entry.dstValueDepth,
                                             entry.subAccessName,
                                             work.argument,
@@ -1868,7 +2135,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         currentNode,
                                         entry.prev,
                                         work.param,
-                                        // TODO for merge: add subAccessName?
+                                        shortFsPrevEdges,
                                     )
                                 }
                             }
@@ -1881,13 +2148,55 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         val callingContextOut = CallingContextOut(mutableListOf(currentNode))
-        mapDstToSrc.forEach { (dstAddr, values) ->
+        /*        mapDstToSrc.forEach { (dstAddr, values) ->
             doubleState =
                 writeMapEntriesToState(lattice, doubleState, dstAddr, values, callingContextOut)
+        }*/
+        mapDstToSrc.entries
+            .sortedBy { (dstAddr, _) -> dstAddr.stableKey() }
+            .forEach { (dstAddr, values) ->
+                val sortedValues =
+                    values
+                        .sortedWith(mapDstToSrcEntryComparator)
+                        .toCollection(concurrentIdentitySetOf())
+
+                doubleState =
+                    writeMapEntriesToState(
+                        lattice,
+                        doubleState,
+                        dstAddr,
+                        sortedValues,
+                        callingContextOut,
+                    )
+            }
+
+        if (shortFsPrevEdges.isNotEmpty()) {
+            doubleState =
+                lattice.push(
+                    doubleState,
+                    currentNode,
+                    GeneralStateEntryElement(
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(shortFsPrevEdges),
+                    ),
+                )
         }
 
         return doubleState
     }
+
+    private val mapDstToSrcEntryComparator: Comparator<MapDstToSrcEntry> =
+        compareBy<MapDstToSrcEntry> { it.param?.stableKey() ?: "" }
+            .thenBy { it.srcNode?.stableKey() ?: "" }
+            .thenBy {
+                it.propertySet
+                    .map { property -> property.stablePropertyKey() }
+                    .sorted()
+                    .joinToString(";")
+            }
+            .thenBy { it.dst.map { dst -> dst.stableKey() }.sorted().joinToString(";") }
+            .thenBy { it.lastWrites.map { lw -> lw.stableKey() }.sorted().joinToString(";") }
 
     private fun calculatePrevDFGs(
         lastWrites: MutableSet<NodeWithPropertiesKey>,
@@ -1896,32 +2205,37 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         invoke: Function,
         srcNode: Any?,
     ): MutableSet<NodeWithPropertiesKey> {
-        val ret = mutableSetOf<NodeWithPropertiesKey>()
+        val ret = linkedSetOf<NodeWithPropertiesKey>()
         // If we have nothing, the last write is probably the Function
         if (lastWrites.isEmpty()) ret.add(NodeWithPropertiesKey(invoke, equalLinkedHashSetOf()))
-        lastWrites.forEach { (lw, properties) ->
-            // If the lastWrite is a Record, that's a hint from the functionSummary that we have a
-            // write to the base. Since we didn't know the base yet when creating the
-            // functionSummary, we fetch it now
-            val prev = if (lw is Record && srcNode is Node) srcNode else lw
-            if (shortFS) {
-                when (prev) {
-                    is Function -> ret.add(NodeWithPropertiesKey(currentNode, properties))
-                    is Parameter -> {
-                        // For dummy functionSummary entries, we have an Integer indicating the
-                        // parameter's index for which we should use the Call's argument
-                        // here
-                        // Otherwise, the lastWrite was the Parameter itself, so we leave
-                        // it as is
-                        val index = properties.filterIsInstance<Int>().singleOrNull()
-                        if (index != null && index < currentNode.arguments.size)
-                            ret.add(NodeWithPropertiesKey(currentNode.arguments[index], properties))
-                        else ret.add(NodeWithPropertiesKey(prev, properties))
+        lastWrites
+            .sortedBy { it.stableKey() }
+            .forEach { (lw, properties) ->
+                // If the lastWrite is a Record, that's a hint from the functionSummary that we have
+                // a
+                // write to the base. Since we didn't know the base yet when creating the
+                // functionSummary, we fetch it now
+                val prev = if (lw is Record && srcNode is Node) srcNode else lw
+                if (shortFS) {
+                    when (prev) {
+                        is Function -> ret.add(NodeWithPropertiesKey(currentNode, properties))
+                        is Parameter -> {
+                            // For dummy functionSummary entries, we have an Integer indicating the
+                            // parameter's index for which we should use the Call's argument
+                            // here
+                            // Otherwise, the lastWrite was the Parameter itself, so we leave
+                            // it as is
+                            val index = properties.filterIsInstance<Int>().singleOrNull()
+                            if (index != null && index < currentNode.arguments.size)
+                                ret.add(
+                                    NodeWithPropertiesKey(currentNode.arguments[index], properties)
+                                )
+                            else ret.add(NodeWithPropertiesKey(prev, properties))
+                        }
+                        else -> ret.add(NodeWithPropertiesKey(prev, properties))
                     }
-                    else -> ret.add(NodeWithPropertiesKey(prev, properties))
-                }
-            } else ret.add(NodeWithPropertiesKey(prev, properties))
-        }
+                } else ret.add(NodeWithPropertiesKey(prev, properties))
+            }
         return ret
     }
 
@@ -2044,7 +2358,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val lastWrites: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet()
         val destinations: MutableSet<IdKey<Node>> = ConcurrentHashMap.newKeySet()
 
-        values.forEachMaybeParallel(minChunkSize = 1) { value ->
+        for (value in values) {
+            //        values.forEachMaybeParallel(minChunkSize = 1) { value ->
             value.lastWrites.forEach { (lw, lwProps) ->
                 // For short FunctionSummaries (AKA one of the lastWrite
                 // properties set to 'true',
@@ -2135,6 +2450,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         currentNode: Call,
         lastWrites: MutableSet<NodeWithPropertiesKey>,
         param: Node,
+        shortFsPrevEdges: LinkedHashSet<NodeWithPropertiesKey>,
     ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
         val doubleState = doubleState
 
@@ -2231,6 +2547,27 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
         }
 
+        fun insertOrMerge(
+            context: DestinationContext,
+            source: Node?,
+            newLastWrites: Collection<NodeWithPropertiesKey>,
+            entry: () -> MapDstToSrcEntry,
+        ) {
+            val existing =
+                context.currentSet.firstOrNull {
+                    it.srcNode === source &&
+                        it.param === param &&
+                        it.propertySet == context.updatedPropertySet &&
+                        it.dst == destinations
+                }
+
+            if (existing != null) {
+                existing.lastWrites.addAll(newLastWrites)
+            } else {
+                context.currentSet += entry()
+            }
+        }
+
         when (srcNode) {
             is Parameter -> {
                 // Add the (dereferenced) value of the respective argument
@@ -2240,7 +2577,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // If this is a short FunctionSummary, we also
                     // update the generalState to draw the additional DFG Edges
                     if (shortFS) {
-                        val newEntry = NodeWithPropertiesKey(src, equalLinkedHashSetOf<Any>(true))
+                        /*                        val newEntry = NodeWithPropertiesKey(src, equalLinkedHashSetOf<Any>(true))
                         doubleState.generalState.computeIfAbsent(currentNode) {
                             TripleLattice.Element(
                                 PowersetLattice.Element(),
@@ -2248,7 +2585,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 PowersetLattice.Element(),
                             )
                         }
-                        doubleState.generalState[currentNode]?.third?.add(newEntry)
+                        doubleState.generalState[currentNode]?.third?.add(newEntry)*/
+                        shortFsPrevEdges.add(
+                            NodeWithPropertiesKey(src, equalLinkedHashSetOf<Any>(true))
+                        )
                     }
                     val argumentValuesKey =
                         AddEntryArgumentValuesKey(IdKey(src), srcValueDepth, shortFS)
@@ -2293,16 +2633,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     it.propertySet == context.updatedPropertySet
                             }
 
-                        if (skipIfSaturated(existingSources, values)) {
+                        /*                        if (skipIfSaturated(existingSources, values)) {
                             continue
-                        }
+                        }*/
 
                         for (value in values) {
-                            insertIfNew(context, dedupKey, existingSources, value) {
+                            insertOrMerge(context, value, lastWrites) {
                                 MapDstToSrcEntry(
                                     param,
                                     value,
-                                    lastWrites,
+                                    concurrentCopyOfLastWrites(lastWrites),
                                     context.updatedPropertySet,
                                     destinations,
                                 )
@@ -2367,16 +2707,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 it.propertySet == context.updatedPropertySet
                         }
 
-                    if (skipIfSaturated(existingSources, parameterValues)) {
+                    /*                    if (skipIfSaturated(existingSources, parameterValues)) {
                         continue
-                    }
+                    }*/
 
                     for (value in parameterValues) {
-                        insertIfNew(context, dedupKey, existingSources, value) {
+                        insertOrMerge(context, value, lastWrites) {
                             MapDstToSrcEntry(
                                 param,
                                 value,
-                                lastWrites,
+                                concurrentCopyOfLastWrites(lastWrites),
                                 context.updatedPropertySet,
                                 destinations,
                             )
@@ -2388,24 +2728,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             is MemoryAddress -> {
                 val writesIdentity = IdKey(lastWrites)
                 for (context in getDestinationContexts()) {
-                    val dedupKey =
-                        AddEntryDedupKey(
-                            AddEntryDedupMode.MEMORY_ADDRESS,
-                            writesIdentity,
-                            context.updatedPropertySet,
-                            shortFS,
-                        )
-                    val existingSources =
-                        getOrBuildSources(context, dedupKey) {
-                            it.lastWrites === lastWrites &&
-                                it.propertySet == context.updatedPropertySet
-                        }
-
-                    insertIfNew(context, dedupKey, existingSources, srcNode) {
+                    insertOrMerge(context, srcNode, lastWrites) {
                         MapDstToSrcEntry(
                             param,
                             srcNode,
-                            lastWrites,
+                            concurrentCopyOfLastWrites(lastWrites),
                             context.updatedPropertySet,
                             destinations,
                         )
@@ -2452,16 +2779,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             it.lastWrites === lastWrites && shortFS in it.propertySet
                         }
 
-                    if (skipIfSaturated(existingSources, newSources)) {
+                    /*                    if (skipIfSaturated(existingSources, newSources)) {
                         continue
-                    }
+                    }*/
 
                     for (newSource in newSources) {
-                        insertIfNew(context, dedupKey, existingSources, newSource) {
+                        insertOrMerge(context, newSource, lastWrites) {
                             MapDstToSrcEntry(
                                 param,
                                 newSource,
-                                lastWrites,
+                                concurrentCopyOfLastWrites(lastWrites),
                                 context.updatedPropertySet,
                                 destinations,
                             )

@@ -54,9 +54,6 @@ import kotlin.math.absoluteValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -1970,14 +1967,14 @@ suspend fun <T> Collection<T>.forEachMaybeParallel(
     minChunkSize: Int = MIN_CHUNK_SIZE,
     action: suspend (T) -> Unit,
 ) {
-    if (size < minChunkSize || parallelism <= 1) {
-        // small – just run the loop
-        forEach { action(it) }
-    } else {
+    //    if (size < minChunkSize || parallelism <= 1) {
+    // small – just run the loop
+    forEach { action(it) }
+    /*    } else {
         coroutineScope {
             this@forEachMaybeParallel.splitInto(maxParts = parallelism, minPartSize = minChunkSize)
                 .map { chunk -> launch(Dispatchers.Default) { chunk.forEach { action(it) } } }
                 .joinAll()
         }
-    }
+    }*/
 }
