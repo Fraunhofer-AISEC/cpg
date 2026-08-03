@@ -1467,9 +1467,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 "derefderefvalue"
                         }
                         .map { it.start }
-                for ((argVal, _) in argVals) {
-                    //                argVals.forEachMaybeParallel(minChunkSize = MIN_CHUNK_SIZE /
-                    // 10) { (argVal, _) ->
+                argVals.forEachMaybeParallel(minChunkSize = MIN_CHUNK_SIZE / 10) { (argVal, _) ->
                     doubleState =
                         innerCalculateIncomingCallingContexts(
                             arg,
@@ -2068,37 +2066,32 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         invoke: Function,
         srcNode: Any?,
     ): MutableSet<NodeWithPropertiesKey> {
-        val ret = linkedSetOf<NodeWithPropertiesKey>()
+        val ret = mutableSetOf<NodeWithPropertiesKey>()
         // If we have nothing, the last write is probably the Function
         if (lastWrites.isEmpty()) ret.add(NodeWithPropertiesKey(invoke, equalLinkedHashSetOf()))
-        lastWrites
-            .sortedBy { it.stableKey() }
-            .forEach { (lw, properties) ->
-                // If the lastWrite is a Record, that's a hint from the functionSummary that we have
-                // a
-                // write to the base. Since we didn't know the base yet when creating the
-                // functionSummary, we fetch it now
-                val prev = if (lw is Record && srcNode is Node) srcNode else lw
-                if (shortFS) {
-                    when (prev) {
-                        is Function -> ret.add(NodeWithPropertiesKey(currentNode, properties))
-                        is Parameter -> {
-                            // For dummy functionSummary entries, we have an Integer indicating the
-                            // parameter's index for which we should use the Call's argument
-                            // here
-                            // Otherwise, the lastWrite was the Parameter itself, so we leave
-                            // it as is
-                            val index = properties.filterIsInstance<Int>().singleOrNull()
-                            if (index != null && index < currentNode.arguments.size)
-                                ret.add(
-                                    NodeWithPropertiesKey(currentNode.arguments[index], properties)
-                                )
-                            else ret.add(NodeWithPropertiesKey(prev, properties))
-                        }
-                        else -> ret.add(NodeWithPropertiesKey(prev, properties))
+        lastWrites.forEach { (lw, properties) ->
+            // If the lastWrite is a Record, that's a hint from the functionSummary that we have
+            // a write to the base. Since we didn't know the base yet when creating the
+            // functionSummary, we fetch it now
+            val prev = if (lw is Record && srcNode is Node) srcNode else lw
+            if (shortFS) {
+                when (prev) {
+                    is Function -> ret.add(NodeWithPropertiesKey(currentNode, properties))
+                    is Parameter -> {
+                        // For dummy functionSummary entries, we have an Integer indicating the
+                        // parameter's index for which we should use the Call's argument
+                        // here
+                        // Otherwise, the lastWrite was the Parameter itself, so we leave
+                        // it as is
+                        val index = properties.filterIsInstance<Int>().singleOrNull()
+                        if (index != null && index < currentNode.arguments.size)
+                            ret.add(NodeWithPropertiesKey(currentNode.arguments[index], properties))
+                        else ret.add(NodeWithPropertiesKey(prev, properties))
                     }
-                } else ret.add(NodeWithPropertiesKey(prev, properties))
-            }
+                    else -> ret.add(NodeWithPropertiesKey(prev, properties))
+                }
+            } else ret.add(NodeWithPropertiesKey(prev, properties))
+        }
         return ret
     }
 
