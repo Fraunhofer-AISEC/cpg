@@ -880,17 +880,7 @@ fun Node.followNextPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _, _ ->
-            val nextEdges = currentNode.nextPDGEdges.toMutableList()
-            if (interproceduralAnalysis) {
-                (currentNode as? Call)?.invokeEdges?.forEach {
-                    @Suppress("UNCHECKED_CAST")
-                    (it as? Edge<Node>)?.let { element -> nextEdges.add(element) }
-                }
-            }
-            // Clone the context per edge so sibling branches do not alias the same [Context].
-            nextEdges.map { Triple(it.end, it, ctx.clone()) }
-        },
+        x = { currentNode, ctx, _, _ -> currentNode.nextPDGStep(ctx, interproceduralAnalysis) },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
         continueAfterHit = continueAfterHit,
@@ -934,17 +924,7 @@ fun Node.followNextCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _, _ ->
-            val nextEdges: MutableList<Edge<Node>> = currentNode.nextCDGEdges.toMutableList()
-            if (interproceduralAnalysis) {
-                (currentNode as? Call)?.invokeEdges?.forEach {
-                    @Suppress("UNCHECKED_CAST")
-                    (it as? Edge<Node>)?.let { element -> nextEdges.add(element) }
-                }
-            }
-            // Clone the context per edge so sibling branches do not alias the same [Context].
-            nextEdges.map { Triple(it.end, it, ctx.clone()) }
-        },
+        x = { currentNode, ctx, _, _ -> currentNode.nextCDGStep(ctx, interproceduralAnalysis) },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
         continueAfterHit = continueAfterHit,
@@ -993,37 +973,7 @@ fun Node.followPrevPDGUntilHit(
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode, ctx, _, _ ->
-            // Pair each edge with its OWN cloned context, so sibling branches never share (and then
-            // mutate, via a call-stack push or the step counter) the same [Context].
-            val nextEdges =
-                currentNode.prevPDGEdges.mapTo(mutableListOf<Pair<Edge<Node>, Context>>()) { edge ->
-                    Pair(edge, ctx.clone())
-                }
-            if (interproceduralAnalysis) {
-                (currentNode as? Function)?.usageEdges?.forEach { edge ->
-                    val node = edge.end
-                    if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true) {
-                        val call = node.astParent as? Call
-                        if (call != null) {
-                            @Suppress("UNCHECKED_CAST")
-                            (edge as? Edge<Node>)?.let { e ->
-                                val newCtx = ctx.clone()
-                                newCtx.callStack.push(call)
-                                nextEdges.add(Pair(e, newCtx))
-                            }
-                        }
-                    }
-                }
-            }
-            // For some reason, the Usage edge needs the opposite direction to the PDG edge. It does
-            // make sense, but it's not intuitive and never will be. (Same as
-            // [followPrevCDGUntilHit];
-            // `prevPDGEdges` are incoming edges so their predecessor is `edge.start`, whereas the
-            // interprocedural `Usage` edges point from the function (start) to the call site
-            // (end).)
-            nextEdges.map { (edge, c) ->
-                Triple(if (edge is Usage) edge.end else edge.start, edge, c)
-            }
+            currentNode.prevPDGStep(ctx, interproceduralAnalysis, interproceduralMaxDepth)
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -1073,33 +1023,7 @@ fun Node.followPrevCDGUntilHit(
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
         x = { currentNode, ctx, _, _ ->
-            // Pair each edge with its OWN cloned context, so sibling branches never share (and then
-            // mutate, via a call-stack push or the step counter) the same [Context].
-            val nextEdges =
-                currentNode.prevCDGEdges.mapTo(mutableListOf<Pair<Edge<Node>, Context>>()) { edge ->
-                    Pair(edge, ctx.clone())
-                }
-            if (interproceduralAnalysis) {
-                (currentNode as? Function)?.usageEdges?.forEach { edge ->
-                    val node = edge.end
-                    if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true) {
-                        val call = node.astParent as? Call
-                        if (call != null) {
-                            @Suppress("UNCHECKED_CAST")
-                            (edge as? Edge<Node>)?.let { e ->
-                                val newCtx = ctx.clone()
-                                newCtx.callStack.push(call)
-                                nextEdges.add(Pair(e, newCtx))
-                            }
-                        }
-                    }
-                }
-            }
-            // For some reason, the Usage edge needs the opposite direction to the CDG edge. It does
-            // make sense, but it's not intuitive and never will be.
-            nextEdges.map { (edge, c) ->
-                Triple(if (edge is Usage) edge.end else edge.start, edge, c)
-            }
+            currentNode.prevCDGStep(ctx, interproceduralAnalysis, interproceduralMaxDepth)
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -1393,6 +1317,395 @@ fun Node.followXUntilHit(
         fulfilledPaths,
         (failedPaths + failedLoops).toSet().map { Pair(it.first, it.second) },
     )
+}
+
+/**
+ * A **path-free** variant of the MAY branch of [followXUntilHit]. Instead of rebuilding a witness
+ * [NodePath] for every hit, it returns only the *set* of predicate-satisfying frontier nodes
+ * reachable from [this] without passing through an earlier match.
+ *
+ * This reproduces the `findAllPossiblePaths = false`, `continueAfterHit = true` regime of
+ * [followXUntilHit] exactly:
+ * * visit-once dedup over the precise `(node, callStack)` MAY state (via [TraversalStateKey] /
+ *   [Context.stateKey] – the key deliberately excludes the index stack),
+ * * AT-hit pruning: a node satisfying [predicate] is recorded and *not* expanded past (frontier
+ *   semantics),
+ * * all frontier hits are collected (equivalent to `continueAfterHit = true`),
+ * * the same [earlyTermination], [contextExplosion] and [MAX_VISITED_STATES] safety bounds.
+ *
+ * It skips all parent/edge/context witness bookkeeping: the worklist carries the `(node, context)`
+ * pair directly. This exists for the very common caller pattern
+ * `followDFGEdgesUntilHit(findAllPossiblePaths = false, ...).fulfilled.map { it.nodes.last() }`,
+ * which throws the reconstructed paths away and keeps only the endpoint nodes.
+ *
+ * The returned set is deduplicated by object identity (like [followXUntilHit]'s `recordedHits`), so
+ * two *distinct* target nodes that happen to be structurally equal are both reported, while a node
+ * reachable via several paths (e.g. through a diamond) is reported exactly once.
+ *
+ * @param x The next-step callback, identical to the one taken by [followXUntilHit].
+ * @param ctx The initial [Context] (index stack, call stack, step counter).
+ * @param earlyTermination A predicate called on each *next* candidate node and the current
+ *   [Context]. If it returns `true`, that branch is abandoned. Unlike [followXUntilHit] this
+ *   variant never collects failed paths, so no record is kept.
+ * @param predicate A predicate that identifies the target node(s). A node satisfying it is added to
+ *   the result set and its successors are not explored.
+ */
+fun Node.followXUntilHitNodes(
+    x:
+        (
+            Node, Context, List<Triple<Node, Edge<Node>?, Context>>, MutableSet<NodePath>,
+        ) -> Collection<Triple<Node, Edge<Node>, Context>>,
+    ctx: Context = Context(steps = 0),
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
+    predicate: (Node) -> Boolean,
+): Set<Node> {
+    // Dedup reported hits by object identity, exactly like [followXUntilHit]'s `recordedHits`.
+    val hits = identitySetOf<Node>()
+
+    // If the start node already satisfies the predicate, it is the only frontier node.
+    if (predicate(this)) {
+        hits.add(this)
+        return hits
+    }
+
+    // Visit-once dedup over the precise `(node, callStack)` MAY state (see [TraversalStateKey]).
+    val visited = HashSet<TraversalStateKey>()
+    // The worklist carries the `(node, context)` pair directly: no parent/edge/witness maps needed.
+    val queue = ArrayDeque<Pair<Node, Context>>()
+    // `x` may append looping records to this set, but the MAY regime never consumes them, so a
+    // throwaway sink keeps the callback happy without any bookkeeping cost.
+    val loopingSink: MutableSet<NodePath> = mutableSetOf()
+
+    visited.add(ctx.stateKey(this))
+    queue.addLast(this to ctx)
+
+    while (queue.isNotEmpty()) {
+        if (visited.size > MAX_VISITED_STATES) {
+            // Pathological state-space blow-up: bail out with the hits found so far rather than
+            // exhaust the heap. A MAY result is allowed to be incomplete.
+            followXLog.warn(
+                "MAY node traversal from {} reached the {}-state backstop; returning the {} hit(s) " +
+                    "found so far. The result may be incomplete.",
+                this,
+                MAX_VISITED_STATES,
+                hits.size,
+            )
+            break
+        }
+        val (currentNode, currentContext) = queue.removeFirst()
+        // A light single-element path suffices: `x` only reads it to build looping records, which
+        // we discard (see [loopingSink]).
+        val lightPath =
+            listOf(Triple<Node, Edge<Node>?, Context>(currentNode, null, currentContext))
+        val nextNodes = x(currentNode, currentContext, lightPath, loopingSink)
+
+        for ((nextNode, _, newContext) in nextNodes) {
+            if (predicate(nextNode)) {
+                // Frontier pruning: record the hit and do NOT expand past it.
+                hits.add(nextNode)
+                continue
+            }
+            if (earlyTermination(nextNode, currentContext)) {
+                continue
+            }
+            if (contextExplosion(newContext)) {
+                // Recursion / stack explosion: cut this branch.
+                continue
+            }
+            // `stateKey` ignores `steps`, so compute it before incrementing and only advance the
+            // step counter for a genuinely new state we are about to enqueue.
+            val nextKey = newContext.stateKey(nextNode)
+            if (visited.add(nextKey)) {
+                newContext.inc()
+                queue.addLast(nextNode to newContext)
+            }
+        }
+    }
+
+    return hits
+}
+
+/**
+ * Path-free MAY variant of [followDFGEdgesUntilHit]: returns the set of frontier DFG nodes
+ * satisfying [predicate] (deduped by identity), skipping all witness bookkeeping. Mirrors the
+ * parameters of [followDFGEdgesUntilHit]; see [followXUntilHitNodes] for the exact semantics.
+ */
+fun Node.followDFGEdgesUntilHitNodes(
+    direction: AnalysisDirection = Forward(GraphToFollow.DFG),
+    vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
+    scope: AnalysisScope = Interprocedural(),
+    ctx: Context = Context(steps = 0),
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
+    predicate: (Node) -> Boolean,
+): Set<Node> {
+    return this.followXUntilHitNodes(
+        x = { currentNode, currentCtx, path, loopingPaths ->
+            direction.pickNextStep(
+                currentNode,
+                scope,
+                currentCtx,
+                path,
+                loopingPaths,
+                sensitivities = sensitivities,
+            )
+        },
+        ctx = ctx,
+        earlyTermination = earlyTermination,
+        predicate = predicate,
+    )
+}
+
+/**
+ * Path-free MAY variant of [followEOGEdgesUntilHit]: returns the set of frontier EOG nodes
+ * satisfying [predicate] (deduped by identity). See [followXUntilHitNodes] for the exact semantics.
+ */
+fun Node.followEOGEdgesUntilHitNodes(
+    direction: AnalysisDirection = Forward(GraphToFollow.EOG),
+    vararg sensitivities: AnalysisSensitivity = FilterUnreachableEOG + ContextSensitive,
+    scope: AnalysisScope = Interprocedural(),
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
+    predicate: (Node) -> Boolean,
+): Set<Node> {
+    return this.followXUntilHitNodes(
+        x = { currentNode, currentCtx, path, loopingPaths ->
+            direction.pickNextStep(
+                currentNode,
+                scope,
+                currentCtx,
+                path,
+                loopingPaths,
+                sensitivities = sensitivities,
+            )
+        },
+        earlyTermination = earlyTermination,
+        predicate = predicate,
+    )
+}
+
+/**
+ * Path-free MAY variant of [followPrevFullDFGEdgesUntilHit]: returns the set of frontier nodes
+ * satisfying [predicate] reachable by walking the prev full DFG edges. See [followXUntilHitNodes].
+ */
+fun Node.followPrevFullDFGEdgesUntilHitNodes(
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
+    predicate: (Node) -> Boolean,
+): Set<Node> {
+    return followDFGEdgesUntilHitNodes(
+        direction = Backward(GraphToFollow.DFG),
+        sensitivities = OnlyFullDFG + ContextSensitive,
+        scope = Interprocedural(),
+        earlyTermination = earlyTermination,
+        predicate = predicate,
+    )
+}
+
+/**
+ * Path-free MAY variant of [followNextFullDFGEdgesUntilHit]: returns the set of frontier nodes
+ * satisfying [predicate] reachable by walking the next full DFG edges. See [followXUntilHitNodes].
+ */
+fun Node.followNextFullDFGEdgesUntilHitNodes(
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
+    predicate: (Node) -> Boolean,
+): Set<Node> {
+    return followDFGEdgesUntilHitNodes(
+        direction = Forward(GraphToFollow.DFG),
+        sensitivities = OnlyFullDFG + ContextSensitive,
+        scope = Interprocedural(),
+        earlyTermination = earlyTermination,
+        predicate = predicate,
+    )
+}
+
+/**
+ * Path-free MAY variant of [followNextPDGUntilHit]: returns the set of frontier PDG nodes
+ * satisfying [predicate] (deduped by identity). See [followXUntilHitNodes] for the exact semantics.
+ */
+fun Node.followNextPDGUntilHitNodes(
+    interproceduralAnalysis: Boolean = false,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
+    predicate: (Node) -> Boolean,
+): Set<Node> {
+    return followXUntilHitNodes(
+        x = { currentNode, ctx, _, _ -> currentNode.nextPDGStep(ctx, interproceduralAnalysis) },
+        earlyTermination = earlyTermination,
+        predicate = predicate,
+    )
+}
+
+/**
+ * Path-free MAY variant of [followNextCDGUntilHit]: returns the set of frontier CDG nodes
+ * satisfying [predicate] (deduped by identity). See [followXUntilHitNodes] for the exact semantics.
+ */
+fun Node.followNextCDGUntilHitNodes(
+    interproceduralAnalysis: Boolean = false,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
+    predicate: (Node) -> Boolean,
+): Set<Node> {
+    return followXUntilHitNodes(
+        x = { currentNode, ctx, _, _ -> currentNode.nextCDGStep(ctx, interproceduralAnalysis) },
+        earlyTermination = earlyTermination,
+        predicate = predicate,
+    )
+}
+
+/**
+ * Path-free MAY variant of [followPrevPDGUntilHit]: returns the set of frontier PDG nodes
+ * satisfying [predicate] (backwards analysis, deduped by identity). See [followXUntilHitNodes].
+ */
+fun Node.followPrevPDGUntilHitNodes(
+    interproceduralAnalysis: Boolean = false,
+    interproceduralMaxDepth: Int? = null,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
+    predicate: (Node) -> Boolean,
+): Set<Node> {
+    return followXUntilHitNodes(
+        x = { currentNode, ctx, _, _ ->
+            currentNode.prevPDGStep(ctx, interproceduralAnalysis, interproceduralMaxDepth)
+        },
+        earlyTermination = earlyTermination,
+        predicate = predicate,
+    )
+}
+
+/**
+ * Path-free MAY variant of [followPrevCDGUntilHit]: returns the set of frontier CDG nodes
+ * satisfying [predicate] (backwards analysis, deduped by identity). See [followXUntilHitNodes].
+ */
+fun Node.followPrevCDGUntilHitNodes(
+    interproceduralAnalysis: Boolean = false,
+    interproceduralMaxDepth: Int? = null,
+    earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
+    predicate: (Node) -> Boolean,
+): Set<Node> {
+    return followXUntilHitNodes(
+        x = { currentNode, ctx, _, _ ->
+            currentNode.prevCDGStep(ctx, interproceduralAnalysis, interproceduralMaxDepth)
+        },
+        earlyTermination = earlyTermination,
+        predicate = predicate,
+    )
+}
+
+/**
+ * Computes the next-step successors along the *next* PDG edges (optionally following
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Call] invocations when [interproceduralAnalysis] is
+ * `true`). Shared by [followNextPDGUntilHit] and [followNextPDGUntilHitNodes] so both stay in sync.
+ * Each successor gets its OWN cloned [Context] so sibling branches never alias mutable state.
+ */
+@Suppress("UNCHECKED_CAST")
+private fun Node.nextPDGStep(
+    ctx: Context,
+    interproceduralAnalysis: Boolean,
+): List<Triple<Node, Edge<Node>, Context>> {
+    val nextEdges = this.nextPDGEdges.toMutableList()
+    if (interproceduralAnalysis) {
+        (this as? Call)?.invokeEdges?.forEach {
+            (it as? Edge<Node>)?.let { element -> nextEdges.add(element) }
+        }
+    }
+    return nextEdges.map { Triple(it.end, it, ctx.clone()) }
+}
+
+/**
+ * Computes the next-step successors along the *next* CDG edges (optionally following
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Call] invocations when [interproceduralAnalysis] is
+ * `true`). Shared by [followNextCDGUntilHit] and [followNextCDGUntilHitNodes] so both stay in sync.
+ */
+@Suppress("UNCHECKED_CAST")
+private fun Node.nextCDGStep(
+    ctx: Context,
+    interproceduralAnalysis: Boolean,
+): List<Triple<Node, Edge<Node>, Context>> {
+    val nextEdges: MutableList<Edge<Node>> = this.nextCDGEdges.toMutableList()
+    if (interproceduralAnalysis) {
+        (this as? Call)?.invokeEdges?.forEach {
+            (it as? Edge<Node>)?.let { element -> nextEdges.add(element) }
+        }
+    }
+    return nextEdges.map { Triple(it.end, it, ctx.clone()) }
+}
+
+/**
+ * Computes the next-step predecessors along the *prev* PDG edges (optionally following
+ * [de.fraunhofer.aisec.cpg.graph.declarations.Function] usages backwards across call boundaries
+ * when [interproceduralAnalysis] is `true`, up to [interproceduralMaxDepth] call levels). Shared by
+ * [followPrevPDGUntilHit] and [followPrevPDGUntilHitNodes] so both stay in sync.
+ */
+@Suppress("UNCHECKED_CAST")
+private fun Node.prevPDGStep(
+    ctx: Context,
+    interproceduralAnalysis: Boolean,
+    interproceduralMaxDepth: Int?,
+): List<Triple<Node, Edge<Node>, Context>> {
+    // Pair each edge with its OWN cloned context, so sibling branches never share (and then mutate,
+    // via a call-stack push or the step counter) the same [Context].
+    val nextEdges =
+        this.prevPDGEdges.mapTo(mutableListOf<Pair<Edge<Node>, Context>>()) { edge ->
+            Pair(edge, ctx.clone())
+        }
+    if (interproceduralAnalysis) {
+        (this as? Function)?.usageEdges?.forEach { edge ->
+            val node = edge.end
+            if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true) {
+                val call = node.astParent as? Call
+                if (call != null) {
+                    (edge as? Edge<Node>)?.let { e ->
+                        val newCtx = ctx.clone()
+                        newCtx.callStack.push(call)
+                        nextEdges.add(Pair(e, newCtx))
+                    }
+                }
+            }
+        }
+    }
+    // For some reason, the Usage edge needs the opposite direction to the PDG edge. It does make
+    // sense, but it's not intuitive and never will be. (`prevPDGEdges` are incoming edges so their
+    // predecessor is `edge.start`, whereas the interprocedural `Usage` edges point from the
+    // function
+    // (start) to the call site (end).)
+    return nextEdges.map { (edge, c) ->
+        Triple(if (edge is Usage) edge.end else edge.start, edge, c)
+    }
+}
+
+/**
+ * Computes the next-step predecessors along the *prev* CDG edges (optionally following
+ * [de.fraunhofer.aisec.cpg.graph.declarations.Function] usages backwards across call boundaries
+ * when [interproceduralAnalysis] is `true`, up to [interproceduralMaxDepth] call levels). Shared by
+ * [followPrevCDGUntilHit] and [followPrevCDGUntilHitNodes] so both stay in sync.
+ */
+@Suppress("UNCHECKED_CAST")
+private fun Node.prevCDGStep(
+    ctx: Context,
+    interproceduralAnalysis: Boolean,
+    interproceduralMaxDepth: Int?,
+): List<Triple<Node, Edge<Node>, Context>> {
+    // Pair each edge with its OWN cloned context, so sibling branches never share (and then mutate,
+    // via a call-stack push or the step counter) the same [Context].
+    val nextEdges =
+        this.prevCDGEdges.mapTo(mutableListOf<Pair<Edge<Node>, Context>>()) { edge ->
+            Pair(edge, ctx.clone())
+        }
+    if (interproceduralAnalysis) {
+        (this as? Function)?.usageEdges?.forEach { edge ->
+            val node = edge.end
+            if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true) {
+                val call = node.astParent as? Call
+                if (call != null) {
+                    (edge as? Edge<Node>)?.let { e ->
+                        val newCtx = ctx.clone()
+                        newCtx.callStack.push(call)
+                        nextEdges.add(Pair(e, newCtx))
+                    }
+                }
+            }
+        }
+    }
+    // For some reason, the Usage edge needs the opposite direction to the CDG edge. It does make
+    // sense, but it's not intuitive and never will be.
+    return nextEdges.map { (edge, c) ->
+        Triple(if (edge is Usage) edge.end else edge.start, edge, c)
+    }
 }
 
 /**
