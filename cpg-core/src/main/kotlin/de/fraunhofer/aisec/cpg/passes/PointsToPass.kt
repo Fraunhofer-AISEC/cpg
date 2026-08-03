@@ -952,83 +952,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     private suspend fun storeFunctionSummary(node: Function, doubleState: PointsToState.Element) {
         clearFSDummies(node.functionSummary)
-
-        for (param in node.parameters) {
-            val indexes: MutableSet<IndexKey> = linkedSetOf()
-            val values = doubleState.getValues(param, param).mapTo(IdentitySet()) { it.first }
-
-            for (value in values) {
-                if (doubleState.hasDeclarationStateValueEntry(value)) {
-                    indexes.add(IndexKey(value, 2))
-
-                    val derefValues =
-                        doubleState.getValues(value, value).mapTo(PowersetLattice.Element()) {
-                            it.first
-                        }
-
-                    for (derefValue in derefValues) {
-                        if (doubleState.hasDeclarationStateValueEntry(derefValue)) {
-                            indexes.add(IndexKey(derefValue, 3))
-                        }
-                    }
-                }
-            }
-
-            for ((idx, dstValueDepth) in indexes) {
-                val stateEntries =
-                    doubleState
-                        .fetchValueFromDeclarationState(
-                            idx,
-                            fetchFields = true,
-                            excludeShortFSValues = true,
-                        )
-                        .filterTo(PowersetLattice.Element()) { it.value.name != param.name }
-
-                data class KeyWithSubAccessEntry(val value: Any, val shortFS: Any)
-
-                val keysWithSubAccess =
-                    stateEntries
-                        .filter { it.subAccessName.isNotEmpty() }
-                        .mapTo(mutableSetOf()) { KeyWithSubAccessEntry(it.value, it.shortFS) }
-
-                val filteredStateEntries =
-                    stateEntries.filterNot { entry ->
-                        entry.subAccessName.isEmpty() &&
-                            KeyWithSubAccessEntry(entry.value, entry.shortFS) in keysWithSubAccess
-                    }
-
-                for ((value, shortFS, subAccessName, lastWrites) in filteredStateEntries) {
-                    if (
-                        value.name != param.name &&
-                            !(value is ParameterMemoryValue &&
-                                value.name.localName.contains("derefvalue") &&
-                                value.name.parent?.localName == param.name.localName) &&
-                            !(value is UnknownMemoryValue && lastWrites.isEmpty())
-                    ) {
-                        addParameterInfoToFS(
-                            node,
-                            param,
-                            dstValueDepth,
-                            value,
-                            shortFS,
-                            subAccessName,
-                            lastWrites,
-                        )
-                    }
-                }
-            }
-        }
-
-        if (node.functionSummary.isEmpty()) {
-            node.functionSummary.put(newLiteral("dummy"), ConcurrentHashMap.newKeySet<FSEntry>())
-        }
-    }
-
-    private suspend fun storeFunctionSummaryConcurrent(
-        node: Function,
-        doubleState: PointsToState.Element,
-    ) {
-        clearFSDummies(node.functionSummary)
         // We try to run this in outer coroutines for each param and inner coroutines per
         // param.
         // In order not to launch an immense amount of coroutines, we calculate their number before
@@ -2633,9 +2556,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     it.propertySet == context.updatedPropertySet
                             }
 
-                        /*                        if (skipIfSaturated(existingSources, values)) {
+                        if (skipIfSaturated(existingSources, values)) {
                             continue
-                        }*/
+                        }
 
                         for (value in values) {
                             insertOrMerge(context, value, lastWrites) {
@@ -2707,9 +2630,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 it.propertySet == context.updatedPropertySet
                         }
 
-                    /*                    if (skipIfSaturated(existingSources, parameterValues)) {
+                    if (skipIfSaturated(existingSources, parameterValues)) {
                         continue
-                    }*/
+                    }
 
                     for (value in parameterValues) {
                         insertOrMerge(context, value, lastWrites) {
@@ -2779,9 +2702,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             it.lastWrites === lastWrites && shortFS in it.propertySet
                         }
 
-                    /*                    if (skipIfSaturated(existingSources, newSources)) {
+                    if (skipIfSaturated(existingSources, newSources)) {
                         continue
-                    }*/
+                    }
 
                     for (newSource in newSources) {
                         insertOrMerge(context, newSource, lastWrites) {
