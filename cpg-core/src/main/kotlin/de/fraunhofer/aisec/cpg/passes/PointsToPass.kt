@@ -1871,96 +1871,87 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 )
 
                 val parameterWork =
-                    inv.functionSummary.entries
-                        .sortedWith(
-                            compareBy<Map.Entry<Node, MutableSet<FSEntry>>> { (param, _) ->
-                                    paramKindOrder(param)
+                    inv.functionSummary.mapNotNull { (param, fsEntries) ->
+                        val dst =
+                            when (param) {
+                                // If we have a record, we use the base as argument
+                                is Record -> {
+                                    (currentNode as? MemberCall)?.base
                                 }
-                                .thenBy { (param, _) -> param.stableKey() }
-                        )
-                        .mapNotNull { (param, fsEntries) ->
-                            val dst =
-                                when (param) {
-                                    // If we have a record, we use the base as argument
-                                    is Record -> {
-                                        (currentNode as? MemberCall)?.base
-                                    }
-                                    is Parameter ->
-                                        if (param.argumentIndex < currentNode.arguments.size)
-                                            currentNode.arguments[param.argumentIndex]
-                                        else null
-                                    is Return,
-                                    is Function -> currentNode
-                                    else -> null
-                                }
-
-                            if (dst == null) {
-                                null
-                            } else {
-                                val depthBuckets = Array(4) { mutableListOf<PreprocessedFSEntry>() }
-                                for ((
-                                    dstValueDepth,
-                                    srcNode,
-                                    srcValueDepth,
-                                    subAccessName,
-                                    lastWrites,
-                                    properties,
-                                ) in fsEntries) {
-                                    if (dstValueDepth in 0..3) {
-                                        val shortFS = properties.any { it == true }
-                                        val propertySet =
-                                            equalLinkedHashSetOf<Any>().apply { addAll(properties) }
-                                        val normalizedSrcNode =
-                                            when (srcNode) {
-                                                is Function -> currentNode
-                                                is Name -> {
-                                                    val memoryAddress =
-                                                        CallToMemAddrMap.computeIfAbsent(
-                                                                currentNode
-                                                            ) {
-                                                                ConcurrentIdentityHashMap()
-                                                            }
-                                                            .computeIfAbsent(srcNode) {
-                                                                MemoryAddress(srcNode)
-                                                            }
-                                                    memoryAddress.nextDFGEdges +=
-                                                        Dataflow(memoryAddress, inv)
-                                                    memoryAddress
-                                                }
-
-                                                else -> srcNode as? Node
-                                            }
-                                        val prev =
-                                            calculatePrevDFGs(
-                                                lastWrites,
-                                                shortFS,
-                                                currentNode,
-                                                inv,
-                                                srcNode,
-                                            )
-                                        depthBuckets[dstValueDepth].add(
-                                            PreprocessedFSEntry(
-                                                dstValueDepth,
-                                                subAccessName,
-                                                normalizedSrcNode,
-                                                srcValueDepth,
-                                                shortFS,
-                                                propertySet,
-                                                prev,
-                                            )
-                                        )
-                                    }
-                                }
-
-                                ParamFsWork(
-                                    param,
-                                    dst,
-                                    Array(4) { depth ->
-                                        deduplicatePreprocessedFSEntries(depthBuckets[depth])
-                                    },
-                                )
+                                is Parameter ->
+                                    if (param.argumentIndex < currentNode.arguments.size)
+                                        currentNode.arguments[param.argumentIndex]
+                                    else null
+                                is Return,
+                                is Function -> currentNode
+                                else -> null
                             }
+
+                        if (dst == null) {
+                            null
+                        } else {
+                            val depthBuckets = Array(4) { mutableListOf<PreprocessedFSEntry>() }
+                            for ((
+                                dstValueDepth,
+                                srcNode,
+                                srcValueDepth,
+                                subAccessName,
+                                lastWrites,
+                                properties,
+                            ) in fsEntries) {
+                                if (dstValueDepth in 0..3) {
+                                    val shortFS = properties.any { it == true }
+                                    val propertySet =
+                                        equalLinkedHashSetOf<Any>().apply { addAll(properties) }
+                                    val normalizedSrcNode =
+                                        when (srcNode) {
+                                            is Function -> currentNode
+                                            is Name -> {
+                                                val memoryAddress =
+                                                    CallToMemAddrMap.computeIfAbsent(currentNode) {
+                                                            ConcurrentIdentityHashMap()
+                                                        }
+                                                        .computeIfAbsent(srcNode) {
+                                                            MemoryAddress(srcNode)
+                                                        }
+                                                memoryAddress.nextDFGEdges +=
+                                                    Dataflow(memoryAddress, inv)
+                                                memoryAddress
+                                            }
+
+                                            else -> srcNode as? Node
+                                        }
+                                    val prev =
+                                        calculatePrevDFGs(
+                                            lastWrites,
+                                            shortFS,
+                                            currentNode,
+                                            inv,
+                                            srcNode,
+                                        )
+                                    depthBuckets[dstValueDepth].add(
+                                        PreprocessedFSEntry(
+                                            dstValueDepth,
+                                            subAccessName,
+                                            normalizedSrcNode,
+                                            srcValueDepth,
+                                            shortFS,
+                                            propertySet,
+                                            prev,
+                                        )
+                                    )
+                                }
+                            }
+
+                            ParamFsWork(
+                                param,
+                                dst,
+                                Array(4) { depth ->
+                                    deduplicatePreprocessedFSEntries(depthBuckets[depth])
+                                },
+                            )
                         }
+                    }
 
                 if (parameterWork.isEmpty()) {
                     return@forEach
