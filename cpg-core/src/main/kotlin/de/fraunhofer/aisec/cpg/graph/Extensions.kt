@@ -58,6 +58,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.slf4j.LoggerFactory
 
 /**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
@@ -1239,6 +1240,18 @@ fun Node.followXUntilHit(
         }
 
         while (queue.isNotEmpty()) {
+            if (parentOf.size > MAX_VISITED_STATES) {
+                // Pathological state-space blow-up: bail out with the hits collected so far rather
+                // than exhaust the heap. A MAY result is allowed to be incomplete.
+                followXLog.warn(
+                    "MAY traversal from {} reached the {}-state backstop; returning the {} hit(s) " +
+                        "found so far. The result may be incomplete.",
+                    this,
+                    MAX_VISITED_STATES,
+                    recordedHits.size,
+                )
+                break
+            }
             val currentKey = queue.removeFirst()
             val currentNode = nodeOf.getValue(currentKey)
             val currentContext = ctxOf.getValue(currentKey)
@@ -1409,19 +1422,36 @@ private const val MAX_CALL_STACK_BACKSTOP = 1000
 private const val MAX_INDEX_STACK_BACKSTOP = 1000
 
 /**
- * An immutable, flow-, context- and field-sensitive traversal state. Two states with the same
- * [node], call stack and index stack are indistinguishable for the remainder of the traversal, so
- * the MAY search may visit each such state at most once.
+ * Hard cap on the number of distinct MAY states (`(node, callStack)` keys) the visit-once search
+ * will retain. A MAY search keeps parent/context/node bookkeeping for every discovered state for
+ * the whole traversal (to rebuild witness paths), so an unexpectedly huge state space would
+ * otherwise exhaust the heap. When this cap is reached the search stops expanding and returns the
+ * hits found so far: a MAY result is allowed to be incomplete, and a bounded-but-incomplete answer
+ * is strictly better than an [OutOfMemoryError]. This is a backstop for pathological graphs; the
+ * primary bound is the `(node, callStack)` dedup itself.
  */
-private data class TraversalStateKey(
-    val node: Node,
-    val callStack: List<Call>,
-    val indexStack: List<IndexedDataflowGranularity>,
-)
+private const val MAX_VISITED_STATES = 1_000_000
+
+/** Logger for [followXUntilHit] diagnostics (e.g. the [MAX_VISITED_STATES] backstop). */
+private val followXLog = LoggerFactory.getLogger("de.fraunhofer.aisec.cpg.graph.FollowXUntilHit")
+
+/**
+ * An immutable traversal state used by the MAY search to visit each state at most once.
+ *
+ * The key is deliberately `(node, callStack)` only and does **not** include the index stack: on a
+ * field-sensitive interprocedural analysis many distinct index-stack contents reach the same
+ * `(node, callStack)`, and partitioning the visited set by the full index stack makes it explode
+ * combinatorially (and, on large real programs, exhausts the heap). Dropping the index stack from
+ * the key restores the historically bounded MAY behaviour: each `(node, callStack)` is expanded
+ * once, keeping the first-arriving (shortest) index-stack context. This can merge states that a
+ * fully index-sensitive dedup would keep apart, but a MAY analysis is explicitly allowed to be
+ * incomplete, and the memory bound matters more than that extra precision here.
+ */
+private data class TraversalStateKey(val node: Node, val callStack: List<Call>)
 
 /** Builds the [TraversalStateKey] for reaching [node] under this [Context]. */
 private fun Context.stateKey(node: Node): TraversalStateKey =
-    TraversalStateKey(node, callStack.toList(), indexStack.toList())
+    TraversalStateKey(node, callStack.toList())
 
 /**
  * Decides whether the state described by [ctx] must not be expanded any further because continuing
