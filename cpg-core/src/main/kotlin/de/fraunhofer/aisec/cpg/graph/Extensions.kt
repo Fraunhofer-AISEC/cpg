@@ -361,12 +361,14 @@ class FulfilledAndFailedPaths(
 fun Node.followPrevFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = true,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followDFGEdgesUntilHit(
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        continueAfterHit = continueAfterHit,
         earlyTermination = earlyTermination,
         predicate = predicate,
         direction = Backward(GraphToFollow.DFG),
@@ -442,6 +444,11 @@ fun Node.reachingWrites(): List<ReachingWrite> =
  * @param findAllPossiblePaths If `true` (the default), all possible paths through the graph are
  *   explored, even if a node has already been visited via another path. Set to `false` to visit
  *   each `(Node, Context)` pair at most once, which is faster but potentially incomplete.
+ * @param continueAfterHit Only used for a MAY analysis (`findAllPossiblePaths = false`). If
+ *   `false`, the traversal stops at the first reached target and returns just that single
+ *   (shortest) witness (a fast reachability check); [FulfilledAndFailedPaths.failed] is then left
+ *   empty. Defaults to `true` (report one witness per reachable target). Ignored for a MUST
+ *   analysis.
  * @param direction The direction in which EOG edges are traversed. Use [Forward] with
  *   [GraphToFollow.EOG] (the default) to walk the EOG in execution order, or [Backward] with
  *   [GraphToFollow.EOG] to walk against the execution order.
@@ -464,6 +471,7 @@ fun Node.reachingWrites(): List<ReachingWrite> =
 fun Node.followEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = true,
     direction: AnalysisDirection = Forward(GraphToFollow.EOG),
     vararg sensitivities: AnalysisSensitivity = FilterUnreachableEOG + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
@@ -483,6 +491,7 @@ fun Node.followEOGEdgesUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        continueAfterHit = continueAfterHit,
         earlyTermination = earlyTermination,
         predicate = predicate,
     )
@@ -503,6 +512,11 @@ fun Node.followEOGEdgesUntilHit(
  * @param findAllPossiblePaths If `true` (the default), all possible paths through the graph are
  *   explored, even if a node has already been visited via another path. Set to `false` to visit
  *   each `(Node, Context)` pair at most once, which is faster but potentially incomplete.
+ * @param continueAfterHit Only used for a MAY analysis (`findAllPossiblePaths = false`). If
+ *   `false`, the traversal stops at the first reached target and returns just that single
+ *   (shortest) witness (a fast reachability check); [FulfilledAndFailedPaths.failed] is then left
+ *   empty. Defaults to `true` (report one witness per reachable target). Ignored for a MUST
+ *   analysis.
  * @param direction The direction in which DFG edges are traversed. Use [Forward] with
  *   [GraphToFollow.DFG] (the default) to follow the data flow forwards (from definitions to uses),
  *   or [Backward] with [GraphToFollow.DFG] to follow it backwards (from uses to definitions).
@@ -533,6 +547,7 @@ fun Node.followEOGEdgesUntilHit(
 fun Node.followDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = true,
     direction: AnalysisDirection = Forward(GraphToFollow.DFG),
     vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
@@ -553,6 +568,7 @@ fun Node.followDFGEdgesUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        continueAfterHit = continueAfterHit,
         ctx = ctx,
         earlyTermination = earlyTermination,
         predicate = predicate,
@@ -857,6 +873,7 @@ fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<NodePath
 fun Node.followNextPDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = true,
     interproceduralAnalysis: Boolean = false,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
@@ -875,6 +892,7 @@ fun Node.followNextPDGUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        continueAfterHit = continueAfterHit,
         earlyTermination = earlyTermination,
         predicate = predicate,
     )
@@ -909,6 +927,7 @@ fun Node.followNextPDGUntilHit(
 fun Node.followNextCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = true,
     interproceduralAnalysis: Boolean = false,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
@@ -927,6 +946,7 @@ fun Node.followNextCDGUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        continueAfterHit = continueAfterHit,
         earlyTermination = earlyTermination,
         predicate = predicate,
     )
@@ -964,6 +984,7 @@ fun Node.followNextCDGUntilHit(
 fun Node.followPrevPDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = true,
     interproceduralAnalysis: Boolean = false,
     interproceduralMaxDepth: Int? = null,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
@@ -993,10 +1014,19 @@ fun Node.followPrevPDGUntilHit(
                     }
                 }
             }
-            nextEdges.map { (edge, c) -> Triple(edge.end, edge, c) }
+            // For some reason, the Usage edge needs the opposite direction to the PDG edge. It does
+            // make sense, but it's not intuitive and never will be. (Same as
+            // [followPrevCDGUntilHit];
+            // `prevPDGEdges` are incoming edges so their predecessor is `edge.start`, whereas the
+            // interprocedural `Usage` edges point from the function (start) to the call site
+            // (end).)
+            nextEdges.map { (edge, c) ->
+                Triple(if (edge is Usage) edge.end else edge.start, edge, c)
+            }
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        continueAfterHit = continueAfterHit,
         earlyTermination = earlyTermination,
         predicate = predicate,
     )
@@ -1034,6 +1064,7 @@ fun Node.followPrevPDGUntilHit(
 fun Node.followPrevCDGUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = true,
     interproceduralAnalysis: Boolean = false,
     interproceduralMaxDepth: Int? = null,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
@@ -1071,6 +1102,7 @@ fun Node.followPrevCDGUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        continueAfterHit = continueAfterHit,
         earlyTermination = earlyTermination,
         predicate = predicate,
     )
@@ -1096,6 +1128,15 @@ fun Node.followPrevCDGUntilHit(
  * @param findAllPossiblePaths If `true` (the default), every possible path through the graph is
  *   explored, even if a node has already been visited via a different path. Set to `false` to visit
  *   each `(Node, Context)` pair only once, which is faster but may miss some paths.
+ * @param continueAfterHit Only relevant for a **MAY** analysis (`findAllPossiblePaths == false`).
+ *   If `true` (the default), the search continues after a hit and reports one (shortest) witness
+ *   per distinct reachable target node. If `false`, the whole traversal stops as soon as the
+ *   *first* target is reached and returns exactly that single (shortest) witness. This is a pure
+ *   reachability query ("is any node satisfying [predicate] reachable?") and can be dramatically
+ *   faster on large graphs, but must be used with care: [FulfilledAndFailedPaths.failed] is left
+ *   empty in this mode, and only [FulfilledAndFailedPaths.fulfilled] is meaningful. The flag is
+ *   ignored for a MUST analysis (`findAllPossiblePaths == true`), which must enumerate every path
+ *   to decide inevitability.
  * @param ctx The initial [Context] for the traversal (index stack, call stack, step counter).
  *   Usually the default value suffices; supply a custom context e.g. when the analysis should start
  *   inside a specific call stack.
@@ -1117,6 +1158,7 @@ fun Node.followXUntilHit(
         ) -> Collection<Triple<Node, Edge<Node>, Context>>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = true,
     ctx: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean,
     predicate: (Node) -> Boolean,
@@ -1216,6 +1258,13 @@ fun Node.followXUntilHit(
                     // Only keep the first (shortest, thanks to BFS) witness per target node.
                     if (recordedHits.add(nextNode)) {
                         fulfilledPaths.add(witness(currentKey, nextNode, edge, newContext))
+                        if (!continueAfterHit) {
+                            // Reachability mode: a single reachable target answers the query, so
+                            // stop the whole BFS immediately. `failed` is intentionally left empty
+                            // here (see the [continueAfterHit] doc); callers that opt into early
+                            // termination only consume `fulfilled`.
+                            return FulfilledAndFailedPaths(fulfilledPaths, emptyList())
+                        }
                     }
                     continue
                 }
@@ -1428,12 +1477,14 @@ private fun contextExplosion(ctx: Context): Boolean {
 fun Node.followNextFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = true,
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followDFGEdgesUntilHit(
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        continueAfterHit = continueAfterHit,
         earlyTermination = earlyTermination,
         predicate = predicate,
         direction = Forward(GraphToFollow.DFG),

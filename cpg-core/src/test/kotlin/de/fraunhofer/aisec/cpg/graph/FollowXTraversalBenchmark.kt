@@ -143,6 +143,8 @@ class FollowXTraversalBenchmark {
         findAllPossiblePaths: Boolean,
         collectFailedPaths: Boolean,
         budgetLimit: Long = 300_000L,
+        continueAfterHit: Boolean = true,
+        predicate: (Node) -> Boolean = { it === target },
     ): BenchResult =
         runX(
             scenario,
@@ -152,6 +154,8 @@ class FollowXTraversalBenchmark {
             findAllPossiblePaths,
             collectFailedPaths,
             budgetLimit,
+            continueAfterHit = continueAfterHit,
+            predicate = predicate,
         ) { budget ->
             graph.asNextStep(budget)
         }
@@ -165,6 +169,8 @@ class FollowXTraversalBenchmark {
         findAllPossiblePaths: Boolean,
         collectFailedPaths: Boolean,
         budgetLimit: Long = 300_000L,
+        continueAfterHit: Boolean = true,
+        predicate: (Node) -> Boolean = { it === target },
         nextStepFactory:
             (Budget) -> (
                     Node, Context, List<Triple<Node, Edge<Node>?, Context>>, MutableSet<NodePath>,
@@ -181,8 +187,9 @@ class FollowXTraversalBenchmark {
                     x = nextStepFactory(budget),
                     collectFailedPaths = collectFailedPaths,
                     findAllPossiblePaths = findAllPossiblePaths,
+                    continueAfterHit = continueAfterHit,
                     earlyTermination = { _, _ -> false },
-                    predicate = { it === target },
+                    predicate = predicate,
                 )
             fulfilled = res.fulfilled.size
             failed = res.failed.size
@@ -354,6 +361,34 @@ class FollowXTraversalBenchmark {
         return Triple(entry, target, factory)
     }
 
+    /**
+     * A start node with two ways to reach a predicate-satisfying node: an immediate hit `t1` and a
+     * second hit `t2` at the end of a long chain of [chainLength] non-target nodes. A MAY analysis
+     * with `continueAfterHit = false` should stop at `t1` almost immediately (1 witness, ~1 step),
+     * while `continueAfterHit = true` keeps exploring the whole chain to also record `t2` (2
+     * witnesses, ~[chainLength] steps). Returns the graph, the start node and the set of target
+     * nodes.
+     */
+    private fun TestLanguageFrontend.multiTargetFan(
+        chainLength: Int
+    ): Triple<SyntheticGraph, Node, Set<Node>> {
+        val g = SyntheticGraph()
+        val start = newReference("mt_start")
+        val t1 = newReference("mt_t1")
+        g.edge(start, t1)
+        var current = newReference("mt_c0")
+        g.edge(start, current)
+        for (i in 1..chainLength) {
+            val next = newReference("mt_c$i")
+            g.edge(current, next)
+            current = next
+        }
+        val t2 = newReference("mt_t2")
+        g.edge(current, t2)
+        g.nodeCount = chainLength + 4
+        return Triple(g, start, setOf(t1, t2))
+    }
+
     // ---------------------------------------------------------------------------------------------
     // The benchmark entry point
     // ---------------------------------------------------------------------------------------------
@@ -366,6 +401,9 @@ class FollowXTraversalBenchmark {
         // bounded memory instead of OOM-ing the JVM.
         val smallBudget = 40_000L
         val tinyBudget = 8_000L
+        // Filled in by scenario 6 below; asserted on after the table is printed.
+        var mtAll: BenchResult? = null
+        var mtFirst: BenchResult? = null
         with(TestLanguageFrontend()) {
             // 1. Linear chain scaling – exposes the O(W^2) `worklist.maxBy { it.size }` scan even
             // on
@@ -401,9 +439,60 @@ class FollowXTraversalBenchmark {
             //    Kept on a tiny budget: with the current engine neither regime terminates, so we
             //    only want enough steps to prove the blow-up in bounded memory.
             recursionFreshCalls().let { (s, t, factory) ->
-                runX("recursion-fresh", "MAY", s, t, false, false, tinyBudget, factory)
-                runX("recursion-fresh", "MUST", s, t, true, true, tinyBudget, factory)
+                runX(
+                    "recursion-fresh",
+                    "MAY",
+                    s,
+                    t,
+                    false,
+                    false,
+                    tinyBudget,
+                    nextStepFactory = factory,
+                )
+                runX(
+                    "recursion-fresh",
+                    "MUST",
+                    s,
+                    t,
+                    true,
+                    true,
+                    tinyBudget,
+                    nextStepFactory = factory,
+                )
             }
+
+            // 6. Multi-target fan – demonstrates the `continueAfterHit` MAY early-exit. Two
+            //    reachable targets: an immediate hit and one behind a long chain. With
+            //    `continueAfterHit = false` the BFS returns on the first hit (~1 step, one
+            // witness);
+            //    with the default it explores the whole chain to also record the second hit.
+            val (mtG, mtStart, mtTargets) = multiTargetFan(2000)
+            mtAll =
+                run(
+                    "multiTargetFan(2000)",
+                    "MAY-all",
+                    mtG,
+                    mtStart,
+                    mtTargets.first(),
+                    false,
+                    false,
+                    smallBudget,
+                    continueAfterHit = true,
+                    predicate = { it in mtTargets },
+                )
+            mtFirst =
+                run(
+                    "multiTargetFan(2000)",
+                    "MAY-1st",
+                    mtG,
+                    mtStart,
+                    mtTargets.first(),
+                    false,
+                    false,
+                    smallBudget,
+                    continueAfterHit = false,
+                    predicate = { it in mtTargets },
+                )
         }
         printTable()
 
@@ -412,5 +501,17 @@ class FollowXTraversalBenchmark {
         val chainMay = results.first { it.scenario == "linearChain(500)" && it.config == "MAY" }
         assertTrue(!chainMay.exceeded, "MAY over a 500-node chain must not exceed the step budget")
         assertTrue(chainMay.fulfilled == 1, "MAY over a chain must find exactly one path")
+
+        // continueAfterHit early-exit: a full MAY traversal records both reachable targets, while
+        // the early-exit variant stops on the first hit with a single witness and far fewer steps.
+        val all = mtAll!!
+        val first = mtFirst!!
+        assertTrue(all.fulfilled == 2, "continueAfterHit=true must record both reachable targets")
+        assertTrue(first.fulfilled == 1, "continueAfterHit=false must stop after the first hit")
+        assertTrue(
+            first.steps < all.steps,
+            "continueAfterHit=false (${first.steps} steps) must expand far fewer nodes than a full " +
+                "MAY traversal (${all.steps} steps)",
+        )
     }
 }
