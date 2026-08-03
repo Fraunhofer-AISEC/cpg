@@ -44,7 +44,7 @@
   "dependencies": {
     "chart.js": "^4.5.1",
     "marked": "^16.3.0",
-    "monaco-editor": "^0.55.1"
+    "monaco-editor": "^0.56.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
