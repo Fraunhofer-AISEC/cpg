@@ -1769,34 +1769,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             .joinToString("|")
     }
 
-    private val nodeComparator: Comparator<Node> =
-        compareBy<Node> { it.stableKey() }
-            .thenBy { it::class.qualifiedName ?: "" }
-            .thenBy { it.name.toString() }
-
-    private val functionComparator: Comparator<Function> =
-        compareBy<Function> { it.name.toString() }
-            .thenBy { it.signature.toString() }
-            .thenBy { it.location?.toString() ?: "" }
-            .thenBy { it.stableKey() }
-
-    private val fsEntryComparator: Comparator<FSEntry> =
-        compareBy<FSEntry> { it.destValueDepth }
-            .thenBy { it.subAccessName }
-            .thenBy { it.srcValueDepth }
-            .thenBy { entry ->
-                when (val src = entry.srcNode) {
-                    is Node -> src.stableKey()
-                    is Name -> src.toString()
-                    null -> ""
-                    else -> src.toString()
-                }
-            }
-            .thenBy { entry ->
-                entry.properties.map { it.stablePropertyKey() }.sorted().joinToString(";")
-            }
-            .thenBy { entry -> entry.lastWrites.map { it.stableKey() }.sorted().joinToString(";") }
-
     private fun NodeWithPropertiesKey.stableKey(): String =
         "${node.stableKey()}|${properties.map { it.stablePropertyKey() }.sorted().joinToString(";")}"
 
@@ -1825,20 +1797,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             is Function -> 3
             else -> 4
         }
-
-    private val preprocessedFsEntryComparator: Comparator<PreprocessedFSEntry> =
-        compareBy<PreprocessedFSEntry> { it.dstValueDepth }
-            .thenBy { it.subAccessName }
-            .thenBy { it.srcValueDepth }
-            .thenBy { it.srcNode?.stableKey() ?: "" }
-            .thenBy { it.shortFS }
-            .thenBy {
-                it.propertySet
-                    .map { property -> property.stablePropertyKey() }
-                    .sorted()
-                    .joinToString(";")
-            }
-            .thenBy { it.prev.map { prev -> prev.stableKey() }.sorted().joinToString(";") }
 
     private fun copyMapDstToSrc(
         original: ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>
@@ -1885,23 +1843,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         addDynamicInvokesEdges(currentNode, doubleState)
 
         // The toIdentitySet avoids having the same elements multiple times
-        var invokes = currentNode.invokes.toIdentitySet().sortedWith(functionComparator)
+        var invokes = currentNode.invokes.toIdentitySet()
         // If we have multiple functions with the same name and the same signature and one has an
         // empty body, we assume that this is from the header so we ignore it
         invokes =
-            invokes
-                .mapFilteredTo(
-                    identitySetOf(),
-                    { inv ->
-                        !(inv.body == null &&
-                            // If the body is empty, check if we have the "real" Function
-                            // somewhere in our list
-                            invokes.any { it != inv && it.name == inv.name && it.type == inv.type })
-                    },
-                ) { inv ->
-                    inv
-                }
-                .sortedWith(functionComparator)
+            invokes.mapFilteredTo(
+                identitySetOf(),
+                { inv ->
+                    !(inv.body == null &&
+                        // If the body is empty, check if we have the "real" Function
+                        // somewhere in our list
+                        invokes.any { it != inv && it.name == inv.name && it.type == inv.type })
+                },
+            ) { inv ->
+                inv
+            }
         invokes.forEach { invoke ->
             val inv = calculateFunctionSummaries(invoke)
             if (inv != null) {
@@ -1942,21 +1898,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 null
                             } else {
                                 val depthBuckets = Array(4) { mutableListOf<PreprocessedFSEntry>() }
-                                /*                            for ((
+                                for ((
                                     dstValueDepth,
                                     srcNode,
                                     srcValueDepth,
                                     subAccessName,
                                     lastWrites,
                                     properties,
-                                ) in fsEntries) {*/
-                                for (fsEntry in fsEntries.sortedWith(fsEntryComparator)) {
-                                    val dstValueDepth = fsEntry.destValueDepth
-                                    val srcNode = fsEntry.srcNode
-                                    val srcValueDepth = fsEntry.srcValueDepth
-                                    val subAccessName = fsEntry.subAccessName
-                                    val lastWrites = fsEntry.lastWrites
-                                    val properties = fsEntry.properties
+                                ) in fsEntries) {
                                     if (dstValueDepth in 0..3) {
                                         val shortFS = properties.any { it == true }
                                         val propertySet =
