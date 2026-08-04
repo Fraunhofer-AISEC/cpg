@@ -37,6 +37,7 @@ plugins {
 
 // this is needed for the plugins block
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 

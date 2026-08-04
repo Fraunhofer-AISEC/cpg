@@ -21,6 +21,7 @@ java {
 // common repositories
 //
 repositories {
+    mavenLocal()
     mavenCentral()
 
     ivy {
