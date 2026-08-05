@@ -38,7 +38,8 @@ import kotlin.test.assertTrue
 /**
  * Tests that the JVM frontend maps bytecode access flags (`ACC_PUBLIC`, `ACC_PROTECTED`,
  * `ACC_PRIVATE`, the absence of all three, and `ACC_STATIC`) onto the canonical [Visibility] model,
- * while keeping the raw modifiers losslessly.
+ * while keeping the raw modifiers losslessly. It also pins the known limitation for *nested*
+ * classes, whose real accessibility is not recoverable from their own ClassFile access flags.
  */
 class JVMVisibilityTest {
     @Test
@@ -61,11 +62,36 @@ class JVMVisibilityTest {
         assertEquals(Visibility.PUBLIC, visibility.visibility)
         assertContains(visibility.modifiers, PUBLIC)
 
-        // A top-level class without any access flag is package-private -> PACKAGE.
+        // A top-level class without any access flag is package-private -> PACKAGE. This is a
+        // separate top-level class (its own PackagePrivate.class), not a nested class.
         val packagePrivate = tu.records["mypackage.PackagePrivate"]
         assertNotNull(packagePrivate)
         assertEquals(Visibility.PACKAGE, packagePrivate.visibility)
         assertFalse(packagePrivate.modifiers.contains(PUBLIC))
+
+        // Nested classes: SootUp only reads a class' own ClassFile access flags, which never carry
+        // ACC_PRIVATE/ACC_PROTECTED/ACC_STATIC -- a nested class' real accessibility lives in the
+        // enclosing class' InnerClasses attribute, which SootUp does not surface. We therefore
+        // cannot recover it and pin the resulting (limited) behavior here (see
+        // DeclarationHandler.applyAccessFlags).
+
+        // Real accessibility is `private`, but javac writes no access flag into the nested class'
+        // own ClassFile, so it is reported as package-private instead of PRIVATE.
+        val nestedPrivate = tu.records["mypackage.Visibility\$NestedPrivate"]
+        assertNotNull(nestedPrivate)
+        assertEquals(Visibility.PACKAGE, nestedPrivate.visibility)
+
+        // Real accessibility is `protected`, but javac marks the nested class' own ClassFile
+        // ACC_PUBLIC, so it is reported as PUBLIC instead of PROTECTED.
+        val nestedProtected = tu.records["mypackage.Visibility\$NestedProtected"]
+        assertNotNull(nestedProtected)
+        assertEquals(Visibility.PUBLIC, nestedProtected.visibility)
+
+        // A public nested class is the one case that survives: ACC_PUBLIC is present on its own
+        // ClassFile, so it maps to PUBLIC correctly.
+        val nestedStatic = tu.records["mypackage.Visibility\$NestedStatic"]
+        assertNotNull(nestedStatic)
+        assertEquals(Visibility.PUBLIC, nestedStatic.visibility)
 
         // Fields: cover every access-control value plus the static flag.
         val publicField = visibility.fields["publicField"]

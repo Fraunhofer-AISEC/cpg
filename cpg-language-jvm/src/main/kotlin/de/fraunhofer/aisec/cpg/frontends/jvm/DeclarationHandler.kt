@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 
 import de.fraunhofer.aisec.cpg.frontends.DeclarationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.frontends.HasKeywordSemantics
 import de.fraunhofer.aisec.cpg.frontends.KeywordSemantics
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -77,13 +78,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         // Map the class' access flags onto the canonical visibility model. The class is not yet on
         // the scope stack, so the current scope reflects its enclosing (declaration) context.
-        record.applyAccessFlags(
-            sootClass.modifiers.mapTo(mutableSetOf()) { it.name.lowercase() },
-            isPublic = sootClass.isPublic,
-            isProtected = sootClass.isProtected,
-            isPrivate = sootClass.isPrivate,
-            isStatic = sootClass.isStatic,
-        )
+        record.applyAccessFlags(sootClass.modifiers.lowercasedNames())
 
         // Collect super class
         val o = sootClass.superclass
@@ -139,13 +134,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
             }
 
         // Map the method's access flags onto the canonical visibility model.
-        method.applyAccessFlags(
-            sootMethod.modifiers.mapTo(mutableSetOf()) { it.name.lowercase() },
-            isPublic = sootMethod.isPublic,
-            isProtected = sootMethod.isProtected,
-            isPrivate = sootMethod.isPrivate,
-            isStatic = sootMethod.isStatic,
-        )
+        method.applyAccessFlags(sootMethod.modifiers.lowercasedNames())
 
         // Enter method scope
         frontend.scopeManager.enterScope(method)
@@ -181,13 +170,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         // Map the field's access flags onto the canonical visibility model. A field is always a
         // record member.
-        declaration.applyAccessFlags(
-            field.modifiers.mapTo(mutableSetOf()) { it.name.lowercase() },
-            isPublic = field.isPublic,
-            isProtected = field.isProtected,
-            isPrivate = field.isPrivate,
-            isStatic = field.isStatic,
-        )
+        declaration.applyAccessFlags(field.modifiers.lowercasedNames())
 
         return declaration
     }
@@ -211,45 +194,45 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
     /**
      * Projects the JVM bytecode access flags of a declaration onto the canonical visibility model.
      *
-     * The raw access flags (including ones without a canonical meaning, such as `final` or
-     * `volatile`) are kept losslessly in [Declaration.modifiers] via [rawModifiers]. The
-     * access-control flags are additionally interpreted via the language's
-     * [de.fraunhofer.aisec.cpg.frontends.HasKeywordSemantics] trait and projected onto
-     * [Declaration.visibility]; the *absence* of `ACC_PUBLIC`/`ACC_PROTECTED`/`ACC_PRIVATE` denotes
-     * Java's package-private default and therefore maps to [Visibility.PACKAGE]. `ACC_STATIC` is
-     * projected onto [ValueDeclaration.isStatic] where applicable.
+     * The [rawModifiers] are the lower-cased access-flag spellings, including ones without a
+     * canonical meaning (such as `final` or `volatile`); they are kept losslessly in
+     * [Declaration.modifiers]. Each flag is additionally interpreted via the language's
+     * [HasKeywordSemantics] trait and the results are merged per axis:
+     * `public`/`protected`/`private` set [Declaration.visibility] while `static` sets
+     * [ValueDeclaration.isStatic]. A declaration carries at most one access-control flag,
+     * optionally combined with `static`, so folding the flags together is unambiguous. Flags this
+     * language does not model yield empty [KeywordSemantics] and are ignored here. The *absence* of
+     * `public`/`protected`/`private` denotes Java's package-private default and therefore maps to
+     * [Visibility.PACKAGE].
+     *
+     * Limitation for nested classes: the JVM stores a nested class' real accessibility
+     * (`private`/`protected`/`static`) in the *enclosing* class' `InnerClasses` attribute, not in
+     * the nested class' own ClassFile `access_flags`. SootUp only surfaces the latter
+     * (`AsmClassSource.resolveModifiers`), so a nested `private`/`protected` class is reported as
+     * [Visibility.PACKAGE]/[Visibility.PUBLIC] and a nested `static` class is not marked static.
+     * [JVMVisibilityTest] pins this (currently unavoidable) behavior. Field- and method-level flags
+     * are unaffected, as member access flags live in the member itself.
      */
-    private fun Declaration.applyAccessFlags(
-        rawModifiers: Set<String>,
-        isPublic: Boolean,
-        isProtected: Boolean,
-        isPrivate: Boolean,
-        isStatic: Boolean,
-    ) {
+    private fun Declaration.applyAccessFlags(rawModifiers: Set<String>) {
         modifiers = modifiers + rawModifiers
 
         val language = frontend.language
-        if (language !is JVMLanguage) {
+        if (language !is HasKeywordSemantics) {
             return
         }
 
-        val keywords = buildList {
-            if (isPublic) add(PUBLIC)
-            if (isProtected) add(PROTECTED)
-            if (isPrivate) add(PRIVATE)
-            if (isStatic) add(STATIC)
-        }
-
         val semantics =
-            keywords.fold(KeywordSemantics()) { acc, keyword ->
+            rawModifiers.fold(KeywordSemantics()) { acc, keyword ->
                 acc.merge(language.interpretKeyword(keyword, currentDeclarationContext))
             }
 
         // No access flag at all means package-private (Visibility.PACKAGE) in the JVM.
         visibility = semantics.visibility ?: Visibility.PACKAGE
 
-        if (this is ValueDeclaration) {
-            semantics.isStatic?.let { this.isStatic = it }
-        }
+        (this as? ValueDeclaration)?.let { vd -> semantics.isStatic?.let { vd.isStatic = it } }
     }
 }
+
+/** Returns the lower-cased [Enum.name]s of these access-flag modifiers. */
+private fun Iterable<Enum<*>>.lowercasedNames(): MutableSet<String> =
+    mapTo(mutableSetOf()) { it.name.lowercase() }

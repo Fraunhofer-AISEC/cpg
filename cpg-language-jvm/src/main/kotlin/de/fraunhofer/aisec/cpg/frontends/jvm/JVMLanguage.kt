@@ -50,11 +50,8 @@ import kotlin.reflect.KClass
  * [de.fraunhofer.aisec.cpg.graph.HasModifiers.modifiers].
  */
 const val PUBLIC = "public"
-
 const val PROTECTED = "protected"
-
 const val PRIVATE = "private"
-
 const val STATIC = "static"
 
 /**
