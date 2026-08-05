@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
@@ -40,6 +41,14 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
 
+/** The Java access modifier keywords, used to control member visibility. */
+const val PUBLIC = "public"
+const val PROTECTED = "protected"
+const val PRIVATE = "private"
+
+/** The Java `static` modifier, marking a class-level (rather than per-instance) member. */
+const val STATIC = "static"
+
 /** The Java language. */
 open class JavaLanguage :
     Language<JavaLanguageFrontend>(),
@@ -50,7 +59,9 @@ open class JavaLanguage :
     HasUnknownType,
     HasShortCircuitOperators,
     HasFunctionOverloading,
-    HasImplicitReceiver {
+    HasImplicitReceiver,
+    HasKeywordSemantics,
+    HasAccessControl {
     override val fileExtensions = listOf("java")
     override val namespaceDelimiter = "."
     @DoNotPersist
@@ -103,6 +114,34 @@ open class JavaLanguage :
             "String" to StringType("java.lang.String", this),
             "java.lang.String" to StringType("java.lang.String", this),
         )
+
+    /**
+     * Interprets a Java declaration keyword into its canonical [KeywordSemantics]. Java has genuine
+     * member access control, so the access modifiers `public`/`protected`/`private` map directly
+     * onto the corresponding [Visibility]. `static` marks a class-level (rather than per-instance)
+     * member when it appears on a record member ([DeclarationContext.RECORD]); it carries no
+     * canonical semantics elsewhere.
+     *
+     * Note that Java's *default* (no access modifier) visibility cannot be expressed here, since
+     * [interpretKeyword] only ever sees the keywords that are actually present. The absence of an
+     * access modifier is therefore resolved by the frontend's declaration handler after folding all
+     * present keywords (see `DeclarationHandler.applyVisibility`): ordinary members and types
+     * default to package-private ([Visibility.PACKAGE]), whereas interface members are implicitly
+     * public ([Visibility.PUBLIC]).
+     */
+    override fun interpretKeyword(keyword: String, context: DeclarationContext): KeywordSemantics {
+        return when (keyword) {
+            PUBLIC -> KeywordSemantics(visibility = Visibility.PUBLIC)
+            PROTECTED -> KeywordSemantics(visibility = Visibility.PROTECTED)
+            PRIVATE -> KeywordSemantics(visibility = Visibility.PRIVATE)
+            STATIC ->
+                when (context) {
+                    DeclarationContext.RECORD -> KeywordSemantics(isStatic = true)
+                    else -> KeywordSemantics()
+                }
+            else -> KeywordSemantics()
+        }
+    }
 
     override fun propagateTypeOfBinaryOperation(
         operatorCode: String?,

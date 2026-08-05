@@ -329,6 +329,55 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     }
 
     @Test
+    fun testVisibility() {
+        val file = File("src/test/resources/compiling/Visibility.java")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<JavaLanguage>()
+            }
+        assertNotNull(tu)
+
+        val someInterface = tu.records["SomeInterface"]
+        assertNotNull(someInterface)
+        assertEquals("interface", someInterface.kind)
+
+        // Interface members are implicitly public; interface fields are implicitly static.
+        val constant = someInterface.fields["CONSTANT"]
+        assertNotNull(constant)
+        assertEquals(Visibility.PUBLIC, constant.visibility)
+        assertTrue(constant.isStatic)
+
+        val doSomething = someInterface.methods["doSomething"]
+        assertNotNull(doSomething)
+        assertEquals(Visibility.PUBLIC, doSomething.visibility)
+
+        // A member type of an interface is implicitly public as well.
+        val nested = someInterface.records["Nested"]
+        assertNotNull(nested)
+        assertEquals(Visibility.PUBLIC, nested.visibility)
+
+        // A field of an ordinary (non-interface) class without an access modifier is
+        // package-private and not static.
+        val nestedField = nested.fields["nestedField"]
+        assertNotNull(nestedField)
+        assertEquals(Visibility.PACKAGE, nestedField.visibility)
+        assertFalse(nestedField.isStatic)
+
+        // Members of an ordinary class without an access modifier are package-private.
+        val someClass = tu.records["SomeClass"]
+        assertNotNull(someClass)
+        assertEquals(Visibility.PACKAGE, someClass.visibility)
+
+        val packageField = someClass.fields["packageField"]
+        assertNotNull(packageField)
+        assertEquals(Visibility.PACKAGE, packageField.visibility)
+
+        val packageMethod = someClass.methods["packageMethod"]
+        assertNotNull(packageMethod)
+        assertEquals(Visibility.PACKAGE, packageMethod.visibility)
+    }
+
+    @Test
     fun testNameExpressions() {
         val file = File("src/test/resources/compiling/NameExpression.java")
         val declaration =

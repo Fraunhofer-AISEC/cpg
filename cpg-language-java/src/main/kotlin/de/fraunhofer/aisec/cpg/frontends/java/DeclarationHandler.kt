@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java
 
+import com.github.javaparser.ast.Modifier
 import com.github.javaparser.ast.Node
+import com.github.javaparser.ast.NodeList
 import com.github.javaparser.ast.body.*
 import com.github.javaparser.ast.body.ConstructorDeclaration
 import com.github.javaparser.ast.body.FieldDeclaration
@@ -36,8 +38,11 @@ import com.github.javaparser.ast.stmt.ReturnStmt
 import com.github.javaparser.ast.stmt.Statement
 import com.github.javaparser.ast.type.ReferenceType
 import com.github.javaparser.resolution.UnsolvedSymbolException
+import de.fraunhofer.aisec.cpg.frontends.DeclarationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
+import de.fraunhofer.aisec.cpg.frontends.HasKeywordSemantics
+import de.fraunhofer.aisec.cpg.frontends.KeywordSemantics
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
@@ -47,6 +52,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
+import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
+import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
@@ -57,6 +64,77 @@ import java.util.function.Supplier
 
 open class DeclarationHandler(lang: JavaLanguageFrontend) :
     Handler<Declaration, Node, JavaLanguageFrontend>(Supplier { ProblemDeclaration() }, lang) {
+
+    /**
+     * The [DeclarationContext] the frontend is currently building a declaration in, derived from
+     * the active scope. A record member is built while the enclosing [RecordScope] is active; a
+     * declaration inside a function or block (e.g. a local or anonymous class) is
+     * [DeclarationContext.LOCAL]; everything else (in particular a top-level, package-level type)
+     * is treated as [DeclarationContext.GLOBAL]. This is what a [HasKeywordSemantics] language
+     * needs in order to interpret a context-dependent keyword such as `static`.
+     */
+    private val currentDeclarationContext: DeclarationContext
+        get() =
+            when (frontend.scopeManager.currentScope) {
+                is RecordScope -> DeclarationContext.RECORD
+                is FunctionScope,
+                is LocalScope -> DeclarationContext.LOCAL
+                else -> DeclarationContext.GLOBAL
+            }
+
+    /** The keyword spellings of these JavaParser [Modifier]s, e.g. `{"public", "static"}`. */
+    private val NodeList<Modifier>.keywords: Set<String>
+        get() = mapTo(mutableSetOf()) { it.keyword.asString() }
+
+    /**
+     * Projects the raw Java [Declaration.modifiers] of [declaration] onto the canonical
+     * [Declaration.visibility] (and [ValueDeclaration.isStatic]).
+     *
+     * The lossless spelling stays in [Declaration.modifiers]; the *meaning* of each keyword is
+     * delegated to the language's [HasKeywordSemantics] trait and the results are folded together.
+     *
+     * Two Java defaults cannot be expressed by the keyword-based interpretation (which only ever
+     * sees keywords that are actually present), so we apply them here:
+     * - A member or type without any of `public`/`protected`/`private` is package-private, so if no
+     *   keyword contributed an explicit visibility we map it to [Visibility.PACKAGE] rather than
+     *   leaving it [Visibility.UNKNOWN]. Local and anonymous types ([DeclarationContext.LOCAL])
+     *   have no package-level accessibility and are left [Visibility.UNKNOWN].
+     * - Every member of an interface is *implicitly public* (JLS §9.3-§9.5), and interface fields
+     *   are *implicitly `public static final`*. Since interfaces are modeled as records, we detect
+     *   this via the enclosing record's kind and default such members to [Visibility.PUBLIC]
+     *   (fields additionally to `static`).
+     */
+    private fun applyVisibility(declaration: Declaration) {
+        val language = language as? HasKeywordSemantics ?: return
+
+        val context = currentDeclarationContext
+        val semantics =
+            declaration.modifiers.fold(KeywordSemantics()) { acc, keyword ->
+                acc.merge(language.interpretKeyword(keyword, context))
+            }
+
+        semantics.visibility?.let { declaration.visibility = it }
+        if (declaration is ValueDeclaration) {
+            semantics.isStatic?.let { declaration.isStatic = it }
+        }
+
+        // A member is declared inside an interface if the enclosing record is one. Interfaces are
+        // modeled as records with kind "interface".
+        val inInterface =
+            (frontend.scopeManager.currentScope as? RecordScope)?.astNode.let {
+                it is Record && it.kind == "interface"
+            }
+
+        if (declaration.visibility == Visibility.UNKNOWN && context != DeclarationContext.LOCAL) {
+            declaration.visibility = if (inInterface) Visibility.PUBLIC else Visibility.PACKAGE
+        }
+
+        // Interface fields are implicitly static, regardless of an explicit `static` keyword.
+        if (inInterface && declaration is Field) {
+            declaration.isStatic = true
+        }
+    }
+
     fun handleConstructor(constructorDeclaration: ConstructorDeclaration): Constructor {
         val resolvedConstructor = constructorDeclaration.resolve()
         val currentRecordDecl = frontend.scopeManager.currentRecord
@@ -66,6 +144,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 currentRecordDecl,
                 rawNode = constructorDeclaration,
             )
+        declaration.modifiers = constructorDeclaration.modifiers.keywords
+        applyVisibility(declaration)
         frontend.scopeManager.enterScope(declaration)
         createMethodReceiver(currentRecordDecl, declaration)
         declaration.addThrowTypes(
@@ -112,8 +192,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 currentRecordDecl,
                 rawNode = methodDecl,
             )
-        functionDeclaration.modifiers =
-            methodDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+        functionDeclaration.modifiers = methodDecl.modifiers.keywords
+        applyVisibility(functionDeclaration)
 
         frontend.scopeManager.enterScope(functionDeclaration)
         createMethodReceiver(currentRecordDecl, functionDeclaration)
@@ -171,13 +251,14 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     open fun handleClassOrInterfaceDeclaration(
         classInterDecl: ClassOrInterfaceDeclaration
     ): Record {
-        // TODO: support other kinds, such as interfaces
         val fqn = classInterDecl.fullyQualifiedName.orElse(classInterDecl.nameAsString)
 
         // Todo adapt name using a new type of scope "Namespace/Package scope"
 
-        // add a type declaration
-        val recordDeclaration = this.newRecord(fqn, "class", rawNode = classInterDecl)
+        // add a type declaration; interfaces are modeled as records with kind "interface" so that
+        // their members can be recognized as implicitly public (see applyVisibility)
+        val kind = if (classInterDecl.isInterface) "interface" else "class"
+        val recordDeclaration = this.newRecord(fqn, kind, rawNode = classInterDecl)
         recordDeclaration.superClasses =
             classInterDecl.extendedTypes
                 .map { type -> frontend.getTypeAsGoodAsPossible(type) }
@@ -186,8 +267,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             classInterDecl.implementedTypes
                 .map { type -> frontend.getTypeAsGoodAsPossible(type) }
                 .toMutableList()
-        recordDeclaration.modifiers =
-            classInterDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+        recordDeclaration.modifiers = classInterDecl.modifiers.keywords
+        applyVisibility(recordDeclaration)
 
         frontend.typeManager.addTypeParameter(
             recordDeclaration,
@@ -278,11 +359,15 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 this.newField(
                     variable.name.asString(),
                     type,
-                    fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet(),
+                    fieldDecl.modifiers.keywords,
                     isStatic = fieldDecl.isStatic,
                     initializer = initializer,
                     rawNode = fieldDecl,
                 )
+            // applyVisibility is the authoritative source for isStatic on record members: it
+            // re-derives it from the `static` keyword and additionally marks interface fields
+            // static. The isStatic passed to newField above agrees for ordinary classes.
+            applyVisibility(fieldDeclaration)
             frontend.processAnnotations(fieldDeclaration, fieldDecl)
             declarationSequence.addDeclaration(fieldDeclaration)
         }
@@ -292,6 +377,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     fun handleEnumeration(enumDecl: EnumDeclaration): Enumeration {
         val name = enumDecl.nameAsString
         val enumDeclaration = this.newEnumeration(name, rawNode = enumDecl)
+        enumDeclaration.modifiers = enumDecl.modifiers.keywords
+        applyVisibility(enumDeclaration)
 
         val superTypes = enumDecl.implementedTypes.map { frontend.getTypeAsGoodAsPossible(it) }
         enumDeclaration.superClasses.addAll(superTypes)
@@ -399,6 +486,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     fun handleEnumConstant(enumConstDecl: EnumConstantDeclaration): EnumConstant {
         val currentEnum = frontend.scopeManager.currentRecord
         val result = this.newEnumConstant(enumConstDecl.nameAsString, rawNode = enumConstDecl)
+        // Enum constants are implicitly `public static final` in Java (JLS §8.9.1).
+        result.visibility = Visibility.PUBLIC
+        result.isStatic = true
         if (enumConstDecl.arguments.isNotEmpty()) {
             val arguments =
                 enumConstDecl.arguments.mapNotNull { frontend.expressionHandler.handle(it) }
