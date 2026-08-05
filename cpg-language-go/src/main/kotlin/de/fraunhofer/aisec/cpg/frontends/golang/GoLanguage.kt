@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Literal
@@ -295,5 +296,37 @@ open class GoLanguage :
             // For all the rest, we take the default behavior
             else -> super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
         }
+    }
+
+    companion object {
+        /**
+         * Maps a Go identifier onto the canonical [Visibility]. Go has no access-control keywords:
+         * the visibility of a declaration is derived solely from the casing of its identifier (see
+         * https://go.dev/ref/spec#Exported_identifiers):
+         * - an identifier whose first character is a Unicode upper-case letter is *exported* and is
+         *   therefore reachable from other packages, which we model as [Visibility.PUBLIC];
+         * - any other identifier is *unexported* and confined to its own package, which we model as
+         *   [Visibility.PACKAGE] (module/package visibility, not tied to a record — Go has no
+         *   record-level `private`/`protected` access control).
+         *
+         * The blank identifier `_` as well as empty/unnamed declarations carry no meaningful
+         * visibility and are left as [Visibility.UNKNOWN] ("no restriction").
+         *
+         * This applies uniformly to top-level declarations (funcs, vars, consts, types) as well as
+         * to struct fields and methods.
+         */
+        fun visibilityOf(name: String) =
+            when {
+                // The blank identifier and unnamed declarations have no export semantics.
+                name.isEmpty() || name == "_" -> Visibility.UNKNOWN
+                // Go decides "exported" on the first *rune*, so we look at the first full code
+                // point
+                // (not the first UTF-16 char) to handle non-ASCII identifiers (e.g. "Über" vs
+                // "über"). Character.isUpperCase(int) is the code-point overload; note it returns
+                // false for uncased scripts (e.g. CJK), which matches Go: only Unicode upper-case
+                // letters export, everything else is package-scoped.
+                Character.isUpperCase(name.codePointAt(0)) -> Visibility.PUBLIC
+                else -> Visibility.PACKAGE
+            }
     }
 }

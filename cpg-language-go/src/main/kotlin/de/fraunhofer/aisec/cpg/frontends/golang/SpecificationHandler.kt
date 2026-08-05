@@ -99,6 +99,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         structType: GoStandardLibrary.Ast.StructType,
     ): Record {
         val record = buildRecordDeclaration(structType, typeSpec.name.name, typeSpec)
+        // A named struct type is exported/unexported based on the casing of its type name.
+        record.visibility = GoLanguage.visibilityOf(typeSpec.name.name)
 
         return record
     }
@@ -129,6 +131,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     }
 
                 val decl = newField(fieldName, type, modifiers, rawNode = field)
+                // A struct field is exported/unexported based on the casing of its (field or, for
+                // embedded fields, type) name.
+                decl.visibility = GoLanguage.visibilityOf(fieldName)
                 frontend.scopeManager.addDeclaration(decl)
                 record.fields += decl
             }
@@ -144,6 +149,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         interfaceType: GoStandardLibrary.Ast.InterfaceType,
     ): Declaration {
         val record = newRecord(typeSpec.name.name, "interface", rawNode = typeSpec)
+        // A named interface type is exported/unexported based on the casing of its type name.
+        record.visibility = GoLanguage.visibilityOf(typeSpec.name.name)
 
         frontend.scopeManager.enterScope(record)
 
@@ -158,6 +165,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 if (field.names.isNotEmpty()) {
                     val method = newMethod(field.names[0].name, rawNode = field)
                     method.type = type
+                    // An interface method is exported/unexported based on the casing of its name.
+                    method.visibility = GoLanguage.visibilityOf(field.names[0].name)
 
                     frontend.scopeManager.enterScope(method)
 
@@ -174,7 +183,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     log.debug("Adding {} as super class of interface {}", type.name, record.name)
                     // Otherwise, it contains either types or interfaces. For now, we
                     // hope that it only has interfaces. We consider embedded
-                    // interfaces as sort of super types for this interface.
+                    // interfaces as sort of super types for this interface. Embedded
+                    // interfaces are super-types, not members, so no member visibility is
+                    // projected here.
                     record.addSuperClass(type)
                 }
             }
@@ -208,13 +219,21 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 // in a namespace are FQNs. Otherwise, we cannot resolve them properly when we
                 // access
                 // them outside of the package.
+                val topLevel = frontend.scopeManager.currentScope is NameScope
                 val fqn =
-                    if (frontend.scopeManager.currentScope is NameScope) {
+                    if (topLevel) {
                         fqn(ident.name)
                     } else {
                         ident.name
                     }
                 val decl = newVariable(fqn, rawNode = valueSpec)
+
+                // Only top-level (package-level) variables/constants have export semantics; local
+                // variables are block-scoped and carry no visibility restriction. (This mirrors the
+                // non-tuple branch below.)
+                if (topLevel) {
+                    decl.visibility = GoLanguage.visibilityOf(ident.name)
+                }
 
                 if (valueSpec.type != null) {
                     decl.type = frontend.typeOf(valueSpec.type!!)
@@ -241,14 +260,22 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 // in a namespace are FQNs. Otherwise, we cannot resolve them properly when we
                 // access
                 // them outside of the package.
+                val topLevel = frontend.scopeManager.currentScope is NameScope
                 val fqn =
-                    if (frontend.scopeManager.currentScope is NameScope) {
+                    if (topLevel) {
                         fqn(ident.name)
                     } else {
                         ident.name
                     }
                 val decl = newVariable(fqn, rawNode = valueSpec)
                 decl.isImplicit = true
+
+                // Only top-level (package-level) variables/constants have export semantics; local
+                // variables are block-scoped and carry no visibility restriction. (This mirrors the
+                // tuple branch above.)
+                if (topLevel) {
+                    decl.visibility = GoLanguage.visibilityOf(ident.name)
+                }
                 if (type != null) {
                     decl.type = type
                 } else {
@@ -330,6 +357,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             spec.assign != 0 -> {
                 val aliasType = frontend.typeOf(spec.name)
                 val typedef = newTypedef(targetType, aliasType, rawNode = spec)
+                // A package-level type alias is a full-fledged exported identifier when its name
+                // starts with an upper-case rune, so it participates in export semantics as well.
+                typedef.visibility = GoLanguage.visibilityOf(spec.name.name)
 
                 frontend.scopeManager.addTypedef(typedef)
                 typedef
@@ -340,6 +370,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             // called the "underlying type") in the list of superclasses.
             else -> {
                 val record = newRecord(spec.name.name, "type")
+                // A named type is exported/unexported based on the casing of its type name.
+                record.visibility = GoLanguage.visibilityOf(spec.name.name)
 
                 // We add the underlying type as the single super class
                 record.superClasses = mutableListOf(targetType)
