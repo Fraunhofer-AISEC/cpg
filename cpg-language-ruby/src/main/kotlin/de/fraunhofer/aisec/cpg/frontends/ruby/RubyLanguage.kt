@@ -98,7 +98,10 @@ open class RubyLanguage :
      * the canonical access-control axis:
      * - `private` in Ruby means the method may only be called *without an explicit receiver* (i.e.
      *   implicitly on `self`). This is stricter than "declaring record only", but the closest
-     *   canonical value is [Visibility.PRIVATE].
+     *   canonical value is [Visibility.PRIVATE]. TODO: A Ruby private method is nonetheless
+     *   inherited and callable without a receiver from a subclass method. Once Ruby superclasses
+     *   are modeled (superTypeDeclarations), the resolver's PRIVATE = "declaring record only" rule
+     *   will mis-filter such subclass access; it would then need handling closer to [PROTECTED].
      * - `protected` in Ruby means the method may be called *with an explicit receiver* as long as
      *   that receiver is of the same class or a subclass. This maps to [Visibility.PROTECTED].
      * - `public` is the default and maps to [Visibility.PUBLIC].

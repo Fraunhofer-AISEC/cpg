@@ -66,9 +66,10 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
     }
 
     /**
-     * Handles a top-level `def`. Ruby method visibility only carries meaning for record members, so
-     * a top-level function is left with the default
-     * [de.fraunhofer.aisec.cpg.graph.Visibility.UNKNOWN]. Members defined inside a [ClassNode] are
+     * Handles a top-level `def`. Strictly, a Ruby top-level method becomes a *private* instance
+     * method of `Object`; we deliberately simplify this to the default
+     * [de.fraunhofer.aisec.cpg.graph.Visibility.UNKNOWN] because there is no explicit enclosing
+     * [Record] to attach record-member access control to. Members defined inside a [ClassNode] are
      * handled by [handleClassNode].
      */
     private fun handleDefnNode(node: DefnNode): Function {
@@ -84,6 +85,12 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
      * whereas the `private def ...` / `private :symbol` form applies to a single method only. See
      * [RubyLanguage.interpretKeyword] for how the raw keyword is mapped onto the canonical
      * [de.fraunhofer.aisec.cpg.graph.Visibility].
+     *
+     * Out of scope for now: singleton/class methods (`def self.foo`, a `DefsNode`) and the
+     * `private_class_method`/`public_class_method` modifiers are not modeled. This is not a
+     * mis-tagging - a bare `private` intentionally does not affect class methods in Ruby - they are
+     * simply left out of the [Record]. Module member visibility (`module M ... end`, incl.
+     * `module_function`) is likewise not handled yet.
      */
     private fun handleClassNode(node: ClassNode): Record {
         val record = newRecord(node.cPath.name.idString(), "class", rawNode = node)
@@ -102,12 +109,20 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
                     // follow it in the class body.
                     currentVisibility = keyword
                 } else {
-                    // `private def foo ... end` or `private :foo` only affects the listed methods.
+                    // The two argument shapes are semantically different, even though both only
+                    // affect the listed methods without flipping the default:
+                    // - `private def foo ... end` (DefnNode) DEFINES and tags a brand-new method.
+                    // - `private :foo` (SymbolNode) RETROACTIVELY re-tags a method that must
+                    // already
+                    //   have been built earlier in the body. Ruby requires the `def` to precede the
+                    //   `private :foo`; if it does not, retagVisibility intentionally no-ops.
                     for (target in targets) {
                         when (target) {
                             is DefnNode -> addMethod(record, target, keyword)
                             is SymbolNode ->
-                                applyVisibilityToExisting(record, target.name.idString(), keyword)
+                                retagVisibility(record, target.name.idString(), keyword)
+                            // Other argument shapes of a visibility call (e.g. dynamically computed
+                            // names) are not modeled.
                             else -> {}
                         }
                     }
@@ -127,17 +142,22 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
     }
 
     /**
-     * Builds a [Method] for [node], records the raw [visibilityKeyword] and its canonical mapping.
+     * Builds a [Method] for [node] and tags it with the effective visibility [keyword]: it records
+     * the raw keyword in the modifiers and additionally projects it onto the canonical visibility,
+     * so passes such as the SymbolResolver can reason about access control without knowing Ruby's
+     * concrete keywords.
      */
-    private fun addMethod(record: Record, node: DefnNode, visibilityKeyword: String): Method {
-        val method = newMethod(node.name.idString(), recordDeclaration = record, rawNode = node)
+    private fun addMethod(record: Record, node: DefnNode, keyword: String): Method {
+        val name = node.name.idString()
+        val method = newMethod(name, recordDeclaration = record, rawNode = node)
 
-        // Keep the raw, lossless keyword in the modifiers and additionally project it onto the
-        // canonical visibility, so passes such as the SymbolResolver can reason about access
-        // control
-        // without knowing Ruby's concrete keywords.
-        method.modifiers = method.modifiers + visibilityKeyword
-        applyVisibility(method, visibilityKeyword)
+        // Ruby's interpreter forces `initialize` to be private regardless of any surrounding
+        // visibility modifier, so it can never be called with an explicit receiver. Reflect that
+        // effective visibility rather than the ambient class default.
+        val effectiveKeyword = if (name == "initialize") RubyLanguage.PRIVATE else keyword
+
+        method.modifiers = method.modifiers + effectiveKeyword
+        applyVisibility(method, effectiveKeyword)
 
         populateFunction(node, method)
 
@@ -148,20 +168,29 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
     }
 
     /**
-     * Retroactively applies [visibilityKeyword] to an already-built method with the given [name],
-     * as produced by the `private :foo` form.
+     * Retroactively applies the visibility [keyword] to an already-built method with the given
+     * [name], as produced by the `private :foo` form. If no such method exists yet (Ruby requires
+     * the `def` to precede `private :foo`), this intentionally no-ops.
      */
-    private fun applyVisibilityToExisting(record: Record, name: String, visibilityKeyword: String) {
+    private fun retagVisibility(record: Record, name: String, keyword: String) {
         val method = record.methods.firstOrNull { it.name.localName == name } ?: return
         method.modifiers =
-            method.modifiers.filterNot { it in RubyLanguage.visibilityModifiers }.toSet() +
-                visibilityKeyword
-        applyVisibility(method, visibilityKeyword)
+            method.modifiers.filterNot { it in RubyLanguage.visibilityModifiers }.toSet() + keyword
+        applyVisibility(method, keyword)
     }
 
-    private fun applyVisibility(declaration: Declaration, visibilityKeyword: String) {
+    /**
+     * Projects the canonical [de.fraunhofer.aisec.cpg.graph.Visibility] for the visibility
+     * [keyword] onto [declaration]. The keyword is interpreted through the [HasKeywordSemantics]
+     * language trait (the single source of truth for the keyword -> visibility mapping) rather than
+     * mapped here, so the frontend stays decoupled from the concrete keyword table. The context is
+     * always [DeclarationContext.RECORD] because Ruby visibility only applies to record members.
+     * The `as?` cast is defensive and normally always succeeds for [RubyLanguage]; the `?.let` only
+     * overwrites the visibility when the trait actually returns one (a `null` means "no opinion").
+     */
+    private fun applyVisibility(declaration: Declaration, keyword: String) {
         (language as? HasKeywordSemantics)
-            ?.interpretKeyword(visibilityKeyword, DeclarationContext.RECORD)
+            ?.interpretKeyword(keyword, DeclarationContext.RECORD)
             ?.visibility
             ?.let { declaration.visibility = it }
     }

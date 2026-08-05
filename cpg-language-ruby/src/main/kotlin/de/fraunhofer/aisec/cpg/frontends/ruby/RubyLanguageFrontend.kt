@@ -87,7 +87,9 @@ class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
 
         for (innerNode in topLevelNodes) {
             // Method definitions (`def`) and class definitions (`class`) become declarations,
-            // everything else is treated as a top-level statement.
+            // everything else is treated as a top-level statement. Modules (`module M ... end`,
+            // a `ModuleNode`) share the same public/protected/private semantics for their instance
+            // methods, but module member visibility is out of scope for now.
             if (innerNode is MethodDefNode || innerNode is ClassNode) {
                 val decl = declarationHandler.handle(innerNode)
                 scopeManager.addDeclaration(decl)

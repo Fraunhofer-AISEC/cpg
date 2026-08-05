@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -101,6 +102,12 @@ class RubyLanguageFrontendTest {
         val account = tu.records["Account"]
         assertNotNull(account)
 
+        // Ruby forces `initialize` to be private regardless of the ambient default (public here).
+        val initialize = account.methods["initialize"]
+        assertNotNull(initialize)
+        assertEquals(Visibility.PRIVATE, initialize.visibility)
+        assertTrue("private" in initialize.modifiers)
+
         // The default (no modifier) visibility for a Ruby method is public.
         val deposit = account.methods["deposit"]
         assertNotNull(deposit)
@@ -136,5 +143,16 @@ class RubyLanguageFrontendTest {
         assertNotNull(close)
         assertEquals(Visibility.PUBLIC, close.visibility)
         assertTrue("public" in close.modifiers)
+
+        // `private :withdraw, :transfer` retroactively re-tags two already-public methods. The
+        // multi-symbol form must re-tag both, and the retag must replace the previous `public`
+        // modifier rather than accumulate it.
+        for (name in listOf("withdraw", "transfer")) {
+            val method = account.methods[name]
+            assertNotNull(method)
+            assertEquals(Visibility.PRIVATE, method.visibility)
+            assertTrue("private" in method.modifiers)
+            assertFalse("public" in method.modifiers)
+        }
     }
 }

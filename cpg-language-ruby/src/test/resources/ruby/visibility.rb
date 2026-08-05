@@ -1,4 +1,9 @@
 class Account
+  # Ruby forces `initialize` to be private regardless of the surrounding default.
+  def initialize
+    @balance = 0
+  end
+
   # Public by default.
   def deposit(amount)
     @balance = amount
@@ -34,4 +39,15 @@ class Account
   def close
     @balance = 0
   end
+
+  # Defined public above, then retroactively re-tagged private via the multi-symbol form.
+  def withdraw
+    @balance
+  end
+
+  def transfer
+    @balance
+  end
+
+  private :withdraw, :transfer
 end
