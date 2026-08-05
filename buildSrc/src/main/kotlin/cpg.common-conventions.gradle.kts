@@ -21,7 +21,6 @@ java {
 // common repositories
 //
 repositories {
-    mavenLocal()
     mavenCentral()
 
     // Serves the SootUp fork (github.com/KuechA/SootUp) built on demand, under

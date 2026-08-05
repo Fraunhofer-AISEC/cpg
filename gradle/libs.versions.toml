@@ -93,7 +93,6 @@ spotless-gradle = { module = "com.diffplug.spotless:spotless-plugin-gradle", ver
 # com.github.<owner>.<repo>); the artifactIds are unchanged (sootup.*).
 sootup-core = { module = "com.github.KuechA.SootUp:sootup.core", version.ref = "sootup" }
 sootup-java-core = { module = "com.github.KuechA.SootUp:sootup.java.core", version.ref = "sootup" }
-#sootup-java-sourcecode = { module = "com.github.KuechA.SootUp:sootup.java.sourcecode.frontend", version.ref = "sootup" }
 sootup-java-bytecode = { module = "com.github.KuechA.SootUp:sootup.java.bytecode.frontend", version.ref = "sootup" }
 sootup-apk = { module = "com.github.KuechA.SootUp:sootup.apk.frontend", version.ref = "sootup" }
 sootup-jimple = { module = "com.github.KuechA.SootUp:sootup.jimple.frontend", version.ref = "sootup" }
@@ -102,8 +101,7 @@ dex2jar = {module = "de.femtopedia.dex2jar:dex2jar", version="2.4.22" }
 
 [bundles]
 log4j = ["log4j-impl", "log4j-core"]
-sootup = ["sootup-core", "sootup-java-core", #"sootup-java-sourcecode",
-    "sootup-java-bytecode", "sootup-jimple", "sootup-apk"]
+sootup = ["sootup-core", "sootup-java-core", "sootup-java-bytecode", "sootup-jimple", "sootup-apk"]
 ktor = ["ktor-server-core", "ktor-server-netty", "ktor-server-cors","ktor-server-content-negotiation", "ktor-serialization-kotlinx-json", "ktor-server-sse"]
 ktor-client = ["ktor-client-core", "ktor-client-cio", "ktor-client-content-negotiation"]
 

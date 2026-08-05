@@ -147,13 +147,6 @@ class JVMLanguageFrontend(
                         )
                     )
                 }
-                /*file.extension == "java" -> {
-                    JavaView(
-                        JavaSourcePathAnalysisInputLocation(
-                            ctx.currentComponent?.topLevel()?.path!!
-                        )
-                    )
-                }*/
                 file.extension == "jimple" -> {
                     JavaView(
                         JimpleAnalysisInputLocation(ctx.currentComponent?.topLevel()?.toPath()!!)
