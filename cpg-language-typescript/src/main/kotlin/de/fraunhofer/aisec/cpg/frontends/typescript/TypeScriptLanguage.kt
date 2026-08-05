@@ -25,7 +25,33 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-/** The TypeScript language. */
+import de.fraunhofer.aisec.cpg.frontends.DeclarationContext
+import de.fraunhofer.aisec.cpg.frontends.KeywordSemantics
+import de.fraunhofer.aisec.cpg.graph.Visibility
+
+/**
+ * The TypeScript language.
+ *
+ * In addition to the JavaScript concepts inherited from [JavaScriptLanguage] (`static` members and
+ * `#name` hard-private members), TypeScript has genuine compile-time member access control via the
+ * `public`/`protected`/`private` access specifiers, which map onto the corresponding [Visibility].
+ */
 class TypeScriptLanguage : JavaScriptLanguage() {
     override val fileExtensions = listOf("ts", "tsx")
+
+    /**
+     * Interprets a TypeScript declaration keyword into its canonical [KeywordSemantics]. In
+     * addition to the keywords handled by [JavaScriptLanguage.interpretKeyword], TypeScript has the
+     * access specifiers `public`/`protected`/`private` (only occurring on record members), which
+     * map onto the corresponding [Visibility]. Every other keyword is delegated to the JavaScript
+     * interpretation.
+     */
+    override fun interpretKeyword(keyword: String, context: DeclarationContext): KeywordSemantics {
+        return when (keyword) {
+            PUBLIC -> KeywordSemantics(visibility = Visibility.PUBLIC)
+            PROTECTED -> KeywordSemantics(visibility = Visibility.PROTECTED)
+            PRIVATE -> KeywordSemantics(visibility = Visibility.PRIVATE)
+            else -> super.interpretKeyword(keyword, context)
+        }
+    }
 }
