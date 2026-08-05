@@ -324,6 +324,9 @@ class ControlFlowTest {
         val function = tu.functions["let_else_example"]
         assertNotNull(function)
 
+        val parameter = function.parameters.firstOrNull()
+        assertNotNull(parameter)
+
         val switches = function.switches
 
         // 1 let else statement in let_else_example

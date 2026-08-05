@@ -164,13 +164,21 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                     (language.builtInTypes["u8"] ?: unknownType()).array(),
                     raw,
                 )
-            RsLiteralType.FLOAT_NUMBER_L ->
-                newLiteral(
-                    stringValue.substringBefore("f").toFloat(),
+            RsLiteralType.FLOAT_NUMBER_L -> {
+                val type =
                     (if (stringValue.endsWith("f32")) language.builtInTypes["f32"]
-                    else language.builtInTypes["f32"]) ?: unknownType(),
+                    else language.builtInTypes["f64"]) ?: unknownType()
+
+                val valueString = stringValue.removeSuffix("f32").removeSuffix("f64")
+
+                newLiteral(
+                    if (type == language.builtInTypes["f32"]) valueString.toFloat()
+                    else valueString.toDouble(),
+                    type,
                     raw,
                 )
+            }
+
             RsLiteralType.UNKNOWN_L ->
                 when (stringValue) {
                     "true" -> newLiteral(true, language.builtInTypes["bool"] ?: unknownType(), raw)
@@ -246,19 +254,21 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        return when {
-            value <= BigInteger.valueOf(Byte.MAX_VALUE.toLong()) ->
-                newLiteral(value.toInt(), language.builtInTypes["i8"] ?: unknownType(), raw)
-            value <= BigInteger.valueOf(Short.MAX_VALUE.toLong()) ->
-                newLiteral(value.toInt(), language.builtInTypes["i16"] ?: unknownType(), raw)
-            value <= BigInteger.valueOf(Int.MAX_VALUE.toLong()) ->
-                newLiteral(value.toInt(), language.builtInTypes["i32"] ?: unknownType(), raw)
-            value <= BigInteger.valueOf(Long.MAX_VALUE) ->
-                newLiteral(value.toInt(), language.builtInTypes["i64"] ?: unknownType(), raw)
-            value.bitLength() <= 127 ->
-                newLiteral(value.toInt(), language.builtInTypes["i128"] ?: unknownType(), raw)
-            else -> newLiteral(value, unknownType(), raw)
-        }
+        val (typ, isBig) =
+            when {
+                value <= BigInteger.valueOf(Byte.MAX_VALUE.toLong()) -> "i8" to false
+                value <= BigInteger.valueOf(Short.MAX_VALUE.toLong()) -> "i16" to false
+                value <= BigInteger.valueOf(Int.MAX_VALUE.toLong()) -> "i32" to false
+                value <= BigInteger.valueOf(Long.MAX_VALUE) -> "i64" to true
+                value.bitLength() <= 127 -> "i128" to true
+                else -> null to true
+            }
+
+        return newLiteral(
+            if (isBig) value.toLong() else value.toInt(),
+            typ?.let { language.builtInTypes[it] } ?: unknownType(),
+            raw,
+        )
     }
 
     fun handleCallExpr(callExpr: RsCallExpr): Call {
@@ -601,8 +611,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
         if (arrayExpr.repeating) {
             arrayConstruction.assume(
-                assumptionType = AssumptionType.DataFlowAssumption,
-                "Using the repetition expression as value in the array model a direct DF although it is an indirect DF.",
+                AssumptionType.DataFlowAssumption,
+                "Repetition expression as direct although it is an indirect DF.",
                 arrayConstruction,
             )
         }
@@ -638,15 +648,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             field.expr.firstOrNull()?.let { expr ->
                 val value = handle(RsAst.RustExpr(expr))
 
-                val member =
-                    field.name?.let {
-                        newMemberAccess(it.text, newReference(refName), rawNode = rawField)
-                    }
-                        ?: newMemberAccess(
-                            value.toString(),
-                            newReference(refName),
-                            rawNode = rawField,
-                        )
+                val name = field.name?.text ?: value.toString()
+
+                val member = newMemberAccess(name, newReference(refName), rawNode = rawField)
 
                 construction.addArgument(
                     newAssign(lhs = listOf(member), rhs = listOf(value), rawNode = rawField).also {
@@ -756,7 +760,11 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                                 obj.components +=
                                     newDeclarationStatement(rawNode = raw).also { declaration ->
                                         declaration.usedAsExpression = true
-                                        val variable = newVariable(rawNode = raw, name = "val")
+                                        val variable =
+                                            newVariable(
+                                                rawNode = raw,
+                                                name = "val_" + switch.id.toString(),
+                                            )
                                         declaration.declarations += variable
 
                                         variable.initializer =
@@ -767,7 +775,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                     }
 
                 val breakStatement = newBreak()
-                breakStatement.expr = newReference("val")
+                breakStatement.expr = newReference("val_" + switch.id.toString())
                 breakStatement.usedAsExpression = true
                 caseBlock.statements += breakStatement
 
@@ -779,7 +787,11 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                                 obj.components +=
                                     newDeclarationStatement(rawNode = raw).also { declaration ->
                                         declaration.usedAsExpression = true
-                                        val variable = newVariable(rawNode = raw, name = "err")
+                                        val variable =
+                                            newVariable(
+                                                rawNode = raw,
+                                                name = "err_" + switch.id.toString(),
+                                            )
                                         declaration.declarations += variable
                                         variable.initializer =
                                             newEmpty(raw).also { it.usedAsExpression = true }
@@ -788,7 +800,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                             }
                     }
                 caseBlock.statements +=
-                    newReturn(raw).also { ret -> ret.returnValue = newReference("err") }
+                    newReturn(raw).also { ret ->
+                        ret.returnValue = newReference("err_" + switch.id.toString())
+                    }
 
                 switch.statement = caseBlock
 

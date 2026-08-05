@@ -179,43 +179,51 @@ class ExpressionsTest {
 
         val print1 = printLines.getOrNull(0)
 
-        print1.memberExpressions
-            .first()
-            .collectAllPrevDFGPaths()
-            .flatMap { it.nodes }
-            .filterIsInstance<Literal<*>>()
-            .map { it.value.toString() }
-            .toSet()
-            .equals(setOf(10))
+        assertEquals(
+            setOf(10),
+            print1.memberExpressions
+                .first()
+                .collectAllPrevFullDFGPaths()
+                .flatMap { it.nodes }
+                .filterIsInstance<Literal<*>>()
+                .map { it.value }
+                .toSet(),
+        )
 
-        print1.memberExpressions
-            .last()
-            .collectAllPrevDFGPaths()
-            .flatMap { it.nodes }
-            .filterIsInstance<Literal<*>>()
-            .map { it.value.toString() }
-            .toSet()
-            .equals(setOf(20))
+        assertEquals(
+            setOf(20),
+            print1.memberExpressions
+                .last()
+                .collectAllPrevFullDFGPaths()
+                .flatMap { it.nodes }
+                .filterIsInstance<Literal<*>>()
+                .map { it.value }
+                .toSet(),
+        )
 
         val print2 = printLines.getOrNull(1)
 
-        print2.memberExpressions
-            .first()
-            .collectAllPrevDFGPaths()
-            .flatMap { it.nodes }
-            .filterIsInstance<Literal<*>>()
-            .map { it.value.toString() }
-            .toSet()
-            .equals(setOf("Alice"))
+        assertEquals(
+            setOf("Alice"),
+            print2.memberExpressions
+                .first()
+                .collectAllPrevFullDFGPaths()
+                .flatMap { it.nodes }
+                .filterIsInstance<Literal<*>>()
+                .map { it.value.toString() }
+                .toSet(),
+        )
 
-        print2.memberExpressions
-            .last()
-            .collectAllPrevDFGPaths()
-            .flatMap { it.nodes }
-            .filterIsInstance<Literal<*>>()
-            .map { it.value.toString() }
-            .toSet()
-            .equals(setOf(30))
+        assertEquals(
+            setOf(30),
+            print2.memberExpressions
+                .last()
+                .collectAllPrevFullDFGPaths()
+                .flatMap { it.nodes }
+                .filterIsInstance<Literal<*>>()
+                .map { it.value }
+                .toSet(),
+        )
     }
 
     @Test
@@ -316,7 +324,7 @@ class ExpressionsTest {
         assertNotNull(intLit)
 
         // Test floating point literal
-        val floatLiterals = literals.filter { it.value is Float }
+        val floatLiterals = literals.filter { it.value is Float || it.value is Double }
         assertTrue(floatLiterals.isNotEmpty(), "Should have floating point literals")
 
         // Test boolean literal

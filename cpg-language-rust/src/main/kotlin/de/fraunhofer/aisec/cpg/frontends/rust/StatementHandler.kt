@@ -125,21 +125,12 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
     fun handleLetElse(letStmt: RsLetStmt, blockExpr: RsBlockExpr, raw: RsAst.RustStmt): Expression {
 
-        val variableDeconstruction =
-            letStmt.pat?.let { frontend.patternHandler.handle(RsAst.RustPat(it)) }
-                ?: newProblemExpression("Pattern cannot be parsed.", rawNode = raw)
-
-        letStmt.ty?.let { variableDeconstruction.type = frontend.typeOf(it) }
-
-        val declarations = variableDeconstruction.nodes.filterIsInstance<DeclarationStatement>()
-
-        // Handle the pattern, extract the variable declarations, put them into an object
-        // deconstruction,
-        // are they already added to the scope?, for every variable, make a tuple expression with a
-        // reference for each
-        //    variable and put that as the return expression
-        // Translate the pattern a second time as case expression
-
+        // The pattern is handled inside the switch/case scope first, so that the bindings it
+        // introduces (e.g. `value` in `Some(value)`) are declared fresh, local to the case. Once
+        // the switch scope is left, the pattern is handled a second time in the enclosing scope
+        // to create the actual variable(s) that stay alive after the let-else statement; at that
+        // point the case-local bindings are no longer visible, so this second pass creates new
+        // declarations instead of just referencing the case-local ones.
         val switch =
             newSwitch(rawNode = raw).also { switch ->
                 switch.selector =
@@ -156,12 +147,15 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                 val caseBlock = newBlock(raw)
                 caseBlock.usedAsExpression = true
 
-                caseBlock.statements +=
+                val case =
                     newCase(raw).also { value ->
                         value.caseExpression =
                             letStmt.pat?.let { frontend.patternHandler.handle(RsAst.RustPat(it)) }
                                 ?: newProblemExpression("Pattern cannot be parsed.", rawNode = raw)
                     }
+                caseBlock.statements += case
+
+                val declarations = case.nodes.filterIsInstance<DeclarationStatement>()
 
                 val bindingsList = newInitializerList(rawNode = raw)
 
@@ -189,6 +183,12 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
                 switch.usedAsExpression = true
             }
+
+        val variableDeconstruction =
+            letStmt.pat?.let { frontend.patternHandler.handle(RsAst.RustPat(it)) }
+                ?: newProblemExpression("Pattern cannot be parsed.", rawNode = raw)
+
+        letStmt.ty?.let { variableDeconstruction.type = frontend.typeOf(it) }
 
         return newAssign(
             operatorCode = "=",

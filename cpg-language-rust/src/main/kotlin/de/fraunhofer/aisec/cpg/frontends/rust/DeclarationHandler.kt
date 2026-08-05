@@ -236,9 +236,25 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                         frontend.declarationHandler.handleNode(
                             RsAst.RustItem(RsItem.Const(item.v1))
                         )
-                    // Todo Add Consts
+                    record.addDeclaration(const)
+                    frontend.scopeManager.addDeclaration(const)
                 }
-                is RsAssocItem.TypeAlias -> {} // Todo handle Type Alias
+                is RsAssocItem.TypeAlias -> {
+
+                    item.v1.let { typeAlias ->
+                        val aliasName = typeAlias.name ?: ""
+                        val type = typeAlias.ty?.let { frontend.typeOf(it) } ?: unknownType()
+
+                        val declaration = frontend.newTypedef(type, frontend.typeOf(aliasName))
+
+                        frontend.scopeManager.addTypedef(
+                            declaration,
+                            frontend.scopeManager.currentScope,
+                        )
+
+                        record.addDeclaration(declaration)
+                    }
+                }
                 is RsAssocItem.MacroCall -> {} // Todo handle Macro Calls
             }
         }
@@ -264,7 +280,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             )
         val currentScope = frontend.scopeManager.currentScope
 
-        scope?.let { frontend.scopeManager.enterScope(it) }
+        scope?.astNode?.let { frontend.scopeManager.enterScope(it) }
 
         val scopedNode = scope?.astNode
 
@@ -278,8 +294,6 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
 
         val extensionDeclaration = newExtension(name, RsAst.RustItem(RsItem.Impl(impl)))
-
-        frontend.scopeManager.enterScope(extensionDeclaration)
 
         for (item in impl.items) {
             when (item) {
@@ -299,17 +313,29 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     extensionDeclaration.addDeclaration(const)
                     frontend.scopeManager.addDeclaration(const)
                 }
-                is RsAssocItem.TypeAlias -> {} // Todo handle type alias
+                is RsAssocItem.TypeAlias -> {
+                    item.v1.let { typeAlias ->
+                        val aliasName = typeAlias.name ?: ""
+                        val type = typeAlias.ty?.let { frontend.typeOf(it) } ?: unknownType()
+
+                        val declaration = frontend.newTypedef(type, frontend.typeOf(aliasName))
+
+                        frontend.scopeManager.addTypedef(
+                            declaration,
+                            frontend.scopeManager.currentScope,
+                        )
+
+                        extensionDeclaration.addDeclaration(declaration)
+                    }
+                }
                 is RsAssocItem.MacroCall -> {} // Todo handle macro call
             }
         }
 
-        scope?.let {
+        scope?.astNode?.let {
             frontend.scopeManager.leaveScope(it)
-            frontend.scopeManager.enterScope(currentScope)
+            currentScope.astNode?.let { frontend.scopeManager.enterScope(it) }
         }
-
-        frontend.scopeManager.leaveScope(extensionDeclaration)
 
         return extensionDeclaration
     }

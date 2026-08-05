@@ -89,7 +89,7 @@ class RustLanguage :
             BinaryOperator::class of ">" to "PartialOrd::gt",
             BinaryOperator::class of ">=" to "PartialOrd::ge",
             BinaryOperator::class of ">>" to "Shr::shr",
-            BinaryOperator::class of ">>=" to "ShrAssign::she_assign",
+            BinaryOperator::class of ">>=" to "ShrAssign::shr_assign",
             BinaryOperator::class of "^" to "BitXor::bitxor",
             BinaryOperator::class of "^=" to "BitXorAssign::bitxor_assign",
             BinaryOperator::class of "|" to "BitOr::bitor",
