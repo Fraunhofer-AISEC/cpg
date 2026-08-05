@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Expression
@@ -317,6 +318,37 @@ open class PythonLanguage :
         }
 
         return super.tryCast(type, targetType, hint, targetHint)
+    }
+
+    /**
+     * Python has **no enforced access control**; the visibility of a member is purely a PEP 8
+     * naming convention (see https://peps.python.org/pep-0008/#descriptive-naming-styles and
+     * https://docs.python.org/3/tutorial/classes.html#private-variables). We therefore map the
+     * (local) name of a declaration onto the canonical [Visibility] *heuristically*:
+     * - A name with a **leading double underscore** that is **not** a trailing "dunder" (e.g.
+     *   `__x`, but not `__init__`) triggers Python's name-mangling and is conventionally "private"
+     *   → [Visibility.PRIVATE].
+     * - A **single leading underscore** (e.g. `_x`) marks a "non-public"/"internal use" member. We
+     *   map it to [Visibility.PROTECTED]: since this mapping is applied primarily to record
+     *   members, the record-relative axis (protected) is a closer fit than the module-relative
+     *   [Visibility.PACKAGE], and it matches how subclasses conventionally still use such members.
+     * - Everything else (including dunders such as `__init__`) is conventionally public →
+     *   [Visibility.PUBLIC].
+     *
+     * Because none of this is enforced by the language, the frontend deliberately does **not**
+     * declare [de.fraunhofer.aisec.cpg.frontends.HasAccessControl]; it only records the
+     * conventional visibility so that passes may read it, without ever discarding a resolution
+     * candidate.
+     */
+    fun visibilityForName(localName: String): Visibility {
+        return when {
+            // Leading double underscore, but not a trailing dunder → name-mangled → "private".
+            localName.startsWith("__") && !localName.endsWith("__") -> Visibility.PRIVATE
+            // Single leading underscore (but not a dunder like `__init__`) → "non-public".
+            localName.startsWith("_") && !localName.startsWith("__") -> Visibility.PROTECTED
+            // Public names (including dunders such as `__init__`).
+            else -> Visibility.PUBLIC
+        }
     }
 
     /**
