@@ -342,7 +342,9 @@ open class PythonLanguage :
      */
     fun visibilityForName(localName: String): Visibility {
         return when {
-            // Leading double underscore, but not a trailing dunder → name-mangled → "private".
+            // Python mangles names with (at least) two leading underscores and at most one trailing
+            // underscore. `endsWith("__")` therefore excludes the dunder form (e.g. `__init__`)
+            // while still mangling a name with a single trailing underscore such as `__foo_`.
             localName.startsWith("__") && !localName.endsWith("__") -> Visibility.PRIVATE
             // Single leading underscore (but not a dunder like `__init__`) → "non-public".
             localName.startsWith("_") && !localName.startsWith("__") -> Visibility.PROTECTED
