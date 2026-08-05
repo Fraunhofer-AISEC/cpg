@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -39,7 +40,9 @@ open class RubyLanguage :
     HasDefaultArguments,
     HasClasses,
     HasSuperClasses,
-    HasShortCircuitOperators {
+    HasShortCircuitOperators,
+    HasKeywordSemantics,
+    HasAccessControl {
     override val fileExtensions = listOf("rb")
     override val namespaceDelimiter = "::"
     @DoNotPersist
@@ -82,5 +85,39 @@ open class RubyLanguage :
         curClass: Record,
     ): Boolean {
         TODO("Not yet implemented")
+    }
+
+    /**
+     * Interprets a Ruby method-visibility keyword into its canonical [KeywordSemantics]. Ruby
+     * controls method access via the `public`/`protected`/`private` visibility modifiers, which
+     * flip the default visibility for subsequently-defined methods (or, in the `private def ...`
+     * form, apply to a single method). They only ever affect record members, so the [context] is
+     * not relevant here.
+     *
+     * Note the mapping is intentionally lossy on Ruby's peculiar runtime semantics, but faithful to
+     * the canonical access-control axis:
+     * - `private` in Ruby means the method may only be called *without an explicit receiver* (i.e.
+     *   implicitly on `self`). This is stricter than "declaring record only", but the closest
+     *   canonical value is [Visibility.PRIVATE].
+     * - `protected` in Ruby means the method may be called *with an explicit receiver* as long as
+     *   that receiver is of the same class or a subclass. This maps to [Visibility.PROTECTED].
+     * - `public` is the default and maps to [Visibility.PUBLIC].
+     */
+    override fun interpretKeyword(keyword: String, context: DeclarationContext): KeywordSemantics {
+        return when (keyword) {
+            PUBLIC -> KeywordSemantics(visibility = Visibility.PUBLIC)
+            PROTECTED -> KeywordSemantics(visibility = Visibility.PROTECTED)
+            PRIVATE -> KeywordSemantics(visibility = Visibility.PRIVATE)
+            else -> KeywordSemantics()
+        }
+    }
+
+    companion object {
+        const val PUBLIC = "public"
+        const val PROTECTED = "protected"
+        const val PRIVATE = "private"
+
+        /** The Ruby method-visibility modifier keywords. */
+        val visibilityModifiers = setOf(PUBLIC, PROTECTED, PRIVATE)
     }
 }
