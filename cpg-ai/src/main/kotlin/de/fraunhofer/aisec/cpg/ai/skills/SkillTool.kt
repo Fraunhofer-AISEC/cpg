@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.ai.skills
 
 import ai.koog.agents.core.tools.SimpleTool
 import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.agents.core.tools.annotations.LLMDescription
 import ai.koog.serialization.typeToken
 import de.fraunhofer.aisec.cpg.ai.Skill
 import kotlinx.serialization.Serializable
@@ -34,7 +35,14 @@ import kotlinx.serialization.Serializable
 const val ACTIVATE_SKILL_TOOL_NAME = "activate_skill"
 
 /** Arguments for [ActivateSkillTool]: the name of the skill to activate. */
-@Serializable data class ActivateSkillArgs(val name: String)
+@Serializable
+data class ActivateSkillArgs(
+    @param:LLMDescription(
+        "The exact name of the skill to activate, matching one of the names listed in the " +
+            "system prompt's skill catalog (e.g. \"tag-library\")."
+    )
+    val name: String
+)
 
 /**
  * A synthetic tool the LLM can call to activate a discovered skill: it returns that skill's full
