@@ -36,7 +36,13 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
 
-/** The TypeScript/JavaScript access modifier keywords, used to control member visibility. */
+/**
+ * The TypeScript/JavaScript access modifier keywords, used to control member visibility.
+ *
+ * These are the raw modifier *spellings* as they appear in source and are stored in
+ * [de.fraunhofer.aisec.cpg.graph.declarations.Declaration.modifiers]. They are distinct from the
+ * canonical [Visibility] enum values (e.g. [Visibility.PRIVATE]) they are interpreted into.
+ */
 const val PUBLIC = "public"
 const val PROTECTED = "protected"
 const val PRIVATE = "private"
@@ -71,7 +77,8 @@ open class JavaScriptLanguage :
 
     /**
      * Interprets a JavaScript declaration keyword into its canonical [KeywordSemantics]:
-     * - [STATIC] on a record member marks it as a class-level (static) member;
+     * - [STATIC] on a record member marks it as a class-level (static) member; outside a record
+     *   `static` has no meaning in JS/TS, so any non-RECORD context yields empty semantics;
      * - [HARD_PRIVATE] (a `#name` member) is a runtime-private member and maps onto
      *   [Visibility.PRIVATE].
      *

@@ -127,26 +127,25 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
      * members.
      */
     private fun handleModifiers(declaration: Declaration, node: TypeScriptNode) {
-        val language = frontend.language
-        if (language !is HasKeywordSemantics) {
-            return
-        }
-
+        val language = frontend.language as? HasKeywordSemantics ?: return
         val context = currentDeclarationContext
-        var semantics = KeywordSemantics()
 
-        node.children
-            ?.filter { it.type in modifierKeywordTypes }
-            ?.forEach { modifier ->
-                val keyword = modifier.code ?: return@forEach
-                declaration.modifiers = declaration.modifiers + keyword
-                semantics = semantics.merge(language.interpretKeyword(keyword, context))
+        // Collect the raw modifier spellings applicable to this declaration: the explicit
+        // `*Keyword` children the parser emits, plus - for a `#name` member - the synthetic
+        // hard-private keyword.
+        val keywords =
+            node.children
+                .orEmpty()
+                .filter { it.type in modifierKeywordTypes }
+                .mapNotNull { it.code } +
+                listOfNotNull(HARD_PRIVATE.takeIf { node.firstChild("PrivateIdentifier") != null })
+
+        // Keep the raw spellings losslessly, then fold their canonical meaning.
+        declaration.modifiers = declaration.modifiers + keywords
+        val semantics =
+            keywords.fold(KeywordSemantics()) { acc, keyword ->
+                acc.merge(language.interpretKeyword(keyword, context))
             }
-
-        if (node.firstChild("PrivateIdentifier") != null) {
-            declaration.modifiers = declaration.modifiers + HARD_PRIVATE
-            semantics = semantics.merge(language.interpretKeyword(HARD_PRIVATE, context))
-        }
 
         semantics.visibility?.let { declaration.visibility = it }
         if (declaration is ValueDeclaration) {
@@ -154,7 +153,9 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         }
 
         // In TypeScript and JavaScript, a record member without an explicit access specifier is
-        // public by default.
+        // public by default. UNKNOWN means none of the keywords above set a visibility; only then
+        // do we apply the implicit PUBLIC default, so an explicit public/protected/private/#private
+        // is never clobbered.
         if (context == DeclarationContext.RECORD && declaration.visibility == Visibility.UNKNOWN) {
             declaration.visibility = Visibility.PUBLIC
         }
@@ -202,6 +203,13 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val name = this.frontend.getIdentifierName(node)
         val type = node.typeChildNode?.let { this.frontend.typeOf(it) } ?: unknownType()
 
+        // NOTE: TypeScript *parameter properties* (an access/`readonly` modifier on a constructor
+        // parameter, e.g. `constructor(private readonly x: number)`) both declare and initialize a
+        // class field with that visibility. This frontend does not model parameter properties as
+        // fields at all (a pre-existing limitation), so we intentionally do not run
+        // [handleModifiers] here: the access specifier is dropped and no visibility-annotated field
+        // is synthesized. Mapping this construct would require synthesizing a corresponding [Field]
+        // on the enclosing record and is out of scope for the member-visibility model.
         return newParameter(name, type, false, rawNode = node)
     }
 
@@ -250,7 +258,9 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         node.typeChildNode?.let { func.type = this.frontend.typeOf(it) }
 
         // Interpret access/`static` modifiers while we are still in the enclosing (record) scope,
-        // before we descend into the function's own scope.
+        // before we descend into the function's own scope. This covers methods *and* constructors,
+        // because `Constructor` extends `Method`; plain top-level functions cannot carry these
+        // modifiers, so they are intentionally excluded.
         if (func is Method) {
             this.handleModifiers(func, node)
         }

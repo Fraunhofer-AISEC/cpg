@@ -26,8 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Field
-import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.nio.file.Path
 import kotlin.test.Test
@@ -40,21 +39,15 @@ class VisibilityTest {
 
     private val topLevel = Path.of("src", "test", "resources", "typescript")
 
-    private fun Iterable<Field>.byName(name: String): Field =
-        assertNotNull(this.firstOrNull { it.name.localName == name }, "no field named $name")
-
-    private fun Iterable<Method>.byName(name: String): Method =
-        assertNotNull(this.firstOrNull { it.name.localName == name }, "no method named $name")
+    private fun <T : Declaration> Iterable<T>.byName(name: String): T =
+        assertNotNull(this.firstOrNull { it.name.localName == name }, "no declaration named $name")
 
     /**
      * A `#private` member has an empty local name and is identified by its raw [HARD_PRIVATE]
      * modifier.
      */
-    private fun Iterable<Field>.hardPrivateField(): Field =
-        assertNotNull(this.firstOrNull { HARD_PRIVATE in it.modifiers }, "no #private field")
-
-    private fun Iterable<Method>.hardPrivateMethod(): Method =
-        assertNotNull(this.firstOrNull { HARD_PRIVATE in it.modifiers }, "no #private method")
+    private fun <T : Declaration> Iterable<T>.hardPrivate(): T =
+        assertNotNull(this.firstOrNull { HARD_PRIVATE in it.modifiers }, "no #private declaration")
 
     @Test
     fun testTypeScriptFieldVisibility() {
@@ -93,6 +86,13 @@ class VisibilityTest {
         assertEquals(Visibility.PUBLIC, staticField.visibility)
         assertTrue(STATIC in staticField.modifiers)
 
+        // combined `private static` -> PRIVATE *and* isStatic (folded from both keywords)
+        val privateStaticField = record.fields.byName("privateStaticField")
+        assertTrue(privateStaticField.isStatic)
+        assertEquals(Visibility.PRIVATE, privateStaticField.visibility)
+        assertTrue(PRIVATE in privateStaticField.modifiers)
+        assertTrue(STATIC in privateStaticField.modifiers)
+
         // no explicit modifier -> defaults to PUBLIC
         val defaultField = record.fields.byName("defaultField")
         assertEquals(Visibility.PUBLIC, defaultField.visibility)
@@ -100,8 +100,15 @@ class VisibilityTest {
         assertFalse(defaultField.isStatic)
 
         // #private -> PRIVATE (hard/runtime private)
-        val hardField = record.fields.hardPrivateField()
+        val hardField = record.fields.firstOrNull { HARD_PRIVATE in it.modifiers && !it.isStatic }
+        assertNotNull(hardField)
         assertEquals(Visibility.PRIVATE, hardField.visibility)
+
+        // combined `static #x` -> PRIVATE *and* isStatic
+        val hardStaticField =
+            record.fields.firstOrNull { HARD_PRIVATE in it.modifiers && it.isStatic }
+        assertNotNull(hardStaticField)
+        assertEquals(Visibility.PRIVATE, hardStaticField.visibility)
     }
 
     @Test
@@ -127,7 +134,17 @@ class VisibilityTest {
         assertTrue(staticMethod.isStatic)
         assertEquals(Visibility.PUBLIC, staticMethod.visibility)
 
-        assertEquals(Visibility.PRIVATE, record.methods.hardPrivateMethod().visibility)
+        // combined `private static` on a method -> PRIVATE *and* isStatic
+        val privateStaticMethod = record.methods.byName("privateStaticMethod")
+        assertTrue(privateStaticMethod.isStatic)
+        assertEquals(Visibility.PRIVATE, privateStaticMethod.visibility)
+
+        assertEquals(Visibility.PRIVATE, record.methods.hardPrivate().visibility)
+
+        // access modifiers on a constructor are interpreted as well (Constructor extends Method)
+        val constructor = record.constructors.firstOrNull()
+        assertNotNull(constructor)
+        assertEquals(Visibility.PRIVATE, constructor.visibility)
     }
 
     @Test
@@ -156,11 +173,18 @@ class VisibilityTest {
         assertEquals(Visibility.PUBLIC, staticField.visibility)
 
         // A `#private` member is the only truly private thing in JavaScript.
-        val hardField = record.fields.hardPrivateField()
+        val hardField = record.fields.firstOrNull { HARD_PRIVATE in it.modifiers && !it.isStatic }
+        assertNotNull(hardField)
         assertEquals(Visibility.PRIVATE, hardField.visibility)
+
+        // combined `static #x` -> PRIVATE *and* isStatic
+        val hardStaticField =
+            record.fields.firstOrNull { HARD_PRIVATE in it.modifiers && it.isStatic }
+        assertNotNull(hardStaticField)
+        assertEquals(Visibility.PRIVATE, hardStaticField.visibility)
 
         assertEquals(Visibility.PUBLIC, record.methods.byName("normalMethod").visibility)
         assertTrue(record.methods.byName("staticMethod").isStatic)
-        assertEquals(Visibility.PRIVATE, record.methods.hardPrivateMethod().visibility)
+        assertEquals(Visibility.PRIVATE, record.methods.hardPrivate().visibility)
     }
 }
