@@ -45,14 +45,6 @@ import kotlin.reflect.KClass
  */
 val LLVM_INTERNAL_LINKAGES = setOf("private", "internal", "linker_private", "linker_private_weak")
 
-/**
- * The LLVM IR [linkage type](https://llvm.org/docs/LangRef.html#linkage-types) keyword for the
- * default `external` linkage, i.e. a symbol that participates in normal cross-module linking and is
- * therefore visible everywhere ([Visibility.PUBLIC]). This is LLVM's default when no linkage is
- * spelled out.
- */
-const val LLVM_EXTERNAL_LINKAGE = "external"
-
 /** The LLVM IR language. */
 open class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>(), HasKeywordSemantics {
     override val fileExtensions = listOf("ll")
@@ -68,23 +60,24 @@ open class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>(), HasKeywordSemant
      * [linkage type](https://llvm.org/docs/LangRef.html#linkage-types) of a global value or
      * function rather than through record access control (LLVM has no such concept, so this
      * language deliberately does not implement
-     * [de.fraunhofer.aisec.cpg.frontends.HasAccessControl]). The relevant axis is whether a symbol
-     * is confined to its own module:
+     * [de.fraunhofer.aisec.cpg.frontends.HasAccessControl]). The only axis this canonical model
+     * captures is whether a symbol is confined to its own module:
      * - `private` / `internal` (and the historical `linker_private` spellings) grant *internal
      *   linkage*, i.e. the symbol must not be resolved from another translation unit
      *   ([Visibility.INTERNAL]);
-     * - the default `external` linkage participates in normal cross-module linking and is therefore
-     *   visible everywhere ([Visibility.PUBLIC]).
+     * - every other linkage type — including the default `external`, as well as `weak`, `linkonce`,
+     *   `common`, ... — does *not* restrict resolution in a way this model captures, so it yields
+     *   empty [KeywordSemantics] and leaves the declaration's visibility [Visibility.UNKNOWN].
      *
-     * Every other linkage type (`weak`, `linkonce`, `common`, ...) does *not* restrict resolution
-     * in a way this canonical model captures, so it yields empty [KeywordSemantics] and leaves the
-     * declaration's visibility [Visibility.UNKNOWN]. The [context] is ignored because LLVM linkage
-     * always applies to module-level globals and functions.
+     * Leaving `external` at [Visibility.UNKNOWN] (rather than mapping it onto the access-control
+     * value [Visibility.PUBLIC]) matches how the analogous, linkage-based C frontend treats
+     * external linkage: as LLVM/C have no access control, external linkage carries no visibility
+     * restriction (see the [Visibility] documentation). The [context] is ignored because LLVM
+     * linkage always applies to module-level globals and functions.
      */
     override fun interpretKeyword(keyword: String, context: DeclarationContext): KeywordSemantics {
         return when (keyword) {
             in LLVM_INTERNAL_LINKAGES -> KeywordSemantics(visibility = Visibility.INTERNAL)
-            LLVM_EXTERNAL_LINKAGE -> KeywordSemantics(visibility = Visibility.PUBLIC)
             else -> KeywordSemantics()
         }
     }

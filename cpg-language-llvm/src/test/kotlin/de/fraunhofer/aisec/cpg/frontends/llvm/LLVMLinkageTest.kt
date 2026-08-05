@@ -48,13 +48,13 @@ class LLVMLinkageTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        // `external` is the default linkage in LLVM and is not spelled out. It is visible
-        // everywhere
-        // and therefore maps onto PUBLIC without adding a raw modifier.
-        val publicGlobal = tu.variables["publicGlobal"]
-        assertNotNull(publicGlobal)
-        assertEquals(Visibility.PUBLIC, publicGlobal.visibility)
-        assertTrue(publicGlobal.modifiers.isEmpty())
+        // `external` is the default linkage in LLVM and is not spelled out. Like C's external
+        // linkage it carries no access-control restriction, so the visibility stays UNKNOWN and no
+        // raw modifier is added.
+        val externalGlobal = tu.variables["externalGlobal"]
+        assertNotNull(externalGlobal)
+        assertEquals(Visibility.UNKNOWN, externalGlobal.visibility)
+        assertTrue(externalGlobal.modifiers.isEmpty())
 
         // `internal` linkage behaves like C's file-scope `static`: confined to this module.
         val internalGlobal = tu.variables["internalGlobal"]
@@ -74,6 +74,14 @@ class LLVMLinkageTest {
         assertNotNull(weakGlobal)
         assertEquals(Visibility.UNKNOWN, weakGlobal.visibility)
         assertTrue("weak" in weakGlobal.modifiers)
+
+        // `common` likewise leaves the visibility UNKNOWN while still recording its raw keyword.
+        // This exercises the branch where a keyword is recorded in the modifiers but the empty
+        // KeywordSemantics leave the visibility untouched.
+        val commonGlobal = tu.variables["commonGlobal"]
+        assertNotNull(commonGlobal)
+        assertEquals(Visibility.UNKNOWN, commonGlobal.visibility)
+        assertTrue("common" in commonGlobal.modifiers)
     }
 
     @Test
@@ -84,10 +92,11 @@ class LLVMLinkageTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val publicFunc = tu.functions["publicFunc"]
-        assertNotNull(publicFunc)
-        assertEquals(Visibility.PUBLIC, publicFunc.visibility)
-        assertTrue(publicFunc.modifiers.isEmpty())
+        // `external` is the default and not spelled out: visibility stays UNKNOWN, no modifier.
+        val externalFunc = tu.functions["externalFunc"]
+        assertNotNull(externalFunc)
+        assertEquals(Visibility.UNKNOWN, externalFunc.visibility)
+        assertTrue(externalFunc.modifiers.isEmpty())
 
         val internalFunc = tu.functions["internalFunc"]
         assertNotNull(internalFunc)
@@ -98,6 +107,13 @@ class LLVMLinkageTest {
         assertNotNull(privateFunc)
         assertEquals(Visibility.INTERNAL, privateFunc.visibility)
         assertTrue("private" in privateFunc.modifiers)
+
+        // A function with `weak` linkage: no canonical visibility meaning, so UNKNOWN, but the raw
+        // keyword is recorded.
+        val weakFunc = tu.functions["weakFunc"]
+        assertNotNull(weakFunc)
+        assertEquals(Visibility.UNKNOWN, weakFunc.visibility)
+        assertTrue("weak" in weakFunc.modifiers)
     }
 
     @Test
@@ -112,10 +128,11 @@ class LLVMLinkageTest {
             )
         }
 
-        // The default `external` linkage maps onto PUBLIC.
+        // The default `external` linkage carries no canonical restriction (like C), so it leaves
+        // the visibility untouched (null), just as any other non-internal linkage does.
         assertEquals(
-            Visibility.PUBLIC,
-            language.interpretKeyword(LLVM_EXTERNAL_LINKAGE, DeclarationContext.GLOBAL).visibility,
+            null,
+            language.interpretKeyword("external", DeclarationContext.GLOBAL).visibility,
         )
 
         // A linkage type without a canonical meaning leaves the visibility untouched (null).
