@@ -156,6 +156,13 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) :
                 }
             }
 
+        // Python has no enforced access control; the visibility of a record member is a PEP 8
+        // naming convention. For fields (both instance attributes and class attributes) we project
+        // this heuristic onto the canonical visibility. See [PythonLanguage.visibilityForName].
+        (language as? PythonLanguage)?.let { pythonLanguage ->
+            (decl as? Field)?.visibility = pythonLanguage.visibilityForName(ref.name.localName)
+        }
+
         // If we didn't create any declaration up to this point and are still here, we need to
         // create a (local) variable. We need to take scope modifications into account.
         if (decl == null) {

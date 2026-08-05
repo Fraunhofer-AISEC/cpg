@@ -142,6 +142,15 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
             } else {
                 newFunction(name = s.name, rawNode = s)
             }
+
+        // Python has no enforced access control; the visibility of a *member* is a PEP 8 naming
+        // convention. We only project this heuristic onto record members (methods, constructors and
+        // operators); free functions keep the default [Visibility.UNKNOWN]. See
+        // [PythonLanguage.visibilityForName] for the exact, documented mapping.
+        if (recordDeclaration != null && language is PythonLanguage) {
+            func.visibility = language.visibilityForName(s.name)
+        }
+
         frontend.scopeManager.enterScope(func)
 
         frontend.statementHandler.addAsyncWarning(s, func)
