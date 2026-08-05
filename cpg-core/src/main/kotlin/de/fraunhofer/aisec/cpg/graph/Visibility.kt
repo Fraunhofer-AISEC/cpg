@@ -40,10 +40,12 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver
  * [HasModifiers.modifiers]. Passes such as the [SymbolResolver] can then reason about visibility
  * uniformly, without having to know any language's concrete keywords.
  *
- * Note that this enum deliberately conflates two conceptually distinct axes that never apply to the
- * same declaration at once, so that a single value is always sufficient:
+ * Note that this enum deliberately conflates three conceptually distinct axes that never apply to
+ * the same declaration at once, so that a single value is always sufficient:
  * - **Access control** ([PUBLIC], [PROTECTED], [PRIVATE]) restricts access relative to the
  *   *declaring [Record]* and only applies to record members.
+ * - **Module visibility** ([PACKAGE]) restricts access relative to the *enclosing module/package*
+ *   (Java's package, Go's package, Kotlin's module, a Rust crate), independently of any record.
  * - **Linkage** ([INTERNAL]) restricts access relative to the *translation unit* and only applies
  *   to non-member (file- or namespace-scope) declarations.
  *
@@ -55,17 +57,12 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver
  *   file-scope `static` → [INTERNAL].
  * - **C++**: `public`/`protected`/`private` members; file-scope `static` and anonymous namespaces →
  *   [INTERNAL].
- * - **Java/Kotlin/TypeScript**: `public`/`protected`/`private` members.
+ * - **Java**: `public`/`protected`/`private` members; the default (no modifier) → [PACKAGE].
+ * - **Kotlin**: `public`/`protected`/`private` members; `internal` → [PACKAGE] (module-scoped).
+ * - **Go**: exported (upper-case) identifiers → [PUBLIC]; unexported (lower-case) → [PACKAGE].
+ * - **TypeScript**: `public`/`protected`/`private` members.
  * - **Ruby**: `public`/`protected`/`private` methods.
  * - **JavaScript**: `#private` fields → [PRIVATE]; everything else → [PUBLIC].
- *
- * There is deliberately **no** dedicated value for *module- or package-level* visibility (Java's
- * package-private default, Kotlin's `internal`, Go's lower-case "unexported" identifiers, or Rust's
- * default module privacy and `pub(crate)`/`pub(super)`). Those relate a declaration to a *module*
- * rather than to a [Record] (access control) or a translation unit ([INTERNAL] linkage), so they do
- * not fit any value above and are conservatively mapped to [UNKNOWN] ("no restriction") for now. A
- * `PACKAGE`/`MODULE` value can be added once a frontend actually models module boundaries and a
- * pass needs to reason about them; adding it before then would be unused and unenforced.
  */
 enum class Visibility {
     /** Visible everywhere the declaring scope is reachable. This is the most permissive value. */
@@ -76,6 +73,15 @@ enum class Visibility {
 
     /** A record member that is visible only within the declaring [Record]. */
     PRIVATE,
+
+    /**
+     * Module/package visibility: a declaration that is visible only within its own enclosing module
+     * or package, but (unlike [PRIVATE]/[PROTECTED]) not tied to a [Record]. Java's package-private
+     * default, Kotlin's `internal`, and Go's unexported (lower-case) identifiers produce this
+     * visibility. Note this differs from [INTERNAL] linkage, which is confined to a single
+     * translation unit rather than to a whole module/package.
+     */
+    PACKAGE,
 
     /**
      * Internal linkage: a non-member declaration that is visible only within its own translation
