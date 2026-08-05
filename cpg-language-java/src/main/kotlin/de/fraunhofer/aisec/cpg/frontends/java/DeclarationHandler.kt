@@ -36,8 +36,11 @@ import com.github.javaparser.ast.stmt.ReturnStmt
 import com.github.javaparser.ast.stmt.Statement
 import com.github.javaparser.ast.type.ReferenceType
 import com.github.javaparser.resolution.UnsolvedSymbolException
+import de.fraunhofer.aisec.cpg.frontends.DeclarationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
+import de.fraunhofer.aisec.cpg.frontends.HasKeywordSemantics
+import de.fraunhofer.aisec.cpg.frontends.KeywordSemantics
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
@@ -57,6 +60,55 @@ import java.util.function.Supplier
 
 open class DeclarationHandler(lang: JavaLanguageFrontend) :
     Handler<Declaration, Node, JavaLanguageFrontend>(Supplier { ProblemDeclaration() }, lang) {
+
+    /**
+     * The [DeclarationContext] the frontend is currently building a declaration in, derived from
+     * the active scope. A record member is built while the enclosing [RecordScope] is active,
+     * everything else (in particular a top-level, package-level type) is treated as
+     * [DeclarationContext.GLOBAL]. This is what a [HasKeywordSemantics] language needs in order to
+     * interpret a context-dependent keyword such as `static`.
+     */
+    private val currentDeclarationContext: DeclarationContext
+        get() =
+            when (frontend.scopeManager.currentScope) {
+                is RecordScope -> DeclarationContext.RECORD
+                else -> DeclarationContext.GLOBAL
+            }
+
+    /**
+     * Projects the raw Java [modifiers] of [declaration] onto the canonical
+     * [Declaration.visibility] (and [ValueDeclaration.isStatic]).
+     *
+     * The lossless spelling stays in [Declaration.modifiers]; the *meaning* of each keyword is
+     * delegated to the language's [HasKeywordSemantics] trait and the results are folded together.
+     * The subtle case is Java's access-control *default*: a member or type without any of
+     * `public`/`protected`/`private` is package-private, so if no keyword contributed an explicit
+     * visibility we map it to [Visibility.PACKAGE] rather than leaving it [Visibility.UNKNOWN].
+     */
+    private fun applyVisibility(declaration: Declaration, modifiers: Set<String>) {
+        val language = language
+        if (language !is HasKeywordSemantics) {
+            return
+        }
+
+        val context = currentDeclarationContext
+        val semantics =
+            modifiers.fold(KeywordSemantics()) { acc, keyword ->
+                acc.merge(language.interpretKeyword(keyword, context))
+            }
+
+        semantics.visibility?.let { declaration.visibility = it }
+        if (declaration is ValueDeclaration) {
+            semantics.isStatic?.let { declaration.isStatic = it }
+        }
+
+        // Java's default (no access modifier) is package-private, which the keyword-based
+        // interpretation above cannot express since it only sees keywords that are present.
+        if (declaration.visibility == Visibility.UNKNOWN) {
+            declaration.visibility = Visibility.PACKAGE
+        }
+    }
+
     fun handleConstructor(constructorDeclaration: ConstructorDeclaration): Constructor {
         val resolvedConstructor = constructorDeclaration.resolve()
         val currentRecordDecl = frontend.scopeManager.currentRecord
@@ -66,6 +118,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 currentRecordDecl,
                 rawNode = constructorDeclaration,
             )
+        declaration.modifiers =
+            constructorDeclaration.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+        applyVisibility(declaration, declaration.modifiers)
         frontend.scopeManager.enterScope(declaration)
         createMethodReceiver(currentRecordDecl, declaration)
         declaration.addThrowTypes(
@@ -114,6 +169,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             )
         functionDeclaration.modifiers =
             methodDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+        applyVisibility(functionDeclaration, functionDeclaration.modifiers)
 
         frontend.scopeManager.enterScope(functionDeclaration)
         createMethodReceiver(currentRecordDecl, functionDeclaration)
@@ -188,6 +244,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 .toMutableList()
         recordDeclaration.modifiers =
             classInterDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+        applyVisibility(recordDeclaration, recordDeclaration.modifiers)
 
         frontend.typeManager.addTypeParameter(
             recordDeclaration,
@@ -283,6 +340,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     initializer = initializer,
                     rawNode = fieldDecl,
                 )
+            applyVisibility(fieldDeclaration, fieldDeclaration.modifiers)
             frontend.processAnnotations(fieldDeclaration, fieldDecl)
             declarationSequence.addDeclaration(fieldDeclaration)
         }
@@ -292,6 +350,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     fun handleEnumeration(enumDecl: EnumDeclaration): Enumeration {
         val name = enumDecl.nameAsString
         val enumDeclaration = this.newEnumeration(name, rawNode = enumDecl)
+        enumDeclaration.modifiers =
+            enumDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+        applyVisibility(enumDeclaration, enumDeclaration.modifiers)
 
         val superTypes = enumDecl.implementedTypes.map { frontend.getTypeAsGoodAsPossible(it) }
         enumDeclaration.superClasses.addAll(superTypes)
