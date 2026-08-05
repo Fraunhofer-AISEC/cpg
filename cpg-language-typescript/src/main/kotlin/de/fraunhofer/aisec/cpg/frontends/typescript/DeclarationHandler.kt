@@ -25,15 +25,32 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
+import de.fraunhofer.aisec.cpg.frontends.DeclarationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.frontends.HasKeywordSemantics
+import de.fraunhofer.aisec.cpg.frontends.KeywordSemantics
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 
 class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Declaration, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemDeclaration, lang) {
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
+    }
+
+    companion object {
+        /**
+         * The [TypeScriptNode.type] values under which the TypeScript parser emits the access and
+         * `static` modifier keywords. Note that we must enumerate these explicitly rather than
+         * matching every `*Keyword` node, because the parser also emits *type* keywords (e.g.
+         * `NumberKeyword`, `VoidKeyword`) as children of the same declaration.
+         */
+        private val modifierKeywordTypes =
+            setOf("PublicKeyword", "ProtectedKeyword", "PrivateKeyword", "StaticKeyword")
     }
 
     private fun handleNode(node: TypeScriptNode): Declaration {
@@ -69,9 +86,79 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 rawNode = node,
             )
 
+        this.handleModifiers(field, node)
+
         this.frontend.processAnnotations(field, node)
 
         return field
+    }
+
+    /**
+     * The [DeclarationContext] the frontend is currently building a declaration in, derived from
+     * the active scope. This tells a [HasKeywordSemantics] language whether a keyword such as
+     * `static` appears on a record member, at (module/file) global scope, or inside a function
+     * body.
+     */
+    private val currentDeclarationContext: DeclarationContext
+        get() =
+            when (frontend.scopeManager.currentScope) {
+                is RecordScope -> DeclarationContext.RECORD
+                is GlobalScope,
+                is NamespaceScope -> DeclarationContext.GLOBAL
+                else -> DeclarationContext.LOCAL
+            }
+
+    /**
+     * Collects the access/visibility modifiers of [node] and projects their canonical semantics
+     * onto [declaration].
+     *
+     * The raw keyword spellings are kept losslessly in [Declaration.modifiers]; their canonical
+     * *meaning* is delegated to the language's [HasKeywordSemantics] trait and stored in
+     * [Declaration.visibility] (and [ValueDeclaration.isStatic] for value declarations). Two shapes
+     * of modifier are recognized:
+     * - explicit modifier keywords such as `public`/`protected`/`private`/`static`, which the
+     *   TypeScript parser emits as dedicated `*Keyword` child nodes in front of the member name,
+     *   and
+     * - *hard private* members, identified not by a keyword but by a `#name` ([PrivateIdentifier])
+     *   name; these are runtime-private in both JavaScript and TypeScript.
+     *
+     * Finally, a record member that received no explicit visibility defaults to
+     * [Visibility.PUBLIC], matching the default access level of TypeScript and JavaScript class
+     * members.
+     */
+    private fun handleModifiers(declaration: Declaration, node: TypeScriptNode) {
+        val language = frontend.language as? HasKeywordSemantics ?: return
+        val context = currentDeclarationContext
+
+        // Collect the raw modifier spellings applicable to this declaration: the explicit
+        // `*Keyword` children the parser emits, plus - for a `#name` member - the synthetic
+        // hard-private keyword.
+        val keywords =
+            node.children
+                .orEmpty()
+                .filter { it.type in modifierKeywordTypes }
+                .mapNotNull { it.code } +
+                listOfNotNull(HARD_PRIVATE.takeIf { node.firstChild("PrivateIdentifier") != null })
+
+        // Keep the raw spellings losslessly, then fold their canonical meaning.
+        declaration.modifiers = declaration.modifiers + keywords
+        val semantics =
+            keywords.fold(KeywordSemantics()) { acc, keyword ->
+                acc.merge(language.interpretKeyword(keyword, context))
+            }
+
+        semantics.visibility?.let { declaration.visibility = it }
+        if (declaration is ValueDeclaration) {
+            semantics.isStatic?.let { declaration.isStatic = it }
+        }
+
+        // In TypeScript and JavaScript, a record member without an explicit access specifier is
+        // public by default. UNKNOWN means none of the keywords above set a visibility; only then
+        // do we apply the implicit PUBLIC default, so an explicit public/protected/private/#private
+        // is never clobbered.
+        if (context == DeclarationContext.RECORD && declaration.visibility == Visibility.UNKNOWN) {
+            declaration.visibility = Visibility.PUBLIC
+        }
     }
 
     private fun handleClassDeclaration(node: TypeScriptNode): Record {
@@ -116,6 +203,13 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         val name = this.frontend.getIdentifierName(node)
         val type = node.typeChildNode?.let { this.frontend.typeOf(it) } ?: unknownType()
 
+        // NOTE: TypeScript *parameter properties* (an access/`readonly` modifier on a constructor
+        // parameter, e.g. `constructor(private readonly x: number)`) both declare and initialize a
+        // class field with that visibility. This frontend does not model parameter properties as
+        // fields at all (a pre-existing limitation), so we intentionally do not run
+        // [handleModifiers] here: the access specifier is dropped and no visibility-annotated field
+        // is synthesized. Mapping this construct would require synthesizing a corresponding [Field]
+        // on the enclosing record and is out of scope for the member-visibility model.
         return newParameter(name, type, false, rawNode = node)
     }
 
@@ -162,6 +256,14 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             }
 
         node.typeChildNode?.let { func.type = this.frontend.typeOf(it) }
+
+        // Interpret access/`static` modifiers while we are still in the enclosing (record) scope,
+        // before we descend into the function's own scope. This covers methods *and* constructors,
+        // because `Constructor` extends `Method`; plain top-level functions cannot carry these
+        // modifiers, so they are intentionally excluded.
+        if (func is Method) {
+            this.handleModifiers(func, node)
+        }
 
         this.frontend.scopeManager.enterScope(func)
 
