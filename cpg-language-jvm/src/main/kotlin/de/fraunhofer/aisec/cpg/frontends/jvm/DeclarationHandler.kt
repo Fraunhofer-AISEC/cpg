@@ -25,9 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.jvm
 
+import de.fraunhofer.aisec.cpg.frontends.DeclarationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.frontends.KeywordSemantics
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import sootup.core.jimple.basic.Local
 import sootup.core.model.SootClass
 import sootup.core.model.SootField
@@ -71,6 +74,16 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
                 },
                 rawNode = sootClass,
             )
+
+        // Map the class' access flags onto the canonical visibility model. The class is not yet on
+        // the scope stack, so the current scope reflects its enclosing (declaration) context.
+        record.applyAccessFlags(
+            sootClass.modifiers.mapTo(mutableSetOf()) { it.name.lowercase() },
+            isPublic = sootClass.isPublic,
+            isProtected = sootClass.isProtected,
+            isPrivate = sootClass.isPrivate,
+            isStatic = sootClass.isStatic,
+        )
 
         // Collect super class
         val o = sootClass.superclass
@@ -125,6 +138,15 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
                 )
             }
 
+        // Map the method's access flags onto the canonical visibility model.
+        method.applyAccessFlags(
+            sootMethod.modifiers.mapTo(mutableSetOf()) { it.name.lowercase() },
+            isPublic = sootMethod.isPublic,
+            isProtected = sootMethod.isProtected,
+            isPrivate = sootMethod.isPrivate,
+            isStatic = sootMethod.isStatic,
+        )
+
         // Enter method scope
         frontend.scopeManager.enterScope(method)
 
@@ -155,15 +177,79 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
     }
 
     fun handleField(field: SootField): Field {
-        return newField(
-            field.name,
-            frontend.typeOf(field.type),
+        val declaration = newField(field.name, frontend.typeOf(field.type), rawNode = field)
+
+        // Map the field's access flags onto the canonical visibility model. A field is always a
+        // record member.
+        declaration.applyAccessFlags(
             field.modifiers.mapTo(mutableSetOf()) { it.name.lowercase() },
-            rawNode = field,
+            isPublic = field.isPublic,
+            isProtected = field.isProtected,
+            isPrivate = field.isPrivate,
+            isStatic = field.isStatic,
         )
+
+        return declaration
     }
 
     private fun handleLocal(local: Local): Variable {
         return newVariable(local.name, frontend.typeOf(local.type), rawNode = local)
+    }
+
+    /**
+     * The [DeclarationContext] the frontend is currently building a declaration in, derived from
+     * the active scope. Since JVM access flags are context-independent, this only distinguishes
+     * record members from top-level declarations for completeness and future use.
+     */
+    private val currentDeclarationContext: DeclarationContext
+        get() =
+            when (frontend.scopeManager.currentScope) {
+                is RecordScope -> DeclarationContext.RECORD
+                else -> DeclarationContext.GLOBAL
+            }
+
+    /**
+     * Projects the JVM bytecode access flags of a declaration onto the canonical visibility model.
+     *
+     * The raw access flags (including ones without a canonical meaning, such as `final` or
+     * `volatile`) are kept losslessly in [Declaration.modifiers] via [rawModifiers]. The
+     * access-control flags are additionally interpreted via the language's
+     * [de.fraunhofer.aisec.cpg.frontends.HasKeywordSemantics] trait and projected onto
+     * [Declaration.visibility]; the *absence* of `ACC_PUBLIC`/`ACC_PROTECTED`/`ACC_PRIVATE` denotes
+     * Java's package-private default and therefore maps to [Visibility.PACKAGE]. `ACC_STATIC` is
+     * projected onto [ValueDeclaration.isStatic] where applicable.
+     */
+    private fun Declaration.applyAccessFlags(
+        rawModifiers: Set<String>,
+        isPublic: Boolean,
+        isProtected: Boolean,
+        isPrivate: Boolean,
+        isStatic: Boolean,
+    ) {
+        modifiers = modifiers + rawModifiers
+
+        val language = frontend.language
+        if (language !is JVMLanguage) {
+            return
+        }
+
+        val keywords = buildList {
+            if (isPublic) add(PUBLIC)
+            if (isProtected) add(PROTECTED)
+            if (isPrivate) add(PRIVATE)
+            if (isStatic) add(STATIC)
+        }
+
+        val semantics =
+            keywords.fold(KeywordSemantics()) { acc, keyword ->
+                acc.merge(language.interpretKeyword(keyword, currentDeclarationContext))
+            }
+
+        // No access flag at all means package-private (Visibility.PACKAGE) in the JVM.
+        visibility = semantics.visibility ?: Visibility.PACKAGE
+
+        if (this is ValueDeclaration) {
+            semantics.isStatic?.let { this.isStatic = it }
+        }
     }
 }

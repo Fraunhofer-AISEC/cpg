@@ -25,9 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.jvm
 
+import de.fraunhofer.aisec.cpg.frontends.DeclarationContext
+import de.fraunhofer.aisec.cpg.frontends.HasAccessControl
 import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.HasFunctionOverloading
+import de.fraunhofer.aisec.cpg.frontends.HasKeywordSemantics
+import de.fraunhofer.aisec.cpg.frontends.KeywordSemantics
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
@@ -39,12 +44,39 @@ import java.util.zip.ZipFile
 import kotlin.reflect.KClass
 
 /**
+ * The lower-cased spellings of the JVM bytecode access flags that this frontend maps onto the
+ * canonical [Visibility] model. They correspond to `ACC_PUBLIC`, `ACC_PROTECTED`, `ACC_PRIVATE` and
+ * `ACC_STATIC` and are kept losslessly (together with any other access flag) in
+ * [de.fraunhofer.aisec.cpg.graph.HasModifiers.modifiers].
+ */
+const val PUBLIC = "public"
+
+const val PROTECTED = "protected"
+
+const val PRIVATE = "private"
+
+const val STATIC = "static"
+
+/**
  * Language definition for JVM-based artifacts.
  *
  * Supports bytecode and source artifacts in the JVM ecosystem and registers JVM built-in types used
  * by the frontend during parsing and type resolution.
+ *
+ * The JVM expresses member and type accessibility via bytecode access flags. `ACC_PUBLIC`,
+ * `ACC_PROTECTED` and `ACC_PRIVATE` map onto the corresponding access-control [Visibility] values,
+ * and the *absence* of all three denotes Java's package-private default, which maps to
+ * [Visibility.PACKAGE]. `ACC_STATIC` marks static (class-level) members. Because the JVM genuinely
+ * enforces access control on record members, this language declares [HasAccessControl]; because a
+ * flag's meaning does not depend on the syntactic position (unlike C's `static`), the
+ * [HasKeywordSemantics] mapping is context-independent.
  */
-open class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctionOverloading {
+open class JVMLanguage :
+    Language<JVMLanguageFrontend>(),
+    HasClasses,
+    HasFunctionOverloading,
+    HasKeywordSemantics,
+    HasAccessControl {
     override val fileExtensions: List<String> = listOf("class", "java", "jimple", "jar", "apk")
 
     override val namespaceDelimiter: String = "."
@@ -66,6 +98,25 @@ open class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctio
         )
 
     override val compoundAssignmentOperators: Set<String> = setOf()
+
+    /**
+     * Interprets a single JVM access-flag [keyword] into its canonical [KeywordSemantics]. The
+     * access modifiers `public`/`protected`/`private` map onto the corresponding [Visibility],
+     * while `static` marks a static member. Unlike C's `static`, a JVM access flag always carries
+     * the same meaning, so the [context] is irrelevant here. Java's package-private default is
+     * *not* a keyword (it is the absence of an access flag) and is therefore handled by the
+     * frontend, not by this mapping. Any keyword this language does not model yields empty
+     * [KeywordSemantics].
+     */
+    override fun interpretKeyword(keyword: String, context: DeclarationContext): KeywordSemantics {
+        return when (keyword) {
+            PUBLIC -> KeywordSemantics(visibility = Visibility.PUBLIC)
+            PROTECTED -> KeywordSemantics(visibility = Visibility.PROTECTED)
+            PRIVATE -> KeywordSemantics(visibility = Visibility.PRIVATE)
+            STATIC -> KeywordSemantics(isStatic = true)
+            else -> KeywordSemantics()
+        }
+    }
 
     /**
      * This function handles some specifics of the Java language when choosing a reference target
