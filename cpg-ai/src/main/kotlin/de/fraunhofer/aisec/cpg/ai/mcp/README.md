@@ -40,7 +40,7 @@ The current implementation uses stdio since Claude Desktop only supports this tr
     {
   "mcpServers": {
     "cpg": {
-      "command": "/path/to/cpg-ai/build/install/cpg-ai/bin/cpg-ai"
+      "command": "/path/to/cpg-ai/build/install/cpg-mcp/bin/cpg-mcp"
     }
   }
 }

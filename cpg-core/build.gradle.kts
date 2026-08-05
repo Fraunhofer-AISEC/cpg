@@ -52,6 +52,7 @@ dependencies {
     implementation(libs.kotlin.reflect)
     implementation(libs.jacksonyml)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.collections.immutable)
 
     testImplementation(libs.junit.params)
     integrationTestImplementation(libs.kotlin.reflect)

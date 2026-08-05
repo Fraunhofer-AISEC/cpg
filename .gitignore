@@ -2,6 +2,8 @@
 target
 .gradle
 build
+!cpg-language-cxx/src/test/resources/cxxProjectDetection/buildFolder/build/
+!cpg-language-cxx/src/test/resources/cxxProjectDetection/buildFolder/build/**
 .settings
 .project
 .classpath
