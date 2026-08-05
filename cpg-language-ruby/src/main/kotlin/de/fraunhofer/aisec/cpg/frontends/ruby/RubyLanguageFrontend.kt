@@ -36,6 +36,7 @@ import java.io.File
 import java.nio.file.Path
 import org.jruby.Ruby
 import org.jruby.ast.BlockNode
+import org.jruby.ast.ClassNode
 import org.jruby.ast.MethodDefNode
 import org.jruby.ast.RootNode
 import org.jruby.parser.Parser
@@ -75,23 +76,27 @@ class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
 
         scopeManager.resetToGlobal(tu)
 
-        // The root node can either contain a single node or a block node
-        if (node.bodyNode is MethodDefNode) {
-            val decl = declarationHandler.handle(node.bodyNode)
-            scopeManager.addDeclaration(decl)
-            tu.declarations += decl
-        } else if (node.bodyNode is BlockNode) {
-            // Otherwise, we need to loop over the block
-            val block = node.bodyNode as BlockNode
-            for (innerNode in block.filterNotNull()) {
-                if (innerNode is MethodDefNode) {
-                    val decl = declarationHandler.handle(innerNode)
-                    scopeManager.addDeclaration(decl)
-                    tu.declarations += decl
-                } else {
-                    val stmt = statementHandler.handle(innerNode)
-                    tu += stmt
-                }
+        // The root node can either contain a single node or a block node. We normalize both cases
+        // into a flat list of top-level nodes.
+        val topLevelNodes =
+            when (val body = node.bodyNode) {
+                is BlockNode -> body.filterNotNull()
+                null -> emptyList()
+                else -> listOf(body)
+            }
+
+        for (innerNode in topLevelNodes) {
+            // Method definitions (`def`) and class definitions (`class`) become declarations,
+            // everything else is treated as a top-level statement. Modules (`module M ... end`,
+            // a `ModuleNode`) share the same public/protected/private semantics for their instance
+            // methods, but module member visibility is out of scope for now.
+            if (innerNode is MethodDefNode || innerNode is ClassNode) {
+                val decl = declarationHandler.handle(innerNode)
+                scopeManager.addDeclaration(decl)
+                tu.declarations += decl
+            } else {
+                val stmt = statementHandler.handle(innerNode)
+                tu += stmt
             }
         }
 
