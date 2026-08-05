@@ -27,24 +27,50 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 
 import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.HasFunctionOverloading
+import de.fraunhofer.aisec.cpg.frontends.HasVisibilityModifiers
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import java.io.File
 import java.util.zip.ZipFile
 import kotlin.reflect.KClass
 
 /**
+ * The lower-cased spellings of the JVM bytecode access flags that this frontend maps onto the
+ * canonical [Visibility] model. They correspond to `ACC_PUBLIC`, `ACC_PROTECTED`, `ACC_PRIVATE` and
+ * `ACC_STATIC` and are kept losslessly (together with any other access flag) in
+ * [de.fraunhofer.aisec.cpg.graph.HasModifiers.modifiers].
+ */
+const val PUBLIC = "public"
+
+const val PROTECTED = "protected"
+
+const val PRIVATE = "private"
+
+const val STATIC = "static"
+
+/**
  * Language definition for JVM-based artifacts.
  *
  * Supports bytecode and source artifacts in the JVM ecosystem and registers JVM built-in types used
  * by the frontend during parsing and type resolution.
+ *
+ * The JVM expresses member and type accessibility via bytecode access flags. `ACC_PUBLIC`,
+ * `ACC_PROTECTED` and `ACC_PRIVATE` map onto the corresponding access-control [Visibility] values,
+ * and the *absence* of all three denotes Java's package-private default, which maps to
+ * [Visibility.PACKAGE]. `ACC_STATIC` marks static (class-level) members. Because the JVM genuinely
+ * enforces access control on record members, this language declares [HasVisibilityModifiers]. See
+ * [applyModifiers] for how the raw access flags are projected onto the canonical model.
  */
-open class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctionOverloading {
+open class JVMLanguage :
+    Language<JVMLanguageFrontend>(), HasClasses, HasFunctionOverloading, HasVisibilityModifiers {
     override val fileExtensions: List<String> = listOf("class", "java", "jimple", "jar", "apk")
 
     override val namespaceDelimiter: String = "."
@@ -66,6 +92,29 @@ open class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctio
         )
 
     override val compoundAssignmentOperators: Set<String> = setOf()
+
+    /**
+     * Projects the JVM bytecode access flags recorded in [Declaration.modifiers] onto the canonical
+     * [Visibility] model. The access modifiers `public`/`protected`/`private` map onto the
+     * corresponding [Visibility], while the *absence* of all three denotes Java's package-private
+     * default and maps to [Visibility.PACKAGE]. `static` is projected onto
+     * [ValueDeclaration.isStatic]. Unlike C's `static`, a JVM access flag always carries the same
+     * meaning, so [scope] is irrelevant here.
+     */
+    override fun applyModifiers(declaration: Declaration, scope: Scope?) {
+        declaration.visibility =
+            when {
+                PUBLIC in declaration.modifiers -> Visibility.PUBLIC
+                PROTECTED in declaration.modifiers -> Visibility.PROTECTED
+                PRIVATE in declaration.modifiers -> Visibility.PRIVATE
+                // No access flag at all means package-private (Visibility.PACKAGE) in the JVM.
+                else -> Visibility.PACKAGE
+            }
+
+        if (STATIC in declaration.modifiers) {
+            (declaration as? ValueDeclaration)?.isStatic = true
+        }
+    }
 
     /**
      * This function handles some specifics of the Java language when choosing a reference target
