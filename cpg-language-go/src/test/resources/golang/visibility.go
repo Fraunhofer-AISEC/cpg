@@ -44,8 +44,18 @@ type ExportedInterface interface {
 	unexportedDo()
 }
 
+// Exported and unexported package-level type aliases
+type ExportedAlias = int
+type unexportedAlias = int
+
 func local() {
-	// Local variables are block-scoped and carry no visibility restriction.
+	// Local variables are block-scoped and carry no visibility restriction, even when
+	// declared with a classic `var` (which reaches handleValueSpec) and an exported casing.
 	notExported := 1
 	_ = notExported
+
+	var Exported = 1
+	var unexported = 2
+	_ = Exported
+	_ = unexported
 }
