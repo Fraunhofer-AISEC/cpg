@@ -40,7 +40,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class RunPassForNodeUnitTest {
+class RunPassForNodeTest {
 
     @Test
     fun runsPassOnNearestParent() {
