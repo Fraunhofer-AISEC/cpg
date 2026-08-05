@@ -23,10 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp
+package de.fraunhofer.aisec.cpg.ai.mcp
 
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
