@@ -49,6 +49,23 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver
  *
  * Static-vs-instance "membership" is an orthogonal axis and is intentionally *not* modeled here; it
  * is captured by [de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration.isStatic].
+ *
+ * These values cover the visibility concepts of the currently supported languages:
+ * - **C**: external linkage → [PUBLIC]-equivalent (left [UNKNOWN], as C has no access control),
+ *   file-scope `static` → [INTERNAL].
+ * - **C++**: `public`/`protected`/`private` members; file-scope `static` and anonymous namespaces →
+ *   [INTERNAL].
+ * - **Java/Kotlin/TypeScript**: `public`/`protected`/`private` members.
+ * - **Ruby**: `public`/`protected`/`private` methods.
+ * - **JavaScript**: `#private` fields → [PRIVATE]; everything else → [PUBLIC].
+ *
+ * There is deliberately **no** dedicated value for *module- or package-level* visibility (Java's
+ * package-private default, Kotlin's `internal`, Go's lower-case "unexported" identifiers, or Rust's
+ * default module privacy and `pub(crate)`/`pub(super)`). Those relate a declaration to a *module*
+ * rather than to a [Record] (access control) or a translation unit ([INTERNAL] linkage), so they do
+ * not fit any value above and are conservatively mapped to [UNKNOWN] ("no restriction") for now. A
+ * `PACKAGE`/`MODULE` value can be added once a frontend actually models module boundaries and a
+ * pass needs to reason about them; adding it before then would be unused and unenforced.
  */
 enum class Visibility {
     /** Visible everywhere the declaring scope is reachable. This is the most permissive value. */

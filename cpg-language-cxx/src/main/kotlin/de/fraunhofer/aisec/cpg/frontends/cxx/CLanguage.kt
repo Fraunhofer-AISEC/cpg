@@ -62,7 +62,6 @@ open class CLanguage :
     HasGlobalFunctions,
     HasRedeclarations,
     HasKeywordSemantics,
-    HasAccessControl,
     Detector {
 
     override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
@@ -144,7 +143,7 @@ open class CLanguage :
     }
 
     /**
-     * Interprets a C/C++ declaration keyword into its canonical [KeywordSemantics], resolving the
+     * Interprets a C declaration keyword into its canonical [KeywordSemantics], resolving the
      * notorious context-dependence of `static`:
      * - at file/namespace scope ([DeclarationContext.GLOBAL]) it grants *internal linkage*, i.e.
      *   the declaration is confined to its own translation unit ([Visibility.INTERNAL]);
@@ -153,8 +152,9 @@ open class CLanguage :
      * - inside a function body ([DeclarationContext.LOCAL]) it only affects storage duration, which
      *   is irrelevant to symbol resolution, so it carries no canonical semantics.
      *
-     * The access specifiers `public`/`protected`/`private` map onto the corresponding [Visibility]
-     * regardless of context (they only ever occur on record members). Any other keyword yields
+     * C has no access control (`struct`/`union` members are always publicly accessible), so the
+     * `public`/`protected`/`private` access specifiers are only interpreted by [CPPLanguage], which
+     * additionally declares [HasAccessControl]. Any keyword this language does not model yields
      * empty [KeywordSemantics].
      */
     override fun interpretKeyword(keyword: String, context: DeclarationContext): KeywordSemantics {
@@ -165,9 +165,6 @@ open class CLanguage :
                     DeclarationContext.RECORD -> KeywordSemantics(isStatic = true)
                     DeclarationContext.LOCAL -> KeywordSemantics()
                 }
-            PUBLIC -> KeywordSemantics(visibility = Visibility.PUBLIC)
-            PROTECTED -> KeywordSemantics(visibility = Visibility.PROTECTED)
-            PRIVATE -> KeywordSemantics(visibility = Visibility.PRIVATE)
             else -> KeywordSemantics()
         }
     }

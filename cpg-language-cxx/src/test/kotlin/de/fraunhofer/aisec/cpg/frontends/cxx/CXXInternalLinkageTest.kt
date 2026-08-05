@@ -70,6 +70,45 @@ class CXXInternalLinkageTest {
     }
 
     @Test
+    fun testStaticFunctionsDoNotLeakAcrossTranslationUnits() {
+        val topLevel = Path.of("src", "test", "resources", "c", "internal_linkage")
+        val result =
+            analyze(listOf(File("$topLevel/a.c"), File("$topLevel/b.c")), topLevel, true) {
+                it.registerLanguage<CLanguage>()
+            }
+
+        // There are two independent, internal-linkage `helper` functions, one per translation unit.
+        val helpers = result.functions.filter { it.name.localName == "helper" }
+        assertEquals(2, helpers.size)
+        assertTrue(helpers.all { it.visibility == Visibility.INTERNAL })
+
+        val helperInA = helpers.single { it.translationUnit?.name.toString().endsWith("a.c") }
+        val helperInB = helpers.single { it.translationUnit?.name.toString().endsWith("b.c") }
+
+        // The `helper()` call in each translation unit must invoke *its own* `helper`, never the
+        // identically-named internal-linkage one in the other translation unit.
+        val callHelperA = result.functions["callHelperA"]
+        assertNotNull(callHelperA)
+        val callInA = callHelperA.calls["helper"]
+        assertNotNull(callInA)
+        assertEquals(
+            listOf(helperInA),
+            callInA.invokes,
+            "call in a.c must resolve to a.c's helper only",
+        )
+
+        val callHelperB = result.functions["callHelperB"]
+        assertNotNull(callHelperB)
+        val callInB = callHelperB.calls["helper"]
+        assertNotNull(callInB)
+        assertEquals(
+            listOf(helperInB),
+            callInB.invokes,
+            "call in b.c must resolve to b.c's helper only",
+        )
+    }
+
+    @Test
     fun testExternalFunctionsStillResolveAcrossTranslationUnits() {
         val topLevel = Path.of("src", "test", "resources", "c", "internal_linkage")
         val result =

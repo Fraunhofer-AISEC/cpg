@@ -57,21 +57,32 @@ class CLanguageKeywordSemanticsTest {
     }
 
     @Test
-    fun testAccessSpecifiersMapToVisibility() {
-        val c = CLanguage()
+    fun testAccessSpecifiersMapToVisibilityInCpp() {
+        // Access control is a C++ concept; only C++ maps the access specifiers to a visibility.
+        val cpp = CPPLanguage()
 
         assertEquals(
             KeywordSemantics(visibility = Visibility.PUBLIC),
-            c.interpretKeyword(PUBLIC, DeclarationContext.RECORD),
+            cpp.interpretKeyword(PUBLIC, DeclarationContext.RECORD),
         )
         assertEquals(
             KeywordSemantics(visibility = Visibility.PROTECTED),
-            c.interpretKeyword(PROTECTED, DeclarationContext.RECORD),
+            cpp.interpretKeyword(PROTECTED, DeclarationContext.RECORD),
         )
         assertEquals(
             KeywordSemantics(visibility = Visibility.PRIVATE),
-            c.interpretKeyword(PRIVATE, DeclarationContext.RECORD),
+            cpp.interpretKeyword(PRIVATE, DeclarationContext.RECORD),
         )
+    }
+
+    @Test
+    fun testCDoesNotModelAccessControl() {
+        // C has no access control, so the access specifiers carry no canonical semantics there.
+        val c = CLanguage()
+
+        assertEquals(KeywordSemantics(), c.interpretKeyword(PUBLIC, DeclarationContext.RECORD))
+        assertEquals(KeywordSemantics(), c.interpretKeyword(PROTECTED, DeclarationContext.RECORD))
+        assertEquals(KeywordSemantics(), c.interpretKeyword(PRIVATE, DeclarationContext.RECORD))
     }
 
     @Test

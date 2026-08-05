@@ -279,7 +279,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // Drop candidates that are invisible to this reference because of internal linkage: a
         // declaration with [Visibility.INTERNAL] (e.g. a file-scope `static` in C/C++) is confined
         // to its own translation unit and must not be resolved from another one.
-        candidates = candidates.withoutForeignInternalLinkage(ref)
+        candidates = candidates.onlyVisibleFrom(ref)
 
         // Store the candidates in the reference
         ref.candidates = candidates
@@ -333,17 +333,21 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * Removes candidates that are invisible to [ref] because of internal linkage. A declaration
-     * with [Visibility.INTERNAL] (in C/C++ a file-scope `static`, see the frontend's
+     * Narrows this set of resolution candidates to those that are *visible* from [ref] given their
+     * linkage — the linkage-level counterpart to the access-control filter [onlyAccessibleFrom].
+     * Currently the only linkage restriction modeled is internal linkage: a declaration with
+     * [Visibility.INTERNAL] (in C/C++ a file-scope `static`, see the frontend's
      * `HasKeywordSemantics` mapping) is confined to its own translation unit, so it must not be
      * resolved from a reference in a different one. This is what makes cross-translation-unit
-     * lookups of `static` globals and functions fail, as the language semantics require.
+     * lookups of `static` globals and functions fail, as the language semantics require. The name
+     * is intentionally kept general so that further linkage kinds (should another language need
+     * them) can be folded in here without renaming.
      *
      * Candidates without internal linkage are always kept, so languages that never assign
      * [Visibility.INTERNAL] are completely unaffected. As internal linkage is comparatively rare,
      * we avoid resolving [ref]'s translation unit unless at least one candidate actually has it.
      */
-    private fun Set<Declaration>.withoutForeignInternalLinkage(ref: Reference): Set<Declaration> {
+    private fun Set<Declaration>.onlyVisibleFrom(ref: Reference): Set<Declaration> {
         if (none { it.hasInternalLinkage }) {
             return this
         }
@@ -590,11 +594,24 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * from the declaring one. Any other visibility (including [Visibility.UNKNOWN]), and any
      * language without the [HasAccessControl] trait, imposes no restriction.
      *
-     * This deliberately models only the two most common access relationships. Access that is
-     * granted through other means — a `friend` declaration or a nested class reaching into its
-     * enclosing one — is *not* recognized and is reported as inaccessible here. Because
-     * [onlyAccessibleFrom] never removes the last candidate, such an access still resolves as long
-     * as it is unambiguous; only genuinely ambiguous candidate sets could be narrowed incorrectly.
+     * "Access relationship" here means the structural relation between the record [from] where the
+     * access is written and the record that declares the member, which is what decides whether the
+     * access is legal. We model exactly the two that every access-controlled language shares and
+     * that are derivable from [from] and the declaring record alone:
+     * 1. **same record** — `from` *is* the declaring record (grants access to `private` members),
+     *    e.g. a method of `class C` reading `C`'s own `private` field;
+     * 2. **subclass** — `from` (transitively) inherits from the declaring record (additionally
+     *    grants access to `protected` members), e.g. a method of `class D : C` reading a
+     *    `protected` field declared in `C`.
+     *
+     * We stop at these two rather than "any number" because every further way access can be granted
+     * requires modeling a *different* relationship that is not expressible from `from` and the
+     * declaring record alone, and is often language-specific: a C++ `friend` declaration names an
+     * unrelated grantee, a nested class reaches into its lexically enclosing one, Java adds
+     * package/module membership, and so on. Those grants are *not* recognized here and such a
+     * member is reported as inaccessible. That is safe because [onlyAccessibleFrom] never removes
+     * the last candidate: an unambiguous access (e.g. a friend call with a single candidate) still
+     * resolves; only a genuinely ambiguous candidate set could be narrowed too aggressively.
      */
     private fun Declaration.isAccessibleFrom(from: Record?): Boolean {
         if (language !is HasAccessControl) {
@@ -610,9 +627,15 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * The [Record] that declares this member. For a [Method] this is its [Method.recordDeclaration]
-     * (which is also set for out-of-line definitions), for any other member it is the closest
-     * enclosing [Record] in the AST. Returns `null` for non-members.
+     * The [Record] that declares this member. For any member that is *lexically* nested in its
+     * record this is simply the closest enclosing [Record] in the AST ([firstParentOrNull], which
+     * walks [Node.astParent]); the surrounding [de.fraunhofer.aisec.cpg.graph.scopes.RecordScope]
+     * would give the same answer for those.
+     *
+     * A [Method], however, may be *defined out-of-line* (e.g. C++ `void C::foo() {}`), where its
+     * AST parent and its scope are the enclosing namespace or translation unit, not the record. We
+     * therefore prefer its explicitly-tracked [Method.recordDeclaration], which points at the
+     * record even for such definitions. Returns `null` for non-members.
      */
     private val Declaration.declaringRecord: Record?
         get() = (this as? Method)?.recordDeclaration ?: firstParentOrNull<Record>()

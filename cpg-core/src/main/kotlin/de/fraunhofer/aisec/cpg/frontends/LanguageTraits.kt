@@ -332,6 +332,14 @@ interface HasRedeclarations : LanguageTrait {
  * The syntactic position in which a declaration appears. The *meaning* of a storage-class or
  * visibility keyword such as C/C++'s `static` depends entirely on this context, so a frontend must
  * classify a declaration before asking a [HasKeywordSemantics] language to interpret its keywords.
+ *
+ * This is a small, deliberately coarse projection of the frontend's active
+ * [de.fraunhofer.aisec.cpg.graph.scopes.Scope] and is *not* a competing model of it: a
+ * [de.fraunhofer.aisec.cpg.graph.scopes.Scope] models lexical nesting and name lookup (which names
+ * are reachable from where), whereas this enum only distinguishes the three positions that change
+ * what a keyword *means*. Frontends therefore derive it directly from the current scope kind
+ * (record vs. file/namespace vs. block); collapsing the full scope hierarchy to these three cases
+ * keeps the language trait decoupled from the scope classes, which the core graph module owns.
  */
 enum class DeclarationContext {
     /** File or namespace scope, i.e. a non-member, top-level declaration. */
