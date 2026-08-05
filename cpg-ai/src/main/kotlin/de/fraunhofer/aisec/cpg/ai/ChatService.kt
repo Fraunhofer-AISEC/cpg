@@ -45,6 +45,7 @@ import ai.koog.serialization.kotlinx.toKotlinxJsonElement
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import de.fraunhofer.aisec.cpg.ai.clients.*
+import de.fraunhofer.aisec.cpg.ai.skills.ACTIVATE_SKILL_TOOL_NAME
 import de.fraunhofer.aisec.cpg.ai.skills.SkillLoader
 import de.fraunhofer.aisec.cpg.ai.skills.buildActivateSkillToolRegistry
 import de.fraunhofer.aisec.cpg.ai.skills.buildSkillCatalog
@@ -185,6 +186,67 @@ class ChatService(
     }
 
     /**
+     * Extracts a tool call from [text] when the model attempted one via free-form text instead of a
+     * real structured `tool_calls` response - e.g. because the LLM provider's tool-call parser
+     * doesn't recognize this particular model's native tool-call format (observed with some
+     * self-hosted models/servers). Rather than special-casing any one model's native syntax (which
+     * varies across model families and even across attempts by the same model), this looks for a
+     * JSON object - optionally inside a fenced code block or a `<tool_call>` tag, both common
+     * conventions - with a name-like key matching one of [validToolNames] and an arguments-like
+     * key. Returns null if no such match is found, which is the common case (real tool calls and
+     * genuine final answers never match).
+     */
+    private fun extractFallbackToolCall(
+        text: String,
+        validToolNames: Set<String>,
+    ): MessagePart.Tool.Call? {
+        val candidates = buildList {
+            FENCED_CODE_BLOCK_REGEX.findAll(text).forEach { add(it.groupValues[1]) }
+            TOOL_CALL_TAG_REGEX.findAll(text).forEach { add(it.groupValues[1]) }
+            add(text)
+        }
+
+        for (candidate in candidates) {
+            for (jsonText in findJsonObjects(candidate)) {
+                val obj =
+                    runCatching { Json.parseToJsonElement(jsonText).jsonObject }.getOrNull()
+                        ?: continue
+                val name =
+                    NAME_KEYS.firstNotNullOfOrNull { key -> obj[key]?.jsonPrimitive?.contentOrNull }
+                if (name == null || name !in validToolNames) continue
+                val args = ARGUMENT_KEYS.firstNotNullOfOrNull { key -> obj[key]?.jsonObject }
+                return MessagePart.Tool.Call(tool = name, args = args ?: JsonObject(emptyMap()))
+            }
+        }
+        return null
+    }
+
+    /** Finds all top-level, brace-balanced `{...}` substrings in [text]. */
+    private fun findJsonObjects(text: String): List<String> {
+        val results = mutableListOf<String>()
+        var depth = 0
+        var start = -1
+        for ((i, c) in text.withIndex()) {
+            when (c) {
+                '{' -> {
+                    if (depth == 0) start = i
+                    depth++
+                }
+                '}' -> {
+                    if (depth > 0) {
+                        depth--
+                        if (depth == 0 && start >= 0) {
+                            results.add(text.substring(start, i + 1))
+                            start = -1
+                        }
+                    }
+                }
+            }
+        }
+        return results
+    }
+
+    /**
      * The agent's tool-calling loop: request the LLM, and if it calls tool(s), execute them and
      * send the results back, repeating until the LLM responds with text. This mirrors Koog's
      * built-in single-run strategy shape, extended with:
@@ -245,6 +307,47 @@ class ChatService(
                     frames.toList().toMessageResponse().also { logTokenUsage(it) }
                 }
 
+            // Some models attempt a tool call as free-form text instead of a real structured
+            // tool_calls response (see extractFallbackToolCall doc). Both "first attempt" and
+            // "after the nudge" responses get this same check before falling through to the
+            // nudge/finish behavior above, since a text-only reply can happen at either point.
+            fun validToolNames() = tools.map { it.name }.toSet() + ACTIVATE_SKILL_TOOL_NAME
+
+            val detectFallbackToolCall by
+                node<String, Pair<String, MessagePart.Tool.Call?>>("detectFallbackToolCall") { text
+                    ->
+                    text to extractFallbackToolCall(text, validToolNames())
+                }
+            val fallbackToolCallDetected by
+                node<Pair<String, MessagePart.Tool.Call?>, ToolCalls>("fallbackToolCallDetected") {
+                    (_, call) ->
+                    ToolCalls(listOf(requireNotNull(call)))
+                }
+            val fallbackNoToolCallDetected by
+                node<Pair<String, MessagePart.Tool.Call?>, String>("fallbackNoToolCallDetected") {
+                    (text, _) ->
+                    text
+                }
+
+            val detectFallbackToolCallAfterNudge by
+                node<String, Pair<String, MessagePart.Tool.Call?>>(
+                    "detectFallbackToolCallAfterNudge"
+                ) { text ->
+                    text to extractFallbackToolCall(text, validToolNames())
+                }
+            val fallbackToolCallDetectedAfterNudge by
+                node<Pair<String, MessagePart.Tool.Call?>, ToolCalls>(
+                    "fallbackToolCallDetectedAfterNudge"
+                ) { (_, call) ->
+                    ToolCalls(listOf(requireNotNull(call)))
+                }
+            val fallbackNoToolCallDetectedAfterNudge by
+                node<Pair<String, MessagePart.Tool.Call?>, String>(
+                    "fallbackNoToolCallDetectedAfterNudge"
+                ) { (text, _) ->
+                    text
+                }
+
             edge(nodeStart forwardTo requestLlmStream)
             edge(requestLlmStream forwardTo requestLlm)
             // onToolCalls is checked before onTextMessage (matching Koog's own singleRunStrategy
@@ -255,7 +358,7 @@ class ChatService(
             // "any Text part present", regardless of tool calls), checking onTextMessage first
             // would let that empty text part win the race and silently skip the tool call.
             edge(requestLlm forwardTo executeTool onToolCalls { true })
-            edge(requestLlm forwardTo buildNudge onTextMessage { true })
+            edge(requestLlm forwardTo detectFallbackToolCall onTextMessage { true })
             edge(executeTool forwardTo truncateToolResults)
             // If the history has grown too large, compress it before sending the tool result.
             edge(
@@ -276,12 +379,46 @@ class ChatService(
             )
             edge(sendToolResultStream forwardTo sendToolResult)
             edge(sendToolResult forwardTo executeTool onToolCalls { true })
-            edge(sendToolResult forwardTo buildNudge onTextMessage { true })
+            edge(sendToolResult forwardTo detectFallbackToolCall onTextMessage { true })
+
+            edge(
+                detectFallbackToolCall forwardTo
+                    fallbackToolCallDetected onCondition
+                    { (_, call) ->
+                        call != null
+                    }
+            )
+            edge(fallbackToolCallDetected forwardTo executeTool)
+            edge(
+                detectFallbackToolCall forwardTo
+                    fallbackNoToolCallDetected onCondition
+                    { (_, call) ->
+                        call == null
+                    }
+            )
+            edge(fallbackNoToolCallDetected forwardTo buildNudge)
 
             edge(buildNudge forwardTo nudgeRequestStream)
             edge(nudgeRequestStream forwardTo nudgeRequest)
             edge(nudgeRequest forwardTo executeTool onToolCalls { true })
-            edge(nudgeRequest forwardTo nodeFinish onTextMessage { true })
+            edge(nudgeRequest forwardTo detectFallbackToolCallAfterNudge onTextMessage { true })
+
+            edge(
+                detectFallbackToolCallAfterNudge forwardTo
+                    fallbackToolCallDetectedAfterNudge onCondition
+                    { (_, call) ->
+                        call != null
+                    }
+            )
+            edge(fallbackToolCallDetectedAfterNudge forwardTo executeTool)
+            edge(
+                detectFallbackToolCallAfterNudge forwardTo
+                    fallbackNoToolCallDetectedAfterNudge onCondition
+                    { (_, call) ->
+                        call == null
+                    }
+            )
+            edge(fallbackNoToolCallDetectedAfterNudge forwardTo nodeFinish)
         }
 
     /** Return the discovered skills. */
@@ -468,6 +605,22 @@ class ChatService(
 
     companion object {
         private val log = LoggerFactory.getLogger(ChatService::class.java)
+
+        /** Matches fenced code blocks, e.g. ` ```json ... ``` ` (see [extractFallbackToolCall]). */
+        private val FENCED_CODE_BLOCK_REGEX = Regex("```(?:\\w+)?\\s*([\\s\\S]*?)```")
+
+        /**
+         * Matches the common `<tool_call>...</tool_call>` convention (see
+         * [extractFallbackToolCall]).
+         */
+        private val TOOL_CALL_TAG_REGEX =
+            Regex("<tool_call>([\\s\\S]*?)</tool_call>", RegexOption.IGNORE_CASE)
+
+        /** Candidate JSON keys for a tool's name, in order of preference. */
+        private val NAME_KEYS = listOf("name", "tool", "tool_name", "function")
+
+        /** Candidate JSON keys for a tool's arguments, in order of preference. */
+        private val ARGUMENT_KEYS = listOf("arguments", "parameters", "input")
 
         fun createIfConfigExist(): ChatService? {
             val config = ConfigFactory.load()

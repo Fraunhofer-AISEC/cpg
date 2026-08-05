@@ -41,7 +41,10 @@ const val SYSTEM_PROMPT =
         "Do not stop at summaries. Inspect the actual code before drawing conclusions. " +
         "If a previous tool result already answers the question, respond without calling tools again. " +
         "If a tool call fails, do not retry it, instead continue with the information you already have. " +
-        "Explain your findings clearly."
+        "Explain your findings clearly. " +
+        "Always prefer calling tools through your normal function-calling mechanism. Only if that " +
+        "is not available to you, write the call as a fenced JSON code block instead, in this " +
+        "exact shape: ```json\n{\"name\": \"<tool name>\", \"arguments\": {<parameter>: <value>}}\n```."
 
 /** SSE event payloads streamed from [ChatService] to the frontend. */
 object Events {
