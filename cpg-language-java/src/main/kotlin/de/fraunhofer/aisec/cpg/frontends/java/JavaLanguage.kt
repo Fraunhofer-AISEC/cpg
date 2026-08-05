@@ -122,11 +122,12 @@ open class JavaLanguage :
      * member when it appears on a record member ([DeclarationContext.RECORD]); it carries no
      * canonical semantics elsewhere.
      *
-     * Note that Java's *default* (no access modifier) visibility — package-private — cannot be
-     * expressed here, since [interpretKeyword] only ever sees the keywords that are actually
-     * present. The absence of an access modifier is therefore mapped to [Visibility.PACKAGE] by the
-     * frontend's declaration handler after folding all present keywords (see
-     * `DeclarationHandler.applyVisibility`).
+     * Note that Java's *default* (no access modifier) visibility cannot be expressed here, since
+     * [interpretKeyword] only ever sees the keywords that are actually present. The absence of an
+     * access modifier is therefore resolved by the frontend's declaration handler after folding all
+     * present keywords (see `DeclarationHandler.applyVisibility`): ordinary members and types
+     * default to package-private ([Visibility.PACKAGE]), whereas interface members are implicitly
+     * public ([Visibility.PUBLIC]).
      */
     override fun interpretKeyword(keyword: String, context: DeclarationContext): KeywordSemantics {
         return when (keyword) {
