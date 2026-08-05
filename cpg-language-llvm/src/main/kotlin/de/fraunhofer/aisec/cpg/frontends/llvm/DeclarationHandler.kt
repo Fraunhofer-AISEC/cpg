@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
+import de.fraunhofer.aisec.cpg.frontends.DeclarationContext
 import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.frontends.HasKeywordSemantics
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
@@ -65,6 +67,69 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
+     * Maps the [linkage type](https://llvm.org/docs/LangRef.html#linkage-types) of a global value
+     * or function (as returned by `LLVMGetLinkage`) to its LLVM IR keyword spelling, or `null` when
+     * there is no spelling to record. Every linkage we can spell is returned by its keyword so that
+     * it is recorded losslessly in [Declaration.modifiers]. `null` is returned both for the default
+     * `external` linkage (which LLVM never writes out) and for the rare obsolete linkage values
+     * that have no keyword we recognize here; [handleLinkage] treats both cases the same way,
+     * adding nothing to [Declaration.modifiers] and leaving the visibility untouched.
+     */
+    private fun linkageKeyword(linkage: Int): String? {
+        return when (linkage) {
+            // `external` is LLVM's implicit default and is never written out in the IR, so there
+            // is no keyword spelling for us to record.
+            LLVMExternalLinkage -> null
+            LLVMInternalLinkage -> "internal"
+            LLVMPrivateLinkage -> "private"
+            LLVMLinkerPrivateLinkage -> "linker_private"
+            LLVMLinkerPrivateWeakLinkage -> "linker_private_weak"
+            LLVMAvailableExternallyLinkage -> "available_externally"
+            LLVMLinkOnceAnyLinkage -> "linkonce"
+            LLVMLinkOnceODRLinkage -> "linkonce_odr"
+            LLVMWeakAnyLinkage -> "weak"
+            LLVMWeakODRLinkage -> "weak_odr"
+            LLVMAppendingLinkage -> "appending"
+            LLVMCommonLinkage -> "common"
+            LLVMExternalWeakLinkage -> "extern_weak"
+            // Obsolete linkage values that a modern `LLVMGetLinkage` never returns (e.g. dllimport,
+            // dllexport, ghost). We have no keyword spelling for them, so we treat them like the
+            // default `external`: nothing recorded, visibility left UNKNOWN.
+            else -> null
+        }
+    }
+
+    /**
+     * Determines the [linkage type](https://llvm.org/docs/LangRef.html#linkage-types) of a global
+     * [value][valueRef] (a global variable or a function), records its raw keyword spelling in
+     * [Declaration.modifiers] and projects it onto the canonical [HasVisibility.visibility] via the
+     * language's [HasKeywordSemantics] trait.
+     *
+     * `private`/`internal` linkage confines the symbol to its own module and therefore becomes
+     * [Visibility.INTERNAL]. All other linkage types (including the default `external`) carry no
+     * canonical visibility restriction and leave the visibility [Visibility.UNKNOWN]; the ones we
+     * have a keyword spelling for are still recorded losslessly in [Declaration.modifiers].
+     */
+    private fun handleLinkage(declaration: Declaration, valueRef: LLVMValueRef) {
+        // Capture the open `language` property in a local so that it can be smart-cast to
+        // `HasKeywordSemantics` below (an open/overridable property cannot be smart-cast in place).
+        val language = language
+        if (language !is HasKeywordSemantics) {
+            return
+        }
+
+        // A `null` keyword means the default `external` linkage (never spelled out) or an obsolete
+        // linkage we have no spelling for. In both cases we add nothing to the (raw, as-spelled)
+        // modifiers and leave the visibility untouched.
+        val keyword = linkageKeyword(LLVMGetLinkage(valueRef)) ?: return
+
+        declaration.modifiers = declaration.modifiers + keyword
+        language.interpretKeyword(keyword, DeclarationContext.GLOBAL).visibility?.let {
+            declaration.visibility = it
+        }
+    }
+
+    /**
      * Handles parsing of [global variables](https://llvm.org/docs/LangRef.html#global-variables).
      */
     private fun handleGlobal(valueRef: LLVMValueRef): Declaration {
@@ -75,6 +140,10 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         val type = frontend.typeOf(valueRef)
 
         val variableDeclaration = newVariable(name, type, false, rawNode = valueRef)
+
+        // Project the LLVM linkage type onto the canonical visibility (e.g. `private`/`internal`
+        // linkage -> internal linkage confined to this module).
+        handleLinkage(variableDeclaration, valueRef)
 
         // cache binding
         frontend.bindingsCache[valueRef.symbolName] = variableDeclaration
@@ -97,6 +166,10 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     private fun handleFunction(func: LLVMValueRef): Function {
         val name = LLVMGetValueName(func)
         val functionDeclaration = newFunction(name.string, rawNode = func)
+
+        // Project the LLVM linkage type onto the canonical visibility (e.g. `private`/`internal`
+        // linkage -> internal linkage confined to this module).
+        handleLinkage(functionDeclaration, func)
 
         // return types are a bit tricky, because the type of the function is a pointer to the
         // function type, which then has the return type in it

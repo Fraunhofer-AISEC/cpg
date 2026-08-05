@@ -25,20 +25,62 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
+import de.fraunhofer.aisec.cpg.frontends.DeclarationContext
+import de.fraunhofer.aisec.cpg.frontends.HasKeywordSemantics
+import de.fraunhofer.aisec.cpg.frontends.KeywordSemantics
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.types.FloatingPointType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.NumericType
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KClass
 
+/**
+ * The LLVM IR [linkage type](https://llvm.org/docs/LangRef.html#linkage-types) keywords that
+ * confine a global value or function to its own module (translation unit): `private` symbols are
+ * not even exposed by name to the rest of the module, and `internal` behaves like C's file-scope
+ * `static`. The `linker_private` variants are historical spellings of `private`. All of them map
+ * onto [Visibility.INTERNAL].
+ */
+val LLVM_INTERNAL_LINKAGES = setOf("private", "internal", "linker_private", "linker_private_weak")
+
 /** The LLVM IR language. */
-open class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>() {
+open class LLVMIRLanguage : Language<LLVMIRLanguageFrontend>(), HasKeywordSemantics {
     override val fileExtensions = listOf("ll")
     override val namespaceDelimiter = "::"
     @DoNotPersist
     override val frontend: KClass<out LLVMIRLanguageFrontend> = LLVMIRLanguageFrontend::class
     override val compoundAssignmentOperators = setOf<String>()
+
+    /**
+     * Interprets an LLVM IR linkage keyword into its canonical [KeywordSemantics].
+     *
+     * LLVM IR expresses visibility through the
+     * [linkage type](https://llvm.org/docs/LangRef.html#linkage-types) of a global value or
+     * function rather than through record access control (LLVM has no such concept, so this
+     * language deliberately does not implement
+     * [de.fraunhofer.aisec.cpg.frontends.HasAccessControl]). The only axis this canonical model
+     * captures is whether a symbol is confined to its own module:
+     * - `private` / `internal` (and the historical `linker_private` spellings) grant *internal
+     *   linkage*, i.e. the symbol must not be resolved from another translation unit
+     *   ([Visibility.INTERNAL]);
+     * - every other linkage type — including the default `external`, as well as `weak`, `linkonce`,
+     *   `common`, ... — does *not* restrict resolution in a way this model captures, so it yields
+     *   empty [KeywordSemantics] and leaves the declaration's visibility [Visibility.UNKNOWN].
+     *
+     * Leaving `external` at [Visibility.UNKNOWN] (rather than mapping it onto the access-control
+     * value [Visibility.PUBLIC]) matches how the analogous, linkage-based C frontend treats
+     * external linkage: as LLVM/C have no access control, external linkage carries no visibility
+     * restriction (see the [Visibility] documentation). The [context] is ignored because LLVM
+     * linkage always applies to module-level globals and functions.
+     */
+    override fun interpretKeyword(keyword: String, context: DeclarationContext): KeywordSemantics {
+        return when (keyword) {
+            in LLVM_INTERNAL_LINKAGES -> KeywordSemantics(visibility = Visibility.INTERNAL)
+            else -> KeywordSemantics()
+        }
+    }
 
     // TODO: In theory, the integers can have any bit-width from 1 to 1^32 bits. It's not known if
     //  they are interpreted as signed or unsigned.
