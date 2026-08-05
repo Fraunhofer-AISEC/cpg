@@ -25,9 +25,8 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
-import de.fraunhofer.aisec.codyze.console.ai.ChatRequestJSON
-import de.fraunhofer.aisec.codyze.console.ai.ChatService
-import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
+import de.fraunhofer.aisec.cpg.ai.ChatRequestJSON
+import de.fraunhofer.aisec.cpg.ai.ChatService
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import io.ktor.http.*
@@ -65,7 +64,7 @@ import kotlinx.serialization.json.JsonObject
  * - POST `/api/concept`: Adds a concept node to the current
  *   [de.fraunhofer.aisec.codyze.AnalysisResult]
  */
-fun Routing.apiRoutes(service: ConsoleService) {
+fun Routing.apiRoutes(service: ConsoleService, chatEnabled: Boolean) {
     // The API routes are prefixed with /api
     route("/api") {
         // The endpoint to analyze a project
@@ -252,7 +251,7 @@ fun Routing.apiRoutes(service: ConsoleService) {
         }
 
         // Feature flags endpoint
-        get("/features") { call.respond(mapOf("mcpEnabled" to McpServerHelper.isEnabled)) }
+        get("/features") { call.respond(mapOf("mcpEnabled" to chatEnabled)) }
 
         // The endpoint to get a QueryTree with its parent IDs for tree expansion
         get("/querytrees/{queryTreeId}/parents") {

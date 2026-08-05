@@ -14,27 +14,20 @@ mavenPublishing {
     }
 }
 
-val mcpEnabled = findProject(":cpg-mcp") != null
-
 dependencies {
     // CPG modules
     implementation(projects.cpgConcepts)
     implementation(projects.cpgSerialization)
-
-    // MCP dependencies
-    if (mcpEnabled) {
-        implementation(project(":cpg-mcp"))
-        // MCP SDK
-        implementation(libs.mcp)
-        // MCP Client SDK - for custom MCP client implementation
-        implementation(libs.mcp.client)
-    } else {
-        // MCP SDK only available at compile time so the files in `/ai` compile,
-        compileOnly(libs.mcp)
-        compileOnly(libs.mcp.client)
-        testImplementation(libs.mcp)
-        testImplementation(libs.mcp.client)
-    }
+    // cpg-ai (MCP server, ChatService, ...) is a real, mandatory dependency of codyze-console,
+    // but the module itself stays optional at the settings.gradle.kts level (like the language
+    // frontends) for consumers who don't need it. Fail clearly if someone tries to build
+    // codyze-console without it, rather than a cryptic "project not found" error.
+    implementation(
+        findProject(":cpg-ai")
+            ?: error(
+                "codyze-console requires the cpg-ai module; set enableAIModule=true in gradle.properties"
+            )
+    )
 
     // Ktor server dependencies
     implementation(libs.bundles.ktor)
