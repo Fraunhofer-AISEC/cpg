@@ -30,31 +30,33 @@ import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.LatticeElement
 import de.fraunhofer.aisec.cpg.helpers.Util.infoWithFileLocation
+import de.fraunhofer.aisec.cpg.helpers.flatMapNotNull
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
-import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import kotlin.collections.toSet
+import kotlinx.coroutines.runBlocking
 
 /**
  * Implements the [LatticeElement] for a lattice over a set of nodes. The lattice itself is
@@ -68,17 +70,19 @@ typealias PowersetLatticeTypeLattice = PowersetLattice<Type>
 
 typealias PowersetLatticeTypeElement = PowersetLattice.Element<Type>
 
-typealias ScopeToDeclarationLattice = MapLattice<Scope, PowersetLatticeDeclarationElement>
+typealias ScopeToDeclarationLattice = ConcurrentMapLattice<Scope, PowersetLatticeDeclarationElement>
 
-typealias ScopeToDeclarationElement = MapLattice.Element<Scope, PowersetLatticeDeclarationElement>
+typealias ScopeToDeclarationElement =
+    ConcurrentMapLattice.Element<Scope, PowersetLatticeDeclarationElement>
 
-typealias NodeToDeclarationLattice = MapLattice<Node, PowersetLatticeDeclarationElement>
+typealias NodeToDeclarationLattice = ConcurrentMapLattice<Node, PowersetLatticeDeclarationElement>
 
-typealias NodeToDeclarationElement = MapLattice.Element<Node, PowersetLatticeDeclarationElement>
+typealias NodeToDeclarationElement =
+    ConcurrentMapLattice.Element<Node, PowersetLatticeDeclarationElement>
 
-typealias NodeToTypeLattice = MapLattice<Node, PowersetLatticeTypeElement>
+typealias NodeToTypeLattice = ConcurrentMapLattice<Node, PowersetLatticeTypeElement>
 
-typealias NodeToTypeElement = MapLattice.Element<Node, PowersetLatticeTypeElement>
+typealias NodeToTypeElement = ConcurrentMapLattice.Element<Node, PowersetLatticeTypeElement>
 
 typealias DeclarationStateElement =
     TripleLattice.Element<ScopeToDeclarationElement, NodeToDeclarationElement, NodeToTypeElement>
@@ -107,20 +111,22 @@ fun DeclarationStateElement.pushDeclarationToScope(
     scope: Scope,
     vararg elements: Declaration,
 ): DeclarationStateElement {
-    return lattice.lub(
-        this,
-        DeclarationStateElement(
-            ScopeToDeclarationElement(scope to PowersetLatticeDeclarationElement(*elements)),
-            NodeToDeclarationElement(),
-            NodeToTypeElement(
-                *elements
-                    .mapNotNull { it as? HasType }
-                    .map { it as Node to PowersetLatticeTypeElement(it.type) }
-                    .toTypedArray()
+    return runBlocking {
+        lattice.lub(
+            this@pushDeclarationToScope,
+            DeclarationStateElement(
+                ScopeToDeclarationElement(scope to PowersetLatticeDeclarationElement(*elements)),
+                NodeToDeclarationElement(),
+                NodeToTypeElement(
+                    *elements
+                        .mapNotNull { it as? HasType }
+                        .map { it as Node to PowersetLatticeTypeElement(it.type) }
+                        .toTypedArray()
+                ),
             ),
-        ),
-        true,
-    )
+            true,
+        )
+    }
 }
 
 fun DeclarationStateElement.pushCandidate(
@@ -128,15 +134,17 @@ fun DeclarationStateElement.pushCandidate(
     scope: Node,
     vararg elements: Declaration,
 ): DeclarationStateElement {
-    return lattice.lub(
-        this,
-        DeclarationStateElement(
-            ScopeToDeclarationElement(),
-            NodeToDeclarationElement(scope to PowersetLatticeDeclarationElement(*elements)),
-            NodeToTypeElement(),
-        ),
-        true,
-    )
+    return runBlocking {
+        lattice.lub(
+            this@pushCandidate,
+            DeclarationStateElement(
+                ScopeToDeclarationElement(),
+                NodeToDeclarationElement(scope to PowersetLatticeDeclarationElement(*elements)),
+                NodeToTypeElement(),
+            ),
+            true,
+        )
+    }
 }
 
 fun DeclarationStateElement.pushType(
@@ -144,15 +152,17 @@ fun DeclarationStateElement.pushType(
     node: Node,
     vararg elements: Type,
 ): DeclarationStateElement {
-    return lattice.lub(
-        this,
-        DeclarationStateElement(
-            ScopeToDeclarationElement(),
-            NodeToDeclarationElement(),
-            NodeToTypeElement(node to PowersetLatticeTypeElement(*elements)),
-        ),
-        true,
-    )
+    return runBlocking {
+        lattice.lub(
+            this@pushType,
+            DeclarationStateElement(
+                ScopeToDeclarationElement(),
+                NodeToDeclarationElement(),
+                NodeToTypeElement(node to PowersetLatticeTypeElement(*elements)),
+            ),
+            true,
+        )
+    }
 }
 
 /**
@@ -168,12 +178,12 @@ fun DeclarationStateElement.pushType(
  * After the iteration, we set the following based on the final state:
  * - [Reference.candidates] - the candidates for the reference
  * - [Reference.refersTo] - the final declaration for the reference
- * - [CallExpression.invokes] - the final declaration for the call expression
+ * - [Call.invokes] - the final declaration for the call expression
  * - [HasType.type] - the type of the node
  * - [HasType.assignedTypes] - the assigned types of the node
  */
 fun SymbolResolver.acceptWithIterateEOG(t: Node) {
-    if (t !is FunctionDeclaration) {
+    if (t !is Function) {
         return
     }
 
@@ -213,7 +223,11 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
         }
 
     t.scope?.let { startState = startState.pushDeclarationToScope(lattice, it) }
-    val finalState = lattice.iterateEOG(t.nextEOGEdges, startState, ::transfer)
+    val (finalState, timeout) =
+        runBlocking { lattice.iterateEOG(t.nextEOGEdges, startState, ::transfer) }
+    if (timeout) {
+        log.warn("Could not compute final state for function {} (due to timeout)", t.name)
+    }
 
     finalState.candidates.forEach { node, candidates ->
         if (node is Reference) {
@@ -222,7 +236,7 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
             // Now it's getting interesting! We need to make the final decision based on whether
             // this a simple reference to a variable or if we are the callee of a call
             // expression
-            val call = node.astParent as? CallExpression
+            val call = node.astParent as? Call
             if (call != null) {
                 decideInvokesBasedOnCandidates(node, call)
             } else {
@@ -243,7 +257,7 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
  * The state-transfer function for the [SymbolResolver]. It is called for each node in the EOG and
  * is responsible for updating the state based on the node type.
  */
-fun SymbolResolver.transfer(
+suspend fun SymbolResolver.transfer(
     lattice: Lattice<DeclarationStateElement>,
     currentEdge: EvaluationOrder,
     state: DeclarationStateElement,
@@ -322,7 +336,7 @@ private fun SymbolResolver.handleReference(
     infoWithFileLocation(node, log, "Resolving reference. {} scopes are active", state.symbols.size)
     var state = state
     var candidates =
-        if (node is MemberExpression) {
+        if (node is MemberAccess) {
             // We need to extract the scope from the base type(s) and then do a qualified
             // lookup
             val baseTypes = state.types[node.base] ?: identitySetOf()
@@ -352,7 +366,7 @@ private fun SymbolResolver.handleReference(
         state.pushType(
             lattice,
             node,
-            *candidates.mapNotNull { state.types[it]?.toSet() }.flatten().toTypedArray(),
+            *candidates.flatMapNotNull { state.types[it]?.toSet() }.toTypedArray(),
         )
 
     return state

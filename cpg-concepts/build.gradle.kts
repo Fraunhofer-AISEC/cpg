@@ -33,7 +33,7 @@ mavenPublishing {
 }
 
 dependencies {
-    implementation(projects.cpgAnalysis)
+    api(projects.cpgCore)
 
     // parsing YAML files
     implementation(libs.jacksonyml)
@@ -49,5 +49,25 @@ dependencies {
     findProject(":cpg-language-ini")?.also { integrationTestImplementation(it) }
     integrationTestImplementation(projects.cpgAnalysis)
 
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+
+    // concept generator deps
+    implementation("com.squareup:kotlinpoet:2.3.0")
+    // owl-api
+    implementation("net.sourceforge.owlapi:owlapi-distribution:4.5.4")
+    implementation("net.sourceforge.owlapi:org.semanticweb.hermit:1.3.8.413")
+
+    // roaster
+    implementation("org.jboss.forge.roaster:roaster-api:2.31.0.Final")
+    implementation("org.jboss.forge.roaster:roaster-jdt:2.31.0.Final")
+    implementation("org.apache.jena:jena-arq:5.6.0")
     implementation(libs.reflections)
+}
+
+// ---- Run the generator ----
+tasks.register<JavaExec>("runSemanticNodeGenerator") {
+    group = "application"
+    description = "Runs de.fraunhofer.aisec.cpg.SemanticNodeGenerator"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("de.fraunhofer.aisec.cpg.SemanticNodeGenerator")
 }

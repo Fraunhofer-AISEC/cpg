@@ -17,9 +17,23 @@ mavenPublishing {
 dependencies {
     // CPG modules
     implementation(projects.cpgConcepts)
+    implementation(projects.cpgSerialization)
+    // cpg-ai (MCP server, ChatService, ...) is a real, mandatory dependency of codyze-console,
+    // but the module itself stays optional at the settings.gradle.kts level (like the language
+    // frontends) for consumers who don't need it. Fail clearly if someone tries to build
+    // codyze-console without it, rather than a cryptic "project not found" error.
+    implementation(
+        findProject(":cpg-ai")
+            ?: error(
+                "codyze-console requires the cpg-ai module; set enableAIModule=true in gradle.properties"
+            )
+    )
 
     // Ktor server dependencies
     implementation(libs.bundles.ktor)
+
+    // Ktor client dependencies
+    implementation(libs.bundles.ktor.client)
 
     // Serialization
     implementation(libs.kotlinx.serialization.json)
@@ -65,3 +79,5 @@ tasks.processResources { dependsOn(pnpmBuild) }
 var jarTasks = tasks.withType<Jar>()
 
 jarTasks.forEach { it.dependsOn(pnpmBuild) }
+
+tasks.shadowJar { setProperty("zip64", true) }

@@ -10,7 +10,7 @@
 
   let { category, initialExpanded = false }: Props = $props();
 
-  let isExpanded = $state(initialExpanded);
+  let isExpanded = $state(false);
 
   // Expand if initialExpanded changes
   $effect(() => {

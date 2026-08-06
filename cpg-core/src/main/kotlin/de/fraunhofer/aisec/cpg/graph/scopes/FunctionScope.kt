@@ -26,14 +26,13 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 
 /**
  * Represents a scope that is only visible in the current function. This is usually used to hold
- * [ParameterDeclaration] nodes, but in some languages such as Python, all variables that are inside
- * the function (also the body) are inside the function scope. In other languages, such as C++, the
- * variables of the function body would be in a [LocalScope] of the [FunctionDeclaration.body].
+ * [Parameter] nodes, but in some languages such as Python, all variables that are inside the
+ * function (also the body) are inside the function scope. In other languages, such as C++, the
+ * variables of the function body would be in a [LocalScope] of the [Function.body].
  */
-class FunctionScope constructor(@JsonProperty("astNode") astNode: FunctionDeclaration) :
-    Scope(astNode)
+class FunctionScope(@JsonProperty("astNode") astNode: Function) : Scope(astNode)

@@ -25,6 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
-interface IsCryptography
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.IsCryptography
 
 interface IsEncryption : IsCryptography

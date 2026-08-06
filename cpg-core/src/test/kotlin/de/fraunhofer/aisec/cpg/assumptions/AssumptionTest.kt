@@ -36,12 +36,12 @@ class AssumptionTest {
     @Test
     fun testAssumptionStatus() {
         with(TestLanguageFrontend()) {
-            Assumption.states[{ it.id == Uuid.parse("00000000-0000-0000-ffff-fffffb51abe9") }] =
+            Assumption.states[{ it.id == Uuid.parse("00000000-0000-0000-0000-000072023357") }] =
                 AssumptionStatus.Accepted
 
             val lit = newLiteral(1).assume(AssumptionType.SoundnessAssumption, "We assume 1 is 1")
-            assertEquals(1876412508, lit.hashCode())
-            assertEquals("00000000-0000-0000-0000-00006fd7c85c", lit.id.toString())
+            assertEquals(1107044270, lit.hashCode())
+            assertEquals("00000000-0000-0000-0000-000041fc27ae", lit.id.toString())
 
             val assumption = lit.assumptions.firstOrNull()
             assertNotNull(assumption)
@@ -52,8 +52,8 @@ class AssumptionTest {
                 "de.fraunhofer.aisec.cpg.assumptions.Assumption",
                 assumption.javaClass.name,
             )
-            assertEquals(-78533655, assumption.hashCode())
-            assertEquals("00000000-0000-0000-ffff-fffffb51abe9", assumption.id.toString())
+            assertEquals(1912746839, assumption.hashCode())
+            assertEquals("00000000-0000-0000-0000-000072023357", assumption.id.toString())
             assertEquals(AssumptionStatus.Accepted, assumption.status)
         }
     }

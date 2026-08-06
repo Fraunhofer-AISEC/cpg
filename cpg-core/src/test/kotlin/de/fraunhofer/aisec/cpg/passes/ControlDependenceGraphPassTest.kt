@@ -27,18 +27,38 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithShortCircuit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.ForEach
+import de.fraunhofer.aisec.cpg.graph.expressions.IfElse
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.assertInstanceOf
 
 class ControlDependenceGraphPassTest {
+
+    @Test
+    fun testFlatFunction() {
+        val result = getFlatTest()
+        assertNotNull(result)
+        val main = result.functions["main"]
+        assertNotNull(main)
+        val allNodes = main.body.allChildren<AstNode>().filter { it != main.body }
+        allNodes.forEach { node ->
+            assertEquals(
+                main,
+                node.prevCDG.singleOrNull(),
+                "Expected node ${node} to have a CDG edge to main, but found ${node.prevCDG}",
+            )
+        }
+    }
 
     @Test
     fun testIfStatements() {
@@ -48,6 +68,7 @@ class ControlDependenceGraphPassTest {
         assertNotNull(main)
         val if0 = (main.body as Block).statements[1]
         assertNotNull(if0)
+        assertInstanceOf<IfElse>(if0)
         assertEquals(1, if0.prevCDG.size)
         assertTrue(main in if0.prevCDG)
 
@@ -55,7 +76,8 @@ class ControlDependenceGraphPassTest {
             result.assignments.firstOrNull { 1 == (it.value as? Literal<*>)?.value }?.start
         assertNotNull(assignment1)
         assertEquals(1, assignment1.prevCDG.size)
-        assertTrue(if0 in assignment1.prevCDG)
+        val branchingNodes = listOfNotNull(if0.condition, if0.conditionDeclaration)
+        branchingNodes.forEach { assertTrue(it in assignment1.prevCDG) }
 
         val print0 =
             result.calls("printf").first {
@@ -63,7 +85,7 @@ class ControlDependenceGraphPassTest {
             }
         assertNotNull(print0)
         assertEquals(1, print0.prevCDG.size)
-        assertTrue(if0 in print0.prevCDG)
+        branchingNodes.forEach { assertTrue(it in print0.prevCDG) }
 
         val print1 =
             result.calls("printf").first {
@@ -90,6 +112,11 @@ class ControlDependenceGraphPassTest {
         assertNotNull(main)
         val forEachStmt = (main.body as Block).statements[1]
         assertNotNull(forEachStmt)
+        assertInstanceOf<ForEach>(forEachStmt)
+
+        val variableDecl = forEachStmt.variable
+        assertNotNull(variableDecl)
+
         assertEquals(1, forEachStmt.prevCDG.size)
         assertTrue(main in forEachStmt.prevCDG)
 
@@ -99,7 +126,7 @@ class ControlDependenceGraphPassTest {
             }
         assertNotNull(printInLoop)
         assertEquals(1, printInLoop.prevCDG.size)
-        assertTrue(forEachStmt in printInLoop.prevCDG)
+        assertTrue(variableDecl in printInLoop.prevCDG)
 
         val printAfterLoop =
             result.calls("printf").first {
@@ -108,10 +135,101 @@ class ControlDependenceGraphPassTest {
         assertNotNull(printAfterLoop)
         assertEquals(1, printAfterLoop.prevCDG.size)
         assertTrue(main in printAfterLoop.prevCDG)
-        assertFalse(forEachStmt in printAfterLoop.prevCDG)
+        assertFalse(variableDecl in printAfterLoop.prevCDG)
+    }
+
+    @Test
+    fun testTimeoutEffective() {
+        val result = getTimeoutTest()
+        assertTrue { result.allChildren<Node>().flatMap { it.nextCDG }.isEmpty() }
+    }
+
+    @Test
+    fun testShortCircuit() {
+        val result = getShortCircuitTest()
+        assertNotNull(result)
+
+        val barCall = result.calls("bar").singleOrNull()
+        assertNotNull(barCall)
+        val fooCall = result.calls("foo").singleOrNull()
+        assertNotNull(fooCall)
+        val bazCall = result.calls("baz").singleOrNull()
+        assertNotNull(bazCall)
+        val quuxCall = result.calls("quux").singleOrNull()
+        assertNotNull(quuxCall)
+        assertTrue(
+            barCall.prevCDG.contains(fooCall),
+            "Expected 'bar()' to be control dependent on 'foo()'",
+        ) // TODO: Once we update the ShortCircuitOperator to a better EOG description, this should
+        // test against the operator instead of foo().
+
+        assertTrue(
+            quuxCall.prevCDG.contains(bazCall),
+            "Expected 'quux()' to be control dependent on 'baz()'",
+        ) // TODO: Once we update the ShortCircuitOperator to a better EOG description, this should
+        // test against the operator instead of baz().
     }
 
     companion object {
+
+        /**
+         * Test language with [HasShortCircuitOperators] to test short-circuit behavior in CDG.
+         *
+         * ```c
+         * int main() {
+         *   foo() && bar();
+         *   baz() || quux();
+         *   return 1;
+         * }
+         * ```
+         */
+        fun getShortCircuitTest() =
+            testFrontend(
+                    TranslationConfiguration.builder()
+                        .registerLanguage<TestLanguageWithShortCircuit>()
+                        .defaultPasses()
+                        .registerPass<ControlDependenceGraphPass>()
+                        .build()
+                )
+                .build {
+                    translationResult {
+                        translationUnit("if.cpp") {
+                            // The main method
+                            function("main", t("int")) {
+                                body {
+                                    call("foo") logicAnd call("bar")
+                                    call("baz") logicOr call("quux")
+                                    returnStmt { literal(1, t("int")) }
+                                }
+                            }
+                        }
+                    }
+                }
+
+        fun getFlatTest() =
+            testFrontend(
+                    TranslationConfiguration.builder()
+                        .registerLanguage<TestLanguageWithColon>()
+                        .defaultPasses()
+                        .registerPass<ControlDependenceGraphPass>()
+                        .build()
+                )
+                .build {
+                    translationResult {
+                        translationUnit("if.cpp") {
+                            // The main method
+                            function("main", t("int")) {
+                                body {
+                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
+                                    call("printf") { literal("1\n", t("string")) }
+                                    call("printf") { literal("2\n", t("string")) }
+                                    returnStmt { ref("i") }
+                                }
+                            }
+                        }
+                    }
+                }
+
         fun getIfTest() =
             testFrontend(
                     TranslationConfiguration.builder()
@@ -164,8 +282,8 @@ class ControlDependenceGraphPassTest {
                                 body {
                                     declare { variable("i", t("int")) { literal(0, t("int")) } }
                                     forEachStmt {
-                                        declare { variable("loopVar", t("string")) }
-                                        call("magicFunction")
+                                        variable = declare { variable("loopVar", t("string")) }
+                                        iterable = call("magicFunction")
                                         loopBody {
                                             call("printf") {
                                                 literal("loop: \${}\n", t("string"))
@@ -175,6 +293,45 @@ class ControlDependenceGraphPassTest {
                                     }
                                     call("printf") { literal("1\n", t("string")) }
 
+                                    returnStmt { ref("i") }
+                                }
+                            }
+                        }
+                    }
+                }
+
+        fun getTimeoutTest() =
+            testFrontend(
+                    TranslationConfiguration.builder()
+                        .registerLanguage<TestLanguageWithColon>()
+                        .defaultPasses()
+                        .registerPass<ControlDependenceGraphPass>()
+                        .configurePass<ControlDependenceGraphPass>(
+                            ControlDependenceGraphPass.Configuration(timeout = 0L)
+                        )
+                        .build()
+                )
+                .build {
+                    translationResult {
+                        translationUnit("if.cpp") {
+                            // The main method
+                            function("main", t("int")) {
+                                body {
+                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
+                                    ifStmt {
+                                        condition { ref("i") lt literal(1, t("int")) }
+                                        thenStmt {
+                                            ref("i") assign literal(1, t("int"))
+                                            call("printf") { literal("0\n", t("string")) }
+                                        }
+                                    }
+                                    call("printf") { literal("1\n", t("string")) }
+                                    ifStmt {
+                                        condition { ref("i") gt literal(0, t("int")) }
+                                        thenStmt { ref("i") assign literal(2, t("int")) }
+                                        elseStmt { ref("i") assign literal(3, t("int")) }
+                                    }
+                                    call("printf") { literal("2\n", t("string")) }
                                     returnStmt { ref("i") }
                                 }
                             }

@@ -26,27 +26,37 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.primitiveType
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.project.DetectionResult
+import de.fraunhofer.aisec.cpg.project.Detector
+import de.fraunhofer.aisec.cpg.project.TargetEnvironment
+import java.nio.file.Path
 import kotlin.math.max
-import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
-class GoLanguage :
+open class GoLanguage :
     Language<GoLanguageFrontend>(),
     HasShortCircuitOperators,
     HasGenerics,
     HasStructs,
     HasFirstClassFunctions,
     HasAnonymousIdentifier,
-    HasFunctionStyleCasts {
+    HasFunctionStyleCasts,
+    Detector {
+
+    override fun detect(root: Path, environment: TargetEnvironment): DetectionResult? {
+        return detectGo(root, environment)
+    }
+
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
-    @Transient override val frontend = GoLanguageFrontend::class
+    @DoNotPersist override val frontend = GoLanguageFrontend::class
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
     override val startCharacter = '['
@@ -66,7 +76,7 @@ class GoLanguage :
     override val simpleAssignmentOperators = setOf("=", ":=")
 
     /** See [Documentation](https://pkg.go.dev/builtin). */
-    @Transient
+    @DoNotPersist
     override val builtInTypes =
         mapOf(
             // https://pkg.go.dev/builtin#any
@@ -199,7 +209,7 @@ class GoLanguage :
         }
 
         // We accept all kind of numbers if the literal is part of the call expression
-        if (targetHint is ParameterDeclaration && hint is Literal<*>) {
+        if (targetHint is Parameter && hint is Literal<*>) {
             return if (type is NumericType && targetType is NumericType) {
                 DirectMatch
             } else {
@@ -207,7 +217,7 @@ class GoLanguage :
             }
         }
 
-        // We additionally want to emulate the behaviour of Go's interface system here
+        // We additionally want to emulate the behavior of Go's interface system here
         if (targetType.isInterface) {
             var b: CastResult = DirectMatch
             val target = (type.root as? ObjectType)?.recordDeclaration

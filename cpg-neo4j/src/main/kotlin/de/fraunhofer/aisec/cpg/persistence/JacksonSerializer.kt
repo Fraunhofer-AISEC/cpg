@@ -27,10 +27,8 @@ package de.fraunhofer.aisec.cpg.persistence
 
 import com.fasterxml.jackson.annotation.JacksonInject
 import com.fasterxml.jackson.annotation.JsonAutoDetect
-import com.fasterxml.jackson.annotation.JsonIdentityInfo
 import com.fasterxml.jackson.annotation.JsonIdentityReference
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import com.fasterxml.jackson.annotation.PropertyAccessor
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonGenerator
@@ -66,7 +64,7 @@ import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.edges
 import de.fraunhofer.aisec.cpg.graph.parseName
-import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
+import de.fraunhofer.aisec.cpg.persistence.converters.LocationConverter
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.IOException
 import kotlin.reflect.KClass
@@ -272,7 +270,7 @@ class NodeDelegatingDeserializer(
 
 class UuidDeserializer : StdDeserializer<Uuid>(Uuid::class.java) {
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Uuid {
-        val uuid = p.codec.readTree<JsonNode>(p)
+        val uuid = p.codec.readTree<com.fasterxml.jackson.databind.JsonNode>(p)
         return Uuid.fromLongs(
             uuid.get("mostSignificantBits").asLong(),
             uuid.get("leastSignificantBits").asLong(),

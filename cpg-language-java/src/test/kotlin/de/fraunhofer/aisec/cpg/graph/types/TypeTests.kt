@@ -80,7 +80,7 @@ internal class TypeTests : BaseTest() {
         val variables = result.allChildren<ObjectType>()
         val recordDeclarations = result.records
 
-        // Test RecordDeclaration relationship
+        // Test Record relationship
         val objectTypes = findByName(variables, "A")
         val recordDeclarationA = findByUniqueName(recordDeclarations, "A")
         for (objectType in objectTypes) {

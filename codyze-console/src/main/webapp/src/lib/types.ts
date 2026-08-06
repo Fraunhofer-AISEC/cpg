@@ -69,9 +69,120 @@ export interface EdgeJSON {
   end: string;
 }
 
+// MCP capabilities
+export interface McpToolInfo {
+  name: string;
+  description?: string;
+  inputSchema?: {
+    properties?: Record<string, any>;
+    required?: string[];
+  };
+}
+
+export interface McpPromptArgument {
+  name: string;
+  description?: string;
+  required?: boolean;
+}
+
+export interface McpPromptInfo {
+  name: string;
+  description?: string;
+  arguments?: McpPromptArgument[];
+}
+
+export interface McpResourceInfo {
+  uri: string;
+  name?: string;
+  description?: string;
+  mimeType?: string;
+}
+
+export interface McpCapabilities {
+  serverName: string;
+  serverVersion: string;
+  tools: McpToolInfo[];
+  prompts: McpPromptInfo[];
+  resources: McpResourceInfo[];
+}
+
+export interface SkillInfo {
+  name: string;
+  description: string;
+  body: string;
+}
+
+// AI Agent / Chat interfaces
+export interface LlmProviderWithModels {
+  name: string;
+  models: string[];
+}
+
+export interface Model {
+  client: string;
+  model: string;
+}
+
+export interface LLMMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+export interface ToolResult {
+  toolName?: string;
+  content: any;
+  isError?: boolean;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  contentType?: 'text' | 'tool-result';
+  toolResult?: ToolResult;
+  reasoning?: string;
+  timestamp: Date;
+}
+
 export interface ConceptInfo {
   conceptName: string;
   constructorInfo: ConstructorInfo[];
+}
+
+// LLM Concept
+export interface LLMProperty {
+  name: string;
+  type: string;
+  description?: string;
+  value: string;
+}
+
+export interface LLMOperation {
+  name: string;
+  description: string;
+  nodeId: string;
+  properties: LLMProperty[];
+}
+
+export interface LLMConcept {
+  name: string;
+  description: string;
+  nodeId: string;
+  properties: LLMProperty[];
+  operations: LLMOperation[];
+}
+
+export type SuggestionItemStatus = 'pending' | 'accepted' | 'rejected';
+
+export interface OperationSuggestionItem {
+  operation: LLMOperation;
+  status: SuggestionItemStatus;
+}
+
+export interface ConceptSuggestionItem {
+  suggestion: LLMConcept;
+  status: SuggestionItemStatus;
+  operations: OperationSuggestionItem[];
 }
 
 export interface RequirementsCategoryJSON {

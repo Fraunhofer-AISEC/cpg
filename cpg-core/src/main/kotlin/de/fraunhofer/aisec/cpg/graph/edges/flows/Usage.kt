@@ -30,11 +30,9 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import org.neo4j.ogm.annotation.RelationshipEntity
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 
 /** This edge class denotes the usage of a [ValueDeclaration] in a [Reference]. */
-@RelationshipEntity
 class Usage(
     start: Node,
     end: Reference,
@@ -53,10 +51,15 @@ class Usage(
         return result
     }
 
-    override var labels = setOf("USAGE")
+    override var labels = LABELS
+
+    companion object {
+        /** Shared, immutable label set for all [Usage] edges (see [Edge.labels]). */
+        val LABELS = setOf("USAGE")
+    }
 }
 
-/** A container for [Usage] edges. [NodeType] is necessary because of the Neo4J OGM. */
+/** A container for [Usage] edges. [NodeType] is necessary for type safety. */
 class Usages<NodeType : Reference>(thisRef: ValueDeclaration) :
     EdgeList<Reference, Usage>(thisRef = thisRef, init = ::Usage) {
     override fun handleOnAdd(edge: Usage) {

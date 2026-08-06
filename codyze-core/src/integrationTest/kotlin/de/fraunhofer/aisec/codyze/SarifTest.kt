@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.codyze
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.literals
@@ -79,7 +79,7 @@ class SarifTest {
         val lit = result.literals.firstOrNull()
         assertNotNull(lit)
 
-        val paths = dataFlow(lit) { it is FunctionDeclaration }
+        val paths = dataFlow(lit) { it is Function }
         assertNotNull(paths)
         assertEquals(
             1,

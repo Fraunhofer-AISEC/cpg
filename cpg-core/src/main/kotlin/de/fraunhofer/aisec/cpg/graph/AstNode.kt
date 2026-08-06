@@ -28,17 +28,18 @@ package de.fraunhofer.aisec.cpg.graph
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonMerge
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import org.neo4j.ogm.annotation.Relationship
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 
 /**
  * This is the base class for all AST nodes in the CPG. It is used to represent any node in the
  * abstract syntax tree (AST) of a program. It serves as a base class for more specific node types
- * such as [Statement]s, [Expression]s, [Declaration]s, etc.
+ * such as [Expression]s, [Expression]s, [Declaration]s, etc.
  */
 abstract class AstNode : Node() {
 
@@ -49,17 +50,39 @@ abstract class AstNode : Node() {
      * Note: This only returns the *direct* children of this node. If you want to have *all*
      * children, e.g., a flattened AST, you need to call [AstNode.allChildren].
      *
-     * For Neo4J OGM, this relationship will be automatically filled by a pre-save event before OGM
-     * persistence. Therefore, this property is a `var` and not a `val`.
+     * For the persistence layer, this relationship will be automatically filled by a pre-save event
+     * before persistence. Therefore, this property is a `var` and not a `val`.
      */
     @Relationship("AST")
     @JsonIgnore
     var astChildren: List<AstNode> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
-    /** List of [Annotation]s associated with that node. */
-    @Relationship("ANNOTATIONS") @JsonMerge var annotationEdges = astEdgesOf<Annotation>()
-    @get:JsonIgnore var annotations by unwrapping(AstNode::annotationEdges)
+    /** Lazy backing field for [annotationEdges]. */
+    private var _annotationEdges: AstEdges<Annotation, AstEdge<Annotation>>? = null
+
+    /**
+     * List of [Annotation]s associated with that node.
+     *
+     * The backing container is allocated lazily on first access: annotations are absent on the
+     * overwhelming majority of nodes, and [astEdgesOf] eagerly allocates a backing array.
+     */
+    @Relationship("ANNOTATIONS")
+    @get:JsonMerge
+    var annotationEdges: AstEdges<Annotation, AstEdge<Annotation>>
+        get() = _annotationEdges ?: astEdgesOf<Annotation>().also { _annotationEdges = it }
+        set(value) {
+            _annotationEdges = value
+        }
+
+    /** Virtual property for accessing [annotationEdges] as plain nodes. */
+    @DoNotPersist
+    @get:JsonIgnore
+    var annotations: MutableList<Annotation>
+        get() = annotationEdges.unwrap()
+        set(value) {
+            annotationEdges.resetTo(value)
+        }
 
     override fun disconnectFromGraph() {
         super.disconnectFromGraph()

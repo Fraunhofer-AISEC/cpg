@@ -31,10 +31,12 @@
     baseUrl
   }: Props = $props();
 
-  // Early return if queryTree is undefined
-  if (!queryTree) {
-    console.error('QueryTreeExplorer: queryTree prop is undefined');
-  }
+  // Log if queryTree is undefined
+  $effect(() => {
+    if (!queryTree) {
+      console.error('QueryTreeExplorer: queryTree prop is undefined');
+    }
+  });
 
   // Use hasChildren from the QueryTree data structure
   const hasChildren = $derived(
@@ -194,8 +196,11 @@
   // Function to load more node values for display
   function loadMoreNodes() {
     if (!queryTree?.nodeValues) return;
-    
-    const newCount = Math.min(displayedNodeCount + NODE_VALUES_BATCH_SIZE, queryTree.nodeValues.length);
+
+    const newCount = Math.min(
+      displayedNodeCount + NODE_VALUES_BATCH_SIZE,
+      queryTree.nodeValues.length
+    );
     displayedNodeCount = newCount;
     
     if (newCount >= queryTree.nodeValues.length) {

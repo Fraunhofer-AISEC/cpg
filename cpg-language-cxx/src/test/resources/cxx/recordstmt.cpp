@@ -41,3 +41,10 @@ int main() {
 int OtherClass::anotherMethod() {
     return 1;
 }
+
+struct SomeStruct {
+  int publicByDefault;
+  void* method();
+private:
+  int privateField;
+};

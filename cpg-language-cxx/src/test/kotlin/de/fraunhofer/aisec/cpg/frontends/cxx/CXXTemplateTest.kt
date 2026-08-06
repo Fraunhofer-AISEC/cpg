@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
@@ -52,7 +52,7 @@ class CXXTemplateTest {
         // We should have two constructors with a "double-reference" type
         var method =
             tu.methods.firstOrNull { it.signature == "MyTemplateClass(T&&)MyTemplateClass" }
-        assertIs<ConstructorDeclaration>(method)
+        assertIs<Constructor>(method)
         assertNotNull(method)
 
         val paramType = method.parameters.firstOrNull()?.type?.root
@@ -60,7 +60,7 @@ class CXXTemplateTest {
         assertLocalName("T", paramType)
 
         method = tu.methods.firstOrNull { it.signature == "MyClass(MyClass&&)MyClass" }
-        assertIs<ConstructorDeclaration>(method)
+        assertIs<Constructor>(method)
         assertNotNull(method)
     }
 

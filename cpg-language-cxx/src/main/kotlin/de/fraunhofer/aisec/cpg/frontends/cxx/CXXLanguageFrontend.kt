@@ -33,19 +33,22 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CXXExtraPass
 import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
+import de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx.CXXMemoryAllocationPass
 import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.lang.reflect.Field
-import java.lang.reflect.Method
+import java.lang.reflect.Method as ReflectMethod
 import java.nio.file.Path
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTReferenceOperator
@@ -81,6 +84,7 @@ import org.slf4j.LoggerFactory
  */
 @RegisterExtraPass(DynamicInvokeResolver::class)
 @RegisterExtraPass(CXXExtraPass::class)
+@RegisterExtraPass(CXXMemoryAllocationPass::class)
 open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLanguageFrontend>) :
     LanguageFrontend<IASTNode, IASTTypeId>(ctx, language) {
 
@@ -200,7 +204,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
     val statementHandler = StatementHandler(this)
 
     @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         val content = FileContent.createForExternalFileLocation(file.absolutePath)
 
         // include paths
@@ -447,7 +451,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
         type: Class<*>,
         methodName: String,
         vararg parameterTypes: Class<*>,
-    ): Method {
+    ): ReflectMethod {
         return try {
             type.getDeclaredMethod(methodName, *parameterTypes)
         } catch (e: NoSuchMethodException) {
@@ -478,7 +482,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
      * behind this, is that in some scenarios we create the [Declaration] before the type and in
      * some, we derive the declaration from the type. In the first one, we might get some necessary
      * information from the declaration, that influences the type parsing. One such example is that
-     * we check, whether a declaration is a [ConstructorDeclaration] and return an [ObjectType] that
+     * we check, whether a declaration is a [Constructor] and return an [ObjectType] that
      * corresponds with the record name it instantiates.
      *
      * @param hint an optional [Declaration], which serves as a parsing hint.
@@ -588,19 +592,18 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
                 )
             }
             // The type of constructor declaration is always the declaration itself
-            specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
-                hint is ConstructorDeclaration -> {
+            specifier.type == IASTSimpleDeclSpecifier.t_unspecified && hint is Constructor -> {
                 hint.name.parent?.let { objectType(it, rawNode = specifier) } ?: unknownType()
             }
             // The type of conversion operator is also always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
-                hint is MethodDeclaration &&
+                hint is Method &&
                 hint.name.localName == "operator#0" -> {
                 hint.name.parent?.let { objectType(it, rawNode = specifier) } ?: unknownType()
             }
             // The type of conversion operator is also always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
-                hint is MethodDeclaration &&
+                hint is Method &&
                 hint.name.localName == "operator#0*" -> {
                 hint.name.parent?.let { objectType(it, rawNode = specifier).pointer() }
                     ?: unknownType()
@@ -608,7 +611,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
             // The type of destructor is unspecified, but we model it as a void type to make it
             // compatible with other methods.
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
-                hint is MethodDeclaration &&
+                hint is Method &&
                 hint.isDestructor -> {
                 incompleteType()
             }
@@ -694,6 +697,19 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
     }
 
     /**
+     * These checks are necessary because CDT will represent implicit ints with modifiers, e.g.
+     * `long **` as t_unspecified with one of the flags below set to true.
+     */
+    public fun isImplicitModifiedBaseType(specifier: CASTSimpleDeclSpecifier): Boolean {
+        return specifier.isShort ||
+            specifier.isSigned ||
+            specifier.isUnsigned ||
+            specifier.isComplex ||
+            specifier.isImaginary ||
+            specifier.isLong
+    }
+
+    /**
      * This is a little helper function, primarily used by [typeOf]. It's primary purpose is to
      * "adjust" the [incoming] type based on the [declarator]. This is needed because the type
      * information in C/C++ are split into a declarator and declaration specifiers.
@@ -734,7 +750,8 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
                     // CDT is not able to handle this correctly
                     if (
                         specifier is CASTSimpleDeclSpecifier &&
-                            specifier.type == IASTDeclSpecifier.sc_unspecified &&
+                            specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
+                            !isImplicitModifiedBaseType(specifier) &&
                             it.declarator.name.toString() != ""
                     ) {
                         typeOf(it.declarator.name)
@@ -766,9 +783,9 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
             // so far is the return value. We then add the parameters and give it a name.
             val name =
                 paramTypes.joinToString(
-                    FunctionDeclaration.COMMA + FunctionDeclaration.WHITESPACE,
-                    FunctionDeclaration.BRACKET_LEFT,
-                    FunctionDeclaration.BRACKET_RIGHT,
+                    Function.COMMA + Function.WHITESPACE,
+                    Function.BRACKET_LEFT,
+                    Function.BRACKET_RIGHT,
                 ) {
                     it.typeName
                 } + type.typeName
@@ -883,7 +900,7 @@ private val IASTSimpleDeclSpecifier.canonicalName: CharSequence
  * Returns whether this method is a
  * [Destructor](https://en.cppreference.com/w/cpp/language/destructor).
  */
-val MethodDeclaration.isDestructor: Boolean
+val Method.isDestructor: Boolean
     get() {
         return "~" + this.name.parent?.localName == this.name.localName
     }

@@ -27,12 +27,11 @@ package de.fraunhofer.aisec.cpg.concepts.logging
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.IsLogging
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.Log
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogLevel
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWrite
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogLevel
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogWrite
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Logging
+import de.fraunhofer.aisec.cpg.graph.declarations.Import
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.passes.concepts.logging.python.PythonLoggingConceptPass
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.test.BaseTest
@@ -82,13 +81,13 @@ class LoggingConceptTest : BaseTest() {
         assertEquals(LogLevel.WARN, logOp.logLevel)
 
         val getSecretCall = result.calls("get_secret").singleOrNull()
-        assertIs<CallExpression>(getSecretCall)
+        assertIs<Call>(getSecretCall)
         val nextDFG = getSecretCall.nextDFG
         assertTrue(nextDFG.isNotEmpty())
         val secretDFG = getSecretCall.followNextFullDFGEdgesUntilHit { it is LogWrite }
         assertTrue(
             secretDFG.fulfilled.isNotEmpty(),
-            "Expected to find a dataflow from the CallExpression[get_secret] to a logging node.",
+            "Expected to find a dataflow from the Call[get_secret] to a logging node.",
         )
     }
 
@@ -112,7 +111,7 @@ class LoggingConceptTest : BaseTest() {
 
         assertEquals(
             2,
-            result.conceptNodes { it is Log }.size,
+            result.conceptNodes { it is Logging }.size,
             "Expected to find 2 logging nodes. One from the `import logging` declaration (not used directly for logging) and one from the `logging.getLogger()` call (used with `logger.error(...)`).",
         )
 
@@ -120,7 +119,7 @@ class LoggingConceptTest : BaseTest() {
         assertNotNull(literalERROR)
 
         assertTrue(
-            dataFlow(startNode = literalERROR) { it is Log }.value,
+            dataFlow(startNode = literalERROR) { it is Logging }.value,
             "Expected to find a dataflow from the literal \"ERROR\" to a logging node.",
         )
     }
@@ -145,7 +144,7 @@ class LoggingConceptTest : BaseTest() {
 
         assertEquals(
             2,
-            result.conceptNodes { it is Log }.size,
+            result.conceptNodes { it is Logging }.size,
             "Expected to find 2 logging nodes. One from the `import logging as log` declaration (used with `log.info()`) and one from the `log.getLogger()` call (used with `logger.error(...)`).",
         )
 
@@ -153,9 +152,7 @@ class LoggingConceptTest : BaseTest() {
         assertNotNull(literalINFO)
 
         assertTrue(
-            dataFlow(startNode = literalINFO) {
-                    it is Log && it.underlyingNode is ImportDeclaration
-                }
+            dataFlow(startNode = literalINFO) { it is Logging && it.underlyingNode is Import }
                 .value,
             "Expected to find a dataflow from the literal \"INFO\" to the logging node based on the import declaration.",
         )
@@ -165,7 +162,7 @@ class LoggingConceptTest : BaseTest() {
 
         assertTrue(
             dataFlow(startNode = literalERROR) {
-                    it is Log && it.underlyingNode?.code == "log.getLogger(__name__)"
+                    it is Logging && it.underlyingNode?.code == "log.getLogger(__name__)"
                 }
                 .value,
             "Expected to find a dataflow from the literal \"ERROR\" to the logging node based on the `getLogger(__name__)` call.",
@@ -187,17 +184,14 @@ class LoggingConceptTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val loggingNodes = result.conceptNodes { it is IsLogging }
-        assertTrue(loggingNodes.isNotEmpty())
-
-        val allLoggers = result.conceptNodes { it is Log }
+        val allLoggers = result.conceptNodes { it is Logging }
         assertEquals(
             3,
             allLoggers.size,
             "Expected to find 3 logging nodes. One from the `import logging as log` declaration and one `foo` and one `bar` logger from the `log.getLogger()` calls. The other `getLogger()` calls are duplicates and must not create new loggers.",
         )
 
-        val defaultLogger = allLoggers.singleOrNull { it.underlyingNode is ImportDeclaration }
+        val defaultLogger = allLoggers.singleOrNull { it.underlyingNode is Import }
         assertNotNull(defaultLogger)
 
         val fooLogger =
@@ -219,9 +213,9 @@ class LoggingConceptTest : BaseTest() {
         testing.entries.forEach {
             val literalString = it.key
             val goodLogger = it.value
-            val badLoggers = allLoggers.filter { it !== goodLogger }
+            val badLoggers = allLoggers.filter { log -> log !== goodLogger }
 
-            val literals = result.literals.filter { it.value == literalString }
+            val literals = result.literals.filter { lit -> lit.value == literalString }
             literals.forEach { currentLit ->
                 assertTrue(
                     dataFlow(startNode = currentLit) { end -> end == goodLogger }.value,
@@ -238,5 +232,45 @@ class LoggingConceptTest : BaseTest() {
                 )
             }
         }
+    }
+
+    // See https://github.com/Fraunhofer-AISEC/cpg/issues/2479
+    // This test makes sure that the pass handles nodes in EOG order by verifying that a `getLogger`
+    // call on global scope is handled before the log usage in a function after `getLogger`.
+    @Test
+    fun testLogEOG() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "logging")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("log_eog_check.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonLoggingConceptPass>()
+            }
+        assertNotNull(result)
+
+        val logger =
+            result.conceptNodes.singleOrNull { it is Logging && it.name.localName == "my_logger" }
+        assertNotNull(logger, "Expected to find a logger with name 'my_logger'")
+
+        val errorCall = result.calls { it.name.localName == "error" }.singleOrNull()
+        assertNotNull(errorCall, "Expected to find a call to logger.error(...)")
+
+        val logWrite = errorCall.operationNodes.singleOrNull { it is LogWrite }
+        assertNotNull(logWrite, "Expected to find a LogWrite operation for logger.error(...)")
+
+        assertTrue(
+            errorCall.overlays.contains<Node?>(logWrite),
+            "Expected the call to logger.error(...) to be overlaid with LogWrite concept.",
+        )
+
+        assertEquals(
+            logger,
+            logWrite.concept,
+            "Expected the LogWrite to be associated with the 'my_logger' logger.",
+        )
     }
 }

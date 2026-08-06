@@ -36,15 +36,15 @@ import de.fraunhofer.aisec.cpg.graph.AnalysisSensitivity
 import de.fraunhofer.aisec.cpg.graph.FilterUnreachableEOG
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import kotlin.collections.all
 
@@ -61,7 +61,8 @@ fun FulfilledAndFailedPaths.toQueryTree(
             value = true,
             children =
                 mutableListOf(
-                    QueryTree(value = it.nodes, operator = GenericQueryOperators.EVALUATE)
+                    QueryTree(value = it.nodes, operator = GenericQueryOperators.EVALUATE),
+                    QueryTree(value = it.edges, operator = GenericQueryOperators.EVALUATE),
                 ),
             stringRepresentation =
                 "$queryType from ${startNode.compactToString()} to ${it.nodes.last().compactToString()} fulfills the requirement",
@@ -76,22 +77,28 @@ fun FulfilledAndFailedPaths.toQueryTree(
                 children =
                     mutableListOf(
                         QueryTree(value = nodePath.nodes, operator = GenericQueryOperators.EVALUATE)
-                            .addAssumptionDependence(nodePath)
+                            .addAssumptionDependence(nodePath),
+                        QueryTree(value = nodePath.edges, operator = GenericQueryOperators.EVALUATE),
                     ),
                 stringRepresentation =
                     "$queryType from $startNode to ${nodePath.nodes.last()} does not fulfill the requirement",
                 node = startNode,
                 terminationReason =
-                    if (reason == FailureReason.PATH_ENDED) {
-                        PathEnded(nodePath.nodes.last())
-                    } else if (reason == FailureReason.HIT_EARLY_TERMINATION) {
-                        HitEarlyTermination(nodePath.nodes.last())
-                    } else {
-                        // TODO: We cannot set this (yet) but it might be useful to differentiate
-                        // between "path is really at the end" or "we just stopped". Requires
-                        // adaptions
-                        // in followXUntilHit and all of its callers
-                        StepsExceeded(nodePath.nodes.last())
+                    when (reason) {
+                        FailureReason.PATH_ENDED -> {
+                            PathEnded(nodePath.nodes.last())
+                        }
+                        FailureReason.HIT_EARLY_TERMINATION -> {
+                            HitEarlyTermination(nodePath.nodes.last())
+                        }
+                        else -> {
+                            // TODO: We cannot set this (yet) but it might be useful to
+                            // differentiate
+                            // between "path is really at the end" or "we just stopped". Requires
+                            // adaptions
+                            // in followXUntilHit and all of its callers
+                            StepsExceeded(nodePath.nodes.last())
+                        }
                     },
                 operator = GenericQueryOperators.EVALUATE,
             )
@@ -180,7 +187,7 @@ fun dataFlow(
 ): QueryTree<Boolean> {
     val collectFailedPaths = type == Must
     val findAllPossiblePaths = type == Must
-    val earlyTermination = { n: Node, ctx: Context -> earlyTermination?.let { it(n) } == true }
+    val earlyTermination = { n: Node, _: Context -> earlyTermination?.let { it(n) } == true }
 
     val evalRes =
         if (direction is Bidirectional) {
@@ -227,7 +234,7 @@ fun executionPath(
 ): QueryTree<Boolean> {
     val collectFailedPaths = type == Must
     val findAllPossiblePaths = type == Must
-    val earlyTermination = { n: Node, ctx: Context -> earlyTermination?.let { it(n) } == true }
+    val earlyTermination = { n: Node, _: Context -> earlyTermination?.let { it(n) } == true }
 
     val evalRes =
         if (direction is Bidirectional) {
@@ -345,29 +352,28 @@ fun Node.generatesNewData(): NodeCollectionWithAssumption {
                     }
                 tempAssumptions.addAll(tmp.fulfilled)
 
-                tmp.fulfilled.map { it.nodes.last() }.toSet()
+                tmp.fulfilled.mapTo(mutableSetOf()) { it.nodes.last() }
             }
             /* A new object is constructed and our data flow into this object -> track the new object. */
-            this is ConstructExpression ||
+            this is Construction ||
                 /* A collection comprehension (e.g. list, set, dict comprehension) generates a new object similar to calling the constructor. */
                 this is CollectionComprehension -> {
                 setOf(this)
             }
 
-            this.astParent is AssignExpression &&
-                this in (this.astParent as AssignExpression).rhs &&
-                (this.astParent as AssignExpression).operatorCode in
+            this.astParent is Assign &&
+                this in (this.astParent as Assign).rhs &&
+                (this.astParent as Assign).operatorCode in
                     this.language.compoundAssignmentOperators -> {
                 // If we're the rhs of an assignment with an operator like +=, we should track the
                 // lhs value separately.
-                (this as? HasType)?.let { (this.astParent as AssignExpression).findTargets(it) }
-                    ?: setOf()
+                (this as? HasType)?.let { (this.astParent as Assign).findTargets(it) } ?: setOf()
             }
             this is Expression &&
-                this.astParent is AssignExpression &&
-                this in (this.astParent as AssignExpression).rhs &&
+                this.astParent is Assign &&
+                this in (this.astParent as Assign).rhs &&
                 !this.type.isMutable -> {
-                (this.astParent as AssignExpression).findTargets(this)
+                (this.astParent as Assign).findTargets(this)
             }
             else -> emptySet()
         }
@@ -408,9 +414,8 @@ fun Node.identifyInfoToTrack(
                 interproceduralAnalysis = scope is Interprocedural,
                 contextSensitive = ContextSensitive in sensitivities,
             )
-            .map { it.nodes }
-            .flatten()
-            .toSet()
+            .flatMapTo(mutableSetOf()) { it.nodes }
+
     val result = mutableSetOf(NodeWithAssumption(this))
     for (node in reachableDFGNodes) {
         // Is this node a node copying the data? If so, add its targets to the list.
@@ -489,10 +494,9 @@ internal fun Node.alwaysFlowsToInternal(
                     interproceduralAnalysis = scope is Interprocedural,
                     contextSensitive = ContextSensitive in sensitivities,
                 )
-                .map { it.nodes }
-                .flatten()
-                .toSet()
-        val earlyTerminationPredicate = { n: Node, ctx: Context ->
+                .flatMapTo(mutableSetOf()) { it.nodes }
+
+        val earlyTerminationPredicate = { n: Node, _: Context ->
             earlyTermination?.let { it(n) } == true ||
                 // If we are not allowed to overwrite the value, we need to check if the node may
                 // overwrite the value. In this case, we terminate early.
@@ -508,9 +512,9 @@ internal fun Node.alwaysFlowsToInternal(
                     maxCallDepth = scope.maxCallDepth,
                     maxSteps = scope.maxSteps,
                     allReachableNodes =
-                        nextDFGPaths
-                            .filter { it.scope != null && it !is FunctionDeclaration }
-                            .toSet(),
+                        nextDFGPaths.filterTo(mutableSetOf()) {
+                            it.scope != null && it !is Function
+                        },
                 )
             } else scope
         val nextEOGEvaluation =
@@ -546,12 +550,16 @@ internal fun Node.alwaysFlowsToInternal(
                                     "before passing through a node matching the required predicate.",
                     node = nodeToTrack.node,
                     terminationReason =
-                        if (failureReason == FailureReason.PATH_ENDED) {
-                            PathEnded(path.nodes.last())
-                        } else if (failureReason == FailureReason.HIT_EARLY_TERMINATION) {
-                            HitEarlyTermination(path.nodes.last())
-                        } else {
-                            StepsExceeded(path.nodes.last())
+                        when (failureReason) {
+                            FailureReason.PATH_ENDED -> {
+                                PathEnded(path.nodes.last())
+                            }
+                            FailureReason.HIT_EARLY_TERMINATION -> {
+                                HitEarlyTermination(path.nodes.last())
+                            }
+                            else -> {
+                                StepsExceeded(path.nodes.last())
+                            }
                         },
                     operator = GenericQueryOperators.EVALUATE,
                 )
@@ -590,7 +598,7 @@ internal fun Node.alwaysFlowsToInternal(
                 "Some EOG paths failed to fulfill the predicate"
             },
         node = this,
-        assumptions = nodesToTrack.flatMap { it.assumptions }.toMutableSet(),
+        assumptions = nodesToTrack.flatMapTo(mutableSetOf()) { it.assumptions },
         operator = GenericQueryOperators.ALL,
     )
 }

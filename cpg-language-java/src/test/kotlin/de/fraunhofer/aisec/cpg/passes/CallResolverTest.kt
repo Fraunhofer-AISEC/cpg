@@ -28,16 +28,16 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 
 class CallResolverTest : BaseTest() {
-    private fun testMethods(records: List<RecordDeclaration>, intType: Type, stringType: Type) {
+    private fun testMethods(records: List<Record>, intType: Type, stringType: Type) {
         val callsRecord = findByUniqueName(records, "Calls")
         val externalRecord = findByUniqueName(records, "External")
         val superClassRecord = findByUniqueName(records, "SuperClass")
@@ -56,7 +56,7 @@ class CallResolverTest : BaseTest() {
         checkCalls(intType, stringType, externalMethods, externalCalls)
     }
 
-    private fun ensureNoUnknownClassDummies(records: List<RecordDeclaration>) {
+    private fun ensureNoUnknownClassDummies(records: List<Record>) {
         val callsRecord = findByUniqueName(records, "Calls")
         assertTrue(records.stream().noneMatch { it.name.localName == "Unknown" })
 
@@ -67,14 +67,14 @@ class CallResolverTest : BaseTest() {
     private fun checkCalls(
         intType: Type,
         stringType: Type,
-        methods: Collection<FunctionDeclaration>,
-        calls: Collection<CallExpression>,
+        methods: Collection<Function>,
+        calls: Collection<Call>,
     ) {
         val signatures = listOf(listOf(), listOf(intType, intType), listOf(intType, stringType))
         for (signature in signatures) {
             for (call in calls.filter { it.signature == signature }) {
                 val target =
-                    findByUniquePredicate(methods) { m: FunctionDeclaration ->
+                    findByUniquePredicate(methods) { m: Function ->
                         m.matchesSignature(signature) != IncompatibleSignature
                     }
                 assertEquals(listOf(target), call.invokes)
@@ -83,10 +83,9 @@ class CallResolverTest : BaseTest() {
 
         // Check for inferred nodes
         val inferenceSignature = listOf(intType, intType, intType)
-        for (inferredCall in
-            calls.filter { c: CallExpression -> c.signature == inferenceSignature }) {
+        for (inferredCall in calls.filter { c: Call -> c.signature == inferenceSignature }) {
             val inferredTarget =
-                findByUniquePredicate(methods) { m: FunctionDeclaration ->
+                findByUniquePredicate(methods) { m: Function ->
                     m.matchesSignature(inferenceSignature) != IncompatibleSignature
                 }
             assertEquals(listOf(inferredTarget), inferredCall.invokes)
@@ -94,7 +93,7 @@ class CallResolverTest : BaseTest() {
         }
     }
 
-    private fun testOverriding(records: List<RecordDeclaration>) {
+    private fun testOverriding(records: List<Record>) {
         val callsRecord = findByUniqueName(records, "Calls")
         val externalRecord = findByUniqueName(records, "External")
         val superClassRecord = findByUniqueName(records, "SuperClass")
@@ -105,11 +104,8 @@ class CallResolverTest : BaseTest() {
         // TODO related to #204: Currently we have both the original and the overriding method in
         //  the invokes list. This check needs to be adjusted to the choice we make on solving #204
         assertTrue(call.invokes.contains(overridingMethod))
-        assertEquals<List<FunctionDeclaration>>(listOf(originalMethod), overridingMethod.overrides)
-        assertEquals<List<FunctionDeclaration>>(
-            listOf(overridingMethod),
-            originalMethod.overriddenBy,
-        )
+        assertEquals<List<Function>>(listOf(originalMethod), overridingMethod.overrides)
+        assertEquals<List<Function>>(listOf(overridingMethod), originalMethod.overriddenBy)
     }
 
     @Test

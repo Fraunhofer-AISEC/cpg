@@ -57,7 +57,7 @@
 
 <div
   role="presentation"
-  class="absolute cursor-pointer transition-all duration-200"
+  class="absolute cursor-pointer transition-[opacity,border-color] duration-200"
   style:top
   style:left
   style:height

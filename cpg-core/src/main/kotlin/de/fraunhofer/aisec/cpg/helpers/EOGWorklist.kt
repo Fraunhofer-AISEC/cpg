@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import java.util.IdentityHashMap
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * A complete lattice is an ordered structure of values of type [T]. [T] could be anything, e.g., a
@@ -73,9 +75,10 @@ class PowersetLattice(override val elements: IdentitySet<Node>) :
 }
 
 /**
- * Stores the current state. I.e., it maps [K] (e.g. a [Node] or [Edge]) to a [LatticeElement]. It
- * provides some useful functions e.g. to check if the mapping has to be updated (e.g. because there
- * are new nodes or because a new lattice element is bigger than the old one).
+ * Stores the current state. I.e., it maps [K] (e.g. a [Node] or [PropertyEdge]) to a
+ * [LatticeElement]. It provides some useful functions e.g. to check if the mapping has to be
+ * updated (e.g. because there are new nodes or because a new lattice element is bigger than the old
+ * one).
  */
 open class State<K, V> : HashMap<K, LatticeElement<V>>() {
 
@@ -163,8 +166,14 @@ class Worklist<K : Any, N : Any, V>() {
     /**
      * The actual worklist, i.e., elements which still have to be analyzed and the state which
      * should be considered there.
+     *
+     * A [LinkedHashMap] preserves insertion order (like the list-based implementation this
+     * replaces) while making the by-node lookup in [push] O(1) on average instead of the O(n)
+     * linear scan a list would require. Removing and re-inserting a key moves it to the end of the
+     * iteration order, which is exactly the "move updated entries to the back of the queue"
+     * behavior the previous implementation had.
      */
-    private val nodeOrder: MutableList<Pair<K, State<N, V>>> = mutableListOf()
+    private val nodeOrder: LinkedHashMap<K, State<N, V>> = LinkedHashMap()
 
     /**
      * Adds [newNode] and the [state] to the [globalState] (i.e., computes the [State.lub] of the
@@ -184,21 +193,21 @@ class Worklist<K : Any, N : Any, V>() {
      * If it returns `false`, the [newNode] wasn't added to the worklist as the state didn't change.
      */
     fun push(newNode: K, state: State<N, V>): Boolean {
-        val currentEntry = nodeOrder.find { it.first == newNode }
+        val currentState = nodeOrder[newNode]
         val update: Boolean
-        val newEntry =
-            if (currentEntry != null) {
-                val (newState, update2) = currentEntry.second.lub(state)
-                update = update2
-                if (update) {
-                    nodeOrder.remove(currentEntry)
-                }
-                Pair(currentEntry.first, newState)
-            } else {
-                update = true
-                Pair(newNode, state)
+        val newState: State<N, V>
+        if (currentState != null) {
+            val (lubState, changed) = currentState.lub(state)
+            update = changed
+            newState = lubState
+            if (update) {
+                nodeOrder.remove(newNode)
             }
-        if (update) nodeOrder.add(newEntry)
+        } else {
+            update = true
+            newState = state
+        }
+        if (update) nodeOrder[newNode] = newState
         return update
     }
 
@@ -210,13 +219,12 @@ class Worklist<K : Any, N : Any, V>() {
 
     /** Removes a [Node] from the worklist and returns the [Node] together with its [State] */
     fun pop(): Pair<K, State<N, V>> {
-        val node = nodeOrder.removeFirst()
-        alreadySeen.add(node.first)
-        return node
+        val iterator = nodeOrder.entries.iterator()
+        val entry = iterator.next()
+        iterator.remove()
+        alreadySeen.add(entry.key)
+        return Pair(entry.key, entry.value)
     }
-
-    /** Checks if [currentNode] has already been visited before. */
-    fun hasAlreadySeen(currentNode: K) = currentNode in alreadySeen
 
     /** Computes the meet over paths for all the states in [globalState]. */
     fun mop(): State<N, V>? {
@@ -242,9 +250,10 @@ class Worklist<K : Any, N : Any, V>() {
 inline fun <reified K : Node, V> iterateEOG(
     startNode: K,
     startState: State<K, V>,
-    transformation: (K, State<K, V>) -> State<K, V>,
+    timeout: Long? = null,
+    crossinline transformation: (K, State<K, V>) -> State<K, V>,
 ): State<K, V>? {
-    return iterateEOG(startNode, startState) { k, s, _ -> transformation(k, s) }
+    return iterateEOG(startNode, startState, timeout) { k, s, _ -> transformation(k, s) }
 }
 
 /**
@@ -258,6 +267,21 @@ inline fun <reified K : Node, V> iterateEOG(
  * not useful for this analysis. The [transformation] has to return the updated [State].
  */
 inline fun <reified K : Node, V> iterateEOG(
+    startNode: K,
+    startState: State<K, V>,
+    timeout: Long? = null,
+    crossinline transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>,
+): State<K, V>? {
+    return runBlocking {
+        if (timeout != null) {
+            withTimeoutOrNull(timeout) { iterateEogInternal(startNode, startState, transformation) }
+        } else {
+            iterateEogInternal(startNode, startState, transformation)
+        }
+    }
+}
+
+inline fun <reified K : Node, V> iterateEogInternal(
     startNode: K,
     startState: State<K, V>,
     transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>,
@@ -282,8 +306,9 @@ inline fun <reified K : Node, V> iterateEOG(
             transformation(nextNode, if (insideBB) state else state.duplicate(), worklist)
         if (worklist.update(nextNode, newState)) {
             nextNode.nextEOGEdges.forEach {
-                if (it is K) {
-                    worklist.push(it, newState)
+                val end = it.end
+                if (end is K) {
+                    worklist.push(end, newState)
                 }
             }
         }
@@ -294,15 +319,31 @@ inline fun <reified K : Node, V> iterateEOG(
 inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
-    transformation: (K, State<N, V>) -> State<N, V>,
+    timeout: Long? = null,
+    crossinline transformation: (K, State<N, V>) -> State<N, V>,
 ): State<N, V>? {
-    return iterateEOG(startEdges, startState) { k, s, _ -> transformation(k, s) }
+    return iterateEOG(startEdges, startState, timeout) { k, s, _ -> transformation(k, s) }
 }
 
 inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
-    transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>,
+    timeout: Long? = null,
+    crossinline transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>,
+): State<N, V>? {
+    return runBlocking {
+        timeout?.let { timeout ->
+            withTimeoutOrNull(timeout) {
+                iterateEogInternal(startEdges, startState, transformation)
+            }
+        } ?: run { iterateEogInternal(startEdges, startState, transformation) }
+    }
+}
+
+inline fun <reified K : Edge<Node>, N : Any, V> iterateEogInternal(
+    startEdges: List<K>,
+    startState: State<N, V>,
+    crossinline transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>,
 ): State<N, V>? {
     val globalState = IdentityHashMap<K, State<N, V>>()
     for (startEdge in startEdges) {

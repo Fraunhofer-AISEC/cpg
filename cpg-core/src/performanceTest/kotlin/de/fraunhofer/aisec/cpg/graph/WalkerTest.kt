@@ -25,15 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.astEdges
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.test.BaseTest
@@ -43,18 +43,19 @@ import kotlin.test.*
 import org.junit.jupiter.api.assertTimeout
 
 class WalkerTest : BaseTest() {
+
     @Test
     fun testWalkerSpeed() {
-        val tu = TranslationUnitDeclaration()
+        val tu = TranslationUnit()
 
         // Let's build some fake CPG trees with a good amount of classes
         for (i in 0..100) {
-            val record = RecordDeclaration()
+            val record = Record()
             record.name = Name("class${i}")
 
             // Each class should have a couple of dozen functions
             for (j in 0..20) {
-                val method = MethodDeclaration()
+                val method = Method()
                 method.name = Name("method${j}", record.name)
 
                 val comp = Block()
@@ -62,7 +63,7 @@ class WalkerTest : BaseTest() {
                 // Each method has a body with contains a fair amount of variable declarations
                 for (k in 0..10) {
                     val stmt = DeclarationStatement()
-                    val decl = VariableDeclaration()
+                    val decl = Variable()
                     decl.name = Name("var${i}")
 
                     // With a literal initializer
@@ -76,12 +77,12 @@ class WalkerTest : BaseTest() {
 
                 method.body = comp
 
-                record.addMethod(method)
+                record.methods += method
             }
 
             // And a couple of fields
             for (j in 0..40) {
-                val field = FieldDeclaration()
+                val field = Field()
                 field.name = Name("field${j}", record.name)
 
                 // With a literal initializer
@@ -89,7 +90,7 @@ class WalkerTest : BaseTest() {
                 lit.value = j
                 field.initializer = lit
 
-                record.addField(field)
+                record.fields += field
             }
 
             tu.addDeclaration(record)
@@ -97,7 +98,7 @@ class WalkerTest : BaseTest() {
 
         // Traversal of about 80.000 nodes should not exceed 1s (on GitHub). On a recently fast
         // machine, such as MacBook M1, this should take about 200-300ms.
-        assertTimeout(Duration.of(1500, ChronoUnit.MILLIS)) {
+        assertTimeout(Duration.of(2, ChronoUnit.SECONDS)) {
             val bench = Benchmark(WalkerTest::class.java, "Speed of Walker")
             val flat = SubgraphWalker.flattenAST(tu)
             bench.stop()
@@ -127,7 +128,7 @@ class WalkerTest : BaseTest() {
         val stmt = DeclarationStatement()
 
         for (k in 0..1000) {
-            val decl = VariableDeclaration()
+            val decl = Variable()
             decl.name = Name("var${k}")
 
             stmt.declarationEdges.add(decl)

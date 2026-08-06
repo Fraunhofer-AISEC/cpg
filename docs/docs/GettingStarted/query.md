@@ -40,14 +40,14 @@ the difference:
 
 **Less detailed:**
 ```
-[CallExpression[name=memcpy,location=vulnerable.cpp(3:5-3:38),type=UNKNOWN,base=<null>]]
+[Call[name=memcpy,location=vulnerable.cpp(3:5-3:38),type=UNKNOWN,base=<null>]]
 ```
 
 **Detailed mode:**
 ```
 all (==> false)
 --------
-    Starting at CallExpression[name=memcpy,location=vulnerable.cpp(3:5-3:38),type=UNKNOWN,base=<null>]: 5 > 11 (==> false)
+    Starting at Call[name=memcpy,location=vulnerable.cpp(3:5-3:38),type=UNKNOWN,base=<null>]: 5 > 11 (==> false)
 ------------------------
         sizeof(Reference[Reference[name=array,location=vulnerable.cpp(3:12-3:17),type=PointerType[name=char[]]],refersTo=VariableDeclaration[name=array,location=vulnerable.cpp(2:10-2:28),initializer=Literal[location=vulnerable.cpp(2:21-2:28),type=PointerType[name=char[]],value=hello]]]) (==> 5)
 ----------------------------------------
@@ -73,7 +73,7 @@ logics (**allExtended** or **existsExtended**) which work as follows:
 
 Example (the first argument of a call to "foo" must be 2): 
 ```
-result.allExtended<CallExpression>{it.name.localName == "foo"} {it.argument[0].intValue eq const(2) }
+result.allExtended<Call>{it.name.localName == "foo"} {it.argument[0].intValue eq const(2) }
 ```
 
 Numerous methods allow to evaluate the queries while keeping track of all the
@@ -173,14 +173,14 @@ initial set of extensions for certain nodes.
 
 An example for such a query could look as follows for the detailed mode:
 ```kotlin
-val memcpyTooLargeQuery = { node: CallExpression ->
+val memcpyTooLargeQuery = { node: Call ->
     sizeof(node.arguments[0]) gt sizeof(node.arguments[1])
 }
 ```
 
 The same query in the less detailed mode:
 ```kotlin
-val memcpyTooLargeQuery = { node: CallExpression ->
+val memcpyTooLargeQuery = { node: Call ->
     sizeof(node.arguments[0]) > sizeof(node.arguments[1])
 }
 ```
@@ -190,14 +190,14 @@ run it for a subset of nodes in the graph. We therefore provide two operators:
 `all` (or `allExtended` for the detailed output) and `exists` (or
 `existsExtended` for the detailed output). Both are used in a similar way.
 They enable the user to optionally specify conditions to determine on which
-nodes we want to run a query (e.g., only on `CallExpression`s which call a
+nodes we want to run a query (e.g., only on `Call`s which call a
 function called "memcpy").
 
 The following snippets use the queries from above to run them on all calls of
 the function "memcpy" contained in the `TranslationResult` `result`:
 ```kotlin
 val queryTreeResult =
-    result.allExtended<CallExpression>(
+    result.allExtended<Call>(
         { it.name == "memcpy" },
         { sizeof(it.arguments[0]) gt sizeof(it.arguments[1]) }
     )
@@ -206,7 +206,7 @@ val queryTreeResult =
 Less detailed:
 ```kotlin
 val queryTreeResult =
-    result.all<CallExpression>(
+    result.all<Call>(
         { it.name == "memcpy" },
         { sizeof(it.arguments[0]) > sizeof(it.arguments[1]) }
     )

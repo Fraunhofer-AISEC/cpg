@@ -25,34 +25,38 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.pointer
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.Lambda
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberAccess
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
-import de.fraunhofer.aisec.cpg.graph.types.ProblemType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
+import de.fraunhofer.aisec.cpg.helpers.functional.getFunctionPointerType
+import de.fraunhofer.aisec.cpg.helpers.functional.matchInvokesCandidateSignature
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
-import de.fraunhofer.aisec.cpg.matchesSignature
+import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.function.Consumer
 
 /**
- * This [Pass] is responsible for resolving dynamic function invokes, i.e., [CallExpression] nodes
- * that contain a reference/pointer to a function and are being "called". A common example includes
- * C/C++ function pointers.
+ * This [Pass] is responsible for resolving dynamic function invokes, i.e.,
+ * [de.fraunhofer.aisec.cpg.graph.expressions.Call] nodes that contain a reference/pointer to a
+ * function and are being "called". A common example includes C/C++ function pointers.
  *
  * This pass is intentionally split from the [SymbolResolver] because it depends on DFG edges. This
  * split allows the [SymbolResolver] to be run before any DFG passes, which in turn allow us to also
@@ -61,6 +65,10 @@ import java.util.function.Consumer
 @DependsOn(SymbolResolver::class)
 @DependsOn(DFGPass::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
+@DependsOn(PointsToPass::class, softDependency = true)
+@Description(
+    "Resolves dynamic method invocations and calls of function pointers in the CPG, enhancing the accuracy of call relationships within the graph."
+)
 class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private lateinit var walker: ScopedWalker<AstNode>
     private var inferDfgForUnresolvedCalls = false
@@ -77,70 +85,48 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private fun handle(node: Node?) {
         when (node) {
-            is MemberCallExpression -> handleMemberCallExpression(node)
-            is CallExpression -> handleCallExpression(node)
+            is MemberCall -> handleMemberCall(node)
+            is Call -> handleCall(node)
         }
     }
 
     /**
-     * Resolves function pointers in a [CallExpression] node. As long as the [CallExpression.callee]
-     * has a [FunctionPointerType], we should be able to resolve it.
+     * Resolves function pointers in a [Call] node. As long as the [Call.callee] has a
+     * [FunctionPointerType], we should be able to resolve it.
      */
-    private fun handleCallExpression(call: CallExpression) {
+    private fun handleCall(call: Call) {
         val callee = call.callee
         if (
-            callee.type is FunctionPointerType ||
-                ((callee as? Reference)?.refersTo is ParameterDeclaration ||
-                    (callee as? Reference)?.refersTo is VariableDeclaration)
+            // Only try to resolve if the PointsToPass did not manage to find any invokes edge
+            call.invokes.isEmpty() &&
+                (callee.type is FunctionPointerType ||
+                    ((callee as? Reference)?.refersTo is Parameter ||
+                        (callee as? Reference)?.refersTo is Variable))
         ) {
             handleCallee(call, callee)
         }
     }
 
     /**
-     * Resolves function pointers in a [MemberCallExpression]. In this case the
-     * [MemberCallExpression.callee] field is a binary operator on which [BinaryOperator.rhs] needs
+     * Resolves function pointers in a [MemberCall]. In this case the [MemberCall.callee] field is a
+     * binary operator on which [de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator.rhs] needs
      * to have a [FunctionPointerType].
      */
-    private fun handleMemberCallExpression(call: MemberCallExpression) {
+    private fun handleMemberCall(call: MemberCall) {
         val callee = call.callee
-        if (callee is BinaryOperator && callee.rhs.type is FunctionPointerType) {
+        // Only try to resolve if the PointsToPass did not manage to find any invokes edge
+        if (
+            call.invokes.isEmpty() &&
+                callee is BinaryOperator &&
+                callee.rhs.type is FunctionPointerType
+        ) {
             handleCallee(call, callee.rhs)
         }
     }
 
-    private fun handleCallee(call: CallExpression, expr: Expression) {
-        // For now, we harmonize all types to the FunctionPointerType. In the future, we want to get
-        // rid of FunctionPointerType and only deal with FunctionTypes.
-        val pointerType: FunctionPointerType =
-            when (val type = expr.type) {
-                is FunctionType -> {
-                    when (val pointerType = type.pointer()) {
-                        is FunctionPointerType -> pointerType
-                        is ProblemType -> {
-                            log.warn("Function has unexpected type: ProblemType; ignore call")
-                            return
-                        }
-                        else -> {
-                            log.warn("Unexpected function type: ${pointerType}; ignore call")
-                            return
-                        }
-                    }
-                }
-                is FunctionPointerType -> type
-                else -> {
-                    // some languages allow other types to derive from a function type, in this case
-                    // we need to look for a super type
-                    val superType = type.superTypes.singleOrNull()
-                    if (superType is FunctionType) {
-                        superType.pointer() as FunctionPointerType
-                    } else {
-                        return
-                    }
-                }
-            }
-
-        val invocationCandidates = mutableListOf<FunctionDeclaration>()
+    private fun handleCallee(call: Call, expr: Expression) {
+        val pointerType = getFunctionPointerType(expr) ?: return
+        val invocationCandidates = mutableListOf<Function>()
         val work: Deque<Node> = ArrayDeque()
         val seen = identitySetOf<Node>()
         work.push(expr)
@@ -150,28 +136,19 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 continue
             }
 
-            val isLambda = curr is VariableDeclaration && curr.initializer is LambdaExpression
+            val isLambda = curr is Variable && curr.initializer is Lambda
             val currentFunction =
                 if (isLambda) {
-                    (curr.initializer as LambdaExpression).function
+                    (curr.initializer as Lambda).function
                 } else {
                     curr
                 }
 
-            if (currentFunction is FunctionDeclaration) {
+            if (currentFunction is Function) {
                 // Even if it is a function declaration, the dataflow might just come from a
                 // situation where the target of a fptr is passed through via a return value. Keep
                 // searching if return type or signature don't match
-                val functionPointerType = currentFunction.type.pointer()
-                if (
-                    isLambda &&
-                        currentFunction.returnTypes.isEmpty() &&
-                        currentFunction.matchesSignature(pointerType.parameters) !=
-                            IncompatibleSignature
-                ) {
-                    invocationCandidates.add(currentFunction)
-                    continue
-                } else if (functionPointerType == pointerType) {
+                if (matchInvokesCandidateSignature(currentFunction, pointerType, isLambda)) {
                     invocationCandidates.add(currentFunction)
                     // We have found a target. Don't follow this path any further, but still
                     // continue the other paths that might be left, as we could have several
@@ -182,25 +159,27 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // Do not consider the base for member expressions, we have to know possible values of
             // the member (e.g. field).
             val prevDFGToPush =
-                curr.prevDFGEdges
-                    .filter { it.granularity is FullDataflowGranularity }
-                    .map { it.start }
-                    .toMutableList()
-            if (curr is MemberExpression && prevDFGToPush.isEmpty()) {
+                curr.prevDFGEdges.mapFilteredTo(
+                    mutableListOf(),
+                    { it.granularity is FullDataflowGranularity },
+                ) {
+                    it.start
+                }
+            if (curr is MemberAccess && prevDFGToPush.isEmpty()) {
                 // TODO: This is only a workaround!
-                //   If there is nothing found for MemberExpressions, we may have set the field
+                //   If there is nothing found for Members, we may have set the field
                 //   somewhere else but do not yet propagate this to this location (e.g. because it
                 //   happens in another function). In this case, we look at write-usages to the
                 //   field and use all of those. This is only a temporary workaround until someone
                 //   implements an interprocedural analysis (for example).
-                (curr.refersTo as? FieldDeclaration)
+                (curr.refersTo as? Field)
                     ?.usages
                     ?.filter {
                         it.access == AccessValues.WRITE || it.access == AccessValues.READWRITE
                     }
                     ?.let { prevDFGToPush.addAll(it) }
                 // Also add the initializer of the field (if it exists)
-                (curr.refersTo as? FieldDeclaration)?.initializer?.let { prevDFGToPush.add(it) }
+                (curr.refersTo as? Field)?.initializer?.let { prevDFGToPush.add(it) }
             }
 
             prevDFGToPush.forEach(Consumer(work::push))
@@ -211,7 +190,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // We have to update the dfg edges because this call could now be resolved (which was not
         // the case before).
-        DFGPass(ctx).handleCallExpression(call, inferDfgForUnresolvedCalls)
+        DFGPass(ctx).handlePreviouslyUnresolvedCallExpression(call, inferDfgForUnresolvedCalls)
     }
 
     override fun cleanup() {

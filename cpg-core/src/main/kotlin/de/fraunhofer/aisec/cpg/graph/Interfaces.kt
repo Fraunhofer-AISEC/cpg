@@ -25,14 +25,61 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Operator
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.mapFilteredTo
+import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+
+/**
+ * Represents that this node (potentially) makes use of the given memory addresses e.g. to load or
+ * store data.
+ */
+interface HasMemoryAddress {
+
+    /** The memory addresses which this node uses e.g. to load or store data. */
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryAddressEdges: MemoryAddressEdges
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    var memoryAddresses: MutableSet<MemoryAddress>
+}
+
+/** Represents that this node may hold the value(s)/data given by [memoryValues]. */
+interface HasMemoryValue {
+
+    /** The value(s)/data the node holds. */
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryValueEdges: Dataflows<Node>
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryValues: MutableSet<Node>
+
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryValueUsageEdges: Dataflows<Node>
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryValueUsages: MutableSet<Node>
+
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    val fullMemoryValues: Set<Node>
+        get() =
+            memoryValueEdges.mapFilteredTo(
+                identitySetOf(),
+                { it.granularity is FullDataflowGranularity && !it.functionSummary },
+            ) {
+                it.start
+            }
+}
 
 /** A simple interface that a node has [language]. */
 interface HasLanguage {
@@ -123,17 +170,8 @@ interface HasInitializer : HasScope, HasType, ArgumentHolder, AssignmentHolder {
 }
 
 /**
- * Some nodes have aliases, i.e., it potentially references another variable. This means that
- * writing to this node, also writes to its [aliases] and vice versa.
- */
-interface HasAliases : HasScope {
-    /** The aliases which this node has. */
-    var aliases: MutableSet<HasAliases>
-}
-
-/**
  * Specifies that this node (e.g. a [BinaryOperator]) contains an operation that can be overloaded
- * by an [OperatorDeclaration].
+ * by an [Operator].
  */
 interface HasOverloadedOperation : HasOperatorCode {
 
@@ -145,7 +183,26 @@ interface HasOverloadedOperation : HasOperatorCode {
 
     /**
      * The base expression this operator works on. The [Type] of this is also the source where the
-     * [SymbolResolver] is looking for an overloaded [OperatorDeclaration].
+     * [SymbolResolver] is looking for an overloaded [Operator].
      */
     val operatorBase: Expression
+}
+
+/**
+ * Specifies that a node has modifiers, e.g., determining its visibility (typically `public` or
+ * `private) or other modifiers like `mut`. The modifiers are represented as a set of strings and
+ * are specific to the language.
+ *
+ * Careful distinction between modifiers and types is necessary and might be different for different
+ * languages, for example in C++ `int` is a type, but `const` or `volatile` are most likely
+ * modifiers.
+ */
+interface HasModifiers {
+
+    /**
+     * The modifiers of this node. The actual modifiers are language-specific and can be any string,
+     * but typical examples include `public`, `private`, `protected` for [Method]s and `mut` or
+     * `volatile` for [Variable]s.
+     */
+    var modifiers: Set<String>
 }

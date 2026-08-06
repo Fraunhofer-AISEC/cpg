@@ -39,7 +39,18 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     override var outgoing: Boolean = true,
     override var onAdd: ((EdgeType) -> Unit)? = null,
     override var onRemove: ((EdgeType) -> Unit)? = null,
-) : ArrayList<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
+    /**
+     * We allow to explicitly set the capacity. The default of 0 defers the backing array allocation
+     * until the first element is added: [ArrayList]'s constructor allocates a real backing array
+     * immediately for any capacity > 0, so a supposedly cheap "capacity 1" default still paid for
+     * an array allocation on every single node, even for the majority of edge types that stay empty
+     * for most nodes (e.g. control- and program-dependence edges). With capacity 0, [ArrayList]
+     * uses a shared empty backing array until something is actually added. In cases where we expect
+     * many edges, we can increase the capacity to avoid unnecessary and expensive copy operations
+     * to a larger list.
+     */
+    initialCapacity: Int = 0,
+) : ArrayList<EdgeType>(initialCapacity), EdgeCollection<NodeType, EdgeType> {
 
     override fun add(element: EdgeType): Boolean {
         // Make sure, the index is always set
@@ -63,10 +74,13 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun removeAll(elements: Collection<EdgeType>): Boolean {
-        val ok = super.removeAll(elements.toSet())
-        if (ok) {
-            elements.forEach { handleOnRemove(it) }
-        }
+        // Only notify for edges that were actually present and removed. Firing onRemove for
+        // elements that were not in this list (or for duplicates in the input) would corrupt
+        // mirror-property bookkeeping and other onRemove side effects.
+        val toRemove = elements.toSet()
+        val removed = toRemove.filter { contains(it) }
+        val ok = super.removeAll(toRemove)
+        removed.forEach { handleOnRemove(it) }
         return ok
     }
 

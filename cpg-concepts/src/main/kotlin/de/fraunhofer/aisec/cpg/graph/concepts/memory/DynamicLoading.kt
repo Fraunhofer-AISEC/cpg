@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.LibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import java.util.Objects
 
@@ -120,7 +120,7 @@ open class LoadLibrary(
  * `dlsym` in C/C++.
  *
  * The [underlyingNode] is most likely a function call and [what] can point to a [Declaration]
- * representing the symbol (e.g., a [FunctionDeclaration]) that we load.
+ * representing the symbol (e.g., a [Function]) that we load.
  *
  * If we are loading a symbol from an external library, [loader] can point to the [LoadLibrary]
  * operation that loaded the library.

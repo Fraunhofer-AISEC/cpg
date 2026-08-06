@@ -23,6 +23,11 @@ java {
 repositories {
     mavenCentral()
 
+    // Serves the SootUp fork (github.com/KuechA/SootUp) built on demand, under
+    // com.github.KuechA.SootUp:sootup.* -- see the `sootup` version in
+    // gradle/libs.versions.toml.
+    maven { setUrl("https://jitpack.io") }
+
     ivy {
         setUrl("https://download.eclipse.org/tools/cdt/releases/")
         metadataSources {
@@ -141,7 +146,6 @@ val serialExecutionService =
 val libs = the<LibrariesForLibs>()  // necessary to be able to use the version catalog in buildSrc
 dependencies {
     implementation(libs.apache.commons.lang3)
-    implementation(libs.neo4j.ogm.core)
     implementation(libs.jackson)
 }
 

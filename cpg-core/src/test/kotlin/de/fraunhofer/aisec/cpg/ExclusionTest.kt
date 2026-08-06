@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.newTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -48,13 +48,13 @@ class TestFileLanguage() : TestLanguage() {
         get() = TestFileLanguageFrontend::class
 }
 
-/** Just a test frontend that "reads" a file and returns an empty [TranslationUnitDeclaration]. */
+/** Just a test frontend that "reads" a file and returns an empty [TranslationUnit]. */
 class TestFileLanguageFrontend(
     ctx: TranslationContext = TranslationContext(TranslationConfiguration.builder().build()),
     language: Language<TestLanguageFrontend> = TestFileLanguage(),
 ) : TestLanguageFrontend(ctx, language) {
-    override fun parse(file: File): TranslationUnitDeclaration {
-        return newTranslationUnitDeclaration(file.name)
+    override fun parse(file: File): TranslationUnit {
+        return newTranslationUnit(file.name)
     }
 
     override fun typeOf(type: Any): Type {

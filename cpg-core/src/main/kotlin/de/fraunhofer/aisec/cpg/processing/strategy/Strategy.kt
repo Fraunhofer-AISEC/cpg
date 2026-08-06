@@ -28,8 +28,9 @@ package de.fraunhofer.aisec.cpg.processing.strategy
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.HasMemoryValue
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.*
 import de.fraunhofer.aisec.cpg.graph.edges.astEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
@@ -77,7 +78,7 @@ object Strategy {
             }
     }
 
-    fun TRANSLATION_UNITS_LEAST_IMPORTS(x: Component): Iterator<TranslationUnitDeclaration> {
+    fun TRANSLATION_UNITS_LEAST_IMPORTS(x: Component): Iterator<TranslationUnit> {
         return x.translationUnitDependencies?.sorted?.iterator()
             ?: x.translationUnits.iterator().also {
                 log.warn(
@@ -125,6 +126,15 @@ object Strategy {
      */
     fun AST_FORWARD(x: AstNode): Iterator<AstNode> {
         return x.astChildren.iterator()
+    }
+
+    fun MEMORY_VALUES_FORWARD(x: Node): Iterator<Dataflow> {
+        return if (x is HasMemoryValue) x.memoryValueEdges.iterator() else x.nextDFGEdges.iterator()
+    }
+
+    fun MEMORY_VALUES_BACKWARD(x: Node): Iterator<Dataflow> {
+        return if (x is HasMemoryValue) x.memoryValueUsageEdges.iterator()
+        else x.prevDFGEdges.iterator()
     }
 
     /**

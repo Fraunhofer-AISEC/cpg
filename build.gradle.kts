@@ -128,3 +128,24 @@ val enableINIFrontend: Boolean by extra {
     enableINIFrontend.toBoolean()
 }
 project.logger.lifecycle("INI frontend is ${if (enableINIFrontend) "enabled" else "disabled"}")
+
+val enableCodyzeConsole: Boolean by extra {
+    val enableCodyzeConsole: String? by project
+    enableCodyzeConsole.toBoolean()
+}
+project.logger.lifecycle(
+    "codyze-console is ${if (enableCodyzeConsole) "enabled" else "disabled"}"
+)
+
+val enableAIModule: Boolean by extra {
+    val enableAIModule: String? by project
+    // codyze-console has a hard, unconditional build dependency on cpg-ai, so codyze-console
+    // being enabled always forces cpg-ai on too, even if enableAIModule=false is set explicitly -
+    // an explicit false would otherwise just break the codyze-console build.
+    val explicitlyEnabled = enableAIModule.toBoolean()
+    if (!explicitlyEnabled && enableCodyzeConsole) {
+        project.logger.lifecycle("cpg-ai module auto-enabled because codyze-console is enabled")
+    }
+    explicitlyEnabled || enableCodyzeConsole
+}
+project.logger.lifecycle("AI module is ${if (enableAIModule) "enabled" else "disabled"}")

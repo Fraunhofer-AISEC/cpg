@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+
   interface Props {
     title?: string;
     subtitle?: string;
@@ -6,6 +8,7 @@
     border?: boolean;
     shadow?: boolean;
     hover?: boolean;
+    children: Snippet;
   }
 
   let {
@@ -14,7 +17,8 @@
     padding = 'md',
     border = true,
     shadow = false,
-    hover = false
+    hover = false,
+    children
   }: Props = $props();
 
   const paddingClasses = {
@@ -44,5 +48,5 @@
     </div>
   {/if}
 
-  <slot />
+  {@render children()}
 </div>

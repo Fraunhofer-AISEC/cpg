@@ -25,13 +25,23 @@
  */
 package de.fraunhofer.aisec.cpg.evaluation
 
+import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.expressions.ArrayConstruction
+import de.fraunhofer.aisec.cpg.graph.expressions.Assign
+import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.expressions.Cast
+import de.fraunhofer.aisec.cpg.graph.expressions.Conditional
+import de.fraunhofer.aisec.cpg.graph.expressions.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.expressions.For
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.Subscription
+import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.invoke
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -39,15 +49,20 @@ import org.slf4j.LoggerFactory
 class MultiValueEvaluator : ValueEvaluator() {
     companion object {
         const val MAX_DEPTH: Int = 20
+        /** Cache calculated values so that we don't have to calculate them each time */
+        private val valuesCache = ConcurrentHashMap<Int, Any>()
     }
 
     override val log: Logger
         get() = LoggerFactory.getLogger(MultiValueEvaluator::class.java)
 
-    override fun evaluate(node: Any?): Any? {
+    override fun evaluate(node: Any?, useCache: Boolean): Any? {
         clearPath()
 
-        val result = evaluateInternal(node as? Node, 0)
+        val result =
+            if (useCache)
+                valuesCache.getOrPut(node.hashCode()) { evaluateInternal(node as? Node, 0) }
+            else evaluateInternal(node as? Node, 0)
         return if (result is Collection<*> && result.all { r -> r is Number }) {
             ConcreteNumberSet(result.map { r -> (r as Number).toLong() }.toMutableSet())
         } else {
@@ -68,20 +83,20 @@ class MultiValueEvaluator : ValueEvaluator() {
         this.path += node
 
         when (node) {
-            is FieldDeclaration -> return handleHasInitializer(node, depth)
-            is NewArrayExpression -> return handleHasInitializer(node, depth)
-            is VariableDeclaration -> return handleHasInitializer(node, depth)
+            is Field -> return handleHasInitializer(node, depth)
+            is ArrayConstruction -> return handleHasInitializer(node, depth)
+            is Variable -> return handleHasInitializer(node, depth)
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> return node.value
             is UnaryOperator -> return handleUnaryOp(node, depth)
-            is AssignExpression -> return handleAssignExpression(node, depth)
+            is Assign -> return handleAssign(node, depth)
             is BinaryOperator -> return handleBinaryOperator(node, depth)
             // Casts are just a wrapper in this case, we are interested in the inner expression
-            is CastExpression -> return this.evaluateInternal(node.expression, depth + 1)
-            is SubscriptExpression -> return handleSubscriptExpression(node, depth)
+            is Cast -> return this.evaluateInternal(node.expression, depth + 1)
+            is Subscription -> return handleSubscription(node, depth)
             // While we are not handling different paths of variables with If statements, we can
             // easily be partly path-sensitive in a conditional expression
-            is ConditionalExpression -> return handleConditionalExpression(node, depth)
+            is Conditional -> return handleConditional(node, depth)
             else -> return handlePrevDFG(node, depth)
         }
 
@@ -94,10 +109,10 @@ class MultiValueEvaluator : ValueEvaluator() {
      * We are handling some basic arithmetic compound assignment operations and string operations
      * that are more or less language-independent.
      */
-    override fun handleAssignExpression(node: AssignExpression, depth: Int): Any? {
+    override fun handleAssign(node: Assign, depth: Int): Any? {
         // This only works for compound assignments
         if (!node.isCompoundAssignment) {
-            return super.handleAssignExpression(node, depth)
+            return super.handleAssign(node, depth)
         }
 
         // Resolve lhs
@@ -164,7 +179,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         return result
     }
 
-    override fun handleConditionalExpression(expr: ConditionalExpression, depth: Int): Any {
+    override fun handleConditional(expr: Conditional, depth: Int): Any {
         val result = mutableSetOf<Any?>()
         val elseResult = evaluateInternal(expr.elseExpression, depth + 1)
         val thenResult = evaluateInternal(expr.thenExpression, depth + 1)
@@ -182,7 +197,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                 }
             }
             "--" -> {
-                if (expr.astParent is ForStatement) {
+                if (expr.astParent is For) {
                     evaluateInternal(expr.input, depth + 1)
                 } else {
                     when (val input = evaluateInternal(expr.input, depth + 1)) {
@@ -192,7 +207,7 @@ class MultiValueEvaluator : ValueEvaluator() {
                 }
             }
             "++" -> {
-                if (expr.astParent is ForStatement) {
+                if (expr.astParent is For) {
                     evaluateInternal(expr.input, depth + 1)
                 } else {
                     when (val input = evaluateInternal(expr.input, depth + 1)) {
@@ -201,8 +216,6 @@ class MultiValueEvaluator : ValueEvaluator() {
                     }
                 }
             }
-            "*" -> evaluateInternal(expr.input, depth + 1)
-            "&" -> evaluateInternal(expr.input, depth + 1)
             else -> super.handleUnaryOp(expr, depth)
         }
     }
@@ -219,7 +232,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         // references.
         val prevDFG =
             if (node is Reference) {
-                filterSelfReferences(node, node.prevDFG.toList())
+                filterSelfReferences(node, node.prevDFG)
             } else {
                 node.prevDFG
             }
@@ -237,7 +250,7 @@ class MultiValueEvaluator : ValueEvaluator() {
         val result = mutableSetOf<Any?>()
         if (prevDFG.isEmpty()) {
             // No previous expression?? Let's try with a variable declaration and its initialization
-            val decl = prevDFG.filterIsInstance<VariableDeclaration>()
+            val decl = prevDFG.filterIsInstance<Variable>()
             for (declaration in decl) {
                 val res = evaluateInternal(declaration, depth + 1)
                 result.addAnything(res)
@@ -257,8 +270,8 @@ class MultiValueEvaluator : ValueEvaluator() {
 
     private fun isSimpleForLoop(node: Node): Boolean {
         // Are we in the for statement somehow?
-        var forStatement = node.astParent as? ForStatement
-        if (forStatement == null) forStatement = node.astParent?.astParent as? ForStatement
+        var forStatement = node.astParent as? For
+        if (forStatement == null) forStatement = node.astParent?.astParent as? For
 
         if (forStatement == null) return false // ...no, we're not.
 
@@ -279,16 +292,17 @@ class MultiValueEvaluator : ValueEvaluator() {
 
     private fun handleSimpleLoopVariable(expr: Reference, depth: Int): Collection<Any?> {
         val loop =
-            expr.prevDFG.firstOrNull { it.astParent is ForStatement }?.astParent as? ForStatement
-                ?: expr.prevDFG
-                    .firstOrNull { it.astParent?.astParent is ForStatement }
-                    ?.astParent
-                    ?.astParent as? ForStatement
+            expr.prevDFG.firstOrNull { it.astParent is For }?.astParent as? For
+                ?: expr.prevDFG.firstOrNull { it.astParent?.astParent is For }?.astParent?.astParent
+                    as? For
         if (loop == null || loop.condition !is BinaryOperator) return setOf()
 
         var loopVar: Any? =
-            evaluateInternal(loop.initializerStatement?.declarations?.first(), depth) as? Number
-                ?: return setOf()
+            evaluateInternal(
+                (loop.initializerStatement as? DeclarationHolder)?.declarations?.first(),
+                depth,
+            )
+                as? Number ?: return setOf()
 
         val cond = loop.condition as BinaryOperator
         val result = mutableSetOf<Any?>()
@@ -315,7 +329,7 @@ class MultiValueEvaluator : ValueEvaluator() {
             val loopOp = loop.iterationStatement
             loopVar =
                 when (loopOp) {
-                    is AssignExpression -> {
+                    is Assign -> {
                         if (
                             loopOp.operatorCode == "=" &&
                                 (loopOp.lhs.singleOrNull() as? Reference)?.refersTo ==

@@ -95,7 +95,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.AssertStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.Assert",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -105,7 +105,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.BreakStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.Break",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -115,7 +115,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.CaseStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.Case",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -155,7 +155,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.ContinueStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.Continue",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -175,7 +175,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.DefaultStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.Default",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -190,7 +190,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.DoStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.Do",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -198,7 +198,7 @@
     "name": "de.fraunhofer.aisec.cpg.graph.EdgeProperty"
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.EmptyStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.Empty",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -233,12 +233,12 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.ForEachStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.ForEach",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.ForStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.For",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -248,7 +248,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.GotoStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.Goto",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -263,7 +263,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.IfStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.If",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -278,7 +278,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.LabelStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.Label",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -341,7 +341,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.ReturnStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.Return",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -365,12 +365,12 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.SwitchStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.Switch",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.SynchronizedStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.Synchronized",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -380,7 +380,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.TryStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.Try",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },
@@ -430,7 +430,7 @@
     "allDeclaredMethods": true
   },
   {
-    "name": "de.fraunhofer.aisec.cpg.graph.WhileStatement",
+    "name": "de.fraunhofer.aisec.cpg.graph.While",
     "allDeclaredFields": true,
     "allDeclaredMethods": true
   },

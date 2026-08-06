@@ -1,0 +1,173 @@
+/*
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
+
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.AbstractIntervalEvaluator
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclarationState
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.expressions.Call
+import de.fraunhofer.aisec.cpg.graph.expressions.MemberCall
+import de.fraunhofer.aisec.cpg.graph.expressions.New
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import de.fraunhofer.aisec.cpg.graph.types.ListType
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.hashCode
+
+/**
+ * A [ValueEvaluator] which evaluates the size of mutable lists. It uses the [MutableSetSize] class
+ * to track the size of the collection.
+ */
+class ListSizeEvaluator : ValueEvaluator() {
+    /** Cache calculated values so that we don't have to calculate them each time */
+    companion object {
+        private val valuesCache = ConcurrentHashMap<Int, Any>()
+    }
+
+    override fun evaluate(node: Any?, useCache: Boolean): Any? {
+        if (node !is Node) return cannotEvaluate(null, this)
+
+        return if (useCache)
+            valuesCache.getOrPut(node.hashCode()) {
+                AbstractIntervalEvaluator().evaluate(node, MutableListSize::class)
+            }
+        else AbstractIntervalEvaluator().evaluate(node, MutableListSize::class)
+    }
+}
+
+/**
+ * This class implements the [Value] interface for mutable Lists, tracking the size of the
+ * collection. We assume that there is no operation that changes an array's size apart from
+ * re-declaring it. NOTE: This is an unpolished example implementation. Before actual usage consider
+ * the below TODOs and write a test file.
+ */
+class MutableListSize() : MutableCollectionSize() {
+    override fun applyEffect(
+        lattice: TupleState<Any>,
+        state: TupleStateElement<Any>,
+        node: Node,
+        edge: EvaluationOrder?,
+        computeWithoutPush: Boolean,
+    ): LatticeInterval {
+        var target: Node? = null
+        var variableSize: LatticeInterval = LatticeInterval.BOTTOM
+
+        if (node is Variable && node.initializer != null) {
+            target = node
+            variableSize =
+                when (val init = node.initializer) {
+                    is MemberCall -> {
+                        if (init.base?.type is ListType) { // TODO: check the function name
+                            // This is a List copying the base, we can use the size of the base
+                            createWithElementsFromElement(init.base!!, state)
+                        } else {
+                            val size = init.arguments.size.toLong()
+                            LatticeInterval.Bounded(size, size)
+                        }
+                    }
+                    is New -> {
+                        if (
+                            init.initializer !is Call ||
+                                (init.initializer as Call).arguments.isEmpty()
+                        ) {
+                            // Empty List, we can use the empty collection size
+                            createEmptyCollection()
+                        } else if (
+                            (init.initializer as Call).arguments.size == 1 &&
+                                (init.initializer as Call).arguments.single().type is ListType
+                        ) {
+                            // This is a List with a single element, we can use the size of that
+                            // element
+                            val element = (init.initializer as Call).arguments.single()
+                            createWithElementsFromElement(element, state)
+                        } else {
+                            // This is a List with multiple elements, we can use the size of those
+                            // elements
+                            val elements = (init.initializer as Call).arguments
+                            createWithElements(elements, state)
+                        }
+                    }
+                    else -> LatticeInterval.BOTTOM
+                }
+        } else if (node is MemberCall && node.base != null) {
+            target = node.base!!
+
+            variableSize =
+                when (node.name.localName) {
+                    "add" -> {
+                        addSingleElementWithoutElementCheck(target, state)
+                    }
+
+                    "addAll" -> {
+                        if (node.arguments.singleOrNull()?.type is ListType) {
+                            addMultipleElementsWithoutElementCheck(
+                                target,
+                                node.arguments.single(),
+                                state,
+                            )
+                        } else {
+                            addMultipleElementsWithoutElementCheck(target, node.arguments, state)
+                        }
+                    }
+
+                    "clear" -> {
+                        clearAllElements()
+                    }
+
+                    "remove" -> {
+                        // We have to differentiate between remove with index or object argument
+                        // Latter may do nothing if the element is not in the list
+                        if (node.arguments.first().type is IntegerType) {
+                            removeSingleElementWithoutElementCheck(target, state)
+                        } else {
+                            removeSingleElementWithElementCheck(target, state)
+                        }
+                    }
+
+                    "removeAll" -> {
+                        removeMultipleElementsWithoutElementCheck(target, state)
+                    }
+
+                    else -> LatticeInterval.BOTTOM
+                }
+        }
+
+        if (target != null) {
+            lattice.pushToGeneralState(state, target, variableSize)
+            lattice.pushToDeclarationState(state, target, variableSize)
+        }
+        lattice.pushToDeclarationState(state, node, LatticeInterval.BOTTOM)
+
+        // TODO: Push stuff, modify state.
+        return variableSize
+    }
+}
