@@ -1767,35 +1767,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             .joinToString("|")
     }
 
-    private fun NodeWithPropertiesKey.stableKey(): String =
-        "${node.stableKey()}|${properties.map { it.stablePropertyKey() }.sorted().joinToString(";")}"
-
-    private fun Any?.stablePropertyKey(): String =
-        when (this) {
-            null -> "null"
-            is Boolean -> "Boolean:$this"
-            is Int -> "Int:$this"
-            is String -> "String:$this"
-            is Name -> "Name:$this"
-            is Node -> "Node:${this.stableKey()}"
-            is Field -> "Field:${this.name}"
-            is Granularity -> "Granularity:${this::class.qualifiedName}:$this"
-            is CallingContextIn ->
-                "CallingContextIn:${this.calls.map { it.stableKey() }.joinToString(">")}"
-            is CallingContextOut ->
-                "CallingContextOut:${this.calls.map { it.stableKey() }.joinToString(">")}"
-            else -> "${this::class.qualifiedName}:$this"
-        }
-
-    private fun paramKindOrder(param: Node): Int =
-        when (param) {
-            is Record -> 0
-            is Parameter -> 1
-            is Return -> 2
-            is Function -> 3
-            else -> 4
-        }
-
     private fun copyMapDstToSrc(
         original: ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>
     ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
@@ -1834,6 +1805,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var doubleState = doubleState
         val mapDstToSrc = ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>()
         val addEntryToMapCache = AddEntryToMapCache()
+        /* Collect all the shortFS edges and add them later in one go */
         val shortFsPrevEdges = linkedSetOf<NodeWithPropertiesKey>()
 
         // If the call is a function pointer, and we don't yet have invokes edges we try to fetch
@@ -2009,27 +1981,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         val callingContextOut = CallingContextOut(mutableListOf(currentNode))
-        /*        mapDstToSrc.forEach { (dstAddr, values) ->
+        mapDstToSrc.forEach { (dstAddr, values) ->
             doubleState =
                 writeMapEntriesToState(lattice, doubleState, dstAddr, values, callingContextOut)
-        }*/
-        mapDstToSrc.entries
-            .sortedBy { (dstAddr, _) -> dstAddr.stableKey() }
-            .forEach { (dstAddr, values) ->
-                val sortedValues =
-                    values
-                        .sortedWith(mapDstToSrcEntryComparator)
-                        .toCollection(concurrentIdentitySetOf())
-
-                doubleState =
-                    writeMapEntriesToState(
-                        lattice,
-                        doubleState,
-                        dstAddr,
-                        sortedValues,
-                        callingContextOut,
-                    )
-            }
+        }
 
         if (shortFsPrevEdges.isNotEmpty()) {
             doubleState =
@@ -2046,18 +2001,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         return doubleState
     }
-
-    private val mapDstToSrcEntryComparator: Comparator<MapDstToSrcEntry> =
-        compareBy<MapDstToSrcEntry> { it.param?.stableKey() ?: "" }
-            .thenBy { it.srcNode?.stableKey() ?: "" }
-            .thenBy {
-                it.propertySet
-                    .map { property -> property.stablePropertyKey() }
-                    .sorted()
-                    .joinToString(";")
-            }
-            .thenBy { it.dst.map { dst -> dst.stableKey() }.sorted().joinToString(";") }
-            .thenBy { it.lastWrites.map { lw -> lw.stableKey() }.sorted().joinToString(";") }
 
     private fun calculatePrevDFGs(
         lastWrites: MutableSet<NodeWithPropertiesKey>,
@@ -2214,8 +2157,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val lastWrites: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet()
         val destinations: MutableSet<IdKey<Node>> = ConcurrentHashMap.newKeySet()
 
-        for (value in values) {
-            //        values.forEachMaybeParallel(minChunkSize = 1) { value ->
+        values.forEachMaybeParallel(minChunkSize = 1) { value ->
             value.lastWrites.forEach { (lw, lwProps) ->
                 // For short FunctionSummaries (AKA one of the lastWrite
                 // properties set to 'true',
@@ -2272,6 +2214,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             destinations.mapTo(identitySetOf()) { it.ref },
             identitySetOf(dstAddr),
             lastWrites,
+            false,
         )
     }
 
@@ -4357,6 +4300,9 @@ suspend fun PointsToState.Element.updateValues(
     // Node and short FS yes or no
     destinationAddresses: IdentitySet<Node>,
     lastWrites: MutableSet<NodeWithPropertiesKey>,
+    // In some cases, we want to remove the old generalState (for example for assigns), in others,
+    // we want to keep it (in handeCall for example)
+    overwriteGeneralState: Boolean = true,
 ): PointsToState.Element = coroutineScope {
     var doubleState = doubleState
 
@@ -4460,15 +4406,30 @@ suspend fun PointsToState.Element.updateValues(
                 }
             }
 
-            destinations.forEachMaybeParallel { d ->
-                doubleState.generalState.put(
-                    d,
-                    GeneralStateEntryElement(
-                        PowersetLattice.Element(destinationAddresses),
-                        PowersetLattice.Element(mappedSources),
-                        PowersetLattice.Element(newLastWrites),
-                    ),
-                )
+            if (overwriteGeneralState) {
+                destinations.forEachMaybeParallel { d ->
+                    doubleState.generalState.put(
+                        d,
+                        GeneralStateEntryElement(
+                            PowersetLattice.Element(destinationAddresses),
+                            PowersetLattice.Element(mappedSources),
+                            PowersetLattice.Element(newLastWrites),
+                        ),
+                    )
+                }
+            } else {
+                destinations.forEachMaybeParallel { d ->
+                    doubleState =
+                        lattice.push(
+                            doubleState,
+                            d,
+                            GeneralStateEntryElement(
+                                PowersetLattice.Element(destinationAddresses),
+                                PowersetLattice.Element(mappedSources),
+                                PowersetLattice.Element(newLastWrites),
+                            ),
+                        )
+                }
             }
         } else {
             val mappedSources =
