@@ -17,6 +17,7 @@ sarif4k = "0.7.0"
 ktor = "3.5.0"
 node = "22.14.0"
 deno-plugin = "0.1.5"
+koog = "1.1.1"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
@@ -72,10 +73,18 @@ ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
 ktor-server-sse = { module = "io.ktor:ktor-server-sse", version.ref = "ktor" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
 
 mcp = {module = "io.modelcontextprotocol:kotlin-sdk", version = "0.15.0"}
 mcp-client = {module = "io.modelcontextprotocol:kotlin-sdk-client", version = "0.14.0"}
 mcp-testing = {module = "io.modelcontextprotocol:kotlin-sdk-testing", version = "0.13.0"}
+
+# Koog (JetBrains Kotlin AI agent framework): the LLM prompt executors and agent/tool runtime that
+# replace our own hand-rolled LLM clients and MCP client usage in cpg-ai. `agents-mcp` is
+# independently versioned (currently only published as a "-beta" of the same release train) and
+# provides the MCP client integration (McpToolRegistryProvider).
+koog-agents = { module = "ai.koog:koog-agents", version.ref = "koog" }
+koog-agents-mcp = { module = "ai.koog:agents-mcp", version = "1.1.1-beta" }
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.14.1"}
