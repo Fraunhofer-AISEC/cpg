@@ -1,18 +1,18 @@
 org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dkotlin.daemon.jvm.options=-Xmx4g
 systemProp.sonar.gradle.skipCompile=true
 
-enableJavaFrontend=true
+enableJavaFrontend=false
 enableCXXFrontend=true
-enableGoFrontend=true
-enablePythonFrontend=true
-enableLLVMFrontend=true
-enableTypeScriptFrontend=true
-enableRubyFrontend=true
-enableJVMFrontend=true
-enableINIFrontend=true
+enableGoFrontend=false
+enablePythonFrontend=false
+enableLLVMFrontend=false
+enableTypeScriptFrontend=false
+enableRubyFrontend=false
+enableJVMFrontend=false
+enableINIFrontend=false
 enableAIModule=true
 enableRustFrontend=true
-enableCodyzeConsole=true
+enableCodyzeConsole=false
 
 org.jetbrains.dokka.experimental.gradle.pluginMode=V2Enabled
 ## Suppress warnings about using the experimental Dokka plugin
