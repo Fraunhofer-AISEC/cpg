@@ -1,0 +1,14 @@
+[
+  {
+    "directory": "src/test/resources/cxxProjectDetection/multiComponent/src/libfoo",
+    "command": "gcc -DFOO=1 -c foo.c",
+    "file": "foo.c",
+    "output": "foo.o"
+  },
+  {
+    "directory": "src/test/resources/cxxProjectDetection/multiComponent/src/tool",
+    "command": "gcc -c main.c",
+    "file": "main.c",
+    "output": "main.o"
+  }
+]

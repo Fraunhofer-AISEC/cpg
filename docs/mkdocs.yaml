@@ -14,7 +14,7 @@ edit_uri: edit/main/docs/
 # Copyright
 copyright: >
   <p>
-    <a href="https://www.aisec.fraunhofer.de/en/data_protection.html">Privacy Policy</a>, <a href="#__consent">Change cookie settings</a>
+    <a href="privacy">Privacy Policy</a>, <a href="#__consent">Change cookie settings</a>
   </p>
   Copyright &copy; 2023 Fraunhofer AISEC
 # Configuration
@@ -160,6 +160,7 @@ nav:
       - "Using Codyze": GettingStarted/codyze.md
       - "Usage as library":
           - "Adding the Dependency": GettingStarted/library.md
+          - "Project API": GettingStarted/project-api.md
           - "Using the Query API": GettingStarted/query.md
           - "Shortcuts to Explore the Graph": GettingStarted/shortcuts.md
           - "Graph Traversal (followXXX)":
@@ -188,3 +189,4 @@ nav:
       - "Contributing to the CPG library": Contributing/index.md
     # This assumes that the most recent dokka build was generated with the "main" tag!
   - "API Reference": dokka/main
+  - Imprint: imprint.md

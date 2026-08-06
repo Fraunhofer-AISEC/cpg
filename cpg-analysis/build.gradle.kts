@@ -34,6 +34,7 @@ mavenPublishing {
 
 dependencies {
     api(projects.cpgCore)
+    api(projects.cpgConcepts)
 
     testImplementation(testFixtures(projects.cpgCore))
     // We depend on the Python frontend for the integration tests, but the frontend is only
