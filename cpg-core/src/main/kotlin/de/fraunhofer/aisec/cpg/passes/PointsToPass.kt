@@ -4265,7 +4265,8 @@ fun PointsToState.Element.fetchFieldAddresses(
 
 /**
  * Updates the declarationState at `destinationAddresses` to the values in `sources`. Additionally,
- * updates the generalstate at `destinations` if there is any
+ * updates the generalstate at `destinations` if there is any. When `overwriteGeneralState` is set
+ * to true, old generalState will be eliminated, otherwise it will be kept
  */
 suspend fun PointsToState.Element.updateValues(
     lattice: PointsToState,
