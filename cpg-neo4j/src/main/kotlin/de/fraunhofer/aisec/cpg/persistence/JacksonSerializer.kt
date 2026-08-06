@@ -558,13 +558,40 @@ fun deserializeFromJson(json: String): TranslationResult {
     // constructor requires its `astNode`). These are never AST children — they belong to the
     // non-node "object web" that this graph-only round-trip does not restore — so we skip any node
     // type without a no-arg constructor.
-    val nodesJson = tree.get("nodes")
+    val nodesJson =
+        tree.get("nodes") ?: error("Serialized graph has no `nodes` array to deserialize.")
+    var skippedNodes = 0
     for (nodeJson in nodesJson) {
         val id = nodeJson.id
-        val type = Class.forName(nodeJson.get("@class").asText())
-        if (type.declaredConstructors.none { it.parameterCount == 0 }) continue
-        val node = objectMapper.treeToValue(nodeJson, type) as? Node ?: continue
+        val node =
+            try {
+                val type = Class.forName(nodeJson.get("@class").asText())
+                // Node types without a no-arg constructor (notably the [Scope] hierarchy, whose
+                // constructor requires its `astNode`) belong to the non-node "object web" that this
+                // graph-only round-trip does not restore, so we skip them.
+                if (type.declaredConstructors.none { it.parameterCount == 0 }) null
+                else objectMapper.treeToValue(nodeJson, type) as? Node
+            } catch (e: Exception) {
+                // A single unbuildable node (e.g. its class is not on the reader's classpath
+                // because
+                // the producing language frontend is absent) must not abort the whole graph read.
+                log.warn("Skipping node {} during deserialization: {}", id, e.message)
+                null
+            }
+        if (node == null) {
+            skippedNodes++
+            continue
+        }
         registry.register(id, node)
+    }
+    if (skippedNodes > 0) {
+        log.info(
+            "Restored {} of {} nodes; {} were skipped (non-node object web or unbuildable types). " +
+                "Edges touching a skipped node are dropped.",
+            registry.all.size,
+            nodesJson.size(),
+            skippedNodes,
+        )
     }
 
     // Phase 2: rebuild the graph's connectivity from the flat `edges` array and the per-node edge
