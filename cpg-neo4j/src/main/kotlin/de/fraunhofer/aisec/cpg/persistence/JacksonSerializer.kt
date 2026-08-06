@@ -26,33 +26,26 @@
 package de.fraunhofer.aisec.cpg.persistence
 
 import com.fasterxml.jackson.annotation.JacksonInject
-import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonIdentityReference
-import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.fasterxml.jackson.annotation.PropertyAccessor
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonToken
+import com.fasterxml.jackson.core.StreamReadConstraints
 import com.fasterxml.jackson.core.StreamWriteConstraints
 import com.fasterxml.jackson.databind.*
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.deser.ContextualDeserializer
 import com.fasterxml.jackson.databind.deser.ResolvableDeserializer
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator
-import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator
 import com.fasterxml.jackson.databind.jsontype.TypeDeserializer
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer
 import com.fasterxml.jackson.databind.module.SimpleKeyDeserializers
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.module.SimpleSerializers
-import com.fasterxml.jackson.databind.ser.BeanPropertyWriter
 import com.fasterxml.jackson.databind.ser.BeanSerializer
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
 import com.fasterxml.jackson.databind.ser.ResolvableSerializer
-import com.fasterxml.jackson.databind.ser.Serializers
 import com.fasterxml.jackson.databind.ser.impl.ObjectIdWriter
 import com.fasterxml.jackson.databind.ser.std.BeanSerializerBase
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
@@ -72,12 +65,11 @@ import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
 import kotlin.uuid.Uuid
 
-@JsonSerialize(using = KClassSerializer::class) interface KClassMixin
-
-val DEFAULT_TYPING = ObjectMapper.DefaultTyping.OBJECT_AND_NON_CONCRETE
-val typeIncludedAs: JsonTypeInfo.As = JsonTypeInfo.As.PROPERTY
-val typeValidator: PolymorphicTypeValidator = // LaissezFaireSubTypeValidator.instance
-    BasicPolymorphicTypeValidator.builder().allowIfSubType("de.fraunhofer.aisec.cpg.").build()
+/**
+ * CPG graphs can be nested very deeply (think of long call/EOG chains), so we raise Jackson's
+ * default read and write nesting limits well beyond what a "normal" JSON document would need.
+ */
+private const val MAX_NESTING_DEPTH = 10_000
 
 class NameKeySerializer : JsonSerializer<Name>() {
     override fun serialize(value: Name, gen: JsonGenerator, serializers: SerializerProvider) {
@@ -135,19 +127,6 @@ class NodeKeyDeserializers(@JacksonInject val registry: NodeRegistry) : SimpleKe
     }
 }
 
-/*class NodeDelegatingDeserializer(delegate: JsonDeserializer<*>, val registry: NodeRegistry) :
-    StdDeserializer<Node>(Node::class.java) {
-
-    private val delegatee: JsonDeserializer<*> = delegate
-
-    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Node {
-        @Suppress("UNCHECKED_CAST") val node = delegatee.deserialize(p, ctxt) as Node
-        registry.register(node)
-        return node
-    }
-
-    override fun isCachable(): Boolean = true
-}*/
 class KClassSerializer : StdSerializer<Any>(Any::class.java) {
     override fun serialize(value: Any, gen: JsonGenerator, provider: SerializerProvider) {
         if (value is KClass<*>) {
@@ -237,8 +216,6 @@ class NodeDelegatingDeserializer(
         ctxt: DeserializationContext,
         property: BeanProperty?,
     ): JsonDeserializer<*> {
-        println("createContextual: " + property?.fullName)
-        println("createContextual type: " + property?.name + " " + property?.type)
         val contextualDelegate =
             if (delegate is ContextualDeserializer) {
                 (delegate as ContextualDeserializer).createContextual(ctxt, property)
@@ -250,8 +227,6 @@ class NodeDelegatingDeserializer(
 
     // Register node after delegating actual deserialization
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Node {
-        println("Parent: " + p.parsingContext?.parent?.currentValue as? Node)
-        println("Type: " + p.parsingContext.typeDesc())
         @Suppress("UNCHECKED_CAST") val node = delegate.deserialize(p, ctxt) as Node
         registry.register(node)
         return node
@@ -275,57 +250,6 @@ class UuidDeserializer : StdDeserializer<Uuid>(Uuid::class.java) {
             uuid.get("mostSignificantBits").asLong(),
             uuid.get("leastSignificantBits").asLong(),
         ) // or Uuid(text), depending on version
-    }
-}
-
-class KClassBeanSerializerModifier : BeanSerializerModifier() {
-    override fun modifySerializer(
-        config: SerializationConfig,
-        beanDesc: BeanDescription,
-        serializer: JsonSerializer<*>,
-    ): JsonSerializer<*> {
-        println(beanDesc.beanClass)
-        if (KClass::class.java.isAssignableFrom(beanDesc.beanClass)) {
-            return KClassSerializer()
-        }
-        return serializer
-    }
-}
-
-class KClassSerializers : Serializers.Base() {
-    override fun findSerializer(
-        config: SerializationConfig,
-        javaType: JavaType,
-        beanDesc: BeanDescription?,
-    ): JsonSerializer<*>? {
-        val raw = javaType.rawClass
-        return if (KClass::class.java.isAssignableFrom(raw)) {
-            KClassSerializer() // returns your serializer
-        } else null
-    }
-}
-
-class LoggingPropertyWriter(base: BeanPropertyWriter) : BeanPropertyWriter(base) {
-    override fun serializeAsField(bean: Any?, gen: JsonGenerator, prov: SerializerProvider) {
-        println("Serializing field '${name}' of ${bean?.javaClass?.name}")
-        super.serializeAsField(bean, gen, prov)
-    }
-}
-
-class LoggingBeanSerializerModifier : BeanSerializerModifier() {
-    override fun changeProperties(
-        config: SerializationConfig,
-        beanDesc: BeanDescription,
-        beanProperties: MutableList<BeanPropertyWriter>,
-    ): MutableList<BeanPropertyWriter> {
-        return beanProperties.map { LoggingPropertyWriter(it) }.toMutableList()
-    }
-}
-
-class DebugSerializer : StdSerializer<Any>(Any::class.java) {
-    override fun serialize(value: Any, gen: JsonGenerator, provider: SerializerProvider) {
-        println("DEBUG serializing: ${value.javaClass.name}")
-        provider.defaultSerializeValue(value, gen)
     }
 }
 
@@ -416,108 +340,106 @@ data class CPG(
     @param:JsonIdentityReference(alwaysAsId = false) val edges: Set<Edge<*>> = emptySet(),
 )
 
-fun serializeToJson(translationResult: TranslationResult): String {
-
+/**
+ * Builds the [ObjectMapper] used for both serializing and deserializing a [CPG] graph. Keeping a
+ * single factory guarantees that the read and write paths stay symmetric: every custom serializer
+ * has a matching deserializer and both sides agree on nesting limits, the Kotlin module and
+ * property visibility.
+ *
+ * The [registry] is used on the read path to resolve nodes referenced by id (as map keys or edge
+ * endpoints). On the write path it is simply unused.
+ */
+private fun cpgObjectMapper(registry: NodeRegistry): ObjectMapper {
     val factory =
         JsonFactory.builder()
             .streamWriteConstraints(
-                StreamWriteConstraints.builder()
-                    .maxNestingDepth(10000) // Set maximum nesting depth to 10,000
-                    .build()
+                StreamWriteConstraints.builder().maxNestingDepth(MAX_NESTING_DEPTH).build()
+            )
+            .streamReadConstraints(
+                StreamReadConstraints.builder().maxNestingDepth(MAX_NESTING_DEPTH).build()
             )
             .build()
 
-    val loggingModule =
-        SimpleModule().apply { setSerializerModifier(LoggingBeanSerializerModifier()) }
+    val cpgModule =
+        SimpleModule().apply {
+            // Write path: keep the type information on nodes even when Jackson only emits their
+            // object id (see [WrappingBeanSerializer]).
+            setSerializerModifier(
+                object : BeanSerializerModifier() {
+                    override fun modifySerializer(
+                        config: SerializationConfig,
+                        beanDesc: BeanDescription,
+                        serializer: JsonSerializer<*>,
+                    ): JsonSerializer<*> =
+                        if (Node::class.java.isAssignableFrom(beanDesc.beanClass)) {
+                            WrappingBeanSerializer(serializer as BeanSerializer)
+                        } else {
+                            serializer
+                        }
+                }
+            )
 
-    val debugModule =
-        object : SimpleModule() {
-            override fun setupModule(context: SetupContext) {
-                super.setupModule(context)
-                context.addSerializers(
-                    object : Serializers.Base() {
+            // Read path: register every node in the [registry] as soon as it is deserialized, so
+            // that references to it (as map keys or edge endpoints) can be resolved by id.
+            setDeserializerModifier(
+                object : BeanDeserializerModifier() {
+                    override fun modifyDeserializer(
+                        config: DeserializationConfig,
+                        desc: BeanDescription,
+                        deserializer: JsonDeserializer<*>,
+                    ): JsonDeserializer<*> =
+                        if (Node::class.java.isAssignableFrom(desc.beanClass)) {
+                            NodeDelegatingDeserializer(deserializer, registry)
+                        } else {
+                            deserializer
+                        }
+                }
+            )
+
+            // Complex value types that Jackson cannot (de)serialize out of the box. Each serializer
+            // is paired with the deserializer that reverses it.
+            setSerializers(
+                object : SimpleSerializers() {
                         override fun findSerializer(
                             config: SerializationConfig,
                             type: JavaType,
                             beanDesc: BeanDescription?,
-                        ): JsonSerializer<*>? {
-                            val cls = type.rawClass
-                            val name = cls.name
-                            // Log only if the class is related to Kotlin reflection or unknown
-                            // internals
-                            if (
-                                name.contains("kotlin.reflect") ||
-                                    name.startsWith("kotlin.") ||
-                                    name.contains("internal")
-                            ) {
-                                println("Inspecting Kotlin-reflection/UUID type: $name")
+                        ): JsonSerializer<*>? =
+                            if (KClass::class.java.isAssignableFrom(type.rawClass)) {
+                                KClassSerializer()
+                            } else {
+                                super.findSerializer(config, type, beanDesc)
                             }
-                            if (KClass::class.java.isAssignableFrom(cls)) {
-                                println("Match KClass subtype: $name — using KClassSerializer")
-                                return KClassSerializer()
-                            }
-                            return null
-                        }
                     }
-                )
-            }
+                    .apply {
+                        addSerializer(
+                            PhysicalLocation::class.java,
+                            LocationConverter.LocationSerializer(),
+                        )
+                    }
+            )
+            addDeserializer(KClass::class.java, KClassDeserializer())
+            addDeserializer(Uuid::class.java, UuidDeserializer())
+            addDeserializer(PhysicalLocation::class.java, LocationConverter.LocationDeserializer())
+
+            // Complex map-key types. The key deserializers are grouped in [NodeKeyDeserializers]
+            // because they need access to the [registry].
+            addKeySerializer(Name::class.java, NameKeySerializer())
+            addKeySerializer(Pair::class.java, PairKeySerializer())
+            addKeySerializer(KClass::class.java, KClassKeySerializer())
+            setKeyDeserializers(NodeKeyDeserializers(registry))
         }
 
-    val objectMapper =
-        ObjectMapper(factory)
-            // .deactivateDefaultTyping()
-            .findAndRegisterModules()
-            // .registerModule(SerializationModule(Node::class.java))
-            // .registerModule(loggingModule)
-            // .registerModule(debugModule)
-            // .addMixIn(KClass::class.java, KClassMixin::class.java)
-            .registerModule(
-                SimpleModule().apply {
-                    setSerializerModifier(
-                        object : BeanSerializerModifier() {
+    return ObjectMapper(factory)
+        .findAndRegisterModules()
+        .registerKotlinModule()
+        .registerModule(cpgModule)
+        .setInjectableValues(InjectableValues.Std().addValue(NodeRegistry::class.java, registry))
+}
 
-                            override fun modifySerializer(
-                                config: SerializationConfig,
-                                beanDesc: BeanDescription,
-                                serializer: JsonSerializer<*>,
-                            ): JsonSerializer<*> {
-                                println("modifySerializer")
-                                return if (Node::class.java.isAssignableFrom(beanDesc.beanClass)) {
-                                    println("Wrapping ${beanDesc.beanClass}")
-                                    @Suppress("UNCHECKED_CAST")
-                                    WrappingBeanSerializer(serializer as BeanSerializer)
-                                        as JsonSerializer<Any>
-                                } else {
-                                    serializer
-                                }
-                            }
-                        }
-                    )
-                    setSerializers(
-                        object : SimpleSerializers() {
-                            override fun findSerializer(
-                                config: SerializationConfig,
-                                type: JavaType,
-                                beanDesc: BeanDescription?,
-                            ): JsonSerializer<*>? {
-                                println("findSerializers")
-                                val raw = type.rawClass
-                                if (KClass::class.java.isAssignableFrom(raw)) {
-                                    // Optionally log match for debugging:
-                                    println(">>> Using KClassSerializer for: ${raw.name}")
-                                    return KClassSerializer()
-                                }
-                                println(">>> KClassSerializer not matching for: ${raw.name}")
-                                return null // let Jackson handle other types
-                            }
-                        }
-                    )
-                }
-            )
-            .registerKotlinModule()
+fun serializeToJson(translationResult: TranslationResult): String {
+    val objectMapper = cpgObjectMapper(NodeRegistry())
 
-    // objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE)
-    // objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
     val allNodes = translationResult.allChildrenWithOverlays<Node>().toMutableSet()
     val allEdges = mutableSetOf<Edge<*>>()
     var toExplore = allNodes.toSet()
@@ -539,39 +461,12 @@ fun serializeToJson(translationResult: TranslationResult): String {
         toExplore = exploredNodes.toSet()
     }
 
-    val toSerialize = translationResult
-
-    return objectMapper
-        .apply {
-            val module =
-                SimpleModule().apply {
-                    // setSerializerModifier(KClassBeanSerializerModifier())
-
-                    addSerializer(
-                        PhysicalLocation::class.java,
-                        LocationConverter.LocationSerializer(),
-                    )
-
-                    // val kclassImpl = Class.forName("kotlin.reflect.jvm.internal.KClassImpl")
-                    // addSerializer(kclassImpl, KClassSerializer())
-
-                    addKeySerializer(Name::class.java, NameKeySerializer())
-                    addKeySerializer(Pair::class.java, PairKeySerializer())
-                    addKeySerializer(KClass::class.java, KClassKeySerializer())
-                }
-            //    module.setSerializerModifier(DepthLimitingModifier(maxDepth = 5))
-            registerModule(module)
-        }
-        //    .activateDefaultTyping(typeValidator, DEFAULT_TYPING, typeIncludedAs)
-        //    .configure(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECT, true)
-        .writerWithDefaultPrettyPrinter()
-        .writeValueAsString(CPG(allNodes, allEdges))
+    return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(CPG(allNodes, allEdges))
 }
 
 fun Node.explore(): Pair<Set<Node>, Set<Edge<*>>> {
     val edges = this.edges<Edge<*>>().toSet()
     val nodes = edges.flatMap { setOf(it.start, it.end) }.toMutableSet()
-    this.javaClass.declaredFields.forEach { field -> }
 
     val kClass = this::class as KClass<Node>
     kClass.memberProperties.forEach { prop ->
@@ -602,59 +497,8 @@ fun Node.explore(): Pair<Set<Node>, Set<Edge<*>>> {
 
 fun deserializeFromJson(json: String): TranslationResult {
     val registry = NodeRegistry()
+    val objectMapper = cpgObjectMapper(registry)
 
-    val module =
-        SimpleModule().apply {
-            setDeserializerModifier(
-                object : BeanDeserializerModifier() {
-                    override fun modifyDeserializer(
-                        config: DeserializationConfig,
-                        desc: BeanDescription,
-                        deserializer: JsonDeserializer<*>,
-                    ): JsonDeserializer<*> {
-                        return if (Node::class.java.isAssignableFrom(desc.beanClass)) {
-                            NodeDelegatingDeserializer(deserializer, registry)
-                        } else {
-                            deserializer
-                        }
-                    }
-                }
-            )
-        }
-
-    val objectMapper =
-        ObjectMapper().setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY).apply {
-            // registerModule(module)
-
-            // Allow injection of the registry instance
-            setInjectableValues(InjectableValues.Std().addValue(NodeRegistry::class.java, registry))
-
-            // Register the deserializer so Jackson knows to use it
-            registerModule(
-                SimpleModule().apply {
-                    /*
-                    addKeyDeserializer(Node::class.java, NodeKeyDeserializer(registry))
-                    addKeyDeserializer(
-                        FunctionDeclaration::class.java,
-                        NodeKeyDeserializer(registry),
-                    )
-                    addKeyDeserializer(ValueDeclaration::class.java, NodeKeyDeserializer(registry))
-                    */
-
-                    addDeserializer(
-                        PhysicalLocation::class.java,
-                        LocationConverter.LocationDeserializer(),
-                    )
-                    addDeserializer(Uuid::class.java, UuidDeserializer())
-                    addDeserializer(KClass::class.java, KClassDeserializer())
-                    setKeyDeserializers(NodeKeyDeserializers(registry))
-                }
-            )
-        }
-
-    // objectMapper
-    //    .activateDefaultTyping(typeValidator, DEFAULT_TYPING, typeIncludedAs)
-    //    .configure(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECT, true)
     val cpg = objectMapper.readValue(json, CPG::class.java)
     return cpg.nodes.filterIsInstance<TranslationResult>().first()
 }
