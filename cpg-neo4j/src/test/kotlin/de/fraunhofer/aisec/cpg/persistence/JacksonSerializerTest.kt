@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.graph.edges.edges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -124,6 +125,49 @@ class JacksonSerializerTest {
             originalCounts,
             branchCounts(restored),
             "The restored graph should preserve every EOG edge's `branch` property (true/false/unset).",
+        )
+    }
+
+    /**
+     * All scopes reachable from [root]: the scope of every node, plus every ancestor reached by
+     * walking `parent` links upwards. This spans the whole restored scope object web.
+     */
+    private fun allScopes(root: Node): Set<Scope> =
+        root
+            .allChildrenWithOverlays<Node>()
+            .mapNotNull { it.scope }
+            .flatMap { generateSequence(it as Scope?) { s -> s.parent } }
+            .toSet()
+
+    @Test
+    fun testRoundTripRestoresScopeObjectWeb() {
+        val original = GraphExamples.getShortcutClass(minimalConfig())
+
+        // Sanity check: the example graph really does attach scopes to its nodes.
+        assertTrue(
+            original.allChildrenWithOverlays<Node>().any { it.scope != null },
+            "The example graph should have nodes with a scope to make this test meaningful.",
+        )
+
+        val restored = deserializeFromJson(serializeToJson(original))
+
+        // The scope tree (node -> scope, and scope -> parent) must be reconstructed identically:
+        // the
+        // same set of scope names, and the same set of scopes reaching a global scope through their
+        // parent chain, as in the original.
+        fun scopeNames(root: Node) = allScopes(root).map { it.name.toString() }.sorted()
+
+        fun scopesWithGlobal(root: Node) = allScopes(root).count { it.globalScope != null }
+
+        assertEquals(
+            scopeNames(original),
+            scopeNames(restored),
+            "The restored scope object web should preserve the original scope names.",
+        )
+        assertEquals(
+            scopesWithGlobal(original),
+            scopesWithGlobal(restored),
+            "The restored scope tree should preserve the parent chains reaching a global scope.",
         )
     }
 }

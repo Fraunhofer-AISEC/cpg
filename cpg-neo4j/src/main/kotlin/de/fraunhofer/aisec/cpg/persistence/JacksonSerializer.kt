@@ -51,6 +51,7 @@ import com.fasterxml.jackson.databind.module.SimpleSerializers
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
@@ -59,6 +60,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSingletonList
 import de.fraunhofer.aisec.cpg.graph.edges.edges
 import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.persistence.converters.LocationConverter
 import de.fraunhofer.aisec.cpg.persistence.converters.NameConverter
@@ -274,6 +276,21 @@ class SkeletonNodeDeserializer(private val delegate: JsonDeserializer<*>) :
             return null
         }
         return delegate.deserialize(p, ctxt)
+    }
+
+    /**
+     * Updating variant used by [buildScope]'s `readerForUpdating`: populate the scalar properties
+     * of an *already-constructed* instance (e.g. a [Scope] we built via its `astNode` constructor)
+     * rather than building a fresh one. Without this override Jackson would fall back to
+     * constructing a new node, which fails for nodes whose constructor requires a (here still-null)
+     * node reference.
+     */
+    override fun deserialize(p: JsonParser, ctxt: DeserializationContext, intoValue: Any?): Any? {
+        if (p.currentToken?.isScalarValue == true) {
+            return intoValue
+        }
+        @Suppress("UNCHECKED_CAST")
+        return (delegate as JsonDeserializer<Any?>).deserialize(p, ctxt, intoValue)
     }
 
     override fun resolve(ctxt: DeserializationContext) {
@@ -555,24 +572,24 @@ fun deserializeFromJson(json: String): TranslationResult {
 
     val tree = objectMapper.readTree(json)
 
-    // Phase 1: build a skeleton instance for every node and register it under its serialized id.
-    // A few `Node` subtypes are not default-constructible (notably the [Scope] hierarchy, whose
-    // constructor requires its `astNode`). These are never AST children — they belong to the
-    // non-node "object web" that this graph-only round-trip does not restore — so we skip any node
-    // type without a no-arg constructor.
+    // Phase 1: build a skeleton instance for every default-constructible node and register it under
+    // its serialized id. The [Scope] hierarchy is deliberately deferred to phase 1b: a `Scope` is a
+    // `Node` whose constructor requires its `astNode`, which is still a forward reference at this
+    // point.
     val nodesJson =
         tree.get("nodes") ?: error("Serialized graph has no `nodes` array to deserialize.")
-    var skippedNodes = 0
     for (nodeJson in nodesJson) {
         val id = nodeJson.id
         val node =
             try {
                 val type = Class.forName(nodeJson.get("@class").asText())
-                // Node types without a no-arg constructor (notably the [Scope] hierarchy, whose
-                // constructor requires its `astNode`) belong to the non-node "object web" that this
-                // graph-only round-trip does not restore, so we skip them.
-                if (type.declaredConstructors.none { it.parameterCount == 0 }) null
-                else objectMapper.treeToValue(nodeJson, type) as? Node
+                when {
+                    // Scopes are built in phase 1b, once their `astNode` exists.
+                    Scope::class.java.isAssignableFrom(type) -> null
+                    // Any other node type without a no-arg constructor cannot be built here.
+                    type.declaredConstructors.none { it.parameterCount == 0 } -> null
+                    else -> objectMapper.treeToValue(nodeJson, type) as? Node
+                }
             } catch (e: Exception) {
                 // A single unbuildable node (e.g. its class is not on the reader's classpath
                 // because
@@ -580,15 +597,32 @@ fun deserializeFromJson(json: String): TranslationResult {
                 log.warn("Skipping node {} during deserialization: {}", id, e.message)
                 null
             }
-        if (node == null) {
-            skippedNodes++
-            continue
-        }
-        registry.register(id, node)
+        if (node != null) registry.register(id, node)
     }
+
+    // Phase 1b: build the [Scope] "object web". Each scope is constructed via the constructor that
+    // takes its (now-resolved) `astNode`; its place in the scope tree and the `node -> scope` links
+    // are wired up in phase 2.
+    for (nodeJson in nodesJson) {
+        val id = nodeJson.id
+        if (registry.lookup(id) != null) continue
+        val scope =
+            try {
+                val type = Class.forName(nodeJson.get("@class").asText())
+                if (Scope::class.java.isAssignableFrom(type)) {
+                    buildScope(type, nodeJson, registry, objectMapper)
+                } else null
+            } catch (e: Exception) {
+                log.warn("Skipping scope {} during deserialization: {}", id, e.message)
+                null
+            }
+        if (scope != null) registry.register(id, scope)
+    }
+
+    val skippedNodes = nodesJson.count { registry.lookup(it.id) == null }
     if (skippedNodes > 0) {
         log.info(
-            "Restored {} of {} nodes; {} were skipped (non-node object web or unbuildable types). " +
+            "Restored {} of {} nodes; {} were skipped (unbuildable types). " +
                 "Edges touching a skipped node are dropped.",
             registry.all.size,
             nodesJson.size(),
@@ -597,11 +631,14 @@ fun deserializeFromJson(json: String): TranslationResult {
     }
 
     // Phase 2: rebuild the graph's connectivity from the flat `edges` array and the per-node edge
-    // containers, restoring each edge's own scalar properties (e.g. the EOG `branch`).
+    // containers, restoring each edge's own scalar properties (e.g. the EOG `branch`), and
+    // reconnect
+    // the scope object web (every node's `scope` and the scope tree).
     val edgesById = readEdgesById(tree)
     for (nodeJson in nodesJson) {
         val node = registry.lookup(nodeJson.id) ?: continue
         relinkEdges(node, nodeJson, edgesById, registry, objectMapper)
+        relinkScopes(node, nodeJson, registry)
     }
 
     // Phase 3: re-assert the persisted names. Relinking edges fires graph observers (e.g. type
@@ -622,6 +659,69 @@ fun deserializeFromJson(json: String): TranslationResult {
 /** Every serialized edge (from the flat `edges` array), indexed by its `@id`. */
 private fun readEdgesById(tree: JacksonNode): Map<String, JacksonNode> =
     tree.get("edges")?.associateBy { it.id }.orEmpty()
+
+/**
+ * Builds a [Scope] node from its serialized [scopeJson]. A `Scope` is a [Node] whose constructor
+ * requires its `astNode` (the code element the scope belongs to), so — unlike ordinary nodes — it
+ * cannot be built from an empty constructor in phase 1. We resolve that `astNode` (already built)
+ * and invoke the scope's constructor with it ([de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope]
+ * has a no-arg constructor instead), then populate its scalar properties. The scope-tree links
+ * (`parent`/`children`) and the `node -> scope` links are node references, so they are filtered out
+ * here and restored in phase 2 (see [relinkScopes]).
+ */
+private fun buildScope(
+    type: Class<*>,
+    scopeJson: JacksonNode,
+    registry: NodeRegistry,
+    objectMapper: ObjectMapper,
+): Scope? {
+    val astNode =
+        scopeJson.get("astNode")?.takeIf { it.isTextual }?.let { registry.lookup(it.asText()) }
+    // The simplest constructor is either no-arg (GlobalScope) or the single `astNode` one.
+    val constructor = type.declaredConstructors.minByOrNull { it.parameterCount } ?: return null
+    constructor.isAccessible = true
+    val scope =
+        when (constructor.parameterCount) {
+            0 -> constructor.newInstance()
+            1 -> constructor.newInstance(astNode ?: return null)
+            else -> return null
+        }
+            as? Scope ?: return null
+    // Populate the scope's scalar properties (name, flags, ...) into the freshly constructed
+    // instance; its node/edge/scope references are filtered out (see [readModule]) and restored
+    // later.
+    objectMapper.readerForUpdating(scope).readValue<Scope>(objectMapper.treeAsTokens(scopeJson))
+    return scope
+}
+
+/**
+ * Restores the scope "object web" for a single [node]: its own `scope`, and — if the node is itself
+ * a [Scope] — its `astNode` and its place in the scope tree (`parent`/`children`). `globalScope`
+ * derives from the parent chain and therefore needs no explicit wiring. Every reference is resolved
+ * through the [registry]; ids that were never restored simply stay unset.
+ */
+private fun relinkScopes(node: Node, nodeJson: JacksonNode, registry: NodeRegistry) {
+    nodeJson
+        .get("scope")
+        ?.takeIf { it.isTextual }
+        ?.let { node.scope = registry.lookup(it.asText()) as? Scope }
+    if (node !is Scope) return
+    nodeJson
+        .get("astNode")
+        ?.takeIf { it.isTextual }
+        ?.let { node.astNode = registry.lookup(it.asText()) as? AstNode }
+    nodeJson
+        .get("parent")
+        ?.takeIf { it.isTextual }
+        ?.let { node.parent = registry.lookup(it.asText()) as? Scope }
+    nodeJson
+        .get("children")
+        ?.takeIf { it.isArray }
+        ?.let { children ->
+            node.children =
+                children.mapNotNull { registry.lookup(it.asText()) as? Scope }.toMutableList()
+        }
+}
 
 /**
  * Describes one edge to (re-)create while relinking: the id of its target ("end") node and, when
