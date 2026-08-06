@@ -523,8 +523,12 @@ fun serializeToJson(translationResult: TranslationResult): String {
     var toExplore = allNodes.toSet()
 
     while (toExplore.isNotEmpty()) {
+        // Only explore the current frontier, not the whole set of already-known nodes. Exploring
+        // `allNodes` on every iteration would re-walk every node again and again, turning the graph
+        // collection into O(n^2). Each node is discovered once, so exploring just the frontier
+        // visits every node (and therefore every edge) exactly once.
         val (exploredNodes, exploredEdges) =
-            allNodes
+            toExplore
                 .map { it.explore() }
                 .let { pairOfLists ->
                     pairOfLists.flatMap { it.first }.filter { it !in allNodes } to
