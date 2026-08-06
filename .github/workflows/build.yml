@@ -128,7 +128,13 @@ jobs:
         if: github.ref == 'refs/heads/main' || (contains(github.event.pull_request.labels.*.name, 'publish-to-github-packages') && env.version != 'gh-readonly-queue-SNAPSHOT')
         run: |
           export ORG_GRADLE_PROJECT_signingInMemoryKey=`echo ${{ secrets.GPG_PRIVATE_KEY }} | base64 -d`
-          ./gradlew --no-daemon --parallel publishAllPublicationsToMavenCentralRepository -x npmInstall
+          # npmInstall only exists on codyze-console (the only module using the Node plugin) -
+          # excluding a task that doesn't exist anywhere in the build fails the whole build.
+          EXCLUDES=""
+          if grep -q '^enableCodyzeConsole=true' gradle.properties; then
+            EXCLUDES="-x npmInstall"
+          fi
+          ./gradlew --no-daemon --parallel publishAllPublicationsToMavenCentralRepository $EXCLUDES
         env:
           ORG_GRADLE_PROJECT_version: ${{ env.version }}
           ORG_GRADLE_PROJECT_includeJavadoc: false
