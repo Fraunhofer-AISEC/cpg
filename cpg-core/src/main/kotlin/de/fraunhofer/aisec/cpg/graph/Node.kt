@@ -72,11 +72,7 @@ import org.slf4j.LoggerFactory
 /** The base class for all graph objects that are going to be persisted in the database. */
 // @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
 
-@JsonTypeInfo(
-    use = JsonTypeInfo.Id.CLASS,
-    include = JsonTypeInfo.As.WRAPPER_OBJECT,
-    property = "@class",
-)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class")
 @JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
 @JsonIdentityReference(alwaysAsId = true)
 // @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property =

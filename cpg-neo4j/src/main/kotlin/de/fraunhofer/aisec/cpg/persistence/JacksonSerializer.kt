@@ -25,29 +25,28 @@
  */
 package de.fraunhofer.aisec.cpg.persistence
 
-import com.fasterxml.jackson.annotation.JacksonInject
+import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
 import com.fasterxml.jackson.annotation.JsonIdentityReference
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
+import com.fasterxml.jackson.annotation.PropertyAccessor
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.core.StreamReadConstraints
 import com.fasterxml.jackson.core.StreamWriteConstraints
 import com.fasterxml.jackson.databind.*
+import com.fasterxml.jackson.databind.JsonNode as JacksonNode
+import com.fasterxml.jackson.databind.deser.BeanDeserializerBuilder
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
-import com.fasterxml.jackson.databind.deser.ContextualDeserializer
+import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler
 import com.fasterxml.jackson.databind.deser.ResolvableDeserializer
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-import com.fasterxml.jackson.databind.jsontype.TypeDeserializer
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer
 import com.fasterxml.jackson.databind.module.SimpleKeyDeserializers
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.module.SimpleSerializers
-import com.fasterxml.jackson.databind.ser.BeanSerializer
-import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
-import com.fasterxml.jackson.databind.ser.ResolvableSerializer
-import com.fasterxml.jackson.databind.ser.impl.ObjectIdWriter
-import com.fasterxml.jackson.databind.ser.std.BeanSerializerBase
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.TranslationResult
@@ -55,9 +54,13 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSingletonList
 import de.fraunhofer.aisec.cpg.graph.edges.edges
 import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.persistence.converters.LocationConverter
+import de.fraunhofer.aisec.cpg.persistence.converters.NameConverter
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.IOException
 import kotlin.reflect.KClass
@@ -87,42 +90,81 @@ class NameKeyDeserializer : KeyDeserializer() {
     }
 }
 
-class NodeRegistry {
-    private val nodes = mutableMapOf<String, Node>()
-
-    fun register(node: Node) = nodes.put(node.id.toString(), node)
-
-    fun lookup(id: String): Node? = nodes[id]
-}
-
-class NodeKeyDeserializer(@JacksonInject val registry: NodeRegistry) : KeyDeserializer() {
-    override fun deserializeKey(key: String, ctxt: DeserializationContext): Any {
-        return registry.lookup(key)
-            ?: throw IllegalStateException("Node with id='$key' not registered")
+/**
+ * Serializes a [Name] *value* as an object holding its full name and delimiter, in exactly the
+ * shape that the existing [NameConverter] reads back (see [readModule]). This is needed because a
+ * [Name]'s defining [Name.fullName] is a *private* field: serialized as a plain bean it would be
+ * omitted, and [NameConverter] — which reconstructs the name from `fullName` + the delimiter —
+ * would produce an empty name. Since [Node.hashCode] (and thus [Node.id]) depends on the name, that
+ * would break the round trip.
+ */
+class NameSerializer : JsonSerializer<Name>() {
+    override fun serialize(value: Name, gen: JsonGenerator, serializers: SerializerProvider) {
+        gen.writeStartObject()
+        gen.writeStringField(NameConverter.FIELD_FULL_NAME, value.toString())
+        gen.writeStringField(NameConverter.FIELD_NAME_DELIMITER, value.delimiter)
+        gen.writeEndObject()
     }
 }
 
-class NodeKeyDeserializers(@JacksonInject val registry: NodeRegistry) : SimpleKeyDeserializers() {
+/**
+ * Maps a serialized object id (Jackson's `@id`) back to the [Node] instance that was built for it.
+ * The two-phase reader (see [deserializeFromJson]) fills this in phase 1 (one entry per node in the
+ * `nodes` array) and consults it in phase 2 to resolve every reference (edge endpoints, edge
+ * containers) to the already-built instance.
+ */
+class NodeRegistry {
+    private val nodes = LinkedHashMap<String, Node>()
+
+    fun register(id: String, node: Node) {
+        nodes[id] = node
+    }
+
+    fun lookup(id: String): Node? = nodes[id]
+
+    val all: Collection<Node>
+        get() = nodes.values
+}
+
+/**
+ * Resolves a [Node] used as a map key from its serialized `@id`. If the id is unknown (e.g. a
+ * regenerable cache that referenced a node we did not restore), it keeps deserialization alive by
+ * returning the raw id string instead of failing.
+ */
+class NodeKeyDeserializer(private val registry: NodeRegistry) : KeyDeserializer() {
+    override fun deserializeKey(key: String, ctxt: DeserializationContext): Any =
+        registry.lookup(key) ?: key
+}
+
+/**
+ * A last-resort [KeyDeserializer] for map-key types that we do not model explicitly. It simply
+ * hands the raw key string back.
+ *
+ * We need this because Jackson requires a key deserializer for *every* non-[String] map-key type
+ * (it resolves them when it builds the map deserializer, even for empty maps) and hard-fails
+ * otherwise. The maps that trigger this are regenerable caches such as
+ * [de.fraunhofer.aisec.cpg.ScopeManager]'s `symbolLookupCache`, whose keys are serialized via their
+ * (irreversible) `toString()` anyway. Returning the raw string keeps deserialization alive; the
+ * resulting cache entries never match a real lookup and are simply recomputed on demand.
+ */
+class TolerantKeyDeserializer : KeyDeserializer() {
+    override fun deserializeKey(key: String, ctxt: DeserializationContext): Any = key
+}
+
+class NodeKeyDeserializers(private val registry: NodeRegistry) : SimpleKeyDeserializers() {
     override fun findKeyDeserializer(
         type: JavaType,
         config: DeserializationConfig,
         beanDesc: BeanDescription?,
-    ): KeyDeserializer? {
+    ): KeyDeserializer {
         val raw = type.rawClass
-        return if (Node::class.java.isAssignableFrom(raw)) {
-            NodeKeyDeserializer(registry)
-        } else if (Name::class.java.isAssignableFrom(raw)) {
-            NameKeyDeserializer()
-        } else if (
-            Pair::class.java.isAssignableFrom(raw)
-        ) { // || Pair::class.java.isAssignableFrom(type.type)
-            PairKeyDeserializer()
-        } else if (
-            KClass::class.java.isAssignableFrom(raw)
-        ) { // || Pair::class.java.isAssignableFrom(type.type)
-            KClassKeyDeserializer()
-        } else {
-            null
+        return when {
+            Node::class.java.isAssignableFrom(raw) -> NodeKeyDeserializer(registry)
+            Name::class.java.isAssignableFrom(raw) -> NameKeyDeserializer()
+            Pair::class.java.isAssignableFrom(raw) -> PairKeyDeserializer()
+            KClass::class.java.isAssignableFrom(raw) -> KClassKeyDeserializer()
+            // Any other (unmodeled) key type: keep deserialization alive instead of hard-failing.
+            else -> TolerantKeyDeserializer()
         }
     }
 }
@@ -199,48 +241,59 @@ class PairKeyDeserializer : KeyDeserializer() {
     }
 }
 
-class NodeDelegatingDeserializer(
-    private var delegate: JsonDeserializer<*>,
-    private val registry: NodeRegistry,
-) : StdDeserializer<Node>(Node::class.java), ResolvableDeserializer, ContextualDeserializer {
+/**
+ * Mixin applied to [Node] on the read path only. It neutralizes the polymorphic type info and the
+ * object-id handling that [Node] declares for the write path.
+ *
+ * Phase 1 of [deserializeFromJson] builds each node from its own JSON subtree, whose concrete type
+ * we already know (we read the `@class` property ourselves and hand Jackson the exact class).
+ * References to *other* nodes appear as bare id strings. We therefore must stop Jackson from (a)
+ * demanding a `@class` type id on those bare-id references and (b) trying to resolve the ids inline
+ * — both of which fail on the graph's forward references. The references are linked manually in
+ * phase 2 instead.
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NONE)
+@JsonIdentityInfo(generator = ObjectIdGenerators.None::class, property = "@id")
+private interface NodeReadMixin
 
-    // Ensure delegate is fully initialized
-    override fun resolve(ctxt: DeserializationContext) {
-        if (delegate is ResolvableDeserializer) {
-            (delegate as ResolvableDeserializer).resolve(ctxt)
+/**
+ * Phase 1 deserializer wrapper for every [Node] subtype. A full node *definition* (a JSON object)
+ * is built by the [delegate]; a bare-id *reference* (a JSON string) is left unresolved (returned as
+ * `null`) and linked later in phase 2. The same wrapper handles both the root node we deserialize
+ * explicitly (an object) and any nested node-typed property (a reference), based purely on the
+ * token it is positioned on.
+ */
+class SkeletonNodeDeserializer(private val delegate: JsonDeserializer<*>) :
+    JsonDeserializer<Any?>(), ResolvableDeserializer {
+    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Any? {
+        if (p.currentToken?.isScalarValue == true) {
+            // A reference to another node; skip it now and link it in phase 2.
+            return null
         }
+        return delegate.deserialize(p, ctxt)
     }
 
-    // Handle contextual setup for nested properties
-    override fun createContextual(
-        ctxt: DeserializationContext,
-        property: BeanProperty?,
-    ): JsonDeserializer<*> {
-        val contextualDelegate =
-            if (delegate is ContextualDeserializer) {
-                (delegate as ContextualDeserializer).createContextual(ctxt, property)
-            } else {
-                delegate
-            }
-        return NodeDelegatingDeserializer(contextualDelegate, registry)
-    }
-
-    // Register node after delegating actual deserialization
-    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Node {
-        @Suppress("UNCHECKED_CAST") val node = delegate.deserialize(p, ctxt) as Node
-        registry.register(node)
-        return node
-    }
-
-    override fun deserializeWithType(
-        p: JsonParser?,
-        ctxt: DeserializationContext?,
-        typeDeserializer: TypeDeserializer?,
-    ): Any? {
-        return delegate.deserializeWithType(p, ctxt, typeDeserializer)
+    override fun resolve(ctxt: DeserializationContext) {
+        (delegate as? ResolvableDeserializer)?.resolve(ctxt)
     }
 
     override fun isCachable(): Boolean = true
+}
+
+/**
+ * Whether this property holds references to other nodes and must therefore be skipped in phase 1 of
+ * [deserializeFromJson] (the graph connectivity is rebuilt from the flat `edges` array in phase 2).
+ * This covers the edge containers themselves (their name contains `Edge`, mirroring
+ * [SubgraphWalker.getAllEdgeFields]), scalar node-typed references (e.g. `language`, `scope` —
+ * deferring these avoids feeding the `null` phase-1 skeleton into a non-null setter), and any
+ * collection, array or map of nodes — most notably the unwrapped list views of edge containers
+ * (e.g. `components`), whose backing collections reject the `null` skeleton references.
+ */
+private fun com.fasterxml.jackson.databind.deser.SettableBeanProperty.referencesNodes(): Boolean {
+    if (name.contains("Edge")) return true
+    if (Node::class.java.isAssignableFrom(type.rawClass)) return true
+    val content = type.contentType ?: return false
+    return Node::class.java.isAssignableFrom(content.rawClass)
 }
 
 class UuidDeserializer : StdDeserializer<Uuid>(Uuid::class.java) {
@@ -250,83 +303,6 @@ class UuidDeserializer : StdDeserializer<Uuid>(Uuid::class.java) {
             uuid.get("mostSignificantBits").asLong(),
             uuid.get("leastSignificantBits").asLong(),
         ) // or Uuid(text), depending on version
-    }
-}
-
-/**
- * The purpose of this serializer is to wrap the serialization of the node with type information.
- * Jackson omits this information when it is supposed to emit an object id. During deserialization
- * this information is than missing.
- */
-class WrappingBeanSerializer(private val defaultSerializer: BeanSerializer) :
-    BeanSerializer(defaultSerializer) {
-
-    override fun handledType(): Class<in Any>? {
-        return defaultSerializer.handledType()
-    }
-
-    override fun usesObjectId(): Boolean {
-        return defaultSerializer.usesObjectId()
-    }
-
-    override fun withObjectIdWriter(objectIdWriter: ObjectIdWriter): BeanSerializerBase {
-        return (defaultSerializer.withObjectIdWriter(objectIdWriter)) as BeanSerializerBase
-    }
-
-    override fun serialize(value: Any, gen: JsonGenerator, provider: SerializerProvider) {
-        defaultSerializer.serialize(value, gen, provider)
-    }
-
-    /**
-     * This is the function where we have to apply the workaround. Jackson is supposed to serialize
-     * with type when calling this function, but is then running into the subbranch of serializing
-     * the object id, neglecting type information.
-     */
-    override fun serializeWithType(
-        value: Any,
-        gen: JsonGenerator,
-        serializers: SerializerProvider,
-        typeSer: TypeSerializer,
-    ) {
-
-        // The wrapping serializer and the default serializer share the same ObjectIdWriter. We
-        // therefore access it to
-        // see if the id was already generated for this value to decide whether we have to apply our
-        // workaround
-        if (
-            this.usesObjectId() &&
-                serializers.findObjectId(value, _objectIdWriter?.generator)?.id != null
-        ) {
-            // If the id is set, jackson will just emit the type information, then failing during
-            // deserialization
-            // because it needs type information, therefore we emit the information explicitly
-            val typeIdInfo = typeSer.typeId(value, value.javaClass, JsonToken.VALUE_STRING)
-            typeSer.writeTypePrefix(gen, typeIdInfo)
-            defaultSerializer.serializeWithType(value, gen, serializers, typeSer)
-            typeSer.writeTypeSuffix(gen, typeIdInfo)
-        } else {
-            // In case the id was not generated so far, the full object will be serialized and in
-            // that case jackson
-            // properly prints type information
-            defaultSerializer.serializeWithType(value, gen, serializers, typeSer)
-        }
-    }
-
-    override fun resolve(provider: SerializerProvider) {
-        (defaultSerializer as ResolvableSerializer).resolve(provider)
-    }
-
-    override fun createContextual(
-        provider: SerializerProvider,
-        property: BeanProperty?,
-    ): JsonSerializer<*> {
-        return if (true) {
-            // Don't i need a copy of the wrappingBeanSerializer here instead? Such that changes are
-            // maintained?
-            WrappingBeanSerializer(
-                defaultSerializer.createContextual(provider, property) as BeanSerializer
-            )
-        } else this
     }
 }
 
@@ -341,104 +317,115 @@ data class CPG(
 )
 
 /**
- * Builds the [ObjectMapper] used for both serializing and deserializing a [CPG] graph. Keeping a
- * single factory guarantees that the read and write paths stay symmetric: every custom serializer
- * has a matching deserializer and both sides agree on nesting limits, the Kotlin module and
- * property visibility.
- *
- * The [registry] is used on the read path to resolve nodes referenced by id (as map keys or edge
- * endpoints). On the write path it is simply unused.
+ * The write-path module: custom serializers for the complex value and map-key types that Jackson
+ * cannot handle out of the box (see [readModule] for their matching deserializers, which keeps the
+ * two paths in parity).
  */
-private fun cpgObjectMapper(registry: NodeRegistry): ObjectMapper {
-    val factory =
-        JsonFactory.builder()
-            .streamWriteConstraints(
-                StreamWriteConstraints.builder().maxNestingDepth(MAX_NESTING_DEPTH).build()
-            )
-            .streamReadConstraints(
-                StreamReadConstraints.builder().maxNestingDepth(MAX_NESTING_DEPTH).build()
-            )
-            .build()
-
-    val cpgModule =
-        SimpleModule().apply {
-            // Write path: keep the type information on nodes even when Jackson only emits their
-            // object id (see [WrappingBeanSerializer]).
-            setSerializerModifier(
-                object : BeanSerializerModifier() {
-                    override fun modifySerializer(
+private fun writeModule(): SimpleModule =
+    SimpleModule().apply {
+        setSerializers(
+            object : SimpleSerializers() {
+                    override fun findSerializer(
                         config: SerializationConfig,
-                        beanDesc: BeanDescription,
-                        serializer: JsonSerializer<*>,
-                    ): JsonSerializer<*> =
-                        if (Node::class.java.isAssignableFrom(beanDesc.beanClass)) {
-                            WrappingBeanSerializer(serializer as BeanSerializer)
+                        type: JavaType,
+                        beanDesc: BeanDescription?,
+                    ): JsonSerializer<*>? =
+                        if (KClass::class.java.isAssignableFrom(type.rawClass)) {
+                            KClassSerializer()
                         } else {
-                            serializer
+                            super.findSerializer(config, type, beanDesc)
                         }
                 }
-            )
-
-            // Read path: register every node in the [registry] as soon as it is deserialized, so
-            // that references to it (as map keys or edge endpoints) can be resolved by id.
-            setDeserializerModifier(
-                object : BeanDeserializerModifier() {
-                    override fun modifyDeserializer(
-                        config: DeserializationConfig,
-                        desc: BeanDescription,
-                        deserializer: JsonDeserializer<*>,
-                    ): JsonDeserializer<*> =
-                        if (Node::class.java.isAssignableFrom(desc.beanClass)) {
-                            NodeDelegatingDeserializer(deserializer, registry)
-                        } else {
-                            deserializer
-                        }
+                .apply {
+                    addSerializer(
+                        PhysicalLocation::class.java,
+                        LocationConverter.LocationSerializer(),
+                    )
                 }
-            )
+        )
 
-            // Complex value types that Jackson cannot (de)serialize out of the box. Each serializer
-            // is paired with the deserializer that reverses it.
-            setSerializers(
-                object : SimpleSerializers() {
-                        override fun findSerializer(
-                            config: SerializationConfig,
-                            type: JavaType,
-                            beanDesc: BeanDescription?,
-                        ): JsonSerializer<*>? =
-                            if (KClass::class.java.isAssignableFrom(type.rawClass)) {
-                                KClassSerializer()
-                            } else {
-                                super.findSerializer(config, type, beanDesc)
-                            }
+        addSerializer(Name::class.java, NameSerializer())
+
+        addKeySerializer(Name::class.java, NameKeySerializer())
+        addKeySerializer(Pair::class.java, PairKeySerializer())
+        addKeySerializer(KClass::class.java, KClassKeySerializer())
+    }
+
+/**
+ * The read-path module used by phase 1 of [deserializeFromJson]. It mirrors [writeModule] with the
+ * matching deserializers and, in addition:
+ * - wraps every [Node] subtype's deserializer in a [SkeletonNodeDeserializer], so that nested node
+ *   *references* (bare ids) are left unresolved and only full node *definitions* are built;
+ * - drops every node-reference property (edge containers, their unwrapped list views such as
+ *   `components`, and any other collection/map of nodes), so those keep their empty,
+ *   constructor-initialized value; the graph's connectivity is rebuilt from the flat `edges` array
+ *   in phase 2. Scalar node-typed references (e.g. `scope`) are kept but resolve to `null` in phase
+ *   1, and are re-linked in phase 2.
+ */
+private fun readModule(registry: NodeRegistry): SimpleModule =
+    SimpleModule().apply {
+        setDeserializerModifier(
+            object : BeanDeserializerModifier() {
+                override fun modifyDeserializer(
+                    config: DeserializationConfig,
+                    desc: BeanDescription,
+                    deserializer: JsonDeserializer<*>,
+                ): JsonDeserializer<*> =
+                    if (Node::class.java.isAssignableFrom(desc.beanClass)) {
+                        SkeletonNodeDeserializer(deserializer)
+                    } else {
+                        deserializer
                     }
-                    .apply {
-                        addSerializer(
-                            PhysicalLocation::class.java,
-                            LocationConverter.LocationSerializer(),
-                        )
+
+                override fun updateBuilder(
+                    config: DeserializationConfig,
+                    desc: BeanDescription,
+                    builder: BeanDeserializerBuilder,
+                ): BeanDeserializerBuilder {
+                    if (Node::class.java.isAssignableFrom(desc.beanClass)) {
+                        builder.properties
+                            .asSequence()
+                            .filter { it.referencesNodes() }
+                            .map { it.fullName }
+                            .toList()
+                            .forEach { builder.removeProperty(it) }
                     }
-            )
-            addDeserializer(KClass::class.java, KClassDeserializer())
-            addDeserializer(Uuid::class.java, UuidDeserializer())
-            addDeserializer(PhysicalLocation::class.java, LocationConverter.LocationDeserializer())
+                    return builder
+                }
+            }
+        )
 
-            // Complex map-key types. The key deserializers are grouped in [NodeKeyDeserializers]
-            // because they need access to the [registry].
-            addKeySerializer(Name::class.java, NameKeySerializer())
-            addKeySerializer(Pair::class.java, PairKeySerializer())
-            addKeySerializer(KClass::class.java, KClassKeySerializer())
-            setKeyDeserializers(NodeKeyDeserializers(registry))
-        }
+        addDeserializer(Name::class.java, NameConverter())
+        addDeserializer(KClass::class.java, KClassDeserializer())
+        addDeserializer(Uuid::class.java, UuidDeserializer())
+        addDeserializer(PhysicalLocation::class.java, LocationConverter.LocationDeserializer())
 
-    return ObjectMapper(factory)
-        .findAndRegisterModules()
-        .registerKotlinModule()
-        .registerModule(cpgModule)
-        .setInjectableValues(InjectableValues.Std().addValue(NodeRegistry::class.java, registry))
-}
+        setKeyDeserializers(NodeKeyDeserializers(registry))
+    }
+
+/**
+ * A shared [JsonFactory] that raises Jackson's default read and write nesting limits (see
+ * [MAX_NESTING_DEPTH]), so that deeply nested CPG graphs can be (de)serialized.
+ */
+private fun cpgJsonFactory(): JsonFactory =
+    JsonFactory.builder()
+        .streamWriteConstraints(
+            StreamWriteConstraints.builder().maxNestingDepth(MAX_NESTING_DEPTH).build()
+        )
+        .streamReadConstraints(
+            StreamReadConstraints.builder().maxNestingDepth(MAX_NESTING_DEPTH).build()
+        )
+        .build()
 
 fun serializeToJson(translationResult: TranslationResult): String {
-    val objectMapper = cpgObjectMapper(NodeRegistry())
+    // The write path uses the Kotlin module and getter-based visibility so that the
+    // `@get:`-targeted
+    // Jackson annotations on [Node] (e.g. `@get:JsonIgnore`, `@get:JsonMerge`) take effect.
+    val objectMapper =
+        ObjectMapper(cpgJsonFactory())
+            .findAndRegisterModules()
+            .registerKotlinModule()
+            .registerModule(writeModule())
 
     val allNodes = translationResult.allChildrenWithOverlays<Node>().toMutableSet()
     val allEdges = mutableSetOf<Edge<*>>()
@@ -495,10 +482,194 @@ fun Node.explore(): Pair<Set<Node>, Set<Edge<*>>> {
     return Pair(nodes, edges)
 }
 
+/**
+ * Deserializes a [CPG] graph previously produced by [serializeToJson]. Because the graph is
+ * serialized flattened — every node appears once as a full object in the top-level `nodes` array
+ * and every reference to it is a bare object id — and Jackson's native `@JsonIdentityInfo`
+ * resolution cannot handle these forward references, we link the graph manually in two phases:
+ * 1. Build one instance per entry in the `nodes` array. Node-typed references are left unresolved
+ *    (null) and edge containers are left empty (see [readModule]); only scalar properties (name,
+ *    location, ...) are populated. Each instance is registered under its serialized `@id`.
+ * 2. Rebuild the connectivity from the flat `edges` array: for every node, for each of its edge
+ *    containers, resolve the referenced edges' endpoints to the registered instances and re-add
+ *    them, which recreates the edges (and, for AST edges, restores the `astParent` links).
+ */
 fun deserializeFromJson(json: String): TranslationResult {
     val registry = NodeRegistry()
-    val objectMapper = cpgObjectMapper(registry)
 
-    val cpg = objectMapper.readValue(json, CPG::class.java)
-    return cpg.nodes.filterIsInstance<TranslationResult>().first()
+    // The read path uses field-based visibility and deliberately does *not* register the Kotlin
+    // module: kotlin-reflect cannot introspect the Java collection subclasses (e.g. `IdentitySet`)
+    // that back many node properties and would otherwise fail with "Cannot infer visibility for
+    // inherited fun clone()".
+    val objectMapper =
+        ObjectMapper(cpgJsonFactory())
+            // Bind strictly to backing fields: disable getter/is-getter/setter auto-detection so a
+            // property is bound to at most its field. This avoids collisions where two Kotlin
+            // members
+            // serialize under the same name (e.g. `Field.isDefinition: Boolean` and
+            // `Field.definition: Field` both map to `"definition"`) and sidesteps non-null Kotlin
+            // setters by assigning fields directly.
+            .setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE)
+            .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
+            // The write path serializes via getters and therefore also emits computed, getter-only
+            // properties (e.g. `currentScope`). Those have no backing field, so the field-based
+            // read
+            // path does not know them. They are derived and regenerable, so we simply skip them
+            // instead of failing.
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .addMixIn(Node::class.java, NodeReadMixin::class.java)
+            .registerModule(readModule(registry))
+            // Two kinds of values that Jackson cannot instantiate on the read path are skipped
+            // (nulled out) here rather than aborting the whole read:
+            // - node references statically typed by a graph *interface* (e.g.
+            //   `Reference.resolutionHelper: HasType?`), serialized as a bare id — not caught by
+            // the
+            //   field-type filter in [readModule] and re-linked in phase 2;
+            // - the non-node "object web" (scopes, translation context, ...) that the writer emits
+            //   inline as full objects but whose classes have no no-arg constructor. Restoring that
+            //   web is out of scope for this graph-only round-trip.
+            .addHandler(
+                object : DeserializationProblemHandler() {
+                    override fun handleMissingInstantiator(
+                        ctxt: DeserializationContext,
+                        instClass: Class<*>,
+                        valueInsta: com.fasterxml.jackson.databind.deser.ValueInstantiator?,
+                        p: JsonParser,
+                        msg: String,
+                    ): Any? {
+                        // Consume the (scalar or object) value we are skipping and null it out.
+                        if (p.currentToken?.isStructStart == true) {
+                            p.skipChildren()
+                        }
+                        return null
+                    }
+                }
+            )
+
+    val tree = objectMapper.readTree(json)
+
+    // Phase 1: build a skeleton instance for every node and register it under its serialized id.
+    // A few `Node` subtypes are not default-constructible (notably the [Scope] hierarchy, whose
+    // constructor requires its `astNode`). These are never AST children — they belong to the
+    // non-node "object web" that this graph-only round-trip does not restore — so we skip any node
+    // type without a no-arg constructor.
+    val nodesJson = tree.get("nodes")
+    for (nodeJson in nodesJson) {
+        val id = nodeJson.get("@id").asText()
+        val type = Class.forName(nodeJson.get("@class").asText())
+        if (type.declaredConstructors.none { it.parameterCount == 0 }) continue
+        val node = objectMapper.treeToValue(nodeJson, type) as? Node ?: continue
+        registry.register(id, node)
+    }
+
+    // Phase 2: rebuild the graph's connectivity from the flat `edges` array and the per-node edge
+    // containers.
+    val edgeEndpoints = readEdgeEndpoints(tree)
+    for (nodeJson in nodesJson) {
+        val node = registry.lookup(nodeJson.get("@id").asText()) ?: continue
+        relinkEdges(node, nodeJson, edgeEndpoints, registry)
+    }
+
+    // Phase 3: re-assert the persisted names. Relinking edges fires graph observers (e.g. type
+    // propagation) that recompute derived names — a `MemberAccess` recomputes its name as
+    // `<base type>.<field>` whenever its base's type changes, so wiring up the base while its type
+    // is still unrestored would leave an `UNKNOWN.<field>` name behind. The serialized name is
+    // authoritative and feeds [Node.id], so we restore it once connectivity is complete.
+    for (nodeJson in nodesJson) {
+        val node = registry.lookup(nodeJson.get("@id").asText()) ?: continue
+        val nameJson = nodeJson.get("name") ?: continue
+        node.name = objectMapper.treeToValue(nameJson, Name::class.java)
+    }
+
+    return registry.all.filterIsInstance<TranslationResult>().first()
+}
+
+/** Maps every serialized edge id to its `(startId, endId)` endpoint ids (from the flat `edges`). */
+private fun readEdgeEndpoints(tree: JacksonNode): Map<String, Pair<String, String>> {
+    val endpoints = HashMap<String, Pair<String, String>>()
+    tree.get("edges")?.forEach { edge ->
+        val start = edge.get("start")?.asText()
+        val end = edge.get("end")?.asText()
+        if (start != null && end != null) {
+            endpoints[edge.get("@id").asText()] = start to end
+        }
+    }
+    return endpoints
+}
+
+/**
+ * Rebuilds the outgoing edges of a single [node] from its serialized [nodeJson]. For every outgoing
+ * edge-container field (mirroring [SubgraphWalker.getAllEdgeFields]) we resolve the ids of its
+ * target nodes (see [targetIdsFor]) and re-add each target to the container, which recreates the
+ * correctly-typed edge. Only outgoing containers are processed: their incoming mirror containers
+ * are populated automatically when the outgoing side is re-added.
+ */
+private fun relinkEdges(
+    node: Node,
+    nodeJson: JacksonNode,
+    edgeEndpoints: Map<String, Pair<String, String>>,
+    registry: NodeRegistry,
+) {
+    for (field in SubgraphWalker.getAllEdgeFields(node.javaClass)) {
+        field.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val container = field.get(node) as? EdgeCollection<Node, *> ?: continue
+        if (!container.outgoing) continue
+
+        for (endId in targetIdsFor(field.name, nodeJson, edgeEndpoints)) {
+            val target = registry.lookup(endId) ?: continue
+            when (container) {
+                is EdgeSingletonList<*, *, *> -> {
+                    // An outgoing singleton edge is pre-populated at construction with a
+                    // placeholder
+                    // (typically a `ProblemExpression`), so we cannot `add` to it; `resetTo`
+                    // replaces
+                    // that placeholder with the real target.
+                    @Suppress("UNCHECKED_CAST")
+                    (container as EdgeSingletonList<Node, Node?, Edge<Node>>).resetTo(target)
+                }
+                // Lists/sets: a target may already be linked via an edge's mirror container; skip
+                // it
+                // to stay idempotent.
+                else -> if (container.none { it.end === target }) container.add(target)
+            }
+        }
+    }
+}
+
+/**
+ * Resolves the ids of the target ("end") nodes of the edge container named [fieldName], from the
+ * serialized [nodeJson]. There are two ways a container shows up in the JSON:
+ * 1. A *public* edge container is serialized under its own field name as an array of edge ids; we
+ *    map each to its far endpoint via [edgeEndpoints].
+ * 2. A *private* edge container (e.g. [de.fraunhofer.aisec.cpg.graph.expressions.Call]'s
+ *    `calleeEdge`) is not serialized at all — but its public unwrapped view is (e.g. `callee`), and
+ *    holds the target node ids directly. We derive that view's name by stripping the `Edge`/`Edges`
+ *    suffix (re-pluralizing for collections, mirroring the `unwrapping` naming convention).
+ */
+private fun targetIdsFor(
+    fieldName: String,
+    nodeJson: JacksonNode,
+    edgeEndpoints: Map<String, Pair<String, String>>,
+): List<String> {
+    // Case 1: the edge container itself (its serialized name may drop a leading underscore).
+    val edgeIds = nodeJson.get(fieldName) ?: nodeJson.get(fieldName.removePrefix("_"))
+    if (edgeIds != null && edgeIds.isArray) {
+        return edgeIds.mapNotNull { edgeEndpoints[it.asText()]?.second }
+    }
+
+    // Case 2: fall back to the unwrapped node-reference view of a non-serialized (private)
+    // container.
+    val unwrappedName =
+        when {
+            fieldName.endsWith("Edges") -> fieldName.removeSuffix("Edges") + "s"
+            fieldName.endsWith("Edge") -> fieldName.removeSuffix("Edge")
+            else -> return emptyList()
+        }
+    val unwrapped = nodeJson.get(unwrappedName) ?: return emptyList()
+    return when {
+        unwrapped.isArray -> unwrapped.map { it.asText() }
+        unwrapped.isTextual -> listOf(unwrapped.asText())
+        else -> emptyList()
+    }
 }
