@@ -42,6 +42,7 @@ import com.fasterxml.jackson.databind.deser.BeanDeserializerBuilder
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler
 import com.fasterxml.jackson.databind.deser.ResolvableDeserializer
+import com.fasterxml.jackson.databind.deser.SettableBeanProperty
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer
 import com.fasterxml.jackson.databind.module.SimpleKeyDeserializers
@@ -289,16 +290,14 @@ class SkeletonNodeDeserializer(private val delegate: JsonDeserializer<*>) :
  * collection, array or map of nodes — most notably the unwrapped list views of edge containers
  * (e.g. `components`), whose backing collections reject the `null` skeleton references.
  */
-private fun com.fasterxml.jackson.databind.deser.SettableBeanProperty.referencesNodes(): Boolean {
-    if (name.contains("Edge")) return true
-    if (Node::class.java.isAssignableFrom(type.rawClass)) return true
-    val content = type.contentType ?: return false
-    return Node::class.java.isAssignableFrom(content.rawClass)
-}
+private fun SettableBeanProperty.referencesNodes(): Boolean =
+    "Edge" in name ||
+        Node::class.java.isAssignableFrom(type.rawClass) ||
+        type.contentType?.let { Node::class.java.isAssignableFrom(it.rawClass) } == true
 
 class UuidDeserializer : StdDeserializer<Uuid>(Uuid::class.java) {
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Uuid {
-        val uuid = p.codec.readTree<com.fasterxml.jackson.databind.JsonNode>(p)
+        val uuid = p.codec.readTree<JacksonNode>(p)
         return Uuid.fromLongs(
             uuid.get("mostSignificantBits").asLong(),
             uuid.get("leastSignificantBits").asLong(),
@@ -387,8 +386,10 @@ private fun readModule(registry: NodeRegistry): SimpleModule =
                             .asSequence()
                             .filter { it.referencesNodes() }
                             .map { it.fullName }
+                            // Snapshot before mutating: `removeProperty` mutates
+                            // `builder.properties`.
                             .toList()
-                            .forEach { builder.removeProperty(it) }
+                            .forEach(builder::removeProperty)
                     }
                     return builder
                 }
@@ -482,6 +483,10 @@ fun Node.explore(): Pair<Set<Node>, Set<Edge<*>>> {
     return Pair(nodes, edges)
 }
 
+/** The serialized Jackson object id (the `@id` property) of this JSON node. */
+private val JacksonNode.id: String
+    get() = get("@id").asText()
+
 /**
  * Deserializes a [CPG] graph previously produced by [serializeToJson]. Because the graph is
  * serialized flattened — every node appears once as a full object in the top-level `nodes` array
@@ -555,7 +560,7 @@ fun deserializeFromJson(json: String): TranslationResult {
     // type without a no-arg constructor.
     val nodesJson = tree.get("nodes")
     for (nodeJson in nodesJson) {
-        val id = nodeJson.get("@id").asText()
+        val id = nodeJson.id
         val type = Class.forName(nodeJson.get("@class").asText())
         if (type.declaredConstructors.none { it.parameterCount == 0 }) continue
         val node = objectMapper.treeToValue(nodeJson, type) as? Node ?: continue
@@ -566,7 +571,7 @@ fun deserializeFromJson(json: String): TranslationResult {
     // containers.
     val edgeEndpoints = readEdgeEndpoints(tree)
     for (nodeJson in nodesJson) {
-        val node = registry.lookup(nodeJson.get("@id").asText()) ?: continue
+        val node = registry.lookup(nodeJson.id) ?: continue
         relinkEdges(node, nodeJson, edgeEndpoints, registry)
     }
 
@@ -576,26 +581,26 @@ fun deserializeFromJson(json: String): TranslationResult {
     // is still unrestored would leave an `UNKNOWN.<field>` name behind. The serialized name is
     // authoritative and feeds [Node.id], so we restore it once connectivity is complete.
     for (nodeJson in nodesJson) {
-        val node = registry.lookup(nodeJson.get("@id").asText()) ?: continue
+        val node = registry.lookup(nodeJson.id) ?: continue
         val nameJson = nodeJson.get("name") ?: continue
         node.name = objectMapper.treeToValue(nameJson, Name::class.java)
     }
 
-    return registry.all.filterIsInstance<TranslationResult>().first()
+    return registry.all.filterIsInstance<TranslationResult>().firstOrNull()
+        ?: error("Deserialized graph contained no TranslationResult to return.")
 }
 
 /** Maps every serialized edge id to its `(startId, endId)` endpoint ids (from the flat `edges`). */
-private fun readEdgeEndpoints(tree: JacksonNode): Map<String, Pair<String, String>> {
-    val endpoints = HashMap<String, Pair<String, String>>()
-    tree.get("edges")?.forEach { edge ->
-        val start = edge.get("start")?.asText()
-        val end = edge.get("end")?.asText()
-        if (start != null && end != null) {
-            endpoints[edge.get("@id").asText()] = start to end
+private fun readEdgeEndpoints(tree: JacksonNode): Map<String, Pair<String, String>> =
+    tree
+        .get("edges")
+        ?.mapNotNull { edge ->
+            val start = edge.get("start")?.asText() ?: return@mapNotNull null
+            val end = edge.get("end")?.asText() ?: return@mapNotNull null
+            edge.id to (start to end)
         }
-    }
-    return endpoints
-}
+        ?.toMap()
+        .orEmpty()
 
 /**
  * Rebuilds the outgoing edges of a single [node] from its serialized [nodeJson]. For every outgoing
