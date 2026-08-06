@@ -1750,23 +1750,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return deduplicated.values.toList()
     }
 
-    private fun Node.stableKey(): String {
-        val location =
-            (this as? AstNode)?.location?.let {
-                "${it.region.startLine}:${it.region.startColumn}:${it.region.endLine}:${it.region.endColumn}"
-            } ?: "no-location"
-
-        val parentName = (this.astParent as? Node)?.name?.toString() ?: "no-parent"
-
-        return listOf(
-                this::class.qualifiedName ?: this::class.simpleName ?: "UnknownClass",
-                name.toString(),
-                parentName,
-                location,
-            )
-            .joinToString("|")
-    }
-
+    /** Perform a deep copy of mapDstToSrc */
     private fun copyMapDstToSrc(
         original: ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>
     ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
@@ -2373,18 +2357,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // in the Call
                 if (srcNode.argumentIndex < currentNode.arguments.size) {
                     val src = currentNode.arguments[srcNode.argumentIndex]
-                    // If this is a short FunctionSummary, we also
+                    // If this is a short FunctionSummary, we later also have to
                     // update the generalState to draw the additional DFG Edges
                     if (shortFS) {
-                        /*                        val newEntry = NodeWithPropertiesKey(src, equalLinkedHashSetOf<Any>(true))
-                        doubleState.generalState.computeIfAbsent(currentNode) {
-                            TripleLattice.Element(
-                                PowersetLattice.Element(),
-                                PowersetLattice.Element(),
-                                PowersetLattice.Element(),
-                            )
-                        }
-                        doubleState.generalState[currentNode]?.third?.add(newEntry)*/
                         shortFsPrevEdges.add(
                             NodeWithPropertiesKey(src, equalLinkedHashSetOf<Any>(true))
                         )
