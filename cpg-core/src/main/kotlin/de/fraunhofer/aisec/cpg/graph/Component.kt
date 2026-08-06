@@ -75,8 +75,13 @@ open class Component : AstNode() {
     /**
      * Stores types that are not directly connected to a node, but are still relevant for the type
      * resolution of this component.
+     *
+     * Excluded from JSON serialization: it is a regenerable type-resolution cache (an
+     * [IdentityHashMap], i.e. a Java collection subtype that also trips kotlin-reflect on the write
+     * path), and the neo4j persistence path likewise never emits it. It is recomputed when passes
+     * re-run.
      */
-    val additionalTypes = IdentityHashMap<String, Type>()
+    @get:JsonIgnore val additionalTypes = IdentityHashMap<String, Type>()
 
     /**
      * In contrast to other Nodes we do not add the assumptions collected over the component because

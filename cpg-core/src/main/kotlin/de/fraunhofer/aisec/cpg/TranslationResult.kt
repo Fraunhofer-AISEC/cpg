@@ -107,7 +107,13 @@ class TranslationResult() : AstNode(), StatisticsHolder, ContextProvider {
      */
     val additionalNodes = mutableSetOf<Node>()
 
-    override val benchmarks: MutableSet<MeasurementHolder> = LinkedHashSet()
+    /**
+     * Excluded from JSON serialization: these are runtime performance measurements collected while
+     * translating, not part of the code property graph. They are also serialized in a shape (a
+     * [MeasurementHolder] renders as a JSON array) that Jackson cannot read back, which would
+     * otherwise abort deserialization of the whole [TranslationResult].
+     */
+    @get:JsonIgnore override val benchmarks: MutableSet<MeasurementHolder> = LinkedHashSet()
 
     val isCancelled: Boolean
         get() = translationManager.isCancelled()
