@@ -3,6 +3,9 @@
 A web application for Codyze with an optional AI chat, which is enhanced by an MCP client that acts as an agent.
 The agent uses the tools of the CPG MCP server to analyze code and answer questions.
 
+> [!IMPORTANT]
+> codyze-console has a hard, unconditional build dependency on the `cpg-ai` module (see [AI Chat Features](#ai-chat-features) below). Enabling `enableCodyzeConsole=true` in `gradle.properties` always enables `cpg-ai` too - no separate step needed, and even an explicit `enableAIModule=false` is overridden while `enableCodyzeConsole=true`.
+
 ## Getting Started
 
 Codyze Console is an optional module. Enable it by setting `enableCodyzeConsole=true` in `gradle.properties` (or via `./configure_frontends.sh`), then rerun/resync Gradle.
@@ -25,24 +28,24 @@ The web console is available at `http://localhost:8080`.
 
 ## AI Chat Features
 
-The AI chat requires the `cpg-mcp` module to be enabled and a configured LLM provider.
+codyze-console has a hard, unconditional build dependency on the `cpg-ai` module (MCP server, `ChatService`, skills), which is always enabled together with `enableCodyzeConsole=true` as described above - no separate step needed. The AI chat itself additionally requires a configured LLM provider to actually work at runtime.
 
-### 1. Enable the `cpg-mcp` module
+### 1. Enable the `cpg-ai` module independently (optional)
 
-Run the configuration script:
+`cpg-ai` is optional at the workspace level (like the language frontends), but codyze-console cannot be built without it, so it's always enabled alongside `enableCodyzeConsole=true`. If you want `cpg-ai` enabled without `codyze-console` (e.g. just the MCP server), use the configuration script:
 
 ```bash
 ./configure_frontends.sh
 ```
 
-Or enable it manually by setting `enableMCPModule=true` in `gradle.properties`.
+Or set `enableAIModule=true` manually in `gradle.properties`. Note this only matters independently of `codyze-console`: an explicit `enableAIModule=false` has no effect while `enableCodyzeConsole=true`, since that dependency is unconditional.
 
 ### 2. Configure your LLM provider
 
 Copy the example configuration:
 
 ```bash
-cp codyze-console/src/main/resources/application.conf.example codyze-console/src/main/resources/application.conf
+cp cpg-ai/src/main/resources/application.conf.example cpg-ai/src/main/resources/application.conf
 ```
 
 Then edit `application.conf` and configure the clients you want to use under `llm.clients`:
@@ -73,7 +76,7 @@ Currently, only Gemini and OpenAI-compatible endpoints are supported.
 
 ### 3. MCP Server
 
-When `cpg-mcp` is enabled, the MCP server is automatically started on port `8081`. The AI chat connects to it as an MCP client to access the CPG tools (e.g., listing functions, records, and calls).
+The MCP server is automatically started on port `8081` whenever codyze-console starts. The AI chat connects to it as an MCP client to access the CPG tools (e.g., listing functions, records, and calls).
 
 ## Architecture
 
@@ -81,7 +84,7 @@ The following diagram shows the interaction between the main components during a
 
 ```
 Frontend            Backend              LLM               MCP Server
-(Svelte)           (ChatService)      (Gemini/OpenAI)       (cpg-mcp)
+(Svelte)           (ChatService)      (Gemini/OpenAI)       (cpg-ai) 
    |                    |                    |                   |
    | POST /api/chat     |                    |                   |
    | {messages}         |                    |                   |
