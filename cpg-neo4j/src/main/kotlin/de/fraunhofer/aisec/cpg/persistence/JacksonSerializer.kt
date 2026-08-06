@@ -64,6 +64,8 @@ import de.fraunhofer.aisec.cpg.persistence.converters.LocationConverter
 import de.fraunhofer.aisec.cpg.persistence.converters.NameConverter
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.IOException
+import java.lang.reflect.Field
+import java.lang.reflect.Modifier
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
@@ -595,11 +597,11 @@ fun deserializeFromJson(json: String): TranslationResult {
     }
 
     // Phase 2: rebuild the graph's connectivity from the flat `edges` array and the per-node edge
-    // containers.
-    val edgeEndpoints = readEdgeEndpoints(tree)
+    // containers, restoring each edge's own scalar properties (e.g. the EOG `branch`).
+    val edgesById = readEdgesById(tree)
     for (nodeJson in nodesJson) {
         val node = registry.lookup(nodeJson.id) ?: continue
-        relinkEdges(node, nodeJson, edgeEndpoints, registry)
+        relinkEdges(node, nodeJson, edgesById, registry, objectMapper)
     }
 
     // Phase 3: re-assert the persisted names. Relinking edges fires graph observers (e.g. type
@@ -617,77 +619,153 @@ fun deserializeFromJson(json: String): TranslationResult {
         ?: error("Deserialized graph contained no TranslationResult to return.")
 }
 
-/** Maps every serialized edge id to its `(startId, endId)` endpoint ids (from the flat `edges`). */
-private fun readEdgeEndpoints(tree: JacksonNode): Map<String, Pair<String, String>> =
-    tree
-        .get("edges")
-        ?.mapNotNull { edge ->
-            val start = edge.get("start")?.asText() ?: return@mapNotNull null
-            val end = edge.get("end")?.asText() ?: return@mapNotNull null
-            edge.id to (start to end)
-        }
-        ?.toMap()
-        .orEmpty()
+/** Every serialized edge (from the flat `edges` array), indexed by its `@id`. */
+private fun readEdgesById(tree: JacksonNode): Map<String, JacksonNode> =
+    tree.get("edges")?.associateBy { it.id }.orEmpty()
+
+/**
+ * Describes one edge to (re-)create while relinking: the id of its target ("end") node and, when
+ * available, the serialized edge object [edgeJson] holding the edge's own properties. For unwrapped
+ * views of private containers (see [edgeDescriptorsFor]) only the target id is known, so [edgeJson]
+ * is `null` and the edge is recreated with default properties.
+ */
+private class EdgeDescriptor(val endId: String, val edgeJson: JacksonNode?)
 
 /**
  * Rebuilds the outgoing edges of a single [node] from its serialized [nodeJson]. For every outgoing
- * edge-container field (mirroring [SubgraphWalker.getAllEdgeFields]) we resolve the ids of its
- * target nodes (see [targetIdsFor]) and re-add each target to the container, which recreates the
- * correctly-typed edge. Only outgoing containers are processed: their incoming mirror containers
+ * edge-container field (mirroring [SubgraphWalker.getAllEdgeFields]) we resolve the edges to
+ * recreate (see [edgeDescriptorsFor]) and re-add each target to the container, which recreates the
+ * correctly-typed edge, then copy the edge's own scalar properties onto it (see
+ * [applyEdgeProperties]). Only outgoing containers are processed: their incoming mirror containers
  * are populated automatically when the outgoing side is re-added.
  */
 private fun relinkEdges(
     node: Node,
     nodeJson: JacksonNode,
-    edgeEndpoints: Map<String, Pair<String, String>>,
+    edgesById: Map<String, JacksonNode>,
     registry: NodeRegistry,
+    objectMapper: ObjectMapper,
 ) {
+    // Guards against creating the same serialized edge twice, should it ever be reachable via two
+    // fields on the same node (e.g. a private backing field and a public alias).
+    val processedEdgeIds = mutableSetOf<String>()
+
     for (field in SubgraphWalker.getAllEdgeFields(node.javaClass)) {
         field.isAccessible = true
         @Suppress("UNCHECKED_CAST")
         val container = field.get(node) as? EdgeCollection<Node, *> ?: continue
         if (!container.outgoing) continue
 
-        for (endId in targetIdsFor(field.name, nodeJson, edgeEndpoints)) {
-            val target = registry.lookup(endId) ?: continue
+        for (descriptor in edgeDescriptorsFor(field.name, nodeJson, edgesById)) {
+            val edgeId = descriptor.edgeJson?.id
+            if (edgeId != null && !processedEdgeIds.add(edgeId)) continue
+            val target = registry.lookup(descriptor.endId) ?: continue
             when (container) {
                 is EdgeSingletonList<*, *, *> -> {
                     // An outgoing singleton edge is pre-populated at construction with a
                     // placeholder
                     // (typically a `ProblemExpression`), so we cannot `add` to it; `resetTo`
-                    // replaces
-                    // that placeholder with the real target.
+                    // replaces that placeholder with the real target.
                     @Suppress("UNCHECKED_CAST")
                     (container as EdgeSingletonList<Node, Node?, Edge<Node>>).resetTo(target)
+                    descriptor.edgeJson?.let {
+                        applyEdgeProperties(container.firstOrNull(), it, objectMapper)
+                    }
                 }
-                // Lists/sets: a target may already be linked via an edge's mirror container; skip
-                // it
-                // to stay idempotent.
-                else -> if (container.none { it.end === target }) container.add(target)
+                else ->
+                    if (descriptor.edgeJson != null) {
+                        // Recreate the edge and set its own properties in the creation `builder`.
+                        // Distinct serialized edges keep their own identity here, so parallel edges
+                        // between the same pair of nodes are preserved rather than collapsed.
+                        @Suppress("UNCHECKED_CAST")
+                        (container as EdgeCollection<Node, Edge<Node>>).add(target) {
+                            applyEdgeProperties(this, descriptor.edgeJson, objectMapper)
+                        }
+                    } else if (container.none { it.end === target }) {
+                        // Unwrapped view without an edge object: the target may already be linked
+                        // via an edge's mirror container, so add it only once.
+                        container.add(target)
+                    }
             }
         }
     }
 }
 
 /**
- * Resolves the ids of the target ("end") nodes of the edge container named [fieldName], from the
- * serialized [nodeJson]. There are two ways a container shows up in the JSON:
+ * The serialized keys that describe an edge's *structure* rather than a plain scalar property, plus
+ * the complex node-referencing properties we do not (yet) restore. [applyEdgeProperties] skips
+ * these so that only simple, settable scalar properties are copied.
+ */
+private val EDGE_STRUCTURAL_KEYS =
+    setOf(
+        "@id",
+        "start",
+        "end",
+        "labels",
+        "assumptions",
+        "overlaying",
+        "granularity",
+        "callingContext",
+    )
+
+/**
+ * Copies the scalar properties of a recreated [edge] from its serialized [edgeJson] (e.g. the EOG
+ * `branch`/`unreachable`/`scc`, or an edge `index`/`name`). Structural keys and the complex
+ * node-referencing properties (`granularity`, `callingContext`) are skipped, as are immutable
+ * (`val`) properties that are fixed at construction — these keep their default. Every assignment is
+ * best-effort: a property we cannot convert or set is skipped rather than failing the whole read.
+ */
+private fun applyEdgeProperties(edge: Edge<*>?, edgeJson: JacksonNode, objectMapper: ObjectMapper) {
+    if (edge == null) return
+    val fieldsByName = allFieldsByName(edge.javaClass)
+    edgeJson.fields().forEach { (key, valueNode) ->
+        if (key in EDGE_STRUCTURAL_KEYS || valueNode.isNull) return@forEach
+        val field = fieldsByName[key] ?: return@forEach
+        if (Modifier.isFinal(field.modifiers)) return@forEach
+        try {
+            field.isAccessible = true
+            field.set(edge, objectMapper.treeToValue(valueNode, field.type))
+        } catch (_: Exception) {
+            // Best-effort: skip any property we cannot convert or assign.
+        }
+    }
+}
+
+/** All declared fields of [type] and its supertypes, indexed by name (subclass wins on clashes). */
+private fun allFieldsByName(type: Class<*>): Map<String, Field> {
+    val fields = HashMap<String, Field>()
+    var current: Class<*>? = type
+    while (current != null && current != Any::class.java) {
+        current.declaredFields.forEach { fields.putIfAbsent(it.name, it) }
+        current = current.superclass
+    }
+    return fields
+}
+
+/**
+ * Resolves the edges to recreate for the container named [fieldName], from the serialized
+ * [nodeJson]. There are two ways a container shows up in the JSON:
  * 1. A *public* edge container is serialized under its own field name as an array of edge ids; we
- *    map each to its far endpoint via [edgeEndpoints].
+ *    look each up in [edgesById] to recover both its target and its properties.
  * 2. A *private* edge container (e.g. [de.fraunhofer.aisec.cpg.graph.expressions.Call]'s
  *    `calleeEdge`) is not serialized at all — but its public unwrapped view is (e.g. `callee`), and
- *    holds the target node ids directly. We derive that view's name by stripping the `Edge`/`Edges`
- *    suffix (re-pluralizing for collections, mirroring the `unwrapping` naming convention).
+ *    holds the target node ids directly (no edge object). We derive that view's name by stripping
+ *    the `Edge`/`Edges` suffix (re-pluralizing for collections, mirroring the `unwrapping` naming
+ *    convention).
  */
-private fun targetIdsFor(
+private fun edgeDescriptorsFor(
     fieldName: String,
     nodeJson: JacksonNode,
-    edgeEndpoints: Map<String, Pair<String, String>>,
-): List<String> {
+    edgesById: Map<String, JacksonNode>,
+): List<EdgeDescriptor> {
     // Case 1: the edge container itself (its serialized name may drop a leading underscore).
     val edgeIds = nodeJson.get(fieldName) ?: nodeJson.get(fieldName.removePrefix("_"))
     if (edgeIds != null && edgeIds.isArray) {
-        return edgeIds.mapNotNull { edgeEndpoints[it.asText()]?.second }
+        return edgeIds.mapNotNull { idNode ->
+            val edgeJson = edgesById[idNode.asText()] ?: return@mapNotNull null
+            val endId = edgeJson.get("end")?.asText() ?: return@mapNotNull null
+            EdgeDescriptor(endId, edgeJson)
+        }
     }
 
     // Case 2: fall back to the unwrapped node-reference view of a non-serialized (private)
@@ -700,8 +778,8 @@ private fun targetIdsFor(
         }
     val unwrapped = nodeJson.get(unwrappedName) ?: return emptyList()
     return when {
-        unwrapped.isArray -> unwrapped.map { it.asText() }
-        unwrapped.isTextual -> listOf(unwrapped.asText())
+        unwrapped.isArray -> unwrapped.map { EdgeDescriptor(it.asText(), null) }
+        unwrapped.isTextual -> listOf(EdgeDescriptor(unwrapped.asText(), null))
         else -> emptyList()
     }
 }
