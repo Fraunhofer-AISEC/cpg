@@ -87,11 +87,12 @@ object Events {
 
     fun keepalive(): String = Json.encodeToString(buildJsonObject { put("type", "keepalive") })
 
-    fun toolResult(toolName: String, content: JsonElement): String =
+    fun toolResult(toolName: String, args: JsonElement, content: JsonElement): String =
         Json.encodeToString(
             buildJsonObject {
                 put("type", "tool_result")
                 put("toolName", toolName)
+                put("args", args)
                 put("content", content)
             }
         )

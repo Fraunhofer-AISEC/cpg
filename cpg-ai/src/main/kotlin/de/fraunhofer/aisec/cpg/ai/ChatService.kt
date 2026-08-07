@@ -248,7 +248,7 @@ class ChatService(
                 val skill = skills.find { it.name == skillName }
                 val resultText =
                     skill?.let { wrapActivatedSkill(it) } ?: "Unknown skill: $skillName"
-                emit(Events.toolResult(toolCall.name, JsonPrimitive(resultText)))
+                emit(Events.toolResult(toolCall.name, arguments, JsonPrimitive(resultText)))
                 return resultText
             }
 
@@ -257,7 +257,7 @@ class ChatService(
             val resultText = contentTexts.joinToString("\n")
 
             val content = parseToolResultContent(contentTexts)
-            val event = Events.toolResult(toolCall.name, content)
+            val event = Events.toolResult(toolCall.name, arguments, content)
             log.debug("Emitting tool result event: {}", event)
             emit(event)
 
