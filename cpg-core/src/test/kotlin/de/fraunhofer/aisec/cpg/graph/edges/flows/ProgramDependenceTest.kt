@@ -28,12 +28,14 @@ package de.fraunhofer.aisec.cpg.graph.edges.flows
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.followPrevPDGUntilHit
 import de.fraunhofer.aisec.cpg.graph.newLiteral
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class ProgramDependenceTest {
     @Test
@@ -85,6 +87,44 @@ class ProgramDependenceTest {
             assertNotNull(cdgEdge)
 
             assertNotEquals<Edge<*>>(dfgEdge, cdgEdge)
+        }
+    }
+
+    @Test
+    fun testFollowPrevPDGUntilHit() {
+        with(TestLanguageFrontend()) {
+            // node1 -- DFG/CDG --> node2 -- DFG --> node3
+            val node1 = newLiteral(value = 1)
+            val node2 = newLiteral(value = 2)
+            val node3 = newLiteral(value = 3)
+
+            node1.nextDFGEdges += node2
+            node1.nextCDGEdges.add(node2) { branches = setOf(false) }
+            node2.nextDFGEdges += node3
+
+            // Populate the combined (incoming) PDG edges the way ProgramDependenceGraphPass does.
+            val combined2 = mutableListOf<Edge<Node>>()
+            combined2 += node2.prevDFGEdges
+            combined2 += node2.prevCDGEdges
+            node2.prevPDGEdges += combined2
+
+            val combined3 = mutableListOf<Edge<Node>>()
+            combined3 += node3.prevDFGEdges
+            node3.prevPDGEdges += combined3
+
+            // A backward prev-PDG traversal from node3 must make progress along `edge.start` and
+            // reach node1. This is a regression test for the interprocedural end/start mix-up that
+            // previously mapped every prev-PDG edge to `edge.end` (i.e. the node itself), so a
+            // backward traversal never moved. See the corresponding CDG fix in PR #2816.
+            val result = node3.followPrevPDGUntilHit { it === node1 }
+
+            assertTrue(
+                result.fulfilled.isNotEmpty(),
+                "backward prev-PDG traversal must reach node1 from node3",
+            )
+            val path = result.fulfilled.first()
+            assertEquals(node3, path.nodes.first(), "the path must start at the traversal origin")
+            assertEquals(node1, path.nodes.last(), "the path must end at the predicate target")
         }
     }
 
