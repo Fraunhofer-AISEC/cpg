@@ -36,11 +36,14 @@ import kotlin.reflect.KClass
  * Register one or multiple callbacks via [TranslationManager.analyze].
  */
 interface TranslationProgressCallback {
-    /** Called after all configured frontends finished running.
+    /**
+     * Called after all configured frontends finished running.
      *
      * @param ctx: The global [TranslationContext], so we can access it in the callback
-     * @param result: The [TranslationResult] containing the results of the analysis, so we can access it in the callback.
-     * @param executedFrontends: The set of [LanguageFrontend] instances that were executed, so we can access it in the callback.
+     * @param result: The [TranslationResult] containing the results of the analysis, so we can
+     *   access it in the callback.
+     * @param executedFrontends: The set of [LanguageFrontend] instances that were executed, so we
+     *   can access it in the callback.
      */
     fun afterFrontends(
         ctx: TranslationContext,
@@ -48,11 +51,13 @@ interface TranslationProgressCallback {
         executedFrontends: Set<LanguageFrontend<*, *>>,
     ) {}
 
-    /** Called after a pass has finished execution. It is executed after every [Pass].
+    /**
+     * Called after a pass has finished execution. It is executed after every [Pass].
      *
      * @param pass: The pass which has just been executed, so we can access it in the callback.
      * @param ctx: The global [TranslationContext], so we can access it in the callback
-     * @param result: The [TranslationResult] containing the results of the analysis, so we can access it in the callback.
+     * @param result: The [TranslationResult] containing the results of the analysis, so we can
+     *   access it in the callback.
      * @param nodes: The starting nodes on which the [pass] was run.
      */
     fun afterPass(

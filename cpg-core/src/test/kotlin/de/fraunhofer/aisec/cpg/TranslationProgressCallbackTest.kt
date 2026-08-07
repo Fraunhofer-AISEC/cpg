@@ -194,4 +194,83 @@ class TranslationProgressCallbackTest {
         assertNotNull(result)
         assertEquals(1, CallbackRecordingPass.executionCount)
     }
+
+    @Test
+    fun multipleCallbacksAreInvokedAfterFrontendsAndPasses() {
+        CallbackRecordingPass.executionCount = 0
+        val events = mutableListOf<String>()
+        val events2 = mutableListOf<String>()
+
+        val callback1 =
+            object : TranslationProgressCallback {
+                override fun afterFrontends(
+                    ctx: TranslationContext,
+                    result: TranslationResult,
+                    executedFrontends: Set<LanguageFrontend<*, *>>,
+                ) {
+                    events += "frontends"
+                }
+
+                override fun afterPass(
+                    pass: KClass<out Pass<out Node>>,
+                    ctx: TranslationContext,
+                    result: TranslationResult,
+                    nodes: Collection<Node>,
+                ) {
+                    events += "pass:${pass.simpleName}"
+                }
+            }
+
+        val callback2 =
+            object : TranslationProgressCallback {
+                override fun afterFrontends(
+                    ctx: TranslationContext,
+                    result: TranslationResult,
+                    executedFrontends: Set<LanguageFrontend<*, *>>,
+                ) {
+                    events2 += "frontends"
+                }
+
+                override fun afterPass(
+                    pass: KClass<out Pass<out Node>>,
+                    ctx: TranslationContext,
+                    result: TranslationResult,
+                    nodes: Collection<Node>,
+                ) {
+                    events2 += "pass:${pass.simpleName}"
+                }
+            }
+
+        val topLevel =
+            Files.createTempDirectory("cpg-callback-test").toFile().apply { deleteOnExit() }
+        val source =
+            File(topLevel, "main.cb").apply {
+                writeText("unit test")
+                deleteOnExit()
+            }
+
+        val config =
+            TranslationConfiguration.builder()
+                .topLevel(topLevel)
+                .sourceLocations(source)
+                .registerLanguage<CallbackTestLanguage>()
+                .registerPass<CallbackRecordingPass>()
+                .build()
+
+        val result =
+            TranslationManager.builder()
+                .config(config)
+                .build()
+                .analyze(callbacks = listOf(callback1, callback2))
+                .get()
+
+        assertNotNull(result)
+        assertEquals(1, CallbackRecordingPass.executionCount)
+        assertTrue(events.isNotEmpty())
+        assertEquals("frontends", events.first())
+        assertTrue(events.contains("pass:CallbackRecordingPass"))
+        assertTrue(events2.isNotEmpty())
+        assertEquals("frontends", events2.first())
+        assertTrue(events2.contains("pass:CallbackRecordingPass"))
+    }
 }
