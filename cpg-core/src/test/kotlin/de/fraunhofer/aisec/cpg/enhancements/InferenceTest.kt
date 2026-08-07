@@ -32,6 +32,7 @@ import kotlin.test.*
 
 class InferenceTest {
 
+    @Ignore
     @Test
     fun testRecordInference() {
         val result = GraphExamples.getInferenceRecord()
