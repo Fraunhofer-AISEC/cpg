@@ -111,7 +111,8 @@ class DFGFunctionSummaries {
         declEntry: FunctionDeclarationEntry,
         summary: List<DFGEntry>,
     ): Function {
-        val inferredFunction = contextProvider.newFunction(language.parseName(declEntry.methodName))
+        val inferredFunction =
+            with(contextProvider) { newFunction(language.parseName(declEntry.methodName)) }
         declEntry.signature?.forEachIndexed { i, typeName ->
             val type =
                 if (contextProvider.ctx.typeManager.typeExists(typeName)) {
@@ -128,7 +129,8 @@ class DFGFunctionSummaries {
                     // contextProvider.ctx.typeManager.registerType(type)
                     type
                 } ?: language.unknownType()
-            inferredFunction.parameters += contextProvider.newParameter(Name("param$i"), type)
+            inferredFunction.parameters +=
+                with(contextProvider) { newParameter(Name("param$i"), type) }
         }
         applyDfgEntryToFunction(inferredFunction, summary)
         return inferredFunction

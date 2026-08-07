@@ -44,29 +44,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Represent a for statement of the form `for(variable ... iterable){...}` that executes the loop
  * body for each instance of an element in `iterable` that is temporarily stored in `variable`.
  */
-class ForEach : Loop(), BranchingNode, StatementHolder, DeclarationHolder {
-
-    /**
-     * The local [ValueDeclaration]s (the loop's iteration variable) declared by this node. These
-     * members were moved down from [Expression] because only a few expression types actually hold
-     * locals; see [DeclarationHolder].
-     */
-    @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
-    var localEdges = astEdgesOf<ValueDeclaration>()
-
-    /** Virtual property to access [localEdges] without property edges. */
-    @DoNotPersist var locals by unwrapping(ForEach::localEdges)
-
-    override fun addDeclaration(declaration: Declaration) {
-        if (declaration is Variable) {
-            addIfNotContains(localEdges, declaration)
-        } else if (declaration is Function) {
-            addIfNotContains(localEdges, declaration)
-        }
-    }
-
-    override val declarations: List<Declaration>
-        get() = locals
+class ForEach : Loop(), BranchingNode {
 
     @Relationship("VARIABLE")
     var variableEdge =
@@ -93,7 +71,7 @@ class ForEach : Loop(), BranchingNode, StatementHolder, DeclarationHolder {
     override val branchedBy
         get() = iterable
 
-    override var statementEdges: AstEdges<Expression, AstEdge<Expression>>
+    var statementEdges: AstEdges<Expression, AstEdge<Expression>>
         get() {
             val statements = astEdgesOf<Expression>()
             statements += variableEdge
@@ -106,7 +84,7 @@ class ForEach : Loop(), BranchingNode, StatementHolder, DeclarationHolder {
             // Nothing to do here
         }
 
-    override var statements: MutableList<Expression>
+    var statements: MutableList<Expression>
         get() = unwrapping(ForEach::statementEdges)
         set(value) {}
 

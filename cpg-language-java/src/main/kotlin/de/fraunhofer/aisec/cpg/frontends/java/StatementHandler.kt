@@ -103,16 +103,12 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     private fun handleIf(stmt: Statement): IfElse {
         val ifStmt = stmt.asIfStmt()
-        val conditionExpression = ifStmt.condition
-        val thenStatement = ifStmt.thenStmt
-        val optionalElseStatement = ifStmt.elseStmt
-        val ifStatement = newIfElse(rawNode = stmt)
-        frontend.scopeManager.enterScope(ifStatement)
-        ifStatement.thenStatement = handle(thenStatement)
-        ifStatement.condition = frontend.expressionHandler.handle(conditionExpression) as Expression
-        optionalElseStatement.ifPresent { ifStatement.elseStatement = handle(it) }
-        frontend.scopeManager.leaveScope(ifStatement)
-        return ifStatement
+        return newIfElse(rawNode = stmt, enterScope = true) { ifStatement ->
+            ifStatement.thenStatement = handle(ifStmt.thenStmt)
+            ifStatement.condition =
+                frontend.expressionHandler.handle(ifStmt.condition) as Expression
+            ifStmt.elseStmt.ifPresent { ifStatement.elseStatement = handle(it) }
+        }
     }
 
     private fun handleAssert(stmt: Statement): Assert {
@@ -130,102 +126,90 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     private fun handleWhile(stmt: Statement): While {
         val whileStmt = stmt.asWhileStmt()
-        val conditionExpression = whileStmt.condition
-        val statement = whileStmt.body
-        val whileStatement = newWhile(rawNode = stmt)
-        frontend.scopeManager.enterScope(whileStatement)
-        whileStatement.statement = handle(statement)
-        whileStatement.condition =
-            frontend.expressionHandler.handle(conditionExpression) as Expression
-        frontend.scopeManager.leaveScope(whileStatement)
-        return whileStatement
+        return newWhile(rawNode = stmt, enterScope = true) { whileStatement ->
+            whileStatement.statement = handle(whileStmt.body)
+            whileStatement.condition =
+                frontend.expressionHandler.handle(whileStmt.condition) as Expression
+        }
     }
 
     private fun handleForEach(stmt: Statement): ForEach {
-        val statement = newForEach(rawNode = stmt)
-        frontend.scopeManager.enterScope(statement)
         val forEachStmt = stmt.asForEachStmt()
-        val variable = frontend.expressionHandler.handle(forEachStmt.variable)
-        val iterable = frontend.expressionHandler.handle(forEachStmt.iterable)
-        if (variable !is DeclarationStatement) {
-            log.error("Expected a DeclarationStatement but received: {}", variable?.name)
-        } else {
-            statement.variable = variable
+        return newForEach(rawNode = stmt, enterScope = true) { statement ->
+            val variable = frontend.expressionHandler.handle(forEachStmt.variable)
+            val iterable = frontend.expressionHandler.handle(forEachStmt.iterable)
+            if (variable !is DeclarationStatement) {
+                log.error("Expected a DeclarationStatement but received: {}", variable?.name)
+            } else {
+                statement.variable = variable
+            }
+            statement.iterable = iterable
+            statement.statement = handle(forEachStmt.body)
         }
-        statement.iterable = iterable
-        statement.statement = handle(forEachStmt.body)
-        frontend.scopeManager.leaveScope(statement)
-        return statement
     }
 
     private fun handleFor(stmt: Statement): For {
         val forStmt = stmt.asForStmt()
-        val statement = this.newFor(rawNode = stmt)
-        frontend.scopeManager.enterScope(statement)
-        if (forStmt.initialization.size > 1) {
-            // code will be set later
-            val initExprList = this.newExpressionList()
-            for (initExpr in forStmt.initialization) {
-                val s = frontend.expressionHandler.handle(initExpr)
-                s?.let { initExprList.expressions += it }
+        return this.newFor(rawNode = stmt, enterScope = true) { statement ->
+            if (forStmt.initialization.size > 1) {
+                // code will be set later
+                val initExprList = this.newExpressionList()
+                for (initExpr in forStmt.initialization) {
+                    val s = frontend.expressionHandler.handle(initExpr)
+                    s?.let { initExprList.expressions += it }
 
-                // can not update location
-                if (s?.location == null) {
-                    continue
+                    // can not update location
+                    if (s?.location == null) {
+                        continue
+                    }
                 }
+
+                statement.initializerStatement = initExprList.codeAndLocationFromChildren(stmt)
+            } else if (forStmt.initialization.size == 1) {
+                statement.initializerStatement =
+                    frontend.expressionHandler.handle(forStmt.initialization[0])
+            }
+            forStmt.compare.ifPresent { condition: JPExpression ->
+                statement.condition = frontend.expressionHandler.handle(condition) as Expression
             }
 
-            statement.initializerStatement = initExprList.codeAndLocationFromChildren(stmt)
-        } else if (forStmt.initialization.size == 1) {
-            statement.initializerStatement =
-                frontend.expressionHandler.handle(forStmt.initialization[0])
-        }
-        forStmt.compare.ifPresent { condition: JPExpression ->
-            statement.condition = frontend.expressionHandler.handle(condition) as Expression
-        }
-
-        // Adds true expression node where default empty condition evaluates to true, remove here
-        // and in cpp StatementHandler
-        if (statement.condition == null) {
-            val literal: Literal<*> =
-                this.newLiteral(true, this.primitiveType("boolean")).implicit("true")
-            statement.condition = literal
-        }
-        if (forStmt.update.size > 1) {
-            // code will be set later
-            val iterationExprList = this.newExpressionList()
-            for (updateExpr in forStmt.update) {
-                val s = frontend.expressionHandler.handle(updateExpr)
-                s?.let {
-                    // make sure location is set
-                    iterationExprList.expressions += it
-                }
-
-                // can not update location
-                if (s?.location == null) {
-                    continue
-                }
+            // Adds true expression node where default empty condition evaluates to true, remove
+            // here and in cpp StatementHandler
+            if (statement.condition == null) {
+                statement.condition =
+                    this.newLiteral(true, this.primitiveType("boolean")).implicit("true")
             }
+            if (forStmt.update.size > 1) {
+                // code will be set later
+                val iterationExprList = this.newExpressionList()
+                for (updateExpr in forStmt.update) {
+                    val s = frontend.expressionHandler.handle(updateExpr)
+                    s?.let {
+                        // make sure location is set
+                        iterationExprList.expressions += it
+                    }
 
-            statement.iterationStatement = iterationExprList.codeAndLocationFromChildren(stmt)
-        } else if (forStmt.update.size == 1) {
-            statement.iterationStatement = frontend.expressionHandler.handle(forStmt.update[0])
+                    // can not update location
+                    if (s?.location == null) {
+                        continue
+                    }
+                }
+
+                statement.iterationStatement = iterationExprList.codeAndLocationFromChildren(stmt)
+            } else if (forStmt.update.size == 1) {
+                statement.iterationStatement = frontend.expressionHandler.handle(forStmt.update[0])
+            }
+            statement.statement = handle(forStmt.body)
         }
-        statement.statement = handle(forStmt.body)
-        frontend.scopeManager.leaveScope(statement)
-        return statement
     }
 
     private fun handleDo(stmt: Statement): DoWhile {
         val doStmt = stmt.asDoStmt()
-        val conditionExpression = doStmt.condition
-        val statement = doStmt.body
-        val doStatement = newDoWhile(rawNode = stmt)
-        frontend.scopeManager.enterScope(doStatement)
-        doStatement.statement = handle(statement)
-        doStatement.condition = frontend.expressionHandler.handle(conditionExpression) as Expression
-        frontend.scopeManager.leaveScope(doStatement)
-        return doStatement
+        return newDoWhile(rawNode = stmt, enterScope = true) { doStatement ->
+            doStatement.statement = handle(doStmt.body)
+            doStatement.condition =
+                frontend.expressionHandler.handle(doStmt.condition) as Expression
+        }
     }
 
     private fun handleEmpty(stmt: Statement): Empty {
@@ -388,39 +372,39 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     fun handleSwitch(stmt: Statement): Switch {
         val switchStmt = stmt.asSwitchStmt()
-        val switchStatement = newSwitch(rawNode = stmt)
+        return newSwitch(rawNode = stmt, enterScope = true) { switchStatement ->
+            switchStatement.selector =
+                frontend.expressionHandler.handle(switchStmt.selector) as Expression
 
-        frontend.scopeManager.enterScope(switchStatement)
-        switchStatement.selector =
-            frontend.expressionHandler.handle(switchStmt.selector) as Expression
-
-        // Compute region and code for self generated compound statement to match the c++ versions
-        var start: JavaToken? = null
-        var end: JavaToken? = null
-        val tokenRange = switchStmt.tokenRange
-        val tokenRangeSelector = switchStmt.selector.tokenRange
-        if (tokenRange.isPresent && tokenRangeSelector.isPresent) {
-            start = getNextTokenWith("{", tokenRangeSelector.get().end)
-            end = getPreviousTokenWith("}", tokenRange.get().end)
+            // Compute region and code for self generated compound statement to match the c++
+            // versions
+            var start: JavaToken? = null
+            var end: JavaToken? = null
+            val tokenRange = switchStmt.tokenRange
+            val tokenRangeSelector = switchStmt.selector.tokenRange
+            if (tokenRange.isPresent && tokenRangeSelector.isPresent) {
+                start = getNextTokenWith("{", tokenRangeSelector.get().end)
+                end = getPreviousTokenWith("}", tokenRange.get().end)
+            }
+            switchStatement.statement =
+                this.newBlock { compoundStatement ->
+                    compoundStatement.code = getCodeBetweenTokens(start, end)
+                    compoundStatement.location =
+                        getLocationsFromTokens(switchStatement.location, start, end)
+                    for (sentry in switchStmt.entries) {
+                        if (sentry.labels.isEmpty()) {
+                            compoundStatement.statements += handleCaseDefault(null, sentry)
+                        }
+                        for (caseExp in sentry.labels) {
+                            compoundStatement.statements += handleCaseDefault(caseExp, sentry)
+                        }
+                        for (subStmt in sentry.statements) {
+                            compoundStatement.statements +=
+                                handle(subStmt) ?: ProblemExpression("Could not parse statement")
+                        }
+                    }
+                }
         }
-        val compoundStatement = this.newBlock()
-        compoundStatement.code = getCodeBetweenTokens(start, end)
-        compoundStatement.location = getLocationsFromTokens(switchStatement.location, start, end)
-        for (sentry in switchStmt.entries) {
-            if (sentry.labels.isEmpty()) {
-                compoundStatement.statements += handleCaseDefault(null, sentry)
-            }
-            for (caseExp in sentry.labels) {
-                compoundStatement.statements += handleCaseDefault(caseExp, sentry)
-            }
-            for (subStmt in sentry.statements) {
-                compoundStatement.statements +=
-                    handle(subStmt) ?: ProblemExpression("Could not parse statement")
-            }
-        }
-        switchStatement.statement = compoundStatement
-        frontend.scopeManager.leaveScope(switchStatement)
-        return switchStatement
     }
 
     private fun handleExplicitConstructorInvocation(stmt: Statement): Construction {
@@ -463,21 +447,20 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     private fun handleTry(stmt: Statement): Try {
         val tryStmt = stmt.asTryStmt()
-        val tryStatement = newTry(rawNode = stmt)
-        frontend.scopeManager.enterScope(tryStatement)
-        val resources =
-            tryStmt.resources.mapNotNullTo(mutableListOf()) { ctx ->
-                frontend.expressionHandler.handle(ctx)
+        val tryStatement =
+            newTry(rawNode = stmt, enterScope = true) { tryStatement ->
+                tryStatement.resources =
+                    tryStmt.resources.mapNotNullTo(mutableListOf()) { ctx ->
+                        frontend.expressionHandler.handle(ctx)
+                    }
+                tryStatement.tryBlock = handleBlock(tryStmt.tryBlock)
+                tryStatement.catchClauses =
+                    tryStmt.catchClauses.map(::handleCatchClause).toMutableList()
+                tryStatement.finallyBlock = tryStmt.finallyBlock.map(::handleBlock).orElse(null)
             }
-        val tryBlock = handleBlock(tryStmt.tryBlock)
-        val catchClauses = tryStmt.catchClauses.map(::handleCatchClause).toMutableList()
-        val finallyBlock = tryStmt.finallyBlock.map(::handleBlock).orElse(null)
-        frontend.scopeManager.leaveScope(tryStatement)
-        tryStatement.resources = resources
-        tryStatement.tryBlock = tryBlock
-        tryStatement.finallyBlock = finallyBlock
-        tryStatement.catchClauses = catchClauses
-        for (r in resources) {
+        // This must happen after the scope of the try statement has been left again, so it is
+        // done outside the init block above.
+        for (r in tryStatement.resources) {
             if (r is DeclarationStatement) {
                 for (d in r.declarations) {
                     if (d is Variable) {
@@ -490,35 +473,32 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     }
 
     private fun handleCatchClause(catchCls: JPCatchClause): CatchClause {
-        val cClause = newCatchClause(rawNode = catchCls)
-        frontend.scopeManager.enterScope(cClause)
-        val possibleTypes = mutableSetOf<Type>()
-        val concreteType: Type
-        if (catchCls.parameter.type is UnionType) {
-            for (t in (catchCls.parameter.type as UnionType).elements) {
-                possibleTypes.add(frontend.getTypeAsGoodAsPossible(t))
+        return newCatchClause(rawNode = catchCls, enterScope = true) { cClause ->
+            val possibleTypes = mutableSetOf<Type>()
+            val concreteType: Type
+            if (catchCls.parameter.type is UnionType) {
+                for (t in (catchCls.parameter.type as UnionType).elements) {
+                    possibleTypes.add(frontend.getTypeAsGoodAsPossible(t))
+                }
+                // we do not know which of the exceptions was actually thrown, so we assume this
+                // might be any
+                concreteType = this.objectType("java.lang.Throwable")
+                concreteType.typeOrigin = Type.Origin.GUESSED
+            } else {
+                concreteType = frontend.getTypeAsGoodAsPossible(catchCls.parameter.type)
+                possibleTypes.add(concreteType)
             }
-            // we do not know which of the exceptions was actually thrown, so we assume this might
-            // be any
-            concreteType = this.objectType("java.lang.Throwable")
-            concreteType.typeOrigin = Type.Origin.GUESSED
-        } else {
-            concreteType = frontend.getTypeAsGoodAsPossible(catchCls.parameter.type)
-            possibleTypes.add(concreteType)
+            val parameter =
+                this.newVariable(
+                    catchCls.parameter.name.toString(),
+                    concreteType,
+                    rawNode = catchCls.parameter,
+                )
+            parameter.addAssignedTypes(possibleTypes)
+            cClause.body = handleBlock(catchCls.body)
+            cClause.parameter = parameter
+            frontend.scopeManager.addDeclaration(parameter)
         }
-        val parameter =
-            this.newVariable(
-                catchCls.parameter.name.toString(),
-                concreteType,
-                rawNode = catchCls.parameter,
-            )
-        parameter.addAssignedTypes(possibleTypes)
-        val body = handleBlock(catchCls.body)
-        cClause.body = body
-        cClause.parameter = parameter
-        frontend.scopeManager.addDeclaration(parameter)
-        frontend.scopeManager.leaveScope(cClause)
-        return cClause
     }
 
     companion object {

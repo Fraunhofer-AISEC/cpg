@@ -45,6 +45,7 @@ fun <T, V> RawNodeTypeProvider<T>.newLiteral(
     value: V,
     type: Type = unknownType(),
     rawNode: Any? = null,
+    init: ((Literal<V>) -> Unit)? = null,
 ): Literal<V> {
     val node = Literal<V>()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -53,6 +54,9 @@ fun <T, V> RawNodeTypeProvider<T>.newLiteral(
     node.type = type
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -65,7 +69,11 @@ fun <T, V> RawNodeTypeProvider<T>.newLiteral(
  * prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newBinaryOperator(operatorCode: String, rawNode: Any? = null): BinaryOperator {
+fun MetadataProvider.newBinaryOperator(
+    operatorCode: String,
+    rawNode: Any? = null,
+    init: ((BinaryOperator) -> Unit)? = null,
+): BinaryOperator {
     val node =
         if (
             this is LanguageProvider &&
@@ -83,6 +91,8 @@ fun MetadataProvider.newBinaryOperator(operatorCode: String, rawNode: Any? = nul
 
     log(node)
 
+    init?.invoke(node)
+
     return node
 }
 
@@ -98,6 +108,7 @@ fun MetadataProvider.newUnaryOperator(
     postfix: Boolean,
     prefix: Boolean,
     rawNode: Any? = null,
+    init: ((UnaryOperator) -> Unit)? = null,
 ): UnaryOperator {
     val node = UnaryOperator()
     node.applyMetadata(this, operatorCode, rawNode, true)
@@ -107,6 +118,8 @@ fun MetadataProvider.newUnaryOperator(
     node.isPrefix = prefix
 
     log(node)
+
+    init?.invoke(node)
 
     return node
 }
@@ -122,6 +135,7 @@ fun MetadataProvider.newAssign(
     lhs: List<Expression> = listOf(),
     rhs: List<Expression> = listOf(),
     rawNode: Any? = null,
+    init: ((Assign) -> Unit)? = null,
 ): Assign {
     val node = Assign()
     node.applyMetadata(this, operatorCode, rawNode, true)
@@ -130,6 +144,8 @@ fun MetadataProvider.newAssign(
     node.rhs = rhs.toMutableList()
 
     log(node)
+
+    init?.invoke(node)
 
     return node
 }
@@ -141,13 +157,20 @@ fun MetadataProvider.newAssign(
  * [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newNew(type: Type = unknownType(), rawNode: Any? = null): New {
+fun MetadataProvider.newNew(
+    type: Type = unknownType(),
+    rawNode: Any? = null,
+    init: ((New) -> Unit)? = null,
+): New {
     val node = New()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     node.type = type
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -161,11 +184,15 @@ fun MetadataProvider.newNew(type: Type = unknownType(), rawNode: Any? = null): N
 fun MetadataProvider.newConstruction(
     name: CharSequence? = EMPTY_NAME,
     rawNode: Any? = null,
+    init: ((Construction) -> Unit)? = null,
 ): Construction {
     val node = Construction()
     node.applyMetadata(this, name, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -182,6 +209,7 @@ fun MetadataProvider.newConditional(
     elseExpression: Expression? = null,
     type: Type = unknownType(),
     rawNode: Any? = null,
+    init: ((Conditional) -> Unit)? = null,
 ): Conditional {
     val node = Conditional()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -192,6 +220,9 @@ fun MetadataProvider.newConditional(
     node.elseExpression = elseExpression
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -206,6 +237,7 @@ fun MetadataProvider.newKeyValue(
     key: Expression,
     value: Expression,
     rawNode: Any? = null,
+    init: ((KeyValue) -> Unit)? = null,
 ): KeyValue {
     val node = KeyValue()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -214,6 +246,9 @@ fun MetadataProvider.newKeyValue(
     node.value = value
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -223,11 +258,14 @@ fun MetadataProvider.newKeyValue(
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newLambda(rawNode: Any? = null): Lambda {
+fun MetadataProvider.newLambda(rawNode: Any? = null, init: ((Lambda) -> Unit)? = null): Lambda {
     val node = Lambda()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -235,13 +273,27 @@ fun MetadataProvider.newLambda(rawNode: Any? = null): Lambda {
  * Creates a new [Block]. The [MetadataProvider] receiver will be used to fill different meta-data
  * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
+ *
+ * If [enterScope] is `true`, scope is entered/left automatically around [init]. This defaults to
+ * `false` so that existing callers that manage scope manually are unaffected.
  */
 @JvmOverloads
-fun MetadataProvider.newBlock(rawNode: Any? = null): Block {
+context(provider: ContextProvider)
+fun MetadataProvider.newBlock(
+    rawNode: Any? = null,
+    enterScope: Boolean = false,
+    init: ((Block) -> Unit)? = null,
+): Block {
     val node = Block()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    val scopeManager = provider.ctx.scopeManager
+    if (enterScope) scopeManager.enterScope(node)
+    init?.invoke(node)
+    if (enterScope) scopeManager.leaveScope(node)
+
     return node
 }
 
@@ -256,6 +308,7 @@ fun MetadataProvider.newCall(
     fqn: CharSequence? = null,
     template: Boolean = false,
     rawNode: Any? = null,
+    init: ((Call) -> Unit)? = null,
 ): Call {
     val node = Call()
     node.applyMetadata(this, fqn, rawNode, true)
@@ -271,6 +324,9 @@ fun MetadataProvider.newCall(
     node.template = template
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -285,6 +341,7 @@ fun MetadataProvider.newOperatorCall(
     operatorCode: String,
     callee: Expression?,
     rawNode: Any? = null,
+    init: ((OperatorCall) -> Unit)? = null,
 ): OperatorCall {
     val node = OperatorCall()
     node.applyMetadata(this, operatorCode, rawNode)
@@ -295,6 +352,9 @@ fun MetadataProvider.newOperatorCall(
     }
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -309,6 +369,7 @@ fun MetadataProvider.newMemberCall(
     callee: Expression?,
     isStatic: Boolean = false,
     rawNode: Any? = null,
+    init: ((MemberCall) -> Unit)? = null,
 ): MemberCall {
     val node = MemberCall()
     node.applyMetadata(
@@ -328,6 +389,9 @@ fun MetadataProvider.newMemberCall(
     node.isStatic = isStatic
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -344,6 +408,7 @@ fun MetadataProvider.newMemberAccess(
     memberType: Type = unknownType(),
     operatorCode: String? = ".",
     rawNode: Any? = null,
+    init: ((MemberAccess) -> Unit)? = null,
 ): MemberAccess {
     val node = MemberAccess()
     node.applyMetadata(this, name, rawNode, true)
@@ -353,6 +418,9 @@ fun MetadataProvider.newMemberAccess(
     node.type = memberType
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -362,11 +430,14 @@ fun MetadataProvider.newMemberAccess(
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newCast(rawNode: Any? = null): Cast {
+fun MetadataProvider.newCast(rawNode: Any? = null, init: ((Cast) -> Unit)? = null): Cast {
     val node = Cast()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -382,6 +453,7 @@ fun MetadataProvider.newTypeReference(
     type: Type = unknownType(),
     referencedType: Type = unknownType(),
     rawNode: Any? = null,
+    init: ((TypeReference) -> Unit)? = null,
 ): TypeReference {
     val node = TypeReference()
     node.applyMetadata(this, operatorCode, rawNode, true)
@@ -391,6 +463,9 @@ fun MetadataProvider.newTypeReference(
     node.referencedType = referencedType
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -401,11 +476,17 @@ fun MetadataProvider.newTypeReference(
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newSubscription(rawNode: Any? = null): Subscription {
+fun MetadataProvider.newSubscription(
+    rawNode: Any? = null,
+    init: ((Subscription) -> Unit)? = null,
+): Subscription {
     val node = Subscription()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -419,6 +500,7 @@ fun MetadataProvider.newRange(
     floor: Expression? = null,
     ceiling: Expression? = null,
     rawNode: Any? = null,
+    init: ((Range) -> Unit)? = null,
 ): Range {
     val node = Range()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -427,6 +509,9 @@ fun MetadataProvider.newRange(
     node.ceiling = ceiling
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -437,11 +522,17 @@ fun MetadataProvider.newRange(
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newArrayConstruction(rawNode: Any? = null): ArrayConstruction {
+fun MetadataProvider.newArrayConstruction(
+    rawNode: Any? = null,
+    init: ((ArrayConstruction) -> Unit)? = null,
+): ArrayConstruction {
     val node = ArrayConstruction()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -456,6 +547,7 @@ fun MetadataProvider.newReference(
     name: CharSequence?,
     type: Type = unknownType(),
     rawNode: Any? = null,
+    init: ((Reference) -> Unit)? = null,
 ): Reference {
     val node = Reference()
     node.applyMetadata(this, name, rawNode, true)
@@ -463,6 +555,9 @@ fun MetadataProvider.newReference(
     node.type = type
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -498,6 +593,7 @@ fun MetadataProvider.newPointerDereference(
     name: CharSequence?,
     type: Type = unknownType(),
     rawNode: Any? = null,
+    init: ((PointerDereference) -> Unit)? = null,
 ): PointerDereference {
     val node = PointerDereference()
     node.applyMetadata(this, name, rawNode, true)
@@ -505,6 +601,9 @@ fun MetadataProvider.newPointerDereference(
     node.type = type
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -514,11 +613,14 @@ fun MetadataProvider.newPointerDereference(
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newDelete(rawNode: Any? = null): Delete {
+fun MetadataProvider.newDelete(rawNode: Any? = null, init: ((Delete) -> Unit)? = null): Delete {
     val node = Delete()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -529,11 +631,17 @@ fun MetadataProvider.newDelete(rawNode: Any? = null): Delete {
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newExpressionList(rawNode: Any? = null): ExpressionList {
+fun MetadataProvider.newExpressionList(
+    rawNode: Any? = null,
+    init: ((ExpressionList) -> Unit)? = null,
+): ExpressionList {
     val node = ExpressionList()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -547,6 +655,7 @@ fun MetadataProvider.newExpressionList(rawNode: Any? = null): ExpressionList {
 fun MetadataProvider.newInitializerList(
     targetType: Type = unknownType(),
     rawNode: Any? = null,
+    init: ((InitializerList) -> Unit)? = null,
 ): InitializerList {
     val node = InitializerList()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
@@ -554,24 +663,49 @@ fun MetadataProvider.newInitializerList(
     node.type = targetType
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
 @JvmOverloads
-fun MetadataProvider.newComprehension(rawNode: Any? = null): Comprehension {
+fun MetadataProvider.newComprehension(
+    rawNode: Any? = null,
+    init: ((Comprehension) -> Unit)? = null,
+): Comprehension {
     val node = Comprehension()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
+/**
+ * Creates a new [CollectionComprehension]. If [enterScope] is `true`, scope is entered/left
+ * automatically around [init]. This defaults to `false` so that existing callers that manage scope
+ * manually are unaffected.
+ */
 @JvmOverloads
-fun MetadataProvider.newCollectionComprehension(rawNode: Any? = null): CollectionComprehension {
+context(provider: ContextProvider)
+fun MetadataProvider.newCollectionComprehension(
+    rawNode: Any? = null,
+    enterScope: Boolean = false,
+    init: ((CollectionComprehension) -> Unit)? = null,
+): CollectionComprehension {
     val node = CollectionComprehension()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    val scopeManager = provider.ctx.scopeManager
+    if (enterScope) scopeManager.enterScope(node)
+    init?.invoke(node)
+    if (enterScope) scopeManager.leaveScope(node)
+
     return node
 }
 
@@ -586,6 +720,7 @@ fun MetadataProvider.newTypeExpression(
     name: CharSequence?,
     type: Type = unknownType(),
     rawNode: Any? = null,
+    init: ((TypeExpression) -> Unit)? = null,
 ): TypeExpression {
     val node = TypeExpression()
     node.applyMetadata(this, name, rawNode)
@@ -593,6 +728,9 @@ fun MetadataProvider.newTypeExpression(
     node.type = type
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -602,11 +740,14 @@ fun MetadataProvider.newTypeExpression(
  * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newThrow(rawNode: Any? = null): Throw {
+fun MetadataProvider.newThrow(rawNode: Any? = null, init: ((Throw) -> Unit)? = null): Throw {
     val node = Throw()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 
@@ -629,11 +770,17 @@ fun MetadataProvider.newProblemExpression(
     return node
 }
 
-fun MetadataProvider.newProblemType(rawNode: Any? = null): ProblemType {
+fun MetadataProvider.newProblemType(
+    rawNode: Any? = null,
+    init: ((ProblemType) -> Unit)? = null,
+): ProblemType {
     val node = ProblemType()
     node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
+
+    init?.invoke(node)
+
     return node
 }
 

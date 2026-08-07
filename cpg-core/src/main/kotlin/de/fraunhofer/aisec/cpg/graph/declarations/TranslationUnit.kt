@@ -36,7 +36,7 @@ import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** The top most declaration, representing a translation unit, for example a file. */
-class TranslationUnit : Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
+class TranslationUnit : Declaration(), DeclarationHolder, EOGStarterHolder {
     /** A list of declarations within this unit. */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
     val declarationEdges = astEdgesOf<Declaration>()
@@ -52,8 +52,8 @@ class TranslationUnit : Declaration(), DeclarationHolder, StatementHolder, EOGSt
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    override var statementEdges = astEdgesOf<Expression>()
-    override var statements by unwrapping(TranslationUnit::statementEdges)
+    var statementEdges = astEdgesOf<Expression>()
+    var statements by unwrapping(TranslationUnit::statementEdges)
 
     override fun addDeclaration(declaration: Declaration) {
         addIfNotContains(declarationEdges, declaration)

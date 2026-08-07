@@ -64,16 +64,14 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 }
             }
 
-        val import =
-            newImport(
-                import = name,
-                alias = alias,
-                style = ImportStyle.IMPORT_NAMESPACE,
-                rawNode = importSpec,
-            )
-        import.importURL = filename
-
-        return import
+        return newImport(
+            import = name,
+            alias = alias,
+            style = ImportStyle.IMPORT_NAMESPACE,
+            rawNode = importSpec,
+        ) {
+            it.importURL = filename
+        }
     }
 
     private fun handleTypeSpec(spec: GoStandardLibrary.Ast.TypeSpec): Declaration {
@@ -108,81 +106,71 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         name: CharSequence,
         typeSpec: GoStandardLibrary.Ast.TypeSpec? = null,
     ): Record {
-        val record = newRecord(name, "struct", rawNode = typeSpec)
+        return newRecord(name, "struct", rawNode = typeSpec, enterScope = true) { record ->
+            if (!structType.incomplete) {
+                for (field in structType.fields.list) {
+                    val type = frontend.typeOf(field.type)
 
-        frontend.scopeManager.enterScope(record)
+                    // A field can also have no name, which means that it is embedded. In this case,
+                    // it can be accessed by the local name of its type, and therefore we name the
+                    // field accordingly. We use the "modifiers" property to denote that this is an
+                    // embedded field, so we can easily retrieve them later
+                    val (fieldName, modifiers) =
+                        if (field.names.isEmpty()) {
+                            // Retrieve the root type local name
+                            Pair(type.root.name.localName, setOf("embedded"))
+                        } else {
+                            Pair(field.names[0].name, setOf())
+                        }
 
-        if (!structType.incomplete) {
-            for (field in structType.fields.list) {
-                val type = frontend.typeOf(field.type)
-
-                // A field can also have no name, which means that it is embedded. In this case, it
-                // can be accessed by the local name of its type, and therefore we name the field
-                // accordingly. We use the "modifiers" property to denote that this is an embedded
-                // field, so we can easily retrieve them later
-                val (fieldName, modifiers) =
-                    if (field.names.isEmpty()) {
-                        // Retrieve the root type local name
-                        Pair(type.root.name.localName, setOf("embedded"))
-                    } else {
-                        Pair(field.names[0].name, setOf())
-                    }
-
-                val decl = newField(fieldName, type, modifiers, rawNode = field)
-                frontend.scopeManager.addDeclaration(decl)
-                record.fields += decl
+                    newField(fieldName, type, modifiers, rawNode = field, holder = record)
+                }
             }
         }
-
-        frontend.scopeManager.leaveScope(record)
-
-        return record
     }
 
     private fun handleInterfaceTypeSpec(
         typeSpec: GoStandardLibrary.Ast.TypeSpec,
         interfaceType: GoStandardLibrary.Ast.InterfaceType,
     ): Declaration {
-        val record = newRecord(typeSpec.name.name, "interface", rawNode = typeSpec)
+        return newRecord(typeSpec.name.name, "interface", rawNode = typeSpec, enterScope = true) {
+            record ->
+            if (!interfaceType.incomplete) {
+                for (field in interfaceType.methods.list) {
+                    val type = frontend.typeOf(field.type)
 
-        frontend.scopeManager.enterScope(record)
+                    // Even though this list is called "Methods", it contains all kinds
+                    // of things, so we need to proceed with caution. Only if the
+                    // "method" actually has a name, we declare a new method
+                    // declaration.
+                    if (field.names.isNotEmpty()) {
+                        newMethod(
+                            field.names[0].name,
+                            rawNode = field,
+                            enterScope = true,
+                            holder = record,
+                        ) { method ->
+                            method.type = type
 
-        if (!interfaceType.incomplete) {
-            for (field in interfaceType.methods.list) {
-                val type = frontend.typeOf(field.type)
-
-                // Even though this list is called "Methods", it contains all kinds
-                // of things, so we need to proceed with caution. Only if the
-                // "method" actually has a name, we declare a new method
-                // declaration.
-                if (field.names.isNotEmpty()) {
-                    val method = newMethod(field.names[0].name, rawNode = field)
-                    method.type = type
-
-                    frontend.scopeManager.enterScope(method)
-
-                    val params = (field.type as? GoStandardLibrary.Ast.FuncType)?.params
-                    if (params != null) {
-                        frontend.declarationHandler.handleFuncParams(method, params)
+                            val params = (field.type as? GoStandardLibrary.Ast.FuncType)?.params
+                            if (params != null) {
+                                frontend.declarationHandler.handleFuncParams(method, params)
+                            }
+                        }
+                    } else {
+                        log.debug(
+                            "Adding {} as super class of interface {}",
+                            type.name,
+                            record.name,
+                        )
+                        // Otherwise, it contains either types or interfaces. For now, we
+                        // hope that it only has interfaces. We consider embedded
+                        // interfaces as sort of super types for this interface.
+                        record.addSuperClass(type)
                     }
-
-                    frontend.scopeManager.leaveScope(method)
-
-                    frontend.scopeManager.addDeclaration(method)
-                    record.methods += method
-                } else {
-                    log.debug("Adding {} as super class of interface {}", type.name, record.name)
-                    // Otherwise, it contains either types or interfaces. For now, we
-                    // hope that it only has interfaces. We consider embedded
-                    // interfaces as sort of super types for this interface.
-                    record.addSuperClass(type)
                 }
             }
         }
-
-        frontend.scopeManager.leaveScope(record)
-
-        return record
     }
 
     /**
@@ -200,37 +188,36 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         if (lenValues == 1 && lenValues != valueSpec.names.size) {
             // We need to construct a "tuple" declaration on the left side that holds all the
             // variables
-            val tuple = newTuple(listOf(), null, rawNode = valueSpec)
-            tuple.type = autoType()
+            return newTuple(listOf(), null, rawNode = valueSpec) { tuple ->
+                tuple.type = autoType()
 
-            for (ident in valueSpec.names) {
-                // We want to make sure that top-level declarations, i.e, the ones that are directly
-                // in a namespace are FQNs. Otherwise, we cannot resolve them properly when we
-                // access
-                // them outside of the package.
-                val fqn =
-                    if (frontend.scopeManager.currentScope is NameScope) {
-                        fqn(ident.name)
+                for (ident in valueSpec.names) {
+                    // We want to make sure that top-level declarations, i.e, the ones that are
+                    // directly in a namespace are FQNs. Otherwise, we cannot resolve them properly
+                    // when we access them outside of the package.
+                    val fqn =
+                        if (frontend.scopeManager.currentScope is NameScope) {
+                            fqn(ident.name)
+                        } else {
+                            ident.name
+                        }
+                    val decl = newVariable(fqn, rawNode = valueSpec)
+
+                    if (valueSpec.type != null) {
+                        decl.type = frontend.typeOf(valueSpec.type!!)
                     } else {
-                        ident.name
+                        decl.type = autoType()
                     }
-                val decl = newVariable(fqn, rawNode = valueSpec)
 
-                if (valueSpec.type != null) {
-                    decl.type = frontend.typeOf(valueSpec.type!!)
-                } else {
-                    decl.type = autoType()
+                    if (valueSpec.values.isNotEmpty()) {
+                        tuple.initializer = frontend.expressionHandler.handle(valueSpec.values[0])
+                    }
+
+                    // We need to manually add the variables to the AST
+                    frontend.scopeManager.addDeclaration(decl)
+                    tuple += decl
                 }
-
-                if (valueSpec.values.isNotEmpty()) {
-                    tuple.initializer = frontend.expressionHandler.handle(valueSpec.values[0])
-                }
-
-                // We need to manually add the variables to the AST
-                frontend.scopeManager.addDeclaration(decl)
-                tuple += decl
             }
-            return tuple
         } else {
             val sequence = DeclarationSequence()
 
@@ -339,16 +326,11 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             // use the special kind "type" to identity such records and put the target type (also
             // called the "underlying type") in the list of superclasses.
             else -> {
-                val record = newRecord(spec.name.name, "type")
-
-                // We add the underlying type as the single super class
-                record.superClasses = mutableListOf(targetType)
-
                 // Make sure to add the scope to the scope manager
-                frontend.scopeManager.enterScope(record)
-                frontend.scopeManager.leaveScope(record)
-
-                record
+                newRecord(spec.name.name, "type", enterScope = true) { record ->
+                    // We add the underlying type as the single super class
+                    record.superClasses = mutableListOf(targetType)
+                }
             }
         }
     }
