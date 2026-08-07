@@ -55,7 +55,8 @@ dependencies {
     implementation(libs.kotlinx.collections.immutable)
 
     testImplementation(libs.junit.params)
-    integrationTestImplementation(libs.kotlin.reflect)
+    findProject(":cpg-language-java")?.also { integrationTestImplementation(it) }
+    findProject(":cpg-language-cxx")?.also { integrationTestImplementation(it) }
 
     testFixturesApi(
         libs.kotlin.test.junit5
