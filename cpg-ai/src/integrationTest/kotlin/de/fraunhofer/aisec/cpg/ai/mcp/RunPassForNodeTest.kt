@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.ai.mcp
 
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.ctx
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.nodeToPass
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.runPassForNode
 import de.fraunhofer.aisec.cpg.ai.mcp.mcpserver.tools.utils.CpgAnalyzePayload
@@ -34,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.ResolveMemberAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
@@ -41,6 +43,36 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class RunPassForNodeTest {
+
+    @Test
+    fun runEOGPass() {
+        // Build a small CPG without passes
+        runCpgAnalyze(
+            CpgAnalyzePayload("def hello():\n    print('X')", "py"),
+            runPasses = false,
+            cleanup = true,
+        )
+        val globalAnalysisResult = globalAnalysisResult
+        val ctx = ctx
+        assertNotNull(globalAnalysisResult)
+        assertNotNull(ctx)
+
+        // Pick any node (i.e., the function declaration "hello")
+        val functionDecl = globalAnalysisResult.functions["hello"]
+        assertNotNull(functionDecl)
+
+        // Use a concrete TU-related pass on the child
+        val result =
+            runPassForNode(
+                nodeToPass,
+                globalAnalysisResult,
+                functionDecl,
+                SymbolResolver::class,
+                ctx,
+            )
+        // No error expected
+        assertTrue(result.success)
+    }
 
     @Test
     fun runsPassOnNearestParent() {
@@ -60,7 +92,14 @@ class RunPassForNodeTest {
         assertNotNull(functionDecl)
 
         // Use a concrete TU-related pass on the child
-        val result = runPassForNode(functionDecl, ResolveMemberAmbiguityPass::class, ctx)
+        val result =
+            runPassForNode(
+                nodeToPass,
+                globalAnalysisResult,
+                functionDecl,
+                ResolveMemberAmbiguityPass::class,
+                ctx,
+            )
         // No error expected
         assertTrue(result.success)
     }
@@ -79,7 +118,14 @@ class RunPassForNodeTest {
         assertNotNull(ctx)
 
         // Use a concrete TU-related pass on the parent
-        val result = runPassForNode(globalAnalysisResult, ResolveMemberAmbiguityPass::class, ctx)
+        val result =
+            runPassForNode(
+                nodeToPass,
+                globalAnalysisResult,
+                globalAnalysisResult,
+                ResolveMemberAmbiguityPass::class,
+                ctx,
+            )
         // No error expected
         assertTrue(result.success)
     }
@@ -98,7 +144,14 @@ class RunPassForNodeTest {
         assertNotNull(ctx)
 
         // Use a concrete TU-related pass on the parent
-        val result = runPassForNode(globalAnalysisResult, ResolveMemberAmbiguityPass::class, ctx)
+        val result =
+            runPassForNode(
+                nodeToPass,
+                globalAnalysisResult,
+                globalAnalysisResult,
+                ResolveMemberAmbiguityPass::class,
+                ctx,
+            )
         // No error expected
         assertTrue(result.success)
     }
@@ -120,7 +173,13 @@ class RunPassForNodeTest {
         // TranslationUnitPass is abstract; primary constructor call should fail with
         // IllegalArgumentException
         assertFailsWith<IllegalArgumentException> {
-            runPassForNode(someNode, TranslationUnitPass::class, ctx)
+            runPassForNode(
+                nodeToPass,
+                globalAnalysisResult,
+                someNode,
+                TranslationUnitPass::class,
+                ctx,
+            )
         }
     }
 }
