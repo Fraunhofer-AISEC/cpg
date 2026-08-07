@@ -234,6 +234,7 @@ fun executionPath(
 ): QueryTree<Boolean> {
     val collectFailedPaths = type == Must
     val findAllPossiblePaths = type == Must
+    val stopAfterHit = type == May
     val earlyTermination = { n: Node, _: Context -> earlyTermination?.let { it(n) } == true }
 
     val evalRes =
@@ -247,6 +248,7 @@ fun executionPath(
                     startNode.followEOGEdgesUntilHit(
                         collectFailedPaths = collectFailedPaths,
                         findAllPossiblePaths = findAllPossiblePaths,
+                        stopAfterHit = stopAfterHit,
                         direction = direction,
                         sensitivities = FilterUnreachableEOG + ContextSensitive,
                         scope = scope,
