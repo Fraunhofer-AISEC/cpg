@@ -104,5 +104,10 @@ class PointerType : Type, SecondOrderType {
             pointerOrigin == other.pointerOrigin
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), elementType, pointerOrigin)
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), elementType, pointerOrigin)
+        // TODO: Use System.identityHashCode for elementType to avoid infinite recursion
+        //   when dealing with circular type references (e.g., struct with pointer to itself).
+        // However, this needs a re-design of the current type handling
+    }
 }
