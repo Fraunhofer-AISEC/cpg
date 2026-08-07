@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.ResolveInFrontend
+import de.fraunhofer.aisec.cpg.frontends.DeclarationContext
+import de.fraunhofer.aisec.cpg.frontends.HasKeywordSemantics
 import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -485,8 +487,15 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
             val declaration = frontend.declarationHandler.handle(member)
             if (declaration != null) {
-                // Apply current visibility to the declaration
+                // Record the raw access specifier losslessly, and additionally project it onto the
+                // canonical [Declaration.visibility] via the language's keyword semantics, so that
+                // passes such as the SymbolResolver can reason about member access control without
+                // knowing C++'s concrete access keywords.
                 declaration.modifiers += currentVisibility
+                (language as? HasKeywordSemantics)
+                    ?.interpretKeyword(currentVisibility, DeclarationContext.RECORD)
+                    ?.visibility
+                    ?.let { declaration.visibility = it }
                 frontend.scopeManager.addDeclaration(declaration)
                 recordDeclaration.addDeclaration(declaration)
             }

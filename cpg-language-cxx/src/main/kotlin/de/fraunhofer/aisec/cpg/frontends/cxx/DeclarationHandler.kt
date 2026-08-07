@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
+import de.fraunhofer.aisec.cpg.frontends.DeclarationContext
+import de.fraunhofer.aisec.cpg.frontends.HasKeywordSemantics
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
@@ -34,7 +36,9 @@ import de.fraunhofer.aisec.cpg.graph.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.expressions.Return
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -182,6 +186,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         // We also need to set the return type, based on the function type.
         declaration.returnTypes = type?.returnTypes ?: listOf(incompleteType())
+
+        // Interpret a `static` storage-class specifier before we (potentially) enter another scope
+        // for the definition, so that the syntactic context is still the one the function is
+        // declared in (e.g. file scope for an internal-linkage function).
+        handleStorageClass(declaration, ctx.declSpecifier)
 
         // We want to determine, whether this is a function definition that is external to its
         // scope. This is a usual case in C++, where the named scope, such as a record or namespace
@@ -419,6 +428,50 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         return type
     }
 
+    /**
+     * The [DeclarationContext] the frontend is currently building a declaration in, derived from
+     * the active scope. This is exactly the information a [HasKeywordSemantics] language needs in
+     * order to interpret a context-dependent keyword such as `static`: the same keyword means
+     * different things at file/namespace scope, inside a record, or within a function body.
+     */
+    private val currentDeclarationContext: DeclarationContext
+        get() =
+            when (frontend.scopeManager.currentScope) {
+                is RecordScope -> DeclarationContext.RECORD
+                is GlobalScope,
+                is NamespaceScope -> DeclarationContext.GLOBAL
+                else -> DeclarationContext.LOCAL
+            }
+
+    /**
+     * Interprets the `static` storage-class specifier of [declSpecifier] for the freshly-built
+     * [declaration] and projects the resulting canonical semantics onto the declaration.
+     *
+     * The raw keyword is recorded losslessly in [Declaration.modifiers]; its *meaning* — internal
+     * linkage at file scope, a static (class-level) member inside a record, or nothing
+     * resolution-relevant inside a function — is delegated to the language's [HasKeywordSemantics]
+     * trait, so that this handler only has to supply the syntactic [currentDeclarationContext] and
+     * store the outcome in [Declaration.visibility] and [ValueDeclaration.isStatic].
+     */
+    private fun handleStorageClass(
+        declaration: ValueDeclaration,
+        declSpecifier: IASTDeclSpecifier?,
+    ) {
+        val language = language
+        if (
+            language !is HasKeywordSemantics ||
+                declSpecifier?.storageClass != IASTDeclSpecifier.sc_static
+        ) {
+            return
+        }
+
+        declaration.modifiers = declaration.modifiers + STATIC
+
+        val semantics = language.interpretKeyword(STATIC, currentDeclarationContext)
+        semantics.visibility?.let { declaration.visibility = it }
+        semantics.isStatic?.let { declaration.isStatic = it }
+    }
+
     private fun handleSimpleDeclaration(ctx: IASTSimpleDeclaration): Declaration {
         val sequence = DeclarationSequence()
         val declSpecifier = ctx.declSpecifier
@@ -477,6 +530,11 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
                 // process attributes
                 frontend.processAttributes(declaration, ctx)
+
+                // Interpret a `static` storage-class specifier (internal linkage, static member,
+                // ...) based on the syntactic context this declaration appears in.
+                handleStorageClass(declaration, declSpecifier)
+
                 sequence.addDeclaration(declaration)
 
                 // We want to make sure that we parse the initializer *after* we have set the

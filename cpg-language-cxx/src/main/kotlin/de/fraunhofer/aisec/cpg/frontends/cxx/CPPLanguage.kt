@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.Visibility
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
@@ -60,10 +61,27 @@ open class CPPLanguage :
     HasFunctionStyleCasts,
     HasFunctionOverloading,
     HasOperatorOverloading,
-    HasImplicitReceiver {
+    HasImplicitReceiver,
+    HasAccessControl {
     override val fileExtensions = listOf("cpp", "cc", "cxx", "c++", "hpp", "hh")
     override val elaboratedTypeSpecifier = listOf("class", "struct", "union", "enum")
     override val unknownTypeString = listOf("auto")
+
+    /**
+     * Interprets a C++ declaration keyword into its canonical [KeywordSemantics]. In addition to
+     * the context-dependent `static` handled by [CLanguage.interpretKeyword], C++ has genuine
+     * member access control, so the access specifiers `public`/`protected`/`private` map onto the
+     * corresponding [Visibility] (they only ever occur on record members). Every other keyword is
+     * delegated to the C interpretation.
+     */
+    override fun interpretKeyword(keyword: String, context: DeclarationContext): KeywordSemantics {
+        return when (keyword) {
+            PUBLIC -> KeywordSemantics(visibility = Visibility.PUBLIC)
+            PROTECTED -> KeywordSemantics(visibility = Visibility.PROTECTED)
+            PRIVATE -> KeywordSemantics(visibility = Visibility.PRIVATE)
+            else -> super.interpretKeyword(keyword, context)
+        }
+    }
 
     // C++ has no notion of a "tentative definition": a non-class-type variable at
     // namespace/global scope without an initializer is already a full definition, so a second

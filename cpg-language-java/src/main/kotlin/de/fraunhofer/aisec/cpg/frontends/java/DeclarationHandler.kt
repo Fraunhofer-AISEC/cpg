@@ -279,7 +279,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     variable.name.asString(),
                     type,
                     fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet(),
-                    initializer,
+                    isStatic = fieldDecl.isStatic,
+                    initializer = initializer,
                     rawNode = fieldDecl,
                 )
             frontend.processAnnotations(fieldDeclaration, fieldDecl)

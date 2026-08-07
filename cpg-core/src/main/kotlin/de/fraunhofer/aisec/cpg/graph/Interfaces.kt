@@ -206,3 +206,20 @@ interface HasModifiers {
      */
     var modifiers: Set<String>
 }
+
+/**
+ * Specifies that a node has a canonical, language-independent [Visibility]. While [HasModifiers]
+ * keeps the raw, language-specific spelling (e.g. the strings `public` or `static`), this interface
+ * exposes the *interpreted* visibility that passes such as the [SymbolResolver] can reason about
+ * without knowing any language's concrete keywords.
+ *
+ * The two are complementary: a language frontend fills [HasModifiers.modifiers] losslessly from the
+ * source and, in addition, maps the relevant modifiers onto a single [visibility] value. The
+ * default is [Visibility.UNKNOWN], which consumers must treat as "no restriction", so that
+ * languages which do not model visibility remain unaffected.
+ */
+interface HasVisibility {
+
+    /** The canonical visibility of this node. See [Visibility] for the exact semantics. */
+    var visibility: Visibility
+}
