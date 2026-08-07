@@ -111,12 +111,26 @@ data class LLMOperation(
         "The description of the operation. It should explain what the operation does and provide guidance on when to apply it."
     )
     val description: String,
-    @Description("The CPG id of the node to which the operation should be applied.")
-    val nodeId: String,
+    @Description(
+        "The CPG id of the node to which the concept should be applied. Either this or the location must be specified"
+    )
+    val nodeId: String? = null,
+    @Description(
+        "The location of the node to which the operation should be applied. Either this or nodeId must be specified."
+    )
+    val location: LLMLocation? = null,
     @Description(
         "The properties to set for the operation. Each property should have a name and a value. The name should match the name of a parameter defined in the operation description, and the value should be the corresponding value for this specific application of the operation."
     )
     val properties: List<LLMProperty>,
+)
+
+@Serializable
+data class LLMLocation(
+    @Description("The name of the file or path (e.g., 'Foo.java' or 'src/Foo.java').")
+    val file: String,
+    @Description("The start line of the node") val line: Int,
+    @Description("Optional. The start column of the node") val column: Int? = null,
 )
 
 @Serializable
@@ -127,8 +141,14 @@ data class LLMConcept(
         "The description of the concept. It should explain the concept in more detail and provide guidance on when to apply it."
     )
     val description: String,
-    @Description("The CPG id of the node to which the concept should be applied.")
-    val nodeId: String,
+    @Description(
+        "The CPG id of the node to which the concept should be applied. Either this or the location must be specified"
+    )
+    val nodeId: String? = null,
+    @Description(
+        "The location of the node to which the operation should be applied. Either this or nodeId must be specified."
+    )
+    val location: LLMLocation? = null,
     @Description(
         "The properties to set for the concept. Each property should have a name and a value. The name should match the name of a parameter defined in the concept description, and the value should be the corresponding value for this specific application of the concept."
     )
