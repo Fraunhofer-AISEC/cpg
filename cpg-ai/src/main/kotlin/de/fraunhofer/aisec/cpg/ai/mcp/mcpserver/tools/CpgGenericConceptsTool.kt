@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericLLMOperation
 import de.fraunhofer.aisec.cpg.graph.concepts.GenericProperties
+import de.fraunhofer.aisec.cpg.graph.concepts.GenericPropertyValue
 import de.fraunhofer.aisec.cpg.graph.nodes
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -50,7 +51,7 @@ private const val fileName = "concepts.yaml"
  * This is a tool to list all currently known concepts and operations. It should be queried
  * initially to get an overview of the available concepts and operations.
  */
-fun Server.listLLMConceptsOperations() {
+fun Server.listLLMConceptsOperations(file: File = File(fileName)) {
     val jsonMapper = ObjectMapper().registerKotlinModule()
     fun LLMConceptDescription.toJson(): String = jsonMapper.writeValueAsString(this)
     val toolDescription =
@@ -64,7 +65,7 @@ fun Server.listLLMConceptsOperations() {
             .trimIndent()
     this.addTool(name = "cpg_list_llm_concepts_operations", description = toolDescription) { _ ->
         CallToolResult(
-            content = loadPersistedConceptsAndOperations().map { TextContent(it.toJson()) }
+            content = loadPersistedConceptsAndOperations(file).map { TextContent(it.toJson()) }
         )
     }
 }
@@ -75,7 +76,7 @@ fun Server.listLLMConceptsOperations() {
  * graph. Matching a concept is done by its name. If a concept with the same name already exists, it
  * will be overwritten with the new information. Otherwise, a new concept will be added.
  */
-fun Server.addOrUpdateConcept() {
+fun Server.addOrUpdateConcept(file: File = File(fileName)) {
     val toolDescription =
         """
         This tool adds or updates a concept in the persisted LLM concepts store.
@@ -97,9 +98,9 @@ fun Server.addOrUpdateConcept() {
                 ?: return@addTool CallToolResult(
                     content = listOf(TextContent("Invalid input for adding/updating concept."))
                 )
-        persistConceptSchemas(listOf(payload))
+        persistConceptSchemas(listOf(payload), file)
         CallToolResult(
-            content = listOf(TextContent("Saved concept '${payload.name}' to $fileName."))
+            content = listOf(TextContent("Saved concept '${payload.name}' to ${file.path}."))
         )
     }
 }
@@ -148,7 +149,7 @@ fun Server.suggestLLMConceptsAndOperations() {
 /**
  * This function adds a [GenericLLMConcept] and the corresponding [GenericLLMOperation]s to the CPG.
  */
-fun Server.addLLMConceptAndOperations() {
+fun Server.addLLMConceptAndOperations(file: File = File(fileName)) {
     val toolDescription =
         """
         This tool applies a concept and all its operations to the graph.
@@ -182,7 +183,16 @@ fun Server.addLLMConceptAndOperations() {
                         conceptName = concept.name,
                         description = concept.description,
                         properties =
-                            GenericProperties(concept.properties.associate { it.name to it.value }),
+                            GenericProperties(
+                                concept.properties.associate {
+                                    it.name to
+                                        GenericPropertyValue(
+                                            value = it.value,
+                                            description = it.description,
+                                        )
+                                }
+                            ),
+                        notes = concept.notes,
                     )
                     .apply {
                         this.codeAndLocationFrom(cpgConceptNode)
@@ -216,8 +226,15 @@ fun Server.addLLMConceptAndOperations() {
                             genericLLMConcept = conceptNode,
                             properties =
                                 GenericProperties(
-                                    operation.properties.associate { it.name to it.value }
+                                    operation.properties.associate {
+                                        it.name to
+                                            GenericPropertyValue(
+                                                value = it.value,
+                                                description = it.description,
+                                            )
+                                    }
                                 ),
+                            notes = operation.notes,
                         )
                         .apply {
                             this.codeAndLocationFrom(cpgOperationNode)
@@ -245,7 +262,7 @@ fun Server.addLLMConceptAndOperations() {
         }
 
         if (schemasToPersist.isNotEmpty()) {
-            persistConceptSchemas(schemasToPersist)
+            persistConceptSchemas(schemasToPersist, file)
         }
 
         val response = AddConceptsResult(applied = applied, failed = failed)
@@ -257,8 +274,9 @@ fun Server.addLLMConceptAndOperations() {
  * This function loads persisted concepts and operations from a storage and returns them as a list
  * of [LLMConceptDescription].
  */
-internal fun loadPersistedConceptsAndOperations(): List<LLMConceptDescription> {
-    val file = File(fileName)
+internal fun loadPersistedConceptsAndOperations(
+    file: File = File(fileName)
+): List<LLMConceptDescription> {
     if (!file.exists() || file.length() == 0L) return emptyList()
     val mapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
     return mapper.readValue<List<LLMConceptDescription>>(file)
@@ -268,10 +286,12 @@ internal fun loadPersistedConceptsAndOperations(): List<LLMConceptDescription> {
  * Merge the given concept schemas into the persisted YAML store. Concepts are matched by name; an
  * existing entry is replaced, otherwise appended.
  */
-private fun persistConceptSchemas(schemas: List<LLMConceptDescription>) {
+private fun persistConceptSchemas(
+    schemas: List<LLMConceptDescription>,
+    file: File = File(fileName),
+) {
     val mapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
-    val file = File(fileName)
-    var updated = loadPersistedConceptsAndOperations()
+    var updated = loadPersistedConceptsAndOperations(file)
     schemas.forEach { schema ->
         updated =
             if (updated.any { it.name == schema.name }) {

@@ -25,10 +25,22 @@
  */
 package de.fraunhofer.aisec.cpg.ai.clients
 
+import ai.koog.http.client.ktor.KtorKoogHttpClient
+import ai.koog.prompt.executor.clients.openai.OpenAIClientSettings
+import ai.koog.prompt.executor.clients.openai.OpenAILLMClient
+import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
+import ai.koog.prompt.executor.llms.all.simpleGoogleAIExecutor
+import ai.koog.prompt.llm.LLMCapability
+import ai.koog.prompt.llm.LLMProvider
+import ai.koog.prompt.llm.LLModel
 import com.typesafe.config.Config
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.*
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger as KtorLogger
+import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -36,22 +48,109 @@ import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger(LlmProviderConfig::class.java)
 
+/**
+ * Generic context-length fallbacks used when constructing an [LLModel] for a model chosen
+ * dynamically (by name) via config/`listAvailableProviders`, rather than one of Koog's predefined
+ * per-provider model catalogs (e.g. `OpenAIModels`, `GoogleModels`). We don't know the true context
+ * window of an arbitrary/local model up front, so these are just reasonable, generous defaults.
+ */
+private const val OPENAI_COMPATIBLE_DEFAULT_CONTEXT_LENGTH = 128_000L
+private const val GEMINI_DEFAULT_CONTEXT_LENGTH = 1_000_000L
+
 class LlmProviderConfig(private val httpClient: HttpClient, val clients: List<ClientConfig>) {
     /**
-     * Resolves the [ClientProvider] name with the chosen model to a [LlmClient]. Returns `null` if
-     * the provider is unknown, or if a required API key is missing.
+     * Resolves the [ClientProvider] name with the chosen model to a [ChatLlm] (a Koog prompt
+     * executor bound to a specific model). Returns `null` if the provider is unknown, or if a
+     * required API key is missing.
      */
-    fun clientFor(clientName: String, model: String): LlmClient? {
+    fun clientFor(clientName: String, model: String): ChatLlm? {
         val config = clients.firstOrNull { it.name == clientName } ?: return null
 
         return when (config.provider) {
             ClientProvider.GEMINI -> {
                 val apiKey = config.apiKey ?: return null
-                GeminiClient(httpClient, model, apiKey, config.baseUrl)
+                // Gemini has no real "local/custom endpoint" use case (unlike the OpenAI-compatible
+                // providers below), so we intentionally don't try to route config.baseUrl through
+                // here; it is still used for model discovery in fetchGeminiModels.
+                ChatLlm(
+                    executor = simpleGoogleAIExecutor(apiKey),
+                    model =
+                        LLModel(
+                            provider = LLMProvider.Google,
+                            id = model,
+                            capabilities =
+                                listOf(
+                                    LLMCapability.Temperature,
+                                    LLMCapability.Tools,
+                                    // GoogleLLMClient.execute() requires this capability too (same
+                                    // requireCapability(LLMCapability.Completion) check as
+                                    // OpenAILLMClient below); without it every Gemini model fails
+                                    // with "Model <id> does not support completion".
+                                    LLMCapability.Completion,
+                                ),
+                            contextLength = GEMINI_DEFAULT_CONTEXT_LENGTH,
+                        ),
+                )
             }
 
-            ClientProvider.OPENAI_COMPATIBLE ->
-                OpenAiClient(httpClient, model, config.baseUrl, config.apiKey)
+            ClientProvider.OPENAI_COMPATIBLE -> {
+                // Logs the full request/response bodies exchanged with the OpenAI-compatible
+                // endpoint (tool schema, tool_choice, and the raw completion) - invaluable for
+                // debugging tool-calling issues against custom/local servers (vLLM, ollama, ...),
+                // whose behavior can diverge from the official OpenAI API in ways that are
+                // otherwise invisible from inside Koog's client.
+                val loggingKtorClient =
+                    HttpClient(CIO) {
+                        install(Logging) {
+                            logger =
+                                object : KtorLogger {
+                                    override fun log(message: String) {
+                                        println(message)
+                                    }
+                                }
+                            level = LogLevel.ALL
+                        }
+                    }
+                // Reuses Koog's own KtorKoogHttpClient.Factory (rather than hand-rolling the
+                // KoogHttpClient setup) so we get its baseUrl/contentType/ContentNegotiation/SSE
+                // wiring exactly as the default apiKey-based OpenAILLMClient constructor would -
+                // only swapping in our logging-enabled Ktor client underneath.
+                val client =
+                    OpenAILLMClient(
+                        apiKey = config.apiKey ?: "not-needed",
+                        settings = OpenAIClientSettings(baseUrl = config.baseUrl),
+                        httpClientFactory =
+                            KtorKoogHttpClient.Factory(baseClient = loggingKtorClient),
+                    )
+                ChatLlm(
+                    executor = MultiLLMPromptExecutor(LLMProvider.OpenAI to client),
+                    model =
+                        LLModel(
+                            provider = LLMProvider.OpenAI,
+                            id = model,
+                            capabilities =
+                                listOf(
+                                    LLMCapability.Temperature,
+                                    LLMCapability.Tools,
+                                    // AbstractOpenAILLMClient.execute() requires this base
+                                    // capability before it will run a completion at all; without
+                                    // it every model fails with "Model <id> does not support
+                                    // completion".
+                                    LLMCapability.Completion,
+                                    // OpenAILLMClient.determineParams() separately requires the
+                                    // model to declare one of the two OpenAI endpoint capabilities
+                                    // to know which request shape to send; without it, every
+                                    // custom/local model (ollama, vLLM, mlx, ...) fails with
+                                    // "Cannot determine proper LLM params". These servers all speak
+                                    // the legacy /v1/chat/completions shape (matching
+                                    // OpenAIClientSettings' default chatCompletionsPath), not the
+                                    // newer /v1/responses API.
+                                    LLMCapability.OpenAIEndpoint.Completions,
+                                ),
+                            contextLength = OPENAI_COMPATIBLE_DEFAULT_CONTEXT_LENGTH,
+                        ),
+                )
+            }
         }
     }
 

@@ -28,10 +28,21 @@ package de.fraunhofer.aisec.cpg.graph.concepts
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 
 /**
+ * A single property's value, as attached to a [GenericLLMConcept]/[GenericLLMOperation].
+ *
+ * @param value The property's value (as a string representation).
+ * @param description A description of the property, e.g. what it represents, or - for a property
+ *   corresponding to one of the tagged function's actual parameters - which parameter that is
+ *   (name/position).
+ *
+ * TODO: also capture the property's declared `type` here once we decide how to represent/query it.
+ */
+@DoNotPersist data class GenericPropertyValue(val value: String, val description: String? = null)
+
+/**
  * Represents a generic set of properties for a concept or operation. This can be used to store
- * arbitrary "fields". The key represents the name of the property, and the value can be any type of
- * data.
+ * arbitrary "fields". The key represents the name of the property.
  *
  * TODO: neo4j persistence
  */
-@DoNotPersist data class GenericProperties(val properties: Map<String, String /* TODO */>)
+@DoNotPersist data class GenericProperties(val properties: Map<String, GenericPropertyValue>)
