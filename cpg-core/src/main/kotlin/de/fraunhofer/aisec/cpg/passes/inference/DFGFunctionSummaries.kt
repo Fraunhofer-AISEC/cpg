@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes.inference
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -72,7 +73,7 @@ class DFGFunctionSummaries {
     private constructor()
 
     /** Caches a mapping of the [FunctionDeclarationEntry] to a list of its [DFGEntry]. */
-    val functionToDFGEntryMap = mutableMapOf<FunctionDeclarationEntry, List<DFGEntry>>()
+    @JsonIgnore val functionToDFGEntryMap = mutableMapOf<FunctionDeclarationEntry, List<DFGEntry>>()
 
     fun hasSummary(function: Function) = function.functionSummary.isNotEmpty()
 
@@ -80,7 +81,7 @@ class DFGFunctionSummaries {
         function.functionSummary
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
-    private fun addEntriesFromFile(file: File): Map<FunctionDeclarationEntry, List<DFGEntry>> {
+    fun addEntriesFromFile(file: File): Map<FunctionDeclarationEntry, List<DFGEntry>> {
         val mapper =
             if (file.extension.lowercase() in listOf("yaml", "yml")) {
                     ObjectMapper(YAMLFactory())

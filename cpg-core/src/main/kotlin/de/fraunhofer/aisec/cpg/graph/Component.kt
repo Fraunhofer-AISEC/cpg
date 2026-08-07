@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonMerge
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
@@ -51,9 +53,11 @@ import java.util.IdentityHashMap
  */
 @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 open class Component : AstNode() {
-    @Relationship("TRANSLATION_UNITS") val translationUnitEdges = astEdgesOf<TranslationUnit>()
+    @Relationship("TRANSLATION_UNITS")
+    @JsonMerge
+    val translationUnitEdges = astEdgesOf<TranslationUnit>()
     /** All translation units belonging to this application. */
-    val translationUnits by unwrapping(Component::translationUnitEdges)
+    @get:JsonIgnore val translationUnits by unwrapping(Component::translationUnitEdges)
 
     /**
      * The import dependencies of [TranslationUnit] nodes of this component. The preferred way to
@@ -71,8 +75,13 @@ open class Component : AstNode() {
     /**
      * Stores types that are not directly connected to a node, but are still relevant for the type
      * resolution of this component.
+     *
+     * Excluded from JSON serialization: it is a regenerable type-resolution cache (an
+     * [IdentityHashMap], i.e. a Java collection subtype that also trips kotlin-reflect on the write
+     * path), and the neo4j persistence path likewise never emits it. It is recomputed when passes
+     * re-run.
      */
-    val additionalTypes = IdentityHashMap<String, Type>()
+    @get:JsonIgnore val additionalTypes = IdentityHashMap<String, Type>()
 
     /**
      * In contrast to other Nodes we do not add the assumptions collected over the component because

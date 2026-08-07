@@ -102,7 +102,7 @@ class Construction : Call() {
 
     override fun hashCode() = Objects.hash(super.hashCode(), constructor, arguments)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return arguments.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+    override fun startingPrevEOG(): Collection<Node> {
+        return arguments.firstOrNull()?.startingPrevEOG() ?: this.prevEOG
     }
 }

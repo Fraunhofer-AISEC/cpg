@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -54,7 +55,13 @@ import org.slf4j.LoggerFactory
  * than adding the declaration to the node itself. This ensures that all declarations are properly
  * registered in the scope map and can be resolved later.
  */
-class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, ContextProvider {
+class ScopeManager() : ScopeProvider, ContextProvider {
+
+    override lateinit var ctx: TranslationContext
+
+    constructor(ctx: TranslationContext) : this() {
+        this.ctx = ctx
+    }
 
     /**
      * The top-most scope in the scope tree. This is the root of the tree and is not associated with
@@ -117,10 +124,12 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     )
 
     /** True, if the scope manager is currently in a [FunctionScope]. */
+    @get:JsonIgnore
     val isInFunction: Boolean
         get() = this.firstScopeOrNull { it is FunctionScope } != null
 
     /** True, if the scope manager is currently in a [RecordScope], e.g. a class. */
+    @get:JsonIgnore
     val isInRecord: Boolean
         get() = this.firstScopeOrNull { it is RecordScope } != null
 
@@ -132,10 +141,12 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         private set
 
     /** The current function, according to the scope that is currently active. */
+    @get:JsonIgnore
     val currentFunction: Function?
         get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? Function
 
     /** The current block, according to the scope that is currently active. */
+    @get:JsonIgnore
     val currentBlock: Block?
         get() = currentScope.astNode as? Block ?: currentScope.astNode?.firstParentOrNull<Block>()
 
@@ -143,14 +154,17 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * The current method in the active scope tree, this ensures that 'this' keywords are mapped
      * correctly if a method contains a lambda or other types of function declarations
      */
+    @get:JsonIgnore
     val currentMethod: Method?
         get() =
             this.firstScopeOrNull { scope: Scope? -> scope?.astNode is Method }?.astNode as? Method
 
     /** The current record, according to the scope that is currently active. */
+    @get:JsonIgnore
     val currentRecord: Record?
         get() = this.firstScopeIsInstanceOrNull<RecordScope>()?.astNode as? Record
 
+    @get:JsonIgnore
     val currentNamespace: Name?
         get() {
             val namedScope = this.firstScopeIsInstanceOrNull<NameScope>()
@@ -769,6 +783,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /** Returns the current scope for the [ScopeProvider] interface. */
+    @get:JsonIgnore
     override val scope: Scope
         get() = currentScope
 

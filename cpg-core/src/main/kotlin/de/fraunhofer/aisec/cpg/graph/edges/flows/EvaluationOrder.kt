@@ -92,6 +92,7 @@ class EvaluationOrder(
  * of type [Node], but if we skip this parameter, the Neo4J exporter does not recognize this as a
  * "list".
  */
+// @JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
 class EvaluationOrders<NodeType : Node>(
     thisRef: Node,
     override var mirrorProperty: KProperty<MutableCollection<EvaluationOrder>>,

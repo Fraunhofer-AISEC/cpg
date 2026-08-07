@@ -27,8 +27,14 @@
 
 package de.fraunhofer.aisec.cpg.graph
 
-import com.fasterxml.jackson.annotation.JsonBackReference
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.JsonIdentityReference
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonMerge
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
@@ -64,6 +70,13 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
+// @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property = "@class")
+@JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
+@JsonIdentityReference(alwaysAsId = true)
+// @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property =
+// "@class")
 abstract class Node() :
     IVisitable,
     Persistable,
@@ -84,6 +97,7 @@ abstract class Node() :
     @DoNotPersist @JsonIgnore private var cachedHashCode: Int = 0
 
     /** This property holds the full name using our new [Name] class. */
+    @JsonDeserialize(using = NameConverter::class)
     @Convert(NameConverter::class)
     override var name: Name = Name(EMPTY_NAME)
         set(value) {
@@ -102,7 +116,7 @@ abstract class Node() :
      * [LanguageProvider] at the time when the node is created.
      */
     @Relationship(value = "LANGUAGE", direction = Relationship.Direction.OUTGOING)
-    @JsonBackReference
+    // @JsonBackReference THis should not be necessary when serializing with JSON Identity info
     override var language: Language<*> = UnknownLanguage
 
     /**
@@ -115,7 +129,7 @@ abstract class Node() :
      * the [Record].
      */
     @Relationship(value = "SCOPE", direction = Relationship.Direction.OUTGOING)
-    @JsonBackReference
+    // @JsonBackReference THis should not be necessary when serializing with JSON Identity info
     override var scope: Scope? = null
 
     /** Optional comment of this node. */
@@ -131,6 +145,7 @@ abstract class Node() :
     /** Incoming control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(EvaluationOrderGraphPass::class)
+    @JsonMerge
     var prevEOGEdges: EvaluationOrders<Node> =
         EvaluationOrders<Node>(this, mirrorProperty = Node::nextEOGEdges, outgoing = false)
         protected set
@@ -138,6 +153,7 @@ abstract class Node() :
     /** Outgoing control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(EvaluationOrderGraphPass::class)
+    @JsonMerge
     var nextEOGEdges: EvaluationOrders<Node> =
         EvaluationOrders<Node>(this, mirrorProperty = Node::prevEOGEdges, outgoing = true)
         protected set
@@ -183,6 +199,7 @@ abstract class Node() :
      */
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
+    @get:JsonMerge
     var nextCDGEdges: ControlDependences<Node>
         get() =
             _nextCDGEdges
@@ -198,6 +215,7 @@ abstract class Node() :
 
     /** Virtual property for accessing [nextCDGEdges] as plain nodes. */
     @DoNotPersist
+    @get:JsonIgnore
     val nextCDG: MutableList<Node>
         get() = nextCDGEdges.unwrap()
 
@@ -212,6 +230,7 @@ abstract class Node() :
      */
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
+    @get:JsonMerge
     var prevCDGEdges: ControlDependences<Node>
         get() =
             _prevCDGEdges
@@ -227,31 +246,39 @@ abstract class Node() :
 
     /** Virtual property for accessing [prevCDGEdges] as plain nodes. */
     @DoNotPersist
+    @get:JsonIgnore
     val prevCDG: MutableList<Node>
         get() = prevCDGEdges.unwrap()
 
     @DoNotPersist @JsonIgnore var astParent: AstNode? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
-    @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    @get:JsonIgnore
+    var prevEOG by unwrapping(Node::prevEOGEdges)
 
     /** Virtual property for accessing [nextEOGEdges] without property edges. */
-    @PopulatedByPass(EvaluationOrderGraphPass::class) var nextEOG by unwrapping(Node::nextEOGEdges)
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    @get:JsonIgnore
+    var nextEOG by unwrapping(Node::nextEOGEdges)
 
     /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    @JsonMerge
     var prevDFGEdges: Dataflows<Node> =
         Dataflows<Node>(this, mirrorProperty = Node::nextDFGEdges, outgoing = false)
         protected set
 
     /** Virtual property for accessing [prevDFGEdges] without property edges. */
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    @get:JsonIgnore
     var prevDFG by unwrapping(Node::prevDFGEdges)
 
     /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
     @DoNotPersist
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    @get:JsonIgnore
     val prevFullDFG: List<Node>
         get() {
             return prevDFGEdges.mapFiltered({
@@ -274,17 +301,20 @@ abstract class Node() :
     /** Outgoing data flow edges */
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
+    @JsonMerge
     var nextDFGEdges: Dataflows<Node> =
         Dataflows<Node>(this, mirrorProperty = Node::prevDFGEdges, outgoing = true)
         protected set
 
     /** Virtual property for accessing [nextDFGEdges] without property edges. */
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    @get:JsonIgnore
     var nextDFG by unwrapping(Node::nextDFGEdges)
 
     /** Virtual property for accessing [nextDFGEdges] that have a [FullDataflowGranularity]. */
     @DoNotPersist
     @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    @get:JsonIgnore
     val nextFullDFG: List<Node>
         get() {
             return nextDFGEdges.mapFiltered({
@@ -316,6 +346,7 @@ abstract class Node() :
      */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
+    @get:JsonMerge
     var nextPDGEdges: ProgramDependences<Node>
         get() =
             _nextPDGEdges
@@ -331,6 +362,7 @@ abstract class Node() :
 
     /** Virtual property for accessing [nextPDGEdges] as plain nodes. */
     @DoNotPersist
+    @get:JsonIgnore
     val nextPDG: MutableSet<Node>
         get() = nextPDGEdges.unwrap()
 
@@ -344,6 +376,7 @@ abstract class Node() :
      */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
+    @get:JsonMerge
     var prevPDGEdges: ProgramDependences<Node>
         get() =
             _prevPDGEdges
@@ -359,10 +392,11 @@ abstract class Node() :
 
     /** Virtual property for accessing [prevPDGEdges] as plain nodes. */
     @DoNotPersist
+    @get:JsonIgnore
     val prevPDG: MutableSet<Node>
         get() = prevPDGEdges.unwrap()
 
-    @DoNotPersist override val assumptions: MutableSet<Assumption> = smallMutableSetOf()
+    @DoNotPersist @JsonMerge override val assumptions: MutableSet<Assumption> = smallMutableSetOf()
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
@@ -387,7 +421,9 @@ abstract class Node() :
      * [Node.hashCode]. In this sense, it is definitely deterministic and reproducible, however, in
      * theory it is not completely unique, as collisions within [Node.hashCode] could occur.
      */
-    val id: Uuid
+    @get:JsonProperty("id")
+    @set:JsonProperty("id")
+    var id: Uuid
         get() {
             val parent =
                 astParent?.id?.toLongs { mostSignificantBits, leastSignificantBits ->
@@ -395,6 +431,7 @@ abstract class Node() :
                 }
             return Uuid.fromLongs(parent ?: 0, hashCode().toLong())
         }
+        set(value) {}
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0
@@ -403,7 +440,7 @@ abstract class Node() :
      * Additional problem nodes. These nodes represent problems which occurred during processing of
      * a node (i.e. only partially processed).
      */
-    val additionalProblems: MutableSet<ProblemNode> = smallMutableSetOf()
+    @JsonMerge val additionalProblems: MutableSet<ProblemNode> = smallMutableSetOf()
 
     /** Lazy backing field for [overlayEdges]. */
     private var _overlayEdges: Overlays? = null
@@ -415,6 +452,7 @@ abstract class Node() :
      * (optional) concept/overlay passes and stay empty on the vast majority of nodes.
      */
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
+    @get:JsonMerge
     val overlayEdges: Overlays
         get() =
             _overlayEdges
@@ -423,6 +461,7 @@ abstract class Node() :
 
     /** Virtual property for accessing [overlayEdges] as plain nodes. */
     @DoNotPersist
+    @get:JsonIgnore
     val overlays: MutableSet<Node>
         get() = overlayEdges.unwrap()
 
@@ -518,12 +557,12 @@ abstract class Node() :
     }
 
     /** Returns the starting point of the EOG outside this node and its children. */
-    open fun getStartingPrevEOG(): Collection<Node> {
+    open fun startingPrevEOG(): Collection<Node> {
         return this.prevEOG
     }
 
     /** Returns the exit point of the EOG outside this node and its children. */
-    open fun getExitNextEOG(): Collection<Node> {
+    open fun exitNextEOG(): Collection<Node> {
         return this.nextEOG
     }
 

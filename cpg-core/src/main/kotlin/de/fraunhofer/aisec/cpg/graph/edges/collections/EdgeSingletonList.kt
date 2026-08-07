@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.collections
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -34,6 +36,7 @@ import kotlin.reflect.KProperty
  * This is a MAJOR workaround since the old persistence system did not allow to use our (generic)
  * [Edge] class for our AST edges. We could most likely remove this class now.
  */
+@JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
 open class EdgeSingletonList<
     NodeType : Node,
     NullableNodeType : NodeType?,

@@ -153,8 +153,8 @@ open class BinaryOperator :
         return lhs == expression || rhs == expression
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.lhs.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.lhs.startingPrevEOG()
     }
 
     val base: Expression?

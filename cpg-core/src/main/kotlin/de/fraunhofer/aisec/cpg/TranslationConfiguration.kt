@@ -27,12 +27,11 @@ package de.fraunhofer.aisec.cpg
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import de.fraunhofer.aisec.cpg.TranslationContext.EmptyTranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
-import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
@@ -59,6 +58,7 @@ import org.slf4j.LoggerFactory
  * translation.
  */
 @DoNotPersist
+@JsonDeserialize(builder = TranslationConfiguration.Builder::class)
 class TranslationConfiguration
 private constructor(
     /** Definition of additional symbols, mostly useful for C++. */
@@ -102,8 +102,8 @@ private constructor(
      * files will be excluded from being parsed and processed in the CPG. The blocklist entries
      * always take priority over those in the whitelist.
      */
-    val includeBlocklist: List<Path>,
-    passes: List<List<KClass<out Pass<out Node>>>>,
+    @JsonIgnore val includeBlocklist: List<Path>,
+    registeredPasses: List<List<KClass<out Pass<out Node>>>>,
     /**
      * This map offers the possibility to replace certain passes for specific languages with other
      * passes. It can either be filled with the [Builder.replacePass] or by using the [ReplacePass]
@@ -199,7 +199,7 @@ private constructor(
      * A flattened list of [registeredPasses], mainly used for the JSON representation because
      * Jackson cannot deal with lists of lists very well.
      */
-    @get:JsonSerialize(contentUsing = KClassSerializer::class)
+    // @get:JsonSerialize(contentUsing = KClassSerializer::class)
     @get:JsonProperty("registeredPasses")
     val flatRegisteredPasses: List<KClass<out Pass<*>>>
         get() {
@@ -208,12 +208,12 @@ private constructor(
 
     /** This sub configuration object holds all information about inference and smart-guessing. */
     val inferenceConfiguration: InferenceConfiguration
-    val passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>
+    @JsonIgnore val passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>
     val frontendConfigurations:
         Map<KClass<out LanguageFrontend<*, *>>, FrontendConfiguration<out LanguageFrontend<*, *>>>
 
     init {
-        this.registeredPasses = passes
+        this.registeredPasses = registeredPasses
         this.languages = languages
         // Make sure to init this AFTER sourceLocations has been set
         this.codeInNodes = codeInNodes
@@ -230,6 +230,7 @@ private constructor(
     }
 
     /** Returns a list of all analyzed files. */
+    @get:JsonIgnore
     val sourceLocations: List<File>
         get() {
             val sourceLocations: MutableList<File> = ArrayList()
@@ -264,10 +265,10 @@ private constructor(
         private val includePaths = mutableListOf<Path>()
         private val includeWhitelist = mutableListOf<Path>()
         private val includeBlocklist = mutableListOf<Path>()
-        private val passes = mutableListOf<KClass<out Pass<*>>>()
+        private val registeredPasses = mutableListOf<KClass<out Pass<*>>>()
         private val replacedPasses =
             mutableMapOf<Pair<KClass<out Pass<*>>, KClass<out Language<*>>>, KClass<out Pass<*>>>()
-        private val functionSummaries = mutableListOf<File>()
+        private val functionSummaries = DFGFunctionSummaries.fromFiles(listOf())
         private var codeInNodes = true
         private var processAnnotations = false
         private var disableCleanup = false
@@ -444,7 +445,7 @@ private constructor(
 
         /** Register an additional [Pass]. */
         fun registerPass(passType: KClass<out Pass<*>>): Builder {
-            passes.add(passType)
+            registeredPasses.add(passType)
             return this
         }
 
@@ -466,7 +467,7 @@ private constructor(
         }
 
         fun registerFunctionSummaries(vararg functionSummary: File): Builder {
-            this.functionSummaries.addAll(functionSummary)
+            functionSummary.forEach { this.functionSummaries.addEntriesFromFile(it) }
             return this
         }
 
@@ -773,7 +774,7 @@ private constructor(
                 includeBlocklist,
                 orderPasses(),
                 replacedPasses,
-                DFGFunctionSummaries.fromFiles(functionSummaries),
+                functionSummaries,
                 languages,
                 codeInNodes,
                 processAnnotations,
@@ -797,10 +798,10 @@ private constructor(
         /** This function reorders passes in order to meet their dependency requirements. */
         @Throws(ConfigurationException::class)
         private fun orderPasses(): List<List<KClass<out Pass<*>>>> {
-            log.info("Passes before enforcing order: {}", passes.map { it.simpleName })
-            val orderingHelper = PassOrderingHelper(passes)
+            log.info("Passes before enforcing order: {}", registeredPasses.map { it.simpleName })
+            val orderingHelper = PassOrderingHelper(registeredPasses)
             log.info(
-                "The following mermaid graph represents the pass dependencies: \n${buildMermaid(passes)}"
+                "The following mermaid graph represents the pass dependencies: \n${buildMermaid(registeredPasses)}"
             )
 
             return orderingHelper.order()

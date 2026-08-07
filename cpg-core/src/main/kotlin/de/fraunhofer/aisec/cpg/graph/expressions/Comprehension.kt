@@ -149,11 +149,11 @@ class Comprehension : Expression(), ArgumentHolder, DeclarationHolder {
             expression == this.predicate
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return iterable.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return iterable.startingPrevEOG()
     }
 
-    override fun getExitNextEOG(): Collection<Node> {
+    override fun exitNextEOG(): Collection<Node> {
         return this.nextEOG.filter { it !in iterable.allChildren<Node> { true } }
     }
 }

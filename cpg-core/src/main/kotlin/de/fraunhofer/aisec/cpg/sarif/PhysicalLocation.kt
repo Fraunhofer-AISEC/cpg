@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.sarif
 
+import com.fasterxml.jackson.annotation.JsonCreator
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
@@ -32,7 +33,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 /** A SARIF compatible location referring to a location, i.e. file and region within the file. */
-class PhysicalLocation(uri: URI?, region: Region) {
+class PhysicalLocation @JsonCreator constructor(uri: URI?, region: Region) {
     class ArtifactLocation(val uri: URI?) {
 
         override fun toString(): String {

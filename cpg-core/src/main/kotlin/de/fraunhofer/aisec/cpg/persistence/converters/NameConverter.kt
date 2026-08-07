@@ -25,6 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.persistence.converters
 
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonNode
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.parseName
 
@@ -36,7 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.parseName
  *
  * Additionally, it converts the aforementioned Neo4J attributes in a node back into a [Name].
  */
-class NameConverter : CpgCompositeConverter<Name?> {
+class NameConverter : CpgCompositeConverter<Name?>, JsonDeserializer<Name>() {
 
     companion object {
         const val FIELD_FULL_NAME = "fullName"
@@ -80,6 +84,14 @@ class NameConverter : CpgCompositeConverter<Name?> {
         return parseName(
             value?.get(FIELD_FULL_NAME)?.toString() ?: "",
             value?.get(FIELD_NAME_DELIMITER)?.toString() ?: ".",
+        )
+    }
+
+    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Name {
+        val node = p.codec.readTree<JsonNode>(p)
+        return parseName(
+            node[FIELD_FULL_NAME]?.asText("") ?: "",
+            node[FIELD_NAME_DELIMITER]?.asText("") ?: ".",
         )
     }
 }

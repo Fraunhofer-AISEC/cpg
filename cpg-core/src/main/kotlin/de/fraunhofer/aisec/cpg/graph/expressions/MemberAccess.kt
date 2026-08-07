@@ -118,7 +118,7 @@ class MemberAccess : Reference(), HasOverloadedOperation, ArgumentHolder, HasBas
         this.name = baseType.root.name.fqn(name.localName)
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.base.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.base.startingPrevEOG()
     }
 }

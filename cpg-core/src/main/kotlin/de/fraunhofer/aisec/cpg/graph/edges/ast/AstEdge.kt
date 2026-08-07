@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.ast
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
@@ -32,7 +33,10 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSingletonList
 
 /** This property edge describes a parent/child relationship in the Abstract Syntax Tree (AST). */
-open class AstEdge<T : AstNode>(start: AstNode, end: T) : Edge<T>(start, end) {
+open class AstEdge<T : AstNode>(
+    @JsonProperty("start") start: AstNode,
+    @JsonProperty("end") end: T,
+) : Edge<T>(start, end) {
     init {
         end.astParent = start
     }

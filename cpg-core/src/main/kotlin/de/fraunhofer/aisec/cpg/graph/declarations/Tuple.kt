@@ -78,7 +78,7 @@ class Tuple : Variable() {
         registerTypeObserver(element)
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.initializer?.getStartingPrevEOG() ?: setOf()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.initializer?.startingPrevEOG() ?: setOf()
     }
 }

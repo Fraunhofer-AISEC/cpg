@@ -80,11 +80,11 @@ class Label : Expression(false), StatementHolder {
 
     override fun hashCode() = Objects.hash(super.hashCode(), label)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.subStatement?.getStartingPrevEOG() ?: this.prevEOG
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.subStatement?.startingPrevEOG() ?: this.prevEOG
     }
 
-    override fun getExitNextEOG(): Collection<Node> {
-        return this.subStatement?.getExitNextEOG() ?: this.nextEOG
+    override fun exitNextEOG(): Collection<Node> {
+        return this.subStatement?.exitNextEOG() ?: this.nextEOG
     }
 }

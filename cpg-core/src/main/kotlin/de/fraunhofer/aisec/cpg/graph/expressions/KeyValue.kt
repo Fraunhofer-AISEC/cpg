@@ -84,7 +84,7 @@ class KeyValue : Expression(), ArgumentHolder {
 
     override fun hashCode() = Objects.hash(super.hashCode(), key, value)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.key.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.key.startingPrevEOG()
     }
 }

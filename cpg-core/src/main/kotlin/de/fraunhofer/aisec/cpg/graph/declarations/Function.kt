@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -144,7 +145,15 @@ open class Function :
                 isDummy == other.isDummy
     }
 
-    var functionSummary = ConcurrentIdentityHashMap<Node, MutableSet<FSEntry>>()
+    /**
+     * Excluded from JSON serialization: it is a regenerable data-flow cache keyed by object
+     * identity with `Any?`-typed contents (a [ConcurrentIdentityHashMap] whose values reach
+     * [EqualLinkedHashSet], a Java collection subtype that trips kotlin-reflect on the write path).
+     * It cannot be round-tripped and the neo4j persistence path likewise never emits it; the same
+     * information is available as regular `prevFunctionSummaryDFG`/`nextFunctionSummaryDFG` edges
+     * and is recomputed when passes re-run.
+     */
+    @get:JsonIgnore var functionSummary = ConcurrentIdentityHashMap<Node, MutableSet<FSEntry>>()
 
     /** Returns true, if this function has a [body] statement. */
     fun hasBody(): Boolean {
@@ -269,11 +278,11 @@ open class Function :
         addAssignedTypes(returnFuncTypes)
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
+    override fun startingPrevEOG(): Collection<Node> {
         return setOf()
     }
 
-    override fun getExitNextEOG(): Collection<Node> {
+    override fun exitNextEOG(): Collection<Node> {
         return setOf()
     }
 

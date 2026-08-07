@@ -27,6 +27,8 @@
 
 package de.fraunhofer.aisec.cpg
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonMerge
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -56,18 +58,23 @@ import kotlin.reflect.KClass
  * The global (intermediate) result of the translation. A [LanguageFrontend] will initially populate
  * it and a [Pass] can extend it.
  */
-class TranslationResult(
+class TranslationResult() : AstNode(), StatisticsHolder, ContextProvider {
+
+    constructor(translationManager: TranslationManager, finalCtx: TranslationContext) : this() {
+        this.translationManager = translationManager
+        this.finalCtx = finalCtx
+    }
+
     /** A reference to our [TranslationManager]. */
-    private val translationManager: TranslationManager,
+    private lateinit var translationManager: TranslationManager
     /**
      * The final [TranslationContext] of this translation result. Currently, for parallel
      * processing, we are creating one translation context for each parsed file (containing a
      * dedicated [ScopeManager] each). This property will contain the final, merged context.
      */
-    var finalCtx: TranslationContext,
-) : AstNode(), StatisticsHolder, ContextProvider {
+    lateinit var finalCtx: TranslationContext
 
-    @Relationship("COMPONENTS") val componentEdges = astEdgesOf<Component>()
+    @JsonMerge @Relationship("COMPONENTS") val componentEdges = astEdgesOf<Component>()
     /**
      * Entry points to the CPG: "SoftwareComponent" refer to programs, application, other "bundles"
      * of software.
@@ -100,7 +107,13 @@ class TranslationResult(
      */
     val additionalNodes = mutableSetOf<Node>()
 
-    override val benchmarks: MutableSet<MeasurementHolder> = LinkedHashSet()
+    /**
+     * Excluded from JSON serialization: these are runtime performance measurements collected while
+     * translating, not part of the code property graph. They are also serialized in a shape (a
+     * [MeasurementHolder] renders as a JSON array) that Jackson cannot read back, which would
+     * otherwise abort deserialization of the whole [TranslationResult].
+     */
+    @get:JsonIgnore override val benchmarks: MutableSet<MeasurementHolder> = LinkedHashSet()
 
     val isCancelled: Boolean
         get() = translationManager.isCancelled()
@@ -178,6 +191,7 @@ class TranslationResult(
     override val config: TranslationConfiguration
         get() = finalCtx.config
 
+    @get:JsonIgnore
     override var language: Language<*>
         get() {
             return multiLanguage()

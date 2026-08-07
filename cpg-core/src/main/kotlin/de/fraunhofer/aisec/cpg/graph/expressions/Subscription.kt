@@ -137,7 +137,7 @@ class Subscription : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder
 
     override fun hashCode() = Objects.hash(super.hashCode(), arrayExpression, subscriptExpression)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.arrayExpression.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.arrayExpression.startingPrevEOG()
     }
 }

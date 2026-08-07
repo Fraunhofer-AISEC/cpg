@@ -190,8 +190,8 @@ class ExtensionTest {
                         val ext = extension("Extension", null) {}
 
                         // Test EOG methods return empty collections
-                        assertTrue(ext.getStartingPrevEOG().isEmpty())
-                        assertTrue(ext.getExitNextEOG().isEmpty())
+                        assertTrue(ext.startingPrevEOG().isEmpty())
+                        assertTrue(ext.exitNextEOG().isEmpty())
                     }
                 }
             }

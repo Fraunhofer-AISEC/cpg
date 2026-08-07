@@ -83,14 +83,14 @@ class Switch : Expression(false), BranchingNode {
             statement,
         )
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.initializerStatement?.getStartingPrevEOG()
-            ?: this.selector?.getStartingPrevEOG()
-            ?: this.selectorDeclaration?.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.initializerStatement?.startingPrevEOG()
+            ?: this.selector?.startingPrevEOG()
+            ?: this.selectorDeclaration?.startingPrevEOG()
             ?: this.prevEOG
     }
 
-    override fun getExitNextEOG(): Collection<Node> {
-        return this.statement?.getExitNextEOG() ?: this.nextEOG
+    override fun exitNextEOG(): Collection<Node> {
+        return this.statement?.exitNextEOG() ?: this.nextEOG
     }
 }

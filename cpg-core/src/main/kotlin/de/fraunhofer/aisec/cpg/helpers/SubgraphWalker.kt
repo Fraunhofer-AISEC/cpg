@@ -451,8 +451,8 @@ fun SubgraphWalker.ScopedWalker<Node>.replace(
         )
     } else {
         // Store any eventual EOG nodes and disconnect old node
-        val oldNextEOG = old.getExitNextEOG().toSet()
-        val oldPrevEOG = old.getStartingPrevEOG().toSet()
+        val oldNextEOG = old.exitNextEOG().toSet()
+        val oldPrevEOG = old.startingPrevEOG().toSet()
         val hasEOG =
             oldNextEOG.isNotEmpty() ||
                 oldPrevEOG.isNotEmpty() ||

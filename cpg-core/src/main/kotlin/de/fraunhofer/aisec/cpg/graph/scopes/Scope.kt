@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import com.fasterxml.jackson.annotation.JsonBackReference
+import com.fasterxml.jackson.annotation.JsonIdentityReference
+import com.fasterxml.jackson.annotation.JsonMerge
+import com.fasterxml.jackson.annotation.JsonProperty
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.HasBuiltins
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
@@ -67,7 +69,8 @@ typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
 @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 sealed class Scope(
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
-    @JsonBackReference
+    @JsonIdentityReference(alwaysAsId = true)
+    @JsonProperty("astNode")
     open var astNode: AstNode?
 ) : Node() {
 
@@ -105,6 +108,7 @@ sealed class Scope(
      */
     @Relationship(value = "IMPORTS_SCOPE", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(ImportResolver::class)
+    @JsonMerge
     val importedScopeEdges =
         Imports(this, mirrorProperty = NamespaceScope::importedByEdges, outgoing = true)
 

@@ -133,16 +133,16 @@ class IfElse : Expression(false), BranchingNode, ArgumentHolder, HasType.TypeObs
             elseStatement,
         )
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return initializerStatement?.getStartingPrevEOG()
-            ?: condition?.getStartingPrevEOG()
-            ?: conditionDeclaration?.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return initializerStatement?.startingPrevEOG()
+            ?: condition?.startingPrevEOG()
+            ?: conditionDeclaration?.startingPrevEOG()
             ?: this.prevEOG
     }
 
-    override fun getExitNextEOG(): Collection<Node> {
-        val thenExit = this.thenStatement?.getExitNextEOG() ?: setOf()
-        val elseExit = this.elseStatement?.getExitNextEOG() ?: this.nextEOG
+    override fun exitNextEOG(): Collection<Node> {
+        val thenExit = this.thenStatement?.exitNextEOG() ?: setOf()
+        val elseExit = this.elseStatement?.exitNextEOG() ?: this.nextEOG
         return (thenExit + elseExit).ifEmpty { this.nextEOG }
     }
 

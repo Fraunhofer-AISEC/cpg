@@ -91,11 +91,11 @@ class Namespace : Declaration(), DeclarationHolder, StatementHolder, EOGStarterH
 
     override var firstBasicBlock: BasicBlock? = null
 
-    override fun getStartingPrevEOG(): Collection<Node> {
+    override fun startingPrevEOG(): Collection<Node> {
         return setOf()
     }
 
-    override fun getExitNextEOG(): Collection<Node> {
+    override fun exitNextEOG(): Collection<Node> {
         return setOf()
     }
 }
