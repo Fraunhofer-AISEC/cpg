@@ -34,7 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.expressions.Call
 import de.fraunhofer.aisec.cpg.graph.expressions.Construction
+import de.fraunhofer.aisec.cpg.graph.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
@@ -244,7 +246,14 @@ class CXXExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
             // understand
             for (i in declaration.parameters.indices) {
                 if (candidate.parameters[i].default != null) {
-                    declaration.parameters[i].default = candidate.parameters[i].default
+                    // duplicate node to prevent changes through the reference
+                    val default =
+                        when (val candidateDefault = candidate.parameters[i].default) {
+                            is Literal<*> -> candidateDefault.duplicate(true)
+                            is TypeExpression -> candidateDefault.duplicate(true)
+                            else -> candidateDefault
+                        }
+                    declaration.parameters[i].default = default
                 }
             }
         }
